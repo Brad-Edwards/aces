@@ -156,7 +156,7 @@
     },
     "Agent": {
       "additionalProperties": false,
-      "description": "An autonomous participant in the scenario.\n\nAgents reference existing scenario elements:\n- ``entity`` links to the entities section (team/role) and supplies\n  identity and role per ADR-020\n- ``starting_accounts`` links to the accounts section\n- ``allowed_subnets`` links to infrastructure entries\n- ``initial_knowledge`` references nodes and infrastructure\n- ``starting_conditions`` links to the conditions section, giving the\n  authoring surface a declarative hook for participant-relevant\n  precondition checks (ACT-601)\n- ``authority_anchors`` links to declared SDL elements (entities,\n  relationships, content, etc.) that anchor what the participant is\n  allowed or expected to do in scenario meaning (ACT-601, ADR-020)\n- ``operating_scope`` links to targetable named scenario elements\n  (subnets, hosts, services, content) defining where the participant\n  may act or observe (ACT-601, ADR-020)\n- ``observation_boundaries`` links to declared participant observation\n  boundaries that define participant-specific projections of world and\n  evidence state (SEM-208)",
+      "description": "An autonomous participant in the scenario.\n\nAgents reference existing scenario elements:\n\n- ``entity`` links to the entities section (team/role) and supplies\n  identity and role per ADR-020\n- ``starting_accounts`` links to the accounts section\n- ``allowed_subnets`` links to infrastructure entries\n- ``initial_knowledge`` references nodes and infrastructure\n- ``starting_conditions`` links to the conditions section, giving the\n  authoring surface a declarative hook for participant-relevant\n  precondition checks (ACT-601)\n- ``authority_anchors`` links to declared SDL elements (entities,\n  relationships, content, etc.) that anchor what the participant is\n  allowed or expected to do in scenario meaning (ACT-601, ADR-020)\n- ``operating_scope`` links to targetable named scenario elements\n  (subnets, hosts, services, content) defining where the participant\n  may act or observe (ACT-601, ADR-020)\n- ``observation_boundaries`` links to declared participant observation\n  boundaries that define participant-specific projections of world and\n  evidence state (SEM-208)",
       "properties": {
         "actions": {
           "items": {
@@ -401,9 +401,94 @@
       "title": "Condition",
       "type": "object"
     },
+    "ContainerImageBuildProvenance": {
+      "additionalProperties": false,
+      "description": "Observed build/provenance facts for a custom container image artifact.",
+      "properties": {
+        "attestation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageAttestation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "base_image": {
+          "default": "",
+          "title": "Base Image",
+          "type": "string"
+        },
+        "base_image_digest": {
+          "default": "",
+          "title": "Base Image Digest",
+          "type": "string"
+        },
+        "build_args": {
+          "items": {
+            "$ref": "#/$defs/ImageBuildArg"
+          },
+          "title": "Build Args",
+          "type": "array"
+        },
+        "config": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "copied_sources": {
+          "items": {
+            "$ref": "#/$defs/ImageCopiedSource"
+          },
+          "title": "Copied Sources",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "dockerfile_path": {
+          "default": "",
+          "title": "Dockerfile Path",
+          "type": "string"
+        },
+        "instructions": {
+          "items": {
+            "$ref": "#/$defs/DockerfileInstruction"
+          },
+          "title": "Instructions",
+          "type": "array"
+        },
+        "layers": {
+          "items": {
+            "$ref": "#/$defs/ImageLayer"
+          },
+          "title": "Layers",
+          "type": "array"
+        },
+        "source_inputs": {
+          "items": {
+            "$ref": "#/$defs/ImageSourceInput"
+          },
+          "title": "Source Inputs",
+          "type": "array"
+        }
+      },
+      "title": "ContainerImageBuildProvenance",
+      "type": "object"
+    },
     "Content": {
       "additionalProperties": false,
-      "description": "Data or files placed into a scenario node.\n\nSupports three forms:\n- ``file``: A single file at a specific path, optionally with inline text.\n- ``dataset``: A collection of related items (emails, records, pcaps)\n  delivered via a source package or listed as items.\n- ``directory``: A directory structure placed at a destination path.",
+      "description": "Data or files placed into a scenario node.\n\nSupports three forms:\n\n- ``file``: A single file at a specific path, optionally with inline text.\n- ``dataset``: A collection of related items (emails, records, pcaps)\n  delivered via a source package or listed as items.\n- ``directory``: A directory structure placed at a destination path.",
       "properties": {
         "description": {
           "default": "",
@@ -524,6 +609,66 @@
         "directory"
       ],
       "title": "ContentType",
+      "type": "string"
+    },
+    "DockerfileInstruction": {
+      "additionalProperties": false,
+      "description": "A structured record of one container build-recipe instruction.\n\nThe instruction is kept as a typed kind plus tokenized ``arguments``\nrather than raw recipe text: raw Dockerfile/shell syntax can contain\n``${...}`` strings that collide with ACES variable substitution.",
+      "properties": {
+        "arguments": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Arguments",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "instruction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DockerfileInstructionKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Instruction"
+        }
+      },
+      "required": [
+        "instruction"
+      ],
+      "title": "DockerfileInstruction",
+      "type": "object"
+    },
+    "DockerfileInstructionKind": {
+      "description": "Observed kind of a structured container build-recipe instruction.",
+      "enum": [
+        "from",
+        "arg",
+        "env",
+        "run",
+        "copy",
+        "add",
+        "workdir",
+        "entrypoint",
+        "cmd",
+        "healthcheck",
+        "label",
+        "expose",
+        "user",
+        "volume",
+        "shell",
+        "stopsignal",
+        "onbuild",
+        "maintainer",
+        "other"
+      ],
+      "title": "DockerfileInstructionKind",
       "type": "string"
     },
     "Entity": {
@@ -822,6 +967,350 @@
       ],
       "title": "Goal",
       "type": "object"
+    },
+    "ImageAttestation": {
+      "additionalProperties": false,
+      "description": "Observed build-attestation availability and verification result.\n\nAttestation *availability* (``status``) and *verification result*\n(``verification``) are deliberately separate facts: a mutable local image\ntag with no registry-visible OCI/in-toto/SLSA attestation is not the same\nstate as a failed verification (ADR-023 \u00a75).",
+      "properties": {
+        "attestation_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageAttestationType"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Attestation Type"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_reference": {
+          "default": "",
+          "title": "Evidence Reference",
+          "type": "string"
+        },
+        "predicate_type": {
+          "default": "",
+          "title": "Predicate Type",
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageAttestationStatus"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Status"
+        },
+        "verification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ImageVerificationStatus"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Verification"
+        }
+      },
+      "title": "ImageAttestation",
+      "type": "object"
+    },
+    "ImageAttestationStatus": {
+      "description": "Availability of a registry-visible build attestation for an image.",
+      "enum": [
+        "present",
+        "absent",
+        "unknown"
+      ],
+      "title": "ImageAttestationStatus",
+      "type": "string"
+    },
+    "ImageAttestationType": {
+      "description": "Format of an observed image build attestation.",
+      "enum": [
+        "oci",
+        "in_toto",
+        "slsa",
+        "other",
+        "none",
+        "unknown"
+      ],
+      "title": "ImageAttestationType",
+      "type": "string"
+    },
+    "ImageBuildArg": {
+      "additionalProperties": false,
+      "description": "An observed build argument with value-sensitivity classification.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        },
+        "value_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeEnvironmentValueClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Value Classification"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ImageBuildArg",
+      "type": "object"
+    },
+    "ImageConfig": {
+      "additionalProperties": false,
+      "description": "Observed image-default configuration baked into the image artifact.\n\nThese are image defaults, distinct from runtime-effective container facts\nrecorded under ``Node.runtime.container``.",
+      "properties": {
+        "command": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Command",
+          "type": "array"
+        },
+        "default_environment": {
+          "items": {
+            "$ref": "#/$defs/ImageEnvironmentDefault"
+          },
+          "title": "Default Environment",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "entrypoint": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Entrypoint",
+          "type": "array"
+        },
+        "exposed_ports": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Exposed Ports",
+          "type": "array"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "object"
+        },
+        "working_directory": {
+          "default": "",
+          "title": "Working Directory",
+          "type": "string"
+        }
+      },
+      "title": "ImageConfig",
+      "type": "object"
+    },
+    "ImageCopiedSource": {
+      "additionalProperties": false,
+      "description": "A source path copied into the image and its in-image destination.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "destination_path": {
+          "title": "Destination Path",
+          "type": "string"
+        },
+        "from_stage": {
+          "default": "",
+          "title": "From Stage",
+          "type": "string"
+        },
+        "source_path": {
+          "title": "Source Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_path",
+        "destination_path"
+      ],
+      "title": "ImageCopiedSource",
+      "type": "object"
+    },
+    "ImageEnvironmentDefault": {
+      "additionalProperties": false,
+      "description": "An image-default environment variable with sensitivity classification.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        },
+        "value_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeEnvironmentValueClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Value Classification"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ImageEnvironmentDefault",
+      "type": "object"
+    },
+    "ImageLayer": {
+      "additionalProperties": false,
+      "description": "An observed layer in the image layer chain.\n\nEmpty/metadata-only layers (e.g. ``ENV`` instructions) legitimately carry\nno ``digest``; the layer is still recorded for build-history correlation.",
+      "properties": {
+        "created_by": {
+          "default": "",
+          "title": "Created By",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "digest": {
+          "default": "",
+          "title": "Digest",
+          "type": "string"
+        },
+        "empty": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Empty"
+        },
+        "size": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size"
+        }
+      },
+      "title": "ImageLayer",
+      "type": "object"
+    },
+    "ImageSourceInput": {
+      "additionalProperties": false,
+      "description": "A source-package input and its source-to-runtime destination mapping.\n\n``source_path`` uses the same source-path dialect as\n``RuntimeFilesystemEntry.source_path`` so the build-time input and the\nrealized runtime entry can be correlated.",
+      "properties": {
+        "checksum": {
+          "default": "",
+          "title": "Checksum",
+          "type": "string"
+        },
+        "checksum_algorithm": {
+          "default": "",
+          "title": "Checksum Algorithm",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "destination_path": {
+          "default": "",
+          "title": "Destination Path",
+          "type": "string"
+        },
+        "identifier": {
+          "title": "Identifier",
+          "type": "string"
+        },
+        "source_path": {
+          "default": "",
+          "title": "Source Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "identifier"
+      ],
+      "title": "ImageSourceInput",
+      "type": "object"
+    },
+    "ImageVerificationStatus": {
+      "description": "Result of verifying an image's build attestation.",
+      "enum": [
+        "verified",
+        "failed",
+        "unverified",
+        "not_applicable",
+        "unknown"
+      ],
+      "title": "ImageVerificationStatus",
+      "type": "string"
     },
     "ImportDecl": {
       "additionalProperties": false,
@@ -2724,6 +3213,431 @@
       "title": "Role",
       "type": "object"
     },
+    "RuntimeApplicationDisclosure": {
+      "additionalProperties": false,
+      "description": "Observable error or information-disclosure behavior of a route.\n\n``disclosure`` is a classified description of what the application exposes\n(a stack trace, an internal path, a backend version), never the raw payload,\ntoken, password, or cookie itself.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "disclosure": {
+          "default": "",
+          "title": "Disclosure",
+          "type": "string"
+        },
+        "sensitivity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Sensitivity"
+        },
+        "status_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Code"
+        },
+        "trigger": {
+          "default": "",
+          "title": "Trigger",
+          "type": "string"
+        }
+      },
+      "title": "RuntimeApplicationDisclosure",
+      "type": "object"
+    },
+    "RuntimeApplicationExposedField": {
+      "additionalProperties": false,
+      "description": "A route-visible fixture secret or intentionally exposed diagnostic field.\n\nThe sensitivity vocabulary is shared with the rest of the runtime surface.\nA ``redacted`` or ``operator_secret`` field must omit its raw ``value``;\nonly intentionally participant-visible ``secret_fixture``/``plain`` material\nis safe to record.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "sensitivity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Sensitivity"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "RuntimeApplicationExposedField",
+      "type": "object"
+    },
+    "RuntimeApplicationParameter": {
+      "additionalProperties": false,
+      "description": "A typed request input observed on an application route.\n\n``location`` distinguishes path variables, query string, headers, cookies,\nform fields, JSON body fields, and uploaded-file fields.",
+      "properties": {
+        "data_type": {
+          "default": "",
+          "title": "Data Type",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeApplicationParameterLocation"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Location"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "required": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Required"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "RuntimeApplicationParameter",
+      "type": "object"
+    },
+    "RuntimeApplicationParameterLocation": {
+      "description": "Where a request input is carried on an observed route.",
+      "enum": [
+        "path",
+        "query",
+        "header",
+        "cookie",
+        "form",
+        "json_body",
+        "uploaded_file",
+        "other"
+      ],
+      "title": "RuntimeApplicationParameterLocation",
+      "type": "string"
+    },
+    "RuntimeApplicationProtocol": {
+      "description": "Application-layer protocol class for an observed application surface.",
+      "enum": [
+        "http",
+        "https",
+        "ws",
+        "wss",
+        "other"
+      ],
+      "title": "RuntimeApplicationProtocol",
+      "type": "string"
+    },
+    "RuntimeApplicationRedirect": {
+      "additionalProperties": false,
+      "description": "An observed redirect a route can issue.\n\nTarget path/URL, status code, and the triggering condition are kept\ndistinct; the target is recorded verbatim, never resolved.",
+      "properties": {
+        "condition": {
+          "default": "",
+          "title": "Condition",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "status_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Code"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target"
+      ],
+      "title": "RuntimeApplicationRedirect",
+      "type": "object"
+    },
+    "RuntimeApplicationResponse": {
+      "additionalProperties": false,
+      "description": "An observed response a route can produce.",
+      "properties": {
+        "content_type": {
+          "default": "",
+          "title": "Content Type",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "status_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Status Code"
+        }
+      },
+      "required": [
+        "status_code"
+      ],
+      "title": "RuntimeApplicationResponse",
+      "type": "object"
+    },
+    "RuntimeApplicationRoute": {
+      "additionalProperties": false,
+      "description": "An observed application route \u2014 a participant-visible endpoint.\n\n``route_id`` is the stable identity; ``path`` is data and may carry path\nvariables, may be shared across HTTP methods, and is never a mapping key.",
+      "properties": {
+        "auth_required": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auth Required"
+        },
+        "auth_scheme": {
+          "default": "",
+          "title": "Auth Scheme",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "disclosures": {
+          "items": {
+            "$ref": "#/$defs/RuntimeApplicationDisclosure"
+          },
+          "title": "Disclosures",
+          "type": "array"
+        },
+        "exposed_fields": {
+          "items": {
+            "$ref": "#/$defs/RuntimeApplicationExposedField"
+          },
+          "title": "Exposed Fields",
+          "type": "array"
+        },
+        "methods": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Methods",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/$defs/RuntimeApplicationParameter"
+          },
+          "title": "Parameters",
+          "type": "array"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "redirects": {
+          "items": {
+            "$ref": "#/$defs/RuntimeApplicationRedirect"
+          },
+          "title": "Redirects",
+          "type": "array"
+        },
+        "responses": {
+          "items": {
+            "$ref": "#/$defs/RuntimeApplicationResponse"
+          },
+          "title": "Responses",
+          "type": "array"
+        },
+        "route_id": {
+          "title": "Route Id",
+          "type": "string"
+        },
+        "session_required": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Required"
+        },
+        "static_assets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Static Assets",
+          "type": "array"
+        },
+        "templates": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Templates",
+          "type": "array"
+        },
+        "vulnerability_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Vulnerability Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "route_id",
+        "path"
+      ],
+      "title": "RuntimeApplicationRoute",
+      "type": "object"
+    },
+    "RuntimeApplicationSurface": {
+      "additionalProperties": false,
+      "description": "An observed application surface hosted by a transport service on a node.\n\n``service`` references the owning same-node ``Node.services[].name`` (bare\nname or the qualified ``nodes.<node>.services.<name>`` form). The surface is\nobservation metadata; it never mutates ``Node.services``.",
+      "properties": {
+        "application_id": {
+          "title": "Application Id",
+          "type": "string"
+        },
+        "base_path": {
+          "default": "",
+          "title": "Base Path",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "framework": {
+          "default": "",
+          "title": "Framework",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "protocol": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeApplicationProtocol"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "http",
+          "title": "Protocol"
+        },
+        "routes": {
+          "items": {
+            "$ref": "#/$defs/RuntimeApplicationRoute"
+          },
+          "title": "Routes",
+          "type": "array"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        }
+      },
+      "required": [
+        "application_id"
+      ],
+      "title": "RuntimeApplicationSurface",
+      "type": "object"
+    },
     "RuntimeCapabilityPolicy": {
       "additionalProperties": false,
       "description": "Linux/container capability policy observed for a runtime node.",
@@ -2769,6 +3683,24 @@
       "additionalProperties": false,
       "description": "Observed runtime configuration facts attached to a VM node.",
       "properties": {
+        "applications": {
+          "items": {
+            "$ref": "#/$defs/RuntimeApplicationSurface"
+          },
+          "title": "Applications",
+          "type": "array"
+        },
+        "container": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeContainerConfiguration"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "dependency_manifests": {
           "items": {
             "$ref": "#/$defs/RuntimeDependencyManifest"
@@ -2782,6 +3714,24 @@
           },
           "title": "Environment",
           "type": "array"
+        },
+        "filesystem_inventory": {
+          "items": {
+            "$ref": "#/$defs/RuntimeFilesystemEntry"
+          },
+          "title": "Filesystem Inventory",
+          "type": "array"
+        },
+        "health": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeHealthObservation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "linux_capabilities": {
           "anyOf": [
@@ -2801,12 +3751,34 @@
           "title": "Local Control Interfaces",
           "type": "array"
         },
+        "local_identity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeLocalIdentityInventory"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "mounts": {
           "items": {
             "$ref": "#/$defs/RuntimeMount"
           },
           "title": "Mounts",
           "type": "array"
+        },
+        "network": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkRealization"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "operational_policy": {
           "anyOf": [
@@ -2853,6 +3825,204 @@
         }
       },
       "title": "RuntimeConfiguration",
+      "type": "object"
+    },
+    "RuntimeContainerConfiguration": {
+      "additionalProperties": false,
+      "description": "Observed container runtime host and security configuration facts.",
+      "properties": {
+        "autoremove": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Autoremove"
+        },
+        "cgroup_parent": {
+          "default": "",
+          "title": "Cgroup Parent",
+          "type": "string"
+        },
+        "command": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Command",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "device_cgroup_rules": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Device Cgroup Rules",
+          "type": "array"
+        },
+        "devices": {
+          "items": {
+            "$ref": "#/$defs/RuntimeDeviceMapping"
+          },
+          "title": "Devices",
+          "type": "array"
+        },
+        "dns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dns",
+          "type": "array"
+        },
+        "dns_options": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dns Options",
+          "type": "array"
+        },
+        "dns_search": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dns Search",
+          "type": "array"
+        },
+        "entrypoint": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Entrypoint",
+          "type": "array"
+        },
+        "extra_hosts": {
+          "items": {
+            "$ref": "#/$defs/RuntimeExtraHost"
+          },
+          "title": "Extra Hosts",
+          "type": "array"
+        },
+        "group_add": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Group Add",
+          "type": "array"
+        },
+        "log_driver": {
+          "default": "",
+          "title": "Log Driver",
+          "type": "string"
+        },
+        "log_options": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Log Options",
+          "type": "object"
+        },
+        "masked_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Masked Paths",
+          "type": "array"
+        },
+        "namespaces": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNamespaceConfiguration"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "privileged": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Privileged"
+        },
+        "publish_all_ports": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Publish All Ports"
+        },
+        "read_only_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Read Only Paths",
+          "type": "array"
+        },
+        "read_only_rootfs": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Read Only Rootfs"
+        },
+        "runtime_name": {
+          "default": "",
+          "title": "Runtime Name",
+          "type": "string"
+        },
+        "shm_size": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shm Size"
+        }
+      },
+      "title": "RuntimeContainerConfiguration",
       "type": "object"
     },
     "RuntimeControlInterface": {
@@ -2965,6 +4135,36 @@
       "title": "RuntimeDependencyManifest",
       "type": "object"
     },
+    "RuntimeDeviceMapping": {
+      "additionalProperties": false,
+      "description": "A host device mapping observed in runtime configuration.",
+      "properties": {
+        "container_path": {
+          "title": "Container Path",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "host_path": {
+          "title": "Host Path",
+          "type": "string"
+        },
+        "permissions": {
+          "default": "",
+          "title": "Permissions",
+          "type": "string"
+        }
+      },
+      "required": [
+        "host_path",
+        "container_path"
+      ],
+      "title": "RuntimeDeviceMapping",
+      "type": "object"
+    },
     "RuntimeEnvironmentValueClassification": {
       "description": "Sensitivity classification for an observed runtime environment value.",
       "enum": [
@@ -3044,13 +4244,572 @@
       "title": "RuntimeEnvironmentVariableProvenance",
       "type": "string"
     },
-    "RuntimeMount": {
+    "RuntimeExtraHost": {
       "additionalProperties": false,
-      "description": "A filesystem mount observed on a runtime node.",
+      "description": "An observed extra host mapping in runtime configuration.",
+      "properties": {
+        "address": {
+          "title": "Address",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "hostname": {
+          "title": "Hostname",
+          "type": "string"
+        }
+      },
+      "required": [
+        "hostname",
+        "address"
+      ],
+      "title": "RuntimeExtraHost",
+      "type": "object"
+    },
+    "RuntimeFilesystemEntry": {
+      "additionalProperties": false,
+      "description": "A filesystem entry observed inside a runtime node or container asset.",
+      "properties": {
+        "content_digest": {
+          "default": "",
+          "title": "Content Digest",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "digest_algorithm": {
+          "default": "",
+          "title": "Digest Algorithm",
+          "type": "string"
+        },
+        "entry_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFilesystemEntryType"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Entry Type"
+        },
+        "gid": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gid"
+        },
+        "mode": {
+          "default": "",
+          "title": "Mode",
+          "type": "string"
+        },
+        "owner_group": {
+          "default": "",
+          "title": "Owner Group",
+          "type": "string"
+        },
+        "owner_user": {
+          "default": "",
+          "title": "Owner User",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "provenance": {
+          "default": "",
+          "title": "Provenance",
+          "type": "string"
+        },
+        "sensitivity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Sensitivity"
+        },
+        "size": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size"
+        },
+        "source_path": {
+          "default": "",
+          "title": "Source Path",
+          "type": "string"
+        },
+        "stability": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFilesystemStability"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Stability"
+        },
+        "uid": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uid"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "RuntimeFilesystemEntry",
+      "type": "object"
+    },
+    "RuntimeFilesystemEntryType": {
+      "description": "Observed type of a runtime filesystem inventory entry.",
+      "enum": [
+        "file",
+        "directory",
+        "symlink",
+        "device",
+        "socket",
+        "fifo",
+        "other"
+      ],
+      "title": "RuntimeFilesystemEntryType",
+      "type": "string"
+    },
+    "RuntimeFilesystemStability": {
+      "description": "Stability class for an observed runtime filesystem or mount fact.",
+      "enum": [
+        "stable",
+        "generated",
+        "log",
+        "cache",
+        "runtime_created",
+        "volume_backed",
+        "transient",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeFilesystemStability",
+      "type": "string"
+    },
+    "RuntimeHealthObservation": {
+      "additionalProperties": false,
+      "description": "Observed runtime health status and healthcheck log facts.",
       "properties": {
         "description": {
           "default": "",
           "title": "Description",
+          "type": "string"
+        },
+        "failing_streak": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Failing Streak"
+        },
+        "log": {
+          "items": {
+            "$ref": "#/$defs/RuntimeHealthcheckLog"
+          },
+          "title": "Log",
+          "type": "array"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeHealthStatus"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Status"
+        }
+      },
+      "title": "RuntimeHealthObservation",
+      "type": "object"
+    },
+    "RuntimeHealthStatus": {
+      "description": "Observed health status for a runtime node or container.",
+      "enum": [
+        "none",
+        "starting",
+        "healthy",
+        "unhealthy",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeHealthStatus",
+      "type": "string"
+    },
+    "RuntimeHealthcheckLog": {
+      "additionalProperties": false,
+      "description": "An observed runtime healthcheck log entry.",
+      "properties": {
+        "end": {
+          "default": "",
+          "title": "End",
+          "type": "string"
+        },
+        "exit_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exit Code"
+        },
+        "output": {
+          "default": "",
+          "title": "Output",
+          "type": "string"
+        },
+        "output_redacted": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": false,
+          "title": "Output Redacted"
+        },
+        "start": {
+          "default": "",
+          "title": "Start",
+          "type": "string"
+        }
+      },
+      "title": "RuntimeHealthcheckLog",
+      "type": "object"
+    },
+    "RuntimeIdentityProvenance": {
+      "description": "Origin class for an observed local identity record.",
+      "enum": [
+        "image",
+        "package",
+        "runtime_created",
+        "operator",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeIdentityProvenance",
+      "type": "string"
+    },
+    "RuntimeLocalGroup": {
+      "additionalProperties": false,
+      "description": "A local group record observed in a node's identity database (/etc/group).",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "gid": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gid"
+        },
+        "members": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Members",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeIdentityProvenance"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "RuntimeLocalGroup",
+      "type": "object"
+    },
+    "RuntimeLocalIdentityInventory": {
+      "additionalProperties": false,
+      "description": "Observed local identity database (users, groups, sudo rules) for a node.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/$defs/RuntimeLocalGroup"
+          },
+          "title": "Groups",
+          "type": "array"
+        },
+        "sudo_rules": {
+          "items": {
+            "$ref": "#/$defs/RuntimeSudoRule"
+          },
+          "title": "Sudo Rules",
+          "type": "array"
+        },
+        "users": {
+          "items": {
+            "$ref": "#/$defs/RuntimeLocalUser"
+          },
+          "title": "Users",
+          "type": "array"
+        }
+      },
+      "title": "RuntimeLocalIdentityInventory",
+      "type": "object"
+    },
+    "RuntimeLocalUser": {
+      "additionalProperties": false,
+      "description": "A local user record observed in a node's identity database (/etc/passwd).",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "disabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": false,
+          "title": "Disabled"
+        },
+        "gecos": {
+          "default": "",
+          "title": "Gecos",
+          "type": "string"
+        },
+        "home": {
+          "default": "",
+          "title": "Home",
+          "type": "string"
+        },
+        "locked": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": false,
+          "title": "Locked"
+        },
+        "no_login": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": false,
+          "title": "No Login"
+        },
+        "primary_gid": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Primary Gid"
+        },
+        "primary_group": {
+          "default": "",
+          "title": "Primary Group",
+          "type": "string"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeIdentityProvenance"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        },
+        "shell": {
+          "default": "",
+          "title": "Shell",
+          "type": "string"
+        },
+        "stability": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFilesystemStability"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Stability"
+        },
+        "supplemental_groups": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supplemental Groups",
+          "type": "array"
+        },
+        "uid": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uid"
+        },
+        "username": {
+          "title": "Username",
+          "type": "string"
+        }
+      },
+      "required": [
+        "username"
+      ],
+      "title": "RuntimeLocalUser",
+      "type": "object"
+    },
+    "RuntimeMount": {
+      "additionalProperties": false,
+      "description": "A filesystem mount observed on a runtime node.",
+      "properties": {
+        "backend_generated": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Backend Generated"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "filesystem_type": {
+          "default": "",
+          "title": "Filesystem Type",
           "type": "string"
         },
         "options": {
@@ -3059,6 +4818,18 @@
           },
           "title": "Options",
           "type": "array"
+        },
+        "propagation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMountPropagation"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Propagation"
         },
         "read_only": {
           "anyOf": [
@@ -3089,6 +4860,18 @@
           "default": "other",
           "title": "Source Kind"
         },
+        "stability": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFilesystemStability"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Stability"
+        },
         "target": {
           "title": "Target",
           "type": "string"
@@ -3099,6 +4882,21 @@
       ],
       "title": "RuntimeMount",
       "type": "object"
+    },
+    "RuntimeMountPropagation": {
+      "description": "Portable propagation mode for a runtime filesystem mount.",
+      "enum": [
+        "private",
+        "rprivate",
+        "shared",
+        "rshared",
+        "slave",
+        "rslave",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeMountPropagation",
+      "type": "string"
     },
     "RuntimeMountSourceKind": {
       "description": "Portable source kind for a runtime filesystem mount.",
@@ -3111,6 +4909,276 @@
       ],
       "title": "RuntimeMountSourceKind",
       "type": "string"
+    },
+    "RuntimeNamespaceConfiguration": {
+      "additionalProperties": false,
+      "description": "Observed namespace modes for a runtime node or container.",
+      "properties": {
+        "cgroup": {
+          "default": "",
+          "title": "Cgroup",
+          "type": "string"
+        },
+        "ipc": {
+          "default": "",
+          "title": "Ipc",
+          "type": "string"
+        },
+        "pid": {
+          "default": "",
+          "title": "Pid",
+          "type": "string"
+        },
+        "userns": {
+          "default": "",
+          "title": "Userns",
+          "type": "string"
+        },
+        "uts": {
+          "default": "",
+          "title": "Uts",
+          "type": "string"
+        }
+      },
+      "title": "RuntimeNamespaceConfiguration",
+      "type": "object"
+    },
+    "RuntimeNetworkBackendDetail": {
+      "additionalProperties": false,
+      "description": "Observed backend network driver and IPAM detail for an endpoint's network.\n\n``driver_options`` and ``ipam_options`` are the bounded extension seam for\nbackend-native key/value facts; raw backend inspect payloads are not stored.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "driver": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkDriver"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Driver"
+        },
+        "driver_options": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Driver Options",
+          "type": "object"
+        },
+        "ipam_driver": {
+          "default": "",
+          "title": "Ipam Driver",
+          "type": "string"
+        },
+        "ipam_options": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Ipam Options",
+          "type": "object"
+        }
+      },
+      "title": "RuntimeNetworkBackendDetail",
+      "type": "object"
+    },
+    "RuntimeNetworkDriver": {
+      "description": "Observed backend network driver class for a realized network.",
+      "enum": [
+        "bridge",
+        "overlay",
+        "host",
+        "ipvlan",
+        "macvlan",
+        "none",
+        "other"
+      ],
+      "title": "RuntimeNetworkDriver",
+      "type": "string"
+    },
+    "RuntimeNetworkEndpoint": {
+      "additionalProperties": false,
+      "description": "An observed container network endpoint (per-network attachment).\n\n``network`` references a declared switch-backed infrastructure network by\nname. Per-network ``aliases``, observed ``dns_names``, and backend-generated\n``generated_dns_names`` are kept as three distinct lists; generated names\nare not stable scenario identity.",
+      "properties": {
+        "aliases": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        },
+        "backend": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkBackendDetail"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "backend_generated": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Backend Generated"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "dns_names": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dns Names",
+          "type": "array"
+        },
+        "endpoint_id": {
+          "default": "",
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "endpoint_id_stability": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkIdStability"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Endpoint Id Stability"
+        },
+        "gateway": {
+          "default": "",
+          "title": "Gateway",
+          "type": "string"
+        },
+        "generated_dns_names": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Generated Dns Names",
+          "type": "array"
+        },
+        "ip_address": {
+          "default": "",
+          "title": "Ip Address",
+          "type": "string"
+        },
+        "ip_prefix_length": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ip Prefix Length"
+        },
+        "mac_address": {
+          "default": "",
+          "title": "Mac Address",
+          "type": "string"
+        },
+        "network": {
+          "title": "Network",
+          "type": "string"
+        },
+        "network_id": {
+          "default": "",
+          "title": "Network Id",
+          "type": "string"
+        },
+        "network_id_stability": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkIdStability"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Network Id Stability"
+        }
+      },
+      "required": [
+        "network"
+      ],
+      "title": "RuntimeNetworkEndpoint",
+      "type": "object"
+    },
+    "RuntimeNetworkIdStability": {
+      "description": "Stability class for a backend-generated network or endpoint identifier.\n\nDistinct from :class:`RuntimeFilesystemStability`: filesystem stability and\nbackend-identifier stability are different concepts (ADR-025).",
+      "enum": [
+        "stable",
+        "ephemeral",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkIdStability",
+      "type": "string"
+    },
+    "RuntimeNetworkRealization": {
+      "additionalProperties": false,
+      "description": "Observed container network realization facts for a node.\n\n``hostname`` and ``domainname`` are the container's network identity facts,\nkept distinct from per-network aliases and DNS names.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domainname": {
+          "default": "",
+          "title": "Domainname",
+          "type": "string"
+        },
+        "endpoints": {
+          "items": {
+            "$ref": "#/$defs/RuntimeNetworkEndpoint"
+          },
+          "title": "Endpoints",
+          "type": "array"
+        },
+        "hostname": {
+          "default": "",
+          "title": "Hostname",
+          "type": "string"
+        },
+        "published_ports": {
+          "items": {
+            "$ref": "#/$defs/RuntimePublishedPort"
+          },
+          "title": "Published Ports",
+          "type": "array"
+        }
+      },
+      "title": "RuntimeNetworkRealization",
+      "type": "object"
     },
     "RuntimeOperationalPolicy": {
       "additionalProperties": false,
@@ -3379,6 +5447,58 @@
       "title": "RuntimeProcessRole",
       "type": "string"
     },
+    "RuntimePublishedPort": {
+      "additionalProperties": false,
+      "description": "An observed host-published port binding for a container endpoint.\n\nHost IP, host port, container port, and protocol are kept distinct; this is\na runtime/host exposure fact, not a node service declaration (ADR-025).",
+      "properties": {
+        "container_port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Container Port"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "host_ip": {
+          "default": "",
+          "title": "Host Ip",
+          "type": "string"
+        },
+        "host_port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Host Port"
+        },
+        "protocol": {
+          "default": "tcp",
+          "title": "Protocol",
+          "type": "string"
+        }
+      },
+      "required": [
+        "container_port"
+      ],
+      "title": "RuntimePublishedPort",
+      "type": "object"
+    },
     "RuntimeResourceLimits": {
       "additionalProperties": false,
       "description": "Observed runtime/cgroup resource limits for a node.",
@@ -3479,6 +5599,115 @@
       ],
       "title": "RuntimeRestartPolicy",
       "type": "string"
+    },
+    "RuntimeSensitivityClassification": {
+      "description": "Sensitivity/redaction class for observed runtime facts.",
+      "enum": [
+        "plain",
+        "redacted",
+        "secret_fixture",
+        "operator_secret",
+        "unknown"
+      ],
+      "title": "RuntimeSensitivityClassification",
+      "type": "string"
+    },
+    "RuntimeSudoPrincipalKind": {
+      "description": "Kind of principal a sudo rule grants privilege to.",
+      "enum": [
+        "user",
+        "group",
+        "other"
+      ],
+      "title": "RuntimeSudoPrincipalKind",
+      "type": "string"
+    },
+    "RuntimeSudoRule": {
+      "additionalProperties": false,
+      "description": "An observed sudo/sudoers privilege grant.\n\nThe portable model is the structured principal/run-as/command scope.\n``raw_entry`` may carry the original sudoers line only as optional\ndescriptive evidence; ``command_redacted`` marks a rule whose command\nscope was withheld because it carried sensitive arguments.",
+      "properties": {
+        "command_redacted": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": false,
+          "title": "Command Redacted"
+        },
+        "commands": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Commands",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "host_scope": {
+          "default": "",
+          "title": "Host Scope",
+          "type": "string"
+        },
+        "nopasswd": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": false,
+          "title": "Nopasswd"
+        },
+        "principal": {
+          "title": "Principal",
+          "type": "string"
+        },
+        "principal_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSudoPrincipalKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "user",
+          "title": "Principal Kind"
+        },
+        "raw_entry": {
+          "default": "",
+          "title": "Raw Entry",
+          "type": "string"
+        },
+        "run_as_groups": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Run As Groups",
+          "type": "array"
+        },
+        "run_as_users": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Run As Users",
+          "type": "array"
+        }
+      },
+      "required": [
+        "principal"
+      ],
+      "title": "RuntimeSudoRule",
+      "type": "object"
     },
     "Script": {
       "additionalProperties": false,
@@ -3625,6 +5854,17 @@
       "additionalProperties": false,
       "description": "Provider-neutral artifact reference.\n\nShorthand: ``source: \"package-name\"`` (version defaults to ``\"*\"``).\nLonghand: ``source: {name: \"package-name\", version: \"1.2.3\"}``.",
       "properties": {
+        "build": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContainerImageBuildProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "name": {
           "title": "Name",
           "type": "string"

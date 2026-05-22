@@ -90,6 +90,32 @@ nodes:
         - target: /shuffle-database
           source: aptl_shuffle_data
           source_kind: volume
+          filesystem_type: ext4
+          read_only: false
+          options: [rw, nosuid]
+          propagation: rprivate
+          stability: volume_backed
+          backend_generated: true
+      filesystem_inventory:
+        - path: /app/app.py
+          entry_type: file
+          owner_user: root
+          owner_group: root
+          uid: 0
+          gid: 0
+          mode: "0644"                 # quote to preserve leading zeroes
+          size: 4096
+          content_digest: 4f8c2d
+          digest_algorithm: sha256
+          source_path: src/webapp/app.py
+          provenance: python-package
+          stability: stable
+          sensitivity: plain
+        - path: /var/log/gunicorn/access.log
+          entry_type: file
+          mode: "0600"
+          stability: log
+          sensitivity: operator_secret
       local_control_interfaces:
         - path: /run/docker.sock
           kind: unix_socket
@@ -127,6 +153,48 @@ nodes:
           memory: 512 MiB
           cpu: 0.5
           pids: 128
+      container:
+        entrypoint: [/entrypoint.sh]
+        command: [gunicorn, app:app]
+        log_driver: json-file
+        log_options:
+          max-size: 10m
+          max-file: "3"
+        namespaces:
+          cgroup: private
+          ipc: private
+          pid: private
+          userns: host
+          uts: private
+        privileged: false
+        read_only_rootfs: false
+        publish_all_ports: false
+        autoremove: false
+        shm_size: 64 MiB
+        masked_paths: [/proc/acpi, /proc/kcore]
+        read_only_paths: [/proc/sys]
+        cgroup_parent: /docker
+        runtime_name: runc
+        devices:
+          - host_path: /dev/null
+            container_path: /dev/null
+            permissions: rwm
+        device_cgroup_rules: [c 1:3 rwm]
+        extra_hosts:
+          - hostname: wazuh-manager
+            address: 172.20.0.10
+        dns: [8.8.8.8]
+        dns_options: [ndots:0]
+        dns_search: [techvault.local]
+        group_add: [adm, "101"]
+      health:
+        status: healthy
+        failing_streak: 0
+        log:
+          - start: "2026-05-20T12:00:00Z"
+            end: "2026-05-20T12:00:01Z"
+            exit_code: 0
+            output: ok
       packages:
         - manager: apk
           name: musl
@@ -144,6 +212,105 @@ nodes:
           scanner: trivy
           image_digest: sha256:abc123
           scan_time: "2026-05-20T12:00:00Z"
+      local_identity:                   # observed /etc/passwd, /etc/group, sudo facts
+        users:
+          - username: www-data
+            uid: 33
+            primary_gid: 33
+            primary_group: www-data
+            home: /var/www
+            shell: /usr/sbin/nologin
+            no_login: true
+            provenance: image
+            stability: stable
+        groups:
+          - name: www-data
+            gid: 33
+            members: [www-data]
+            provenance: image
+        sudo_rules:
+          - principal: wazuh
+            principal_kind: user
+            run_as_users: [root]
+            commands: ["/usr/bin/systemctl restart wazuh-agent"]
+            nopasswd: true
+      network:                          # observed container network realization
+        hostname: techvault-webapp
+        domainname: techvault.local
+        endpoints:
+          - network: aptl-dmz           # references a switch-backed infrastructure entry
+            network_id: 7f2c1ad4e9b3...
+            network_id_stability: stable
+            endpoint_id: 3a9c7e0d3f5b...
+            endpoint_id_stability: ephemeral
+            backend_generated: true
+            ip_address: 172.20.0.20
+            ip_prefix_length: 24
+            gateway: 172.20.0.1
+            mac_address: 02:42:ac:14:00:14
+            aliases: [aptl-webapp, webapp]
+            dns_names: [aptl-webapp, webapp]
+            generated_dns_names: [3a9c7e0d3f5b]
+            backend:
+              driver: bridge
+              ipam_driver: default
+              driver_options: {com.docker.network.bridge.name: br-aptl-dmz}
+        published_ports:
+          - container_port: 8080
+            protocol: tcp
+            host_ip: 0.0.0.0
+            host_port: 8080
+      applications:                     # observed HTTP route/API/UI surface
+        - application_id: techvault-webapp
+          service: techvault-http       # owning same-node Node.services[].name
+          protocol: http
+          framework: flask
+          base_path: /
+          routes:
+            - route_id: login
+              path: /login
+              methods: [GET, POST]
+              auth_required: false
+              session_required: false
+              auth_scheme: form_login
+              parameters:
+                - name: username
+                  location: form
+                  required: true
+                - name: password
+                  location: form
+                  required: true
+              responses:
+                - status_code: 200
+                  content_type: text/html
+              templates: [/app/templates/login.html]
+              static_assets: [/app/static/style.css]
+              redirects:
+                - target: /dashboard
+                  status_code: 302
+                  condition: valid credentials
+            - route_id: upload
+              path: /files/upload
+              methods: [POST]
+              auth_required: true
+              session_required: true
+              parameters:
+                - name: document
+                  location: uploaded_file
+                  required: true
+              vulnerability_refs: [unrestricted-upload]   # → top-level vulnerabilities
+            - route_id: diagnostics
+              path: /debug/info
+              methods: [GET]
+              exposed_fields:
+                - name: build_token
+                  sensitivity: secret_fixture
+                  value: fixture-token-1234
+              disclosures:
+                - trigger: any request
+                  status_code: 200
+                  disclosure: internal package versions and host paths
+                  sensitivity: plain
     asset_value:                        # CIA triad (from CybORG)
       confidentiality: high
       integrity: medium
@@ -162,17 +329,101 @@ Concrete service bindings on a VM must be unique by `protocol` + `port`. Reusing
 
 `runtime` captures observed VM/runtime facts that are not authored deployable
 features or exposed network services. Mounts describe realized filesystem
-attachments; `local_control_interfaces` describe path-local control APIs such
-as Unix sockets; `process` records primary execution identity; `processes`
-records a supervised or load-bearing process set; `environment` records
-observed runtime environment variables with provenance and redaction
-classification; `linux_capabilities` records container/Linux capability policy;
-`operational_policy` records restart policy and observed resource limits;
-`packages` and `dependency_manifests` record runtime inventory; and
-`package_vulnerabilities` records scanner-derived CVE/advisory findings tied
-to an image digest and scan time. These findings are separate from the
-top-level `vulnerabilities` section, which remains the CWE-classified scenario
-vulnerability surface.
+attachments, including filesystem type, propagation, stability, and whether a
+backend generated the source. `filesystem_inventory` records runtime-observed
+filesystem entries with absolute path, entry type, ownership, UID/GID, mode,
+size, digest algorithm/value pairs, source-package path, provenance, stability,
+and sensitivity classification. `local_control_interfaces` describe path-local
+control APIs such as Unix sockets; `process` records primary execution
+identity; `processes` records a supervised or load-bearing process set;
+`environment` records observed runtime environment variables with provenance
+and redaction classification; `linux_capabilities` records container/Linux
+capability policy; `operational_policy` records restart policy and observed
+resource limits; `container` records observed host/container configuration and
+namespace/security facts; `health` records observed health status and bounded
+healthcheck log facts; `packages` and `dependency_manifests` record runtime
+inventory; and `package_vulnerabilities` records scanner-derived CVE/advisory
+findings tied to an image digest and scan time. These findings are separate
+from the top-level `vulnerabilities` section, which remains the CWE-classified
+scenario vulnerability surface.
+
+`runtime.local_identity` records the observed local identity database — the
+node-scoped `/etc/passwd`, `/etc/group`, and sudo/sudoers facts. `users` carry
+`username`, `uid`, `primary_gid`, `primary_group`, `gecos`, `home`, `shell`,
+`supplemental_groups`, and the three distinct status facts `disabled`,
+`locked`, and `no_login` (a no-login shell is not the same fact as a locked
+password or a disabled account), plus `provenance` and `stability`. `groups`
+carry `name`, `gid`, and `members`. `sudo_rules` model privilege grants as
+structured `principal`/`principal_kind`, `run_as_users`/`run_as_groups`,
+`host_scope`, and a portable `commands` scope, with `nopasswd` and a
+`command_redacted` flag; an optional `raw_entry` may carry the original
+sudoers line as descriptive evidence only. This is observed inventory: it is
+distinct from the top-level `accounts` provisioning surface, and service
+accounts recorded here are not implicitly compiled into account placements
+(see [ADR-024](../../decisions/adrs/adr-024-local-identity-inventory-surface.md)).
+
+`runtime.network` records the observed container network realization — the
+facts visible from inside the realized range or by a harness, distinct from the
+`infrastructure` topology declaration. `hostname` and `domainname` are the
+container's network identity. Each `endpoints` entry is a per-network
+attachment: `network` references a declared switch-backed infrastructure entry,
+and the entry carries the realized `ip_address`, `ip_prefix_length`, `gateway`,
+and `mac_address`; backend `network_id`/`endpoint_id` each with an explicit
+`stable`/`ephemeral` stability classification; a `backend_generated` flag; and
+three distinct name lists — stable per-network `aliases`, observed `dns_names`,
+and backend-`generated_dns_names` (such as a container-ID-prefixed DNS name,
+which is not stable scenario identity). The optional `backend` block records
+observable network `driver` and `ipam_driver` plus bounded backend-native
+`driver_options`/`ipam_options` maps — not raw engine inspect payloads.
+`published_ports` records host-published bindings, keeping container port, host
+IP, host port, and protocol distinct; this is host exposure observed at
+runtime, separate from the authored `services` declaration and image-default
+`source.build.config.exposed_ports`
+(see [ADR-025](../../decisions/adrs/adr-025-container-network-realization-surface.md)).
+
+`runtime.applications` records the participant-observable HTTP application
+route/API/UI surface — what an adversary, defender, agent, scanner, or evaluator
+can observe of the web application itself, distinct from the transport-level
+`services` binding and from the host exposure in `runtime.network`. Each entry
+is a `RuntimeApplicationSurface` with a stable `application_id`, an optional
+`service` referencing the owning same-node `Node.services[].name` (bare name or
+the qualified `nodes.<node>.services.<name>` form), a `protocol`/`framework`
+classification, and an optional `base_path`. Each `routes` entry carries a
+stable `route_id` (the route `path` is data, never a mapping key, and may carry
+path variables and be shared across methods), normalized HTTP `methods`,
+observable `auth_required`/`session_required`/`auth_scheme`, typed `parameters`
+located by `path`/`query`/`header`/`cookie`/`form`/`json_body`/`uploaded_file`,
+`responses` with status code and content type, `templates`/`static_assets`
+associations resolving to the node's observed file inventory,
+`vulnerability_refs` pointing at top-level `vulnerabilities` for route-specific
+weakness placement, `redirects`, observable error/disclosure behavior in
+`disclosures`, and `exposed_fields` for route-visible fixture secrets or
+intentionally exposed diagnostic fields classified with the shared runtime
+sensitivity vocabulary — `redacted` and `operator_secret` fields omit their raw
+value (see
+[ADR-026](../../decisions/adrs/adr-026-application-http-surface-inventory.md)).
+
+`source` identifies the node's artifact by provider-neutral `name` and
+`version`. When that artifact is a custom-built container image, the optional
+`source.build` block records its observable build/provenance facts without
+making any container engine the normative deployment model. `build` captures
+the `base_image` and `base_image_digest`; the `dockerfile_path` and structured
+`instructions` (typed `instruction` kind plus tokenized `arguments` — raw
+recipe text is intentionally not stored, since `${...}` in shell/Dockerfile
+syntax would collide with SDL variable substitution); the `layers` chain with
+per-layer `digest`, `created_by`, `size`, and `empty` flag; `build_args` with a
+`value_classification` so secret build arguments are redacted rather than
+recorded; `copied_sources` mapping build-context `source_path` to in-image
+`destination_path`; `config` recording image *defaults* (entrypoint, command,
+working directory, exposed ports, native-keyed `labels`, and
+`default_environment`); `source_inputs` mapping source-package inputs to
+runtime destinations with optional checksums; and `attestation`, which records
+attestation `status` (availability) separately from `verification` (result) so
+that "no registry-visible attestation" is a distinct, falsifiable fact rather
+than an inferred verification failure. Image-default `config` facts are kept
+separate from runtime-effective facts under `runtime.container`; the same value
+may appear in both with different meanings. See
+[ADR-023](../../decisions/adrs/adr-023-container-image-build-provenance-surface.md).
 
 ---
 
@@ -523,10 +774,10 @@ must not be variables.
 This section captures the authoring-layer guarantees of ACT-601. Broader
 participant concerns — behavior semantics, visibility, trajectories,
 budgets, verifier/reward — remain owned by separate ecosystem requirements
-(ACT-602, SEM-208, …) that are still planned.
+(ACT-602, SEM-208, ...) and are not fully represented by the `agents` section.
 
-Broader participant concerns are now treated as first-class ecosystem surfaces,
-even where the current SDL syntax does not yet expose their full shape. Those
+Broader participant concerns are treated as first-class ecosystem surfaces,
+even where the current SDL syntax does not expose their full shape. Those
 concerns include:
 
 - participant-visible tool and affordance surfaces
@@ -719,7 +970,7 @@ variables:
 
 Variables are referenced as `${var_name}` in other sections. They are **not resolved at parse time** — resolution happens at instantiation.
 
-Full-value placeholders are currently supported in ordinary string fields, common scalar fields (counts, booleans, scores, timings, RAM/CPU, ports), many reference values, and selected leaf enum-backed property fields such as `accounts.*.password_strength`, `entities.*.role`, `nodes.*.os`, `nodes.*.asset_value.*`, `infrastructure.*.acls[*].action`, and `objectives.*.success.mode`. The semantic validator checks that `${var_name}` refers to a declared variable, and the repo-owned instantiation phase later substitutes concrete values before compilation/runtime planning. User-defined mapping keys and discriminant/schema-shaping enum fields such as section `type` tags still need concrete values, and placeholder keys are rejected at parse time.
+Full-value placeholders are currently supported in ordinary string fields, common scalar fields (counts, booleans, scores, timings, RAM/CPU, ports), many reference values, and selected leaf enum-backed property fields such as `accounts.*.password_strength`, `entities.*.role`, `nodes.*.os`, `nodes.*.asset_value.*`, `infrastructure.*.acls[*].action`, and `objectives.*.success.mode`. The semantic validator checks that `${var_name}` refers to a declared variable, and the repo-owned instantiation phase substitutes concrete values before compilation/runtime planning. User-defined mapping keys and discriminant/schema-shaping enum fields such as section `type` tags still need concrete values, and placeholder keys are rejected at parse time.
 
 Think of variables as parameterizing **properties of declared objects**, not the object graph itself. For example, a node's hostname, a content file's text, or a subnet CIDR may be variable-backed, while top-level identifiers like `nodes.web`, `features.nginx`, or `accounts.domain-admin` must remain literal.
 
@@ -729,7 +980,7 @@ Think of variables as parameterizing **properties of declared objects**, not the
 
 ## Scoring, Objectives, and Runtime Checks
 
-The SDL now carries both:
+The SDL carries both:
 
 - the OCR-style scoring pipeline (`conditions → metrics → evaluations → TLOs → goals`)
 - declarative objectives that bind actors, targets, windows, and success criteria

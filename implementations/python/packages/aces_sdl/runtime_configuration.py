@@ -1,6 +1,7 @@
 """Observed runtime configuration models for SDL nodes."""
 
 import re
+from collections.abc import Iterable
 from enum import Enum
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
@@ -12,95 +13,126 @@ from ._base import (
     parse_float_or_var,
     parse_int_or_var,
 )
-
-_BYTE_UNITS = {
-    "b": 1,
-    "kb": 1_000,
-    "kib": 1_024,
-    "mb": 1_000_000,
-    "mib": 1_048_576,
-    "gb": 1_000_000_000,
-    "gib": 1_073_741_824,
-    "tb": 1_000_000_000_000,
-    "tib": 1_099_511_627_776,
-}
-
-_RAM_PATTERN = re.compile(
-    r"^\s*(\d+(?:\.\d+)?)\s*(" + "|".join(_BYTE_UNITS) + r")\s*$",
-    re.IGNORECASE,
+from .runtime_application import (
+    RuntimeApplicationDisclosure,
+    RuntimeApplicationExposedField,
+    RuntimeApplicationParameter,
+    RuntimeApplicationParameterLocation,
+    RuntimeApplicationProtocol,
+    RuntimeApplicationRedirect,
+    RuntimeApplicationResponse,
+    RuntimeApplicationRoute,
+    RuntimeApplicationSurface,
 )
-_RAM_MIN_BYTES_ERROR = "RAM must be >= 1 byte"
-_WINDOWS_NAMED_PIPE_PREFIXES = ("\\\\.\\pipe\\", "\\\\?\\pipe\\")
+from .runtime_container import (
+    RuntimeContainerConfiguration,
+    RuntimeDeviceMapping,
+    RuntimeExtraHost,
+    RuntimeHealthcheckLog,
+    RuntimeHealthObservation,
+    RuntimeHealthStatus,
+    RuntimeNamespaceConfiguration,
+)
+from .runtime_filesystem import (
+    RuntimeFilesystemEntry,
+    RuntimeFilesystemEntryType,
+    RuntimeFilesystemStability,
+    RuntimeMountPropagation,
+    RuntimeSensitivityClassification,
+)
+from .runtime_identity import (
+    RuntimeIdentityProvenance,
+    RuntimeLocalGroup,
+    RuntimeLocalIdentityInventory,
+    RuntimeLocalUser,
+    RuntimeSudoPrincipalKind,
+    RuntimeSudoRule,
+)
+from .runtime_network import (
+    RuntimeNetworkBackendDetail,
+    RuntimeNetworkDriver,
+    RuntimeNetworkEndpoint,
+    RuntimeNetworkIdStability,
+    RuntimeNetworkRealization,
+    RuntimePublishedPort,
+)
+from .runtime_values import (
+    absolute_path_or_var as _absolute_path_or_var,
+)
+from .runtime_values import (
+    coerce_string_list as _coerce_string_list,
+)
+from .runtime_values import (
+    control_interface_path_or_var as _control_interface_path_or_var,
+)
+from .runtime_values import (
+    is_windows_named_pipe as _is_windows_named_pipe,
+)
+from .runtime_values import (
+    parse_optional_bool_or_var as _parse_optional_bool_or_var,
+)
+from .runtime_values import (
+    parse_ram,
+)
+from .runtime_values import (
+    parse_runtime_enum_or_var as _parse_runtime_enum_or_var,
+)
 
-
-def _absolute_path_or_var(value: str, *, field_name: str) -> str:
-    if is_variable_ref(value):
-        return value
-    if not isinstance(value, str):
-        raise ValueError(f"{field_name} must be a string")
-    if not value.startswith("/"):
-        raise ValueError(f"{field_name} must be an absolute path")
-    return value
-
-
-def _is_windows_named_pipe(value: str) -> bool:
-    return isinstance(value, str) and value.lower().startswith(_WINDOWS_NAMED_PIPE_PREFIXES)
-
-
-def _control_interface_path_or_var(value: str, *, field_name: str) -> str:
-    if is_variable_ref(value):
-        return value
-    if not isinstance(value, str):
-        raise ValueError(f"{field_name} must be a string")
-    if value.startswith("/") or _is_windows_named_pipe(value):
-        return value
-    raise ValueError(f"{field_name} must be an absolute path or Windows named pipe")
-
-
-def _parse_runtime_enum_or_var(value, enum_cls: type[Enum], *, field_name: str):
-    if value is None or is_variable_ref(value):
-        return value
-    if isinstance(value, enum_cls):
-        return value
-    if isinstance(value, str):
-        normalized = value.lower().replace("-", "_")
-        try:
-            return enum_cls(normalized)
-        except ValueError as e:
-            allowed = ", ".join(member.value for member in enum_cls)
-            raise ValueError(f"{field_name} must be one of: {allowed}") from e
-    raise ValueError(f"{field_name} must be a string")
-
-
-def parse_ram(value: str | int) -> int | str:
-    """Parse a human-readable RAM string to bytes.
-
-    Accepts bare integers (treated as bytes) or strings like
-    ``"4 GiB"``, ``"2048 MiB"``, ``"512mb"``.
-    """
-    if is_variable_ref(value):
-        return value
-    if isinstance(value, bool):
-        raise ValueError("RAM must be a positive integer or human-readable size")
-    if isinstance(value, int):
-        if value < 1:
-            raise ValueError(_RAM_MIN_BYTES_ERROR)
-        return value
-    value_str = str(value).strip()
-    if value_str.isdigit():
-        parsed = int(value_str)
-        if parsed < 1:
-            raise ValueError(_RAM_MIN_BYTES_ERROR)
-        return parsed
-    match = _RAM_PATTERN.match(value_str)
-    if not match:
-        raise ValueError(f"Invalid RAM value: {value_str!r}. Use a number with a unit (e.g., '4 GiB', '2048 MiB').")
-    amount = float(match.group(1))
-    unit = match.group(2).lower()
-    parsed = int(amount * _BYTE_UNITS[unit])
-    if parsed < 1:
-        raise ValueError(_RAM_MIN_BYTES_ERROR)
-    return parsed
+__all__ = [
+    "RuntimeApplicationDisclosure",
+    "RuntimeApplicationExposedField",
+    "RuntimeApplicationParameter",
+    "RuntimeApplicationParameterLocation",
+    "RuntimeApplicationProtocol",
+    "RuntimeApplicationRedirect",
+    "RuntimeApplicationResponse",
+    "RuntimeApplicationRoute",
+    "RuntimeApplicationSurface",
+    "RuntimeCapabilityPolicy",
+    "RuntimeConfiguration",
+    "RuntimeContainerConfiguration",
+    "RuntimeControlInterface",
+    "RuntimeControlInterfaceAccess",
+    "RuntimeControlInterfaceKind",
+    "RuntimeDependencyManifest",
+    "RuntimeDeviceMapping",
+    "RuntimeEnvironmentValueClassification",
+    "RuntimeEnvironmentVariable",
+    "RuntimeEnvironmentVariableProvenance",
+    "RuntimeExtraHost",
+    "RuntimeFilesystemEntry",
+    "RuntimeFilesystemEntryType",
+    "RuntimeFilesystemStability",
+    "RuntimeHealthObservation",
+    "RuntimeHealthStatus",
+    "RuntimeHealthcheckLog",
+    "RuntimeIdentityProvenance",
+    "RuntimeLocalGroup",
+    "RuntimeLocalIdentityInventory",
+    "RuntimeLocalUser",
+    "RuntimeMount",
+    "RuntimeMountPropagation",
+    "RuntimeMountSourceKind",
+    "RuntimeNamespaceConfiguration",
+    "RuntimeNetworkBackendDetail",
+    "RuntimeNetworkDriver",
+    "RuntimeNetworkEndpoint",
+    "RuntimeNetworkIdStability",
+    "RuntimeNetworkRealization",
+    "RuntimeOperationalPolicy",
+    "RuntimePackage",
+    "RuntimePackageVulnerabilityFinding",
+    "RuntimePackageVulnerabilitySeverity",
+    "RuntimeProcessIdentity",
+    "RuntimeProcessRole",
+    "RuntimePublishedPort",
+    "RuntimeResourceLimits",
+    "RuntimeRestartPolicy",
+    "RuntimeSensitivityClassification",
+    "RuntimeSudoPrincipalKind",
+    "RuntimeSudoRule",
+    "parse_ram",
+]
 
 
 class RuntimeMountSourceKind(str, Enum):
@@ -183,14 +215,6 @@ class RuntimeRestartPolicy(str, Enum):
     OTHER = "other"
 
 
-def _coerce_string_list(value):
-    if value is None:
-        return []
-    if isinstance(value, str):
-        return [value]
-    return value
-
-
 def _normalize_capability_name(value: str) -> str:
     if is_variable_ref(value):
         return value
@@ -208,8 +232,12 @@ class RuntimeMount(SDLModel):
     target: str
     source: str = ""
     source_kind: RuntimeMountSourceKind | str = RuntimeMountSourceKind.OTHER
+    filesystem_type: str = ""
     read_only: bool | str = False
     options: list[str] = Field(default_factory=list)
+    propagation: RuntimeMountPropagation | str = RuntimeMountPropagation.UNKNOWN
+    stability: RuntimeFilesystemStability | str = RuntimeFilesystemStability.UNKNOWN
+    backend_generated: bool | str | None = None
     description: str = ""
 
     @field_validator("target")
@@ -226,6 +254,21 @@ class RuntimeMount(SDLModel):
     @classmethod
     def parse_read_only(cls, v: bool | str) -> bool | str:
         return parse_bool_or_var(v, field_name="read_only")
+
+    @field_validator("propagation", mode="before")
+    @classmethod
+    def normalize_propagation(cls, v: RuntimeMountPropagation | str) -> RuntimeMountPropagation | str:
+        return _parse_runtime_enum_or_var(v, RuntimeMountPropagation, field_name="propagation")
+
+    @field_validator("stability", mode="before")
+    @classmethod
+    def normalize_stability(cls, v: RuntimeFilesystemStability | str) -> RuntimeFilesystemStability | str:
+        return _parse_runtime_enum_or_var(v, RuntimeFilesystemStability, field_name="stability")
+
+    @field_validator("backend_generated", mode="before")
+    @classmethod
+    def parse_backend_generated(cls, v: bool | str | None) -> bool | str | None:
+        return _parse_optional_bool_or_var(v, field_name="backend_generated")
 
 
 class RuntimeControlInterface(SDLModel):
@@ -295,11 +338,7 @@ class RuntimeProcessIdentity(SDLModel):
     @field_validator("command", mode="before")
     @classmethod
     def normalize_command(cls, v: str | list[str] | None) -> list[str]:
-        if v is None:
-            return []
-        if isinstance(v, str):
-            return [v]
-        return v
+        return _coerce_string_list(v)
 
     @field_validator("command_redacted", mode="before")
     @classmethod
@@ -482,37 +521,48 @@ class RuntimePackageVulnerabilityFinding(SDLModel):
         return _parse_runtime_enum_or_var(v, RuntimePackageVulnerabilitySeverity, field_name="severity")
 
 
+def _reject_duplicate_keys(items: Iterable[object], *, attr: str, label: str) -> None:
+    """Raise ``ValueError`` on the first repeated key among ``items``.
+
+    Keys read off ``attr`` that are ``None`` or empty strings are not comparable
+    identities and are skipped (e.g. an unnamed process or an absent pid).
+    """
+    seen: set[object] = set()
+    for item in items:
+        key = getattr(item, attr)
+        if key is None or key == "":
+            continue
+        if key in seen:
+            raise ValueError(f"Duplicate runtime {label} '{key}'")
+        seen.add(key)
+
+
 class RuntimeConfiguration(SDLModel):
     """Observed runtime configuration facts attached to a VM node."""
 
     mounts: list[RuntimeMount] = Field(default_factory=list)
+    filesystem_inventory: list[RuntimeFilesystemEntry] = Field(default_factory=list)
     local_control_interfaces: list[RuntimeControlInterface] = Field(default_factory=list)
     process: RuntimeProcessIdentity | None = None
     processes: list[RuntimeProcessIdentity] = Field(default_factory=list)
     environment: list[RuntimeEnvironmentVariable] = Field(default_factory=list)
     linux_capabilities: RuntimeCapabilityPolicy | None = None
     operational_policy: RuntimeOperationalPolicy | None = None
+    container: RuntimeContainerConfiguration | None = None
+    health: RuntimeHealthObservation | None = None
+    local_identity: RuntimeLocalIdentityInventory | None = None
+    network: RuntimeNetworkRealization | None = None
+    applications: list[RuntimeApplicationSurface] = Field(default_factory=list)
     packages: list[RuntimePackage] = Field(default_factory=list)
     dependency_manifests: list[RuntimeDependencyManifest] = Field(default_factory=list)
     package_vulnerabilities: list[RuntimePackageVulnerabilityFinding] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_unique_runtime_entries(self) -> "RuntimeConfiguration":
-        seen_env_names: set[str] = set()
-        for variable in self.environment:
-            if variable.name in seen_env_names:
-                raise ValueError(f"Duplicate runtime environment variable '{variable.name}'")
-            seen_env_names.add(variable.name)
-
-        seen_process_names: set[str] = set()
-        seen_process_pids: set[int | str] = set()
-        for process in self.processes:
-            if process.name:
-                if process.name in seen_process_names:
-                    raise ValueError(f"Duplicate runtime process name '{process.name}'")
-                seen_process_names.add(process.name)
-            if process.pid is not None:
-                if process.pid in seen_process_pids:
-                    raise ValueError(f"Duplicate runtime process pid '{process.pid}'")
-                seen_process_pids.add(process.pid)
+        _reject_duplicate_keys(self.environment, attr="name", label="environment variable")
+        _reject_duplicate_keys(self.mounts, attr="target", label="mount target")
+        _reject_duplicate_keys(self.filesystem_inventory, attr="path", label="filesystem path")
+        _reject_duplicate_keys(self.processes, attr="name", label="process name")
+        _reject_duplicate_keys(self.processes, attr="pid", label="process pid")
+        _reject_duplicate_keys(self.applications, attr="application_id", label="application_id")
         return self

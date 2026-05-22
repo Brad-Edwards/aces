@@ -48,13 +48,39 @@ becoming a validator-only interpretation of the SDL.
 Pydantic structural validation also enforces model-local node rules before
 these semantic passes run. Switch nodes reject VM-only fields, including
 `runtime`. Runtime mount and dependency-manifest paths must be absolute paths
-or variable references. Runtime local-control interface paths and bind sources
-must be absolute paths, Windows named pipe endpoints, or variable references;
-Windows named pipe endpoints require `kind: named_pipe`.
+or variable references. Runtime filesystem inventory paths, container masked
+paths, container read-only paths, and device host/container paths must also be
+absolute runtime paths or variable references. Runtime local-control interface
+paths and bind sources must be absolute paths, Windows named pipe endpoints, or
+variable references; Windows named pipe endpoints require `kind: named_pipe`.
+Runtime filesystem inventory UID/GID and size fields are non-negative, mode is
+stored as octal permission bits, and content digests must carry both the digest
+algorithm and value. Runtime healthcheck entries marked as redacted must omit
+raw output.
+
+The optional `runtime.local_identity` inventory carries its own model-local
+rules. Local user `username` and local group `name` must be non-empty; user
+`uid`/`primary_gid` and group `gid` are non-negative; user `home` and `shell`,
+when set, must be absolute paths or variable references. Local users are unique
+by `username`, local groups are unique by both `name` and `gid`, and sudo rules
+are unique by principal plus command scope. A sudo rule with
+`command_redacted: true` must omit its `commands` list, keeping a withheld
+command scope distinct from a genuinely empty one.
+
+The optional `source.build` container image provenance block carries its own
+model-local rules. Build-argument and image-default-environment names must be
+non-empty and free of `=`, and values classified as redacted must omit the raw
+value. Copied-source and source-input destination paths, and image-config
+working directories, must be absolute paths or variable references. Source-input
+checksums must carry both the checksum and its algorithm. Build-argument names
+and source-input identifiers must be unique within a build block, and
+image-default environment names must be unique within an image config. An
+attestation with `status: absent` cannot also report `verification: verified`,
+keeping "no registry-visible attestation" distinct from a failed verification.
 
 When a field contains an unresolved `${var}` placeholder, reference-oriented
 passes treat it as deferred rather than as a broken concrete reference. The
-validator still does not substitute values; the later repo-owned instantiation
+validator still does not substitute values; the repo-owned instantiation
 phase performs substitution, type-checking, and concrete revalidation before
 runtime compilation.
 
@@ -70,7 +96,12 @@ terminal participant-episode history for the same participant and episode.
 This also means the validator only enforces what the current SDL syntax can
 actually express. Node `runtime` metadata covers observed VM configuration
 facts such as mounts, path-local control interfaces, process identity, runtime
+filesystem inventory, container host/security configuration, health observations,
 package inventory, dependency manifests, and scanner-derived package findings.
+The `source.build` block covers observed container image build provenance:
+base image and digest, layer chain, structured build-recipe instructions, build
+arguments, copied sources, image-default configuration, source-input mapping,
+and attestation status.
 Broader ecosystem concerns such as participant-implementation manifests,
 decision-surface exposure policy contracts, augmentation disclosure, and full
 evidence-capture contract surfaces are separate validation domains.
@@ -104,14 +135,14 @@ but the important semantics live here and in the runtime architecture: which
 steps are reachable, which joins are legal, and which prior step states are
 knowable before a predicate executes.
 
-Objective windows are now the clearest current `FM2` example. Their authoring
+Objective windows are the clearest current `FM2` example. Their authoring
 surface is still simple YAML, but the semantic meaning comes from one shared
 analysis pass that resolves normalized references, checks story/script/event and
 workflow/step consistency, derives refresh semantics, and feeds both validator
 errors and compiled runtime forms.
 
-The same pattern now applies conceptually to newer participant and
-observability concerns: author-facing syntax, shared semantics, runtime
+The same pattern applies conceptually to participant and observability
+concerns: author-facing syntax, shared semantics, runtime
 contracts, and provenance must stay aligned, but they do not all collapse into
 the current validator surface.
 

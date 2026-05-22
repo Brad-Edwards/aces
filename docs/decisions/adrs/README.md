@@ -48,3 +48,7 @@ Each ADR includes:
 | [020](adr-020-declarative-participant-framing-boundaries.md) | Declarative Participant Framing Boundaries | proposed | 2026-05-18 |
 | [021](adr-021-falsification-first-claim-evidence-gate.md) | Falsification-First Claim Evidence Gate | proposed | 2026-05-18 |
 | [022](adr-022-participant-behavior-and-interaction-semantics.md) | Participant Behavior and Interaction Semantics | proposed | 2026-05-18 |
+| [023](adr-023-container-image-build-provenance-surface.md) | Container Image Build Provenance Surface | proposed | 2026-05-21 |
+| [024](adr-024-local-identity-inventory-surface.md) | Local Identity Inventory Surface | accepted | 2026-05-21 |
+| [025](adr-025-container-network-realization-surface.md) | Container Network Realization Surface | accepted | 2026-05-21 |
+| [026](adr-026-application-http-surface-inventory.md) | Application HTTP Surface Inventory | accepted | 2026-05-22 |

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from aces.core.sdl import instantiate_scenario
 from aces.core.sdl._errors import SDLParseError
 from aces.core.sdl.nodes import NodeType
 from aces.core.sdl.parser import parse_sdl, parse_sdl_file
@@ -232,6 +233,32 @@ nodes:
         - target: /shuffle-database
           source: aptl_shuffle_data
           source-kind: volume
+          filesystem-type: ext4
+          read-only: false
+          options: [rw, nosuid]
+          propagation: rprivate
+          stability: volume-backed
+          backend-generated: true
+      filesystem-inventory:
+        - path: /app/app.py
+          entry-type: file
+          owner-user: root
+          owner-group: root
+          uid: "0"
+          gid: "0"
+          mode: "0644"
+          size: "4096"
+          content-digest: 4f8c2d
+          digest-algorithm: sha256
+          source-path: src/webapp/app.py
+          provenance: python-package
+          stability: stable
+          sensitivity: plain
+        - path: /var/log/gunicorn/access.log
+          entry-type: file
+          mode: "0600"
+          stability: log
+          sensitivity: operator-secret
       local-control-interfaces:
         - path: /run/docker.sock
           kind: unix-socket
@@ -269,6 +296,48 @@ nodes:
           memory: 512 MiB
           cpu: 0.5
           pids: 128
+      container:
+        entrypoint: [/entrypoint.sh]
+        command: [gunicorn, app:app]
+        log-driver: json-file
+        log-options:
+          max-size: 10m
+          max-file: "3"
+        namespaces:
+          cgroup: private
+          ipc: private
+          pid: private
+          userns: host
+          uts: private
+        privileged: false
+        read-only-rootfs: false
+        publish-all-ports: false
+        autoremove: false
+        shm-size: 64 MiB
+        masked-paths: [/proc/acpi, /proc/kcore]
+        read-only-paths: /proc/sys
+        cgroup-parent: /docker
+        runtime-name: runc
+        devices:
+          - host-path: /dev/null
+            container-path: /dev/null
+            permissions: rwm
+        device-cgroup-rules: c 1:3 rwm
+        extra-hosts:
+          - hostname: wazuh-manager
+            address: 172.20.0.10
+        dns: [8.8.8.8]
+        dns-options: ndots:0
+        dns-search: [techvault.local]
+        group-add: [adm, "101"]
+      health:
+        status: healthy
+        failing-streak: "0"
+        log:
+          - start: "2026-05-20T12:00:00Z"
+            end: "2026-05-20T12:00:01Z"
+            exit-code: "0"
+            output: ok
       packages:
         - manager: apk
           name: musl
@@ -294,6 +363,22 @@ nodes:
         assert scenario.vulnerabilities == {}
         assert node.runtime is not None
         assert node.runtime.mounts[0].target == "/shuffle-database"
+        assert node.runtime.mounts[0].filesystem_type == "ext4"
+        assert node.runtime.mounts[0].propagation == "rprivate"
+        assert node.runtime.mounts[0].stability == "volume_backed"
+        assert node.runtime.mounts[0].backend_generated is True
+        assert node.runtime.filesystem_inventory[0].path == "/app/app.py"
+        assert node.runtime.filesystem_inventory[0].entry_type == "file"
+        assert node.runtime.filesystem_inventory[0].uid == 0
+        assert node.runtime.filesystem_inventory[0].gid == 0
+        assert node.runtime.filesystem_inventory[0].mode == "0644"
+        assert node.runtime.filesystem_inventory[0].size == 4096
+        assert node.runtime.filesystem_inventory[0].digest_algorithm == "sha256"
+        assert node.runtime.filesystem_inventory[0].content_digest == "4f8c2d"
+        assert node.runtime.filesystem_inventory[0].source_path == "src/webapp/app.py"
+        assert node.runtime.filesystem_inventory[0].stability == "stable"
+        assert node.runtime.filesystem_inventory[1].stability == "log"
+        assert node.runtime.filesystem_inventory[1].sensitivity == "operator_secret"
         assert node.runtime.local_control_interfaces[0].path == "/run/docker.sock"
         assert node.runtime.process is not None
         assert node.runtime.process.command == ["./shufflebackend"]
@@ -308,6 +393,24 @@ nodes:
         assert node.runtime.operational_policy.resource_limits.memory == 512 * 1048576
         assert node.runtime.operational_policy.resource_limits.cpu == 0.5
         assert node.runtime.operational_policy.resource_limits.pids == 128
+        assert node.runtime.container is not None
+        assert node.runtime.container.entrypoint == ["/entrypoint.sh"]
+        assert node.runtime.container.command == ["gunicorn", "app:app"]
+        assert node.runtime.container.log_driver == "json-file"
+        assert node.runtime.container.log_options == {"max-size": "10m", "max-file": "3"}
+        assert node.runtime.container.namespaces.userns == "host"
+        assert node.runtime.container.shm_size == 64 * 1048576
+        assert node.runtime.container.masked_paths == ["/proc/acpi", "/proc/kcore"]
+        assert node.runtime.container.read_only_paths == ["/proc/sys"]
+        assert node.runtime.container.devices[0].container_path == "/dev/null"
+        assert node.runtime.container.device_cgroup_rules == ["c 1:3 rwm"]
+        assert node.runtime.container.extra_hosts[0].hostname == "wazuh-manager"
+        assert node.runtime.container.dns_options == ["ndots:0"]
+        assert node.runtime.container.group_add == ["adm", "101"]
+        assert node.runtime.health is not None
+        assert node.runtime.health.status == "healthy"
+        assert node.runtime.health.failing_streak == 0
+        assert node.runtime.health.log[0].exit_code == 0
         assert node.runtime.packages[0].manager == "apk"
         assert node.runtime.packages[0].name == "musl"
         assert node.runtime.packages[0].version == "1.2.4-r2"
@@ -322,6 +425,278 @@ nodes:
         assert node.runtime.package_vulnerabilities[0].scanner == "trivy"
         assert node.runtime.package_vulnerabilities[0].image_digest == "sha256:abc123"
         assert node.runtime.package_vulnerabilities[0].scan_time == "2026-05-20T12:00:00Z"
+
+    def test_runtime_local_identity_inventory_parses_with_kebab_keys(self):
+        sdl = """
+name: techvault-identity-inventory
+nodes:
+  techvault-webapp:
+    type: vm
+    os: linux
+    runtime:
+      local-identity:
+        description: getent passwd/group capture
+        users:
+          - username: root
+            uid: 0
+            primary-gid: 0
+            primary-group: root
+            gecos: root
+            home: /root
+            shell: /bin/bash
+            provenance: image
+            stability: stable
+          - username: www-data
+            uid: 33
+            primary-gid: 33
+            primary-group: www-data
+            home: /var/www
+            shell: /usr/sbin/nologin
+            supplemental-groups: [wazuh]
+            no-login: true
+            provenance: package
+        groups:
+          - name: root
+            gid: 0
+            members: [root]
+          - name: wazuh
+            gid: 101
+            members: [www-data]
+        sudo-rules:
+          - principal: operator
+            principal-kind: user
+            run-as-users: [root]
+            commands: ["/usr/bin/systemctl restart gunicorn"]
+            nopasswd: true
+"""
+        scenario = parse_sdl(sdl)
+        identity = scenario.nodes["techvault-webapp"].runtime.local_identity
+        assert identity is not None
+        assert identity.description == "getent passwd/group capture"
+        assert identity.users[0].username == "root"
+        assert identity.users[0].primary_gid == 0
+        assert identity.users[0].provenance == "image"
+        assert identity.users[1].username == "www-data"
+        assert identity.users[1].no_login is True
+        assert identity.users[1].supplemental_groups == ["wazuh"]
+        assert identity.users[1].provenance == "package"
+        assert identity.groups[1].name == "wazuh"
+        assert identity.groups[1].gid == 101
+        assert identity.sudo_rules[0].principal == "operator"
+        assert identity.sudo_rules[0].run_as_users == ["root"]
+        assert identity.sudo_rules[0].commands == ["/usr/bin/systemctl restart gunicorn"]
+        assert identity.sudo_rules[0].nopasswd is True
+
+    def test_runtime_local_identity_uid_variable_substitutes_on_instantiation(self):
+        sdl = """
+name: techvault-identity-variable
+variables:
+  svc_uid:
+    type: integer
+    required: true
+nodes:
+  techvault-webapp:
+    type: vm
+    os: linux
+    runtime:
+      local-identity:
+        users:
+          - username: wazuh
+            uid: ${svc_uid}
+            home: /var/ossec
+            shell: /usr/sbin/nologin
+            no-login: true
+"""
+        raw = parse_sdl(sdl)
+        assert raw.nodes["techvault-webapp"].runtime.local_identity.users[0].uid == "${svc_uid}"
+        instantiated = instantiate_scenario(raw, parameters={"svc_uid": 999})
+        user = instantiated.nodes["techvault-webapp"].runtime.local_identity.users[0]
+        assert user.uid == 999
+        assert user.no_login is True
+
+    def test_runtime_network_realization_parses_with_kebab_keys(self):
+        sdl = """
+name: techvault-network-realization
+nodes:
+  aptl-dmz:
+    type: switch
+  techvault-webapp:
+    type: vm
+    os: linux
+    runtime:
+      network:
+        description: Docker network realization observed by harness inspection.
+        hostname: techvault-webapp
+        domainname: techvault.local
+        endpoints:
+          - network: aptl-dmz
+            network-id: net-a1b2c3d4e5f6
+            network-id-stability: stable
+            endpoint-id: ep-1a2b3c4d5e6f
+            endpoint-id-stability: ephemeral
+            backend-generated: true
+            ip-address: 172.20.0.20
+            ip-prefix-length: "24"
+            gateway: 172.20.0.1
+            mac-address: 02:42:ac:14:00:14
+            aliases: [aptl-webapp, webapp]
+            dns-names: [aptl-webapp, webapp]
+            generated-dns-names: [a1b2c3d4e5f6]
+            backend:
+              driver: bridge
+              ipam-driver: default
+              driver-options:
+                com.docker.network.bridge.name: br-dmz
+              ipam-options:
+                com.docker.network.driver.mtu: "1500"
+        published-ports:
+          - container-port: "8080"
+            protocol: tcp
+            host-ip: 127.0.0.1
+            host-port: "8080"
+infrastructure:
+  aptl-dmz:
+    properties:
+      cidr: 172.20.0.0/24
+      gateway: 172.20.0.1
+"""
+        scenario = parse_sdl(sdl)
+        network = scenario.nodes["techvault-webapp"].runtime.network
+        assert network is not None
+        assert network.hostname == "techvault-webapp"
+        assert network.domainname == "techvault.local"
+        endpoint = network.endpoints[0]
+        assert endpoint.network == "aptl-dmz"
+        assert endpoint.network_id == "net-a1b2c3d4e5f6"
+        assert endpoint.network_id_stability == "stable"
+        assert endpoint.endpoint_id_stability == "ephemeral"
+        assert endpoint.backend_generated is True
+        assert endpoint.ip_address == "172.20.0.20"
+        assert endpoint.ip_prefix_length == 24
+        assert endpoint.gateway == "172.20.0.1"
+        assert endpoint.mac_address == "02:42:ac:14:00:14"
+        assert endpoint.aliases == ["aptl-webapp", "webapp"]
+        assert endpoint.dns_names == ["aptl-webapp", "webapp"]
+        assert endpoint.generated_dns_names == ["a1b2c3d4e5f6"]
+        # Backend-native option keys are preserved verbatim (not key-normalized).
+        assert endpoint.backend.driver == "bridge"
+        assert endpoint.backend.driver_options == {"com.docker.network.bridge.name": "br-dmz"}
+        assert endpoint.backend.ipam_options == {"com.docker.network.driver.mtu": "1500"}
+        binding = network.published_ports[0]
+        assert binding.container_port == 8080
+        assert binding.host_ip == "127.0.0.1"
+        assert binding.host_port == 8080
+        assert binding.protocol == "tcp"
+
+    def test_runtime_network_ip_variable_substitutes_on_instantiation(self):
+        sdl = """
+name: techvault-network-variable
+variables:
+  webapp_ip:
+    type: string
+    required: true
+nodes:
+  aptl-dmz:
+    type: switch
+  techvault-webapp:
+    type: vm
+    os: linux
+    runtime:
+      network:
+        endpoints:
+          - network: aptl-dmz
+            ip-address: ${webapp_ip}
+infrastructure:
+  aptl-dmz:
+    properties:
+      cidr: 172.20.0.0/24
+      gateway: 172.20.0.1
+"""
+        raw = parse_sdl(sdl)
+        assert raw.nodes["techvault-webapp"].runtime.network.endpoints[0].ip_address == "${webapp_ip}"
+        instantiated = instantiate_scenario(raw, parameters={"webapp_ip": "172.20.0.20"})
+        endpoint = instantiated.nodes["techvault-webapp"].runtime.network.endpoints[0]
+        assert endpoint.ip_address == "172.20.0.20"
+
+    def test_source_build_provenance_parses_with_kebab_keys(self):
+        sdl = """
+name: techvault-build-provenance
+nodes:
+  techvault-webapp:
+    type: vm
+    os: linux
+    source:
+      name: techvault-webapp
+      version: local
+      build:
+        base-image: python:3.12-slim
+        base-image-digest: sha256:deadbeef
+        dockerfile-path: containers/webapp/Dockerfile
+        instructions:
+          - instruction: from
+            arguments: [python:3.12-slim]
+          - instruction: copy
+            arguments: [webapp/app.py, /app/app.py]
+        layers:
+          - digest: sha256:layer1
+            created-by: FROM python:3.12-slim
+            size: "31000000"
+          - created-by: ENV APP_HOME=/app
+            empty: true
+        build-args:
+          - name: APP_VERSION
+            value: 1.4.2
+            value-classification: plain
+          - name: PIP_INDEX_TOKEN
+            value-classification: redacted
+        copied-sources:
+          - source-path: webapp/app.py
+            destination-path: /app/app.py
+        config:
+          entrypoint: [/entrypoint.sh]
+          command: [gunicorn, app:app]
+          working-directory: /app
+          exposed-ports: [8080/tcp]
+          labels:
+            org.opencontainers.image.source: https://example.test/techvault
+            com.Example.Tier: webapp
+          default-environment:
+            - name: APP_HOME
+              value: /app
+        source-inputs:
+          - identifier: webapp-app
+            source-path: webapp/app.py
+            destination-path: /app/app.py
+            checksum: 4f8c2d
+            checksum-algorithm: sha256
+        attestation:
+          status: absent
+          verification: not-applicable
+          attestation-type: in-toto
+"""
+        s = parse_sdl(sdl, skip_semantic_validation=True)
+        build = s.nodes["techvault-webapp"].source.build
+
+        assert build is not None
+        assert build.base_image == "python:3.12-slim"
+        assert build.dockerfile_path == "containers/webapp/Dockerfile"
+        assert build.instructions[1].instruction.value == "copy"
+        assert build.instructions[1].arguments == ["webapp/app.py", "/app/app.py"]
+        assert build.layers[0].size == 31000000
+        assert build.layers[1].empty is True
+        assert build.build_args[1].value_classification.value == "redacted"
+        assert build.copied_sources[0].destination_path == "/app/app.py"
+        assert build.config.working_directory == "/app"
+        assert build.config.exposed_ports == ["8080/tcp"]
+        # Native, case-sensitive image label keys are preserved verbatim.
+        assert build.config.labels == {
+            "org.opencontainers.image.source": "https://example.test/techvault",
+            "com.Example.Tier": "webapp",
+        }
+        assert build.config.default_environment[0].name == "APP_HOME"
+        assert build.source_inputs[0].checksum_algorithm == "sha256"
+        assert build.attestation.verification.value == "not_applicable"
+        assert build.attestation.attestation_type.value == "in_toto"
 
     def test_source_shorthand(self):
         sdl = """
@@ -733,7 +1108,7 @@ class TestErrorHandling:
             parse_sdl("- just\n- a\n- list")
 
     def test_no_identity(self):
-        with pytest.raises(SDLParseError):
+        with pytest.raises(SDLParseError, match="name"):
             parse_sdl("description: no name or metadata")
 
 
@@ -1075,3 +1450,81 @@ class TestLoadRealScenarios:
         for path in sorted(scenarios_dir.glob("*.yaml")):
             scenario = parse_sdl_file(path)
             assert scenario.name
+
+
+class TestRuntimeApplicationParsing:
+    def test_runtime_application_surface_parses_with_kebab_keys(self):
+        sdl = """
+name: techvault-application-surface
+nodes:
+  techvault-webapp:
+    type: vm
+    os: linux
+    services:
+      - port: 8080
+        name: techvault-http
+    runtime:
+      applications:
+        - application-id: techvault-webapp
+          service: techvault-http
+          protocol: http
+          base-path: /
+          framework: flask
+          routes:
+            - route-id: login
+              path: /login
+              methods: [get, post]
+              auth-required: false
+              session-required: false
+              parameters:
+                - name: username
+                  location: form
+                  required: true
+              responses:
+                - status-code: "200"
+                  content-type: text/html
+              redirects:
+                - target: /dashboard
+                  status-code: "302"
+"""
+        scenario = parse_sdl(sdl)
+        applications = scenario.nodes["techvault-webapp"].runtime.applications
+        assert len(applications) == 1
+        surface = applications[0]
+        assert surface.application_id == "techvault-webapp"
+        assert surface.service == "techvault-http"
+        assert surface.base_path == "/"
+        route = surface.routes[0]
+        assert route.route_id == "login"
+        assert route.methods == ["GET", "POST"]
+        assert route.auth_required is False
+        assert route.parameters[0].name == "username"
+        assert route.responses[0].status_code == 200
+        assert route.redirects[0].status_code == 302
+
+    def test_runtime_application_auth_variable_substitutes_on_instantiation(self):
+        sdl = """
+name: techvault-application-variable
+variables:
+  login_auth:
+    type: boolean
+    required: true
+nodes:
+  techvault-webapp:
+    type: vm
+    os: linux
+    runtime:
+      applications:
+        - application-id: techvault-webapp
+          routes:
+            - route-id: login
+              path: /login
+              methods: [GET]
+              auth-required: ${login_auth}
+"""
+        raw = parse_sdl(sdl)
+        route = raw.nodes["techvault-webapp"].runtime.applications[0].routes[0]
+        assert route.auth_required == "${login_auth}"
+        instantiated = instantiate_scenario(raw, parameters={"login_auth": True})
+        route = instantiated.nodes["techvault-webapp"].runtime.applications[0].routes[0]
+        assert route.auth_required is True

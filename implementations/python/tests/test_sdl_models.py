@@ -9,19 +9,58 @@ from aces.core.sdl.entities import Entity, ExerciseRole, flatten_entities
 from aces.core.sdl.features import Feature, FeatureType
 from aces.core.sdl.infrastructure import ACLAction, ACLRule, InfraNode, SimpleProperties
 from aces.core.sdl.nodes import (
+    ContainerImageBuildProvenance,
+    DockerfileInstruction,
+    DockerfileInstructionKind,
+    ImageAttestation,
+    ImageAttestationStatus,
+    ImageAttestationType,
+    ImageBuildArg,
+    ImageConfig,
+    ImageCopiedSource,
+    ImageEnvironmentDefault,
+    ImageLayer,
+    ImageSourceInput,
+    ImageVerificationStatus,
     Node,
     NodeType,
     Resources,
     Role,
+    RuntimeApplicationDisclosure,
+    RuntimeApplicationExposedField,
+    RuntimeApplicationParameter,
+    RuntimeApplicationParameterLocation,
+    RuntimeApplicationProtocol,
+    RuntimeApplicationRedirect,
+    RuntimeApplicationResponse,
+    RuntimeApplicationRoute,
+    RuntimeApplicationSurface,
     RuntimeControlInterface,
     RuntimeControlInterfaceAccess,
     RuntimeControlInterfaceKind,
     RuntimeEnvironmentValueClassification,
     RuntimeEnvironmentVariableProvenance,
+    RuntimeFilesystemEntryType,
+    RuntimeFilesystemStability,
+    RuntimeHealthStatus,
+    RuntimeIdentityProvenance,
+    RuntimeLocalGroup,
+    RuntimeLocalIdentityInventory,
+    RuntimeLocalUser,
+    RuntimeMountPropagation,
     RuntimeMountSourceKind,
+    RuntimeNetworkBackendDetail,
+    RuntimeNetworkDriver,
+    RuntimeNetworkEndpoint,
+    RuntimeNetworkIdStability,
+    RuntimeNetworkRealization,
     RuntimePackageVulnerabilitySeverity,
     RuntimeProcessRole,
+    RuntimePublishedPort,
     RuntimeRestartPolicy,
+    RuntimeSensitivityClassification,
+    RuntimeSudoPrincipalKind,
+    RuntimeSudoRule,
     parse_ram,
 )
 from aces.core.sdl.objectives import Objective, ObjectiveSuccess, ObjectiveWindow
@@ -53,6 +92,181 @@ class TestSource:
     def test_default_version(self):
         s = Source(name="pkg")
         assert s.version == "*"
+
+    def test_build_defaults_to_none(self):
+        s = Source(name="pkg")
+        assert s.build is None
+
+
+class TestContainerImageBuildProvenance:
+    """Tests for the SDL container image build/provenance surface (issue #364)."""
+
+    def _full_build(self) -> dict:
+        return {
+            "base_image": "python:3.12-slim",
+            "base_image_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "dockerfile_path": "containers/webapp/Dockerfile",
+            "instructions": [
+                {"instruction": "from", "arguments": ["python:3.12-slim"]},
+                {"instruction": "arg", "arguments": ["APP_VERSION"]},
+                {"instruction": "copy", "arguments": ["webapp/app.py", "/app/app.py"]},
+                {"instruction": "entrypoint", "arguments": ["/entrypoint.sh"]},
+            ],
+            "layers": [
+                {
+                    "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+                    "created_by": "FROM python:3.12-slim",
+                    "size": "31000000",
+                },
+                {"created_by": "ENV APP_HOME=/app", "empty": "true"},
+            ],
+            "build_args": [
+                {"name": "APP_VERSION", "value": "1.4.2", "value_classification": "plain"},
+                {"name": "PIP_INDEX_TOKEN", "value_classification": "redacted"},
+            ],
+            "copied_sources": [
+                {"source_path": "webapp/app.py", "destination_path": "/app/app.py"},
+                {
+                    "source_path": "containers/webapp/entrypoint.sh",
+                    "destination_path": "/entrypoint.sh",
+                    "from_stage": "builder",
+                },
+            ],
+            "config": {
+                "entrypoint": "/entrypoint.sh",
+                "command": ["gunicorn", "app:app"],
+                "working_directory": "/app",
+                "exposed_ports": ["8080/tcp"],
+                "labels": {"org.opencontainers.image.source": "https://example.test/techvault"},
+                "default_environment": [
+                    {"name": "APP_HOME", "value": "/app", "value_classification": "plain"},
+                ],
+            },
+            "source_inputs": [
+                {
+                    "identifier": "webapp-app",
+                    "source_path": "webapp/app.py",
+                    "destination_path": "/app/app.py",
+                    "checksum": "4f8c2d",
+                    "checksum_algorithm": "sha256",
+                },
+            ],
+            "attestation": {
+                "status": "absent",
+                "verification": "unverified",
+                "attestation_type": "none",
+            },
+        }
+
+    def test_source_carries_full_build_provenance(self):
+        s = Source(name="techvault-webapp", version="local", build=self._full_build())
+
+        assert s.build is not None
+        build = s.build
+        assert build.base_image == "python:3.12-slim"
+        assert build.dockerfile_path == "containers/webapp/Dockerfile"
+        assert build.instructions[0].instruction == DockerfileInstructionKind.FROM
+        assert build.instructions[2].arguments == ["webapp/app.py", "/app/app.py"]
+        assert build.layers[0].size == 31000000
+        assert build.layers[1].empty is True
+        assert build.layers[1].digest == ""
+        assert build.build_args[0].value == "1.4.2"
+        assert build.copied_sources[1].from_stage == "builder"
+        assert build.config is not None
+        assert build.config.entrypoint == ["/entrypoint.sh"]
+        assert build.config.working_directory == "/app"
+        assert build.config.labels["org.opencontainers.image.source"] == "https://example.test/techvault"
+        assert build.source_inputs[0].checksum_algorithm == "sha256"
+        assert build.attestation is not None
+        assert build.attestation.status == ImageAttestationStatus.ABSENT
+        assert build.attestation.verification == ImageVerificationStatus.UNVERIFIED
+        assert build.attestation.attestation_type == ImageAttestationType.NONE
+
+    def test_instruction_kind_normalizes_case_and_hyphen(self):
+        instruction = DockerfileInstruction(instruction="HEALTHCHECK", arguments="curl localhost")
+        assert instruction.instruction == DockerfileInstructionKind.HEALTHCHECK
+        assert instruction.arguments == ["curl localhost"]
+
+    def test_instruction_rejects_unknown_kind(self):
+        with pytest.raises(ValidationError, match="instruction must be one of"):
+            DockerfileInstruction(instruction="not-a-real-instruction")
+
+    def test_build_arg_redacted_value_must_be_omitted(self):
+        with pytest.raises(ValidationError, match="redacted build arguments must omit value"):
+            ImageBuildArg(name="SECRET", value="leaked", value_classification="redacted")
+
+    def test_build_arg_rejects_name_with_equals(self):
+        with pytest.raises(ValidationError, match="must not contain '='"):
+            ImageBuildArg(name="A=B")
+
+    def test_image_environment_default_redacted_value_must_be_omitted(self):
+        with pytest.raises(ValidationError, match="redacted image environment variables must omit value"):
+            ImageEnvironmentDefault(name="TOKEN", value="leaked", value_classification="redacted")
+
+    def test_copied_source_destination_must_be_absolute(self):
+        with pytest.raises(ValidationError, match="destination_path must be an absolute path"):
+            ImageCopiedSource(source_path="webapp/app.py", destination_path="app/app.py")
+
+    def test_copied_source_rejects_empty_source_path(self):
+        with pytest.raises(ValidationError, match="source_path must be a non-empty string"):
+            ImageCopiedSource(source_path="  ", destination_path="/app/app.py")
+
+    def test_image_config_working_directory_must_be_absolute(self):
+        with pytest.raises(ValidationError, match="working_directory must be an absolute path"):
+            ImageConfig(working_directory="app")
+
+    def test_image_config_rejects_duplicate_default_environment(self):
+        with pytest.raises(ValidationError, match="Duplicate image environment variable 'APP_HOME'"):
+            ImageConfig(
+                default_environment=[
+                    {"name": "APP_HOME", "value": "/app"},
+                    {"name": "APP_HOME", "value": "/srv"},
+                ],
+            )
+
+    def test_source_input_checksum_requires_algorithm(self):
+        with pytest.raises(ValidationError, match="checksum requires checksum_algorithm"):
+            ImageSourceInput(identifier="webapp-app", checksum="4f8c2d")
+
+    def test_source_input_algorithm_requires_checksum(self):
+        with pytest.raises(ValidationError, match="checksum_algorithm requires checksum"):
+            ImageSourceInput(identifier="webapp-app", checksum_algorithm="sha256")
+
+    def test_source_input_destination_must_be_absolute(self):
+        with pytest.raises(ValidationError, match="destination_path must be an absolute path"):
+            ImageSourceInput(identifier="webapp-app", destination_path="app/app.py")
+
+    def test_attestation_absent_cannot_be_verified(self):
+        with pytest.raises(ValidationError, match="absent attestation cannot have a verified"):
+            ImageAttestation(status="absent", verification="verified")
+
+    def test_attestation_absent_unverified_is_distinct_from_failed(self):
+        absent = ImageAttestation(status="absent", verification="unverified")
+        failed = ImageAttestation(status="present", verification="failed")
+        assert absent.status == ImageAttestationStatus.ABSENT
+        assert absent.verification == ImageVerificationStatus.UNVERIFIED
+        assert failed.verification == ImageVerificationStatus.FAILED
+
+    def test_build_rejects_duplicate_build_arg(self):
+        with pytest.raises(ValidationError, match="Duplicate build argument 'APP_VERSION'"):
+            ContainerImageBuildProvenance(
+                build_args=[{"name": "APP_VERSION"}, {"name": "APP_VERSION"}],
+            )
+
+    def test_build_rejects_duplicate_source_input_identifier(self):
+        with pytest.raises(ValidationError, match="Duplicate source input identifier 'webapp-app'"):
+            ContainerImageBuildProvenance(
+                source_inputs=[{"identifier": "webapp-app"}, {"identifier": "webapp-app"}],
+            )
+
+    def test_build_rejects_unknown_field(self):
+        with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+            ContainerImageBuildProvenance(not_a_field="x")
+
+    def test_layer_supports_variable_placeholders(self):
+        layer = ImageLayer(digest="${layer_digest}", size="${layer_size}")
+        assert layer.digest == "${layer_digest}"
+        assert layer.size == "${layer_size}"
 
 
 # ---------------------------------------------------------------------------
@@ -303,14 +517,210 @@ class TestNode:
         assert runtime.operational_policy.resource_limits.cpu == 0.5
         assert runtime.operational_policy.resource_limits.pids == 128
 
+    def test_vm_runtime_filesystem_inventory_surfaces(self):
+        n = Node(
+            type="vm",
+            runtime={
+                "filesystem_inventory": [
+                    {
+                        "path": "/app/app.py",
+                        "entry_type": "file",
+                        "owner_user": "root",
+                        "owner_group": "root",
+                        "uid": "0",
+                        "gid": 0,
+                        "mode": 0o644,
+                        "size": "4096",
+                        "content_digest": "4f8c2d",
+                        "digest_algorithm": "sha256",
+                        "source_path": "src/webapp/app.py",
+                        "provenance": "python-package",
+                        "stability": "stable",
+                        "sensitivity": "plain",
+                    },
+                    {
+                        "path": "/var/log/gunicorn/access.log",
+                        "entry_type": "file",
+                        "mode": "0600",
+                        "stability": "log",
+                        "sensitivity": "operator-secret",
+                    },
+                    {
+                        "path": "/run/secrets/fixture-token",
+                        "entry_type": "file",
+                        "stability": "runtime-created",
+                        "sensitivity": "secret-fixture",
+                    },
+                ],
+            },
+        )
+
+        runtime = n.runtime
+        assert runtime is not None
+        assert runtime.filesystem_inventory[0].path == "/app/app.py"
+        assert runtime.filesystem_inventory[0].entry_type == RuntimeFilesystemEntryType.FILE
+        assert runtime.filesystem_inventory[0].uid == 0
+        assert runtime.filesystem_inventory[0].gid == 0
+        assert runtime.filesystem_inventory[0].mode == "0644"
+        assert runtime.filesystem_inventory[0].size == 4096
+        assert runtime.filesystem_inventory[0].digest_algorithm == "sha256"
+        assert runtime.filesystem_inventory[0].content_digest == "4f8c2d"
+        assert runtime.filesystem_inventory[0].source_path == "src/webapp/app.py"
+        assert runtime.filesystem_inventory[0].stability == RuntimeFilesystemStability.STABLE
+        assert runtime.filesystem_inventory[0].sensitivity == RuntimeSensitivityClassification.PLAIN
+        assert runtime.filesystem_inventory[1].stability == RuntimeFilesystemStability.LOG
+        assert runtime.filesystem_inventory[1].sensitivity == RuntimeSensitivityClassification.OPERATOR_SECRET
+        assert runtime.filesystem_inventory[2].stability == RuntimeFilesystemStability.RUNTIME_CREATED
+        assert runtime.filesystem_inventory[2].sensitivity == RuntimeSensitivityClassification.SECRET_FIXTURE
+
+    def test_vm_runtime_container_host_config_surfaces(self):
+        n = Node(
+            type="vm",
+            runtime={
+                "mounts": [
+                    {
+                        "target": "/var/log/gunicorn",
+                        "source": "techvault_gunicorn_logs",
+                        "source_kind": "volume",
+                        "filesystem_type": "ext4",
+                        "read_only": False,
+                        "options": ["rw", "nosuid"],
+                        "propagation": "rprivate",
+                        "stability": "volume-backed",
+                        "backend_generated": True,
+                    }
+                ],
+                "container": {
+                    "entrypoint": ["/entrypoint.sh"],
+                    "command": ["gunicorn", "app:app"],
+                    "log_driver": "json-file",
+                    "log_options": {"max-size": "10m", "max-file": "3"},
+                    "namespaces": {
+                        "cgroup": "private",
+                        "ipc": "private",
+                        "pid": "private",
+                        "userns": "host",
+                        "uts": "private",
+                    },
+                    "privileged": False,
+                    "read_only_rootfs": False,
+                    "publish_all_ports": False,
+                    "autoremove": False,
+                    "shm_size": "64 MiB",
+                    "masked_paths": ["/proc/acpi", "/proc/kcore"],
+                    "read_only_paths": "/proc/sys",
+                    "cgroup_parent": "/docker",
+                    "runtime_name": "runc",
+                    "devices": [
+                        {
+                            "host_path": "/dev/null",
+                            "container_path": "/dev/null",
+                            "permissions": "rwm",
+                        }
+                    ],
+                    "device_cgroup_rules": "c 1:3 rwm",
+                    "extra_hosts": [{"hostname": "wazuh-manager", "address": "172.20.0.10"}],
+                    "dns": ["8.8.8.8"],
+                    "dns_options": "ndots:0",
+                    "dns_search": ["techvault.local"],
+                    "group_add": ["adm", "101"],
+                },
+                "health": {
+                    "status": "healthy",
+                    "failing_streak": "0",
+                    "log": [
+                        {
+                            "start": "2026-05-20T12:00:00Z",
+                            "end": "2026-05-20T12:00:01Z",
+                            "exit_code": "0",
+                            "output": "ok",
+                        },
+                        {
+                            "start": "2026-05-20T12:01:00Z",
+                            "end": "2026-05-20T12:01:01Z",
+                            "exit_code": 1,
+                            "output_redacted": True,
+                        },
+                    ],
+                },
+            },
+        )
+
+        runtime = n.runtime
+        assert runtime is not None
+        assert runtime.mounts[0].filesystem_type == "ext4"
+        assert runtime.mounts[0].propagation == RuntimeMountPropagation.RPRIVATE
+        assert runtime.mounts[0].stability == RuntimeFilesystemStability.VOLUME_BACKED
+        assert runtime.mounts[0].backend_generated is True
+        assert runtime.container is not None
+        assert runtime.container.entrypoint == ["/entrypoint.sh"]
+        assert runtime.container.command == ["gunicorn", "app:app"]
+        assert runtime.container.log_driver == "json-file"
+        assert runtime.container.namespaces is not None
+        assert runtime.container.namespaces.userns == "host"
+        assert runtime.container.privileged is False
+        assert runtime.container.shm_size == 64 * 1048576
+        assert runtime.container.read_only_paths == ["/proc/sys"]
+        assert runtime.container.devices[0].host_path == "/dev/null"
+        assert runtime.container.device_cgroup_rules == ["c 1:3 rwm"]
+        assert runtime.container.extra_hosts[0].hostname == "wazuh-manager"
+        assert runtime.container.dns_options == ["ndots:0"]
+        assert runtime.container.group_add == ["adm", "101"]
+        assert runtime.health is not None
+        assert runtime.health.status == RuntimeHealthStatus.HEALTHY
+        assert runtime.health.failing_streak == 0
+        assert runtime.health.log[0].exit_code == 0
+        assert runtime.health.log[1].output_redacted is True
+
     @pytest.mark.parametrize(
         ("runtime", "message"),
         [
             ({"mounts": [{"target": "shuffle-database", "source": "data"}]}, "target"),
+            ({"mounts": [{"target": "/data", "backend_generated": "sometimes"}]}, "backend_generated"),
+            ({"mounts": [{"target": "/data"}, {"target": "/data"}]}, "Duplicate runtime mount target"),
+            ({"filesystem_inventory": [{"path": "app/app.py"}]}, "path"),
+            (
+                {"filesystem_inventory": [{"path": "/app/app.py", "content_digest": "abc"}]},
+                "content_digest requires digest_algorithm",
+            ),
+            (
+                {"filesystem_inventory": [{"path": "/app/app.py", "digest_algorithm": "sha256"}]},
+                "digest_algorithm requires content_digest",
+            ),
+            ({"filesystem_inventory": [{"path": "/app/app.py", "mode": "888"}]}, "mode"),
+            (
+                {"filesystem_inventory": [{"path": "/app/app.py"}, {"path": "/app/app.py"}]},
+                "Duplicate runtime filesystem path",
+            ),
             ({"local_control_interfaces": [{"path": "run/docker.sock"}]}, "path"),
             ({"process": {"pid": 0, "command": "./shufflebackend"}}, "pid"),
             ({"process": {"working_directory": "app"}}, "working_directory"),
             ({"dependency_manifests": [{"ecosystem": "go", "path": "go.mod"}]}, "path"),
+            ({"container": {"masked_paths": ["proc/acpi"]}}, "masked_paths"),
+            ({"container": {"devices": [{"host_path": "dev/null", "container_path": "/dev/null"}]}}, "host_path"),
+            (
+                {
+                    "container": {
+                        "devices": [
+                            {"host_path": "/dev/null", "container_path": "/dev/null"},
+                            {"host_path": "/dev/null", "container_path": "/dev/null"},
+                        ]
+                    }
+                },
+                "Duplicate runtime device mapping",
+            ),
+            (
+                {
+                    "container": {
+                        "extra_hosts": [
+                            {"hostname": "wazuh-manager", "address": "172.20.0.10"},
+                            {"hostname": "wazuh-manager", "address": "172.20.0.11"},
+                        ]
+                    }
+                },
+                "Duplicate runtime extra host",
+            ),
+            ({"health": {"log": [{"output": "secret", "output_redacted": True}]}}, "redacted healthcheck output"),
             (
                 {
                     "environment": [
@@ -327,6 +737,41 @@ class TestNode:
             ),
             ({"linux_capabilities": {"required": [""]}}, "capability"),
             ({"operational_policy": {"resource_limits": {"pids": 0}}}, "pids"),
+            (
+                {"local_identity": {"users": [{"username": "root"}, {"username": "root"}]}},
+                "Duplicate runtime local user",
+            ),
+            (
+                {"local_identity": {"groups": [{"name": "wheel"}, {"name": "wheel"}]}},
+                "Duplicate runtime local group",
+            ),
+            (
+                {"local_identity": {"groups": [{"name": "a", "gid": 10}, {"name": "b", "gid": 10}]}},
+                "Duplicate runtime local group gid",
+            ),
+            (
+                {
+                    "local_identity": {
+                        "sudo_rules": [
+                            {"principal": "ops", "commands": ["/usr/bin/systemctl"]},
+                            {"principal": "ops", "commands": ["/usr/bin/systemctl"]},
+                        ]
+                    }
+                },
+                "Duplicate runtime sudo rule",
+            ),
+            ({"local_identity": {"users": [{"username": "  "}]}}, "username"),
+            ({"local_identity": {"users": [{"username": "svc", "home": "var/svc"}]}}, "home"),
+            ({"local_identity": {"users": [{"username": "svc", "uid": -1}]}}, "uid"),
+            ({"local_identity": {"groups": [{"name": ""}]}}, "group name"),
+            (
+                {
+                    "local_identity": {
+                        "sudo_rules": [{"principal": "ops", "command_redacted": True, "commands": ["/bin/sh"]}]
+                    }
+                },
+                "redacted sudo rules must omit commands",
+            ),
         ],
     )
     def test_runtime_configuration_rejects_invalid_runtime_anchors(self, runtime, message):
@@ -347,6 +792,309 @@ class TestNode:
     def test_runtime_control_interface_named_pipe_path_requires_named_pipe_kind(self):
         with pytest.raises(ValidationError, match="named_pipe"):
             RuntimeControlInterface(path=r"\\.\pipe\docker_engine", kind="unix-socket")
+
+    def test_vm_runtime_local_identity_inventory_surfaces(self):
+        n = Node(
+            type="vm",
+            runtime={
+                "local_identity": {
+                    "description": "getent passwd/group capture",
+                    "users": [
+                        {
+                            "username": "root",
+                            "uid": 0,
+                            "primary_gid": 0,
+                            "primary_group": "root",
+                            "gecos": "root",
+                            "home": "/root",
+                            "shell": "/bin/bash",
+                            "provenance": "image",
+                            "stability": "stable",
+                        },
+                        {
+                            "username": "www-data",
+                            "uid": "33",
+                            "primary_gid": 33,
+                            "primary_group": "www-data",
+                            "home": "/var/www",
+                            "shell": "/usr/sbin/nologin",
+                            "supplemental_groups": ["wazuh"],
+                            "no_login": True,
+                            "provenance": "package",
+                        },
+                        {
+                            "username": "operator",
+                            "uid": 1000,
+                            "home": "/home/operator",
+                            "shell": "/bin/bash",
+                            "disabled": True,
+                            "locked": True,
+                            "provenance": "runtime-created",
+                            "stability": "runtime_created",
+                        },
+                    ],
+                    "groups": [
+                        {"name": "root", "gid": 0, "members": ["root"], "provenance": "image"},
+                        {"name": "www-data", "gid": 33, "members": ["www-data"]},
+                        {"name": "wazuh", "gid": "101", "members": ["www-data", "operator"]},
+                    ],
+                    "sudo_rules": [
+                        {
+                            "principal": "operator",
+                            "principal_kind": "user",
+                            "run_as_users": ["root"],
+                            "commands": ["/usr/bin/systemctl restart gunicorn"],
+                            "nopasswd": True,
+                        },
+                        {
+                            "principal": "wheel",
+                            "principal_kind": "group",
+                            "host_scope": "ALL",
+                            "commands": ["ALL"],
+                        },
+                    ],
+                },
+            },
+        )
+
+        identity = n.runtime.local_identity
+        assert identity is not None
+        assert identity.description == "getent passwd/group capture"
+        assert identity.users[0].username == "root"
+        assert identity.users[0].uid == 0
+        assert identity.users[0].primary_gid == 0
+        assert identity.users[0].primary_group == "root"
+        assert identity.users[0].gecos == "root"
+        assert identity.users[0].home == "/root"
+        assert identity.users[0].shell == "/bin/bash"
+        assert identity.users[0].provenance == RuntimeIdentityProvenance.IMAGE
+        assert identity.users[0].stability == RuntimeFilesystemStability.STABLE
+        assert identity.users[1].uid == 33
+        assert identity.users[1].supplemental_groups == ["wazuh"]
+        assert identity.users[1].no_login is True
+        assert identity.users[1].disabled is False
+        assert identity.users[1].locked is False
+        assert identity.users[1].provenance == RuntimeIdentityProvenance.PACKAGE
+        assert identity.users[2].disabled is True
+        assert identity.users[2].locked is True
+        assert identity.users[2].no_login is False
+        assert identity.users[2].provenance == RuntimeIdentityProvenance.RUNTIME_CREATED
+        assert identity.groups[0].name == "root"
+        assert identity.groups[0].gid == 0
+        assert identity.groups[0].members == ["root"]
+        assert identity.groups[2].gid == 101
+        assert identity.groups[2].members == ["www-data", "operator"]
+        assert identity.sudo_rules[0].principal == "operator"
+        assert identity.sudo_rules[0].principal_kind == RuntimeSudoPrincipalKind.USER
+        assert identity.sudo_rules[0].run_as_users == ["root"]
+        assert identity.sudo_rules[0].commands == ["/usr/bin/systemctl restart gunicorn"]
+        assert identity.sudo_rules[0].nopasswd is True
+        assert identity.sudo_rules[1].principal_kind == RuntimeSudoPrincipalKind.GROUP
+        assert identity.sudo_rules[1].host_scope == "ALL"
+
+    def test_runtime_local_user_status_flags_are_independent(self):
+        user = RuntimeLocalUser.model_validate({"username": "svc", "shell": "/usr/sbin/nologin", "no_login": True})
+        assert user.no_login is True
+        assert user.locked is False
+        assert user.disabled is False
+
+    def test_runtime_local_group_defaults(self):
+        group = RuntimeLocalGroup(name="messagebus")
+        assert group.gid is None
+        assert group.members == []
+        assert group.provenance == RuntimeIdentityProvenance.UNKNOWN
+
+    def test_runtime_local_identity_inventory_is_optional(self):
+        assert RuntimeLocalIdentityInventory().users == []
+        assert Node(type="vm", runtime={}).runtime.local_identity is None
+
+    def test_runtime_sudo_rule_redacted_commands_must_be_omitted(self):
+        with pytest.raises(ValidationError, match="redacted sudo rules must omit commands"):
+            RuntimeSudoRule(principal="ops", command_redacted=True, commands=["/bin/sh -c secret"])
+
+    def test_runtime_sudo_rule_redacted_without_commands_is_valid(self):
+        rule = RuntimeSudoRule(principal="ops", command_redacted=True)
+        assert rule.command_redacted is True
+        assert rule.commands == []
+
+
+# ---------------------------------------------------------------------------
+# Runtime network realization (ADR-025)
+# ---------------------------------------------------------------------------
+
+
+class TestRuntimeNetworkRealization:
+    def test_vm_runtime_network_surface(self):
+        n = Node(
+            type="vm",
+            runtime={
+                "network": {
+                    "description": "Docker network realization observed by harness inspection.",
+                    "hostname": "techvault-webapp",
+                    "domainname": "techvault.local",
+                    "endpoints": [
+                        {
+                            "network": "aptl-dmz",
+                            "network_id": "net-a1b2c3d4e5f6",
+                            "network_id_stability": "stable",
+                            "endpoint_id": "ep-1a2b3c4d5e6f",
+                            "endpoint_id_stability": "ephemeral",
+                            "backend_generated": True,
+                            "ip_address": "172.20.0.20",
+                            "ip_prefix_length": 24,
+                            "gateway": "172.20.0.1",
+                            "mac_address": "02:42:ac:14:00:14",
+                            "aliases": ["aptl-webapp", "webapp"],
+                            "dns_names": ["aptl-webapp", "webapp"],
+                            "generated_dns_names": ["a1b2c3d4e5f6"],
+                            "backend": {
+                                "driver": "bridge",
+                                "ipam_driver": "default",
+                                "driver_options": {"com.docker.network.bridge.name": "br-dmz"},
+                                "ipam_options": {"foo": "bar"},
+                            },
+                        },
+                        {
+                            "network": "aptl-internal",
+                            "ip_address": "172.21.0.20",
+                        },
+                    ],
+                    "published_ports": [
+                        {
+                            "container_port": 8080,
+                            "protocol": "tcp",
+                            "host_ip": "127.0.0.1",
+                            "host_port": 8080,
+                        }
+                    ],
+                },
+            },
+        )
+
+        net = n.runtime.network
+        assert net is not None
+        assert net.hostname == "techvault-webapp"
+        assert net.domainname == "techvault.local"
+        ep = net.endpoints[0]
+        assert ep.network == "aptl-dmz"
+        assert ep.network_id == "net-a1b2c3d4e5f6"
+        assert ep.network_id_stability == RuntimeNetworkIdStability.STABLE
+        assert ep.endpoint_id_stability == RuntimeNetworkIdStability.EPHEMERAL
+        assert ep.backend_generated is True
+        assert ep.ip_address == "172.20.0.20"
+        assert ep.ip_prefix_length == 24
+        assert ep.gateway == "172.20.0.1"
+        assert ep.mac_address == "02:42:ac:14:00:14"
+        assert ep.aliases == ["aptl-webapp", "webapp"]
+        assert ep.dns_names == ["aptl-webapp", "webapp"]
+        assert ep.generated_dns_names == ["a1b2c3d4e5f6"]
+        assert ep.backend.driver == RuntimeNetworkDriver.BRIDGE
+        assert ep.backend.ipam_driver == "default"
+        assert ep.backend.driver_options == {"com.docker.network.bridge.name": "br-dmz"}
+        assert ep.backend.ipam_options == {"foo": "bar"}
+        # Defaults on a sparsely-observed endpoint.
+        assert net.endpoints[1].network_id == ""
+        assert net.endpoints[1].network_id_stability == RuntimeNetworkIdStability.UNKNOWN
+        assert net.endpoints[1].backend is None
+        binding = net.published_ports[0]
+        assert binding.container_port == 8080
+        assert binding.host_ip == "127.0.0.1"
+        assert binding.host_port == 8080
+        assert binding.protocol == "tcp"
+
+    def test_runtime_network_is_optional(self):
+        assert RuntimeNetworkRealization().endpoints == []
+        assert Node(type="vm", runtime={}).runtime.network is None
+
+    def test_endpoint_accepts_variable_placeholders(self):
+        ep = RuntimeNetworkEndpoint(
+            network="aptl-dmz",
+            ip_address="${WEBAPP_IP}",
+            gateway="${DMZ_GATEWAY}",
+            mac_address="${WEBAPP_MAC}",
+            ip_prefix_length="${PREFIX}",
+        )
+        assert ep.ip_address == "${WEBAPP_IP}"
+        assert ep.mac_address == "${WEBAPP_MAC}"
+        assert ep.ip_prefix_length == "${PREFIX}"
+
+    def test_published_port_protocol_normalized_and_required(self):
+        binding = RuntimePublishedPort(container_port="443", protocol="TCP")
+        assert binding.container_port == 443
+        assert binding.protocol == "tcp"
+        assert binding.host_port is None
+
+    def test_published_port_rejects_out_of_range_ports(self):
+        with pytest.raises(ValidationError, match="container_port must be <= 65535"):
+            RuntimePublishedPort(container_port=70000)
+        with pytest.raises(ValidationError, match="host_port must be >= 1"):
+            RuntimePublishedPort(container_port=8080, host_port=0)
+
+    def test_published_port_rejects_empty_protocol(self):
+        with pytest.raises(ValidationError, match="protocol must be a non-empty string"):
+            RuntimePublishedPort(container_port=8080, protocol="  ")
+
+    def test_published_port_rejects_invalid_host_ip(self):
+        with pytest.raises(ValidationError, match="host_ip must be a valid IP address"):
+            RuntimePublishedPort(container_port=8080, host_ip="not-an-ip")
+
+    def test_endpoint_rejects_invalid_ip_and_gateway(self):
+        with pytest.raises(ValidationError, match="ip_address must be a valid IP address"):
+            RuntimeNetworkEndpoint(network="aptl-dmz", ip_address="999.0.0.1")
+        with pytest.raises(ValidationError, match="gateway must be a valid IP address"):
+            RuntimeNetworkEndpoint(network="aptl-dmz", gateway="bad-gateway")
+
+    def test_endpoint_rejects_invalid_mac_address(self):
+        with pytest.raises(ValidationError, match="mac_address must be a colon-separated MAC address"):
+            RuntimeNetworkEndpoint(network="aptl-dmz", mac_address="02-42-ac-14-00-14")
+
+    def test_endpoint_rejects_out_of_range_prefix_length(self):
+        with pytest.raises(ValidationError, match="ip_prefix_length must be <= 128"):
+            RuntimeNetworkEndpoint(network="aptl-dmz", ip_prefix_length=129)
+
+    def test_endpoint_rejects_empty_network(self):
+        with pytest.raises(ValidationError, match="network must be a non-empty string"):
+            RuntimeNetworkEndpoint(network="  ")
+
+    def test_endpoint_rejects_duplicate_aliases(self):
+        with pytest.raises(ValidationError, match="Duplicate runtime network aliases"):
+            RuntimeNetworkEndpoint(network="aptl-dmz", aliases=["webapp", "webapp"])
+
+    def test_endpoint_rejects_duplicate_dns_names(self):
+        with pytest.raises(ValidationError, match="Duplicate runtime network dns_names"):
+            RuntimeNetworkEndpoint(network="aptl-dmz", dns_names=["webapp", "webapp"])
+
+    def test_realization_rejects_duplicate_endpoint_networks(self):
+        with pytest.raises(ValidationError, match="Duplicate runtime network endpoint for network 'aptl-dmz'"):
+            RuntimeNetworkRealization(
+                endpoints=[{"network": "aptl-dmz"}, {"network": "aptl-dmz"}],
+            )
+
+    def test_realization_rejects_conflicting_host_bindings(self):
+        with pytest.raises(ValidationError, match="Duplicate host-published binding"):
+            RuntimeNetworkRealization(
+                published_ports=[
+                    {"container_port": 8080, "host_ip": "127.0.0.1", "host_port": 8080, "protocol": "tcp"},
+                    {"container_port": 9090, "host_ip": "127.0.0.1", "host_port": 8080, "protocol": "tcp"},
+                ],
+            )
+
+    def test_realization_allows_same_host_port_on_distinct_protocols(self):
+        realization = RuntimeNetworkRealization(
+            published_ports=[
+                {"container_port": 53, "host_ip": "127.0.0.1", "host_port": 53, "protocol": "tcp"},
+                {"container_port": 53, "host_ip": "127.0.0.1", "host_port": 53, "protocol": "udp"},
+            ],
+        )
+        assert len(realization.published_ports) == 2
+
+    def test_backend_detail_normalizes_driver_enum(self):
+        detail = RuntimeNetworkBackendDetail(driver="OVERLAY")
+        assert detail.driver == RuntimeNetworkDriver.OVERLAY
+
+    def test_backend_detail_rejects_unknown_driver(self):
+        with pytest.raises(ValidationError, match="driver must be one of"):
+            RuntimeNetworkBackendDetail(driver="quantum-mesh")
 
 
 class TestRole:
@@ -375,7 +1123,7 @@ class TestInfraNode:
         assert n.count == 3
 
     def test_rejects_zero_count(self):
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError, match="count must be >= 1"):
             InfraNode(count=0)
 
     def test_duplicate_links_rejected(self):
@@ -406,7 +1154,11 @@ class TestSimpleProperties:
             SimpleProperties(cidr="10.0.0.0/24", gateway="192.168.1.1")
 
     def test_invalid_cidr(self):
-        with pytest.raises(ValidationError):
+        # Pinned to the field-level ``validate_cidr`` validator (the ipaddress
+        # stdlib message), not the model-level ``gateway_within_cidr`` check,
+        # which would also reject this CIDR. Keeps the test honest about which
+        # validator is under exercise.
+        with pytest.raises(ValidationError, match="does not appear to be an IPv4 or IPv6"):
             SimpleProperties(cidr="not-a-cidr", gateway="10.0.0.1")
 
     def test_variable_placeholders_skip_network_validation(self):
@@ -546,7 +1298,7 @@ class TestEvaluation:
         assert len(e.metrics) == 1
 
     def test_empty_metrics_rejected(self):
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError, match="at least 1 item"):
             Evaluation(metrics=[], min_score=MinScore(percentage=50))
 
 
@@ -704,7 +1456,7 @@ class TestStory:
         assert s.speed == 1.0
 
     def test_speed_below_1_rejected(self):
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError, match="speed must be >= 1.0"):
             Story(scripts=["script-1"], speed=0.5)
 
 
@@ -1236,6 +1988,8 @@ class TestRelationship:
             type="connects_to", source="webapp", target="db", properties={"protocol": "tcp", "port": "5432"}
         )
         assert r.source == "webapp"
+        assert r.type == RelationshipType.CONNECTS_TO
+        assert r.properties == {"protocol": "tcp", "port": "5432"}
 
     def test_federates_with(self):
         r = Relationship(type="federates_with", source="adfs", target="azure-ad", properties={"protocol": "SAML"})
@@ -1312,7 +2066,7 @@ class TestAgent:
         assert a.operating_scope == ["${scope_ref}"]
 
     def test_unknown_field_rejected(self):
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
             Agent(entity="red-team", unknown_field=["x"])
 
 
@@ -1364,3 +2118,253 @@ class TestBooleanPlaceholders:
             **{"class": "CWE-89"},
         )
         assert v.technical == "${is_technical}"
+
+
+# ---------------------------------------------------------------------------
+# Runtime application HTTP surface inventory (ADR-026)
+# ---------------------------------------------------------------------------
+
+
+class TestRuntimeApplicationSurface:
+    def test_vm_runtime_application_surface(self):
+        n = Node(
+            type="vm",
+            services=[{"port": 8080, "name": "techvault-http"}],
+            runtime={
+                "applications": [
+                    {
+                        "application_id": "techvault-webapp",
+                        "service": "techvault-http",
+                        "protocol": "http",
+                        "name": "TechVault Webapp",
+                        "base_path": "/",
+                        "framework": "flask",
+                        "description": "Observed Flask route surface.",
+                        "routes": [
+                            {
+                                "route_id": "login",
+                                "path": "/login",
+                                "methods": ["get", "post"],
+                                "name": "login",
+                                "auth_required": False,
+                                "session_required": False,
+                                "auth_scheme": "form_login",
+                                "parameters": [
+                                    {"name": "username", "location": "form", "required": True},
+                                    {"name": "password", "location": "form", "required": True},
+                                ],
+                                "responses": [
+                                    {"status_code": 200, "content_type": "text/html"},
+                                    {"status_code": "302", "content_type": "text/html"},
+                                ],
+                                "templates": ["/app/templates/login.html"],
+                                "static_assets": ["/app/static/style.css"],
+                                "redirects": [
+                                    {
+                                        "target": "/dashboard",
+                                        "status_code": 302,
+                                        "condition": "valid credentials",
+                                    }
+                                ],
+                            },
+                            {
+                                "route_id": "upload",
+                                "path": "/files/upload",
+                                "methods": ["POST"],
+                                "auth_required": True,
+                                "session_required": True,
+                                "parameters": [
+                                    {"name": "document", "location": "uploaded_file", "required": True},
+                                ],
+                                "vulnerability_refs": ["unrestricted-upload"],
+                            },
+                            {
+                                "route_id": "diagnostics",
+                                "path": "/debug/info",
+                                "methods": ["GET"],
+                                "exposed_fields": [
+                                    {
+                                        "name": "build_token",
+                                        "sensitivity": "secret_fixture",
+                                        "value": "fixture-token-1234",
+                                    }
+                                ],
+                                "disclosures": [
+                                    {
+                                        "trigger": "any request",
+                                        "status_code": 200,
+                                        "disclosure": "internal package versions and host paths",
+                                        "sensitivity": "plain",
+                                    }
+                                ],
+                            },
+                        ],
+                    }
+                ]
+            },
+        )
+        surface = n.runtime.applications[0]
+        assert surface.application_id == "techvault-webapp"
+        assert surface.service == "techvault-http"
+        assert surface.protocol == RuntimeApplicationProtocol.HTTP
+        assert surface.base_path == "/"
+        assert len(surface.routes) == 3
+        login = surface.routes[0]
+        # HTTP methods normalize to uppercase.
+        assert login.methods == ["GET", "POST"]
+        assert login.parameters[0].location == RuntimeApplicationParameterLocation.FORM
+        assert login.parameters[0].required is True
+        assert login.responses[1].status_code == 302
+        assert login.redirects[0].status_code == 302
+        upload = surface.routes[1]
+        assert upload.auth_required is True
+        assert upload.parameters[0].location == RuntimeApplicationParameterLocation.UPLOADED_FILE
+        assert upload.vulnerability_refs == ["unrestricted-upload"]
+        diag = surface.routes[2]
+        assert diag.exposed_fields[0].sensitivity == RuntimeSensitivityClassification.SECRET_FIXTURE
+        assert diag.disclosures[0].disclosure == "internal package versions and host paths"
+
+    def test_route_path_must_be_url_path(self):
+        with pytest.raises(ValidationError, match="route path must be a URL path starting with"):
+            RuntimeApplicationRoute(route_id="r1", path="login", methods=["GET"])
+
+    def test_route_path_rejects_whitespace(self):
+        with pytest.raises(ValidationError, match="must not contain whitespace"):
+            RuntimeApplicationRoute(route_id="r1", path="/log in", methods=["GET"])
+
+    def test_route_methods_must_not_be_empty(self):
+        with pytest.raises(ValidationError, match="route methods must not be empty"):
+            RuntimeApplicationRoute(route_id="r1", path="/login", methods=[])
+
+    def test_route_method_must_be_known(self):
+        with pytest.raises(ValidationError, match="must be one of"):
+            RuntimeApplicationRoute(route_id="r1", path="/login", methods=["FETCH"])
+
+    def test_route_id_rejects_variable_placeholder(self):
+        with pytest.raises(ValidationError, match="must be a stable identifier"):
+            RuntimeApplicationRoute(route_id="${rid}", path="/login", methods=["GET"])
+
+    def test_application_id_rejects_variable_placeholder(self):
+        with pytest.raises(ValidationError, match="must be a stable identifier"):
+            RuntimeApplicationSurface(application_id="${aid}")
+
+    def test_response_status_code_range(self):
+        with pytest.raises(ValidationError, match="status_code must be <= 599"):
+            RuntimeApplicationResponse(status_code=600)
+
+    def test_redirect_status_code_must_be_3xx(self):
+        with pytest.raises(ValidationError, match="redirect status_code must be >= 300"):
+            RuntimeApplicationRedirect(target="/x", status_code=200)
+
+    def test_redirect_target_must_be_non_empty(self):
+        with pytest.raises(ValidationError, match="redirect target must be a non-empty string"):
+            RuntimeApplicationRedirect(target="")
+
+    def test_parameter_name_must_be_non_empty(self):
+        with pytest.raises(ValidationError, match="parameter name must be a non-empty string"):
+            RuntimeApplicationParameter(name="  ")
+
+    def test_duplicate_parameter_in_same_location_rejected(self):
+        with pytest.raises(ValidationError, match="Duplicate runtime application parameter 'id'"):
+            RuntimeApplicationRoute(
+                route_id="r1",
+                path="/items",
+                methods=["GET"],
+                parameters=[
+                    {"name": "id", "location": "query"},
+                    {"name": "id", "location": "query"},
+                ],
+            )
+
+    def test_same_parameter_name_in_different_locations_allowed(self):
+        route = RuntimeApplicationRoute(
+            route_id="r1",
+            path="/items/<id>",
+            methods=["GET"],
+            parameters=[
+                {"name": "id", "location": "path"},
+                {"name": "id", "location": "query"},
+            ],
+        )
+        assert len(route.parameters) == 2
+
+    def test_exposed_field_redacted_must_omit_value(self):
+        with pytest.raises(ValidationError, match="must omit its raw value"):
+            RuntimeApplicationExposedField(name="api_key", sensitivity="redacted", value="secret")
+
+    def test_exposed_field_operator_secret_must_omit_value(self):
+        with pytest.raises(ValidationError, match="must omit its raw value"):
+            RuntimeApplicationExposedField(name="api_key", sensitivity="operator_secret", value="secret")
+
+    def test_disclosure_classified_description_only(self):
+        disclosure = RuntimeApplicationDisclosure(
+            trigger="malformed id",
+            status_code=500,
+            disclosure="stack trace exposed",
+            sensitivity="plain",
+        )
+        assert disclosure.status_code == 500
+
+    def test_duplicate_route_id_rejected(self):
+        with pytest.raises(ValidationError, match="Duplicate runtime application route_id 'r1'"):
+            RuntimeApplicationSurface(
+                application_id="app",
+                routes=[
+                    {"route_id": "r1", "path": "/a", "methods": ["GET"]},
+                    {"route_id": "r1", "path": "/b", "methods": ["GET"]},
+                ],
+            )
+
+    def test_duplicate_method_path_binding_rejected(self):
+        with pytest.raises(ValidationError, match="Duplicate runtime application route binding 'GET /a'"):
+            RuntimeApplicationSurface(
+                application_id="app",
+                routes=[
+                    {"route_id": "r1", "path": "/a", "methods": ["GET"]},
+                    {"route_id": "r2", "path": "/a", "methods": ["GET", "POST"]},
+                ],
+            )
+
+    def test_same_path_different_methods_allowed(self):
+        surface = RuntimeApplicationSurface(
+            application_id="app",
+            routes=[
+                {"route_id": "r1", "path": "/a", "methods": ["GET"]},
+                {"route_id": "r2", "path": "/a", "methods": ["POST"]},
+            ],
+        )
+        assert len(surface.routes) == 2
+
+    def test_duplicate_application_id_on_node_rejected(self):
+        with pytest.raises(ValidationError, match="Duplicate runtime application_id 'app'"):
+            Node(
+                type="vm",
+                runtime={
+                    "applications": [
+                        {"application_id": "app"},
+                        {"application_id": "app"},
+                    ]
+                },
+            )
+
+    def test_route_path_variable_placeholder_allowed_in_value_fields(self):
+        route = RuntimeApplicationRoute(
+            route_id="r1",
+            path="/items",
+            methods=["GET"],
+            auth_required="${needs_auth}",
+        )
+        assert route.auth_required == "${needs_auth}"
+
+    def test_base_path_must_be_url_path(self):
+        with pytest.raises(ValidationError, match="base_path must be a URL path starting with"):
+            RuntimeApplicationSurface(application_id="app", base_path="api")
+
+    def test_duplicate_template_ref_rejected(self):
+        with pytest.raises(ValidationError, match="Duplicate runtime application templates entry"):
+            RuntimeApplicationRoute(
+                route_id="r1",
+                path="/a",
+                methods=["GET"],
+                templates=["/app/t.html", "/app/t.html"],
+            )

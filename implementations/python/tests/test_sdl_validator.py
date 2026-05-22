@@ -180,6 +180,89 @@ class TestVerifyInfrastructure:
         assert any("cannot have count > 1" in e for e in errors)
 
 
+class TestVerifyRuntimeNetwork:
+    def test_endpoint_referencing_switch_is_valid(self):
+        s = _make_scenario(
+            nodes={
+                "sw": {"type": "switch"},
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {
+                        "network": {"endpoints": [{"network": "sw", "ip_address": "10.0.0.5", "gateway": "10.0.0.1"}]}
+                    },
+                },
+            },
+            infrastructure={
+                "sw": {"count": 1, "properties": {"cidr": "10.0.0.0/24", "gateway": "10.0.0.1"}},
+                "vm": {"count": 1, "links": ["sw"]},
+            },
+        )
+        assert _validate(s) == []
+
+    def test_endpoint_referencing_undefined_network_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {"network": {"endpoints": [{"network": "ghost-net"}]}},
+                },
+            },
+        )
+        errors = _validate(s)
+        assert any("references undefined network 'ghost-net'" in e for e in errors)
+
+    def test_endpoint_referencing_non_switch_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "other-vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {"network": {"endpoints": [{"network": "other-vm"}]}},
+                },
+            },
+            infrastructure={
+                "other-vm": {"count": 1},
+                "vm": {"count": 1},
+            },
+        )
+        errors = _validate(s)
+        assert any("must reference a switch/network entry" in e for e in errors)
+
+    def test_endpoint_ip_outside_referenced_cidr_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "sw": {"type": "switch"},
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {"network": {"endpoints": [{"network": "sw", "ip_address": "192.168.5.5"}]}},
+                },
+            },
+            infrastructure={
+                "sw": {"count": 1, "properties": {"cidr": "10.0.0.0/24", "gateway": "10.0.0.1"}},
+                "vm": {"count": 1, "links": ["sw"]},
+            },
+        )
+        errors = _validate(s)
+        assert any("ip_address 192.168.5.5 is not within network 'sw'" in e for e in errors)
+
+    def test_endpoint_network_variable_reference_is_skipped(self):
+        s = _make_scenario(
+            variables={"TARGET_NET": {"type": "string", "required": True}},
+            nodes={
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {"network": {"endpoints": [{"network": "${TARGET_NET}"}]}},
+                },
+            },
+        )
+        assert _validate(s) == []
+
+
 class TestVerifyFeatures:
     def test_feature_dependency_cycle(self):
         s = _make_scenario(
@@ -2581,3 +2664,207 @@ class TestValidFullScenario:
         )
         errors = _validate(s)
         assert not errors
+
+
+class TestVerifyRuntimeApplication:
+    def _node_with_application(self, application: dict, **node_extra) -> dict:
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "runtime": {"applications": [application]},
+        }
+        node.update(node_extra)
+        return node
+
+    def test_application_service_ref_resolves(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_application(
+                    {"application_id": "app", "service": "http"},
+                    services=[{"port": 8080, "name": "http"}],
+                ),
+            },
+        )
+        assert _validate(s) == []
+
+    def test_application_service_ref_undefined_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_application({"application_id": "app", "service": "ghost"}),
+            },
+        )
+        errors = _validate(s)
+        assert any("references undefined service 'ghost'" in e for e in errors)
+
+    def test_application_qualified_service_ref_resolves(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_application(
+                    {"application_id": "app", "service": "nodes.vm.services.http"},
+                    services=[{"port": 8080, "name": "http"}],
+                ),
+            },
+        )
+        assert _validate(s) == []
+
+    def test_application_qualified_service_ref_other_node_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "other": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "vm": self._node_with_application(
+                    {"application_id": "app", "service": "nodes.other.services.http"},
+                    services=[{"port": 8080, "name": "http"}],
+                ),
+            },
+        )
+        errors = _validate(s)
+        assert any("must reference a service on the same node" in e for e in errors)
+
+    def test_application_service_variable_reference_is_skipped(self):
+        s = _make_scenario(
+            variables={"SVC": {"type": "string", "required": True}},
+            nodes={
+                "vm": self._node_with_application({"application_id": "app", "service": "${SVC}"}),
+            },
+        )
+        assert _validate(s) == []
+
+    def test_route_vulnerability_ref_resolves(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_application(
+                    {
+                        "application_id": "app",
+                        "routes": [
+                            {
+                                "route_id": "r1",
+                                "path": "/a",
+                                "methods": ["GET"],
+                                "vulnerability_refs": ["sqli"],
+                            }
+                        ],
+                    },
+                ),
+            },
+            vulnerabilities={"sqli": {"name": "SQLi", "description": "x", "class": "CWE-89"}},
+        )
+        assert _validate(s) == []
+
+    def test_route_vulnerability_ref_undefined_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_application(
+                    {
+                        "application_id": "app",
+                        "routes": [
+                            {
+                                "route_id": "r1",
+                                "path": "/a",
+                                "methods": ["GET"],
+                                "vulnerability_refs": ["ghost-vuln"],
+                            }
+                        ],
+                    },
+                ),
+            },
+        )
+        errors = _validate(s)
+        assert any("references undefined vulnerability 'ghost-vuln'" in e for e in errors)
+
+    def test_route_template_ref_resolves_to_filesystem_inventory(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "runtime": {
+                "filesystem_inventory": [{"path": "/app/templates/index.html", "entry_type": "file"}],
+                "applications": [
+                    {
+                        "application_id": "app",
+                        "routes": [
+                            {
+                                "route_id": "r1",
+                                "path": "/",
+                                "methods": ["GET"],
+                                "templates": ["/app/templates/index.html"],
+                            }
+                        ],
+                    }
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        assert _validate(s) == []
+
+    def test_route_template_ref_not_in_inventory_is_rejected(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "runtime": {
+                "filesystem_inventory": [{"path": "/app/templates/index.html", "entry_type": "file"}],
+                "applications": [
+                    {
+                        "application_id": "app",
+                        "routes": [
+                            {
+                                "route_id": "r1",
+                                "path": "/",
+                                "methods": ["GET"],
+                                "templates": ["/app/templates/missing.html"],
+                            }
+                        ],
+                    }
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        errors = _validate(s)
+        assert any("does not resolve to an observed file" in e for e in errors)
+
+    def test_route_static_asset_ref_resolves_to_filesystem_inventory(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "runtime": {
+                "filesystem_inventory": [{"path": "/app/static/style.css", "entry_type": "file"}],
+                "applications": [
+                    {
+                        "application_id": "app",
+                        "routes": [
+                            {
+                                "route_id": "r1",
+                                "path": "/",
+                                "methods": ["GET"],
+                                "static_assets": ["/app/static/style.css"],
+                            }
+                        ],
+                    }
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        assert _validate(s) == []
+
+    def test_route_static_asset_ref_not_in_inventory_is_rejected(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "runtime": {
+                "filesystem_inventory": [{"path": "/app/static/style.css", "entry_type": "file"}],
+                "applications": [
+                    {
+                        "application_id": "app",
+                        "routes": [
+                            {
+                                "route_id": "r1",
+                                "path": "/",
+                                "methods": ["GET"],
+                                "static_assets": ["/app/static/missing.css"],
+                            }
+                        ],
+                    }
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        errors = _validate(s)
+        assert any("does not resolve to an observed file" in e for e in errors)
