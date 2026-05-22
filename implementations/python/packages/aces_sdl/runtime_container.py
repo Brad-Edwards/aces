@@ -1,11 +1,12 @@
 """Observed container runtime host/security and health models for SDL nodes."""
 
+import re
 from enum import Enum
 from typing import Any
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
-from ._base import SDLModel, parse_bool_or_var, parse_int_or_var
+from ._base import SDLModel, is_variable_ref, parse_bool_or_var, parse_int_or_var
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
@@ -112,6 +113,22 @@ class RuntimeInitProcess(SDLModel):
         return self
 
 
+# Recognized Docker/Compose spellings of a seccomp security option (`seccomp:value`
+# or `seccomp=value`). Used only for the seccomp_profile/security_opt consistency
+# check; it does not turn the option list into a typed Docker dialect.
+_SECCOMP_OPTION_RE = re.compile(r"^seccomp[:=](.+)$", re.IGNORECASE)
+
+
+def _seccomp_values_from_security_opt(security_opt: list[str]) -> list[str]:
+    """Extract seccomp profile values from recognized ``security_opt`` entries."""
+    values: list[str] = []
+    for option in security_opt:
+        match = _SECCOMP_OPTION_RE.match(option)
+        if match:
+            values.append(match.group(1).strip())
+    return values
+
+
 class RuntimeContainerConfiguration(SDLModel):
     """Observed container runtime host and security configuration facts."""
 
@@ -132,6 +149,8 @@ class RuntimeContainerConfiguration(SDLModel):
     init_process: RuntimeInitProcess | None = None
     devices: list[RuntimeDeviceMapping] = Field(default_factory=list)
     device_cgroup_rules: list[str] = Field(default_factory=list)
+    seccomp_profile: str = ""
+    security_opt: list[str] = Field(default_factory=list)
     extra_hosts: list[RuntimeExtraHost] = Field(default_factory=list)
     dns: list[str] = Field(default_factory=list)
     dns_options: list[str] = Field(default_factory=list)
@@ -148,6 +167,7 @@ class RuntimeContainerConfiguration(SDLModel):
         "masked_paths",
         "read_only_paths",
         "device_cgroup_rules",
+        "security_opt",
         "dns",
         "dns_options",
         "dns_search",
@@ -172,6 +192,32 @@ class RuntimeContainerConfiguration(SDLModel):
     @classmethod
     def validate_path_lists(cls, v: list[str], info: ValidationInfo) -> list[str]:
         return validate_absolute_paths(v, field_name=info.field_name)
+
+    @field_validator("security_opt")
+    @classmethod
+    def validate_security_opt(cls, v: list[str]) -> list[str]:
+        seen: set[str] = set()
+        for option in v:
+            if not isinstance(option, str) or not option.strip():
+                raise ValueError("security_opt entries must be non-empty strings")
+            if option in seen:
+                raise ValueError(f"Duplicate runtime security option '{option}'")
+            seen.add(option)
+        return v
+
+    @model_validator(mode="after")
+    def validate_seccomp_consistency(self) -> "RuntimeContainerConfiguration":
+        observed: set[str] = set()
+        if self.seccomp_profile and not is_variable_ref(self.seccomp_profile):
+            observed.add(self.seccomp_profile)
+        for value in _seccomp_values_from_security_opt(self.security_opt):
+            if value and not is_variable_ref(value):
+                observed.add(value)
+        if len(observed) > 1:
+            raise ValueError(
+                "seccomp_profile and security_opt seccomp entries disagree: " + ", ".join(sorted(observed))
+            )
+        return self
 
     @model_validator(mode="after")
     def validate_unique_container_entries(self) -> "RuntimeContainerConfiguration":
