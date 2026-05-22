@@ -66,6 +66,52 @@ class RuntimeExtraHost(SDLModel):
         return v
 
 
+class RuntimeInitProcess(SDLModel):
+    """Observed backend-injected container init / PID-1 reaper configuration.
+
+    Models authored container runtime intent — for example Docker Compose
+    ``init: true`` causing PID 1 to be ``/sbin/docker-init`` (tini). This is
+    distinct from the observed PID-1 process recorded in ``runtime.process`` /
+    ``runtime.processes``; see ADR-027.
+    """
+
+    enabled: bool | str | None = None
+    implementation: str = ""
+    executable_path: str = ""
+    reaps_children: bool | str | None = None
+    argv: list[str] = Field(default_factory=list)
+    argv_redacted: bool | str = False
+    description: str = ""
+
+    @field_validator("enabled", "reaps_children", mode="before")
+    @classmethod
+    def parse_optional_init_flags(cls, v: bool | str | None, info: ValidationInfo) -> bool | str | None:
+        return parse_optional_bool_or_var(v, field_name=info.field_name)
+
+    @field_validator("argv_redacted", mode="before")
+    @classmethod
+    def parse_argv_redacted(cls, v: bool | str) -> bool | str:
+        return parse_bool_or_var(v, field_name="argv_redacted")
+
+    @field_validator("argv", mode="before")
+    @classmethod
+    def normalize_argv(cls, v: Any) -> list[str]:
+        return coerce_string_list(v)
+
+    @field_validator("executable_path")
+    @classmethod
+    def validate_executable_path(cls, v: str, info: ValidationInfo) -> str:
+        if not v:
+            return v
+        return absolute_path_or_var(v, field_name=info.field_name)
+
+    @model_validator(mode="after")
+    def validate_redacted_argv(self) -> "RuntimeInitProcess":
+        if self.argv_redacted is True and self.argv:
+            raise ValueError("redacted init process argv must omit argv")
+        return self
+
+
 class RuntimeContainerConfiguration(SDLModel):
     """Observed container runtime host and security configuration facts."""
 
@@ -83,6 +129,7 @@ class RuntimeContainerConfiguration(SDLModel):
     read_only_paths: list[str] = Field(default_factory=list)
     cgroup_parent: str = ""
     runtime_name: str = ""
+    init_process: RuntimeInitProcess | None = None
     devices: list[RuntimeDeviceMapping] = Field(default_factory=list)
     device_cgroup_rules: list[str] = Field(default_factory=list)
     extra_hosts: list[RuntimeExtraHost] = Field(default_factory=list)

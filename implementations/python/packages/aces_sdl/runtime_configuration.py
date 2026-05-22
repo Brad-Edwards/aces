@@ -31,6 +31,7 @@ from .runtime_container import (
     RuntimeHealthcheckLog,
     RuntimeHealthObservation,
     RuntimeHealthStatus,
+    RuntimeInitProcess,
     RuntimeNamespaceConfiguration,
 )
 from .runtime_filesystem import (
@@ -107,6 +108,7 @@ __all__ = [
     "RuntimeHealthStatus",
     "RuntimeHealthcheckLog",
     "RuntimeIdentityProvenance",
+    "RuntimeInitProcess",
     "RuntimeLocalGroup",
     "RuntimeLocalIdentityInventory",
     "RuntimeLocalUser",
