@@ -67,31 +67,31 @@ class SshMatchCriterionKind(str, Enum):
     ALL = "all"
 
 
+def _check_accept_env_literal_shape(raw: str) -> None:
+    """Raise if a concrete (non-variable) ``AcceptEnv`` entry is malformed."""
+    if raw == "" or raw.strip() == "":
+        raise ValueError("accept_env entries must be non-empty")
+    if any(ch.isspace() for ch in raw):
+        raise ValueError(f"accept_env entry '{raw}' must not contain whitespace")
+    if "=" in raw:
+        raise ValueError(f"accept_env entry '{raw}' must not contain '=' (names only, not assignments)")
+
+
 def _validate_accept_env_entries(values: list[str]) -> list[str]:
     """Validate an ``AcceptEnv`` allowlist of environment-variable names/patterns.
 
     ``AcceptEnv`` entries are names or patterns, not assignments. Reject
-    empty entries, entries containing whitespace, entries containing ``=``,
-    and case-sensitive duplicates. Variable refs (``${var}``) are passed
-    through unchanged.
+    non-strings, empty entries, entries containing whitespace, entries
+    containing ``=``, and case-sensitive duplicates. Variable refs
+    (``${var}``) are passed through unchanged but still deduplicated.
     """
     seen: set[str] = set()
     out: list[str] = []
     for raw in values:
         if not isinstance(raw, str):
             raise ValueError("accept_env entries must be strings")
-        if is_variable_ref(raw):
-            if raw in seen:
-                raise ValueError(f"Duplicate accept_env entry '{raw}'")
-            seen.add(raw)
-            out.append(raw)
-            continue
-        if raw == "" or raw.strip() == "":
-            raise ValueError("accept_env entries must be non-empty")
-        if any(ch.isspace() for ch in raw):
-            raise ValueError(f"accept_env entry '{raw}' must not contain whitespace")
-        if "=" in raw:
-            raise ValueError(f"accept_env entry '{raw}' must not contain '=' (names only, not assignments)")
+        if not is_variable_ref(raw):
+            _check_accept_env_literal_shape(raw)
         if raw in seen:
             raise ValueError(f"Duplicate accept_env entry '{raw}'")
         seen.add(raw)
@@ -142,15 +142,23 @@ class SshForcedCommand(SDLModel):
 
     @model_validator(mode="after")
     def validate_command_shape(self) -> "SshForcedCommand":
+        # Enforce every invariant that is knowable from the literal fields
+        # BEFORE deferring variable-dependent checks. Otherwise a variable
+        # ``command_kind`` or ``command_redacted`` can be used to smuggle
+        # a raw secret-bearing command through the model boundary.
         kind = self.command_kind
-        command = self.command
         redacted = self.command_redacted
         kind_is_var = isinstance(kind, str) and is_variable_ref(kind)
         redacted_is_var = isinstance(redacted, str) and is_variable_ref(redacted)
-        # Enforce every invariant that is knowable from the literal fields
-        # BEFORE deferring variable-dependent checks. Otherwise a variable
-        # command_kind or command_redacted can be used to smuggle a raw
-        # secret-bearing command through the model boundary.
+        self._enforce_redaction_consistency(kind_is_var=kind_is_var, redacted_is_var=redacted_is_var)
+        if not (kind_is_var or redacted_is_var or redacted is True):
+            self._enforce_concrete_kind_command_shape()
+        return self
+
+    def _enforce_redaction_consistency(self, *, kind_is_var: bool, redacted_is_var: bool) -> None:
+        kind = self.command_kind
+        command = self.command
+        redacted = self.command_redacted
         if redacted is True:
             if command != "":
                 raise ValueError("redacted forced command must omit the command value")
@@ -161,20 +169,16 @@ class SshForcedCommand(SDLModel):
                 raise ValueError("redacted forced command must omit the command value")
             if not redacted_is_var and redacted is not True:
                 raise ValueError("command_kind='redacted' requires command_redacted=true")
-        # Variable-dependent checks: defer the parts that genuinely require
-        # post-instantiation knowledge of kind/redacted to complete.
-        if kind_is_var or redacted_is_var:
-            return self
-        if redacted is True:
-            return self
+
+    def _enforce_concrete_kind_command_shape(self) -> None:
+        kind = self.command_kind
+        command = self.command
         if kind == SshForcedCommandKind.ABSOLUTE_PATH:
             if not command:
                 raise ValueError("absolute_path forced command requires a non-empty command")
             absolute_path_or_var(command, field_name="command")
-        elif kind == SshForcedCommandKind.INTERNAL_SFTP:
-            if command != "internal-sftp":
-                raise ValueError("internal_sftp forced command must equal 'internal-sftp'")
-        return self
+        elif kind == SshForcedCommandKind.INTERNAL_SFTP and command != "internal-sftp":
+            raise ValueError("internal_sftp forced command must equal 'internal-sftp'")
 
 
 class SshMatchCriterion(SDLModel):
