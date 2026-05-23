@@ -611,6 +611,514 @@
       "title": "ContentType",
       "type": "string"
     },
+    "Database": {
+      "additionalProperties": false,
+      "description": "An observed logical database within a database service.",
+      "properties": {
+        "database_id": {
+          "title": "Database Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabaseObjectOrigin"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Origin"
+        },
+        "schemas": {
+          "items": {
+            "$ref": "#/$defs/DatabaseSchema"
+          },
+          "title": "Schemas",
+          "type": "array"
+        }
+      },
+      "required": [
+        "database_id",
+        "name"
+      ],
+      "title": "Database",
+      "type": "object"
+    },
+    "DatabaseAuthMethod": {
+      "description": "How a client authenticates to a database on an access relationship.",
+      "enum": [
+        "password",
+        "md5",
+        "scram_sha_256",
+        "cert",
+        "trust",
+        "peer",
+        "ident",
+        "gssapi",
+        "sspi",
+        "ldap",
+        "radius",
+        "other"
+      ],
+      "title": "DatabaseAuthMethod",
+      "type": "string"
+    },
+    "DatabaseEngine": {
+      "description": "The database engine of an observed database service.",
+      "enum": [
+        "postgresql",
+        "mysql",
+        "mariadb",
+        "sqlite",
+        "mongodb",
+        "mssql",
+        "oracle",
+        "redis",
+        "other"
+      ],
+      "title": "DatabaseEngine",
+      "type": "string"
+    },
+    "DatabaseGrant": {
+      "additionalProperties": false,
+      "description": "An observed privilege grant to a database role.\n\nThe grant is structured by grantee, target object, and privileges; raw\n``GRANT`` statements are not the portable model (ADR-029 \u00a74). ``object_ref``\nis the stable ``*_id`` of a database/schema/table in the same service.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "grantee_role_ref": {
+          "title": "Grantee Role Ref",
+          "type": "string"
+        },
+        "object_ref": {
+          "title": "Object Ref",
+          "type": "string"
+        },
+        "object_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabaseObjectType"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Object Type"
+        },
+        "privileges": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Privileges",
+          "type": "array"
+        },
+        "with_grant_option": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": false,
+          "title": "With Grant Option"
+        }
+      },
+      "required": [
+        "grantee_role_ref",
+        "object_type",
+        "object_ref"
+      ],
+      "title": "DatabaseGrant",
+      "type": "object"
+    },
+    "DatabaseListener": {
+      "additionalProperties": false,
+      "description": "An observed listener of a database service.\n\nThis records what the database process itself listens on. It is not host\npublication \u2014 ``runtime.network.published_ports`` remains the host-exposure\nfact (ADR-029 \u00a73).",
+      "properties": {
+        "address": {
+          "title": "Address",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Port"
+        }
+      },
+      "required": [
+        "address"
+      ],
+      "title": "DatabaseListener",
+      "type": "object"
+    },
+    "DatabaseObjectOrigin": {
+      "description": "Whether a database object was scenario-authored or engine-supplied.\n\nKeeps engine built-ins (``postgres``, ``template0``, ``template1``,\n``information_schema``) and system roles from looking scenario-authored.",
+      "enum": [
+        "scenario",
+        "built_in",
+        "system",
+        "unknown"
+      ],
+      "title": "DatabaseObjectOrigin",
+      "type": "string"
+    },
+    "DatabaseObjectType": {
+      "description": "The kind of database object a grant applies to.",
+      "enum": [
+        "database",
+        "schema",
+        "table"
+      ],
+      "title": "DatabaseObjectType",
+      "type": "string"
+    },
+    "DatabaseProtocol": {
+      "description": "The wire protocol an observed database service speaks.\n\nKept distinct from :class:`DatabaseEngine`: a MariaDB engine speaks the\n``mysql`` protocol, and PostgreSQL must never be ``other`` (ADR-029 \u00a73).",
+      "enum": [
+        "postgresql",
+        "mysql",
+        "tds",
+        "mongodb",
+        "redis",
+        "other"
+      ],
+      "title": "DatabaseProtocol",
+      "type": "string"
+    },
+    "DatabaseRole": {
+      "additionalProperties": false,
+      "description": "An observed database-local role \u2014 an authorization principal.\n\nDatabase roles are not OS accounts, ``runtime.local_identity`` users, or\ntop-level scenario ``accounts`` (ADR-029 \u00a74).",
+      "properties": {
+        "can_login": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Can Login"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabaseObjectOrigin"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Origin"
+        },
+        "role_id": {
+          "title": "Role Id",
+          "type": "string"
+        },
+        "role_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabaseRoleType"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Role Type"
+        }
+      },
+      "required": [
+        "role_id",
+        "name"
+      ],
+      "title": "DatabaseRole",
+      "type": "object"
+    },
+    "DatabaseRoleType": {
+      "description": "Portable classification of a database-local role.",
+      "enum": [
+        "login",
+        "group",
+        "application",
+        "service",
+        "admin",
+        "system",
+        "other"
+      ],
+      "title": "DatabaseRoleType",
+      "type": "string"
+    },
+    "DatabaseSchema": {
+      "additionalProperties": false,
+      "description": "An observed schema (namespace) within a database.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabaseObjectOrigin"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Origin"
+        },
+        "schema_id": {
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "tables": {
+          "items": {
+            "$ref": "#/$defs/DatabaseTable"
+          },
+          "title": "Tables",
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_id",
+        "name"
+      ],
+      "title": "DatabaseSchema",
+      "type": "object"
+    },
+    "DatabaseService": {
+      "additionalProperties": false,
+      "description": "An observed database service hosted by a transport service on a node.\n\n``service`` references the owning same-node ``Node.services[].name`` (bare\nname or the qualified ``nodes.<node>.services.<name>`` form). The inventory\nis observation metadata; it never mutates ``Node.services``.",
+      "properties": {
+        "database_service_id": {
+          "title": "Database Service Id",
+          "type": "string"
+        },
+        "databases": {
+          "items": {
+            "$ref": "#/$defs/Database"
+          },
+          "title": "Databases",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "engine": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabaseEngine"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Engine"
+        },
+        "grants": {
+          "items": {
+            "$ref": "#/$defs/DatabaseGrant"
+          },
+          "title": "Grants",
+          "type": "array"
+        },
+        "listeners": {
+          "items": {
+            "$ref": "#/$defs/DatabaseListener"
+          },
+          "title": "Listeners",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "protocol": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabaseProtocol"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Protocol"
+        },
+        "roles": {
+          "items": {
+            "$ref": "#/$defs/DatabaseRole"
+          },
+          "title": "Roles",
+          "type": "array"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        },
+        "settings": {
+          "items": {
+            "$ref": "#/$defs/DatabaseSetting"
+          },
+          "title": "Settings",
+          "type": "array"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "database_service_id"
+      ],
+      "title": "DatabaseService",
+      "type": "object"
+    },
+    "DatabaseSetting": {
+      "additionalProperties": false,
+      "description": "An observed database runtime setting with provenance and sensitivity.\n\nSettings that may carry credentials, hashes, connection strings, or\noperator-only values must omit their raw ``value`` and classify it as\n``redacted``/``operator_secret`` (ADR-029 \u00a75).",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabaseSettingProvenance"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        },
+        "value_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Value Classification"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "DatabaseSetting",
+      "type": "object"
+    },
+    "DatabaseSettingProvenance": {
+      "description": "Where an observed database runtime setting value came from.",
+      "enum": [
+        "introspection",
+        "configuration_file",
+        "image_default",
+        "operator_override",
+        "runtime_default",
+        "unknown",
+        "other"
+      ],
+      "title": "DatabaseSettingProvenance",
+      "type": "string"
+    },
+    "DatabaseTable": {
+      "additionalProperties": false,
+      "description": "An observed table in a database schema.\n\n``table_id`` is the stable identity; ``name`` is the observed table name\nand is data, never a mapping key or reference segment.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "table_id": {
+          "title": "Table Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "table_id",
+        "name"
+      ],
+      "title": "DatabaseTable",
+      "type": "object"
+    },
     "DockerfileInstruction": {
       "additionalProperties": false,
       "description": "A structured record of one container build-recipe instruction.\n\nThe instruction is kept as a typed kind plus tokenized ``arguments``\nrather than raw recipe text: raw Dockerfile/shell syntax can contain\n``${...}`` strings that collide with ACES variable substitution.",
@@ -3107,8 +3615,19 @@
     },
     "Relationship": {
       "additionalProperties": false,
-      "description": "A typed directed edge between two named scenario elements.\n\nSource and target can reference any named element in the scenario:\nnodes, features, accounts, entities, or infrastructure entries.\nThe validator checks that both endpoints resolve.\n\nThe ``properties`` dict carries type-specific metadata (e.g.,\n``trust_type: parent-child`` for AD trusts, ``protocol: SAML``\nfor federation). It's a flat dict rather than typed sub-models\nbecause relationship properties vary widely and we don't want\nto gate expressiveness on pre-modeling every variant.",
+      "description": "A typed directed edge between two named scenario elements.\n\nSource and target can reference any named element in the scenario:\nnodes, features, accounts, entities, or infrastructure entries.\nThe validator checks that both endpoints resolve.\n\nThe ``properties`` dict carries type-specific metadata (e.g.,\n``trust_type: parent-child`` for AD trusts, ``protocol: SAML``\nfor federation). It's a flat dict rather than typed sub-models\nbecause relationship properties vary widely and we don't want\nto gate expressiveness on pre-modeling every variant.\n\n``database_access`` is the one typed exception: when an application\nconnects to a database, the access role and auth method need\nstructural validation rather than prose, so they get a typed block\n(ADR-029 \u00a74).",
       "properties": {
+        "database_access": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipDatabaseAccess"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "description": {
           "default": "",
           "title": "Description",
@@ -3139,6 +3658,36 @@
         "target"
       ],
       "title": "Relationship",
+      "type": "object"
+    },
+    "RelationshipDatabaseAccess": {
+      "additionalProperties": false,
+      "description": "Typed database-access detail carried by a top-level relationship edge.\n\nWhen an application connects to a database, the relationship's ``target``\nresolves to the database (service or logical database) and this block keeps\nthe ``role_ref`` (a ``role_id`` in that service) and ``auth_method``\nstructurally validated rather than recorded as prose (ADR-029 \u00a74).",
+      "properties": {
+        "auth_method": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabaseAuthMethod"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Auth Method"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "role_ref": {
+          "default": "",
+          "title": "Role Ref",
+          "type": "string"
+        }
+      },
+      "title": "RelationshipDatabaseAccess",
       "type": "object"
     },
     "RelationshipType": {
@@ -3700,6 +4249,13 @@
             }
           ],
           "default": null
+        },
+        "database_services": {
+          "items": {
+            "$ref": "#/$defs/DatabaseService"
+          },
+          "title": "Database Services",
+          "type": "array"
         },
         "dependency_manifests": {
           "items": {

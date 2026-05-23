@@ -10,6 +10,18 @@ from aces.core.sdl.features import Feature, FeatureType
 from aces.core.sdl.infrastructure import ACLAction, ACLRule, InfraNode, SimpleProperties
 from aces.core.sdl.nodes import (
     ContainerImageBuildProvenance,
+    DatabaseAuthMethod,
+    DatabaseEngine,
+    DatabaseGrant,
+    DatabaseListener,
+    DatabaseObjectOrigin,
+    DatabaseProtocol,
+    DatabaseRoleType,
+    DatabaseSchema,
+    DatabaseService,
+    DatabaseSetting,
+    DatabaseSettingProvenance,
+    DatabaseTable,
     DockerfileInstruction,
     DockerfileInstructionKind,
     ImageAttestation,
@@ -2465,3 +2477,313 @@ class TestRuntimeApplicationSurface:
                 methods=["GET"],
                 templates=["/app/t.html", "/app/t.html"],
             )
+
+
+# ---------------------------------------------------------------------------
+# Runtime database logical-state surface inventory (ADR-027)
+# ---------------------------------------------------------------------------
+
+
+class TestRuntimeDatabaseService:
+    def test_vm_runtime_database_service(self):
+        n = Node(
+            type="vm",
+            services=[{"port": 5432, "name": "techvault-pg"}],
+            runtime={
+                "database_services": [
+                    {
+                        "database_service_id": "techvault-postgres",
+                        "service": "techvault-pg",
+                        "engine": "postgresql",
+                        "protocol": "postgresql",
+                        "version": "16.13",
+                        "name": "TechVault PostgreSQL",
+                        "listeners": [
+                            {"address": "*", "port": 5432},
+                            {"address": "/var/run/postgresql", "description": "unix socket"},
+                        ],
+                        "databases": [
+                            {
+                                "database_id": "techvault-db",
+                                "name": "techvault",
+                                "origin": "scenario",
+                                "schemas": [
+                                    {
+                                        "schema_id": "public-schema",
+                                        "name": "public",
+                                        "tables": [
+                                            {"table_id": "users-tbl", "name": "users"},
+                                            {"table_id": "audit-tbl", "name": "audit_log"},
+                                        ],
+                                    }
+                                ],
+                            },
+                            {"database_id": "template0-db", "name": "template0", "origin": "built_in"},
+                        ],
+                        "roles": [
+                            {"role_id": "app-role", "name": "techvault", "role_type": "application", "can_login": True},
+                            {"role_id": "su-role", "name": "postgres", "role_type": "admin", "origin": "built_in"},
+                        ],
+                        "grants": [
+                            {
+                                "grantee_role_ref": "app-role",
+                                "object_type": "table",
+                                "object_ref": "users-tbl",
+                                "privileges": ["SELECT", "INSERT", "UPDATE"],
+                                "with_grant_option": False,
+                            }
+                        ],
+                        "settings": [
+                            {
+                                "name": "listen_addresses",
+                                "value": "*",
+                                "provenance": "configuration_file",
+                            },
+                            {
+                                "name": "log_statement",
+                                "value": "all",
+                                "provenance": "operator_override",
+                            },
+                        ],
+                    }
+                ]
+            },
+        )
+        dbsvc = n.runtime.database_services[0]
+        # Engine, protocol, and version are first-class — no protocol: other.
+        assert dbsvc.engine == DatabaseEngine.POSTGRESQL
+        assert dbsvc.protocol == DatabaseProtocol.POSTGRESQL
+        assert dbsvc.version == "16.13"
+        assert dbsvc.service == "techvault-pg"
+        # Listener address union: wildcard and Unix socket both accepted.
+        assert dbsvc.listeners[0].address == "*"
+        assert dbsvc.listeners[0].port == 5432
+        assert dbsvc.listeners[1].address == "/var/run/postgresql"
+        # Databases, schemas, tables are typed data.
+        techvault = dbsvc.databases[0]
+        assert techvault.name == "techvault"
+        assert techvault.origin == DatabaseObjectOrigin.SCENARIO
+        assert techvault.schemas[0].name == "public"
+        assert [t.name for t in techvault.schemas[0].tables] == ["users", "audit_log"]
+        # Built-in objects classified, not scenario-authored.
+        assert dbsvc.databases[1].origin == DatabaseObjectOrigin.BUILT_IN
+        # Roles are typed database-local principals.
+        assert dbsvc.roles[0].role_type == DatabaseRoleType.APPLICATION
+        assert dbsvc.roles[0].can_login is True
+        assert dbsvc.roles[1].origin == DatabaseObjectOrigin.BUILT_IN
+        # Grants are typed privilege facts.
+        assert dbsvc.grants[0].privileges == ["SELECT", "INSERT", "UPDATE"]
+        # Settings carry provenance.
+        assert dbsvc.settings[0].provenance == DatabaseSettingProvenance.CONFIGURATION_FILE
+
+    def test_listener_address_accepts_ip_and_hostname(self):
+        assert DatabaseListener(address="10.0.0.5").address == "10.0.0.5"
+        assert DatabaseListener(address="::1").address == "::1"
+        assert DatabaseListener(address="db.internal.example").address == "db.internal.example"
+
+    def test_listener_address_rejects_garbage(self):
+        with pytest.raises(ValidationError, match="must be '\\*', an IP address, a hostname"):
+            DatabaseListener(address="bad!host")
+
+    def test_listener_port_range_enforced(self):
+        with pytest.raises(ValidationError, match="listener port must be <="):
+            DatabaseListener(address="*", port=70000)
+
+    def test_database_service_id_rejects_variable_placeholder(self):
+        with pytest.raises(ValidationError, match="database_service_id must be a stable identifier"):
+            DatabaseService(database_service_id="${svc}")
+
+    def test_table_id_rejects_variable_placeholder(self):
+        with pytest.raises(ValidationError, match="table_id must be a stable identifier"):
+            DatabaseTable(table_id="${t}", name="users")
+
+    def test_object_name_allows_variable_placeholder(self):
+        # Names are data, not symbols — a placeholder is a legal value field.
+        assert DatabaseTable(table_id="users-tbl", name="${table_name}").name == "${table_name}"
+
+    def test_object_name_rejects_empty(self):
+        with pytest.raises(ValidationError, match="table name must be a non-empty string"):
+            DatabaseTable(table_id="users-tbl", name="")
+
+    def test_duplicate_database_id_rejected(self):
+        with pytest.raises(ValidationError, match="Duplicate database database_id 'dup'"):
+            DatabaseService(
+                database_service_id="svc",
+                databases=[
+                    {"database_id": "dup", "name": "a"},
+                    {"database_id": "dup", "name": "b"},
+                ],
+            )
+
+    def test_duplicate_role_id_rejected(self):
+        with pytest.raises(ValidationError, match="Duplicate role role_id 'dup'"):
+            DatabaseService(
+                database_service_id="svc",
+                roles=[
+                    {"role_id": "dup", "name": "a"},
+                    {"role_id": "dup", "name": "b"},
+                ],
+            )
+
+    def test_duplicate_table_id_rejected(self):
+        with pytest.raises(ValidationError, match="Duplicate database table_id 't'"):
+            DatabaseSchema(
+                schema_id="s",
+                name="public",
+                tables=[{"table_id": "t", "name": "a"}, {"table_id": "t", "name": "b"}],
+            )
+
+    def test_duplicate_setting_name_rejected(self):
+        with pytest.raises(ValidationError, match="Duplicate database setting 'port'"):
+            DatabaseService(
+                database_service_id="svc",
+                settings=[
+                    {"name": "port", "value": "5432"},
+                    {"name": "port", "value": "5433"},
+                ],
+            )
+
+    def test_redacted_setting_must_omit_raw_value(self):
+        with pytest.raises(ValidationError, match="must omit its raw value"):
+            DatabaseSetting(name="password", value="hunter2", value_classification="redacted")
+
+    def test_operator_secret_setting_must_omit_raw_value(self):
+        with pytest.raises(ValidationError, match="must omit its raw value"):
+            DatabaseSetting(name="primary_conninfo", value="host=x password=y", value_classification="operator_secret")
+
+    def test_redacted_setting_without_value_is_valid(self):
+        setting = DatabaseSetting(name="password", value_classification="redacted", provenance="operator_override")
+        assert setting.value == ""
+
+    @pytest.mark.parametrize(
+        "secret_name",
+        [
+            "password",
+            "PASSWORD",
+            "shared_password",
+            "primary_conninfo",
+            "ssl_passphrase",
+            "pg_hba_file_contents",
+            "service_credential",
+        ],
+    )
+    def test_secret_bearing_name_must_omit_value_regardless_of_classification(self, secret_name):
+        # Defaulting value_classification to 'unknown' must not let plaintext
+        # secrets through (the cycle-2 codex finding).
+        with pytest.raises(ValidationError, match="must omit its raw value"):
+            DatabaseSetting(name=secret_name, value="leak")
+
+    def test_secret_bearing_name_with_empty_value_still_requires_redacted_classification(self):
+        with pytest.raises(ValidationError, match="value_classification must be 'redacted' or 'operator_secret'"):
+            DatabaseSetting(name="password", value_classification="plain")
+
+    def test_secret_bearing_name_with_variable_classification_is_skipped(self):
+        # ${var} classification is deferred to instantiation revalidation.
+        setting = DatabaseSetting(name="password", value_classification="${CLS}")
+        assert setting.value_classification == "${CLS}"
+
+    def test_non_secret_setting_keeps_default_unknown_classification(self):
+        setting = DatabaseSetting(name="shared_buffers", value="128MB")
+        assert setting.value == "128MB"
+
+    def test_grant_privileges_must_not_be_empty(self):
+        with pytest.raises(ValidationError, match="grant privileges must not be empty"):
+            DatabaseGrant(grantee_role_ref="r", object_type="table", object_ref="t", privileges=[])
+
+    def test_grant_rejects_duplicate_privilege(self):
+        with pytest.raises(ValidationError, match="Duplicate grant privilege"):
+            DatabaseGrant(
+                grantee_role_ref="r",
+                object_type="table",
+                object_ref="t",
+                privileges=["SELECT", "SELECT"],
+            )
+
+    def test_engine_normalizes_case_and_hyphens(self):
+        svc = DatabaseService(database_service_id="svc", engine="PostgreSQL", protocol="postgresql")
+        assert svc.engine == DatabaseEngine.POSTGRESQL
+
+    def test_unknown_engine_rejected(self):
+        with pytest.raises(ValidationError, match="engine must be one of"):
+            DatabaseService(database_service_id="svc", engine="cobol-db")
+
+    def test_engine_protocol_accept_variable_placeholder(self):
+        svc = DatabaseService(database_service_id="svc", engine="${ENGINE}", protocol="${PROTO}")
+        assert svc.engine == "${ENGINE}"
+        assert svc.protocol == "${PROTO}"
+
+    @pytest.mark.parametrize(
+        "engine,bad_protocol,expected_protocol",
+        [
+            ("postgresql", "other", "postgresql"),
+            ("mysql", "other", "mysql"),
+            ("mariadb", "tds", "mysql"),
+            ("mssql", "mysql", "tds"),
+            ("mongodb", "other", "mongodb"),
+            ("redis", "other", "redis"),
+        ],
+    )
+    def test_known_engine_rejects_wrong_or_other_protocol(self, engine, bad_protocol, expected_protocol):
+        with pytest.raises(ValidationError, match=f"requires protocol to be one of: {expected_protocol}"):
+            DatabaseService(database_service_id="svc", engine=engine, protocol=bad_protocol)
+
+    def test_postgresql_engine_default_protocol_other_is_rejected(self):
+        # Without a cross-field check, defaulting protocol leaves PostgreSQL
+        # at protocol=other — the exact ADR-027 §3 anti-pattern.
+        with pytest.raises(ValidationError, match="requires protocol to be one of: postgresql"):
+            DatabaseService(database_service_id="svc", engine="postgresql")
+
+    def test_engine_with_variable_protocol_is_skipped(self):
+        svc = DatabaseService(database_service_id="svc", engine="postgresql", protocol="${PROTO}")
+        assert svc.protocol == "${PROTO}"
+
+    def test_mariadb_engine_accepts_mysql_protocol(self):
+        svc = DatabaseService(database_service_id="svc", engine="mariadb", protocol="mysql")
+        assert svc.engine == DatabaseEngine.MARIADB
+        assert svc.protocol == DatabaseProtocol.MYSQL
+
+    def test_sqlite_engine_unconstrained_protocol(self):
+        # SQLite has no wire protocol; default ``other`` is acceptable.
+        svc = DatabaseService(database_service_id="svc", engine="sqlite")
+        assert svc.engine == DatabaseEngine.SQLITE
+
+    def test_duplicate_schema_id_across_databases_is_rejected(self):
+        # Service-wide uniqueness for grant target resolution.
+        with pytest.raises(ValidationError, match="Duplicate schema schema_id 'public' in database service 'svc'"):
+            DatabaseService(
+                database_service_id="svc",
+                databases=[
+                    {"database_id": "a", "name": "a", "schemas": [{"schema_id": "public", "name": "public"}]},
+                    {"database_id": "b", "name": "b", "schemas": [{"schema_id": "public", "name": "public"}]},
+                ],
+            )
+
+    def test_duplicate_table_id_across_schemas_is_rejected(self):
+        with pytest.raises(ValidationError, match="Duplicate table table_id 'users' in database service 'svc'"):
+            DatabaseService(
+                database_service_id="svc",
+                databases=[
+                    {
+                        "database_id": "a",
+                        "name": "a",
+                        "schemas": [
+                            {"schema_id": "s1", "name": "s1", "tables": [{"table_id": "users", "name": "users"}]},
+                            {"schema_id": "s2", "name": "s2", "tables": [{"table_id": "users", "name": "users"}]},
+                        ],
+                    }
+                ],
+            )
+
+    def test_relationship_database_access_auth_method_normalized(self):
+        from aces.core.sdl.relationships import Relationship, RelationshipDatabaseAccess
+
+        access = RelationshipDatabaseAccess(role_ref="app-role", auth_method="SCRAM-SHA-256")
+        assert access.auth_method == DatabaseAuthMethod.SCRAM_SHA_256
+        rel = Relationship(
+            type="connects_to",
+            source="webapp",
+            target="db",
+            database_access={"role_ref": "app-role", "auth_method": "password"},
+        )
+        assert rel.database_access.role_ref == "app-role"
+        assert rel.database_access.auth_method == DatabaseAuthMethod.PASSWORD

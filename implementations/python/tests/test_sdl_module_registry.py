@@ -427,3 +427,52 @@ def test_untrusted_and_unsigned_oci_imports_fail_closed(tmp_path: Path):
         )
         with pytest.raises(SDLParseError, match="No valid trusted signer signature found"):
             parse_sdl_file(root)
+
+
+def test_database_and_application_refs_survive_module_namespacing():
+    """Qualified runtime DB/application refs are rewritten when namespaced.
+
+    ADR-027 §2: refs published into the named-reference index must also be
+    rewritten by module composition so an application-to-database relationship
+    survives being imported under a namespace.
+    """
+    from aces_sdl._module_symbols import symbol_index
+
+    from aces.core.sdl.scenario import ModuleDescriptor, Scenario
+
+    scenario = Scenario(
+        name="db-module",
+        nodes={
+            "db": {
+                "type": "vm",
+                "services": [{"port": 5432, "name": "pg"}],
+                "runtime": {
+                    "database_services": [
+                        {
+                            "database_service_id": "tv-pg",
+                            "service": "pg",
+                            "engine": "postgresql",
+                            "protocol": "postgresql",
+                            "databases": [{"database_id": "tv-db", "name": "techvault"}],
+                        }
+                    ]
+                },
+            },
+            "web": {
+                "type": "vm",
+                "services": [{"port": 8080, "name": "http"}],
+                "runtime": {"applications": [{"application_id": "webapp", "service": "http"}]},
+            },
+        },
+    )
+    index = symbol_index(
+        scenario,
+        namespace="shared",
+        descriptor=ModuleDescriptor(id="aces/db-module", version="1.0.0"),
+    )
+    named = index["named"]
+    assert named["nodes.db.runtime.database_services.tv-pg"] == ("nodes.shared.db.runtime.database_services.tv-pg")
+    assert named["nodes.db.runtime.database_services.tv-pg.databases.tv-db"] == (
+        "nodes.shared.db.runtime.database_services.tv-pg.databases.tv-db"
+    )
+    assert named["nodes.web.runtime.applications.webapp"] == ("nodes.shared.web.runtime.applications.webapp")
