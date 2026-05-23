@@ -52,3 +52,4 @@ Each ADR includes:
 | [024](adr-024-local-identity-inventory-surface.md) | Local Identity Inventory Surface | accepted | 2026-05-21 |
 | [025](adr-025-container-network-realization-surface.md) | Container Network Realization Surface | accepted | 2026-05-21 |
 | [026](adr-026-application-http-surface-inventory.md) | Application HTTP Surface Inventory | accepted | 2026-05-22 |
+| [027](adr-027-container-init-reaper-runtime-surface.md) | Container Init/Reaper Runtime Surface | accepted | 2026-05-22 |
