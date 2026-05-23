@@ -38,6 +38,12 @@ Validator
 .. automodule:: aces_sdl.validator
    :members:
 
+Language Service
+----------------
+
+.. automodule:: aces_sdl.language_service
+   :members:
+
 Composition
 -----------
 

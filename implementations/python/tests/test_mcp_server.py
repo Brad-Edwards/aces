@@ -1,7 +1,7 @@
 """Tests for the ACES SDL MCP server tools.
 
-Verifies that all 14 tools produce correct results across
-reference, authoring, and inspection categories.
+Verifies that the registered tool surface produces correct results across
+reference, authoring, language-service, inspection, and operation categories.
 """
 
 from __future__ import annotations
@@ -358,6 +358,130 @@ variables:
 
 
 # ---------------------------------------------------------------------------
+# Language-service tools
+# ---------------------------------------------------------------------------
+
+
+class TestLanguageServiceTools:
+    def test_completions_suggest_reference_targets(self, server):
+        payload = _json_call(
+            server,
+            "sdl_completions",
+            {"sdl_content": FULL_SDL, "cursor_path": "/nodes/web/features"},
+        )
+
+        labels = {item["label"] for item in payload["items"]}
+        assert "app" in labels
+        assert any(item["detail"] == "features.app" for item in payload["items"])
+
+    def test_references_return_definition_locations(self, server):
+        payload = _json_call(
+            server,
+            "sdl_references",
+            {"sdl_content": FULL_SDL, "symbol": "app"},
+        )
+
+        assert payload["status"] == "ok"
+        assert any(item["qualified_name"] == "features.app" for item in payload["definitions"])
+        assert any(item["path"] == "/nodes/web/features/app" for item in payload["occurrences"])
+
+    def test_format_returns_normalized_yaml(self, server):
+        payload = _json_call(
+            server,
+            "sdl_format",
+            {"sdl_content": "Name: x\nNodes:\n  sw: {Type: Switch}\n"},
+        )
+
+        assert payload["status"] == "formatted"
+        assert payload["content"].startswith("name: x\nnodes:\n")
+
+    def test_diagnostics_return_structured_errors(self, server):
+        payload = _json_call(
+            server,
+            "sdl_diagnostics",
+            {"sdl_content": INVALID_SDL},
+        )
+
+        assert payload["status"] == "invalid"
+        assert payload["diagnostics"][0]["code"] == "sdl.semantic"
+        assert "ghost-feature" in payload["diagnostics"][0]["message"]
+
+    def test_apply_edit_sets_value_and_revalidates(self, server):
+        payload = _json_call(
+            server,
+            "sdl_apply_edit",
+            {
+                "sdl_content": MINIMAL_SDL,
+                "operation": "set",
+                "pointer": "/description",
+                "value_json": '"Edited"',
+            },
+        )
+
+        assert payload["status"] == "edited"
+        assert "description: Edited" in payload["content"]
+        assert payload["diagnostics"] == []
+
+    def test_apply_edit_deletes_value_and_revalidates(self, server):
+        payload = _json_call(
+            server,
+            "sdl_apply_edit",
+            {
+                "sdl_content": MINIMAL_SDL,
+                "operation": "delete",
+                "pointer": "/infrastructure/web/links",
+            },
+        )
+
+        assert payload["status"] == "edited"
+        assert "links" not in payload["content"]
+        assert payload["diagnostics"] == []
+
+    def test_apply_edit_appends_value_and_revalidates(self, server):
+        sdl = """\
+name: append-edit
+nodes:
+  net: {type: Switch}
+  net2: {type: Switch}
+  web: {type: VM, os: linux, resources: {ram: 2 GiB, cpu: 1}}
+infrastructure:
+  net: {count: 1, properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}}
+  net2: {count: 1, properties: {cidr: 10.0.1.0/24, gateway: 10.0.1.1}}
+  web: {count: 1, links: [net]}
+"""
+        payload = _json_call(
+            server,
+            "sdl_apply_edit",
+            {
+                "sdl_content": sdl,
+                "operation": "append",
+                "pointer": "/infrastructure/web/links",
+                "value_json": '"net2"',
+            },
+        )
+
+        assert payload["status"] == "edited"
+        assert "- net2" in payload["content"]
+        assert payload["diagnostics"] == []
+
+    def test_apply_edit_rejects_invalid_value_json(self, server):
+        payload = _json_call(
+            server,
+            "sdl_apply_edit",
+            {
+                "sdl_content": MINIMAL_SDL,
+                "operation": "set",
+                "pointer": "/description",
+                "value_json": "{bad",
+            },
+        )
+
+        assert payload["status"] == "invalid"
+        assert payload["diagnostics"][0]["code"] == "sdl.edit"
+        assert "Invalid JSON" in payload["diagnostics"][0]["message"]
+
+
+# ---------------------------------------------------------------------------
 # Inspection tools
 # ---------------------------------------------------------------------------
 
@@ -493,6 +617,7 @@ class TestOperationTools:
         payload = _json_call(server, "aces_tool_surface")
         assert payload["surface"] == "aces-sdl"
         assert "sdl_claims_assessment" in payload["recommended_workflow"]
+        assert "sdl_completions" in payload["tool_families"]["language_service"]
         assert any("does not expose participant cyber actions" in item for item in payload["boundaries"])
 
     def test_parse_returns_machine_readable_summary(self, server):
@@ -622,6 +747,11 @@ class TestServerConstruction:
             "sdl_validate_section",
             "sdl_scaffold",
             "sdl_instantiate",
+            "sdl_completions",
+            "sdl_references",
+            "sdl_format",
+            "sdl_diagnostics",
+            "sdl_apply_edit",
             "sdl_summarize",
             "sdl_list_elements",
             "sdl_get_element",

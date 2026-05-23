@@ -48,6 +48,7 @@ def register(mcp: FastMCP) -> None:
                     "sdl_overview",
                     "sdl_section_reference",
                     "sdl_scaffold or user-authored SDL",
+                    "sdl_completions / sdl_diagnostics / sdl_apply_edit while authoring",
                     "sdl_parse",
                     "sdl_validate",
                     "sdl_design_assessment",
@@ -68,6 +69,13 @@ def register(mcp: FastMCP) -> None:
                         "sdl_validate",
                         "sdl_validate_section",
                         "sdl_instantiate",
+                    ],
+                    "language_service": [
+                        "sdl_completions",
+                        "sdl_references",
+                        "sdl_format",
+                        "sdl_diagnostics",
+                        "sdl_apply_edit",
                     ],
                     "parsing": ["sdl_parse"],
                     "inspection": [

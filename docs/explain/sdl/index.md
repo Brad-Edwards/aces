@@ -138,6 +138,7 @@ accounts:
 
 - [SDL Sections Reference](sections.md) — Complete reference for all 21 sections
 - [Parser Behavior](parser.md) — Key normalization, shorthand expansion, SDL-only parsing
+- [Language-Service Tools](language-service.md) — Agent-facing completions, references, formatting, diagnostics, and structured edits
 - [Semantic Validation](validation.md) — Cross-reference checks and what the validator enforces
 - [Design Precedents](precedents.md) — Where each SDL element comes from
 - [Academic Lineage](lineage.md) — Primary-source lineage for SDL semantics
