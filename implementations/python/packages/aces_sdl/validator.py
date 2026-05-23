@@ -445,6 +445,7 @@ class SemanticValidator:
         self._verify_infrastructure()
         self._verify_runtime_network()
         self._verify_runtime_application()
+        self._verify_runtime_capability_overrides()
         self._verify_features()
         self._verify_conditions()
         self._verify_vulnerabilities()
@@ -754,6 +755,71 @@ class SemanticValidator:
                         f"Node '{node_name}' runtime application '{app_id}' route '{route_id}' "
                         f"{field_name} ref '{ref}' does not resolve to an observed file on the node"
                     )
+
+    def _verify_runtime_capability_overrides(self) -> None:
+        """Cross-check ``linux_capabilities.process_overrides`` selectors.
+
+        Per ADR-029, scoped capability records identify a subject via
+        ``RuntimeProcessIdentity`` selectors and the capability list ships
+        through the same closed-world Pydantic gates as the container-wide
+        lists. The only check that cannot live on the model itself is the
+        scenario-level cross-reference: when an override's
+        ``subject.name`` is a literal value and the enclosing node declares
+        ``runtime.processes``, the name SHOULD match one of those observed
+        processes. A miss is reported as an error so inventories that
+        forget to add the new process surface fail fast rather than ship a
+        scoped-policy claim that points at nothing.
+        """
+        for node_name, node in self._s.nodes.items():
+            overrides = self._capability_overrides_for(node)
+            if not overrides:
+                continue
+            observed = self._observed_process_names(node)
+            if not observed:
+                # No declared process inventory to cross-check against — the
+                # override stands on its own selectors.
+                continue
+            self._check_override_subject_names(node_name, overrides, observed)
+
+    def _capability_overrides_for(self, node: object) -> list[object]:
+        runtime = getattr(node, "runtime", None)
+        if runtime is None:
+            return []
+        capability_policy = getattr(runtime, "linux_capabilities", None)
+        if capability_policy is None:
+            return []
+        return list(getattr(capability_policy, "process_overrides", None) or [])
+
+    def _observed_process_names(self, node: object) -> set[str]:
+        runtime = getattr(node, "runtime", None)
+        if runtime is None:
+            return set()
+        names = {
+            process.name
+            for process in (runtime.processes or [])
+            if process.name and not self._is_unresolved_var(process.name)
+        }
+        primary = getattr(runtime, "process", None)
+        if primary is not None and primary.name and not self._is_unresolved_var(primary.name):
+            names.add(primary.name)
+        return names
+
+    def _check_override_subject_names(
+        self,
+        node_name: str,
+        overrides: list[object],
+        observed: set[str],
+    ) -> None:
+        for override in overrides:
+            subject_name = override.subject.name
+            if not subject_name or self._is_unresolved_var(subject_name):
+                continue
+            if subject_name not in observed:
+                self._err(
+                    f"Node '{node_name}' runtime capability override subject "
+                    f"'{subject_name}' does not match any process declared in "
+                    "'runtime.processes' or 'runtime.process'"
+                )
 
     def _verify_content(self) -> None:
         for name, item in self._s.content.items():

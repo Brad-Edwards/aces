@@ -263,6 +263,109 @@ class TestVerifyRuntimeNetwork:
         assert _validate(s) == []
 
 
+class TestVerifyRuntimeCapabilityOverrides:
+    def test_override_subject_matching_observed_process_is_valid(self):
+        s = _make_scenario(
+            nodes={
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {
+                        "processes": [
+                            {"name": "entrypoint", "pid": 1, "role": "supervisor"},
+                            {"name": "sshd", "parent_pid": 1, "role": "supervisor"},
+                        ],
+                        "linux_capabilities": {
+                            "required": ["CAP_AUDIT_CONTROL"],
+                            "process_overrides": [
+                                {
+                                    "subject": {"name": "sshd"},
+                                    "scope": "subtree",
+                                    "drop": ["CAP_AUDIT_CONTROL"],
+                                }
+                            ],
+                        },
+                    },
+                },
+            },
+        )
+        assert _validate(s) == []
+
+    def test_override_subject_missing_from_processes_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {
+                        "processes": [
+                            {"name": "entrypoint", "pid": 1, "role": "supervisor"},
+                        ],
+                        "linux_capabilities": {
+                            "process_overrides": [
+                                {
+                                    "subject": {"name": "ghost-sshd"},
+                                    "scope": "subtree",
+                                    "drop": ["CAP_AUDIT_CONTROL"],
+                                }
+                            ],
+                        },
+                    },
+                },
+            },
+        )
+        errors = _validate(s)
+        assert any("capability override subject 'ghost-sshd' does not match any process" in e for e in errors)
+
+    def test_override_with_variable_subject_name_is_skipped(self):
+        s = _make_scenario(
+            variables={"SHELL_NAME": {"type": "string", "required": True}},
+            nodes={
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {
+                        "processes": [
+                            {"name": "entrypoint", "pid": 1, "role": "supervisor"},
+                        ],
+                        "linux_capabilities": {
+                            "process_overrides": [
+                                {
+                                    "subject": {"name": "${SHELL_NAME}"},
+                                    "scope": "subtree",
+                                    "drop": ["CAP_AUDIT_CONTROL"],
+                                }
+                            ],
+                        },
+                    },
+                },
+            },
+        )
+        assert _validate(s) == []
+
+    def test_override_skipped_when_no_processes_declared(self):
+        s = _make_scenario(
+            nodes={
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {
+                        "linux_capabilities": {
+                            "process_overrides": [
+                                {
+                                    "subject": {"name": "sshd", "parent_pid": 1},
+                                    "scope": "subtree",
+                                    "drop": ["CAP_AUDIT_CONTROL"],
+                                }
+                            ],
+                        },
+                    },
+                },
+            },
+        )
+        assert _validate(s) == []
+
+
 class TestVerifyFeatures:
     def test_feature_dependency_cycle(self):
         s = _make_scenario(

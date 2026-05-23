@@ -290,6 +290,13 @@ nodes:
       linux-capabilities:
         required: [CAP_NET_ADMIN]
         effective: CAP_NET_ADMIN
+        process-overrides:
+          - subject:
+              name: gunicorn
+              parent-pid: 1
+            scope: subtree
+            drop: [cap-audit-control]
+            description: interactive participant shell
       operational-policy:
         restart: unless-stopped
         resource-limits:
@@ -395,6 +402,12 @@ nodes:
         assert node.runtime.environment[1].value_classification == "secret_fixture"
         assert node.runtime.linux_capabilities.required == ["CAP_NET_ADMIN"]
         assert node.runtime.linux_capabilities.effective == ["CAP_NET_ADMIN"]
+        overrides = node.runtime.linux_capabilities.process_overrides
+        assert len(overrides) == 1
+        assert overrides[0].subject.name == "gunicorn"
+        assert overrides[0].subject.parent_pid == 1
+        assert overrides[0].scope == "subtree"
+        assert overrides[0].drop == ["CAP_AUDIT_CONTROL"]
         assert node.runtime.operational_policy.restart == "unless_stopped"
         assert node.runtime.operational_policy.resource_limits.memory == 512 * 1048576
         assert node.runtime.operational_policy.resource_limits.cpu == 0.5

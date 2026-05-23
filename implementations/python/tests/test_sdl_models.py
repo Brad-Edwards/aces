@@ -35,6 +35,8 @@ from aces.core.sdl.nodes import (
     RuntimeApplicationResponse,
     RuntimeApplicationRoute,
     RuntimeApplicationSurface,
+    RuntimeCapabilityOverrideScope,
+    RuntimeCapabilityPolicy,
     RuntimeContainerConfiguration,
     RuntimeControlInterface,
     RuntimeControlInterfaceAccess,
@@ -56,6 +58,7 @@ from aces.core.sdl.nodes import (
     RuntimeNetworkIdStability,
     RuntimeNetworkRealization,
     RuntimePackageVulnerabilitySeverity,
+    RuntimeProcessCapabilityOverride,
     RuntimeProcessRole,
     RuntimePublishedPort,
     RuntimeRestartPolicy,
@@ -760,6 +763,43 @@ class TestNode:
                 "Duplicate runtime process name",
             ),
             ({"linux_capabilities": {"required": [""]}}, "capability"),
+            (
+                {
+                    "linux_capabilities": {
+                        "process_overrides": [
+                            {"subject": {"name": "sshd"}, "scope": "subtree", "drop": ["CAP_AUDIT_CONTROL"]},
+                            {"subject": {"name": "sshd"}, "scope": "subtree", "drop": ["CAP_NET_ADMIN"]},
+                        ]
+                    }
+                },
+                "Duplicate runtime capability override",
+            ),
+            (
+                {
+                    "linux_capabilities": {
+                        "process_overrides": [{"subject": {}, "scope": "process", "drop": ["CAP_AUDIT_CONTROL"]}]
+                    }
+                },
+                "subject",
+            ),
+            (
+                {"linux_capabilities": {"process_overrides": [{"subject": {"name": "sshd"}, "scope": "process"}]}},
+                "capability",
+            ),
+            (
+                {
+                    "linux_capabilities": {
+                        "process_overrides": [
+                            {
+                                "subject": {"name": "sshd"},
+                                "scope": "totally-not-a-scope",
+                                "drop": ["CAP_AUDIT_CONTROL"],
+                            }
+                        ]
+                    }
+                },
+                "scope",
+            ),
             ({"operational_policy": {"resource_limits": {"pids": 0}}}, "pids"),
             (
                 {"local_identity": {"users": [{"username": "root"}, {"username": "root"}]}},
@@ -874,6 +914,121 @@ class TestNode:
     def test_runtime_container_seccomp_rejects_disagreeing_security_opt_entries(self):
         with pytest.raises(ValidationError, match="seccomp_profile"):
             RuntimeContainerConfiguration(security_opt=["seccomp:unconfined", "seccomp=default"])
+
+    def test_vm_runtime_process_capability_overrides_surfaces(self):
+        n = Node(
+            type="vm",
+            runtime={
+                "processes": [
+                    {"name": "entrypoint", "pid": 1, "role": "supervisor"},
+                    {"name": "sshd", "parent_pid": 1, "role": "supervisor"},
+                ],
+                "linux_capabilities": {
+                    "required": ["CAP_AUDIT_CONTROL"],
+                    "effective": ["CAP_AUDIT_CONTROL"],
+                    "process_overrides": [
+                        {
+                            "subject": {"name": "sshd", "parent_pid": 1},
+                            "scope": "subtree",
+                            "drop": ["cap-audit-control"],
+                            "description": "interactive participant shell cannot disable auditing",
+                        }
+                    ],
+                },
+            },
+        )
+
+        runtime = n.runtime
+        assert runtime is not None
+        assert runtime.linux_capabilities is not None
+        overrides = runtime.linux_capabilities.process_overrides
+        assert len(overrides) == 1
+        ov = overrides[0]
+        assert ov.subject.name == "sshd"
+        assert ov.subject.parent_pid == 1
+        assert ov.scope == RuntimeCapabilityOverrideScope.SUBTREE
+        # capability list passed through the same normalization pipeline as the
+        # container-wide lists (hyphen-to-underscore, uppercase, CAP_* form).
+        assert ov.drop == ["CAP_AUDIT_CONTROL"]
+        assert ov.effective == []
+        assert ov.add == []
+
+    def test_runtime_process_capability_override_accepts_variable_refs(self):
+        override = RuntimeProcessCapabilityOverride(
+            subject={"name": "${shell_name}", "pid": "${shell_pid}"},
+            scope="${shell_scope}",
+            drop=["${dropped_cap}"],
+        )
+
+        assert override.subject.name == "${shell_name}"
+        assert override.subject.pid == "${shell_pid}"
+        assert override.scope == "${shell_scope}"
+        assert override.drop == ["${dropped_cap}"]
+
+    def test_runtime_process_capability_override_requires_a_subject_selector(self):
+        with pytest.raises(ValidationError, match="subject"):
+            RuntimeProcessCapabilityOverride(
+                subject={},
+                scope="process",
+                drop=["CAP_AUDIT_CONTROL"],
+            )
+
+    def test_runtime_process_capability_override_requires_a_capability_assertion(self):
+        with pytest.raises(ValidationError, match="capability"):
+            RuntimeProcessCapabilityOverride(
+                subject={"name": "sshd"},
+                scope="process",
+            )
+
+    def test_runtime_process_capability_override_rejects_duplicates_within_list(self):
+        with pytest.raises(ValidationError, match="Duplicate"):
+            RuntimeProcessCapabilityOverride(
+                subject={"name": "sshd"},
+                scope="process",
+                drop=["CAP_AUDIT_CONTROL", "cap_audit_control"],
+            )
+
+    def test_runtime_process_capability_override_rejects_non_cap_capability_name(self):
+        with pytest.raises(ValidationError, match="CAP_"):
+            RuntimeProcessCapabilityOverride(
+                subject={"name": "sshd"},
+                scope="process",
+                drop=["AUDIT_CONTROL"],
+            )
+
+    def test_runtime_capability_policy_rejects_conflicting_overrides_for_same_subject(self):
+        with pytest.raises(ValidationError, match="Duplicate runtime capability override"):
+            RuntimeCapabilityPolicy(
+                process_overrides=[
+                    {
+                        "subject": {"name": "sshd"},
+                        "scope": "subtree",
+                        "drop": ["CAP_AUDIT_CONTROL"],
+                    },
+                    {
+                        "subject": {"name": "sshd"},
+                        "scope": "subtree",
+                        "drop": ["CAP_NET_ADMIN"],
+                    },
+                ]
+            )
+
+    def test_runtime_capability_policy_allows_same_name_different_scope(self):
+        policy = RuntimeCapabilityPolicy(
+            process_overrides=[
+                {
+                    "subject": {"name": "sshd"},
+                    "scope": "process",
+                    "drop": ["CAP_AUDIT_CONTROL"],
+                },
+                {
+                    "subject": {"name": "sshd"},
+                    "scope": "subtree",
+                    "drop": ["CAP_NET_ADMIN"],
+                },
+            ]
+        )
+        assert len(policy.process_overrides) == 2
 
     def test_runtime_control_interface_accepts_windows_named_pipe_path(self):
         interface = RuntimeControlInterface(
