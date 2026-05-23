@@ -464,6 +464,22 @@ infrastructure:
         assert "- net2" in payload["content"]
         assert payload["diagnostics"] == []
 
+    def test_apply_edit_rejects_invalid_value_json(self, server):
+        payload = _json_call(
+            server,
+            "sdl_apply_edit",
+            {
+                "sdl_content": MINIMAL_SDL,
+                "operation": "set",
+                "pointer": "/description",
+                "value_json": "{bad",
+            },
+        )
+
+        assert payload["status"] == "invalid"
+        assert payload["diagnostics"][0]["code"] == "sdl.edit"
+        assert "Invalid JSON" in payload["diagnostics"][0]["message"]
+
 
 # ---------------------------------------------------------------------------
 # Inspection tools

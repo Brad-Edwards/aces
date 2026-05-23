@@ -41,19 +41,46 @@ def _resolve_parent(data: Any, tokens: list[str], *, create_missing: bool) -> An
     current = data
     for index, token in enumerate(tokens[:-1]):
         next_token = tokens[index + 1]
-        if isinstance(current, MutableMapping):
-            if token not in current:
-                if not create_missing:
-                    raise ValueError(f"missing path segment '{token}'")
-                current[token] = [] if next_token.isdigit() else {}
-            current = current[token]
-            continue
-        if isinstance(current, MutableSequence):
-            item_index = _list_index(current, token)
-            current = current[item_index]
-            continue
-        raise ValueError(f"path segment '{token}' does not address a mapping or list")
+        current = _resolve_path_segment(
+            current,
+            token,
+            next_token=next_token,
+            create_missing=create_missing,
+        )
     return current
+
+
+def _resolve_path_segment(
+    current: Any,
+    token: str,
+    *,
+    next_token: str,
+    create_missing: bool,
+) -> Any:
+    if isinstance(current, MutableMapping):
+        return _resolve_mapping_segment(
+            current,
+            token,
+            next_token=next_token,
+            create_missing=create_missing,
+        )
+    if isinstance(current, MutableSequence):
+        return current[_list_index(current, token)]
+    raise ValueError(f"path segment '{token}' does not address a mapping or list")
+
+
+def _resolve_mapping_segment(
+    current: MutableMapping[str, Any],
+    token: str,
+    *,
+    next_token: str,
+    create_missing: bool,
+) -> Any:
+    if token not in current:
+        if not create_missing:
+            raise ValueError(f"missing path segment '{token}'")
+        current[token] = [] if next_token.isdigit() else {}
+    return current[token]
 
 
 def _resolve_child(parent: Any, token: str) -> Any:
