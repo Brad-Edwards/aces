@@ -17,6 +17,7 @@ from .entities import flatten_entities
 from .infrastructure import SimpleProperties
 from .nodes import MAX_NODE_NAME_LENGTH, NodeType
 from .orchestration import Workflow, WorkflowPredicate, WorkflowStep, WorkflowStepType
+from .runtime_database import DatabaseObjectType
 from .runtime_ssh_server import SshMatchCriterionKind
 from .scenario import Scenario
 from .semantics.assessment import AssessmentIssue, analyze_assessment_pipeline
@@ -35,6 +36,10 @@ from .semantics.participant_outcome import (
     analyze_participant_outcome_interpretations,
 )
 from .semantics.workflow import branch_closure, workflow_step_semantic_contract
+
+# Common ref-path prefix used by qualified runtime/service refs (e.g.
+# ``nodes.vm.services.http``, ``nodes.vm.runtime.applications.webapp``).
+_NODES_PREFIX = "nodes."
 
 # Renders an objective-semantics issue (machine-readable code from
 # ``aces_sdl.semantics.objective_semantics``) into the authoring-error string
@@ -244,6 +249,27 @@ class SemanticValidator:
                     refs.add(f"nodes.{node_name}.services.{service.name}")
         return refs
 
+    def _qualified_runtime_refs(self) -> set[str]:
+        """Qualified refs for node-scoped runtime applications and database objects.
+
+        These let a top-level relationship endpoint resolve to a runtime
+        application surface or a database service / logical database, so an
+        application-to-database access edge is expressible (ADR-029 §4).
+        """
+        refs: set[str] = set()
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None:
+                continue
+            for application in runtime.applications:
+                refs.add(f"nodes.{node_name}.runtime.applications.{application.application_id}")
+            for dbsvc in runtime.database_services:
+                base = f"nodes.{node_name}.runtime.database_services.{dbsvc.database_service_id}"
+                refs.add(base)
+                for database in dbsvc.databases:
+                    refs.add(f"{base}.databases.{database.database_id}")
+        return refs
+
     def _qualified_acl_refs(self) -> set[str]:
         refs: set[str] = set()
         for infra_name, infra in self._s.infrastructure.items():
@@ -268,71 +294,86 @@ class SemanticValidator:
         intentionally mirror node names.
         """
         index: dict[str, set[str]] = defaultdict(set)
+        self._populate_named_ref_index(index)
+        if not targetable:
+            return {alias: set(candidates) for alias, candidates in index.items()}
+        return self._filter_targetable_aliases(index)
 
-        def add(alias: str, canonical: str) -> None:
-            index[alias].add(canonical)
+    _NAMED_REF_TOP_LEVEL_SECTIONS = (
+        ("nodes", True),
+        ("features", True),
+        ("conditions", True),
+        ("vulnerabilities", True),
+        ("infrastructure", False),
+        ("metrics", True),
+        ("evaluations", True),
+        ("tlos", True),
+        ("goals", True),
+        ("content", True),
+        ("accounts", True),
+        ("agents", True),
+        ("action_contracts", True),
+        ("observation_boundaries", True),
+        ("objectives", True),
+        ("workflows", True),
+        ("relationships", True),
+        ("variables", True),
+        ("injects", True),
+        ("events", True),
+        ("scripts", True),
+        ("stories", True),
+    )
 
-        top_level_sections = (
-            ("nodes", self._s.nodes, True),
-            ("features", self._s.features, True),
-            ("conditions", self._s.conditions, True),
-            ("vulnerabilities", self._s.vulnerabilities, True),
-            ("infrastructure", self._s.infrastructure, False),
-            ("metrics", self._s.metrics, True),
-            ("evaluations", self._s.evaluations, True),
-            ("tlos", self._s.tlos, True),
-            ("goals", self._s.goals, True),
-            ("content", self._s.content, True),
-            ("accounts", self._s.accounts, True),
-            ("agents", self._s.agents, True),
-            ("action_contracts", self._s.action_contracts, True),
-            ("observation_boundaries", self._s.observation_boundaries, True),
-            ("objectives", self._s.objectives, True),
-            ("workflows", self._s.workflows, True),
-            ("relationships", self._s.relationships, True),
-            ("variables", self._s.variables, True),
-            ("injects", self._s.injects, True),
-            ("events", self._s.events, True),
-            ("scripts", self._s.scripts, True),
-            ("stories", self._s.stories, True),
-        )
+    _TARGETABLE_DISALLOWED_PREFIXES = (
+        "variables.",
+        "objectives.",
+        "workflows.",
+    )
 
-        for section_name, section, allow_bare in top_level_sections:
-            for name in section:
+    def _populate_named_ref_index(self, index: dict[str, set[str]]) -> None:
+        self._add_top_level_section_aliases(index)
+        self._add_entity_aliases(index)
+        self._add_content_item_aliases(index)
+        self._add_qualified_aliases(index)
+
+    def _add_top_level_section_aliases(self, index: dict[str, set[str]]) -> None:
+        for section_name, allow_bare in self._NAMED_REF_TOP_LEVEL_SECTIONS:
+            for name in getattr(self._s, section_name):
                 canonical = f"{section_name}.{name}"
-                add(canonical, canonical)
+                index[canonical].add(canonical)
                 if allow_bare:
-                    add(name, canonical)
+                    index[name].add(canonical)
 
+    def _add_entity_aliases(self, index: dict[str, set[str]]) -> None:
         for entity_name in self._all_entity_names():
             canonical = f"entities.{entity_name}"
-            add(canonical, canonical)
-            add(entity_name, canonical)
+            index[canonical].add(canonical)
+            index[entity_name].add(canonical)
 
+    def _add_content_item_aliases(self, index: dict[str, set[str]]) -> None:
         for content_name, content in self._s.content.items():
             for item in content.items:
                 if not item.name:
                     continue
                 canonical = f"content.{content_name}.items.{item.name}"
-                add(canonical, canonical)
-                add(item.name, canonical)
+                index[canonical].add(canonical)
+                index[item.name].add(canonical)
 
-        for ref in self._qualified_service_refs():
-            add(ref, ref)
-        for ref in self._qualified_acl_refs():
-            add(ref, ref)
+    def _add_qualified_aliases(self, index: dict[str, set[str]]) -> None:
+        for qualified_refs in (
+            self._qualified_service_refs(),
+            self._qualified_acl_refs(),
+            self._qualified_runtime_refs(),
+        ):
+            for ref in qualified_refs:
+                index[ref].add(ref)
 
-        if not targetable:
-            return {alias: set(candidates) for alias, candidates in index.items()}
-
-        disallowed_prefixes = (
-            "variables.",
-            "objectives.",
-            "workflows.",
-        )
+    def _filter_targetable_aliases(self, index: dict[str, set[str]]) -> dict[str, set[str]]:
         filtered: dict[str, set[str]] = {}
         for alias, candidates in index.items():
-            keep = {candidate for candidate in candidates if not candidate.startswith(disallowed_prefixes)}
+            keep = {
+                candidate for candidate in candidates if not candidate.startswith(self._TARGETABLE_DISALLOWED_PREFIXES)
+            }
             if keep:
                 filtered[alias] = keep
         return filtered
@@ -446,6 +487,8 @@ class SemanticValidator:
         self._verify_infrastructure()
         self._verify_runtime_network()
         self._verify_runtime_application()
+        self._verify_runtime_capability_overrides()
+        self._verify_runtime_database_services()
         self._verify_runtime_ssh_servers()
         self._verify_features()
         self._verify_conditions()
@@ -462,6 +505,7 @@ class SemanticValidator:
         self._verify_content()
         self._verify_accounts()
         self._verify_relationships()
+        self._verify_relationship_database_access()
         self._verify_agents()
         self._verify_participant_behavior()
         self._verify_objectives()
@@ -703,30 +747,43 @@ class SemanticValidator:
         return paths
 
     def _verify_application_service(self, node_name: str, application: object, service_names: set[str]) -> None:
-        ref = getattr(application, "service", "")
+        self._verify_owned_service_ref(
+            node_name,
+            getattr(application, "service", ""),
+            service_names,
+            owner_label=f"Node '{node_name}' runtime application '{application.application_id}'",
+        )
+
+    def _verify_owned_service_ref(
+        self,
+        node_name: str,
+        ref: str,
+        service_names: set[str],
+        *,
+        owner_label: str,
+    ) -> None:
+        """Validate a runtime surface's owning transport-service reference.
+
+        The ref is a bare ``Node.services[].name`` or the qualified
+        ``nodes.<node>.services.<name>`` form, and must resolve to a service on
+        the same node. Shared by runtime applications and database services.
+        """
         if not ref or self._is_unresolved_var(ref):
             return
-        app_id = application.application_id
         service_name = ref
-        if ref.startswith("nodes."):
+        if ref.startswith(_NODES_PREFIX):
             parts = ref.split(".")
             if len(parts) != 4 or parts[2] != "services":
                 self._err(
-                    f"Node '{node_name}' runtime application '{app_id}' service ref '{ref}' "
-                    f"must be a bare service name or 'nodes.<node>.services.<name>'"
+                    f"{owner_label} service ref '{ref}' must be a bare service name or 'nodes.<node>.services.<name>'"
                 )
                 return
             if parts[1] != node_name:
-                self._err(
-                    f"Node '{node_name}' runtime application '{app_id}' service ref '{ref}' "
-                    f"must reference a service on the same node"
-                )
+                self._err(f"{owner_label} service ref '{ref}' must reference a service on the same node")
                 return
             service_name = parts[3]
         if service_name not in service_names:
-            self._err(
-                f"Node '{node_name}' runtime application '{app_id}' references undefined service '{service_name}'"
-            )
+            self._err(f"{owner_label} references undefined service '{service_name}'")
 
     def _verify_route_refs(
         self,
@@ -765,7 +822,7 @@ class SemanticValidator:
         Each ``Match`` rule's ``LOCAL_USER`` criterion whose pattern is a
         concrete (non-wildcard, non-variable) literal MAY be cross-checked
         against ``runtime.local_identity.users`` when that inventory is
-        present and non-empty (ADR-029 § "Semantic validation gate").
+        present and non-empty (ADR-031 § "Semantic validation gate").
         """
         for node_name, node in self._s.nodes.items():
             runtime = getattr(node, "runtime", None)
@@ -843,6 +900,216 @@ class SemanticValidator:
                     f"match rule '{rule.match_id}' references local user '{pattern}' "
                     f"not present in runtime.local_identity.users"
                 )
+
+    def _verify_runtime_capability_overrides(self) -> None:
+        """Cross-check ``linux_capabilities.process_overrides`` selectors.
+
+        Per ADR-030, scoped capability records identify a subject via
+        ``RuntimeProcessIdentity`` selectors and the capability list ships
+        through the same closed-world Pydantic gates as the container-wide
+        lists. The only check that cannot live on the model itself is the
+        scenario-level cross-reference: when an override's
+        ``subject.name`` is a literal value and the enclosing node declares
+        ``runtime.processes``, the name SHOULD match one of those observed
+        processes. A miss is reported as an error so inventories that
+        forget to add the new process surface fail fast rather than ship a
+        scoped-policy claim that points at nothing.
+        """
+        for node_name, node in self._s.nodes.items():
+            overrides = self._capability_overrides_for(node)
+            if not overrides:
+                continue
+            observed = self._observed_process_names(node)
+            if not observed:
+                # No declared process inventory to cross-check against — the
+                # override stands on its own selectors.
+                continue
+            self._check_override_subject_names(node_name, overrides, observed)
+
+    def _capability_overrides_for(self, node: object) -> list[object]:
+        runtime = getattr(node, "runtime", None)
+        if runtime is None:
+            return []
+        capability_policy = getattr(runtime, "linux_capabilities", None)
+        if capability_policy is None:
+            return []
+        return list(getattr(capability_policy, "process_overrides", None) or [])
+
+    def _observed_process_names(self, node: object) -> set[str]:
+        runtime = getattr(node, "runtime", None)
+        if runtime is None:
+            return set()
+        names = {
+            process.name
+            for process in (runtime.processes or [])
+            if process.name and not self._is_unresolved_var(process.name)
+        }
+        primary = getattr(runtime, "process", None)
+        if primary is not None and primary.name and not self._is_unresolved_var(primary.name):
+            names.add(primary.name)
+        return names
+
+    def _check_override_subject_names(
+        self,
+        node_name: str,
+        overrides: list[object],
+        observed: set[str],
+    ) -> None:
+        for override in overrides:
+            subject_name = override.subject.name
+            if not subject_name or self._is_unresolved_var(subject_name):
+                continue
+            if subject_name not in observed:
+                self._err(
+                    f"Node '{node_name}' runtime capability override subject "
+                    f"'{subject_name}' does not match any process declared in "
+                    "'runtime.processes' or 'runtime.process'"
+                )
+
+    def _verify_runtime_database_services(self) -> None:
+        """Validate observed database services against the scenario.
+
+        Each service's owning transport service must resolve to a service on
+        the same node (mirroring ``runtime.applications``); grant grantee/object
+        refs must resolve to roles and logical objects within the same service
+        (ADR-029 §6).
+        """
+        for name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.database_services:
+                continue
+            service_names = self._node_service_names(node)
+            for dbsvc in runtime.database_services:
+                self._verify_owned_service_ref(
+                    name,
+                    getattr(dbsvc, "service", ""),
+                    service_names,
+                    owner_label=f"Node '{name}' runtime database service '{dbsvc.database_service_id}'",
+                )
+                self._verify_database_grants(name, dbsvc)
+
+    def _verify_database_grants(self, node_name: str, dbsvc: object) -> None:
+        role_ids = {role.role_id for role in dbsvc.roles}
+        objects_by_type: dict[str, set[str]] = {
+            "database": {db.database_id for db in dbsvc.databases},
+            "schema": {schema.schema_id for db in dbsvc.databases for schema in db.schemas},
+            "table": {table.table_id for db in dbsvc.databases for schema in db.schemas for table in schema.tables},
+        }
+        label = f"Node '{node_name}' runtime database service '{dbsvc.database_service_id}'"
+        for grant in dbsvc.grants:
+            if not self._is_unresolved_var(grant.grantee_role_ref) and grant.grantee_role_ref not in role_ids:
+                self._err(f"{label} grant grantee_role_ref '{grant.grantee_role_ref}' is not a role in the service")
+            object_type = grant.object_type
+            type_value = object_type.value if isinstance(object_type, DatabaseObjectType) else object_type
+            if self._is_unresolved_var(grant.object_ref) or self._is_unresolved_var(type_value):
+                continue
+            if grant.object_ref not in objects_by_type.get(type_value, set()):
+                self._err(f"{label} grant object_ref '{grant.object_ref}' is not a {type_value} in the service")
+
+    def _split_runtime_ref(self, ref: object, *, surface: str) -> tuple[str, str] | None:
+        """Split ``nodes.<node>.runtime.<surface>.<rest>`` into (node, rest).
+
+        Module composition rewrites the node segment to a dotted namespaced
+        form (``shared.web``), so we cannot split on ``.`` and index by
+        position. Partition on the surface marker instead so the node name
+        survives an arbitrary number of namespace prefixes.
+        """
+        if not isinstance(ref, str) or not ref.startswith(_NODES_PREFIX):
+            return None
+        marker = f".runtime.{surface}."
+        head, sep, tail = ref[len(_NODES_PREFIX) :].partition(marker)
+        if not sep or not head or not tail:
+            return None
+        return head, tail
+
+    def _resolve_database_service_ref(self, ref: object) -> object | None:
+        """Resolve a qualified ``nodes.<node>.runtime.database_services.<id>`` ref.
+
+        Accepts the database-service form and the ``.databases.<id>`` form; both
+        resolve to the owning :class:`DatabaseService` so a relationship's
+        ``database_access`` can be checked against it.
+        """
+        split = self._split_runtime_ref(ref, surface="database_services")
+        if split is None:
+            return None
+        node_name, tail = split
+        tail_parts = tail.split(".")
+        # tail is ``<svc_id>`` (1 part) or ``<svc_id>.databases.<db_id>`` (3).
+        if len(tail_parts) == 1 or (len(tail_parts) == 3 and tail_parts[1] == "databases"):
+            svc_id = tail_parts[0]
+        else:
+            return None
+        node = self._s.nodes.get(node_name)
+        runtime = getattr(node, "runtime", None) if node is not None else None
+        if runtime is None:
+            return None
+        for dbsvc in runtime.database_services:
+            if dbsvc.database_service_id == svc_id:
+                return dbsvc
+        return None
+
+    def _resolve_application_ref(self, ref: object) -> object | None:
+        """Resolve a qualified ``nodes.<node>.runtime.applications.<id>`` ref.
+
+        Returns the owning :class:`RuntimeApplicationSurface` so a relationship's
+        ``database_access`` source endpoint can be confirmed to be a runtime
+        application (ADR-029 §4).
+        """
+        split = self._split_runtime_ref(ref, surface="applications")
+        if split is None:
+            return None
+        node_name, tail = split
+        if "." in tail:
+            return None
+        node = self._s.nodes.get(node_name)
+        runtime = getattr(node, "runtime", None) if node is not None else None
+        if runtime is None:
+            return None
+        for application in runtime.applications:
+            if application.application_id == tail:
+                return application
+        return None
+
+    def _verify_relationship_database_access(self) -> None:
+        """Validate typed ``database_access`` blocks on relationship edges.
+
+        When a relationship carries ``database_access``, its ``source`` must
+        resolve to a runtime application and its ``target`` must resolve to a
+        database service (or logical database); the access ``role_ref`` must
+        name a role in that service (ADR-029 §4).
+        """
+        for name, rel in self._s.relationships.items():
+            access = rel.database_access
+            if access is None:
+                continue
+            label = f"Relationship '{name}'"
+            self._check_database_access_source(rel.source, label)
+            dbsvc = self._check_database_access_target(rel.target, label)
+            if dbsvc is not None:
+                self._check_database_access_role(access.role_ref, dbsvc, label)
+
+    def _check_database_access_source(self, source: str, label: str) -> None:
+        if self._is_unresolved_var(source) or self._resolve_application_ref(source) is not None:
+            return
+        self._err(f"{label} has database_access but source '{source}' does not resolve to a runtime application")
+
+    def _check_database_access_target(self, target: str, label: str) -> object | None:
+        dbsvc = self._resolve_database_service_ref(target)
+        if dbsvc is not None or self._is_unresolved_var(target):
+            return dbsvc
+        self._err(
+            f"{label} has database_access but target '{target}' does not resolve to a database service or database"
+        )
+        return None
+
+    def _check_database_access_role(self, role_ref: str, dbsvc: object, label: str) -> None:
+        if not role_ref or self._is_unresolved_var(role_ref):
+            return
+        if role_ref not in {role.role_id for role in dbsvc.roles}:
+            self._err(
+                f"{label} database_access role_ref '{role_ref}' "
+                f"is not a role in database service '{dbsvc.database_service_id}'"
+            )
 
     def _verify_content(self) -> None:
         for name, item in self._s.content.items():

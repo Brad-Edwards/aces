@@ -2,7 +2,7 @@
 
 These models express the participant-observable sshd policy that materially
 changes a node's login surface (``ForceCommand``, ``AcceptEnv``, ``Match``
-rules) as typed runtime facts (see ADR-029). They sit under
+rules) as typed runtime facts (see ADR-031). They sit under
 ``Node.runtime.ssh_servers`` as observed service configuration, distinct
 from transport-binding ``Node.services``, curated top-level ``accounts``,
 ``runtime.local_identity`` inventory, ``runtime.environment`` values, and

@@ -1,4 +1,4 @@
-# ADR-029: SSH Server Configuration Surface
+# ADR-031: SSH Server Configuration Surface
 
 ## Status
 

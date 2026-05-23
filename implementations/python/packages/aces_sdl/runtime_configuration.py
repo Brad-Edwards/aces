@@ -1,6 +1,5 @@
 """Observed runtime configuration models for SDL nodes."""
 
-import re
 from collections.abc import Iterable
 from enum import Enum
 
@@ -24,6 +23,13 @@ from .runtime_application import (
     RuntimeApplicationRoute,
     RuntimeApplicationSurface,
 )
+from .runtime_capabilities import (
+    RuntimeCapabilityOverrideScope,
+    RuntimeCapabilityPolicy,
+    RuntimeProcessCapabilityOverride,
+    RuntimeProcessIdentity,
+    RuntimeProcessRole,
+)
 from .runtime_container import (
     RuntimeContainerConfiguration,
     RuntimeDeviceMapping,
@@ -34,6 +40,7 @@ from .runtime_container import (
     RuntimeInitProcess,
     RuntimeNamespaceConfiguration,
 )
+from .runtime_database import DatabaseService
 from .runtime_filesystem import (
     RuntimeFilesystemEntry,
     RuntimeFilesystemEntryType,
@@ -69,9 +76,6 @@ from .runtime_values import (
     absolute_path_or_var as _absolute_path_or_var,
 )
 from .runtime_values import (
-    coerce_string_list as _coerce_string_list,
-)
-from .runtime_values import (
     control_interface_path_or_var as _control_interface_path_or_var,
 )
 from .runtime_values import (
@@ -88,6 +92,7 @@ from .runtime_values import (
 )
 
 __all__ = [
+    "DatabaseService",
     "RuntimeApplicationDisclosure",
     "RuntimeApplicationExposedField",
     "RuntimeApplicationParameter",
@@ -97,6 +102,7 @@ __all__ = [
     "RuntimeApplicationResponse",
     "RuntimeApplicationRoute",
     "RuntimeApplicationSurface",
+    "RuntimeCapabilityOverrideScope",
     "RuntimeCapabilityPolicy",
     "RuntimeConfiguration",
     "RuntimeContainerConfiguration",
@@ -133,6 +139,7 @@ __all__ = [
     "RuntimePackage",
     "RuntimePackageVulnerabilityFinding",
     "RuntimePackageVulnerabilitySeverity",
+    "RuntimeProcessCapabilityOverride",
     "RuntimeProcessIdentity",
     "RuntimeProcessRole",
     "RuntimePublishedPort",
@@ -188,17 +195,6 @@ class RuntimePackageVulnerabilitySeverity(str, Enum):
     CRITICAL = "critical"
 
 
-class RuntimeProcessRole(str, Enum):
-    """Observed role of a process in a runtime process set."""
-
-    PRIMARY = "primary"
-    SUPERVISOR = "supervisor"
-    WORKER = "worker"
-    SIDECAR = "sidecar"
-    AGENT = "agent"
-    OTHER = "other"
-
-
 class RuntimeEnvironmentValueClassification(str, Enum):
     """Sensitivity classification for an observed runtime environment value."""
 
@@ -229,17 +225,6 @@ class RuntimeRestartPolicy(str, Enum):
     UNLESS_STOPPED = "unless_stopped"
     UNKNOWN = "unknown"
     OTHER = "other"
-
-
-def _normalize_capability_name(value: str) -> str:
-    if is_variable_ref(value):
-        return value
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError("capability names must be non-empty strings")
-    normalized = value.strip().upper().replace("-", "_")
-    if not re.fullmatch(r"CAP_[A-Z0-9_]+", normalized):
-        raise ValueError("capability names must use Linux CAP_* form")
-    return normalized
 
 
 class RuntimeMount(SDLModel):
@@ -327,51 +312,6 @@ class RuntimeControlInterface(SDLModel):
         return self
 
 
-class RuntimeProcessIdentity(SDLModel):
-    """Observed process identity for a runtime node."""
-
-    name: str = ""
-    pid: int | str | None = None
-    parent_pid: int | str | None = None
-    command: list[str] = Field(default_factory=list)
-    command_redacted: bool | str = False
-    role: RuntimeProcessRole | str = RuntimeProcessRole.OTHER
-    user: str = ""
-    group: str = ""
-    working_directory: str = ""
-    description: str = ""
-
-    @field_validator("pid", mode="before")
-    @classmethod
-    def parse_pid(cls, v: int | str | None) -> int | str | None:
-        return parse_int_or_var(v, minimum=1, field_name="pid") if v is not None else v
-
-    @field_validator("parent_pid", mode="before")
-    @classmethod
-    def parse_parent_pid(cls, v: int | str | None) -> int | str | None:
-        return parse_int_or_var(v, minimum=1, field_name="parent_pid") if v is not None else v
-
-    @field_validator("command", mode="before")
-    @classmethod
-    def normalize_command(cls, v: str | list[str] | None) -> list[str]:
-        return _coerce_string_list(v)
-
-    @field_validator("command_redacted", mode="before")
-    @classmethod
-    def parse_command_redacted(cls, v: bool | str) -> bool | str:
-        return parse_bool_or_var(v, field_name="command_redacted")
-
-    @field_validator("role", mode="before")
-    @classmethod
-    def normalize_role(cls, v: RuntimeProcessRole | str) -> RuntimeProcessRole | str:
-        return _parse_runtime_enum_or_var(v, RuntimeProcessRole, field_name="role")
-
-    @field_validator("working_directory")
-    @classmethod
-    def validate_working_directory(cls, v: str) -> str:
-        return _absolute_path_or_var(v, field_name="working_directory") if v else v
-
-
 class RuntimeEnvironmentVariable(SDLModel):
     """Observed runtime environment variable with provenance and sensitivity."""
 
@@ -415,34 +355,6 @@ class RuntimeEnvironmentVariable(SDLModel):
     def validate_redacted_value(self) -> "RuntimeEnvironmentVariable":
         if self.value_classification == RuntimeEnvironmentValueClassification.REDACTED and self.value:
             raise ValueError("redacted runtime environment variables must omit value")
-        return self
-
-
-class RuntimeCapabilityPolicy(SDLModel):
-    """Linux/container capability policy observed for a runtime node."""
-
-    required: list[str] = Field(default_factory=list)
-    effective: list[str] = Field(default_factory=list)
-    add: list[str] = Field(default_factory=list)
-    drop: list[str] = Field(default_factory=list)
-    description: str = ""
-
-    @field_validator("required", "effective", "add", "drop", mode="before")
-    @classmethod
-    def coerce_capability_lists(cls, v):
-        return _coerce_string_list(v)
-
-    @field_validator("required", "effective", "add", "drop")
-    @classmethod
-    def validate_capability_names(cls, v: list[str]) -> list[str]:
-        return [_normalize_capability_name(item) for item in v]
-
-    @model_validator(mode="after")
-    def validate_unique_capabilities(self) -> "RuntimeCapabilityPolicy":
-        for field_name in ("required", "effective", "add", "drop"):
-            values = getattr(self, field_name)
-            if len(values) != len(set(values)):
-                raise ValueError(f"Duplicate runtime capability in {field_name}")
         return self
 
 
@@ -569,6 +481,7 @@ class RuntimeConfiguration(SDLModel):
     local_identity: RuntimeLocalIdentityInventory | None = None
     network: RuntimeNetworkRealization | None = None
     applications: list[RuntimeApplicationSurface] = Field(default_factory=list)
+    database_services: list[DatabaseService] = Field(default_factory=list)
     ssh_servers: list[SshServerConfig] = Field(default_factory=list)
     packages: list[RuntimePackage] = Field(default_factory=list)
     dependency_manifests: list[RuntimeDependencyManifest] = Field(default_factory=list)
@@ -582,5 +495,6 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.processes, attr="name", label="process name")
         _reject_duplicate_keys(self.processes, attr="pid", label="process pid")
         _reject_duplicate_keys(self.applications, attr="application_id", label="application_id")
+        _reject_duplicate_keys(self.database_services, attr="database_service_id", label="database_service_id")
         _reject_duplicate_keys(self.ssh_servers, attr="server_id", label="ssh_server server_id")
         return self

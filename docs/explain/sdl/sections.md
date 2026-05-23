@@ -313,6 +313,40 @@ nodes:
                   status_code: 200
                   disclosure: internal package versions and host paths
                   sensitivity: plain
+      database_services:                # observed database logical state
+        - database_service_id: techvault-postgres
+          service: techvault-pg         # owning same-node Node.services[].name
+          engine: postgresql
+          protocol: postgresql
+          version: "16.13"
+          listeners:
+            - address: "*"
+              port: 5432
+          databases:
+            - database_id: techvault-db
+              name: techvault
+              origin: scenario
+              schemas:
+                - schema_id: public-schema
+                  name: public
+                  tables:
+                    - {table_id: users-tbl, name: users}
+                    - {table_id: audit-tbl, name: audit_log}
+            - database_id: template0-db
+              name: template0
+              origin: built_in           # engine built-in, not scenario-authored
+          roles:
+            - {role_id: app-role, name: techvault, role_type: application, can_login: true}
+          grants:
+            - grantee_role_ref: app-role
+              object_type: table
+              object_ref: users-tbl
+              privileges: [SELECT, INSERT, UPDATE]
+          settings:
+            - {name: listen_addresses, value: "*", provenance: configuration_file}
+            - name: password_encryption     # secret-bearing settings omit value
+              value_classification: redacted
+              provenance: operator_override
     asset_value:                        # CIA triad (from CybORG)
       confidentiality: high
       integrity: medium
@@ -410,6 +444,34 @@ intentionally exposed diagnostic fields classified with the shared runtime
 sensitivity vocabulary — `redacted` and `operator_secret` fields omit their raw
 value (see
 [ADR-026](../../decisions/adrs/adr-026-application-http-surface-inventory.md)).
+
+`runtime.database_services` records the participant-observable database
+logical state — what an adversary, defender, agent, scanner, or evaluator can
+observe of a database itself, distinct from the transport-level `services`
+binding, the host exposure in `runtime.network`, and the HTTP surface in
+`runtime.applications`. Each entry is a `DatabaseService` with a stable
+`database_service_id`, an optional `service` referencing the owning same-node
+`Node.services[].name`, and distinct `engine`/`protocol`/`version` facts — a
+PostgreSQL service is never modelled as `protocol: other`. `listeners` record
+what the database process listens on (the wildcard `*`, an IP, a hostname, or a
+Unix socket path) and are not host publication, which remains
+`runtime.network.published_ports`. `databases` carry typed `schemas` and
+`tables`; `roles` are database-local authorization principals, not OS accounts
+or top-level `accounts`; and every database, schema, table, and role has a
+stable `*_id` symbol kept separate from its observed `name`, plus an `origin`
+classification so engine built-ins (`template0`, `postgres`) are not mistaken
+for scenario-authored objects. `grants` are typed privilege facts structured by
+grantee role, target object, and privileges. `settings` carry a `provenance`
+(introspection, configuration file, image default, operator override, runtime
+default) and a value classification reusing the shared runtime sensitivity
+vocabulary — `redacted`/`operator_secret` settings omit their raw value, so
+PostgreSQL secret areas such as `primary_conninfo`, password attributes, and
+TLS key material never enter the model. An application-to-database access edge
+reuses the top-level `relationships` graph: the relationship endpoints resolve
+to the runtime application and the database service or logical database, and a
+typed `database_access` block keeps the access `role_ref` and `auth_method`
+structurally validated (see
+[ADR-029](../../decisions/adrs/adr-029-database-logical-state-runtime-surface.md)).
 
 `source` identifies the node's artifact by provider-neutral `name` and
 `version`. When that artifact is a custom-built container image, the optional

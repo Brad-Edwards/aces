@@ -30,6 +30,19 @@ _RAM_MIN_BYTES_ERROR = "RAM must be >= 1 byte"
 _WINDOWS_NAMED_PIPE_PREFIXES = ("\\\\.\\pipe\\", "\\\\?\\pipe\\")
 
 
+def require_symbol(value: str, *, field_name: str) -> str:
+    """Validate a stable, symbol-defining identifier (no ``${var}`` placeholder).
+
+    Symbol-defining ids are reference targets, so they must be concrete: empty
+    values and ``${var}`` placeholders are rejected.
+    """
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} must be a non-empty string")
+    if is_variable_ref(value):
+        raise ValueError(f"{field_name} must be a stable identifier, not a variable placeholder")
+    return value
+
+
 def absolute_path_or_var(value: str, *, field_name: str) -> str:
     if is_variable_ref(value):
         return value

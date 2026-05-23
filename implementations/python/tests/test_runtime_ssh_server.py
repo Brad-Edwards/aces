@@ -1,6 +1,6 @@
 """Model-level tests for the SSH server configuration runtime surface.
 
-Covers ``aces_sdl.runtime_ssh_server`` (see ADR-029). These tests construct
+Covers ``aces_sdl.runtime_ssh_server`` (see ADR-031). These tests construct
 ``SshServerConfig`` / ``SshMatchRule`` / ``SshForcedCommand`` directly to
 exercise field validators, redaction invariants, and stable-identifier
 discipline without going through the YAML parser.
@@ -97,7 +97,7 @@ class TestSshForcedCommand:
             SshForcedCommand(command_kind="exec", command="/bin/sh")
 
     def test_redacted_kind_requires_command_redacted_flag(self):
-        # ADR-029: command_kind='redacted' carries an out-of-band secret-bearing
+        # ADR-031: command_kind='redacted' carries an out-of-band secret-bearing
         # command; the redaction flag is the consumer-visible signal and must
         # be set explicitly, not left at the default False.
         with pytest.raises(ValidationError) as exc:
