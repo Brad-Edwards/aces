@@ -200,17 +200,21 @@ class SshMatchCriterion(SDLModel):
         return v
 
 
-class SshMatchRule(SDLModel):
-    """A scoped sshd ``Match`` rule.
+class _SshDirectiveBundle(SDLModel):
+    """Shared sshd directive fields used by both the server config and per-rule overrides.
 
-    ``criteria`` is the ordered conjunction of one-or-more match criteria
-    (``Match User kali`` is one criterion; ``Match User kali Address 10.0.0.0/8``
-    is two). Per-rule sshd directives override the surrounding global
-    directives for sessions that match all listed criteria.
+    Concrete sshd directives — ``AcceptEnv``, ``AllowUsers`` /
+    ``DenyUsers`` / ``AllowGroups`` / ``DenyGroups``,
+    ``AuthenticationMethods``, ``PasswordAuthentication`` /
+    ``PubkeyAuthentication`` / ``PermitTTY``, ``ChrootDirectory``, and
+    ``AuthorizedKeysFile`` — apply identically at the global scope
+    (``SshServerConfig``) and inside a ``Match`` rule
+    (``SshMatchRule``). Centralising the field declarations and their
+    validators here keeps the two surfaces in lockstep and removes the
+    structural duplication SonarCloud flags when the same block is
+    repeated verbatim across both classes.
     """
 
-    match_id: str
-    criteria: list[SshMatchCriterion] = Field(default_factory=list)
     forced_command: SshForcedCommand | None = None
     accept_env: list[str] = Field(default_factory=list)
     allow_users: list[str] = Field(default_factory=list)
@@ -225,11 +229,6 @@ class SshMatchRule(SDLModel):
     authorized_keys_file: str = ""
     description: str = ""
 
-    @field_validator("match_id")
-    @classmethod
-    def validate_match_id(cls, v: str) -> str:
-        return _validate_stable_identifier(v, field_name="match_id")
-
     @field_validator(
         "accept_env",
         "allow_users",
@@ -240,12 +239,12 @@ class SshMatchRule(SDLModel):
         mode="before",
     )
     @classmethod
-    def coerce_string_lists(cls, v: str | list[str] | None) -> list[str]:
+    def _coerce_string_lists(cls, v: str | list[str] | None) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("accept_env")
     @classmethod
-    def validate_accept_env(cls, v: list[str]) -> list[str]:
+    def _validate_accept_env(cls, v: list[str]) -> list[str]:
         return _validate_accept_env_entries(v)
 
     @field_validator(
@@ -255,13 +254,31 @@ class SshMatchRule(SDLModel):
         mode="before",
     )
     @classmethod
-    def parse_optional_bool_fields(cls, v: bool | str | None, info: ValidationInfo) -> bool | str | None:
+    def _parse_optional_bool_fields(cls, v: bool | str | None, info: ValidationInfo) -> bool | str | None:
         return parse_optional_bool_or_var(v, field_name=info.field_name)
 
     @field_validator("chroot_directory", "authorized_keys_file")
     @classmethod
-    def validate_path_fields(cls, v: str, info: ValidationInfo) -> str:
+    def _validate_path_fields(cls, v: str, info: ValidationInfo) -> str:
         return absolute_path_or_var(v, field_name=info.field_name) if v else v
+
+
+class SshMatchRule(_SshDirectiveBundle):
+    """A scoped sshd ``Match`` rule.
+
+    ``criteria`` is the ordered conjunction of one-or-more match criteria
+    (``Match User kali`` is one criterion; ``Match User kali Address 10.0.0.0/8``
+    is two). Per-rule sshd directives override the surrounding global
+    directives for sessions that match all listed criteria.
+    """
+
+    match_id: str
+    criteria: list[SshMatchCriterion] = Field(default_factory=list)
+
+    @field_validator("match_id")
+    @classmethod
+    def validate_match_id(cls, v: str) -> str:
+        return _validate_stable_identifier(v, field_name="match_id")
 
     @model_validator(mode="after")
     def validate_criteria(self) -> "SshMatchRule":
@@ -283,7 +300,7 @@ def _criteria_fingerprint(rule: SshMatchRule) -> tuple[tuple[object, str], ...]:
     return tuple((crit.kind, crit.pattern) for crit in rule.criteria)
 
 
-class SshServerConfig(SDLModel):
+class SshServerConfig(_SshDirectiveBundle):
     """A scoped sshd server configuration observed on a node.
 
     Each configuration carries a stable ``server_id`` and an explicit
@@ -299,20 +316,7 @@ class SshServerConfig(SDLModel):
 
     server_id: str
     service: str
-    forced_command: SshForcedCommand | None = None
-    accept_env: list[str] = Field(default_factory=list)
-    allow_users: list[str] = Field(default_factory=list)
-    deny_users: list[str] = Field(default_factory=list)
-    allow_groups: list[str] = Field(default_factory=list)
-    deny_groups: list[str] = Field(default_factory=list)
-    authentication_methods: list[str] = Field(default_factory=list)
-    password_authentication: bool | str | None = None
-    pubkey_authentication: bool | str | None = None
-    permit_tty: bool | str | None = None
-    chroot_directory: str = ""
-    authorized_keys_file: str = ""
     match_rules: list[SshMatchRule] = Field(default_factory=list)
-    description: str = ""
 
     @field_validator("server_id")
     @classmethod
@@ -325,39 +329,6 @@ class SshServerConfig(SDLModel):
         if not isinstance(v, str) or not v.strip():
             raise ValueError("service must be a non-empty string")
         return v
-
-    @field_validator(
-        "accept_env",
-        "allow_users",
-        "deny_users",
-        "allow_groups",
-        "deny_groups",
-        "authentication_methods",
-        mode="before",
-    )
-    @classmethod
-    def coerce_string_lists(cls, v: str | list[str] | None) -> list[str]:
-        return coerce_string_list(v)
-
-    @field_validator("accept_env")
-    @classmethod
-    def validate_accept_env(cls, v: list[str]) -> list[str]:
-        return _validate_accept_env_entries(v)
-
-    @field_validator(
-        "password_authentication",
-        "pubkey_authentication",
-        "permit_tty",
-        mode="before",
-    )
-    @classmethod
-    def parse_optional_bool_fields(cls, v: bool | str | None, info: ValidationInfo) -> bool | str | None:
-        return parse_optional_bool_or_var(v, field_name=info.field_name)
-
-    @field_validator("chroot_directory", "authorized_keys_file")
-    @classmethod
-    def validate_path_fields(cls, v: str, info: ValidationInfo) -> str:
-        return absolute_path_or_var(v, field_name=info.field_name) if v else v
 
     @model_validator(mode="after")
     def validate_match_rules_unique(self) -> "SshServerConfig":
