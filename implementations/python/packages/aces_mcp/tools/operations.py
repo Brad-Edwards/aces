@@ -46,6 +46,7 @@ def register(mcp: FastMCP) -> None:
                 ),
                 "recommended_workflow": [
                     "sdl_overview",
+                    "aces_agent_guidance",
                     "sdl_section_reference",
                     "sdl_scaffold or user-authored SDL",
                     "sdl_completions / sdl_diagnostics / sdl_apply_edit while authoring",
@@ -94,6 +95,9 @@ def register(mcp: FastMCP) -> None:
                         "sdl_design_assessment",
                         "sdl_claims_assessment",
                     ],
+                    "guidance": [
+                        "aces_agent_guidance",
+                    ],
                 },
                 "boundaries": [
                     (
@@ -113,6 +117,20 @@ def register(mcp: FastMCP) -> None:
                 ],
             }
         )
+
+    @mcp.tool(
+        name="aces_agent_guidance",
+        description=(
+            "Return the AUT-811 machine-readable guidance profile for ACES "
+            "agents and operators. Includes scope boundaries, invariants, "
+            "review priorities, safe-operating expectations, source refs, and "
+            "an optional audience filter: all, contributor, or operator."
+        ),
+    )
+    def aces_agent_guidance(audience: str = "all") -> str:
+        from aces_sdl.agent_guidance import agent_guidance
+
+        return json_response(agent_guidance(audience=audience))
 
     @mcp.tool(
         name="sdl_parse",

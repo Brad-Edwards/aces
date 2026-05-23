@@ -44,6 +44,12 @@ Language Service
 .. automodule:: aces_sdl.language_service
    :members:
 
+Agent Guidance
+--------------
+
+.. automodule:: aces_sdl.agent_guidance
+   :members:
+
 Composition
 -----------
 
