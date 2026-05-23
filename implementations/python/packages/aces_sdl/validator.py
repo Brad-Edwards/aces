@@ -36,6 +36,10 @@ from .semantics.participant_outcome import (
 )
 from .semantics.workflow import branch_closure, workflow_step_semantic_contract
 
+# Common ref-path prefix used by qualified runtime/service refs (e.g.
+# ``nodes.vm.services.http``, ``nodes.vm.runtime.applications.webapp``).
+_NODES_PREFIX = "nodes."
+
 # Renders an objective-semantics issue (machine-readable code from
 # ``aces_sdl.semantics.objective_semantics``) into the authoring-error string
 # the SDL surface has always used. Keyed by issue code so a new code is a new
@@ -289,37 +293,48 @@ class SemanticValidator:
         intentionally mirror node names.
         """
         index: dict[str, set[str]] = defaultdict(set)
+        self._populate_named_ref_index(index)
+        if not targetable:
+            return {alias: set(candidates) for alias, candidates in index.items()}
+        return self._filter_targetable_aliases(index)
 
+    _NAMED_REF_TOP_LEVEL_SECTIONS = (
+        ("nodes", True),
+        ("features", True),
+        ("conditions", True),
+        ("vulnerabilities", True),
+        ("infrastructure", False),
+        ("metrics", True),
+        ("evaluations", True),
+        ("tlos", True),
+        ("goals", True),
+        ("content", True),
+        ("accounts", True),
+        ("agents", True),
+        ("action_contracts", True),
+        ("observation_boundaries", True),
+        ("objectives", True),
+        ("workflows", True),
+        ("relationships", True),
+        ("variables", True),
+        ("injects", True),
+        ("events", True),
+        ("scripts", True),
+        ("stories", True),
+    )
+
+    _TARGETABLE_DISALLOWED_PREFIXES = (
+        "variables.",
+        "objectives.",
+        "workflows.",
+    )
+
+    def _populate_named_ref_index(self, index: dict[str, set[str]]) -> None:
         def add(alias: str, canonical: str) -> None:
             index[alias].add(canonical)
 
-        top_level_sections = (
-            ("nodes", self._s.nodes, True),
-            ("features", self._s.features, True),
-            ("conditions", self._s.conditions, True),
-            ("vulnerabilities", self._s.vulnerabilities, True),
-            ("infrastructure", self._s.infrastructure, False),
-            ("metrics", self._s.metrics, True),
-            ("evaluations", self._s.evaluations, True),
-            ("tlos", self._s.tlos, True),
-            ("goals", self._s.goals, True),
-            ("content", self._s.content, True),
-            ("accounts", self._s.accounts, True),
-            ("agents", self._s.agents, True),
-            ("action_contracts", self._s.action_contracts, True),
-            ("observation_boundaries", self._s.observation_boundaries, True),
-            ("objectives", self._s.objectives, True),
-            ("workflows", self._s.workflows, True),
-            ("relationships", self._s.relationships, True),
-            ("variables", self._s.variables, True),
-            ("injects", self._s.injects, True),
-            ("events", self._s.events, True),
-            ("scripts", self._s.scripts, True),
-            ("stories", self._s.stories, True),
-        )
-
-        for section_name, section, allow_bare in top_level_sections:
-            for name in section:
+        for section_name, allow_bare in self._NAMED_REF_TOP_LEVEL_SECTIONS:
+            for name in getattr(self._s, section_name):
                 canonical = f"{section_name}.{name}"
                 add(canonical, canonical)
                 if allow_bare:
@@ -338,24 +353,20 @@ class SemanticValidator:
                 add(canonical, canonical)
                 add(item.name, canonical)
 
-        for ref in self._qualified_service_refs():
-            add(ref, ref)
-        for ref in self._qualified_acl_refs():
-            add(ref, ref)
-        for ref in self._qualified_runtime_refs():
-            add(ref, ref)
+        for qualified_refs in (
+            self._qualified_service_refs(),
+            self._qualified_acl_refs(),
+            self._qualified_runtime_refs(),
+        ):
+            for ref in qualified_refs:
+                add(ref, ref)
 
-        if not targetable:
-            return {alias: set(candidates) for alias, candidates in index.items()}
-
-        disallowed_prefixes = (
-            "variables.",
-            "objectives.",
-            "workflows.",
-        )
+    def _filter_targetable_aliases(self, index: dict[str, set[str]]) -> dict[str, set[str]]:
         filtered: dict[str, set[str]] = {}
         for alias, candidates in index.items():
-            keep = {candidate for candidate in candidates if not candidate.startswith(disallowed_prefixes)}
+            keep = {
+                candidate for candidate in candidates if not candidate.startswith(self._TARGETABLE_DISALLOWED_PREFIXES)
+            }
             if keep:
                 filtered[alias] = keep
         return filtered
@@ -751,7 +762,7 @@ class SemanticValidator:
         if not ref or self._is_unresolved_var(ref):
             return
         service_name = ref
-        if ref.startswith("nodes."):
+        if ref.startswith(_NODES_PREFIX):
             parts = ref.split(".")
             if len(parts) != 4 or parts[2] != "services":
                 self._err(
@@ -842,10 +853,10 @@ class SemanticValidator:
         position. Partition on the surface marker instead so the node name
         survives an arbitrary number of namespace prefixes.
         """
-        if not isinstance(ref, str) or not ref.startswith("nodes."):
+        if not isinstance(ref, str) or not ref.startswith(_NODES_PREFIX):
             return None
         marker = f".runtime.{surface}."
-        head, sep, tail = ref[len("nodes.") :].partition(marker)
+        head, sep, tail = ref[len(_NODES_PREFIX) :].partition(marker)
         if not sep or not head or not tail:
             return None
         return head, tail
@@ -911,24 +922,33 @@ class SemanticValidator:
             if access is None:
                 continue
             label = f"Relationship '{name}'"
-            if not self._is_unresolved_var(rel.source) and self._resolve_application_ref(rel.source) is None:
-                self._err(
-                    f"{label} has database_access but source '{rel.source}' does not resolve to a runtime application"
-                )
-            dbsvc = self._resolve_database_service_ref(rel.target)
-            if dbsvc is None:
-                if not self._is_unresolved_var(rel.target):
-                    self._err(
-                        f"{label} has database_access but target '{rel.target}' "
-                        f"does not resolve to a database service or database"
-                    )
-                continue
-            if access.role_ref and not self._is_unresolved_var(access.role_ref):
-                if access.role_ref not in {role.role_id for role in dbsvc.roles}:
-                    self._err(
-                        f"{label} database_access role_ref '{access.role_ref}' "
-                        f"is not a role in database service '{dbsvc.database_service_id}'"
-                    )
+            self._check_database_access_source(rel.source, label)
+            dbsvc = self._check_database_access_target(rel.target, label)
+            if dbsvc is not None:
+                self._check_database_access_role(access.role_ref, dbsvc, label)
+
+    def _check_database_access_source(self, source: str, label: str) -> None:
+        if self._is_unresolved_var(source) or self._resolve_application_ref(source) is not None:
+            return
+        self._err(f"{label} has database_access but source '{source}' does not resolve to a runtime application")
+
+    def _check_database_access_target(self, target: str, label: str) -> object | None:
+        dbsvc = self._resolve_database_service_ref(target)
+        if dbsvc is not None or self._is_unresolved_var(target):
+            return dbsvc
+        self._err(
+            f"{label} has database_access but target '{target}' does not resolve to a database service or database"
+        )
+        return None
+
+    def _check_database_access_role(self, role_ref: str, dbsvc: object, label: str) -> None:
+        if not role_ref or self._is_unresolved_var(role_ref):
+            return
+        if role_ref not in {role.role_id for role in dbsvc.roles}:
+            self._err(
+                f"{label} database_access role_ref '{role_ref}' "
+                f"is not a role in database service '{dbsvc.database_service_id}'"
+            )
 
     def _verify_content(self) -> None:
         for name, item in self._s.content.items():

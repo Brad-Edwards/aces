@@ -134,6 +134,26 @@ def _nested_node_application_aliases(
     return aliases
 
 
+def _database_service_aliases(
+    *,
+    node_name: str,
+    prefixed_node: str,
+    dbsvc: Any,
+) -> dict[str, str]:
+    """Aliases for one database service: the service ref and each contained database."""
+    svc_id = getattr(dbsvc, "database_service_id", "")
+    if not svc_id:
+        return {}
+    bare_base = f"nodes.{node_name}.runtime.database_services.{svc_id}"
+    prefixed_base = f"nodes.{prefixed_node}.runtime.database_services.{svc_id}"
+    aliases: dict[str, str] = {bare_base: prefixed_base}
+    for database in getattr(dbsvc, "databases", []):
+        db_id = getattr(database, "database_id", "")
+        if db_id:
+            aliases[f"{bare_base}.databases.{db_id}"] = f"{prefixed_base}.databases.{db_id}"
+    return aliases
+
+
 def _nested_node_database_aliases(
     scenario: Scenario,
     node_rename_map: Mapping[str, str],
@@ -153,17 +173,13 @@ def _nested_node_database_aliases(
         if runtime is None:
             continue
         for dbsvc in getattr(runtime, "database_services", []):
-            svc_id = getattr(dbsvc, "database_service_id", "")
-            if not svc_id:
-                continue
-            bare_base = f"nodes.{node_name}.runtime.database_services.{svc_id}"
-            prefixed_base = f"nodes.{prefixed_node}.runtime.database_services.{svc_id}"
-            aliases[bare_base] = prefixed_base
-            for database in getattr(dbsvc, "databases", []):
-                db_id = getattr(database, "database_id", "")
-                if not db_id:
-                    continue
-                aliases[f"{bare_base}.databases.{db_id}"] = f"{prefixed_base}.databases.{db_id}"
+            aliases.update(
+                _database_service_aliases(
+                    node_name=node_name,
+                    prefixed_node=prefixed_node,
+                    dbsvc=dbsvc,
+                )
+            )
     return aliases
 
 

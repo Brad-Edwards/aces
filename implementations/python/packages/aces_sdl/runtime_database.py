@@ -89,10 +89,13 @@ _REDACTED_SENSITIVITIES = frozenset(
 # how the submitter chose to classify it: passwords are not less secret because
 # the YAML author forgot to mark them.
 _SECRET_NAME_TOKENS: tuple[str, ...] = (
-    "password",  # noqa: S105 - identifier-shape token, not a secret
+    # These are identifier-shape tokens used to detect secret-bearing setting
+    # names, not secrets themselves; the noqa marker silences bandit's S105
+    # without dressing each line up as actual credential material.
+    "password",  # noqa: S105
     "passwd",
     "passphrase",
-    "secret",  # noqa: S105 - identifier-shape token, not a secret
+    "secret",  # noqa: S105
     "credential",
     "conninfo",
     "private_key",
@@ -106,6 +109,11 @@ def _name_indicates_secret(name: str) -> bool:
     """Return whether a setting name's substring suggests secret content."""
     lowered = name.lower()
     return any(token in lowered for token in _SECRET_NAME_TOKENS)
+
+
+def _setting_name_is_concrete_secret(name: object) -> bool:
+    """Return whether ``name`` is a concrete (non-``${var}``) secret-bearing label."""
+    return isinstance(name, str) and not is_variable_ref(name) and _name_indicates_secret(name)
 
 
 def _db_listen_address_or_var(value: str, *, field_name: str) -> str:
@@ -390,25 +398,25 @@ class DatabaseSetting(SDLModel):
         # value even when the submitter left ``value_classification`` at the
         # default ``unknown`` — otherwise the protection is opt-in for the
         # author and absent for adversarial inputs (ADR-029 §5).
-        if isinstance(self.name, str) and not is_variable_ref(self.name) and _name_indicates_secret(self.name):
-            if self.value:
-                raise ValueError(
-                    f"database setting '{self.name}' carries a secret-bearing name and must omit its raw value "
-                    f"(value_classification must be 'redacted' or 'operator_secret')"
-                )
-            if (
-                not is_variable_ref(self.value_classification)
-                and self.value_classification not in _REDACTED_SENSITIVITIES
-            ):
-                raise ValueError(
-                    f"database setting '{self.name}' carries a secret-bearing name; "
-                    f"value_classification must be 'redacted' or 'operator_secret'"
-                )
+        if _setting_name_is_concrete_secret(self.name):
+            self._enforce_secret_name_redaction()
         elif self.value and self.value_classification in _REDACTED_SENSITIVITIES:
             raise ValueError(
                 f"database setting '{self.name}' classified '{self.value_classification}' must omit its raw value"
             )
         return self
+
+    def _enforce_secret_name_redaction(self) -> None:
+        if self.value:
+            raise ValueError(
+                f"database setting '{self.name}' carries a secret-bearing name and must omit its raw value "
+                f"(value_classification must be 'redacted' or 'operator_secret')"
+            )
+        if not is_variable_ref(self.value_classification) and self.value_classification not in _REDACTED_SENSITIVITIES:
+            raise ValueError(
+                f"database setting '{self.name}' carries a secret-bearing name; "
+                f"value_classification must be 'redacted' or 'operator_secret'"
+            )
 
 
 class DatabaseService(SDLModel):

@@ -97,7 +97,7 @@ class DatabaseObjectType(str, Enum):
 class DatabaseAuthMethod(str, Enum):
     """How a client authenticates to a database on an access relationship."""
 
-    PASSWORD = "password"  # noqa: S105 - enum label, not a secret
+    PASSWORD = "password"  # noqa: S105
     MD5 = "md5"
     SCRAM_SHA_256 = "scram_sha_256"
     CERT = "cert"
