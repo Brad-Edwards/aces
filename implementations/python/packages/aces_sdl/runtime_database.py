@@ -116,6 +116,23 @@ def _setting_name_is_concrete_secret(name: object) -> bool:
     return isinstance(name, str) and not is_variable_ref(name) and _name_indicates_secret(name)
 
 
+def _reject_duplicates(
+    values: Any,
+    *,
+    label: str,
+    container_label: str,
+    duplicate_template: str = "Duplicate {label} '{value}' in {container_label}",
+) -> None:
+    """Raise on the first repeated value in ``values``; skip empty / None entries."""
+    seen: set[object] = set()
+    for value in values:
+        if value is None or value == "":
+            continue
+        if value in seen:
+            raise ValueError(duplicate_template.format(label=label, value=value, container_label=container_label))
+        seen.add(value)
+
+
 def _db_listen_address_or_var(value: str, *, field_name: str) -> str:
     """Validate a database listener address, allowing ``${var}`` placeholders.
 
@@ -457,54 +474,56 @@ class DatabaseService(SDLModel):
 
     @model_validator(mode="after")
     def validate_service(self) -> "DatabaseService":
+        self._reject_duplicate_top_level_ids()
+        self._reject_duplicate_nested_object_ids()
+        self._reject_duplicate_setting_names()
+        self._enforce_engine_protocol_pairing()
+        return self
+
+    def _reject_duplicate_top_level_ids(self) -> None:
         for field_name, attr in (("database", "database_id"), ("role", "role_id")):
-            seen: set[str] = set()
-            for item in getattr(self, f"{field_name}s"):
-                key = getattr(item, attr)
-                if key in seen:
-                    raise ValueError(
-                        f"Duplicate {field_name} {attr} '{key}' in database service '{self.database_service_id}'"
-                    )
-                seen.add(key)
+            _reject_duplicates(
+                (getattr(item, attr) for item in getattr(self, f"{field_name}s")),
+                label=f"{field_name} {attr}",
+                container_label=f"database service '{self.database_service_id}'",
+            )
+
+    def _reject_duplicate_nested_object_ids(self) -> None:
         # Service-wide uniqueness for every object type used by ``grants``.
         # Without this, two databases can share ``schema_id: public`` or two
         # schemas can share ``table_id: users``, and a grant ``object_ref``
         # resolves ambiguously against the service-wide set the semantic
         # validator builds (ADR-029 §4/§6).
-        for label, ids in (
-            ("schema", [schema.schema_id for db in self.databases for schema in db.schemas]),
-            (
-                "table",
-                [table.table_id for db in self.databases for schema in db.schemas for table in schema.tables],
-            ),
-        ):
-            seen_obj: set[str] = set()
-            for value in ids:
-                if value in seen_obj:
-                    raise ValueError(
-                        f"Duplicate {label} {label}_id '{value}' in database service "
-                        f"'{self.database_service_id}'; grant object_ref needs unambiguous resolution"
-                    )
-                seen_obj.add(value)
-        seen_settings: set[str] = set()
-        for setting in self.settings:
-            if setting.name in seen_settings:
-                raise ValueError(
-                    f"Duplicate database setting '{setting.name}' in database service '{self.database_service_id}'"
-                )
-            seen_settings.add(setting.name)
-        # Cross-field check: an engine with a canonical wire protocol may not
-        # carry ``protocol: other`` (ADR-029 §3). ``${var}`` engines or
-        # protocols are deferred to instantiation revalidation.
-        if isinstance(self.engine, DatabaseEngine):
-            expected = _ENGINE_TO_PROTOCOLS.get(self.engine)
-            if expected is not None and isinstance(self.protocol, DatabaseProtocol) and self.protocol not in expected:
-                allowed = ", ".join(sorted(p.value for p in expected))
-                raise ValueError(
-                    f"database service '{self.database_service_id}' engine '{self.engine.value}' "
-                    f"requires protocol to be one of: {allowed} (not '{self.protocol.value}')"
-                )
-        return self
+        schema_ids = [schema.schema_id for db in self.databases for schema in db.schemas]
+        table_ids = [table.table_id for db in self.databases for schema in db.schemas for table in schema.tables]
+        suffix = f"database service '{self.database_service_id}'; grant object_ref needs unambiguous resolution"
+        _reject_duplicates(schema_ids, label="schema schema_id", container_label=suffix)
+        _reject_duplicates(table_ids, label="table table_id", container_label=suffix)
+
+    def _reject_duplicate_setting_names(self) -> None:
+        _reject_duplicates(
+            (setting.name for setting in self.settings),
+            label="database setting",
+            container_label=f"database service '{self.database_service_id}'",
+            duplicate_template="Duplicate {label} '{value}' in {container_label}",
+        )
+
+    def _enforce_engine_protocol_pairing(self) -> None:
+        # An engine with a canonical wire protocol may not carry
+        # ``protocol: other`` (ADR-029 §3). ``${var}`` engines or protocols are
+        # deferred to instantiation revalidation.
+        if not isinstance(self.engine, DatabaseEngine):
+            return
+        expected = _ENGINE_TO_PROTOCOLS.get(self.engine)
+        if expected is None or not isinstance(self.protocol, DatabaseProtocol):
+            return
+        if self.protocol in expected:
+            return
+        allowed = ", ".join(sorted(p.value for p in expected))
+        raise ValueError(
+            f"database service '{self.database_service_id}' engine '{self.engine.value}' "
+            f"requires protocol to be one of: {allowed} (not '{self.protocol.value}')"
+        )
 
 
 class RelationshipDatabaseAccess(SDLModel):

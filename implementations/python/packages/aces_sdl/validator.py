@@ -330,36 +330,42 @@ class SemanticValidator:
     )
 
     def _populate_named_ref_index(self, index: dict[str, set[str]]) -> None:
-        def add(alias: str, canonical: str) -> None:
-            index[alias].add(canonical)
+        self._add_top_level_section_aliases(index)
+        self._add_entity_aliases(index)
+        self._add_content_item_aliases(index)
+        self._add_qualified_aliases(index)
 
+    def _add_top_level_section_aliases(self, index: dict[str, set[str]]) -> None:
         for section_name, allow_bare in self._NAMED_REF_TOP_LEVEL_SECTIONS:
             for name in getattr(self._s, section_name):
                 canonical = f"{section_name}.{name}"
-                add(canonical, canonical)
+                index[canonical].add(canonical)
                 if allow_bare:
-                    add(name, canonical)
+                    index[name].add(canonical)
 
+    def _add_entity_aliases(self, index: dict[str, set[str]]) -> None:
         for entity_name in self._all_entity_names():
             canonical = f"entities.{entity_name}"
-            add(canonical, canonical)
-            add(entity_name, canonical)
+            index[canonical].add(canonical)
+            index[entity_name].add(canonical)
 
+    def _add_content_item_aliases(self, index: dict[str, set[str]]) -> None:
         for content_name, content in self._s.content.items():
             for item in content.items:
                 if not item.name:
                     continue
                 canonical = f"content.{content_name}.items.{item.name}"
-                add(canonical, canonical)
-                add(item.name, canonical)
+                index[canonical].add(canonical)
+                index[item.name].add(canonical)
 
+    def _add_qualified_aliases(self, index: dict[str, set[str]]) -> None:
         for qualified_refs in (
             self._qualified_service_refs(),
             self._qualified_acl_refs(),
             self._qualified_runtime_refs(),
         ):
             for ref in qualified_refs:
-                add(ref, ref)
+                index[ref].add(ref)
 
     def _filter_targetable_aliases(self, index: dict[str, set[str]]) -> dict[str, set[str]]:
         filtered: dict[str, set[str]] = {}
