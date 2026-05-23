@@ -46,7 +46,7 @@ class Relationship(SDLModel):
     ``database_access`` is the one typed exception: when an application
     connects to a database, the access role and auth method need
     structural validation rather than prose, so they get a typed block
-    (ADR-027 §4).
+    (ADR-029 §4).
     """
 
     type: RelationshipType

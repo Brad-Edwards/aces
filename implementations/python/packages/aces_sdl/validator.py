@@ -249,7 +249,7 @@ class SemanticValidator:
 
         These let a top-level relationship endpoint resolve to a runtime
         application surface or a database service / logical database, so an
-        application-to-database access edge is expressible (ADR-027 §4).
+        application-to-database access edge is expressible (ADR-029 §4).
         """
         refs: set[str] = set()
         for node_name, node in self._s.nodes.items():
@@ -800,7 +800,7 @@ class SemanticValidator:
         Each service's owning transport service must resolve to a service on
         the same node (mirroring ``runtime.applications``); grant grantee/object
         refs must resolve to roles and logical objects within the same service
-        (ADR-027 §6).
+        (ADR-029 §6).
         """
         for name, node in self._s.nodes.items():
             runtime = getattr(node, "runtime", None)
@@ -881,7 +881,7 @@ class SemanticValidator:
 
         Returns the owning :class:`RuntimeApplicationSurface` so a relationship's
         ``database_access`` source endpoint can be confirmed to be a runtime
-        application (ADR-027 §4).
+        application (ADR-029 §4).
         """
         split = self._split_runtime_ref(ref, surface="applications")
         if split is None:
@@ -904,7 +904,7 @@ class SemanticValidator:
         When a relationship carries ``database_access``, its ``source`` must
         resolve to a runtime application and its ``target`` must resolve to a
         database service (or logical database); the access ``role_ref`` must
-        name a role in that service (ADR-027 §4).
+        name a role in that service (ADR-029 §4).
         """
         for name, rel in self._s.relationships.items():
             access = rel.database_access

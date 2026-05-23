@@ -54,3 +54,4 @@ Each ADR includes:
 | [026](adr-026-application-http-surface-inventory.md) | Application HTTP Surface Inventory | accepted | 2026-05-22 |
 | [027](adr-027-container-init-reaper-runtime-surface.md) | Container Init/Reaper Runtime Surface | accepted | 2026-05-22 |
 | [028](adr-028-container-seccomp-security-options-surface.md) | Container Seccomp and Security Options Surface | accepted | 2026-05-22 |
+| [029](adr-029-database-logical-state-runtime-surface.md) | Database Logical-State Runtime Surface | accepted | 2026-05-22 |

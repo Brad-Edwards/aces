@@ -1,4 +1,4 @@
-# ADR-027: Database Logical-State Runtime Surface
+# ADR-029: Database Logical-State Runtime Surface
 
 ## Status
 

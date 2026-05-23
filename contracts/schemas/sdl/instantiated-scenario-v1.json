@@ -692,7 +692,7 @@
     },
     "DatabaseGrant": {
       "additionalProperties": false,
-      "description": "An observed privilege grant to a database role.\n\nThe grant is structured by grantee, target object, and privileges; raw\n``GRANT`` statements are not the portable model (ADR-027 \u00a74). ``object_ref``\nis the stable ``*_id`` of a database/schema/table in the same service.",
+      "description": "An observed privilege grant to a database role.\n\nThe grant is structured by grantee, target object, and privileges; raw\n``GRANT`` statements are not the portable model (ADR-029 \u00a74). ``object_ref``\nis the stable ``*_id`` of a database/schema/table in the same service.",
       "properties": {
         "description": {
           "default": "",
@@ -748,7 +748,7 @@
     },
     "DatabaseListener": {
       "additionalProperties": false,
-      "description": "An observed listener of a database service.\n\nThis records what the database process itself listens on. It is not host\npublication \u2014 ``runtime.network.published_ports`` remains the host-exposure\nfact (ADR-027 \u00a73).",
+      "description": "An observed listener of a database service.\n\nThis records what the database process itself listens on. It is not host\npublication \u2014 ``runtime.network.published_ports`` remains the host-exposure\nfact (ADR-029 \u00a73).",
       "properties": {
         "address": {
           "title": "Address",
@@ -803,7 +803,7 @@
       "type": "string"
     },
     "DatabaseProtocol": {
-      "description": "The wire protocol an observed database service speaks.\n\nKept distinct from :class:`DatabaseEngine`: a MariaDB engine speaks the\n``mysql`` protocol, and PostgreSQL must never be ``other`` (ADR-027 \u00a73).",
+      "description": "The wire protocol an observed database service speaks.\n\nKept distinct from :class:`DatabaseEngine`: a MariaDB engine speaks the\n``mysql`` protocol, and PostgreSQL must never be ``other`` (ADR-029 \u00a73).",
       "enum": [
         "postgresql",
         "mysql",
@@ -817,7 +817,7 @@
     },
     "DatabaseRole": {
       "additionalProperties": false,
-      "description": "An observed database-local role \u2014 an authorization principal.\n\nDatabase roles are not OS accounts, ``runtime.local_identity`` users, or\ntop-level scenario ``accounts`` (ADR-027 \u00a74).",
+      "description": "An observed database-local role \u2014 an authorization principal.\n\nDatabase roles are not OS accounts, ``runtime.local_identity`` users, or\ntop-level scenario ``accounts`` (ADR-029 \u00a74).",
       "properties": {
         "can_login": {
           "anyOf": [
@@ -1033,7 +1033,7 @@
     },
     "DatabaseSetting": {
       "additionalProperties": false,
-      "description": "An observed database runtime setting with provenance and sensitivity.\n\nSettings that may carry credentials, hashes, connection strings, or\noperator-only values must omit their raw ``value`` and classify it as\n``redacted``/``operator_secret`` (ADR-027 \u00a75).",
+      "description": "An observed database runtime setting with provenance and sensitivity.\n\nSettings that may carry credentials, hashes, connection strings, or\noperator-only values must omit their raw ``value`` and classify it as\n``redacted``/``operator_secret`` (ADR-029 \u00a75).",
       "properties": {
         "description": {
           "default": "",
@@ -3615,7 +3615,7 @@
     },
     "Relationship": {
       "additionalProperties": false,
-      "description": "A typed directed edge between two named scenario elements.\n\nSource and target can reference any named element in the scenario:\nnodes, features, accounts, entities, or infrastructure entries.\nThe validator checks that both endpoints resolve.\n\nThe ``properties`` dict carries type-specific metadata (e.g.,\n``trust_type: parent-child`` for AD trusts, ``protocol: SAML``\nfor federation). It's a flat dict rather than typed sub-models\nbecause relationship properties vary widely and we don't want\nto gate expressiveness on pre-modeling every variant.\n\n``database_access`` is the one typed exception: when an application\nconnects to a database, the access role and auth method need\nstructural validation rather than prose, so they get a typed block\n(ADR-027 \u00a74).",
+      "description": "A typed directed edge between two named scenario elements.\n\nSource and target can reference any named element in the scenario:\nnodes, features, accounts, entities, or infrastructure entries.\nThe validator checks that both endpoints resolve.\n\nThe ``properties`` dict carries type-specific metadata (e.g.,\n``trust_type: parent-child`` for AD trusts, ``protocol: SAML``\nfor federation). It's a flat dict rather than typed sub-models\nbecause relationship properties vary widely and we don't want\nto gate expressiveness on pre-modeling every variant.\n\n``database_access`` is the one typed exception: when an application\nconnects to a database, the access role and auth method need\nstructural validation rather than prose, so they get a typed block\n(ADR-029 \u00a74).",
       "properties": {
         "database_access": {
           "anyOf": [
@@ -3662,7 +3662,7 @@
     },
     "RelationshipDatabaseAccess": {
       "additionalProperties": false,
-      "description": "Typed database-access detail carried by a top-level relationship edge.\n\nWhen an application connects to a database, the relationship's ``target``\nresolves to the database (service or logical database) and this block keeps\nthe ``role_ref`` (a ``role_id`` in that service) and ``auth_method``\nstructurally validated rather than recorded as prose (ADR-027 \u00a74).",
+      "description": "Typed database-access detail carried by a top-level relationship edge.\n\nWhen an application connects to a database, the relationship's ``target``\nresolves to the database (service or logical database) and this block keeps\nthe ``role_ref`` (a ``role_id`` in that service) and ``auth_method``\nstructurally validated rather than recorded as prose (ADR-029 \u00a74).",
       "properties": {
         "auth_method": {
           "anyOf": [

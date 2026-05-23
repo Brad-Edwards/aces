@@ -142,7 +142,7 @@ def _nested_node_database_aliases(
 
     Covers the database-service ref and the ``.databases.<id>`` ref so an
     application-to-database relationship endpoint survives namespacing
-    (ADR-027 §2).
+    (ADR-029 §2).
     """
     aliases: dict[str, str] = {}
     for node_name, node in scenario.nodes.items():

@@ -471,7 +471,7 @@ reuses the top-level `relationships` graph: the relationship endpoints resolve
 to the runtime application and the database service or logical database, and a
 typed `database_access` block keeps the access `role_ref` and `auth_method`
 structurally validated (see
-[ADR-027](../../decisions/adrs/adr-027-database-logical-state-runtime-surface.md)).
+[ADR-029](../../decisions/adrs/adr-029-database-logical-state-runtime-surface.md)).
 
 `source` identifies the node's artifact by provider-neutral `name` and
 `version`. When that artifact is a custom-built container image, the optional

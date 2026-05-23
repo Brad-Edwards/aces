@@ -1,4 +1,4 @@
-"""Closed-world vocabularies for ``runtime.database_services`` (ADR-027).
+"""Closed-world vocabularies for ``runtime.database_services`` (ADR-029).
 
 Holds the enums and the engine-to-protocol mapping that the database-service
 model and its validators consume. Lives next to ``runtime_database.py`` to keep
@@ -38,7 +38,7 @@ class DatabaseProtocol(str, Enum):
     """The wire protocol an observed database service speaks.
 
     Kept distinct from :class:`DatabaseEngine`: a MariaDB engine speaks the
-    ``mysql`` protocol, and PostgreSQL must never be ``other`` (ADR-027 §3).
+    ``mysql`` protocol, and PostgreSQL must never be ``other`` (ADR-029 §3).
     """
 
     POSTGRESQL = "postgresql"
@@ -112,7 +112,7 @@ class DatabaseAuthMethod(str, Enum):
 
 
 # Engines that speak a well-known wire protocol. A scenario authored with one
-# of these engines must declare the matching protocol — ADR-027 §3 disallows
+# of these engines must declare the matching protocol — ADR-029 §3 disallows
 # PostgreSQL being modelled as ``protocol: other``, and the same rule applies
 # to the other engines that have one canonical wire protocol. Engines without
 # an entry here (``sqlite`` is file-based; ``oracle`` / ``other`` are left

@@ -1,7 +1,7 @@
 """Observed database logical-state runtime inventory models for SDL nodes.
 
 These models express the participant-observable database logical state of a
-node's database service (see ADR-027): the database engine, wire protocol and
+node's database service (see ADR-029): the database engine, wire protocol and
 version; listener observations; logical objects (databases, schemas, tables);
 database-local roles; privilege grants; and provenance-bearing runtime
 settings.
@@ -17,7 +17,7 @@ database-local authorization principals — they are not OS accounts.
 ``RelationshipDatabaseAccess`` is the typed access detail a top-level
 ``relationships`` edge carries when an application connects to a database; it
 keeps ``role_ref``/``auth_method`` structurally validated rather than buried in
-prose (ADR-027 §4).
+prose (ADR-029 §4).
 """
 
 import ipaddress
@@ -84,7 +84,7 @@ _REDACTED_SENSITIVITIES = frozenset(
 
 # Substrings (case-insensitive) on a setting ``name`` that indicate the value
 # field would carry credentials, hashes, private keys, bearer tokens, connection
-# strings, replication secrets, or auth-file material (ADR-027 §5). A setting
+# strings, replication secrets, or auth-file material (ADR-029 §5). A setting
 # whose name matches one of these may not carry a raw ``value`` regardless of
 # how the submitter chose to classify it: passwords are not less secret because
 # the YAML author forgot to mark them.
@@ -115,7 +115,7 @@ def _db_listen_address_or_var(value: str, *, field_name: str) -> str:
     a value may be the wildcard ``*``, an IPv4/IPv6 address, a hostname, or a
     Unix socket path. Forcing it through an IP-only or absolute-path validator
     would wrongly reject legitimate PostgreSQL ``listen_addresses`` values
-    (ADR-027 §3).
+    (ADR-029 §3).
     """
     if is_variable_ref(value):
         return value
@@ -151,7 +151,7 @@ class DatabaseListener(SDLModel):
 
     This records what the database process itself listens on. It is not host
     publication — ``runtime.network.published_ports`` remains the host-exposure
-    fact (ADR-027 §3).
+    fact (ADR-029 §3).
     """
 
     address: str
@@ -265,7 +265,7 @@ class DatabaseRole(SDLModel):
     """An observed database-local role — an authorization principal.
 
     Database roles are not OS accounts, ``runtime.local_identity`` users, or
-    top-level scenario ``accounts`` (ADR-027 §4).
+    top-level scenario ``accounts`` (ADR-029 §4).
     """
 
     role_id: str
@@ -305,7 +305,7 @@ class DatabaseGrant(SDLModel):
     """An observed privilege grant to a database role.
 
     The grant is structured by grantee, target object, and privileges; raw
-    ``GRANT`` statements are not the portable model (ADR-027 §4). ``object_ref``
+    ``GRANT`` statements are not the portable model (ADR-029 §4). ``object_ref``
     is the stable ``*_id`` of a database/schema/table in the same service.
     """
 
@@ -356,7 +356,7 @@ class DatabaseSetting(SDLModel):
 
     Settings that may carry credentials, hashes, connection strings, or
     operator-only values must omit their raw ``value`` and classify it as
-    ``redacted``/``operator_secret`` (ADR-027 §5).
+    ``redacted``/``operator_secret`` (ADR-029 §5).
     """
 
     name: str
@@ -389,7 +389,7 @@ class DatabaseSetting(SDLModel):
         # connection strings, auth files, private keys) must omit their raw
         # value even when the submitter left ``value_classification`` at the
         # default ``unknown`` — otherwise the protection is opt-in for the
-        # author and absent for adversarial inputs (ADR-027 §5).
+        # author and absent for adversarial inputs (ADR-029 §5).
         if isinstance(self.name, str) and not is_variable_ref(self.name) and _name_indicates_secret(self.name):
             if self.value:
                 raise ValueError(
@@ -462,7 +462,7 @@ class DatabaseService(SDLModel):
         # Without this, two databases can share ``schema_id: public`` or two
         # schemas can share ``table_id: users``, and a grant ``object_ref``
         # resolves ambiguously against the service-wide set the semantic
-        # validator builds (ADR-027 §4/§6).
+        # validator builds (ADR-029 §4/§6).
         for label, ids in (
             ("schema", [schema.schema_id for db in self.databases for schema in db.schemas]),
             (
@@ -486,7 +486,7 @@ class DatabaseService(SDLModel):
                 )
             seen_settings.add(setting.name)
         # Cross-field check: an engine with a canonical wire protocol may not
-        # carry ``protocol: other`` (ADR-027 §3). ``${var}`` engines or
+        # carry ``protocol: other`` (ADR-029 §3). ``${var}`` engines or
         # protocols are deferred to instantiation revalidation.
         if isinstance(self.engine, DatabaseEngine):
             expected = _ENGINE_TO_PROTOCOLS.get(self.engine)
@@ -505,7 +505,7 @@ class RelationshipDatabaseAccess(SDLModel):
     When an application connects to a database, the relationship's ``target``
     resolves to the database (service or logical database) and this block keeps
     the ``role_ref`` (a ``role_id`` in that service) and ``auth_method``
-    structurally validated rather than recorded as prose (ADR-027 §4).
+    structurally validated rather than recorded as prose (ADR-029 §4).
     """
 
     role_ref: str = ""
