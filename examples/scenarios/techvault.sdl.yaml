@@ -322,7 +322,7 @@ nodes:
       linux_capabilities:
         required: [CAP_NET_BIND_SERVICE]
         effective: [CAP_CHOWN, CAP_DAC_OVERRIDE, CAP_NET_BIND_SERVICE]
-        # See ADR-029. The container baseline above is what PID 1 (the
+        # See ADR-030. The container baseline above is what PID 1 (the
         # supervisor) carries; the gunicorn worker subtree drops
         # CAP_CHOWN so an attacker who lands code execution as gunicorn
         # cannot relabel files under /var/log/gunicorn out from under the

@@ -36,6 +36,7 @@ authority.
 | Understand the repository | `README.md`, [`docs/index.md`](../index.md), [`docs/explain/reference/canonical-reference-map.md`](reference/canonical-reference-map.md) | Read the referenced docs | The repository layout and current boundaries are understood. |
 | Read a complete scenario | `examples/README.md`, `examples/scenarios/*.sdl.yaml` | `pytest tests/test_scenarios.py` | The checked examples load through the current parser boundary. |
 | Author a small SDL file | [`docs/explain/sdl/index.md`](sdl/index.md), [`docs/explain/sdl/sections.md`](sdl/sections.md), [`docs/explain/sdl/validation.md`](sdl/validation.md) | `parse_sdl_file()` or `load_scenario()` | The file is accepted by the current SDL model and semantic validator. |
+| Use an agent-facing authoring surface | `aces-mcp`, then `aces_tool_surface` | `sdl_parse`, `sdl_validate`, `sdl_design_assessment`, `sdl_plan`, `sdl_claims_assessment` | The agent can help author, inspect, dry-run, and qualify claims without repository-local code access. |
 | Use variables or imports | [`docs/explain/sdl/parser.md`](sdl/parser.md), [`docs/explain/sdl/sections.md`](sdl/sections.md) | `aces sdl resolve`, `aces sdl verify-imports` | Imports and variable placeholders follow the current parser rules. |
 | Inspect current limits | [`docs/explain/sdl/limitations.md`](sdl/limitations.md), [`docs/explain/sdl/testing.md`](sdl/testing.md) | Compare the use case to the listed materialized surfaces | Unsupported or partial surfaces are identified before authoring. |
 | Work on backend conformance | [`docs/explain/sdl/runtime-architecture.md`](sdl/runtime-architecture.md), `contracts/README.md`, [`docs/explain/reference/backend-conformance.md`](reference/backend-conformance.md) | `aces conformance --help` and the conformance tests | The backend work is aligned with published contracts and fixtures. |
@@ -92,6 +93,17 @@ cd implementations/python
 uv run aces sdl resolve ../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
 uv run aces sdl verify-imports ../../examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
 ```
+
+Expose the agent-facing MCP tools:
+
+```shell
+cd implementations/python
+uv run aces-mcp
+```
+
+Start with `aces_tool_surface`; use `sdl_claims_assessment` before making
+research or range-readiness claims. These tools do not execute participant
+actions or start a live range.
 
 The CLI does not expose a separate general-purpose `validate` command today.
 Use the Python parser boundary or the test suite for direct validation.

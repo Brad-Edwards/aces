@@ -1,6 +1,6 @@
 """Process identity + Linux capability policy models for SDL runtime nodes.
 
-This module owns the schemas that ADR-029 places under
+This module owns the schemas that ADR-030 places under
 ``Node.runtime.linux_capabilities``: the observed process identity used
 both as a process inventory entry *and* as a selector for a scoped
 capability override, plus the container-wide capability baseline and the
@@ -129,7 +129,7 @@ class RuntimeProcessIdentity(SDLModel):
 class RuntimeProcessCapabilityOverride(SDLModel):
     """A capability delta scoped to a single process or its descendant subtree.
 
-    Per ADR-029, scoped Linux-capability facts stay under
+    Per ADR-030, scoped Linux-capability facts stay under
     ``RuntimeCapabilityPolicy`` rather than migrating onto
     ``RuntimeProcessIdentity``. ``subject`` reuses the existing process
     identity model as a selector / evidence anchor — it identifies *which*

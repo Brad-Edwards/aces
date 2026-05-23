@@ -1,4 +1,4 @@
-# ADR-029: Process-Scoped Linux Capability Policy
+# ADR-030: Process-Scoped Linux Capability Policy
 
 ## Status
 

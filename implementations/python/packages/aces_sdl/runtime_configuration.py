@@ -40,6 +40,7 @@ from .runtime_container import (
     RuntimeInitProcess,
     RuntimeNamespaceConfiguration,
 )
+from .runtime_database import DatabaseService
 from .runtime_filesystem import (
     RuntimeFilesystemEntry,
     RuntimeFilesystemEntryType,
@@ -83,6 +84,7 @@ from .runtime_values import (
 )
 
 __all__ = [
+    "DatabaseService",
     "RuntimeApplicationDisclosure",
     "RuntimeApplicationExposedField",
     "RuntimeApplicationParameter",
@@ -465,6 +467,7 @@ class RuntimeConfiguration(SDLModel):
     local_identity: RuntimeLocalIdentityInventory | None = None
     network: RuntimeNetworkRealization | None = None
     applications: list[RuntimeApplicationSurface] = Field(default_factory=list)
+    database_services: list[DatabaseService] = Field(default_factory=list)
     packages: list[RuntimePackage] = Field(default_factory=list)
     dependency_manifests: list[RuntimeDependencyManifest] = Field(default_factory=list)
     package_vulnerabilities: list[RuntimePackageVulnerabilityFinding] = Field(default_factory=list)
@@ -477,4 +480,5 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.processes, attr="name", label="process name")
         _reject_duplicate_keys(self.processes, attr="pid", label="process pid")
         _reject_duplicate_keys(self.applications, attr="application_id", label="application_id")
+        _reject_duplicate_keys(self.database_services, attr="database_service_id", label="database_service_id")
         return self

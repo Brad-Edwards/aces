@@ -15,6 +15,7 @@ from enum import Enum
 from pydantic import Field, field_validator
 
 from ._base import SDLModel, normalize_enum_value
+from .runtime_database import RelationshipDatabaseAccess
 
 
 class RelationshipType(str, Enum):
@@ -41,6 +42,11 @@ class Relationship(SDLModel):
     for federation). It's a flat dict rather than typed sub-models
     because relationship properties vary widely and we don't want
     to gate expressiveness on pre-modeling every variant.
+
+    ``database_access`` is the one typed exception: when an application
+    connects to a database, the access role and auth method need
+    structural validation rather than prose, so they get a typed block
+    (ADR-029 §4).
     """
 
     type: RelationshipType
@@ -48,6 +54,7 @@ class Relationship(SDLModel):
     target: str
     description: str = ""
     properties: dict[str, str] = Field(default_factory=dict)
+    database_access: RelationshipDatabaseAccess | None = None
 
     @field_validator("type", mode="before")
     @classmethod

@@ -2971,3 +2971,175 @@ class TestVerifyRuntimeApplication:
         s = _make_scenario(nodes={"vm": node})
         errors = _validate(s)
         assert any("does not resolve to an observed file" in e for e in errors)
+
+
+class TestVerifyRuntimeDatabaseServices:
+    def _node_with_db(self, **dbsvc_overrides):
+        dbsvc = {
+            "database_service_id": "tv-pg",
+            "service": "pg",
+            "engine": "postgresql",
+            "protocol": "postgresql",
+            "databases": [
+                {
+                    "database_id": "tv-db",
+                    "name": "techvault",
+                    "schemas": [
+                        {"schema_id": "pub", "name": "public", "tables": [{"table_id": "users", "name": "users"}]}
+                    ],
+                }
+            ],
+            "roles": [{"role_id": "app", "name": "techvault", "role_type": "application"}],
+        }
+        dbsvc.update(dbsvc_overrides)
+        return {
+            "type": "vm",
+            "services": [{"port": 5432, "name": "pg"}],
+            "runtime": {"database_services": [dbsvc]},
+        }
+
+    def test_database_service_with_same_node_service_is_valid(self):
+        s = _make_scenario(nodes={"db": self._node_with_db()})
+        assert _validate(s) == []
+
+    def test_database_service_qualified_same_node_ref_is_valid(self):
+        s = _make_scenario(nodes={"db": self._node_with_db(service="nodes.db.services.pg")})
+        assert _validate(s) == []
+
+    def test_database_service_owning_service_must_be_same_node(self):
+        node = self._node_with_db(service="nodes.other.services.pg")
+        s = _make_scenario(
+            nodes={
+                "db": node,
+                "other": {"type": "vm", "services": [{"port": 5432, "name": "pg"}]},
+            }
+        )
+        errors = _validate(s)
+        assert any("must reference a service on the same node" in e for e in errors)
+
+    def test_database_service_undefined_owning_service_rejected(self):
+        s = _make_scenario(nodes={"db": self._node_with_db(service="ghost")})
+        errors = _validate(s)
+        assert any("references undefined service 'ghost'" in e for e in errors)
+
+    def test_grant_with_resolvable_refs_is_valid(self):
+        s = _make_scenario(
+            nodes={
+                "db": self._node_with_db(
+                    grants=[
+                        {
+                            "grantee_role_ref": "app",
+                            "object_type": "table",
+                            "object_ref": "users",
+                            "privileges": ["SELECT"],
+                        }
+                    ]
+                )
+            }
+        )
+        assert _validate(s) == []
+
+    def test_grant_grantee_role_ref_must_resolve(self):
+        s = _make_scenario(
+            nodes={
+                "db": self._node_with_db(
+                    grants=[
+                        {
+                            "grantee_role_ref": "ghost",
+                            "object_type": "table",
+                            "object_ref": "users",
+                            "privileges": ["SELECT"],
+                        }
+                    ]
+                )
+            }
+        )
+        errors = _validate(s)
+        assert any("grant grantee_role_ref 'ghost' is not a role" in e for e in errors)
+
+    def test_grant_object_ref_must_match_object_type(self):
+        s = _make_scenario(
+            nodes={
+                "db": self._node_with_db(
+                    grants=[
+                        {
+                            "grantee_role_ref": "app",
+                            "object_type": "database",
+                            "object_ref": "users",
+                            "privileges": ["SELECT"],
+                        }
+                    ]
+                )
+            }
+        )
+        errors = _validate(s)
+        assert any("grant object_ref 'users' is not a database" in e for e in errors)
+
+
+class TestVerifyRelationshipDatabaseAccess:
+    def _scenario_with_app_and_db(self, **rel_overrides):
+        rel = {
+            "type": "connects_to",
+            "source": "nodes.web.runtime.applications.webapp",
+            "target": "nodes.db.runtime.database_services.tv-pg",
+            "database_access": {"role_ref": "app", "auth_method": "scram_sha_256"},
+        }
+        rel.update(rel_overrides)
+        return _make_scenario(
+            nodes={
+                "db": {
+                    "type": "vm",
+                    "services": [{"port": 5432, "name": "pg"}],
+                    "runtime": {
+                        "database_services": [
+                            {
+                                "database_service_id": "tv-pg",
+                                "service": "pg",
+                                "engine": "postgresql",
+                                "protocol": "postgresql",
+                                "databases": [{"database_id": "tv-db", "name": "techvault"}],
+                                "roles": [{"role_id": "app", "name": "techvault"}],
+                            }
+                        ]
+                    },
+                },
+                "web": {
+                    "type": "vm",
+                    "services": [{"port": 8080, "name": "http"}],
+                    "runtime": {"applications": [{"application_id": "webapp", "service": "http"}]},
+                },
+            },
+            relationships={"webapp-to-db": rel},
+        )
+
+    def test_relationship_to_database_with_role_is_valid(self):
+        # Implicitly exercises the named-ref index for the application source
+        # and database target — the strict ``== []`` assertion catches both
+        # 'ref didn't resolve' and 'database-access check broke' regressions.
+        assert _validate(self._scenario_with_app_and_db()) == []
+
+    def test_relationship_target_to_logical_database_ref_is_valid(self):
+        s = self._scenario_with_app_and_db(target="nodes.db.runtime.database_services.tv-pg.databases.tv-db")
+        assert _validate(s) == []
+
+    def test_database_access_target_must_resolve_to_database(self):
+        s = self._scenario_with_app_and_db(target="nodes.web.runtime.applications.webapp")
+        errors = _validate(s)
+        assert any("does not resolve to a database service or database" in e for e in errors)
+
+    def test_database_access_role_ref_must_be_a_role_in_the_service(self):
+        s = self._scenario_with_app_and_db(database_access={"role_ref": "ghost", "auth_method": "password"})
+        errors = _validate(s)
+        assert any("role_ref 'ghost' is not a role in database service 'tv-pg'" in e for e in errors)
+
+    def test_database_access_source_must_be_a_runtime_application(self):
+        # A defined non-application scenario element (a node) passes generic
+        # relationship validation but is not a valid database_access source.
+        s = self._scenario_with_app_and_db(source="nodes.db")
+        errors = _validate(s)
+        assert any("source 'nodes.db' does not resolve to a runtime application" in e for e in errors)
+
+    def test_database_access_variable_source_is_skipped(self):
+        # An unresolved ${var} source is left for instantiation, not flagged.
+        s = self._scenario_with_app_and_db(source="${APP_REF}")
+        assert not any("does not resolve to a runtime application" in e for e in _validate(s))
