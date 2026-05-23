@@ -35,6 +35,7 @@ from aces.core.sdl.nodes import (
     RuntimeApplicationResponse,
     RuntimeApplicationRoute,
     RuntimeApplicationSurface,
+    RuntimeContainerConfiguration,
     RuntimeControlInterface,
     RuntimeControlInterfaceAccess,
     RuntimeControlInterfaceKind,
@@ -734,6 +735,15 @@ class TestNode:
                 },
                 "Duplicate runtime extra host",
             ),
+            ({"container": {"security_opt": ["seccomp:unconfined", ""]}}, "security_opt"),
+            (
+                {"container": {"security_opt": ["seccomp:unconfined", "seccomp:unconfined"]}},
+                "Duplicate runtime security option",
+            ),
+            (
+                {"container": {"seccomp_profile": "default", "security_opt": ["seccomp:unconfined"]}},
+                "seccomp_profile",
+            ),
             ({"health": {"log": [{"output": "secret", "output_redacted": True}]}}, "redacted healthcheck output"),
             (
                 {
@@ -830,6 +840,40 @@ class TestNode:
         assert init.argv_redacted is True
         assert init.argv == []
         assert init.description == "backend-injected reaper"
+
+    def test_runtime_container_records_seccomp_and_security_opt(self):
+        container = RuntimeContainerConfiguration(
+            seccomp_profile="unconfined",
+            security_opt=["seccomp:unconfined", "apparmor=unconfined", "no-new-privileges"],
+        )
+
+        assert container.seccomp_profile == "unconfined"
+        assert container.security_opt == ["seccomp:unconfined", "apparmor=unconfined", "no-new-privileges"]
+
+    def test_runtime_container_security_opt_coerces_scalar_string(self):
+        container = RuntimeContainerConfiguration(security_opt="seccomp:unconfined")
+
+        assert container.security_opt == ["seccomp:unconfined"]
+
+    def test_runtime_container_seccomp_consistency_accepts_agreeing_values(self):
+        container = RuntimeContainerConfiguration(
+            seccomp_profile="unconfined",
+            security_opt=["label=disable", "seccomp=unconfined"],
+        )
+
+        assert container.seccomp_profile == "unconfined"
+
+    def test_runtime_container_seccomp_consistency_allows_variable_placeholder(self):
+        container = RuntimeContainerConfiguration(
+            seccomp_profile="${SECCOMP}",
+            security_opt=["seccomp:unconfined"],
+        )
+
+        assert container.seccomp_profile == "${SECCOMP}"
+
+    def test_runtime_container_seccomp_rejects_disagreeing_security_opt_entries(self):
+        with pytest.raises(ValidationError, match="seccomp_profile"):
+            RuntimeContainerConfiguration(security_opt=["seccomp:unconfined", "seccomp=default"])
 
     def test_runtime_control_interface_accepts_windows_named_pipe_path(self):
         interface = RuntimeControlInterface(

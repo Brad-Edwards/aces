@@ -152,6 +152,8 @@ nodes:
             container-path: /dev/null
             permissions: rwm
         device-cgroup-rules: c 1:3 rwm
+        seccomp-profile: unconfined
+        security-opt: [seccomp:unconfined, no-new-privileges]
         extra-hosts:
           - hostname: wazuh-manager
             address: 172.20.0.10
@@ -228,6 +230,8 @@ nodes:
         assert runtime["container"]["read_only_paths"] == ["/proc/sys"]
         assert runtime["container"]["devices"][0]["container_path"] == "/dev/null"
         assert runtime["container"]["device_cgroup_rules"] == ["c 1:3 rwm"]
+        assert runtime["container"]["seccomp_profile"] == "unconfined"
+        assert runtime["container"]["security_opt"] == ["seccomp:unconfined", "no-new-privileges"]
         assert runtime["container"]["extra_hosts"][0]["hostname"] == "wazuh-manager"
         assert runtime["container"]["dns_options"] == ["ndots:0"]
         assert runtime["container"]["group_add"] == ["adm", "101"]
