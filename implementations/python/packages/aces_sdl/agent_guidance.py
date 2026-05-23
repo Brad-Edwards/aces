@@ -50,7 +50,7 @@ def _filter_profile(profile: dict[str, Any], audience: str) -> dict[str, Any]:
     guidance = data.get("guidance")
     if not isinstance(guidance, dict):
         return data
-    for category, entries in list(guidance.items()):
+    for category, entries in guidance.items():
         if not isinstance(entries, list):
             continue
         guidance[category] = [
