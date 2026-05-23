@@ -9,6 +9,7 @@ import yaml
 from yaml.error import MarkedYAMLError, YAMLError
 from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
+from ._language_diagnostics import invalid as _invalid
 from ._language_metadata import REFERENCE_COMPLETION_TARGETS
 
 _CODE_PARSE = "sdl.parse"
@@ -338,31 +339,3 @@ def _encode_pointer(tokens: list[str]) -> str:
 
 def _escape_pointer_token(token: str) -> str:
     return token.replace("~", "~0").replace("/", "~1")
-
-
-def _invalid(
-    stage: str,
-    code: str,
-    message: str,
-    *,
-    location: dict[str, int] | None = None,
-) -> dict[str, Any]:
-    return {"status": "invalid", "stage": stage, "diagnostics": [_diagnostic(stage, code, message, location=location)]}
-
-
-def _diagnostic(
-    stage: str,
-    code: str,
-    message: str,
-    *,
-    location: dict[str, int] | None = None,
-) -> dict[str, Any]:
-    diagnostic: dict[str, Any] = {
-        "stage": stage,
-        "severity": "error",
-        "code": code,
-        "message": message,
-    }
-    if location is not None:
-        diagnostic["range"] = {"start": location, "end": location}
-    return diagnostic

@@ -13,6 +13,8 @@ from typing import Any
 import yaml
 
 from ._errors import SDLParseError, SDLValidationError
+from ._language_diagnostics import diagnostic as _diagnostic
+from ._language_diagnostics import invalid as _invalid
 from ._language_edit import apply_edit
 from ._language_metadata import REFERENCE_COMPLETION_TARGETS, SECTION_FIELD_COMPLETIONS
 from ._language_references import find_references
@@ -287,31 +289,3 @@ def _size_error(*values: str) -> dict[str, Any] | None:
     if size <= _MAX_INPUT_BYTES:
         return None
     return _invalid("input", "sdl.input_too_large", f"INPUT TOO LARGE - limit is {_MAX_INPUT_BYTES} bytes.")
-
-
-def _invalid(
-    stage: str,
-    code: str,
-    message: str,
-    *,
-    location: dict[str, int] | None = None,
-) -> dict[str, Any]:
-    return {"status": "invalid", "stage": stage, "diagnostics": [_diagnostic(stage, code, message, location=location)]}
-
-
-def _diagnostic(
-    stage: str,
-    code: str,
-    message: str,
-    *,
-    location: dict[str, int] | None = None,
-) -> dict[str, Any]:
-    diagnostic: dict[str, Any] = {
-        "stage": stage,
-        "severity": "error",
-        "code": code,
-        "message": message,
-    }
-    if location is not None:
-        diagnostic["range"] = {"start": location, "end": location}
-    return diagnostic
