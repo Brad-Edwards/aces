@@ -56,3 +56,4 @@ Each ADR includes:
 | [028](adr-028-container-seccomp-security-options-surface.md) | Container Seccomp and Security Options Surface | accepted | 2026-05-22 |
 | [029](adr-029-database-logical-state-runtime-surface.md) | Database Logical-State Runtime Surface | accepted | 2026-05-22 |
 | [030](adr-030-process-scoped-linux-capability-policy.md) | Process-Scoped Linux Capability Policy | accepted | 2026-05-23 |
+| [031](adr-031-ssh-server-configuration-surface.md) | SSH Server Configuration Surface | accepted | 2026-05-23 |

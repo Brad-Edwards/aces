@@ -18,6 +18,7 @@ from .infrastructure import SimpleProperties
 from .nodes import MAX_NODE_NAME_LENGTH, NodeType
 from .orchestration import Workflow, WorkflowPredicate, WorkflowStep, WorkflowStepType
 from .runtime_database import DatabaseObjectType
+from .runtime_ssh_server import SshMatchCriterionKind
 from .scenario import Scenario
 from .semantics.assessment import AssessmentIssue, analyze_assessment_pipeline
 from .semantics.objective_semantics import (
@@ -488,6 +489,7 @@ class SemanticValidator:
         self._verify_runtime_application()
         self._verify_runtime_capability_overrides()
         self._verify_runtime_database_services()
+        self._verify_runtime_ssh_servers()
         self._verify_features()
         self._verify_conditions()
         self._verify_vulnerabilities()
@@ -811,6 +813,93 @@ class SemanticValidator:
                         f"Node '{node_name}' runtime application '{app_id}' route '{route_id}' "
                         f"{field_name} ref '{ref}' does not resolve to an observed file on the node"
                     )
+
+    def _verify_runtime_ssh_servers(self) -> None:
+        """Validate observed SSH server configurations against the scenario.
+
+        Each ``SshServerConfig.service`` must resolve to a service on the
+        same node (bare name OR ``nodes.<this-node>.services.<name>``).
+        Each ``Match`` rule's ``LOCAL_USER`` criterion whose pattern is a
+        concrete (non-wildcard, non-variable) literal MAY be cross-checked
+        against ``runtime.local_identity.users`` when that inventory is
+        present and non-empty (ADR-031 § "Semantic validation gate").
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.ssh_servers:
+                continue
+            service_names = self._node_service_names(node)
+            local_usernames = self._node_local_usernames(node)
+            for server in runtime.ssh_servers:
+                self._verify_ssh_server_service(node_name, server, service_names)
+                for rule in server.match_rules:
+                    self._verify_ssh_match_rule(node_name, server, rule, local_usernames)
+
+    @staticmethod
+    def _node_local_usernames(node: object) -> set[str]:
+        runtime = getattr(node, "runtime", None)
+        if runtime is None:
+            return set()
+        identity = getattr(runtime, "local_identity", None)
+        if identity is None:
+            return set()
+        return {user.username for user in identity.users if user.username}
+
+    def _verify_ssh_server_service(
+        self,
+        node_name: str,
+        server: object,
+        service_names: set[str],
+    ) -> None:
+        ref = getattr(server, "service", "")
+        if not ref or self._is_unresolved_var(ref):
+            return
+        server_id = server.server_id
+        service_name = ref
+        if ref.startswith("nodes."):
+            parts = ref.split(".")
+            if len(parts) != 4 or parts[2] != "services":
+                self._err(
+                    f"Node '{node_name}' runtime ssh_server '{server_id}' service ref '{ref}' "
+                    f"must be a bare service name or 'nodes.<node>.services.<name>'"
+                )
+                return
+            if parts[1] != node_name:
+                self._err(
+                    f"Node '{node_name}' runtime ssh_server '{server_id}' service ref '{ref}' "
+                    f"must reference a service on the same node"
+                )
+                return
+            service_name = parts[3]
+        if service_name not in service_names:
+            self._err(
+                f"Node '{node_name}' runtime ssh_server '{server_id}' references undefined service '{service_name}'"
+            )
+
+    def _verify_ssh_match_rule(
+        self,
+        node_name: str,
+        server: object,
+        rule: object,
+        local_usernames: set[str],
+    ) -> None:
+        if not local_usernames:
+            return
+        for criterion in rule.criteria:
+            if criterion.kind != SshMatchCriterionKind.LOCAL_USER:
+                continue
+            pattern = criterion.pattern
+            if self._is_unresolved_var(pattern):
+                continue
+            if any(ch in pattern for ch in "*?!,"):
+                # Wildcard or comma-separated list — not a single concrete identity.
+                continue
+            if pattern not in local_usernames:
+                self._err(
+                    f"Node '{node_name}' runtime ssh_server '{server.server_id}' "
+                    f"match rule '{rule.match_id}' references local user '{pattern}' "
+                    f"not present in runtime.local_identity.users"
+                )
 
     def _verify_runtime_capability_overrides(self) -> None:
         """Cross-check ``linux_capabilities.process_overrides`` selectors.

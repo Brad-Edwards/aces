@@ -1623,6 +1623,135 @@ nodes:
         assert route.auth_required is True
 
 
+class TestRuntimeSshServerParsing:
+    def test_ssh_server_configuration_parses_with_kebab_keys(self):
+        sdl = """
+name: techvault-ssh-surface
+nodes:
+  techvault-kali:
+    type: vm
+    os: linux
+    services:
+      - port: 22
+        name: ssh
+    runtime:
+      ssh-servers:
+        - server-id: sshd-default
+          service: ssh
+          accept-env: [APTL_SESSION_ID, APTL_RUN_ID, APTL_TRACE_ID]
+          password-authentication: false
+          pubkey-authentication: true
+          permit-tty: true
+          allow-users: [kali]
+          authentication-methods: [publickey]
+          chroot-directory: /var/empty
+          authorized-keys-file: /etc/ssh/authorized_keys.d/%u
+          match-rules:
+            - match-id: m-kali
+              criteria:
+                - kind: user
+                  pattern: kali
+              forced-command:
+                command-kind: absolute_path
+                command: /usr/local/bin/aptl-wrap-shell.sh
+              permit-tty: true
+"""
+        scenario = parse_sdl(sdl)
+        ssh_servers = scenario.nodes["techvault-kali"].runtime.ssh_servers
+        assert len(ssh_servers) == 1
+        server = ssh_servers[0]
+        assert server.server_id == "sshd-default"
+        assert server.service == "ssh"
+        assert server.accept_env == ["APTL_SESSION_ID", "APTL_RUN_ID", "APTL_TRACE_ID"]
+        assert server.password_authentication is False
+        assert server.pubkey_authentication is True
+        assert server.permit_tty is True
+        assert server.allow_users == ["kali"]
+        assert server.authentication_methods == ["publickey"]
+        assert server.chroot_directory == "/var/empty"
+        assert server.authorized_keys_file == "/etc/ssh/authorized_keys.d/%u"
+        assert len(server.match_rules) == 1
+        rule = server.match_rules[0]
+        assert rule.match_id == "m-kali"
+        assert rule.criteria[0].pattern == "kali"
+        assert rule.forced_command is not None
+        assert rule.forced_command.command == "/usr/local/bin/aptl-wrap-shell.sh"
+        assert rule.permit_tty is True
+
+    def test_ssh_server_accept_env_scalar_coerces_to_list(self):
+        sdl = """
+name: techvault-ssh-scalar
+nodes:
+  techvault-kali:
+    type: vm
+    os: linux
+    services:
+      - port: 22
+        name: ssh
+    runtime:
+      ssh-servers:
+        - server-id: sshd-default
+          service: ssh
+          accept-env: APTL_SESSION_ID
+"""
+        scenario = parse_sdl(sdl)
+        server = scenario.nodes["techvault-kali"].runtime.ssh_servers[0]
+        assert server.accept_env == ["APTL_SESSION_ID"]
+
+    def test_ssh_server_chroot_directory_variable_substitutes_on_instantiation(self):
+        sdl = """
+name: techvault-ssh-variable
+variables:
+  chroot_path:
+    type: string
+    required: true
+nodes:
+  techvault-kali:
+    type: vm
+    os: linux
+    services:
+      - port: 22
+        name: ssh
+    runtime:
+      ssh-servers:
+        - server-id: sshd-default
+          service: ssh
+          chroot-directory: ${chroot_path}
+"""
+        raw = parse_sdl(sdl)
+        server = raw.nodes["techvault-kali"].runtime.ssh_servers[0]
+        assert server.chroot_directory == "${chroot_path}"
+        instantiated = instantiate_scenario(raw, parameters={"chroot_path": "/var/empty"})
+        server = instantiated.nodes["techvault-kali"].runtime.ssh_servers[0]
+        assert server.chroot_directory == "/var/empty"
+
+    def test_ssh_server_variable_ref_server_id_rejected_on_instantiation(self):
+        from aces.core.sdl._errors import SDLInstantiationError
+
+        sdl = """
+name: techvault-ssh-bad-id
+variables:
+  server_id:
+    type: string
+    required: true
+nodes:
+  techvault-kali:
+    type: vm
+    os: linux
+    services:
+      - port: 22
+        name: ssh
+    runtime:
+      ssh-servers:
+        - server-id: ${server_id}
+          service: ssh
+"""
+        # The parse step itself should reject a variable-ref symbol-defining identifier
+        # because SshServerConfig.server_id rejects variable refs at model validation time.
+        with pytest.raises((SDLParseError, SDLInstantiationError)):
+            parse_sdl(sdl)
+
+
 class TestRuntimeDatabaseParsing:
     def test_database_service_field_keys_normalized_names_preserved(self):
         # Field keys (hyphenated/cased) normalize; observed object names are

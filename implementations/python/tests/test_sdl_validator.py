@@ -3143,3 +3143,239 @@ class TestVerifyRelationshipDatabaseAccess:
         # An unresolved ${var} source is left for instantiation, not flagged.
         s = self._scenario_with_app_and_db(source="${APP_REF}")
         assert not any("does not resolve to a runtime application" in e for e in _validate(s))
+
+
+# ---------------------------------------------------------------------------
+# Runtime SSH server configuration semantics (ADR-031)
+# ---------------------------------------------------------------------------
+
+
+class TestVerifyRuntimeSshServer:
+    def _node_with_ssh_server(self, ssh_server: dict, **node_extra) -> dict:
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "runtime": {"ssh_servers": [ssh_server]},
+        }
+        node.update(node_extra)
+        return node
+
+    def test_bare_service_ref_resolves(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_ssh_server(
+                    {"server_id": "sshd-default", "service": "ssh"},
+                    services=[{"port": 22, "name": "ssh"}],
+                ),
+            },
+        )
+        assert _validate(s) == []
+
+    def test_undefined_service_ref_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_ssh_server(
+                    {"server_id": "sshd-default", "service": "ghost"},
+                ),
+            },
+        )
+        errors = _validate(s)
+        assert any("references undefined service 'ghost'" in e for e in errors)
+
+    def test_qualified_service_ref_same_node_resolves(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_ssh_server(
+                    {"server_id": "sshd-default", "service": "nodes.vm.services.ssh"},
+                    services=[{"port": 22, "name": "ssh"}],
+                ),
+            },
+        )
+        assert _validate(s) == []
+
+    def test_qualified_service_ref_other_node_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "other": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "vm": self._node_with_ssh_server(
+                    {"server_id": "sshd-default", "service": "nodes.other.services.ssh"},
+                    services=[{"port": 22, "name": "ssh"}],
+                ),
+            },
+        )
+        errors = _validate(s)
+        assert any("must reference a service on the same node" in e for e in errors)
+
+    def test_malformed_qualified_service_ref_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_ssh_server(
+                    {"server_id": "sshd-default", "service": "nodes.vm.svc.ssh"},
+                ),
+            },
+        )
+        errors = _validate(s)
+        assert any("must be a bare service name" in e for e in errors)
+
+    def test_service_variable_reference_skipped(self):
+        s = _make_scenario(
+            variables={"SVC": {"type": "string", "required": True}},
+            nodes={
+                "vm": self._node_with_ssh_server(
+                    {"server_id": "sshd-default", "service": "${SVC}"},
+                ),
+            },
+        )
+        assert _validate(s) == []
+
+    def test_local_user_criterion_present_in_inventory_passes(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 22, "name": "ssh"}],
+            "runtime": {
+                "local_identity": {
+                    "users": [{"username": "kali", "uid": 1000}],
+                },
+                "ssh_servers": [
+                    {
+                        "server_id": "sshd-default",
+                        "service": "ssh",
+                        "match_rules": [
+                            {
+                                "match_id": "m-kali",
+                                "criteria": [{"kind": "local_user", "pattern": "kali"}],
+                            },
+                        ],
+                    },
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        assert _validate(s) == []
+
+    def test_local_user_criterion_absent_from_populated_inventory_rejected(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 22, "name": "ssh"}],
+            "runtime": {
+                "local_identity": {
+                    "users": [{"username": "kali", "uid": 1000}],
+                },
+                "ssh_servers": [
+                    {
+                        "server_id": "sshd-default",
+                        "service": "ssh",
+                        "match_rules": [
+                            {
+                                "match_id": "m-ghost",
+                                "criteria": [{"kind": "local_user", "pattern": "ghost"}],
+                            },
+                        ],
+                    },
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        errors = _validate(s)
+        assert any("local user 'ghost'" in e for e in errors)
+
+    def test_local_user_criterion_without_inventory_does_not_error(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 22, "name": "ssh"}],
+            "runtime": {
+                "ssh_servers": [
+                    {
+                        "server_id": "sshd-default",
+                        "service": "ssh",
+                        "match_rules": [
+                            {
+                                "match_id": "m-kali",
+                                "criteria": [{"kind": "local_user", "pattern": "kali"}],
+                            },
+                        ],
+                    },
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        assert _validate(s) == []
+
+    def test_user_pattern_criterion_not_checked_against_inventory(self):
+        """USER (not LOCAL_USER) is a pattern, not an identity — not cross-checked."""
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 22, "name": "ssh"}],
+            "runtime": {
+                "local_identity": {"users": [{"username": "kali", "uid": 1000}]},
+                "ssh_servers": [
+                    {
+                        "server_id": "sshd-default",
+                        "service": "ssh",
+                        "match_rules": [
+                            {
+                                "match_id": "m-pattern",
+                                "criteria": [{"kind": "user", "pattern": "ghost"}],
+                            },
+                        ],
+                    },
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        assert _validate(s) == []
+
+    def test_local_user_wildcard_pattern_not_checked_against_inventory(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 22, "name": "ssh"}],
+            "runtime": {
+                "local_identity": {"users": [{"username": "kali", "uid": 1000}]},
+                "ssh_servers": [
+                    {
+                        "server_id": "sshd-default",
+                        "service": "ssh",
+                        "match_rules": [
+                            {
+                                "match_id": "m-glob",
+                                "criteria": [{"kind": "local_user", "pattern": "ka*"}],
+                            },
+                        ],
+                    },
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        assert _validate(s) == []
+
+    def test_local_user_variable_ref_pattern_skipped(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 22, "name": "ssh"}],
+            "runtime": {
+                "local_identity": {"users": [{"username": "kali", "uid": 1000}]},
+                "ssh_servers": [
+                    {
+                        "server_id": "sshd-default",
+                        "service": "ssh",
+                        "match_rules": [
+                            {
+                                "match_id": "m-var",
+                                "criteria": [{"kind": "local_user", "pattern": "${ssh_user}"}],
+                            },
+                        ],
+                    },
+                ],
+            },
+        }
+        s = _make_scenario(
+            variables={"ssh_user": {"type": "string", "required": True}},
+            nodes={"vm": node},
+        )
+        assert _validate(s) == []
