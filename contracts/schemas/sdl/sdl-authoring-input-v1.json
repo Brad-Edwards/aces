@@ -4187,6 +4187,15 @@
       "title": "RuntimeApplicationSurface",
       "type": "object"
     },
+    "RuntimeCapabilityOverrideScope": {
+      "description": "Scope of a ``RuntimeProcessCapabilityOverride``.\n\n``PROCESS`` records a capability delta that applies only to the subject\nprocess itself; ``SUBTREE`` records a delta that applies to the subject\nprocess and every descendant it spawns (the motivating case is\n``capsh --drop=cap_audit_control`` exec'ing ``sshd``, after which the\ninteractive shell subtree runs without ``CAP_AUDIT_CONTROL``).",
+      "enum": [
+        "process",
+        "subtree"
+      ],
+      "title": "RuntimeCapabilityOverrideScope",
+      "type": "string"
+    },
     "RuntimeCapabilityPolicy": {
       "additionalProperties": false,
       "description": "Linux/container capability policy observed for a runtime node.",
@@ -4215,6 +4224,13 @@
             "type": "string"
           },
           "title": "Effective",
+          "type": "array"
+        },
+        "process_overrides": {
+          "items": {
+            "$ref": "#/$defs/RuntimeProcessCapabilityOverride"
+          },
+          "title": "Process Overrides",
           "type": "array"
         },
         "required": {
@@ -5990,6 +6006,58 @@
       ],
       "title": "RuntimePackageVulnerabilitySeverity",
       "type": "string"
+    },
+    "RuntimeProcessCapabilityOverride": {
+      "additionalProperties": false,
+      "description": "A capability delta scoped to a single process or its descendant subtree.\n\nPer ADR-030, scoped Linux-capability facts stay under\n``RuntimeCapabilityPolicy`` rather than migrating onto\n``RuntimeProcessIdentity``. ``subject`` reuses the existing process\nidentity model as a selector / evidence anchor \u2014 it identifies *which*\nprocess or subtree the delta applies to but does not own capability\nsemantics. ``effective`` / ``add`` / ``drop`` record the scoped delta\nrelative to the container-wide baseline on the enclosing\n``RuntimeCapabilityPolicy``; ``required`` is intentionally omitted from\nthis surface because overrides describe deltas, not new container-wide\nrequirements.",
+      "properties": {
+        "add": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Add",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "drop": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Drop",
+          "type": "array"
+        },
+        "effective": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Effective",
+          "type": "array"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeCapabilityOverrideScope"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "process",
+          "title": "Scope"
+        },
+        "subject": {
+          "$ref": "#/$defs/RuntimeProcessIdentity"
+        }
+      },
+      "required": [
+        "subject"
+      ],
+      "title": "RuntimeProcessCapabilityOverride",
+      "type": "object"
     },
     "RuntimeProcessIdentity": {
       "additionalProperties": false,
