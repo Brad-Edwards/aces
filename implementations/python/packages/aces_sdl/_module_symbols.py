@@ -108,6 +108,65 @@ def _nested_node_service_aliases(
     return aliases
 
 
+def _nested_node_application_aliases(
+    scenario: Scenario,
+    node_rename_map: Mapping[str, str],
+) -> dict[str, str]:
+    """Qualified runtime-application refs ``nodes.<vm>.runtime.applications.<app>``.
+
+    The node segment must be rewritten so a qualified application ref used as a
+    relationship endpoint survives namespacing.
+    """
+    aliases: dict[str, str] = {}
+    for node_name, node in scenario.nodes.items():
+        prefixed_node = node_rename_map.get(node_name, node_name)
+        if prefixed_node == node_name:
+            continue
+        runtime = getattr(node, "runtime", None)
+        if runtime is None:
+            continue
+        for application in getattr(runtime, "applications", []):
+            app_id = getattr(application, "application_id", "")
+            if not app_id:
+                continue
+            bare_ref = f"nodes.{node_name}.runtime.applications.{app_id}"
+            aliases[bare_ref] = f"nodes.{prefixed_node}.runtime.applications.{app_id}"
+    return aliases
+
+
+def _nested_node_database_aliases(
+    scenario: Scenario,
+    node_rename_map: Mapping[str, str],
+) -> dict[str, str]:
+    """Qualified database refs ``nodes.<vm>.runtime.database_services.<id>[...]``.
+
+    Covers the database-service ref and the ``.databases.<id>`` ref so an
+    application-to-database relationship endpoint survives namespacing
+    (ADR-027 §2).
+    """
+    aliases: dict[str, str] = {}
+    for node_name, node in scenario.nodes.items():
+        prefixed_node = node_rename_map.get(node_name, node_name)
+        if prefixed_node == node_name:
+            continue
+        runtime = getattr(node, "runtime", None)
+        if runtime is None:
+            continue
+        for dbsvc in getattr(runtime, "database_services", []):
+            svc_id = getattr(dbsvc, "database_service_id", "")
+            if not svc_id:
+                continue
+            bare_base = f"nodes.{node_name}.runtime.database_services.{svc_id}"
+            prefixed_base = f"nodes.{prefixed_node}.runtime.database_services.{svc_id}"
+            aliases[bare_base] = prefixed_base
+            for database in getattr(dbsvc, "databases", []):
+                db_id = getattr(database, "database_id", "")
+                if not db_id:
+                    continue
+                aliases[f"{bare_base}.databases.{db_id}"] = f"{prefixed_base}.databases.{db_id}"
+    return aliases
+
+
 def _nested_content_item_aliases(
     scenario: Scenario,
     content_rename_map: Mapping[str, str],
@@ -159,6 +218,8 @@ def symbol_index(
     named.update(_qualified_section_aliases("entities", entity_map))
 
     named.update(_nested_node_service_aliases(scenario, section_maps.get("nodes", {})))
+    named.update(_nested_node_application_aliases(scenario, section_maps.get("nodes", {})))
+    named.update(_nested_node_database_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_content_item_aliases(scenario, section_maps.get("content", {})))
 
     return {

@@ -17,6 +17,7 @@ from .entities import flatten_entities
 from .infrastructure import SimpleProperties
 from .nodes import MAX_NODE_NAME_LENGTH, NodeType
 from .orchestration import Workflow, WorkflowPredicate, WorkflowStep, WorkflowStepType
+from .runtime_database import DatabaseObjectType
 from .scenario import Scenario
 from .semantics.assessment import AssessmentIssue, analyze_assessment_pipeline
 from .semantics.objective_semantics import (
@@ -243,6 +244,27 @@ class SemanticValidator:
                     refs.add(f"nodes.{node_name}.services.{service.name}")
         return refs
 
+    def _qualified_runtime_refs(self) -> set[str]:
+        """Qualified refs for node-scoped runtime applications and database objects.
+
+        These let a top-level relationship endpoint resolve to a runtime
+        application surface or a database service / logical database, so an
+        application-to-database access edge is expressible (ADR-027 §4).
+        """
+        refs: set[str] = set()
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None:
+                continue
+            for application in runtime.applications:
+                refs.add(f"nodes.{node_name}.runtime.applications.{application.application_id}")
+            for dbsvc in runtime.database_services:
+                base = f"nodes.{node_name}.runtime.database_services.{dbsvc.database_service_id}"
+                refs.add(base)
+                for database in dbsvc.databases:
+                    refs.add(f"{base}.databases.{database.database_id}")
+        return refs
+
     def _qualified_acl_refs(self) -> set[str]:
         refs: set[str] = set()
         for infra_name, infra in self._s.infrastructure.items():
@@ -319,6 +341,8 @@ class SemanticValidator:
         for ref in self._qualified_service_refs():
             add(ref, ref)
         for ref in self._qualified_acl_refs():
+            add(ref, ref)
+        for ref in self._qualified_runtime_refs():
             add(ref, ref)
 
         if not targetable:
@@ -445,6 +469,7 @@ class SemanticValidator:
         self._verify_infrastructure()
         self._verify_runtime_network()
         self._verify_runtime_application()
+        self._verify_runtime_database_services()
         self._verify_features()
         self._verify_conditions()
         self._verify_vulnerabilities()
@@ -460,6 +485,7 @@ class SemanticValidator:
         self._verify_content()
         self._verify_accounts()
         self._verify_relationships()
+        self._verify_relationship_database_access()
         self._verify_agents()
         self._verify_participant_behavior()
         self._verify_objectives()
@@ -701,30 +727,43 @@ class SemanticValidator:
         return paths
 
     def _verify_application_service(self, node_name: str, application: object, service_names: set[str]) -> None:
-        ref = getattr(application, "service", "")
+        self._verify_owned_service_ref(
+            node_name,
+            getattr(application, "service", ""),
+            service_names,
+            owner_label=f"Node '{node_name}' runtime application '{application.application_id}'",
+        )
+
+    def _verify_owned_service_ref(
+        self,
+        node_name: str,
+        ref: str,
+        service_names: set[str],
+        *,
+        owner_label: str,
+    ) -> None:
+        """Validate a runtime surface's owning transport-service reference.
+
+        The ref is a bare ``Node.services[].name`` or the qualified
+        ``nodes.<node>.services.<name>`` form, and must resolve to a service on
+        the same node. Shared by runtime applications and database services.
+        """
         if not ref or self._is_unresolved_var(ref):
             return
-        app_id = application.application_id
         service_name = ref
         if ref.startswith("nodes."):
             parts = ref.split(".")
             if len(parts) != 4 or parts[2] != "services":
                 self._err(
-                    f"Node '{node_name}' runtime application '{app_id}' service ref '{ref}' "
-                    f"must be a bare service name or 'nodes.<node>.services.<name>'"
+                    f"{owner_label} service ref '{ref}' must be a bare service name or 'nodes.<node>.services.<name>'"
                 )
                 return
             if parts[1] != node_name:
-                self._err(
-                    f"Node '{node_name}' runtime application '{app_id}' service ref '{ref}' "
-                    f"must reference a service on the same node"
-                )
+                self._err(f"{owner_label} service ref '{ref}' must reference a service on the same node")
                 return
             service_name = parts[3]
         if service_name not in service_names:
-            self._err(
-                f"Node '{node_name}' runtime application '{app_id}' references undefined service '{service_name}'"
-            )
+            self._err(f"{owner_label} references undefined service '{service_name}'")
 
     def _verify_route_refs(
         self,
@@ -753,6 +792,142 @@ class SemanticValidator:
                     self._err(
                         f"Node '{node_name}' runtime application '{app_id}' route '{route_id}' "
                         f"{field_name} ref '{ref}' does not resolve to an observed file on the node"
+                    )
+
+    def _verify_runtime_database_services(self) -> None:
+        """Validate observed database services against the scenario.
+
+        Each service's owning transport service must resolve to a service on
+        the same node (mirroring ``runtime.applications``); grant grantee/object
+        refs must resolve to roles and logical objects within the same service
+        (ADR-027 §6).
+        """
+        for name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.database_services:
+                continue
+            service_names = self._node_service_names(node)
+            for dbsvc in runtime.database_services:
+                self._verify_owned_service_ref(
+                    name,
+                    getattr(dbsvc, "service", ""),
+                    service_names,
+                    owner_label=f"Node '{name}' runtime database service '{dbsvc.database_service_id}'",
+                )
+                self._verify_database_grants(name, dbsvc)
+
+    def _verify_database_grants(self, node_name: str, dbsvc: object) -> None:
+        role_ids = {role.role_id for role in dbsvc.roles}
+        objects_by_type: dict[str, set[str]] = {
+            "database": {db.database_id for db in dbsvc.databases},
+            "schema": {schema.schema_id for db in dbsvc.databases for schema in db.schemas},
+            "table": {table.table_id for db in dbsvc.databases for schema in db.schemas for table in schema.tables},
+        }
+        label = f"Node '{node_name}' runtime database service '{dbsvc.database_service_id}'"
+        for grant in dbsvc.grants:
+            if not self._is_unresolved_var(grant.grantee_role_ref) and grant.grantee_role_ref not in role_ids:
+                self._err(f"{label} grant grantee_role_ref '{grant.grantee_role_ref}' is not a role in the service")
+            object_type = grant.object_type
+            type_value = object_type.value if isinstance(object_type, DatabaseObjectType) else object_type
+            if self._is_unresolved_var(grant.object_ref) or self._is_unresolved_var(type_value):
+                continue
+            if grant.object_ref not in objects_by_type.get(type_value, set()):
+                self._err(f"{label} grant object_ref '{grant.object_ref}' is not a {type_value} in the service")
+
+    def _split_runtime_ref(self, ref: object, *, surface: str) -> tuple[str, str] | None:
+        """Split ``nodes.<node>.runtime.<surface>.<rest>`` into (node, rest).
+
+        Module composition rewrites the node segment to a dotted namespaced
+        form (``shared.web``), so we cannot split on ``.`` and index by
+        position. Partition on the surface marker instead so the node name
+        survives an arbitrary number of namespace prefixes.
+        """
+        if not isinstance(ref, str) or not ref.startswith("nodes."):
+            return None
+        marker = f".runtime.{surface}."
+        head, sep, tail = ref[len("nodes.") :].partition(marker)
+        if not sep or not head or not tail:
+            return None
+        return head, tail
+
+    def _resolve_database_service_ref(self, ref: object) -> object | None:
+        """Resolve a qualified ``nodes.<node>.runtime.database_services.<id>`` ref.
+
+        Accepts the database-service form and the ``.databases.<id>`` form; both
+        resolve to the owning :class:`DatabaseService` so a relationship's
+        ``database_access`` can be checked against it.
+        """
+        split = self._split_runtime_ref(ref, surface="database_services")
+        if split is None:
+            return None
+        node_name, tail = split
+        tail_parts = tail.split(".")
+        # tail is ``<svc_id>`` (1 part) or ``<svc_id>.databases.<db_id>`` (3).
+        if len(tail_parts) == 1 or (len(tail_parts) == 3 and tail_parts[1] == "databases"):
+            svc_id = tail_parts[0]
+        else:
+            return None
+        node = self._s.nodes.get(node_name)
+        runtime = getattr(node, "runtime", None) if node is not None else None
+        if runtime is None:
+            return None
+        for dbsvc in runtime.database_services:
+            if dbsvc.database_service_id == svc_id:
+                return dbsvc
+        return None
+
+    def _resolve_application_ref(self, ref: object) -> object | None:
+        """Resolve a qualified ``nodes.<node>.runtime.applications.<id>`` ref.
+
+        Returns the owning :class:`RuntimeApplicationSurface` so a relationship's
+        ``database_access`` source endpoint can be confirmed to be a runtime
+        application (ADR-027 §4).
+        """
+        split = self._split_runtime_ref(ref, surface="applications")
+        if split is None:
+            return None
+        node_name, tail = split
+        if "." in tail:
+            return None
+        node = self._s.nodes.get(node_name)
+        runtime = getattr(node, "runtime", None) if node is not None else None
+        if runtime is None:
+            return None
+        for application in runtime.applications:
+            if application.application_id == tail:
+                return application
+        return None
+
+    def _verify_relationship_database_access(self) -> None:
+        """Validate typed ``database_access`` blocks on relationship edges.
+
+        When a relationship carries ``database_access``, its ``source`` must
+        resolve to a runtime application and its ``target`` must resolve to a
+        database service (or logical database); the access ``role_ref`` must
+        name a role in that service (ADR-027 §4).
+        """
+        for name, rel in self._s.relationships.items():
+            access = rel.database_access
+            if access is None:
+                continue
+            label = f"Relationship '{name}'"
+            if not self._is_unresolved_var(rel.source) and self._resolve_application_ref(rel.source) is None:
+                self._err(
+                    f"{label} has database_access but source '{rel.source}' does not resolve to a runtime application"
+                )
+            dbsvc = self._resolve_database_service_ref(rel.target)
+            if dbsvc is None:
+                if not self._is_unresolved_var(rel.target):
+                    self._err(
+                        f"{label} has database_access but target '{rel.target}' "
+                        f"does not resolve to a database service or database"
+                    )
+                continue
+            if access.role_ref and not self._is_unresolved_var(access.role_ref):
+                if access.role_ref not in {role.role_id for role in dbsvc.roles}:
+                    self._err(
+                        f"{label} database_access role_ref '{access.role_ref}' "
+                        f"is not a role in database service '{dbsvc.database_service_id}'"
                     )
 
     def _verify_content(self) -> None:

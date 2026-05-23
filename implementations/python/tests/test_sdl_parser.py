@@ -1428,6 +1428,74 @@ imports:
         with pytest.raises(SDLParseError, match="collides"):
             parse_sdl_file(root)
 
+    def test_parse_sdl_file_rewrites_database_and_application_relationship_refs(self, tmp_path: Path):
+        # End-to-end composition: the relationship's source (a runtime
+        # application ref) and target (a database service ref) must survive
+        # module namespacing. Without `_nested_node_application_aliases` /
+        # `_nested_node_database_aliases` being consumed by composition's
+        # relationship rewrite, the refs would point at the un-namespaced
+        # nodes and fail semantic validation on the composed scenario
+        # (ADR-027 §2).
+        imported = tmp_path / "shared-db.yaml"
+        imported.write_text(
+            """
+name: shared-db
+version: 1.0.0
+nodes:
+  db:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    services:
+      - {port: 5432, name: pg}
+    runtime:
+      database_services:
+        - database_service_id: tv-pg
+          service: pg
+          engine: postgresql
+          protocol: postgresql
+          databases:
+            - {database_id: tv, name: techvault}
+          roles:
+            - {role_id: app, name: techvault}
+  web:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    services:
+      - {port: 8080, name: http}
+    runtime:
+      applications:
+        - {application_id: webapp, service: http}
+relationships:
+  webapp-to-db:
+    type: connects_to
+    source: nodes.web.runtime.applications.webapp
+    target: nodes.db.runtime.database_services.tv-pg
+    database_access: {role_ref: app, auth_method: scram_sha_256}
+""",
+            encoding="utf-8",
+        )
+        root = tmp_path / "root.yaml"
+        root.write_text(
+            """
+name: root
+imports:
+  - path: shared-db.yaml
+    namespace: shared
+    version: 1.0.0
+""",
+            encoding="utf-8",
+        )
+
+        scenario = parse_sdl_file(root)
+
+        rel = scenario.relationships["shared.webapp-to-db"]
+        assert rel.source == "nodes.shared.web.runtime.applications.webapp"
+        assert rel.target == "nodes.shared.db.runtime.database_services.tv-pg"
+        # ``role_ref`` is service-local and intentionally not rewritten.
+        assert rel.database_access.role_ref == "app"
+
 
 class TestLoadRealScenarios:
     """ACES legacy scenario YAMLs use the metadata format which is no
@@ -1528,3 +1596,69 @@ nodes:
         instantiated = instantiate_scenario(raw, parameters={"login_auth": True})
         route = instantiated.nodes["techvault-webapp"].runtime.applications[0].routes[0]
         assert route.auth_required is True
+
+
+class TestRuntimeDatabaseParsing:
+    def test_database_service_field_keys_normalized_names_preserved(self):
+        # Field keys (hyphenated/cased) normalize; observed object names are
+        # data and survive verbatim — including mixed case and underscores.
+        sdl = """
+name: techvault-db
+nodes:
+  db-host:
+    type: vm
+    os: linux
+    services:
+      - {port: 5432, name: pg}
+    runtime:
+      database-services:
+        - database-service-id: tv-pg
+          service: pg
+          engine: PostgreSQL
+          protocol: postgresql
+          databases:
+            - database-id: tv-db
+              name: TechVault_Prod
+              schemas:
+                - schema-id: pub
+                  name: public
+                  tables:
+                    - {table-id: audit, name: Audit_Log}
+          settings:
+            - {name: log_statement, value: all, provenance: configuration-file}
+"""
+        raw = parse_sdl(sdl)
+        dbsvc = raw.nodes["db-host"].runtime.database_services[0]
+        assert dbsvc.database_service_id == "tv-pg"
+        # Engine string normalizes for enum matching.
+        assert str(dbsvc.engine.value) == "postgresql"
+        # Observed names are preserved exactly, not case-folded.
+        assert dbsvc.databases[0].name == "TechVault_Prod"
+        assert dbsvc.databases[0].schemas[0].tables[0].name == "Audit_Log"
+        assert dbsvc.settings[0].provenance.value == "configuration_file"
+
+    def test_database_service_variable_substitutes_on_instantiation(self):
+        sdl = """
+name: techvault-db-variable
+variables:
+  pg_version:
+    type: string
+    required: true
+nodes:
+  db-host:
+    type: vm
+    os: linux
+    services:
+      - {port: 5432, name: pg}
+    runtime:
+      database-services:
+        - database-service-id: tv-pg
+          service: pg
+          engine: postgresql
+          protocol: postgresql
+          version: ${pg_version}
+"""
+        raw = parse_sdl(sdl)
+        assert raw.nodes["db-host"].runtime.database_services[0].version == "${pg_version}"
+        instantiated = instantiate_scenario(raw, parameters={"pg_version": "16.13"})
+        assert instantiated.nodes["db-host"].runtime.database_services[0].version == "16.13"

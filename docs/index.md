@@ -112,6 +112,7 @@ decisions/adrs/adr-023-container-image-build-provenance-surface
 decisions/adrs/adr-024-local-identity-inventory-surface
 decisions/adrs/adr-025-container-network-realization-surface
 decisions/adrs/adr-026-application-http-surface-inventory
+decisions/adrs/adr-027-database-logical-state-runtime-surface
 decisions/sem-213-temporal-participant-preflight
 ```
 

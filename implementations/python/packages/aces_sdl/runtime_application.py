@@ -30,6 +30,9 @@ from .runtime_values import (
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
 )
+from .runtime_values import (
+    require_symbol as _require_symbol,
+)
 
 __all__ = [
     "RuntimeApplicationDisclosure",
@@ -99,15 +102,6 @@ def _url_path_or_var(value: str, *, field_name: str, allow_empty: bool = False) 
         raise ValueError(f"{field_name} must be a URL path starting with '/'")
     if any(ch.isspace() for ch in value):
         raise ValueError(f"{field_name} must not contain whitespace")
-    return value
-
-
-def _require_symbol(value: str, *, field_name: str) -> str:
-    """Validate a stable, symbol-defining identifier (no ``${var}`` placeholder)."""
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{field_name} must be a non-empty string")
-    if is_variable_ref(value):
-        raise ValueError(f"{field_name} must be a stable identifier, not a variable placeholder")
     return value
 
 
