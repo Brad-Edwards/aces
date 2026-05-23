@@ -180,6 +180,8 @@ nodes:
             container_path: /dev/null
             permissions: rwm
         device_cgroup_rules: [c 1:3 rwm]
+        seccomp_profile: unconfined
+        security_opt: [seccomp:unconfined, no-new-privileges]
         extra_hosts:
           - hostname: wazuh-manager
             address: 172.20.0.10
@@ -374,7 +376,13 @@ identity; `processes` records a supervised or load-bearing process set;
 and redaction classification; `linux_capabilities` records container/Linux
 capability policy; `operational_policy` records restart policy and observed
 resource limits; `container` records observed host/container configuration and
-namespace/security facts; `health` records observed health status and bounded
+namespace/security facts, including `seccomp_profile` (the portable seccomp
+posture — `default`, `unconfined`, a named profile, or a profile path) and
+`security_opt` (the bounded list of backend-native engine security options
+such as `seccomp:unconfined` or `no-new-privileges`); a seccomp posture is a
+distinct security control from `privileged`, so it is recorded separately (see
+[ADR-028](../../decisions/adrs/adr-028-container-seccomp-security-options-surface.md));
+`health` records observed health status and bounded
 healthcheck log facts; `packages` and `dependency_manifests` record runtime
 inventory; and `package_vulnerabilities` records scanner-derived CVE/advisory
 findings tied to an image digest and scan time. These findings are separate

@@ -318,6 +318,12 @@ nodes:
         read-only-paths: /proc/sys
         cgroup-parent: /docker
         runtime-name: runc
+        init-process:
+          enabled: true
+          implementation: docker-init
+          executable-path: /sbin/docker-init
+          reaps-children: true
+          argv: [/sbin/docker-init, "--", /entrypoint.sh]
         devices:
           - host-path: /dev/null
             container-path: /dev/null
@@ -407,6 +413,12 @@ nodes:
         assert node.runtime.container.extra_hosts[0].hostname == "wazuh-manager"
         assert node.runtime.container.dns_options == ["ndots:0"]
         assert node.runtime.container.group_add == ["adm", "101"]
+        assert node.runtime.container.init_process is not None
+        assert node.runtime.container.init_process.enabled is True
+        assert node.runtime.container.init_process.implementation == "docker-init"
+        assert node.runtime.container.init_process.executable_path == "/sbin/docker-init"
+        assert node.runtime.container.init_process.reaps_children is True
+        assert node.runtime.container.init_process.argv == ["/sbin/docker-init", "--", "/entrypoint.sh"]
         assert node.runtime.health is not None
         assert node.runtime.health.status == "healthy"
         assert node.runtime.health.failing_streak == 0
