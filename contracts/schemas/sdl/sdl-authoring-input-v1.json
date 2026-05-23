@@ -3919,6 +3919,17 @@
           "title": "Group Add",
           "type": "array"
         },
+        "init_process": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeInitProcess"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "log_driver": {
           "default": "",
           "title": "Log Driver",
@@ -4005,6 +4016,18 @@
           "default": "",
           "title": "Runtime Name",
           "type": "string"
+        },
+        "seccomp_profile": {
+          "default": "",
+          "title": "Seccomp Profile",
+          "type": "string"
+        },
+        "security_opt": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Security Opt",
+          "type": "array"
         },
         "shm_size": {
           "anyOf": [
@@ -4557,6 +4580,78 @@
       ],
       "title": "RuntimeIdentityProvenance",
       "type": "string"
+    },
+    "RuntimeInitProcess": {
+      "additionalProperties": false,
+      "description": "Observed backend-injected container init / PID-1 reaper configuration.\n\nModels authored container runtime intent \u2014 for example Docker Compose\n``init: true`` causing PID 1 to be ``/sbin/docker-init`` (tini). This is\ndistinct from the observed PID-1 process recorded in ``runtime.process`` /\n``runtime.processes``; see ADR-027.",
+      "properties": {
+        "argv": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Argv",
+          "type": "array"
+        },
+        "argv_redacted": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": false,
+          "title": "Argv Redacted"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "executable_path": {
+          "default": "",
+          "title": "Executable Path",
+          "type": "string"
+        },
+        "implementation": {
+          "default": "",
+          "title": "Implementation",
+          "type": "string"
+        },
+        "reaps_children": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reaps Children"
+        }
+      },
+      "title": "RuntimeInitProcess",
+      "type": "object"
     },
     "RuntimeLocalGroup": {
       "additionalProperties": false,

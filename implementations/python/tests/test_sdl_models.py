@@ -35,6 +35,7 @@ from aces.core.sdl.nodes import (
     RuntimeApplicationResponse,
     RuntimeApplicationRoute,
     RuntimeApplicationSurface,
+    RuntimeContainerConfiguration,
     RuntimeControlInterface,
     RuntimeControlInterfaceAccess,
     RuntimeControlInterfaceKind,
@@ -611,6 +612,13 @@ class TestNode:
                     "read_only_paths": "/proc/sys",
                     "cgroup_parent": "/docker",
                     "runtime_name": "runc",
+                    "init_process": {
+                        "enabled": True,
+                        "implementation": "docker-init",
+                        "executable_path": "/sbin/docker-init",
+                        "reaps_children": True,
+                        "argv": ["/sbin/docker-init", "--", "/entrypoint.sh"],
+                    },
                     "devices": [
                         {
                             "host_path": "/dev/null",
@@ -666,6 +674,13 @@ class TestNode:
         assert runtime.container.extra_hosts[0].hostname == "wazuh-manager"
         assert runtime.container.dns_options == ["ndots:0"]
         assert runtime.container.group_add == ["adm", "101"]
+        assert runtime.container.init_process is not None
+        assert runtime.container.init_process.enabled is True
+        assert runtime.container.init_process.implementation == "docker-init"
+        assert runtime.container.init_process.executable_path == "/sbin/docker-init"
+        assert runtime.container.init_process.reaps_children is True
+        assert runtime.container.init_process.argv == ["/sbin/docker-init", "--", "/entrypoint.sh"]
+        assert runtime.container.init_process.argv_redacted is False
         assert runtime.health is not None
         assert runtime.health.status == RuntimeHealthStatus.HEALTHY
         assert runtime.health.failing_streak == 0
@@ -720,6 +735,15 @@ class TestNode:
                 },
                 "Duplicate runtime extra host",
             ),
+            ({"container": {"security_opt": ["seccomp:unconfined", ""]}}, "security_opt"),
+            (
+                {"container": {"security_opt": ["seccomp:unconfined", "seccomp:unconfined"]}},
+                "Duplicate runtime security option",
+            ),
+            (
+                {"container": {"seccomp_profile": "default", "security_opt": ["seccomp:unconfined"]}},
+                "seccomp_profile",
+            ),
             ({"health": {"log": [{"output": "secret", "output_redacted": True}]}}, "redacted healthcheck output"),
             (
                 {
@@ -772,11 +796,84 @@ class TestNode:
                 },
                 "redacted sudo rules must omit commands",
             ),
+            (
+                {"container": {"init_process": {"executable_path": "sbin/docker-init"}}},
+                "executable_path",
+            ),
+            (
+                {"container": {"init_process": {"enabled": "maybe"}}},
+                "enabled",
+            ),
+            (
+                {"container": {"init_process": {"argv_redacted": True, "argv": ["/sbin/docker-init"]}}},
+                "redacted init process argv must omit argv",
+            ),
         ],
     )
     def test_runtime_configuration_rejects_invalid_runtime_anchors(self, runtime, message):
         with pytest.raises(ValidationError, match=message):
             Node(type="vm", runtime=runtime)
+
+    def test_runtime_init_process_accepts_variable_refs_and_redaction(self):
+        n = Node(
+            type="vm",
+            runtime={
+                "container": {
+                    "init_process": {
+                        "enabled": "${init_enabled}",
+                        "reaps_children": "${reaps}",
+                        "executable_path": "${init_path}",
+                        "argv_redacted": True,
+                        "description": "backend-injected reaper",
+                    }
+                }
+            },
+        )
+
+        container = n.runtime.container
+        assert container is not None
+        init = container.init_process
+        assert init is not None
+        assert init.enabled == "${init_enabled}"
+        assert init.reaps_children == "${reaps}"
+        assert init.executable_path == "${init_path}"
+        assert init.argv_redacted is True
+        assert init.argv == []
+        assert init.description == "backend-injected reaper"
+
+    def test_runtime_container_records_seccomp_and_security_opt(self):
+        container = RuntimeContainerConfiguration(
+            seccomp_profile="unconfined",
+            security_opt=["seccomp:unconfined", "apparmor=unconfined", "no-new-privileges"],
+        )
+
+        assert container.seccomp_profile == "unconfined"
+        assert container.security_opt == ["seccomp:unconfined", "apparmor=unconfined", "no-new-privileges"]
+
+    def test_runtime_container_security_opt_coerces_scalar_string(self):
+        container = RuntimeContainerConfiguration(security_opt="seccomp:unconfined")
+
+        assert container.security_opt == ["seccomp:unconfined"]
+
+    def test_runtime_container_seccomp_consistency_accepts_agreeing_values(self):
+        container = RuntimeContainerConfiguration(
+            seccomp_profile="unconfined",
+            security_opt=["label=disable", "seccomp=unconfined"],
+        )
+
+        assert container.seccomp_profile == "unconfined"
+
+    def test_runtime_container_seccomp_consistency_allows_variable_placeholder(self):
+        container = RuntimeContainerConfiguration(
+            seccomp_profile="${SECCOMP}",
+            security_opt=["seccomp:unconfined"],
+        )
+
+        assert container.seccomp_profile == "${SECCOMP}"
+
+    def test_runtime_container_seccomp_rejects_disagreeing_security_opt_entries(self):
+        with pytest.raises(ValidationError, match="seccomp_profile"):
+            RuntimeContainerConfiguration(security_opt=["seccomp:unconfined", "seccomp=default"])
 
     def test_runtime_control_interface_accepts_windows_named_pipe_path(self):
         interface = RuntimeControlInterface(
