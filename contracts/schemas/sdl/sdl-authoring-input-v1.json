@@ -3822,6 +3822,13 @@
           },
           "title": "Processes",
           "type": "array"
+        },
+        "ssh_servers": {
+          "items": {
+            "$ref": "#/$defs/SshServerConfig"
+          },
+          "title": "Ssh Servers",
+          "type": "array"
         }
       },
       "title": "RuntimeConfiguration",
@@ -5974,6 +5981,375 @@
         "name"
       ],
       "title": "Source",
+      "type": "object"
+    },
+    "SshForcedCommand": {
+      "additionalProperties": false,
+      "description": "A typed sshd ``ForceCommand`` configuration.\n\nThe ``command_kind`` discriminates how ``command`` is interpreted:\n\n- ``absolute_path``: a concrete executable path (or ``${var}``) starting\n  with ``/``. Validated via ``absolute_path_or_var``.\n- ``internal_sftp``: the sshd-internal sftp subsystem; ``command`` must\n  equal the literal ``\"internal-sftp\"``.\n- ``redacted``: the underlying command is withheld from the SDL model\n  because it carries secrets, session identifiers, or operator-only\n  arguments; ``command`` must be empty and ``command_redacted`` must\n  be true.",
+      "properties": {
+        "command": {
+          "default": "",
+          "title": "Command",
+          "type": "string"
+        },
+        "command_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SshForcedCommandKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "absolute_path",
+          "title": "Command Kind"
+        },
+        "command_redacted": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": false,
+          "title": "Command Redacted"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "title": "SshForcedCommand",
+      "type": "object"
+    },
+    "SshForcedCommandKind": {
+      "description": "Kind of forced command an sshd ``ForceCommand`` directive carries.",
+      "enum": [
+        "absolute_path",
+        "internal_sftp",
+        "redacted"
+      ],
+      "title": "SshForcedCommandKind",
+      "type": "string"
+    },
+    "SshMatchCriterion": {
+      "additionalProperties": false,
+      "description": "A single sshd ``Match`` criterion (one ``kind`` + one ``pattern``).",
+      "properties": {
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SshMatchCriterionKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Kind"
+        },
+        "pattern": {
+          "title": "Pattern",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "pattern"
+      ],
+      "title": "SshMatchCriterion",
+      "type": "object"
+    },
+    "SshMatchCriterionKind": {
+      "description": "OpenSSH ``Match`` criterion kinds.\n\n``LOCAL_USER`` is the explicit \"match this concrete account\" form that\nsemantic validation may cross-check against ``runtime.local_identity``\nwhen that inventory is present. ``USER`` is the looser pattern form\n(wildcards, comma-separated lists) and is not cross-checked.",
+      "enum": [
+        "user",
+        "group",
+        "host",
+        "address",
+        "local_user",
+        "local_port",
+        "rdomain",
+        "all"
+      ],
+      "title": "SshMatchCriterionKind",
+      "type": "string"
+    },
+    "SshMatchRule": {
+      "additionalProperties": false,
+      "description": "A scoped sshd ``Match`` rule.\n\n``criteria`` is the ordered conjunction of one-or-more match criteria\n(``Match User kali`` is one criterion; ``Match User kali Address 10.0.0.0/8``\nis two). Per-rule sshd directives override the surrounding global\ndirectives for sessions that match all listed criteria.",
+      "properties": {
+        "accept_env": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Accept Env",
+          "type": "array"
+        },
+        "allow_groups": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allow Groups",
+          "type": "array"
+        },
+        "allow_users": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allow Users",
+          "type": "array"
+        },
+        "authentication_methods": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Authentication Methods",
+          "type": "array"
+        },
+        "authorized_keys_file": {
+          "default": "",
+          "title": "Authorized Keys File",
+          "type": "string"
+        },
+        "chroot_directory": {
+          "default": "",
+          "title": "Chroot Directory",
+          "type": "string"
+        },
+        "criteria": {
+          "items": {
+            "$ref": "#/$defs/SshMatchCriterion"
+          },
+          "title": "Criteria",
+          "type": "array"
+        },
+        "deny_groups": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Deny Groups",
+          "type": "array"
+        },
+        "deny_users": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Deny Users",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "forced_command": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SshForcedCommand"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "password_authentication": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Password Authentication"
+        },
+        "permit_tty": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Permit Tty"
+        },
+        "pubkey_authentication": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pubkey Authentication"
+        }
+      },
+      "required": [
+        "match_id"
+      ],
+      "title": "SshMatchRule",
+      "type": "object"
+    },
+    "SshServerConfig": {
+      "additionalProperties": false,
+      "description": "A scoped sshd server configuration observed on a node.\n\nEach configuration carries a stable ``server_id`` and an explicit\n``service`` reference pointing at the owning same-node service (bare\nname or ``nodes.<node>.services.<name>`` form). Global sshd directives\nsit at the top level; scoped overrides live in ``match_rules``.\n\nThe configuration is the SDL surface for participant-observable sshd\npolicy. It is not a backend sshd-payload dump and must not embed raw\n``sshd_config`` text, raw ``sshd -T`` output, container inspect\npayloads, session transcripts, or environment values.",
+      "properties": {
+        "accept_env": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Accept Env",
+          "type": "array"
+        },
+        "allow_groups": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allow Groups",
+          "type": "array"
+        },
+        "allow_users": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allow Users",
+          "type": "array"
+        },
+        "authentication_methods": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Authentication Methods",
+          "type": "array"
+        },
+        "authorized_keys_file": {
+          "default": "",
+          "title": "Authorized Keys File",
+          "type": "string"
+        },
+        "chroot_directory": {
+          "default": "",
+          "title": "Chroot Directory",
+          "type": "string"
+        },
+        "deny_groups": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Deny Groups",
+          "type": "array"
+        },
+        "deny_users": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Deny Users",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "forced_command": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SshForcedCommand"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "match_rules": {
+          "items": {
+            "$ref": "#/$defs/SshMatchRule"
+          },
+          "title": "Match Rules",
+          "type": "array"
+        },
+        "password_authentication": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Password Authentication"
+        },
+        "permit_tty": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Permit Tty"
+        },
+        "pubkey_authentication": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pubkey Authentication"
+        },
+        "server_id": {
+          "title": "Server Id",
+          "type": "string"
+        },
+        "service": {
+          "title": "Service",
+          "type": "string"
+        }
+      },
+      "required": [
+        "server_id",
+        "service"
+      ],
+      "title": "SshServerConfig",
       "type": "object"
     },
     "Story": {

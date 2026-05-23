@@ -57,6 +57,14 @@ from .runtime_network import (
     RuntimeNetworkRealization,
     RuntimePublishedPort,
 )
+from .runtime_ssh_server import (
+    SshForcedCommand,
+    SshForcedCommandKind,
+    SshMatchCriterion,
+    SshMatchCriterionKind,
+    SshMatchRule,
+    SshServerConfig,
+)
 from .runtime_values import (
     absolute_path_or_var as _absolute_path_or_var,
 )
@@ -133,6 +141,12 @@ __all__ = [
     "RuntimeSensitivityClassification",
     "RuntimeSudoPrincipalKind",
     "RuntimeSudoRule",
+    "SshForcedCommand",
+    "SshForcedCommandKind",
+    "SshMatchCriterion",
+    "SshMatchCriterionKind",
+    "SshMatchRule",
+    "SshServerConfig",
     "parse_ram",
 ]
 
@@ -555,6 +569,7 @@ class RuntimeConfiguration(SDLModel):
     local_identity: RuntimeLocalIdentityInventory | None = None
     network: RuntimeNetworkRealization | None = None
     applications: list[RuntimeApplicationSurface] = Field(default_factory=list)
+    ssh_servers: list[SshServerConfig] = Field(default_factory=list)
     packages: list[RuntimePackage] = Field(default_factory=list)
     dependency_manifests: list[RuntimeDependencyManifest] = Field(default_factory=list)
     package_vulnerabilities: list[RuntimePackageVulnerabilityFinding] = Field(default_factory=list)
@@ -567,4 +582,5 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.processes, attr="name", label="process name")
         _reject_duplicate_keys(self.processes, attr="pid", label="process pid")
         _reject_duplicate_keys(self.applications, attr="application_id", label="application_id")
+        _reject_duplicate_keys(self.ssh_servers, attr="server_id", label="ssh_server server_id")
         return self
