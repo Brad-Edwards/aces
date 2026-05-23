@@ -12,6 +12,7 @@ from mcp.server.fastmcp import FastMCP
 
 from aces_mcp.tools.authoring import register as register_authoring_tools
 from aces_mcp.tools.inspection import register as register_inspection_tools
+from aces_mcp.tools.operations import register as register_operation_tools
 from aces_mcp.tools.reference import register as register_reference_tools
 
 _INSTRUCTIONS = """\
@@ -23,10 +24,12 @@ content), when (scripts, stories, events), and declarative experiment \
 semantics (objectives, scoring, conditions, relationships, workflows, \
 variables).
 
-Start with `sdl_overview` to orient yourself, then use \
-`sdl_section_reference` for any section you need to understand. \
-Use `sdl_get_example` to see real-world annotated scenarios. \
-Use `sdl_validate` to check any SDL YAML you write.\
+Start with `aces_tool_surface` to understand the available tool families, \
+then use `sdl_overview` to orient yourself. Use `sdl_section_reference` \
+for any section you need to understand. Use `sdl_get_example` to see \
+real-world annotated scenarios. Use `sdl_validate`, `sdl_design_assessment`, \
+`sdl_plan`, and `sdl_claims_assessment` to check SDL YAML and avoid \
+overstating what a scenario or dry run can prove.\
 """
 
 
@@ -39,6 +42,7 @@ def create_server() -> FastMCP:
     register_reference_tools(mcp)
     register_authoring_tools(mcp)
     register_inspection_tools(mcp)
+    register_operation_tools(mcp)
     return mcp
 
 
