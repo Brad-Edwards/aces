@@ -370,7 +370,9 @@ features or exposed network services. Mounts describe realized filesystem
 attachments, including filesystem type, propagation, stability, whether a
 backend generated the source, and sensitivity classifications for the source
 and option strings. Mount sources or options classified as `redacted` or
-`operator_secret` must omit the raw value. `filesystem_inventory` records
+`operator_secret` must omit the raw value. This sensitivity vocabulary is an
+ACES runtime contract, not an adopted taxonomy from Docker, Compose, or the
+cited scenario-language precedents. `filesystem_inventory` records
 runtime-observed filesystem entries with absolute path, entry type, ownership,
 UID/GID, mode, size, digest algorithm/value pairs, source-package path,
 provenance, stability, and sensitivity classification.

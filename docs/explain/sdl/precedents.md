@@ -206,7 +206,9 @@ and host-local machinery that creates or controls the range. See
 This table is checked against the current ACES runtime/source models and the
 downstream APTL issue #339 Kali inventory evidence class: Compose service
 slices, Docker inspect output, runtime mount/network/capability observations,
-and image provenance are evidence to classify, not schema authority.
+and image provenance are evidence to classify, not schema authority. The APTL
+inventory is motivating downstream evidence; it is not a claim that all APTL
+artifacts already satisfy the ACES redaction contract.
 
 
 | Concept                                 | Current Disposition                | Where It Belongs                       |

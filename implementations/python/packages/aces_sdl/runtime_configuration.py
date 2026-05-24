@@ -3,7 +3,9 @@
 from collections.abc import Iterable
 from enum import Enum
 
-from pydantic import Field, ValidationInfo, field_validator, model_validator
+from pydantic import Field, GetJsonSchemaHandler, ValidationInfo, field_validator, model_validator
+from pydantic.json_schema import JsonSchemaValue
+from pydantic_core import CoreSchema
 
 from ._base import (
     SDLModel,
@@ -47,6 +49,7 @@ from .runtime_filesystem import (
     RuntimeFilesystemStability,
     RuntimeMountPropagation,
     RuntimeSensitivityClassification,
+    redacted_raw_value_schema,
 )
 from .runtime_identity import (
     RuntimeIdentityProvenance,
@@ -304,6 +307,30 @@ class RuntimeMount(SDLModel):
             raise ValueError("redacted runtime mount options must omit options")
         return self
 
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).extend(
+            [
+                redacted_raw_value_schema(
+                    sensitivity_field="source_sensitivity",
+                    raw_field="source",
+                    raw_value_schema={"type": "string", "minLength": 1},
+                ),
+                redacted_raw_value_schema(
+                    sensitivity_field="options_sensitivity",
+                    raw_field="options",
+                    raw_value_schema={"type": "array", "minItems": 1},
+                ),
+            ]
+        )
+        return json_schema
+
 
 class RuntimeControlInterface(SDLModel):
     """A non-network local control API exposed inside a runtime node."""
@@ -349,7 +376,7 @@ class RuntimeControlInterface(SDLModel):
         return _parse_runtime_enum_or_var(v, RuntimeControlInterfaceAccess, field_name="access")
 
     @model_validator(mode="after")
-    def validate_named_pipe_kind(self) -> "RuntimeControlInterface":
+    def validate_redacted_bind_source_and_named_pipe_kind(self) -> "RuntimeControlInterface":
         if (
             self.bind_source_sensitivity
             in {
@@ -365,6 +392,23 @@ class RuntimeControlInterface(SDLModel):
         if has_windows_named_pipe_endpoint and self.kind != RuntimeControlInterfaceKind.NAMED_PIPE:
             raise ValueError("Windows named pipe paths require kind 'named_pipe'")
         return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).append(
+            redacted_raw_value_schema(
+                sensitivity_field="bind_source_sensitivity",
+                raw_field="bind_source",
+                raw_value_schema={"type": "string", "minLength": 1},
+            )
+        )
+        return json_schema
 
 
 class RuntimeEnvironmentVariable(SDLModel):

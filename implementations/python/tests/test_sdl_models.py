@@ -1,6 +1,8 @@
 """Tests for SDL structural models (Pydantic validation)."""
 
 import pytest
+from jsonschema import Draft202012Validator
+from jsonschema import ValidationError as JsonSchemaValidationError
 from pydantic import ValidationError
 
 from aces.core.sdl._source import Source
@@ -1116,6 +1118,52 @@ class TestNode:
 
         assert interface.bind_source == ""
         assert interface.bind_source_sensitivity == RuntimeSensitivityClassification.OPERATOR_SECRET
+
+    def test_runtime_mount_json_schema_rejects_redacted_raw_details(self):
+        validator = Draft202012Validator(RuntimeMount.model_json_schema())
+
+        validator.validate(
+            {
+                "target": "/host-keys",
+                "source_kind": "bind",
+                "source_sensitivity": "operator_secret",
+            }
+        )
+        with pytest.raises(JsonSchemaValidationError):
+            validator.validate(
+                {
+                    "target": "/host-keys",
+                    "source": "/home/operator/.ssh",
+                    "source_sensitivity": "operator-secret",
+                }
+            )
+        with pytest.raises(JsonSchemaValidationError):
+            validator.validate(
+                {
+                    "target": "/",
+                    "options": ["lowerdir=/var/lib/containerd/snapshots/1/fs"],
+                    "options_sensitivity": "redacted",
+                }
+            )
+
+    def test_runtime_control_interface_json_schema_rejects_redacted_bind_source(self):
+        validator = Draft202012Validator(RuntimeControlInterface.model_json_schema())
+
+        validator.validate(
+            {
+                "path": "/run/docker.sock",
+                "protocol": "docker",
+                "bind_source_sensitivity": "operator_secret",
+            }
+        )
+        with pytest.raises(JsonSchemaValidationError):
+            validator.validate(
+                {
+                    "path": "/run/docker.sock",
+                    "bind_source": "/var/run/docker.sock",
+                    "bind_source_sensitivity": "operator-secret",
+                }
+            )
 
     def test_vm_runtime_local_identity_inventory_surfaces(self):
         n = Node(

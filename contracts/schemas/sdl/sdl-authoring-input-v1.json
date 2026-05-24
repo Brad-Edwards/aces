@@ -4629,6 +4629,37 @@
     },
     "RuntimeControlInterface": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "bind_source_sensitivity": {
+                "enum": [
+                  "redacted",
+                  "operator_secret",
+                  "operator-secret"
+                ]
+              }
+            },
+            "required": [
+              "bind_source_sensitivity"
+            ]
+          },
+          "then": {
+            "not": {
+              "properties": {
+                "bind_source": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "bind_source"
+              ]
+            }
+          }
+        }
+      ],
       "description": "A non-network local control API exposed inside a runtime node.",
       "properties": {
         "access": {
@@ -5471,6 +5502,66 @@
     },
     "RuntimeMount": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "source_sensitivity": {
+                "enum": [
+                  "redacted",
+                  "operator_secret",
+                  "operator-secret"
+                ]
+              }
+            },
+            "required": [
+              "source_sensitivity"
+            ]
+          },
+          "then": {
+            "not": {
+              "properties": {
+                "source": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "options_sensitivity": {
+                "enum": [
+                  "redacted",
+                  "operator_secret",
+                  "operator-secret"
+                ]
+              }
+            },
+            "required": [
+              "options_sensitivity"
+            ]
+          },
+          "then": {
+            "not": {
+              "properties": {
+                "options": {
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "options"
+              ]
+            }
+          }
+        }
+      ],
       "description": "A filesystem mount observed on a runtime node.",
       "properties": {
         "backend_generated": {

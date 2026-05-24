@@ -58,6 +58,34 @@ class RuntimeSensitivityClassification(str, Enum):
     UNKNOWN = "unknown"
 
 
+def redacted_raw_value_schema(
+    *,
+    sensitivity_field: str,
+    raw_field: str,
+    raw_value_schema: dict[str, object],
+) -> dict[str, object]:
+    return {
+        "if": {
+            "properties": {
+                sensitivity_field: {
+                    "enum": [
+                        RuntimeSensitivityClassification.REDACTED.value,
+                        RuntimeSensitivityClassification.OPERATOR_SECRET.value,
+                        "operator-secret",
+                    ]
+                }
+            },
+            "required": [sensitivity_field],
+        },
+        "then": {
+            "not": {
+                "required": [raw_field],
+                "properties": {raw_field: raw_value_schema},
+            }
+        },
+    }
+
+
 class RuntimeFilesystemEntry(SDLModel):
     """A filesystem entry observed inside a runtime node or container asset."""
 

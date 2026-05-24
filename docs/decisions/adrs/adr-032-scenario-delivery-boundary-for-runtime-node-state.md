@@ -50,6 +50,12 @@ This ADR is grounded in three evidence sets:
   and raw Docker evidence that had to be classified without making Docker
   Compose the SDL authority.
 
+The sensitivity labels used for mount sources/options and local-control bind
+sources are an ACES-native field-level redaction discipline reused from the
+existing runtime filesystem, application, and database surfaces. The cited
+literature and standards motivate the scenario/runtime/evidence separation; they
+do not define ACES's specific sensitivity enum names or omission rule.
+
 ## Decision
 
 ### 1. Classify by semantic locus, not backend syntax
@@ -138,6 +144,9 @@ different facts.
 - Modifying or fully auditing downstream APTL inventories; APTL issue #339 is
   used here as motivating consumer evidence, not as a new ACES conformance
   fixture.
+- Claiming downstream APTL artifacts have already adopted this redaction
+  contract everywhere. Existing downstream evidence may still carry raw host or
+  backend-local paths until that consumer updates its SDL inventory.
 - Rewriting broad documentation outside the issue #399 precedent rule.
 - Reclassifying source-artifact provenance as runtime node state.
 
@@ -183,6 +192,7 @@ different facts.
   [ADR-031](adr-031-ssh-server-configuration-surface.md) — concrete runtime and
   provenance surfaces that this ADR generalizes.
 - [`runtime_configuration.py`](../../../implementations/python/packages/aces_sdl/runtime_configuration.py),
+  [`runtime_filesystem.py`](../../../implementations/python/packages/aces_sdl/runtime_filesystem.py),
   [`runtime_network.py`](../../../implementations/python/packages/aces_sdl/runtime_network.py),
   [`runtime_capabilities.py`](../../../implementations/python/packages/aces_sdl/runtime_capabilities.py),
   and [`image_provenance.py`](../../../implementations/python/packages/aces_sdl/image_provenance.py)

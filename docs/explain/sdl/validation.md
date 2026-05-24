@@ -58,7 +58,8 @@ stored as octal permission bits, and content digests must carry both the digest
 algorithm and value. Runtime healthcheck entries marked as redacted must omit
 raw output. Runtime mount sources/options and local-control bind sources
 classified as `redacted` or `operator_secret` must omit the corresponding raw
-value.
+value; the Python models and generated JSON Schemas both reject non-empty raw
+values for canonical redacted/operator-secret labels.
 
 The optional `runtime.local_identity` inventory carries its own model-local
 rules. Local user `username` and local group `name` must be non-empty; user
