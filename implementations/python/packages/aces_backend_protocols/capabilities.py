@@ -13,6 +13,58 @@ from aces_contracts.controlled_vocabularies import validate_controlled_vocabular
 from aces_contracts.manifest_authority import validate_backend_supported_contract_versions
 from aces_contracts.vocabulary import WorkflowFeature, WorkflowStatePredicateFeature
 
+PARTICIPANT_RUNTIME_ROLE_SCOPE = "capabilities.participant_runtime.supported_participant_roles"
+PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = "capabilities.participant_runtime.supported_behavior_features"
+PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE = "capabilities.participant_runtime.supported_interaction_features"
+
+_PARTICIPANT_EPISODE_CONTRACTS = frozenset(
+    {
+        "participant-episode-state-envelope-v1",
+        "participant-episode-history-event-stream-v1",
+        "runtime-snapshot-v1",
+    }
+)
+_PARTICIPANT_BEHAVIOR_CONTRACTS = frozenset(
+    {
+        "participant-behavior-history-event-stream-v1",
+        "runtime-snapshot-v1",
+    }
+)
+
+PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
+    PARTICIPANT_RUNTIME_ROLE_SCOPE: {
+        "blue": _PARTICIPANT_EPISODE_CONTRACTS,
+        "green": _PARTICIPANT_EPISODE_CONTRACTS,
+        "red": _PARTICIPANT_EPISODE_CONTRACTS,
+        "white": _PARTICIPANT_EPISODE_CONTRACTS,
+    },
+    PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE: {
+        "action_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "attribution_support": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "behavior_history": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "effects": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "failure_classes": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "observation_boundaries": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "outcome_interpretation": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "preconditions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "state_transitions": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "temporal_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+    },
+    PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE: {
+        "contention": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "coordination": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "interference": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "shared_state_change": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+    },
+}
+"""Minimum published contract surfaces needed to make API-405 claims checkable.
+
+The table is intentionally conservative: it does not prove that every backend
+implements every action kind. It gives the conformance runner a falsifiable
+floor for standard terms, so a manifest cannot claim ACES participant support
+while omitting the contracts that carry the corresponding runtime evidence.
+"""
+
 
 @dataclass(frozen=True)
 class ProvisionerCapabilities:
@@ -180,15 +232,15 @@ class ParticipantRuntimeCapabilities:
                 "ParticipantRuntimeCapabilities.supported_interaction_features must not contain empty strings"
             )
         validate_controlled_vocabulary_scope_values(
-            "capabilities.participant_runtime.supported_participant_roles",
+            PARTICIPANT_RUNTIME_ROLE_SCOPE,
             self.supported_participant_roles,
         )
         validate_controlled_vocabulary_scope_values(
-            "capabilities.participant_runtime.supported_behavior_features",
+            PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
             self.supported_behavior_features,
         )
         validate_controlled_vocabulary_scope_values(
-            "capabilities.participant_runtime.supported_interaction_features",
+            PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
             self.supported_interaction_features,
         )
 
@@ -334,3 +386,34 @@ class BackendManifest:
     @property
     def supports_objectives(self) -> bool:
         return self.evaluator.supports_objectives if self.evaluator is not None else False
+
+
+def participant_runtime_capability_contract_gaps(manifest: BackendManifest) -> tuple[str, ...]:
+    """Return missing contract surfaces for declared standard API-405 claims.
+
+    Governed extension terms remain valid vocabulary values, but ACES cannot
+    know their backend-specific evidence obligations. Standard terms are tied to
+    the published contract families that make the claim falsifiable in
+    conformance and downstream review.
+    """
+
+    participant_runtime = manifest.participant_runtime
+    if participant_runtime is None:
+        return ()
+
+    declared_terms = {
+        PARTICIPANT_RUNTIME_ROLE_SCOPE: participant_runtime.supported_participant_roles,
+        PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE: participant_runtime.supported_behavior_features,
+        PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE: participant_runtime.supported_interaction_features,
+    }
+    gaps: list[str] = []
+    for scope, terms in declared_terms.items():
+        required_by_term = PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[scope]
+        for term in sorted(terms):
+            required_contracts = required_by_term.get(term)
+            if required_contracts is None:
+                continue
+            missing = sorted(required_contracts - manifest.supported_contract_versions)
+            if missing:
+                gaps.append(f"{scope}.{term} missing required contracts: {', '.join(missing)}")
+    return tuple(gaps)

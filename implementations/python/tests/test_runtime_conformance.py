@@ -143,6 +143,35 @@ def test_live_probe_catches_participant_runtime_that_does_not_populate_snapshot(
     assert any("exposes no participant_episode_history" in msg for msg in messages)
 
 
+def test_target_conformance_rejects_participant_capability_claims_without_contract_evidence():
+    manifest = create_stub_manifest()
+    weak_manifest = BackendManifest(
+        identity=manifest.identity,
+        supported_contract_versions=manifest.supported_contract_versions
+        - frozenset({"participant-behavior-history-event-stream-v1"}),
+        compatibility=manifest.compatibility,
+        realization_support=manifest.realization_support,
+        concept_bindings=manifest.concept_bindings,
+        constraints=manifest.constraints,
+        capabilities=manifest.capabilities,
+    )
+    components = create_stub_components(manifest=weak_manifest)
+    target = RuntimeTarget(
+        name="weak-participant-claims",
+        manifest=weak_manifest,
+        provisioner=components.provisioner,
+        orchestrator=components.orchestrator,
+        evaluator=components.evaluator,
+        participant_runtime=components.participant_runtime,
+    )
+
+    report = run_target_conformance(target, profile=BackendCapabilityProfile.PROVISIONING_ONLY)
+
+    assert report.passed is False
+    assert any(diagnostic.code == "conformance.unsupported-capability-claim" for diagnostic in report.diagnostics)
+    assert any("supported_behavior_features.action_contracts" in gap for gap in report.unsupported_capability_gaps)
+
+
 def test_fixture_suite_passes_for_full_remote_control_plane_profile():
     """RUN-311 — the FULL_REMOTE_CONTROL_PLANE profile now requires the
     participant episode envelope + history event stream fixtures, so running

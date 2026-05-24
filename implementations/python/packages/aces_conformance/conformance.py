@@ -10,7 +10,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Any
 
-from aces_backend_protocols.capabilities import BackendManifest
+from aces_backend_protocols.capabilities import BackendManifest, participant_runtime_capability_contract_gaps
 from aces_backend_protocols.manifest import backend_manifest_payload
 from aces_contracts.backend_profiles import (
     BackendProfileModel,
@@ -974,8 +974,10 @@ def run_target_conformance(
             diagnostics=diagnostics,
         )
     contract_gaps = _declared_contract_gaps(effective_profile, target.manifest, profiles_root=profiles_root)
-    gaps = _capability_gaps(effective_profile, target)
-    passed = fixture_report.passed and not contract_gaps and not gaps
+    surface_gaps = _capability_gaps(effective_profile, target)
+    claim_gaps = participant_runtime_capability_contract_gaps(target.manifest)
+    capability_gaps = tuple((*surface_gaps, *claim_gaps))
+    passed = fixture_report.passed and not contract_gaps and not capability_gaps
     diagnostics = list(fixture_report.diagnostics)
     if contract_gaps:
         diagnostics.append(
@@ -985,12 +987,21 @@ def run_target_conformance(
                 f"Target does not declare required contracts for {_to_profile_id(effective_profile)}: {', '.join(contract_gaps)}",
             )
         )
-    if gaps:
+    if surface_gaps:
         diagnostics.append(
             _diagnostic(
                 "conformance.unsupported-surface",
                 target.name,
-                "Target is missing required runtime surfaces: " + ", ".join(gaps),
+                "Target is missing required runtime surfaces: " + ", ".join(surface_gaps),
+            )
+        )
+    if claim_gaps:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.unsupported-capability-claim",
+                target.name,
+                "Target declares participant capability claims without required contract surfaces: "
+                + "; ".join(claim_gaps),
             )
         )
     live_cases = _live_target_cases(target, effective_profile)
@@ -1002,7 +1013,7 @@ def run_target_conformance(
         cases=cases,
         contract_versions=dict(fixture_report.contract_versions),
         unsupported_contract_gaps=contract_gaps,
-        unsupported_capability_gaps=gaps,
+        unsupported_capability_gaps=capability_gaps,
         diagnostics=tuple(diagnostics),
     )
 

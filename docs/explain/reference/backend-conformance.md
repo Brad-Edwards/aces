@@ -74,6 +74,12 @@ The conformance path touches these gates:
   interaction-feature support claims must resolve through the governed
   vocabulary scopes on `capabilities.participant_runtime`; backend-specific
   terms must use the governed `x-<owner>:<term>` extension format.
+- Participant capability evidence: standard API-405 claims must also have the
+  published contract surfaces required by
+  `PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS`; the conformance runner
+  reports `conformance.unsupported-capability-claim` when a manifest claims a
+  role or feature without the runtime contract evidence surface needed to check
+  it.
 - Control-plane probe validation: live probes must use `RuntimeControlPlane`
   and existing operation receipt/status/snapshot envelopes rather than backend
   native objects.
@@ -101,12 +107,18 @@ default path remains the published `contracts/` tree.
 Participant capability declarations follow the same extension boundary. API-405
 adds governed vocabulary surfaces under `capabilities.participant_runtime`
 instead of a backend-profile branch, snapshot metadata field, or control-plane
-role. The standard terms are grounded in `docs/explain/sdl/lineage.md`,
-ADR-022, and `specs/formal/participant-semantics/`: exercise roles map to the
-existing `white`/`green`/`red`/`blue` framing vocabulary; behavior terms map to
-the action, observation, state-transition, failure, temporal, attribution, and
-outcome semantics already modeled in ACES; interaction terms map to the
-SEM-209 coordination, contention, interference, and shared-state classes.
+role. Absence of the `participant_runtime` block declares no participant runtime
+surface; when the block is present, the role and feature declarations are
+mandatory and set-like. The standard terms are grounded in
+`docs/explain/sdl/lineage.md`, ADR-020, ADR-022, and
+`specs/formal/participant-semantics/`: exercise roles map to the existing
+`white`/`green`/`red`/`blue` framing vocabulary; behavior terms map to the
+action, observation, state-transition, failure, temporal, attribution, and
+outcome semantics already modeled in ACES; interaction terms map to the SEM-209
+coordination, contention, interference, and shared-state classes. Standard terms
+are not accepted as prose-only promises: target conformance checks that the
+manifest also declares the published participant episode or behavior-history
+contract surfaces that carry the evidence for those claims.
 
 ## Gotchas And Anti-Patterns
 

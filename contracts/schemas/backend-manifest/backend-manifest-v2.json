@@ -323,7 +323,8 @@
           },
           "minItems": 1,
           "title": "Supported Behavior Features",
-          "type": "array"
+          "type": "array",
+          "uniqueItems": true
         },
         "supported_interaction_features": {
           "items": {
@@ -332,7 +333,8 @@
           },
           "minItems": 1,
           "title": "Supported Interaction Features",
-          "type": "array"
+          "type": "array",
+          "uniqueItems": true
         },
         "supported_participant_roles": {
           "items": {
@@ -341,7 +343,8 @@
           },
           "minItems": 1,
           "title": "Supported Participant Roles",
-          "type": "array"
+          "type": "array",
+          "uniqueItems": true
         }
       },
       "required": [

@@ -5,6 +5,10 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as distribution_version
 
 from aces_backend_protocols.capabilities import (
+    PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
+    PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_ROLE_SCOPE,
     BackendCapabilitySet,
     BackendManifest,
     EvaluatorCapabilities,
@@ -42,28 +46,14 @@ from aces_processor.models import (
 from aces_processor.registry import RuntimeTarget, RuntimeTargetComponents
 
 REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = BACKEND_SUPPORTED_CONTRACT_IDS
-REFERENCE_PARTICIPANT_ROLES = frozenset({"blue", "green", "red", "white"})
+REFERENCE_PARTICIPANT_ROLES = frozenset(
+    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE]
+)
 REFERENCE_PARTICIPANT_BEHAVIOR_FEATURES = frozenset(
-    {
-        "action_contracts",
-        "attribution_support",
-        "behavior_history",
-        "effects",
-        "failure_classes",
-        "observation_boundaries",
-        "outcome_interpretation",
-        "preconditions",
-        "state_transitions",
-        "temporal_contracts",
-    }
+    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE]
 )
 REFERENCE_PARTICIPANT_INTERACTION_FEATURES = frozenset(
-    {
-        "contention",
-        "coordination",
-        "interference",
-        "shared_state_change",
-    }
+    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
 )
 
 

@@ -7,10 +7,15 @@ from pathlib import Path
 
 import pytest
 from aces_backend_protocols.capabilities import (
+    PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
+    PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_ROLE_SCOPE,
     BackendManifest,
     OrchestratorCapabilities,
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
+    participant_runtime_capability_contract_gaps,
 )
 from aces_backend_protocols.manifest import backend_manifest_payload
 from aces_backend_stubs.stubs import create_stub_manifest
@@ -127,6 +132,14 @@ def test_backend_manifest_v2_declares_participant_capability_dimensions():
     ]
 
 
+def test_backend_manifest_without_participant_runtime_declares_no_participant_runtime_surface():
+    payload = backend_manifest_payload(create_stub_manifest(with_participant_runtime=False))
+
+    assert payload["capabilities"]["participant_runtime"] is None
+    model = BackendManifestV2Model.model_validate(payload)
+    assert model.capabilities.participant_runtime is None
+
+
 @pytest.mark.parametrize(
     "field_name",
     [
@@ -140,6 +153,14 @@ def test_backend_manifest_v2_rejects_participant_runtime_without_api_405_declara
     payload["capabilities"]["participant_runtime"].pop(field_name, None)
 
     with pytest.raises(ValidationError, match=field_name):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_backend_manifest_v2_rejects_duplicate_api_405_declarations():
+    payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
+    payload["capabilities"]["participant_runtime"]["supported_participant_roles"].append("blue")
+
+    with pytest.raises(ValidationError, match="duplicate"):
         BackendManifestV2Model.model_validate(payload)
 
 
@@ -162,6 +183,49 @@ def test_participant_runtime_capabilities_validate_api_405_vocabularies():
             supported_behavior_features=frozenset({"custom_feature"}),
             supported_interaction_features=frozenset({"coordination"}),
         )
+
+
+def test_participant_runtime_capability_evidence_covers_standard_vocabularies():
+    catalog_path = FIXTURES_ROOT / "concept-authority" / "controlled-vocabularies-v1" / "valid" / "reference.json"
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    terms_by_scope = {
+        scope: set(definition["terms"])
+        for definition in catalog["vocabularies"].values()
+        for scope in definition.get("governed_scopes", ())
+        if scope.startswith("capabilities.participant_runtime.")
+    }
+
+    assert (
+        set(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE])
+        == terms_by_scope[PARTICIPANT_RUNTIME_ROLE_SCOPE]
+    )
+    assert (
+        set(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE])
+        == terms_by_scope[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE]
+    )
+    assert (
+        set(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE])
+        == terms_by_scope[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
+    )
+
+
+def test_participant_runtime_capability_claims_require_published_contract_evidence():
+    manifest = create_stub_manifest()
+    weak_manifest = BackendManifest(
+        identity=manifest.identity,
+        supported_contract_versions=manifest.supported_contract_versions
+        - frozenset({"participant-behavior-history-event-stream-v1"}),
+        compatibility=manifest.compatibility,
+        realization_support=manifest.realization_support,
+        concept_bindings=manifest.concept_bindings,
+        constraints=manifest.constraints,
+        capabilities=manifest.capabilities,
+    )
+
+    assert participant_runtime_capability_contract_gaps(manifest) == ()
+    gaps = participant_runtime_capability_contract_gaps(weak_manifest)
+    assert any("supported_behavior_features.action_contracts" in gap for gap in gaps)
+    assert any("supported_interaction_features.coordination" in gap for gap in gaps)
 
 
 def test_backend_manifest_v2_requires_manifest_sections():
