@@ -1,0 +1,63 @@
+template: aces-library-template
+version: 1
+id: parallel-objective-workflow
+surface: workflow
+requirement_refs: [AUT-806]
+source_refs:
+  - docs/explain/sdl/sections.md
+  - docs/explain/sdl/validation.md
+summary: Parallel workflow template with explicit branch convergence through a join step.
+body:
+  name: library-workflow-template
+  description: Workflow template showing parallel objective branches converging at an explicit join.
+  nodes:
+    service:
+      type: VM
+      resources: {ram: 1 GiB, cpu: 1}
+      services:
+        - {port: 443, name: https}
+  conditions:
+    patch-applied:
+      command: test -f /var/lib/aces/patch-applied
+      interval: 30
+    service-verified:
+      command: curl -fsS https://service/health
+      interval: 30
+  entities:
+    blue-team:
+      role: blue
+  agents:
+    operator:
+      entity: blue-team
+  objectives:
+    apply-patch:
+      agent: operator
+      targets: [nodes.service]
+      success:
+        conditions: [patch-applied]
+    verify-service:
+      agent: operator
+      targets: [nodes.service.services.https]
+      success:
+        conditions: [service-verified]
+  workflows:
+    parallel-remediation:
+      start: fan-out
+      steps:
+        fan-out:
+          type: parallel
+          branches: [patch-step, verify-step]
+          join: converge
+        patch-step:
+          type: objective
+          objective: apply-patch
+          on-success: converge
+        verify-step:
+          type: objective
+          objective: verify-service
+          on-success: converge
+        converge:
+          type: join
+          next: done
+        done:
+          type: end

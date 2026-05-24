@@ -1,0 +1,44 @@
+template: aces-library-template
+version: 1
+id: minimal-validated-scenario
+surface: scenario
+requirement_refs: [AUT-806]
+source_refs:
+  - docs/explain/sdl/sections.md
+  - docs/explain/sdl/validation.md
+summary: Minimal current-SDL scenario with a target, participant, objective, and workflow.
+body:
+  name: library-scenario-template
+  description: Minimal scenario template exercising identity, target, objective, and workflow refs.
+  nodes:
+    app:
+      type: VM
+      resources: {ram: 1 GiB, cpu: 1}
+      services:
+        - {port: 443, name: https}
+  conditions:
+    app-healthy:
+      command: curl -fsS https://app/health
+      interval: 30
+  entities:
+    blue-team:
+      role: blue
+  agents:
+    operator:
+      entity: blue-team
+  objectives:
+    verify-app-health:
+      agent: operator
+      targets: [nodes.app.services.https]
+      success:
+        conditions: [app-healthy]
+  workflows:
+    baseline-check:
+      start: verify
+      steps:
+        verify:
+          type: objective
+          objective: verify-app-health
+          on-success: done
+        done:
+          type: end
