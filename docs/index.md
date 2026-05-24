@@ -66,6 +66,7 @@ explain/sdl/index
 explain/sdl/sections
 explain/sdl/parser
 explain/sdl/language-service
+explain/sdl/agent-guidance
 explain/sdl/validation
 explain/sdl/precedents
 explain/sdl/lineage

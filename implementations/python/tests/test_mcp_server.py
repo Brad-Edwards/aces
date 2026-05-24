@@ -616,9 +616,32 @@ class TestOperationTools:
     def test_tool_surface_self_describes_boundaries(self, server):
         payload = _json_call(server, "aces_tool_surface")
         assert payload["surface"] == "aces-sdl"
+        assert "aces_agent_guidance" in payload["recommended_workflow"]
         assert "sdl_claims_assessment" in payload["recommended_workflow"]
         assert "sdl_completions" in payload["tool_families"]["language_service"]
+        assert "aces_agent_guidance" in payload["tool_families"]["guidance"]
         assert any("does not expose participant cyber actions" in item for item in payload["boundaries"])
+
+    def test_agent_guidance_returns_machine_usable_profile(self, server):
+        payload = _json_call(server, "aces_agent_guidance")
+        assert payload["status"] == "ok"
+        assert payload["profile"] == "aces-agent-guidance"
+        assert "AUT-811" in payload["requirement_refs"]
+        assert set(payload["guidance"]) == {
+            "scope_boundaries",
+            "invariants",
+            "review_priorities",
+            "safe_operating_expectations",
+        }
+        assert payload["guidance"]["scope_boundaries"][0]["id"]
+        assert payload["guidance"]["scope_boundaries"][0]["source_refs"]
+
+    def test_agent_guidance_filters_by_audience(self, server):
+        payload = _json_call(server, "aces_agent_guidance", {"audience": "operator"})
+        assert payload["status"] == "ok"
+        for entries in payload["guidance"].values():
+            assert entries
+            assert all("operator" in entry["audience"] for entry in entries)
 
     def test_parse_returns_machine_readable_summary(self, server):
         payload = _json_call(server, "sdl_parse", {"sdl_content": MINIMAL_SDL})
@@ -733,9 +756,13 @@ class TestExampleScenarios:
 class TestServerConstruction:
     def test_server_has_all_tools(self):
         server = create_server()
-        tool_names = [t.name for t in server._tool_manager._tools.values()]
+        payload = _json_call(server, "aces_tool_surface")
+        tool_names = {"aces_tool_surface"}
+        for family in payload["tool_families"].values():
+            tool_names.update(family)
         expected = {
             "aces_tool_surface",
+            "aces_agent_guidance",
             "aces_reference_manifests",
             "sdl_overview",
             "sdl_section_reference",
@@ -762,7 +789,7 @@ class TestServerConstruction:
             "sdl_design_assessment",
             "sdl_claims_assessment",
         }
-        assert set(tool_names) == expected
+        assert tool_names == expected
 
     def test_server_has_instructions(self):
         server = create_server()
