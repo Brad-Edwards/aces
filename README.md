@@ -66,6 +66,8 @@ nodes:
 ```
 
 Complete examples live in [`examples/scenarios/`](examples/scenarios/).
+Reusable non-normative templates and patterns are indexed by
+[`examples/library/catalog.yaml`](examples/library/catalog.yaml).
 
 ## Getting Started
 
@@ -118,7 +120,7 @@ uv run aces-mcp
 - `specs/` - normative prose and formal specification material
 - `contracts/` - published schemas, fixtures, manifests, and profiles
 - `implementations/` - reference implementations and their local tooling
-- `examples/` - worked SDL scenario examples
+- `examples/` - worked SDL scenario examples plus reusable authoring templates and patterns
 - `docs/` - explanatory documentation, API docs, and architecture decisions
 - `research/` - supporting literature and reference ecosystem material
 - `tools/` - repository maintenance, policy, and publication tooling
@@ -145,6 +147,7 @@ The documentation source is under [`docs/`](docs/). Important entry points:
 - [`docs/index.md`](docs/index.md) - documentation index
 - [`docs/explain/getting-started.md`](docs/explain/getting-started.md) - use-case and rigor-level entrypoint
 - [`examples/README.md`](examples/README.md) - current worked example inventory
+- [`examples/library/catalog.yaml`](examples/library/catalog.yaml) - template and pattern library catalog
 - [`docs/explain/reference/canonical-reference-map.md`](docs/explain/reference/canonical-reference-map.md) - current reference map
 - [`docs/explain/reference/documentation-style-guide.md`](docs/explain/reference/documentation-style-guide.md) - documentation style and citation rules
 - [`docs/explain/reference/glossary.md`](docs/explain/reference/glossary.md) - current terminology

@@ -31,6 +31,7 @@ material. It is an index, not a replacement for the linked artifacts.
 |---------|-------------------|
 | Getting started | [`docs/explain/getting-started.md`](../getting-started.md) |
 | Worked examples | `examples/README.md`, `examples/scenarios/*.sdl.yaml` |
+| Template and pattern library | `examples/library/catalog.yaml`, `examples/library/templates/`, `examples/library/patterns/` |
 | SDL guide | [`docs/explain/sdl/index.md`](../sdl/index.md) |
 | SDL sections | [`docs/explain/sdl/sections.md`](../sdl/sections.md) |
 | Parser behavior | [`docs/explain/sdl/parser.md`](../sdl/parser.md) |
@@ -68,7 +69,8 @@ material. It is an index, not a replacement for the linked artifacts.
 ## Current Materialization Notes
 
 - SDL authoring, parsing, validation, instantiation, compilation, planning,
-  control-plane APIs, and published JSON schemas are present in the repository.
+  control-plane APIs, published JSON schemas, and a validated non-normative
+  template/pattern library are present in the repository.
 - Participant-implementation manifests, evidence-capture contracts, and
   provenance contract surfaces are described at the architecture level and are
   not fully materialized as published schemas.

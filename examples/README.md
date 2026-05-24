@@ -1,8 +1,9 @@
 # ACES Examples
 
-This directory contains non-normative worked examples. They are useful for
-reading and testing current SDL behavior. They are not conformance fixtures,
-schemas, deployment recipes, or backend guarantees.
+This directory contains non-normative worked examples, templates, and reusable
+patterns. They are useful for reading, testing, and adapting current SDL
+behavior. They are not conformance fixtures, schemas, deployment recipes, or
+backend guarantees.
 
 ## Current Corpus
 
@@ -15,6 +16,26 @@ schemas, deployment recipes, or backend guarantees.
 
 The tests are in
 [`../implementations/python/tests/test_scenarios.py`](../implementations/python/tests/test_scenarios.py).
+
+## Template And Pattern Library
+
+The AUT-806 library is indexed by
+[`library/catalog.yaml`](library/catalog.yaml). It is a versioned,
+machine-readable catalog for the current non-normative authoring library.
+
+| Surface | Template | Pattern |
+|---------|----------|---------|
+| Scenario | [`library/templates/scenario/minimal-validated-scenario.yaml`](library/templates/scenario/minimal-validated-scenario.yaml) | [`library/patterns/scenario-reference-integrity.yaml`](library/patterns/scenario-reference-integrity.yaml) |
+| Workflow | [`library/templates/workflow/parallel-objective-workflow.yaml`](library/templates/workflow/parallel-objective-workflow.yaml) | [`library/patterns/workflow-explicit-control-graph.yaml`](library/patterns/workflow-explicit-control-graph.yaml) |
+| Participant behavior | [`library/templates/participant_behavior/action-contract-observation-boundary.yaml`](library/templates/participant_behavior/action-contract-observation-boundary.yaml) | [`library/patterns/participant-behavior-contract-binding.yaml`](library/patterns/participant-behavior-contract-binding.yaml) |
+| Task | [`library/templates/task/single-objective-task.yaml`](library/templates/task/single-objective-task.yaml) | [`library/patterns/task-as-objective-contract.yaml`](library/patterns/task-as-objective-contract.yaml) |
+| Run | [`library/templates/run/timed-run-control.yaml`](library/templates/run/timed-run-control.yaml) | [`library/patterns/run-window-with-evidence.yaml`](library/patterns/run-window-with-evidence.yaml) |
+| Study | [`library/templates/study/scored-study-protocol.yaml`](library/templates/study/scored-study-protocol.yaml) | [`library/patterns/study-scoring-chain.yaml`](library/patterns/study-scoring-chain.yaml) |
+
+Each template has metadata plus a complete current-SDL `body`. The
+`tools/check_example_library.py` policy gate validates catalog shape, stable
+IDs, referenced paths, AUT-806 requirement references, and every template body
+through the SDL parser and semantic validator.
 
 ## Validate The Examples
 
@@ -36,6 +57,12 @@ scenario = parse_sdl_file(
     Path("../../examples/scenarios/port-authority-surge-response.sdl.yaml")
 )
 assert scenario.advisories == []
+```
+
+Validate the template and pattern catalog from the repository root:
+
+```shell
+uv run --project implementations/python --frozen python tools/check_example_library.py
 ```
 
 ## How To Use These Files
@@ -62,19 +89,15 @@ Check the section reference and limitations before adapting a file:
 
 There are no placeholder templates in this directory. Files under
 `examples/scenarios/` are positive SDL examples and must load successfully from
-disk.
+disk. Files under `examples/library/templates/` are reusable authoring
+templates with complete SDL bodies; they are validated by the example-library
+policy gate.
 
 Do not add invalid or incomplete SDL files under `examples/scenarios/`.
 Negative-path examples belong in focused parser, model, validator, contract, or
 conformance tests.
 
-Current gaps:
-
-- no reusable participant-behavior template catalog
-- no task template catalog
-- no run template catalog
-- no study template catalog
-- no versioned pattern-library metadata
-
-Those surfaces need current syntax, contracts, or validation rules before a
-repository artifact can make a factual claim about them.
+Task, run, and study templates use current SDL wrappers rather than first-class
+`tasks`, `runs`, or `studies` sections. They show how to express those concepts
+with objectives, workflows, timing, scoring, and evidence-like references that
+the current implementation can validate.
