@@ -8,13 +8,15 @@ from the current corpus, not a completeness proof.
 
 ### Deployment Authoring Boundaries (by design)
 
-The SDL distinguishes authored deployment intent from observed runtime facts.
-Backends own deployment-specific mechanics such as Docker Compose
-profiles, host port publication decisions, image build execution, and engine
-realization. The node `runtime` surface can record observed runtime facts
-for analysis and parity, including mounts, Linux capabilities, namespace modes,
-entrypoints, image commands, extra hosts, DNS options, security flags, resource
-limits, health status/logs, filesystem inventory, the local identity
+The SDL distinguishes authored deployment intent from observed runtime facts
+using the semantic boundary in
+[ADR-032](../../decisions/adrs/adr-032-scenario-delivery-boundary-for-runtime-node-state.md).
+Backends own deployment-specific mechanics such as Docker Compose profiles,
+decisions to publish host ports, image build execution, and engine realization.
+The node `runtime` surface can record observed runtime facts for analysis and
+parity, including mounts, Linux capabilities, namespace modes, entrypoints,
+image commands, extra hosts, DNS options, security flags, resource limits,
+health status/logs, filesystem inventory, the local identity
 database (`/etc/passwd` users, `/etc/group` groups, and sudo/sudoers grants),
 container network realization (per-network aliases and DNS names,
 hostname/domain identity, endpoint MAC/IP/prefix/gateway, backend network and

@@ -203,11 +203,16 @@ host kernel, container runtime, backend adapter, control plane, build executor,
 and host-local machinery that creates or controls the range. See
 [ADR-032](../../decisions/adrs/adr-032-scenario-delivery-boundary-for-runtime-node-state.md).
 
+This table is checked against the current ACES runtime/source models and the
+downstream APTL issue #339 Kali inventory evidence class: Compose service
+slices, Docker inspect output, runtime mount/network/capability observations,
+and image provenance are evidence to classify, not schema authority.
+
 
 | Concept                                 | Current Disposition                | Where It Belongs                       |
 | --------------------------------------- | ---------------------------------- | -------------------------------------- |
 | Port mappings (host:container)          | Host publication is runtime/host exposure when observed; the backend decision to publish remains delivery machinery | Container-side listeners remain `Node.services`; observed host bindings belong in `Node.runtime.network.published_ports`; see ADR-025 and ADR-032 |
-| Volume mounts                           | Guest-visible filesystem attachments are runtime node state; host source paths and orchestration choices remain delivery/evidence concerns | `Node.runtime.mounts` and `runtime.filesystem_inventory` when observed; authored file placement remains `Content`; host bind-source resolution stays in backend/evidence handling |
+| Volume mounts                           | Guest-visible filesystem attachments are runtime node state; host source paths and orchestration choices remain delivery/evidence concerns | `Node.runtime.mounts` and `runtime.filesystem_inventory` when observed; authored file placement remains `Content`; mount `source` and `options` carry sensitivity classification, and `redacted` / `operator_secret` values omit raw host-local details |
 | Linux capabilities (NET_RAW, SYS_ADMIN) | Participant-relevant capability posture is runtime node security state, not a raw Compose security field | `Node.runtime.linux_capabilities`, including scoped `process_overrides`; see ADR-030 |
 | Docker Compose profiles                 | Backend packaging/selection groups are delivery mechanics unless promoted to an ACES scenario/profile composition surface | Backend implementation layer today; realized node set is represented by SDL `nodes`, not raw Compose profile labels |
 | Dockerfile/build execution              | Build executor mechanics are delivery/packaging; observable image/source provenance is an artifact-boundary fact | Backend implementation layer for execution mechanics; `Source.build` provenance when observed; see ADR-023 |

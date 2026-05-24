@@ -232,10 +232,12 @@ class RuntimeMount(SDLModel):
 
     target: str
     source: str = ""
+    source_sensitivity: RuntimeSensitivityClassification | str = RuntimeSensitivityClassification.UNKNOWN
     source_kind: RuntimeMountSourceKind | str = RuntimeMountSourceKind.OTHER
     filesystem_type: str = ""
     read_only: bool | str = False
     options: list[str] = Field(default_factory=list)
+    options_sensitivity: RuntimeSensitivityClassification | str = RuntimeSensitivityClassification.UNKNOWN
     propagation: RuntimeMountPropagation | str = RuntimeMountPropagation.UNKNOWN
     stability: RuntimeFilesystemStability | str = RuntimeFilesystemStability.UNKNOWN
     backend_generated: bool | str | None = None
@@ -245,6 +247,15 @@ class RuntimeMount(SDLModel):
     @classmethod
     def validate_target(cls, v: str) -> str:
         return _absolute_path_or_var(v, field_name="target")
+
+    @field_validator("source_sensitivity", "options_sensitivity", mode="before")
+    @classmethod
+    def normalize_mount_sensitivity(
+        cls,
+        v: RuntimeSensitivityClassification | str,
+        info: ValidationInfo,
+    ) -> RuntimeSensitivityClassification | str:
+        return _parse_runtime_enum_or_var(v, RuntimeSensitivityClassification, field_name=info.field_name)
 
     @field_validator("source_kind", mode="before")
     @classmethod
@@ -271,6 +282,28 @@ class RuntimeMount(SDLModel):
     def parse_backend_generated(cls, v: bool | str | None) -> bool | str | None:
         return _parse_optional_bool_or_var(v, field_name="backend_generated")
 
+    @model_validator(mode="after")
+    def validate_redacted_mount_details(self) -> "RuntimeMount":
+        if (
+            self.source_sensitivity
+            in {
+                RuntimeSensitivityClassification.REDACTED,
+                RuntimeSensitivityClassification.OPERATOR_SECRET,
+            }
+            and self.source
+        ):
+            raise ValueError("redacted runtime mount source must omit source")
+        if (
+            self.options_sensitivity
+            in {
+                RuntimeSensitivityClassification.REDACTED,
+                RuntimeSensitivityClassification.OPERATOR_SECRET,
+            }
+            and self.options
+        ):
+            raise ValueError("redacted runtime mount options must omit options")
+        return self
+
 
 class RuntimeControlInterface(SDLModel):
     """A non-network local control API exposed inside a runtime node."""
@@ -279,6 +312,7 @@ class RuntimeControlInterface(SDLModel):
     kind: RuntimeControlInterfaceKind | str = RuntimeControlInterfaceKind.UNIX_SOCKET
     protocol: str = ""
     bind_source: str = ""
+    bind_source_sensitivity: RuntimeSensitivityClassification | str = RuntimeSensitivityClassification.UNKNOWN
     access: RuntimeControlInterfaceAccess | str = RuntimeControlInterfaceAccess.UNKNOWN
     description: str = ""
 
@@ -292,6 +326,18 @@ class RuntimeControlInterface(SDLModel):
     def validate_bind_source(cls, v: str) -> str:
         return _control_interface_path_or_var(v, field_name="bind_source") if v else v
 
+    @field_validator("bind_source_sensitivity", mode="before")
+    @classmethod
+    def normalize_bind_source_sensitivity(
+        cls,
+        v: RuntimeSensitivityClassification | str,
+    ) -> RuntimeSensitivityClassification | str:
+        return _parse_runtime_enum_or_var(
+            v,
+            RuntimeSensitivityClassification,
+            field_name="bind_source_sensitivity",
+        )
+
     @field_validator("kind", mode="before")
     @classmethod
     def normalize_kind(cls, v: RuntimeControlInterfaceKind | str) -> RuntimeControlInterfaceKind | str:
@@ -304,6 +350,15 @@ class RuntimeControlInterface(SDLModel):
 
     @model_validator(mode="after")
     def validate_named_pipe_kind(self) -> "RuntimeControlInterface":
+        if (
+            self.bind_source_sensitivity
+            in {
+                RuntimeSensitivityClassification.REDACTED,
+                RuntimeSensitivityClassification.OPERATOR_SECRET,
+            }
+            and self.bind_source
+        ):
+            raise ValueError("redacted runtime control interface bind_source must omit bind_source")
         if is_variable_ref(self.kind):
             return self
         has_windows_named_pipe_endpoint = _is_windows_named_pipe(self.path) or _is_windows_named_pipe(self.bind_source)

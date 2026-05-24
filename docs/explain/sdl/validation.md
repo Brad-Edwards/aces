@@ -56,7 +56,9 @@ variable references; Windows named pipe endpoints require `kind: named_pipe`.
 Runtime filesystem inventory UID/GID and size fields are non-negative, mode is
 stored as octal permission bits, and content digests must carry both the digest
 algorithm and value. Runtime healthcheck entries marked as redacted must omit
-raw output.
+raw output. Runtime mount sources/options and local-control bind sources
+classified as `redacted` or `operator_secret` must omit the corresponding raw
+value.
 
 The optional `runtime.local_identity` inventory carries its own model-local
 rules. Local user `username` and local group `name` must be non-empty; user

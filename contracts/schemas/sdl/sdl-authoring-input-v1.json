@@ -4648,6 +4648,18 @@
           "title": "Bind Source",
           "type": "string"
         },
+        "bind_source_sensitivity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Bind Source Sensitivity"
+        },
         "description": {
           "default": "",
           "title": "Description",
@@ -5493,6 +5505,18 @@
           "title": "Options",
           "type": "array"
         },
+        "options_sensitivity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Options Sensitivity"
+        },
         "propagation": {
           "anyOf": [
             {
@@ -5533,6 +5557,18 @@
           ],
           "default": "other",
           "title": "Source Kind"
+        },
+        "source_sensitivity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Source Sensitivity"
         },
         "stability": {
           "anyOf": [

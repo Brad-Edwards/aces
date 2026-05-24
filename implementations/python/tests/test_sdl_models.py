@@ -62,6 +62,7 @@ from aces.core.sdl.nodes import (
     RuntimeLocalGroup,
     RuntimeLocalIdentityInventory,
     RuntimeLocalUser,
+    RuntimeMount,
     RuntimeMountPropagation,
     RuntimeMountSourceKind,
     RuntimeNetworkBackendDetail,
@@ -380,6 +381,7 @@ class TestNode:
                     {
                         "target": "/shuffle-database",
                         "source": "aptl_shuffle_data",
+                        "source_sensitivity": "plain",
                         "source_kind": "volume",
                     }
                 ],
@@ -388,7 +390,7 @@ class TestNode:
                         "path": "/run/docker.sock",
                         "kind": "unix_socket",
                         "protocol": "docker",
-                        "bind_source": "/var/run/docker.sock:/var/run/docker.sock:rw",
+                        "bind_source_sensitivity": "operator_secret",
                         "access": "read_write",
                     }
                 ],
@@ -430,9 +432,14 @@ class TestNode:
         runtime = n.runtime
         assert runtime is not None
         assert runtime.mounts[0].target == "/shuffle-database"
+        assert runtime.mounts[0].source_sensitivity == RuntimeSensitivityClassification.PLAIN
         assert runtime.mounts[0].source_kind == RuntimeMountSourceKind.VOLUME
         assert runtime.local_control_interfaces[0].kind == RuntimeControlInterfaceKind.UNIX_SOCKET
-        assert runtime.local_control_interfaces[0].bind_source == "/var/run/docker.sock:/var/run/docker.sock:rw"
+        assert runtime.local_control_interfaces[0].bind_source == ""
+        assert (
+            runtime.local_control_interfaces[0].bind_source_sensitivity
+            == RuntimeSensitivityClassification.OPERATOR_SECRET
+        )
         assert runtime.local_control_interfaces[0].access == RuntimeControlInterfaceAccess.READ_WRITE
         assert runtime.process is not None
         assert runtime.process.pid == 1
@@ -1056,6 +1063,59 @@ class TestNode:
     def test_runtime_control_interface_named_pipe_path_requires_named_pipe_kind(self):
         with pytest.raises(ValidationError, match="named_pipe"):
             RuntimeControlInterface(path=r"\\.\pipe\docker_engine", kind="unix-socket")
+
+    def test_runtime_mount_redacted_source_must_be_omitted(self):
+        with pytest.raises(ValidationError, match="redacted runtime mount source"):
+            RuntimeMount(
+                target="/host-keys",
+                source="/home/operator/.ssh",
+                source_sensitivity="operator-secret",
+            )
+
+        mount = RuntimeMount(
+            target="/host-keys",
+            source_kind="bind",
+            source_sensitivity="operator-secret",
+            description="Host bind source withheld from the SDL artifact.",
+        )
+
+        assert mount.source == ""
+        assert mount.source_sensitivity == RuntimeSensitivityClassification.OPERATOR_SECRET
+
+    def test_runtime_mount_redacted_options_must_be_omitted(self):
+        with pytest.raises(ValidationError, match="redacted runtime mount options"):
+            RuntimeMount(
+                target="/",
+                options=["lowerdir=/var/lib/containerd/snapshots/1/fs"],
+                options_sensitivity="redacted",
+            )
+
+        mount = RuntimeMount(
+            target="/",
+            options_sensitivity="redacted",
+            description="Backend-local overlay options withheld.",
+        )
+
+        assert mount.options == []
+        assert mount.options_sensitivity == RuntimeSensitivityClassification.REDACTED
+
+    def test_runtime_control_interface_redacted_bind_source_must_be_omitted(self):
+        with pytest.raises(ValidationError, match="redacted runtime control interface bind_source"):
+            RuntimeControlInterface(
+                path="/run/docker.sock",
+                bind_source="/var/run/docker.sock",
+                bind_source_sensitivity="operator-secret",
+            )
+
+        interface = RuntimeControlInterface(
+            path="/run/docker.sock",
+            protocol="docker",
+            bind_source_sensitivity="operator-secret",
+            access="read-write",
+        )
+
+        assert interface.bind_source == ""
+        assert interface.bind_source_sensitivity == RuntimeSensitivityClassification.OPERATOR_SECRET
 
     def test_vm_runtime_local_identity_inventory_surfaces(self):
         n = Node(
