@@ -1,0 +1,23 @@
+pattern: aces-library-pattern
+version: 1
+id: participant-behavior-contract-binding
+surface: participant_behavior
+requirement_refs: [AUT-806]
+source_refs:
+  - implementations/python/tests/test_sem_208_participant_behavior.py
+  - docs/explain/sdl/validation.md
+summary: Bind participant actions to governed action contracts and observation boundaries.
+intent: >
+  Make participant behavior examples reusable without treating free-form action
+  names as complete semantics.
+use_when:
+  - An agent action needs declared preconditions, effects, failures, and evidence expectations.
+  - A participant view needs explicit hidden, observable, and evidence-only material.
+authoring_steps:
+  - Add an action-contract entry for each governed action name.
+  - Bind agent actions to the action-contract keys.
+  - Add observation-boundaries and bind each agent boundary reference.
+  - Keep sensitive information in hidden or evidence-only boundary rules.
+validation:
+  - command: parse_sdl_file
+    expected: agent actions and observation boundaries resolve to declared entries.
