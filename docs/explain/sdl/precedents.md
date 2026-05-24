@@ -209,7 +209,8 @@ Kali inventory evidence class: Compose service slices, Docker inspect output,
 runtime mount/network/capability observations, and image provenance are evidence
 to classify, not schema authority. The APTL inventory is motivating downstream
 evidence; it is not a claim that all APTL artifacts already satisfy the ACES
-redaction contract.
+redaction contract. The table is a current ACES disposition, not a complete
+taxonomy of container, orchestrator, or host-security concerns.
 
 
 | Concept                                 | Current Disposition                | Where It Belongs                       |

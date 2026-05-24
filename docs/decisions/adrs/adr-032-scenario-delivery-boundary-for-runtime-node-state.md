@@ -56,6 +56,16 @@ existing runtime filesystem, application, and database surfaces. The cited
 literature and standards motivate the scenario/runtime/evidence separation; they
 do not define ACES's specific sensitivity enum names or omission rule.
 
+For academic and standards review, the evidence has different force. The ACES
+source models, generated schemas, and tests establish current repository
+behavior. `Brad-Edwards/aptl#339` is motivating downstream consumer evidence for
+the classification failure mode, not a representative validation study. The
+external sources listed below provide adjacent precedent for authoring/runtime
+separation, schema discipline, participant observation boundaries, workflow and
+target references, and container security surface separation. They are not
+treated as normative authority for ACES field names, Docker/Compose
+compatibility, or downstream adoption.
+
 ## Decision
 
 ### 1. Classify by semantic locus, not backend syntax
@@ -205,3 +215,12 @@ different facts.
   cited from the lineage document — adjacent primary sources behind the
   scenario/deployment, participant-observation, schema-discipline, and language
   adequacy boundaries.
+- [Docker Compose service reference](https://docs.docker.com/reference/compose-file/services/),
+  [Compose profiles](https://docs.docker.com/compose/how-tos/profiles/), and
+  [Docker inspect](https://docs.docker.com/reference/cli/docker/inspect/) —
+  primary references for the backend evidence forms that motivated the issue;
+  they are evidence sources, not the SDL schema authority.
+- [NIST SP 800-190, Application Container Security Guide](https://doi.org/10.6028/NIST.SP.800-190)
+  — adjacent container-security practice identifying images, runtime
+  configuration, orchestrators, and host interactions as distinct
+  security-relevant surfaces.
