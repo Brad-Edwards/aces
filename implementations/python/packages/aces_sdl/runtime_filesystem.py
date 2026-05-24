@@ -58,6 +58,10 @@ class RuntimeSensitivityClassification(str, Enum):
     UNKNOWN = "unknown"
 
 
+_REDACTED_LABEL_PATTERN = r"^[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]$"
+_OPERATOR_SECRET_LABEL_PATTERN = r"^[Oo][Pp][Ee][Rr][Aa][Tt][Oo][Rr][_-][Ss][Ee][Cc][Rr][Ee][Tt]$"  # noqa: S105
+
+
 def redacted_raw_value_schema(
     *,
     sensitivity_field: str,
@@ -68,10 +72,9 @@ def redacted_raw_value_schema(
         "if": {
             "properties": {
                 sensitivity_field: {
-                    "enum": [
-                        RuntimeSensitivityClassification.REDACTED.value,
-                        RuntimeSensitivityClassification.OPERATOR_SECRET.value,
-                        "operator-secret",
+                    "anyOf": [
+                        {"type": "string", "pattern": _REDACTED_LABEL_PATTERN},
+                        {"type": "string", "pattern": _OPERATOR_SECRET_LABEL_PATTERN},
                     ]
                 }
             },

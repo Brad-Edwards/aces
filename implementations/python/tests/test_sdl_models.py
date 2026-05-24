@@ -1134,7 +1134,7 @@ class TestNode:
                 {
                     "target": "/host-keys",
                     "source": "/home/operator/.ssh",
-                    "source_sensitivity": "operator-secret",
+                    "source_sensitivity": "OPERATOR-SECRET",
                 }
             )
         with pytest.raises(JsonSchemaValidationError):
@@ -1161,7 +1161,7 @@ class TestNode:
                 {
                     "path": "/run/docker.sock",
                     "bind_source": "/var/run/docker.sock",
-                    "bind_source_sensitivity": "operator-secret",
+                    "bind_source_sensitivity": "OPERATOR_SECRET",
                 }
             )
 

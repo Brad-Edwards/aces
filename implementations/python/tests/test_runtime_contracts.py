@@ -75,23 +75,6 @@ def test_sdl_schema_rejects_redacted_runtime_mount_and_bind_raw_values():
         }
     )
 
-    invalid_mount_source = {
-        "name": "redaction-contract",
-        "nodes": {
-            "n": {
-                "type": "vm",
-                "runtime": {
-                    "mounts": [
-                        {
-                            "target": "/host-keys",
-                            "source": "/home/operator/.ssh",
-                            "source_sensitivity": "operator_secret",
-                        }
-                    ]
-                },
-            }
-        },
-    }
     invalid_mount_options = {
         "name": "redaction-contract",
         "nodes": {
@@ -127,7 +110,34 @@ def test_sdl_schema_rejects_redacted_runtime_mount_and_bind_raw_values():
         },
     }
 
-    assert list(validator.iter_errors(invalid_mount_source))
+    for sensitivity in (
+        "operator_secret",
+        "operator-secret",
+        "OPERATOR_SECRET",
+        "OPERATOR-SECRET",
+        "Operator-Secret",
+        "redacted",
+        "REDACTED",
+    ):
+        invalid_mount_source = {
+            "name": "redaction-contract",
+            "nodes": {
+                "n": {
+                    "type": "vm",
+                    "runtime": {
+                        "mounts": [
+                            {
+                                "target": "/host-keys",
+                                "source": "/home/operator/.ssh",
+                                "source_sensitivity": sensitivity,
+                            }
+                        ]
+                    },
+                }
+            },
+        }
+        assert list(validator.iter_errors(invalid_mount_source)), sensitivity
+
     assert list(validator.iter_errors(invalid_mount_options))
     assert list(validator.iter_errors(invalid_bind_source))
 

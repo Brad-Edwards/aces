@@ -204,11 +204,12 @@ and host-local machinery that creates or controls the range. See
 [ADR-032](../../decisions/adrs/adr-032-scenario-delivery-boundary-for-runtime-node-state.md).
 
 This table is checked against the current ACES runtime/source models and the
-downstream APTL issue #339 Kali inventory evidence class: Compose service
-slices, Docker inspect output, runtime mount/network/capability observations,
-and image provenance are evidence to classify, not schema authority. The APTL
-inventory is motivating downstream evidence; it is not a claim that all APTL
-artifacts already satisfy the ACES redaction contract.
+downstream [Brad-Edwards/aptl#339](https://github.com/Brad-Edwards/aptl/issues/339)
+Kali inventory evidence class: Compose service slices, Docker inspect output,
+runtime mount/network/capability observations, and image provenance are evidence
+to classify, not schema authority. The APTL inventory is motivating downstream
+evidence; it is not a claim that all APTL artifacts already satisfy the ACES
+redaction contract.
 
 
 | Concept                                 | Current Disposition                | Where It Belongs                       |

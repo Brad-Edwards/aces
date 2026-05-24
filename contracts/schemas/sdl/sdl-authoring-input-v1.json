@@ -4634,10 +4634,15 @@
           "if": {
             "properties": {
               "bind_source_sensitivity": {
-                "enum": [
-                  "redacted",
-                  "operator_secret",
-                  "operator-secret"
+                "anyOf": [
+                  {
+                    "pattern": "^[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]$",
+                    "type": "string"
+                  },
+                  {
+                    "pattern": "^[Oo][Pp][Ee][Rr][Aa][Tt][Oo][Rr][_-][Ss][Ee][Cc][Rr][Ee][Tt]$",
+                    "type": "string"
+                  }
                 ]
               }
             },
@@ -5507,10 +5512,15 @@
           "if": {
             "properties": {
               "source_sensitivity": {
-                "enum": [
-                  "redacted",
-                  "operator_secret",
-                  "operator-secret"
+                "anyOf": [
+                  {
+                    "pattern": "^[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]$",
+                    "type": "string"
+                  },
+                  {
+                    "pattern": "^[Oo][Pp][Ee][Rr][Aa][Tt][Oo][Rr][_-][Ss][Ee][Cc][Rr][Ee][Tt]$",
+                    "type": "string"
+                  }
                 ]
               }
             },
@@ -5536,10 +5546,15 @@
           "if": {
             "properties": {
               "options_sensitivity": {
-                "enum": [
-                  "redacted",
-                  "operator_secret",
-                  "operator-secret"
+                "anyOf": [
+                  {
+                    "pattern": "^[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]$",
+                    "type": "string"
+                  },
+                  {
+                    "pattern": "^[Oo][Pp][Ee][Rr][Aa][Tt][Oo][Rr][_-][Ss][Ee][Cc][Rr][Ee][Tt]$",
+                    "type": "string"
+                  }
                 ]
               }
             },

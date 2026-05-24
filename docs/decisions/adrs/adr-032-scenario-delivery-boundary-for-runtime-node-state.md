@@ -44,11 +44,11 @@ This ADR is grounded in three evidence sets:
   `RuntimeCapabilityPolicy`, and `ContainerImageBuildProvenance`;
 - the ACES lineage notes for cyber-range SDL separation, participant
   observation semantics, DSL adequacy, and runtime/evidence boundaries; and
-- downstream APTL issue #339 / SCN-010 evidence, where the TechVault Kali
-  inventory exposed Compose profiles, build inputs, volume mounts, Linux
-  capabilities, seccomp posture, runtime network realization, image provenance,
-  and raw Docker evidence that had to be classified without making Docker
-  Compose the SDL authority.
+- downstream [Brad-Edwards/aptl#339](https://github.com/Brad-Edwards/aptl/issues/339)
+  / SCN-010 evidence, where the TechVault Kali inventory exposed Compose
+  profiles, build inputs, volume mounts, Linux capabilities, seccomp posture,
+  runtime network realization, image provenance, and raw Docker evidence that
+  had to be classified without making Docker Compose the SDL authority.
 
 The sensitivity labels used for mount sources/options and local-control bind
 sources are an ACES-native field-level redaction discipline reused from the
@@ -141,7 +141,8 @@ different facts.
 
 - Adding new SDL fields for every previously omitted Docker or Compose key.
 - Building a Docker, Compose, Podman, Kubernetes, or harness inspector.
-- Modifying or fully auditing downstream APTL inventories; APTL issue #339 is
+- Modifying or fully auditing downstream APTL inventories;
+  [Brad-Edwards/aptl#339](https://github.com/Brad-Edwards/aptl/issues/339) is
   used here as motivating consumer evidence, not as a new ACES conformance
   fixture.
 - Claiming downstream APTL artifacts have already adopted this redaction
