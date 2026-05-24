@@ -27,6 +27,9 @@ such as `GOV-918`.
 
 ## Repo skills
 
-- For ACES asset inventory capture, use
-  `.claude/skills/aces-asset-inventory-capture/SKILL.md`. The skill is
-  agent-neutral and explicitly runs from either Claude Code or Codex.
+- For Codex, use `.codex-skills/aces-asset-inventory-capture/SKILL.md`.
+  This server also links it at
+  `~/.codex/skills/aces-asset-inventory-capture`.
+- For Claude Code, use
+  `.claude/skills/aces-asset-inventory-capture/SKILL.md`. This server also
+  links it at `~/.claude/skills/aces-asset-inventory-capture`.
