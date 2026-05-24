@@ -24,3 +24,9 @@ such as `GOV-918`.
 - Keep concept-authority artifacts in the approved concept-authority surfaces.
 - Keep IMPLEMENTS and TESTS traceability in Ground Control aligned with changed
   code and tests.
+
+## Repo skills
+
+- For ACES asset inventory capture, use
+  `.claude/skills/aces-asset-inventory-capture/SKILL.md`. The skill is
+  agent-neutral and explicitly runs from either Claude Code or Codex.
