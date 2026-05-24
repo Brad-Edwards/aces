@@ -6,7 +6,12 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_backend_protocols.capabilities import BackendManifest, OrchestratorCapabilities, ProvisionerCapabilities
+from aces_backend_protocols.capabilities import (
+    BackendManifest,
+    OrchestratorCapabilities,
+    ParticipantRuntimeCapabilities,
+    ProvisionerCapabilities,
+)
 from aces_backend_protocols.manifest import backend_manifest_payload
 from aces_backend_stubs.stubs import create_stub_manifest
 from aces_contracts.contracts import BackendManifestV2Model
@@ -83,6 +88,80 @@ def test_backend_manifest_v2_roundtrip_from_stub_manifest():
     ]
     assert model.realization_support[0].support_mode.value == "constrained"
     assert model.model_dump(mode="json") == payload
+
+
+def test_backend_manifest_v2_declares_participant_capability_dimensions():
+    """API-405: participant-runtime backends must declare the participant
+    roles, behavior features, and interaction features they support."""
+
+    payload = backend_manifest_payload(create_stub_manifest())
+    participant_runtime = payload["capabilities"]["participant_runtime"]
+
+    assert participant_runtime["supported_participant_roles"] == ["blue", "green", "red", "white"]
+    assert participant_runtime["supported_behavior_features"] == [
+        "action_contracts",
+        "attribution_support",
+        "behavior_history",
+        "effects",
+        "failure_classes",
+        "observation_boundaries",
+        "outcome_interpretation",
+        "preconditions",
+        "state_transitions",
+        "temporal_contracts",
+    ]
+    assert participant_runtime["supported_interaction_features"] == [
+        "contention",
+        "coordination",
+        "interference",
+        "shared_state_change",
+    ]
+
+    model = BackendManifestV2Model.model_validate(payload)
+    assert model.capabilities.participant_runtime is not None
+    assert model.capabilities.participant_runtime.supported_participant_roles == [
+        "blue",
+        "green",
+        "red",
+        "white",
+    ]
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    [
+        "supported_participant_roles",
+        "supported_behavior_features",
+        "supported_interaction_features",
+    ],
+)
+def test_backend_manifest_v2_rejects_participant_runtime_without_api_405_declarations(field_name: str):
+    payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
+    payload["capabilities"]["participant_runtime"].pop(field_name, None)
+
+    with pytest.raises(ValidationError, match=field_name):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_participant_runtime_capabilities_validate_api_405_vocabularies():
+    capability = ParticipantRuntimeCapabilities(
+        name="participant-runtime",
+        supported_participant_roles=frozenset({"blue", "x-acme:observer"}),
+        supported_behavior_features=frozenset({"action_contracts", "x-acme:custom-feature"}),
+        supported_interaction_features=frozenset({"coordination", "x-acme:custom-interaction"}),
+    )
+
+    assert "x-acme:observer" in capability.supported_participant_roles
+    assert "x-acme:custom-feature" in capability.supported_behavior_features
+    assert "x-acme:custom-interaction" in capability.supported_interaction_features
+
+    with pytest.raises(ValueError, match="participant-runtime-behavior-features"):
+        ParticipantRuntimeCapabilities(
+            name="participant-runtime",
+            supported_participant_roles=frozenset({"blue"}),
+            supported_behavior_features=frozenset({"custom_feature"}),
+            supported_interaction_features=frozenset({"coordination"}),
+        )
 
 
 def test_backend_manifest_v2_requires_manifest_sections():
@@ -317,6 +396,6 @@ def test_backend_manifest_v2_rejects_duplicate_binding_scopes():
 def test_backend_manifest_v2_concept_bindings_roundtrip():
     payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
     model = BackendManifestV2Model.model_validate(payload)
-    assert len(model.concept_bindings) == 6
+    assert len(model.concept_bindings) == 9
     assert model.concept_bindings[0].scope == "capabilities.provisioner.supported_node_types"
     assert model.concept_bindings[0].family == "assets"

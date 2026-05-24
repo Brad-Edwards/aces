@@ -146,14 +146,51 @@ class ParticipantRuntimeCapabilities:
     capability MUST populate ``RuntimeSnapshot.participant_episode_results``
     and ``participant_episode_history`` so downstream consumers see the
     state machine transitions.
+
+    API-405 support dimensions live here because they are backend apparatus
+    claims: which participant roles, behavior features, and interaction
+    features this participant runtime can actually realize.
     """
 
     name: str
+    supported_participant_roles: frozenset[str] = frozenset()
+    supported_behavior_features: frozenset[str] = frozenset()
+    supported_interaction_features: frozenset[str] = frozenset()
     constraints: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.name.strip():
             raise ValueError("ParticipantRuntimeCapabilities.name must be non-empty")
+        if not self.supported_participant_roles:
+            raise ValueError("ParticipantRuntimeCapabilities.supported_participant_roles must not be empty")
+        if not self.supported_behavior_features:
+            raise ValueError("ParticipantRuntimeCapabilities.supported_behavior_features must not be empty")
+        if not self.supported_interaction_features:
+            raise ValueError("ParticipantRuntimeCapabilities.supported_interaction_features must not be empty")
+        if any(not role.strip() for role in self.supported_participant_roles):
+            raise ValueError(
+                "ParticipantRuntimeCapabilities.supported_participant_roles must not contain empty strings"
+            )
+        if any(not feature.strip() for feature in self.supported_behavior_features):
+            raise ValueError(
+                "ParticipantRuntimeCapabilities.supported_behavior_features must not contain empty strings"
+            )
+        if any(not feature.strip() for feature in self.supported_interaction_features):
+            raise ValueError(
+                "ParticipantRuntimeCapabilities.supported_interaction_features must not contain empty strings"
+            )
+        validate_controlled_vocabulary_scope_values(
+            "capabilities.participant_runtime.supported_participant_roles",
+            self.supported_participant_roles,
+        )
+        validate_controlled_vocabulary_scope_values(
+            "capabilities.participant_runtime.supported_behavior_features",
+            self.supported_behavior_features,
+        )
+        validate_controlled_vocabulary_scope_values(
+            "capabilities.participant_runtime.supported_interaction_features",
+            self.supported_interaction_features,
+        )
 
 
 @dataclass(frozen=True)

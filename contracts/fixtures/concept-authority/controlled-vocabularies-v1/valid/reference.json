@@ -333,6 +333,114 @@
           "description": "Objective section support."
         }
       }
+    },
+    "participant-runtime-roles": {
+      "title": "Participant Runtime Roles",
+      "description": "Backend-supported participant role vocabulary for participant runtime capability declarations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.participant_runtime.supported_participant_roles"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "blue": {
+          "title": "Blue",
+          "description": "Backend supports blue-team participant roles."
+        },
+        "green": {
+          "title": "Green",
+          "description": "Backend supports green-team participant roles."
+        },
+        "red": {
+          "title": "Red",
+          "description": "Backend supports red-team participant roles."
+        },
+        "white": {
+          "title": "White",
+          "description": "Backend supports white-team participant roles."
+        }
+      }
+    },
+    "participant-runtime-behavior-features": {
+      "title": "Participant Runtime Behavior Features",
+      "description": "Backend-supported participant behavior feature vocabulary for participant runtime capability declarations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.participant_runtime.supported_behavior_features"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "action_contracts": {
+          "title": "Action Contracts",
+          "description": "Backend supports governed participant action contracts."
+        },
+        "attribution_support": {
+          "title": "Attribution Support",
+          "description": "Backend supports evidence-labeled participant attribution claims."
+        },
+        "behavior_history": {
+          "title": "Behavior History",
+          "description": "Backend supports participant behavior history event streams."
+        },
+        "effects": {
+          "title": "Effects",
+          "description": "Backend supports declared participant action effects."
+        },
+        "failure_classes": {
+          "title": "Failure Classes",
+          "description": "Backend supports portable participant failure classes."
+        },
+        "observation_boundaries": {
+          "title": "Observation Boundaries",
+          "description": "Backend supports participant-visible observation boundary semantics."
+        },
+        "outcome_interpretation": {
+          "title": "Outcome Interpretation",
+          "description": "Backend supports participant-local outcome interpretation records."
+        },
+        "preconditions": {
+          "title": "Preconditions",
+          "description": "Backend supports declared participant action preconditions."
+        },
+        "state_transitions": {
+          "title": "State Transitions",
+          "description": "Backend supports participant behavior state-transition records."
+        },
+        "temporal_contracts": {
+          "title": "Temporal Contracts",
+          "description": "Backend supports participant temporal contracts and timing disclosures."
+        }
+      }
+    },
+    "participant-runtime-interaction-features": {
+      "title": "Participant Runtime Interaction Features",
+      "description": "Backend-supported multi-participant interaction feature vocabulary.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.participant_runtime.supported_interaction_features"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "contention": {
+          "title": "Contention",
+          "description": "Backend supports declared contention interaction semantics."
+        },
+        "coordination": {
+          "title": "Coordination",
+          "description": "Backend supports declared coordination interaction semantics."
+        },
+        "interference": {
+          "title": "Interference",
+          "description": "Backend supports declared interference interaction semantics."
+        },
+        "shared_state_change": {
+          "title": "Shared State Change",
+          "description": "Backend supports declared shared-state interaction semantics."
+        }
+      }
     }
   }
 }

@@ -45,6 +45,9 @@ Reuse these existing surfaces before adding anything new:
   `aces_contracts.controlled_vocabularies`,
   `aces_contracts.apparatus`, and the `BackendManifestV2Model` validators
 - manifest rendering: `aces_backend_protocols.manifest.backend_manifest_payload`
+- participant capability declarations:
+  `capabilities.participant_runtime.supported_participant_roles`,
+  `supported_behavior_features`, and `supported_interaction_features`
 - runtime behavior probes: `compile_runtime_model()`, `plan()`,
   `RuntimeControlPlane`, and `RuntimeTarget`
 - diagnostics: `aces_processor.models.Diagnostic` and `Severity`
@@ -67,6 +70,10 @@ The conformance path touches these gates:
 - Manifest authority validation: `supported_contract_versions`,
   `concept_bindings`, capability vocabulary terms, and backend profile claims
   must resolve through existing authority helpers, not local string checks.
+- Participant capability validation: role, behavior-feature, and
+  interaction-feature support claims must resolve through the governed
+  vocabulary scopes on `capabilities.participant_runtime`; backend-specific
+  terms must use the governed `x-<owner>:<term>` extension format.
 - Control-plane probe validation: live probes must use `RuntimeControlPlane`
   and existing operation receipt/status/snapshot envelopes rather than backend
   native objects.
@@ -90,6 +97,16 @@ registering the matching validator once, not editing every call site.
 Keep the profile loader parameterized by `profiles_root` and the fixture runner
 parameterized by `fixtures_root` so tests can use temporary corpora while the
 default path remains the published `contracts/` tree.
+
+Participant capability declarations follow the same extension boundary. API-405
+adds governed vocabulary surfaces under `capabilities.participant_runtime`
+instead of a backend-profile branch, snapshot metadata field, or control-plane
+role. The standard terms are grounded in `docs/explain/sdl/lineage.md`,
+ADR-022, and `specs/formal/participant-semantics/`: exercise roles map to the
+existing `white`/`green`/`red`/`blue` framing vocabulary; behavior terms map to
+the action, observation, state-transition, failure, temporal, attribution, and
+outcome semantics already modeled in ACES; interaction terms map to the
+SEM-209 coordination, contention, interference, and shared-state classes.
 
 ## Gotchas And Anti-Patterns
 

@@ -302,7 +302,7 @@
     },
     "ParticipantRuntimeCapabilitiesModel": {
       "additionalProperties": false,
-      "description": "Participant-episode lifecycle capability block (RUN-311).\n\nA backend that declares this block advertises that it implements\nthe full participant episode control surface on the\n``ParticipantRuntime`` protocol: ``initialize`` / ``reset`` /\n``restart`` / ``terminate`` plus ``status`` / ``results`` /\n``history``. Consumers of the manifest can infer the\n``FULL_REMOTE_CONTROL_PLANE`` conformance profile from this block.",
+      "description": "Participant-episode lifecycle capability block (RUN-311).\n\nA backend that declares this block advertises that it implements\nthe full participant episode control surface on the\n``ParticipantRuntime`` protocol: ``initialize`` / ``reset`` /\n``restart`` / ``terminate`` plus ``status`` / ``results`` /\n``history``. Consumers of the manifest can infer the\n``FULL_REMOTE_CONTROL_PLANE`` conformance profile from this block.\n\nAPI-405 support dimensions live here because they are backend apparatus\nclaims: which participant roles, behavior features, and interaction\nfeatures this participant runtime can actually realize.",
       "properties": {
         "constraints": {
           "additionalProperties": {
@@ -315,10 +315,40 @@
           "minLength": 1,
           "title": "Name",
           "type": "string"
+        },
+        "supported_behavior_features": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Behavior Features",
+          "type": "array"
+        },
+        "supported_interaction_features": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Interaction Features",
+          "type": "array"
+        },
+        "supported_participant_roles": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Participant Roles",
+          "type": "array"
         }
       },
       "required": [
-        "name"
+        "name",
+        "supported_participant_roles",
+        "supported_behavior_features",
+        "supported_interaction_features"
       ],
       "title": "ParticipantRuntimeCapabilitiesModel",
       "type": "object"

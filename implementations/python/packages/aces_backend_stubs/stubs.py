@@ -42,6 +42,29 @@ from aces_processor.models import (
 from aces_processor.registry import RuntimeTarget, RuntimeTargetComponents
 
 REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = BACKEND_SUPPORTED_CONTRACT_IDS
+REFERENCE_PARTICIPANT_ROLES = frozenset({"blue", "green", "red", "white"})
+REFERENCE_PARTICIPANT_BEHAVIOR_FEATURES = frozenset(
+    {
+        "action_contracts",
+        "attribution_support",
+        "behavior_history",
+        "effects",
+        "failure_classes",
+        "observation_boundaries",
+        "outcome_interpretation",
+        "preconditions",
+        "state_transitions",
+        "temporal_contracts",
+    }
+)
+REFERENCE_PARTICIPANT_INTERACTION_FEATURES = frozenset(
+    {
+        "contention",
+        "coordination",
+        "interference",
+        "shared_state_change",
+    }
+)
 
 
 def _current_backend_version() -> str:
@@ -71,19 +94,35 @@ def create_stub_manifest(
         supported_contract_versions.discard("participant-episode-state-envelope-v1")
         supported_contract_versions.discard("participant-episode-history-event-stream-v1")
         supported_contract_versions.discard("participant-behavior-history-event-stream-v1")
+    concept_bindings = (
+        ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
+        ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
+        ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
+        ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
+        ConceptBinding(scope="capabilities.orchestrator.supported_sections", family="actions-and-events"),
+        ConceptBinding(scope="capabilities.evaluator.supported_sections", family="observables"),
+    )
+    if with_participant_runtime:
+        concept_bindings += (
+            ConceptBinding(
+                scope="capabilities.participant_runtime.supported_participant_roles",
+                family="identities",
+            ),
+            ConceptBinding(
+                scope="capabilities.participant_runtime.supported_behavior_features",
+                family="actions-and-events",
+            ),
+            ConceptBinding(
+                scope="capabilities.participant_runtime.supported_interaction_features",
+                family="relationships",
+            ),
+        )
     return BackendManifest(
         name="stub",
         version=_current_backend_version(),
         supported_contract_versions=frozenset(supported_contract_versions),
         compatible_processors=frozenset({"aces-reference-processor"}),
-        concept_bindings=(
-            ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
-            ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
-            ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
-            ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
-            ConceptBinding(scope="capabilities.orchestrator.supported_sections", family="actions-and-events"),
-            ConceptBinding(scope="capabilities.evaluator.supported_sections", family="observables"),
-        ),
+        concept_bindings=concept_bindings,
         realization_support=(
             RealizationSupportDeclaration(
                 domain="runtime-realization",
@@ -154,7 +193,14 @@ def create_stub_manifest(
                 supports_objectives=True,
             ),
             participant_runtime=(
-                ParticipantRuntimeCapabilities(name="stub-participant-runtime") if with_participant_runtime else None
+                ParticipantRuntimeCapabilities(
+                    name="stub-participant-runtime",
+                    supported_participant_roles=REFERENCE_PARTICIPANT_ROLES,
+                    supported_behavior_features=REFERENCE_PARTICIPANT_BEHAVIOR_FEATURES,
+                    supported_interaction_features=REFERENCE_PARTICIPANT_INTERACTION_FEATURES,
+                )
+                if with_participant_runtime
+                else None
             ),
         ),
     )
