@@ -1,0 +1,118 @@
+template: aces-library-template
+version: 1
+id: action-contract-observation-boundary
+surface: participant_behavior
+requirement_refs: [AUT-806]
+source_refs:
+  - docs/explain/sdl/validation.md
+  - implementations/python/tests/test_sem_208_participant_behavior.py
+summary: Participant behavior template binding an agent action to an action contract and observation boundary.
+body:
+  name: library-participant-behavior-template
+  description: Participant behavior template with governed action and observation semantics.
+  nodes:
+    web:
+      type: VM
+      resources: {ram: 1 GiB, cpu: 1}
+      services:
+        - {port: 80, name: http}
+  entities:
+    red-team:
+      role: red
+  action-contracts:
+    scan:
+      semantic-version: 1.0.0
+      lifecycle-state: active
+      behavioral-granularity: atomic
+      procedure-basis: nmap service discovery
+      realization-profile: backend-declared
+      fidelity-claim: records participant discovery intent and terminal observation
+      preconditions:
+        - precondition-id: authority-in-scope
+          precondition-class: authority
+          description: red participant is authorized to scan the web service
+          support-refs: [agents.red-agent, nodes.web.services.http]
+        - precondition-id: target-service-present
+          precondition-class: target
+          description: target service exists in the participant action scope
+          support-refs: [nodes.web.services.http]
+        - precondition-id: backend-can-realize-scan
+          precondition-class: realization
+          description: backend can realize the scan action contract
+          support-refs: [backend.participant-runtime]
+      effects:
+        - effect-id: discover-network-services
+          effect-class: intended_effect
+          description: discover network services
+          target-refs: [nodes.web.services.http]
+        - effect-id: participant-service-knowledge-update
+          effect-class: side_effect
+          description: participant-local service knowledge changes
+          target-refs: [nodes.web.services.http]
+        - effect-id: terminal-scan-observation
+          effect-class: observation_effect
+          description: terminal scan observation
+          evidence-refs: [evidence.scan-output]
+        - effect-id: participant-view-discovers-node
+          effect-class: visibility_effect
+          description: participant view marks the web node discovered
+          target-refs: [nodes.web]
+        - effect-id: scan-output-evidence
+          effect-class: evidence_effect
+          description: scan output is retained as evidence
+          evidence-refs: [evidence.scan-output]
+        - effect-id: no-hidden-truth-effect
+          effect-class: no_effect
+          description: scan does not disclose hidden adjudication material
+      state-transition-effects: [participant knowledge expands]
+      observation-expectations: [terminal scan result]
+      evidence-expectations: [tool output]
+      failure-classes: [target_unavailable, precondition_unsatisfied, backend_error, unknown]
+      backend-failure-mappings:
+        - backend-error-code: backend.target-unreachable
+          failure-class: target_unavailable
+          diagnostic: backend target unreachable
+  observation-boundaries:
+    red-view:
+      projection-basis: participant-local projection over observed services
+      observable-refs: []
+      hidden-refs: [nodes.web, content.private-answer-key]
+      evidence-refs: [evidence.scan-output]
+      redaction-policy: hidden refs never project without explicit disclosure
+      latency-profile: terminal observation emitted after state transition commit
+      observer-effects: [tool execution may affect telemetry]
+      realized-view-disclosure: backend reports terminal scan output only
+      view-rules:
+        - information-ref: nodes.web
+          boundary-class: observable_resource
+          disposition: hidden
+          visibility-basis: service is not known before terminal scan output
+          latency-profile: terminal observation latency
+        - information-ref: content.private-answer-key
+          boundary-class: private_answer_key
+          disposition: hidden
+          visibility-basis: adjudication-only hidden truth
+        - information-ref: evidence.scan-output
+          boundary-class: archival_evidence
+          disposition: evidence_only
+          visibility-basis: archival run evidence reference
+          evidence-refs: [evidence.scan-output]
+      view-transitions:
+        - transition-id: discover-web-service
+          transition-kind: discovery
+          information-ref: nodes.web
+          trigger: scan terminal observation
+          effective-from: episode-step:scan-0001:terminal-observation
+          effective-order: 30
+          history-event-type: observation_emitted
+          action-instance-id: scan-0001
+          from-disposition: hidden
+          to-disposition: discovered
+          evidence-refs: [evidence.scan-output]
+          certainty: high
+          latency-profile: terminal observation latency
+  agents:
+    red-agent:
+      entity: red-team
+      actions: [scan]
+      observation-boundaries: [red-view]
