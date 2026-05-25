@@ -18,6 +18,8 @@ parity, including mounts, Linux capabilities, namespace modes, entrypoints,
 image commands, extra hosts, DNS options, security flags, resource limits,
 health status/logs, filesystem inventory, the local identity
 database (`/etc/passwd` users, `/etc/group` groups, and sudo/sudoers grants),
+software component identity below package-manager row granularity
+([ADR-034](../../decisions/adrs/adr-034-runtime-software-component-inventory.md)),
 container network realization (per-network aliases and DNS names,
 hostname/domain identity, endpoint MAC/IP/prefix/gateway, backend network and
 endpoint identifiers with stability classification, host-published port

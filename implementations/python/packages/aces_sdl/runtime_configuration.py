@@ -83,6 +83,12 @@ from .runtime_network import (
     RuntimeNetworkRealization,
     RuntimePublishedPort,
 )
+from .runtime_software import (
+    RuntimeSoftwareComponent,
+    RuntimeSoftwareComponentHash,
+    RuntimeSoftwareComponentProvenance,
+    RuntimeSoftwareComponentType,
+)
 from .runtime_ssh_server import (
     SshForcedCommand,
     SshForcedCommandKind,
@@ -168,6 +174,10 @@ __all__ = [
     "RuntimeResourceLimits",
     "RuntimeRestartPolicy",
     "RuntimeSensitivityClassification",
+    "RuntimeSoftwareComponent",
+    "RuntimeSoftwareComponentHash",
+    "RuntimeSoftwareComponentProvenance",
+    "RuntimeSoftwareComponentType",
     "RuntimeSudoPrincipalKind",
     "RuntimeSudoRule",
     "SshForcedCommand",
@@ -395,6 +405,7 @@ class RuntimeConfiguration(SDLModel):
     database_services: list[DatabaseService] = Field(default_factory=list)
     ssh_servers: list[SshServerConfig] = Field(default_factory=list)
     packages: list[RuntimePackage] = Field(default_factory=list)
+    software_components: list[RuntimeSoftwareComponent] = Field(default_factory=list)
     dependency_manifests: list[RuntimeDependencyManifest] = Field(default_factory=list)
     package_vulnerabilities: list[RuntimePackageVulnerabilityFinding] = Field(default_factory=list)
 
@@ -409,4 +420,5 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.database_services, attr="database_service_id", label="database_service_id")
         _reject_duplicate_keys(self.ssh_servers, attr="server_id", label="ssh_server server_id")
         _reject_duplicate_keys(self.identity_authorities, attr="authority_id", label="identity authority")
+        _reject_duplicate_keys(self.software_components, attr="component_id", label="software component")
         return self

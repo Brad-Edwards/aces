@@ -59,3 +59,4 @@ Each ADR includes:
 | [031](adr-031-ssh-server-configuration-surface.md) | SSH Server Configuration Surface | accepted | 2026-05-23 |
 | [032](adr-032-directory-domain-identity-runtime-surface.md) | Directory and Domain Identity Runtime Surface | accepted | 2026-05-24 |
 | [033](adr-033-scenario-delivery-boundary-for-runtime-node-state.md) | Scenario/Delivery Boundary for Runtime Node State | accepted | 2026-05-24 |
+| [034](adr-034-runtime-software-component-inventory.md) | Runtime Software Component Inventory | accepted | 2026-05-25 |

@@ -96,6 +96,10 @@ from .runtime_configuration import (
     RuntimeResourceLimits,
     RuntimeRestartPolicy,
     RuntimeSensitivityClassification,
+    RuntimeSoftwareComponent,
+    RuntimeSoftwareComponentHash,
+    RuntimeSoftwareComponentProvenance,
+    RuntimeSoftwareComponentType,
     RuntimeSudoPrincipalKind,
     RuntimeSudoRule,
     parse_ram,
@@ -227,6 +231,15 @@ __all__ = [
     "ServicePort",
     "parse_ram",
 ]
+
+__all__.extend(
+    [
+        RuntimeSoftwareComponent.__name__,
+        RuntimeSoftwareComponentHash.__name__,
+        RuntimeSoftwareComponentProvenance.__name__,
+        RuntimeSoftwareComponentType.__name__,
+    ]
+)
 
 MAX_NODE_NAME_LENGTH = 35
 

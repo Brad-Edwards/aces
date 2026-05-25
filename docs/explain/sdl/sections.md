@@ -205,6 +205,23 @@ nodes:
         - manager: apk
           name: musl
           version: 1.2.4-r2
+      software_components:
+        - component_id: shuffle-backend-app
+          name: shuffle-backend
+          version: 1.2.3
+          component_type: application
+          provenance: scanner
+          ecosystem: go
+          purl: "pkg:golang/github.com/frikky/shuffle@1.2.3"
+          cpe: "cpe:2.3:a:shuffle:shuffle:1.2.3:*:*:*:*:*:*:*"
+          package_manager: apk
+          package_name: shuffle-backend
+          package_version: 1.2.3-r0
+          manifest_path: /app/go.mod
+          installed_paths: [/app/shufflebackend, /app/go.mod]
+          hashes:
+            - algorithm: sha256
+              value: abc123
       dependency_manifests:
         - ecosystem: go
           path: /app/go.mod
@@ -432,12 +449,18 @@ posture — `default`, `unconfined`, a named profile, or a profile path) and
 such as `seccomp:unconfined` or `no-new-privileges`); a seccomp posture is a
 distinct security control from `privileged`, so it is recorded separately (see
 [ADR-028](../../decisions/adrs/adr-028-container-seccomp-security-options-surface.md));
-`health` records observed health status and bounded
-healthcheck log facts; `packages` and `dependency_manifests` record runtime
-inventory; and `package_vulnerabilities` records scanner-derived CVE/advisory
-findings tied to an image digest and scan time. These findings are separate
-from the top-level `vulnerabilities` section, which remains the CWE-classified
-scenario vulnerability surface.
+`health` records observed health status and bounded healthcheck log facts;
+`packages` records package-manager rows; `software_components` records
+node-local software identity at component granularity with stable ACES ids,
+component type, version, purl/CPE/hash identifiers, package or manifest
+lineage, and runtime paths when known; `dependency_manifests` records observed
+manifest files; and `package_vulnerabilities` records scanner-derived
+CVE/advisory findings tied to an image digest and scan time. Software
+components are WHAT-IS state, not invocation surfaces, process snapshots, HTTP
+route inventory, build provenance, or authored deployment intent (see
+[ADR-034](../../decisions/adrs/adr-034-runtime-software-component-inventory.md)).
+Package findings are separate from the top-level `vulnerabilities` section,
+which remains the CWE-classified scenario vulnerability surface.
 
 `runtime.local_identity` records the observed local identity database — the
 node-scoped `/etc/passwd`, `/etc/group`, and sudo/sudoers facts. `users` carry
