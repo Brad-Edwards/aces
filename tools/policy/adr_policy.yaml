@@ -58,6 +58,8 @@ layering_rules:
 # ADR-035 / MOD-001: explicit module ownership boundaries.
 module_boundaries:
   adr: ADR-035
+  package_coverage_roots:
+    - implementations/python/packages
   modules:
     - id: aces_sdl
       root: implementations/python/packages/aces_sdl
@@ -108,11 +110,8 @@ module_boundaries:
       allowed_top_level_imports:
         - aces_backend_protocols
         - aces_contracts
-        - aces_processor
         - aces_runtime
       public_import_prefixes:
-        aces_processor:
-          - aces_processor.models
         aces_runtime:
           - aces_runtime.registry
     - id: aces_conformance
@@ -136,6 +135,7 @@ module_boundaries:
     - id: aces_cli
       root: implementations/python/packages/aces_cli
       allowed_top_level_imports:
+        - aces_contracts
         - aces_conformance
         - aces_processor
         - aces_sdl

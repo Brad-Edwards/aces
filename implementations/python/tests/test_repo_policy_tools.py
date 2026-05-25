@@ -299,56 +299,7 @@ def test_layering_rule_does_not_check_files_outside_scope(tmp_path: Path) -> Non
 
 
 def install_module_boundary_policy(repo_root: Path) -> None:
-    policy_path = repo_root / "tools" / "policy" / "adr_policy.yaml"
-    policy_path.write_text(
-        policy_path.read_text(encoding="utf-8")
-        + """
-
-module_boundaries:
-  adr: ADR-035
-  modules:
-    - id: aces_sdl
-      root: implementations/python/packages/aces_sdl
-      allowed_top_level_imports:
-        - aces_contracts
-      forbidden_import_prefixes:
-        - aces_processor
-        - aces_runtime
-        - aces_backend_protocols
-        - aces_backend_stubs
-        - aces_cli
-        - aces_conformance
-        - aces_mcp
-    - id: aces_processor
-      root: implementations/python/packages/aces_processor
-      allowed_top_level_imports:
-        - aces_backend_protocols
-        - aces_contracts
-        - aces_sdl
-      forbidden_import_prefixes:
-        - aces_runtime
-        - aces_backend_stubs
-        - aces_cli
-        - aces_conformance
-        - aces_mcp
-    - id: aces_runtime
-      root: implementations/python/packages/aces_runtime
-      allowed_top_level_imports:
-        - aces_backend_protocols
-        - aces_contracts
-        - aces_processor
-      public_import_prefixes:
-        aces_processor:
-          - aces_processor.compiler
-          - aces_processor.models
-          - aces_processor.planner
-    - id: aces_mcp
-      root: implementations/python/packages/aces_mcp
-      forbidden_import_prefixes:
-        - aces_runtime
-""",
-        encoding="utf-8",
-    )
+    del repo_root
 
 
 def test_module_boundaries_reject_processor_importing_runtime(tmp_path: Path) -> None:
@@ -422,6 +373,31 @@ def test_module_boundaries_reject_authoring_importing_runtime_internals(tmp_path
     assert [f.rule_id for f in failures] == ["module-boundary-import"]
 
 
+def test_module_boundaries_reject_backend_stub_importing_processor(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    rel = "implementations/python/packages/aces_backend_stubs/uses_processor.py"
+    write_text(repo_root / rel, "from aces_processor.models import ApplyResult\n")
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["module-boundary-import"]
+
+
+def test_module_boundaries_reject_backend_protocol_any_signatures(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    rel = "implementations/python/packages/aces_backend_protocols/protocols.py"
+    write_text(
+        repo_root / rel,
+        "from typing import Any, Protocol\n\n"
+        "class Provisioner(Protocol):\n"
+        "    def apply(self, plan: Any) -> Any: ...\n",
+    )
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["backend-protocol-untyped-contract"]
+
+
 def test_module_boundaries_config_is_required(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     policy = _load_test_policy(repo_root)
@@ -471,6 +447,22 @@ def test_module_boundaries_reject_missing_module_root(tmp_path: Path) -> None:
 
     assert [f.rule_id for f in failures] == ["policy-config-malformed"]
     assert "must resolve to an existing directory" in failures[0].message
+
+
+def test_module_boundaries_reject_uncovered_package_root(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    write_text(repo_root / "implementations/python/packages/aces_new_package/__init__.py", "")
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        ["tools/policy/adr_policy.yaml"],
+        check_set="file-local",
+        structural_runner=structural_runner_stub,
+    )
+
+    assert [f.rule_id for f in failures] == ["policy-config-malformed"]
+    assert "aces_new_package" in failures[0].message
+    assert "missing from module_boundaries.modules" in failures[0].message
 
 
 def test_module_boundaries_full_check_scans_all_module_sources(tmp_path: Path) -> None:

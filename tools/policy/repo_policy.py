@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 from .common import PolicyFailure, load_yaml, path_matches_prefix
@@ -621,6 +621,9 @@ def _validate_module_boundary_config(repo_root: Path, config: object) -> tuple[l
     modules = config.get("modules")
     if not isinstance(modules, list) or not modules:
         return [], [fail("module_boundaries.modules must be a non-empty list")]
+    package_coverage_roots = config.get("package_coverage_roots")
+    if not _str_list_ok(package_coverage_roots, allow_empty=False):
+        return [], [fail("module_boundaries.package_coverage_roots must be a non-empty list of strings")]
 
     failures: list[PolicyFailure] = []
     validated: list[dict] = []
@@ -700,6 +703,36 @@ def _validate_module_boundary_config(repo_root: Path, config: object) -> tuple[l
                 },
             }
         )
+    if failures:
+        return validated, failures
+    for coverage_root in package_coverage_roots:
+        safe_coverage_root = _safe_repo_path(repo_root, str(coverage_root))
+        if safe_coverage_root is None:
+            failures.append(
+                fail(
+                    f"module_boundaries.package_coverage_roots entry '{coverage_root}' must be a safe repo-relative path"
+                )
+            )
+            continue
+        if not safe_coverage_root.is_dir():
+            failures.append(
+                fail(
+                    f"module_boundaries.package_coverage_roots entry '{coverage_root}' "
+                    "must resolve to an existing directory"
+                )
+            )
+            continue
+        for package_root in sorted(path for path in safe_coverage_root.iterdir() if path.is_dir()):
+            if not (package_root / "__init__.py").is_file():
+                continue
+            rel_package_root = package_root.relative_to(repo_root).as_posix()
+            if rel_package_root not in seen_roots:
+                failures.append(
+                    fail(
+                        f"package root '{rel_package_root}' is missing from module_boundaries.modules; "
+                        "every first-party package must have an ADR-backed module boundary"
+                    )
+                )
     return validated, failures
 
 
@@ -726,6 +759,8 @@ def _check_module_boundaries(
                 continue
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel_path)
             failures.extend(_check_module_imports(rel_path, rule, known_modules, tree))
+            if rule["id"] == "aces_backend_protocols" and rel_path.endswith("protocols.py"):
+                failures.extend(_check_backend_protocol_contract_annotations(rel_path, tree))
     return failures
 
 
@@ -831,6 +866,61 @@ def _matches_any_import_prefix(imported: str, prefixes: tuple[str, ...]) -> bool
 def _uses_private_module_path(imported: str) -> bool:
     parts = imported.split(".")
     return any(part.startswith("_") for part in parts[1:])
+
+
+def _check_backend_protocol_contract_annotations(rel_path: str, tree: ast.Module) -> list[PolicyFailure]:
+    failures: list[PolicyFailure] = []
+    for class_node in (node for node in tree.body if isinstance(node, ast.ClassDef)):
+        if not any(_base_name(base) == "Protocol" for base in class_node.bases):
+            continue
+        for function in (item for item in class_node.body if isinstance(item, ast.FunctionDef)):
+            for annotation in _function_signature_annotations(function):
+                if _annotation_uses_any(annotation):
+                    failures.append(
+                        PolicyFailure(
+                            "backend-protocol-untyped-contract",
+                            (
+                                f"{class_node.name}.{function.name} uses Any in its public protocol signature; "
+                                "backend protocols must use neutral contract DTOs from aces_contracts"
+                            ),
+                            rel_path,
+                        )
+                    )
+                    break
+    return failures
+
+
+def _base_name(node: ast.expr) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    if isinstance(node, ast.Subscript):
+        return _base_name(node.value)
+    return ""
+
+
+def _function_signature_annotations(function: ast.FunctionDef) -> Iterator[ast.expr]:
+    for arg in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]:
+        if arg.arg == "self":
+            continue
+        if arg.annotation is not None:
+            yield arg.annotation
+    if function.args.vararg is not None and function.args.vararg.annotation is not None:
+        yield function.args.vararg.annotation
+    if function.args.kwarg is not None and function.args.kwarg.annotation is not None:
+        yield function.args.kwarg.annotation
+    if function.returns is not None:
+        yield function.returns
+
+
+def _annotation_uses_any(annotation: ast.expr) -> bool:
+    for node in ast.walk(annotation):
+        if isinstance(node, ast.Name) and node.id == "Any":
+            return True
+        if isinstance(node, ast.Attribute) and node.attr == "Any":
+            return True
+    return False
 
 
 CHANGELOG_HEADING_RE = re.compile(r"^## \[(.+?)\]", re.MULTILINE)
