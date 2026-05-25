@@ -38,6 +38,81 @@ see [Design Precedents](precedents.md).
   Their strongest shared lesson is that scenario meaning must be more than a
   deployment script.
 
+## Directory, Domain, And Identity Authority Semantics
+
+The `runtime.identity_authorities` surface is issue #401's response to an
+observed gap in APTL's TechVault AD inventory. It is not a clean-room
+invention, but it also is not a clone of any one directory or attack-graph
+format.
+
+ACES relies on prior work in four different ways:
+
+- **Direct SDL lineage:** top-level `accounts` keeps the CyRIS account
+  placement lineage. CyRIS implements `add_account`/`modify_account` as
+  host/user management operations in code
+  ([modules.py](https://github.com/crond-jaist/cyris/blob/8b65a30581cdd8e126c7b1fa26db2a4b770b7f17/main/modules.py)),
+  so ACES continues to treat `accounts` as curated scenario/provisioning
+  resources. ACES does not infer a full directory service from those accounts.
+- **Primary industry standards:** LDAP/X.500 ([RFC 4510](https://www.rfc-editor.org/rfc/rfc4510),
+  [RFC 4512](https://www.rfc-editor.org/rfc/rfc4512)), Kerberos
+  ([RFC 4120](https://www.rfc-editor.org/rfc/rfc4120)), SCIM
+  ([RFC 7643](https://www.rfc-editor.org/rfc/rfc7643),
+  [RFC 7644](https://www.rfc-editor.org/rfc/rfc7644)),
+  [SAML V2.0 Assertions and Protocols](http://docs.oasis-open.org/security/saml/v2.0/saml-core-2.0-os.pdf),
+  OAuth 2.0 ([RFC 6749](https://www.rfc-editor.org/rfc/rfc6749)),
+  [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0-18.html),
+  [NIST SP 800-63C-4](https://doi.org/10.6028/NIST.SP.800-63C-4),
+  [NIST SP 800-162](https://doi.org/10.6028/NIST.SP.800-162), and
+  [NIST SP 800-207](https://doi.org/10.6028/NIST.SP.800-207) supply
+  terminology for authorities, naming contexts, realms, issuers, tenants,
+  subjects, groups, attributes, policy inputs, federation boundaries,
+  attribute-based authorization, and zero-trust identity/resource boundaries.
+  ACES adapts their shared concepts, not their full protocol objects.
+- **Primary access-control literature:** Lampson's
+  [access matrix](https://doi.org/10.1145/775265.775268), Saltzer and
+  Schroeder's [protection principles](https://doi.org/10.1109/PROC.1975.9939),
+  Ferraiolo/Kuhn [RBAC](https://www.nist.gov/publications/role-based-access-controls),
+  Sandhu et al.'s [RBAC96 model](https://doi.org/10.1109/2.485845), and NIST
+  ABAC support the separation among subject, attribute, policy, relationship,
+  and authority boundary. That is why ACES models policies and
+  membership/trust/federation edges as first-class records instead of storing
+  them only as prose or untyped relationship properties.
+- **Downstream/evidence precedents:** BloodHound/OpenGraph validates the
+  usefulness of node/edge identity graphs for attack-path analysis, while OCSF,
+  UCO, and CASE are evidence and concept-authority influences. ACES does not
+  make any of them the canonical runtime inventory schema: BloodHound graphs
+  are downstream analysis overlays, OCSF is telemetry/event-oriented, and
+  UCO/CASE are concept/evidence vocabularies broader than the SDL authoring
+  surface.
+
+Reference status is explicit. The identity and access-control authorities above
+are primary standards, government reports, or peer-reviewed access-control
+literature. The cyber-range and V&V sources are adjacent methodological support:
+Russo/Costa/Armando, Swiler, Oberkampf/Roy, and Sargent are citable proceedings,
+technical-report, or book sources; Garg et al. is used as a current survey
+preprint rather than as settled normative authority. The working Zotero library
+tracks these identity-authority references under `aces-sdl-identity-authority`
+and the adjacent V&V subset under `adjacent-vv-lineage`.
+
+The design deliberately keeps provider-stable identifiers as data rather than
+as ACES reference identity. AD SIDs/objectGUIDs, LDAP DNs/entryUUIDs, SCIM
+`id`/`externalId`, SAML NameIDs, and OIDC `iss` + `sub` values are preserved in
+specific fields or bounded attributes when needed for translation/evidence, but
+the portable ACES references are stable `*_id` symbols scoped by the scenario
+and authority. Within one authority those ids share a single local namespace,
+so an id cannot be reused across service, subject, policy, relationship, and
+authority records. This matches the verification/validation posture in the
+cyber-range literature (for example Russo/Costa/Armando on
+[scenario validation](https://doi.org/10.1109/NCA.2018.8548324), Garg et al.
+on the TechRxiv preprint
+[scenario-design/execution survey](https://doi.org/10.36227/techrxiv.175942879.94813577/v1),
+and Swiler plus Oberkampf/Roy/Sargent on
+[cyber-emulation V&V](https://doi.org/10.2172/1897016),
+[scientific-computing V&V](https://doi.org/10.1017/CBO9780511760396), and
+[simulation-model V&V](https://doi.org/10.1109/WSC.2010.5679166)): a model
+should state what it can preserve and compare rather than smuggle
+backend/vendor assumptions into an ambiguous field.
+
 ## Participant Semantics
 
 - [OpenAI Gym](https://arxiv.org/abs/1606.01540),
