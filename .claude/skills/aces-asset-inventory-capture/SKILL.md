@@ -15,6 +15,13 @@ The methodology remains the authority. In an APTL checkout, read
 skill operationalizes that prose; it does not define a second ledger schema or
 a second secret taxonomy.
 
+For Docker/Compose/container-image captures, start by copying
+`scripts/capture-container-evidence-template.sh` and
+`scripts/normalize-syft-cyclonedx.jq` into the target bundle as runnable capture
+resources, then tailor the copied script for asset-specific source paths,
+filesystem manifests, and redaction names. Keep every evidence-affecting
+normalization in the script or a referenced jq file.
+
 ## Inputs
 
 Before running commands, identify:
@@ -36,6 +43,8 @@ Produce a bundle that validates with the APTL ledger tooling:
 
 - `README.md` that states scope, target identity, verification commands, and
   known limits;
+- `capture-evidence.sh` or equivalent committed capture commands, derived from
+  the template for Docker/Compose assets when applicable;
 - `mapping-ledger.yaml` using the canonical APTL schema;
 - `evidence/` with raw or redacted evidence files;
 - `evidence/capture-limits.txt` with one first-class limit for every skipped
@@ -75,6 +84,9 @@ No `needs_gap_triage` row may remain at review time.
    process/listener state, OS release, users/groups, mounts, entrypoint,
    command, exposed ports, restart policy, resource limits, and source
    manifests where present. Use `jq` and `yq` for structured extraction.
+   For containerized targets, copy and adapt
+   `scripts/capture-container-evidence-template.sh` instead of rebuilding this
+   command sequence from memory.
 
 3. Run the required scanner baseline.
 
@@ -96,6 +108,13 @@ No `needs_gap_triage` row may remain at review time.
      `processes`, `listening_ports`, `docker_containers`, and `docker_images`;
    - filesystem manifest tooling for the asset scope: `mtree`, AIDE, or
      Tripwire.
+
+   If Syft CycloneDX output must be reduced for repository size, use
+   `scripts/normalize-syft-cyclonedx.jq`. The only built-in allowed transform is
+   stripping component properties named `syft:location:*` and deleting empty
+   `properties` arrays. This is allowed only when component identity remains
+   intact and separate filesystem provenance is captured or the omission is
+   recorded in `capture-limits.txt`.
 
 5. Hash and redact before committing.
 
@@ -174,6 +193,9 @@ Before returning:
   each declined command has a `capture-limits.txt` entry and ledger reference;
 - Syft, osquery, and filesystem-manifest attempts are present or explicitly
   declined;
+- Syft normalization, when used, is deterministic, scripted, records the
+  `syft:location:*` rule, and is paired with filesystem provenance or a
+  first-class limit;
 - every evidence file is referenced from `mapping-ledger.yaml`;
 - `capture-limits.txt` records skipped methodology steps as first-class
   limits;
