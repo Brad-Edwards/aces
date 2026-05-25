@@ -58,7 +58,12 @@ from aces.core.sdl.nodes import (
     RuntimeFilesystemEntryType,
     RuntimeFilesystemStability,
     RuntimeHealthStatus,
+    RuntimeIdentityAttribute,
+    RuntimeIdentityAuthorityKind,
+    RuntimeIdentityAuthorityProtocol,
     RuntimeIdentityProvenance,
+    RuntimeIdentityRelationshipKind,
+    RuntimeIdentitySubjectKind,
     RuntimeLocalGroup,
     RuntimeLocalIdentityInventory,
     RuntimeLocalUser,
@@ -849,6 +854,53 @@ class TestNode:
                 "redacted sudo rules must omit commands",
             ),
             (
+                {
+                    "identity_authorities": [
+                        {"authority_id": "techvault-domain"},
+                        {"authority_id": "techvault-domain"},
+                    ]
+                },
+                "Duplicate runtime identity authority",
+            ),
+            (
+                {
+                    "identity_authorities": [
+                        {
+                            "authority_id": "techvault-domain",
+                            "subjects": [
+                                {"subject_id": "alice", "kind": "user", "name": "alice"},
+                                {"subject_id": "alice", "kind": "user", "name": "alice"},
+                            ],
+                        }
+                    ]
+                },
+                "Duplicate runtime identity subject_id",
+            ),
+            (
+                {
+                    "identity_authorities": [
+                        {
+                            "authority_id": "techvault-domain",
+                            "relationships": [
+                                {
+                                    "relationship_id": "alice-admin",
+                                    "relationship_type": "member_of",
+                                    "source_ref": "alice",
+                                    "target_ref": "domain-admins",
+                                },
+                                {
+                                    "relationship_id": "alice-admin",
+                                    "relationship_type": "member_of",
+                                    "source_ref": "alice",
+                                    "target_ref": "domain-admins",
+                                },
+                            ],
+                        }
+                    ]
+                },
+                "Duplicate runtime identity relationship_id",
+            ),
+            (
                 {"container": {"init_process": {"executable_path": "sbin/docker-init"}}},
                 "executable_path",
             ),
@@ -1180,6 +1232,114 @@ class TestNode:
         rule = RuntimeSudoRule(principal="ops", command_redacted=True)
         assert rule.command_redacted is True
         assert rule.commands == []
+
+
+class TestRuntimeIdentityAuthorities:
+    def test_vm_runtime_identity_authority_inventory_surfaces(self):
+        n = Node(
+            type="vm",
+            services=[
+                {"port": 389, "name": "ldap"},
+                {"port": 88, "name": "kerberos"},
+            ],
+            runtime={
+                "identity_authorities": [
+                    {
+                        "authority_id": "techvault-domain",
+                        "kind": "domain",
+                        "name": "TechVault Domain",
+                        "namespace": "techvault.local",
+                        "domain_name": "TECHVAULT",
+                        "realm": "TECHVAULT.LOCAL",
+                        "base_dn": "DC=techvault,DC=local",
+                        "services": [
+                            {
+                                "service_id": "ldap-endpoint",
+                                "service": "ldap",
+                                "protocol": "LDAP",
+                                "address": "dc.techvault.local",
+                                "port": "389",
+                            }
+                        ],
+                        "subjects": [
+                            {
+                                "subject_id": "alice",
+                                "kind": "user",
+                                "name": "alice",
+                                "principal_name": "alice@TECHVAULT.LOCAL",
+                                "distinguished_name": "CN=Alice,CN=Users,DC=techvault,DC=local",
+                                "enabled": True,
+                                "attributes": [{"name": "department", "values": "security"}],
+                            },
+                            {
+                                "subject_id": "domain-admins",
+                                "kind": "group",
+                                "name": "Domain Admins",
+                                "distinguished_name": "CN=Domain Admins,CN=Users,DC=techvault,DC=local",
+                            },
+                            {
+                                "subject_id": "ldap-svc",
+                                "kind": "service_principal",
+                                "name": "ldap",
+                                "service_principal_names": ["LDAP/dc.techvault.local"],
+                            },
+                        ],
+                        "relationships": [
+                            {
+                                "relationship_id": "alice-admin",
+                                "relationship_type": "member-of",
+                                "source_ref": "alice",
+                                "target_ref": "domain-admins",
+                            },
+                            {
+                                "relationship_id": "trust-parent",
+                                "relationship_type": "trusts",
+                                "source_ref": "techvault-domain",
+                                "external_target": "corp.example",
+                            },
+                        ],
+                        "policies": [
+                            {
+                                "policy_id": "default-password-policy",
+                                "policy_kind": "password",
+                                "name": "Default Domain Policy",
+                                "applies_to_refs": ["techvault-domain"],
+                                "settings": [{"name": "min_length", "values": "14"}],
+                            }
+                        ],
+                    }
+                ]
+            },
+        )
+
+        authority = n.runtime.identity_authorities[0]
+        assert authority.authority_id == "techvault-domain"
+        assert authority.kind == RuntimeIdentityAuthorityKind.DOMAIN
+        assert authority.namespace == "techvault.local"
+        assert authority.domain_name == "TECHVAULT"
+        assert authority.realm == "TECHVAULT.LOCAL"
+        assert authority.base_dn == "DC=techvault,DC=local"
+        assert authority.services[0].protocol == RuntimeIdentityAuthorityProtocol.LDAP
+        assert authority.services[0].port == 389
+        assert authority.subjects[0].kind == RuntimeIdentitySubjectKind.USER
+        assert authority.subjects[0].enabled is True
+        assert authority.subjects[0].attributes[0].values == ["security"]
+        assert authority.subjects[2].service_principal_names == ["LDAP/dc.techvault.local"]
+        assert authority.relationships[0].relationship_type == RuntimeIdentityRelationshipKind.MEMBER_OF
+        assert authority.relationships[1].external_target == "corp.example"
+        assert authority.policies[0].applies_to_refs == ["techvault-domain"]
+        assert authority.policies[0].settings[0].values == ["14"]
+
+    def test_runtime_identity_secret_bearing_attribute_rejects_raw_values(self):
+        with pytest.raises(ValidationError, match="secret-bearing"):
+            RuntimeIdentityAttribute(
+                name="unicodePwd",
+                values=["not-for-fixtures"],
+                value_classification="plain",
+            )
+
+    def test_runtime_identity_authority_inventory_is_optional(self):
+        assert Node(type="vm", runtime={}).runtime.identity_authorities == []
 
 
 # ---------------------------------------------------------------------------

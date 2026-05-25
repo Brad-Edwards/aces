@@ -268,6 +268,17 @@ class SemanticValidator:
                 refs.add(base)
                 for database in dbsvc.databases:
                     refs.add(f"{base}.databases.{database.database_id}")
+            for authority in runtime.identity_authorities:
+                base = f"nodes.{node_name}.runtime.identity_authorities.{authority.authority_id}"
+                refs.add(base)
+                for service in authority.services:
+                    refs.add(f"{base}.services.{service.service_id}")
+                for subject in authority.subjects:
+                    refs.add(f"{base}.subjects.{subject.subject_id}")
+                for policy in authority.policies:
+                    refs.add(f"{base}.policies.{policy.policy_id}")
+                for relationship in authority.relationships:
+                    refs.add(f"{base}.relationships.{relationship.relationship_id}")
         return refs
 
     def _qualified_acl_refs(self) -> set[str]:
@@ -490,6 +501,7 @@ class SemanticValidator:
         self._verify_runtime_capability_overrides()
         self._verify_runtime_database_services()
         self._verify_runtime_ssh_servers()
+        self._verify_runtime_identity_authorities()
         self._verify_features()
         self._verify_conditions()
         self._verify_vulnerabilities()
@@ -965,6 +977,103 @@ class SemanticValidator:
                     f"'{subject_name}' does not match any process declared in "
                     "'runtime.processes' or 'runtime.process'"
                 )
+
+    def _verify_runtime_identity_authorities(self) -> None:
+        """Validate observed identity authorities against the scenario.
+
+        Authority endpoint ``service`` refs resolve like other node-scoped
+        runtime service ownership claims. Relationship and policy refs are
+        local to the authority inventory so membership and trust facts cannot
+        silently point at missing users, groups, policies, or the authority
+        record itself.
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.identity_authorities:
+                continue
+            service_names = self._node_service_names(node)
+            for authority in runtime.identity_authorities:
+                self._verify_identity_authority_services(node_name, authority, service_names)
+                local_refs = self._identity_authority_local_refs(authority)
+                self._verify_identity_authority_relationships(node_name, authority, local_refs)
+                self._verify_identity_authority_policies(node_name, authority, local_refs)
+
+    def _verify_identity_authority_services(
+        self,
+        node_name: str,
+        authority: object,
+        service_names: set[str],
+    ) -> None:
+        for service in authority.services:
+            self._verify_owned_service_ref(
+                node_name,
+                getattr(service, "service", ""),
+                service_names,
+                owner_label=(
+                    f"Node '{node_name}' runtime identity authority '{authority.authority_id}' "
+                    f"service '{service.service_id}'"
+                ),
+            )
+
+    @staticmethod
+    def _identity_authority_local_refs(authority: object) -> set[str]:
+        refs = {authority.authority_id}
+        refs.update(subject.subject_id for subject in authority.subjects)
+        refs.update(policy.policy_id for policy in authority.policies)
+        return refs
+
+    def _verify_identity_authority_relationships(
+        self,
+        node_name: str,
+        authority: object,
+        local_refs: set[str],
+    ) -> None:
+        label = f"Node '{node_name}' runtime identity authority '{authority.authority_id}'"
+        for relationship in authority.relationships:
+            rel_label = f"{label} relationship '{relationship.relationship_id}'"
+            self._verify_identity_ref(
+                getattr(relationship, "source_ref", ""),
+                local_refs,
+                label=rel_label,
+                field_name="source_ref",
+            )
+            if relationship.target_ref:
+                self._verify_identity_ref(
+                    relationship.target_ref,
+                    local_refs,
+                    label=rel_label,
+                    field_name="target_ref",
+                )
+
+    def _verify_identity_authority_policies(
+        self,
+        node_name: str,
+        authority: object,
+        local_refs: set[str],
+    ) -> None:
+        label = f"Node '{node_name}' runtime identity authority '{authority.authority_id}'"
+        for policy in authority.policies:
+            policy_label = f"{label} policy '{policy.policy_id}'"
+            for ref in policy.applies_to_refs:
+                self._verify_identity_ref(
+                    ref,
+                    local_refs,
+                    label=policy_label,
+                    field_name="applies_to_ref",
+                )
+
+    def _verify_identity_ref(
+        self,
+        ref: str,
+        local_refs: set[str],
+        *,
+        label: str,
+        field_name: str,
+    ) -> None:
+        if self._is_unresolved_var(ref):
+            return
+        if ref not in local_refs:
+            self._err(f"{label} {field_name} '{ref}' does not resolve inside identity authority")
 
     def _verify_runtime_database_services(self) -> None:
         """Validate observed database services against the scenario.
