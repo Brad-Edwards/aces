@@ -25,7 +25,13 @@ and the application HTTP route/API/UI surface (route paths and methods, owning
 service, auth/session requirements, typed request inputs, responses,
 template/static associations, route-specific vulnerability placement, exposed
 fixture secrets or diagnostic disclosures, and redirect/error behavior —
-[ADR-026](../../decisions/adrs/adr-026-application-http-surface-inventory.md)).
+[ADR-026](../../decisions/adrs/adr-026-application-http-surface-inventory.md)),
+database logical state (databases, schemas, tables, database-local roles,
+grants, listeners, settings, and database-access bindings -
+[ADR-029](../../decisions/adrs/adr-029-database-logical-state-runtime-surface.md)),
+and directory/domain/realm/IdP/IAM/federation identity-authority state
+(authority namespaces, services, subjects, policies, and typed relationships -
+[ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).
 Container image build
 provenance is a separate source-artifact expressivity surface tracked by issue
 #364 and [ADR-023](../../decisions/adrs/adr-023-container-image-build-provenance-surface.md);
@@ -106,5 +112,12 @@ completeness or usability for all cyber-range designs.
 | 19 | Locked Shields IT/OT | NATO exercise | 7 | 13 | 0 |
 
 Additionally, a 28-node enterprise lab topology (4 networks, 17 health checks, 17 vulnerabilities) has been described in SDL and validated.
+
+The directory/domain identity surface was added after the older Enterprise AD
+and AD trust/federation corpus entries. It is now covered by targeted parser
+and model tests plus the hospital ransomware scenario's AD/ADFS
+`runtime.identity_authorities` example. That coverage validates ACES's neutral
+reference and redaction mechanics; it is not a claim that ACES mirrors full
+AD DS, LDAP, Kerberos, SCIM, SAML, OIDC, cloud IAM, or BloodHound schemas.
 
 Property-based fuzz testing (Hypothesis) has run 1,050+ random inputs through the parser with zero unhandled crashes.

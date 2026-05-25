@@ -1,6 +1,8 @@
 # SDL Semantic Validation
 
-The semantic validator (`aces.core.sdl.validator.SemanticValidator`) runs 22 named passes after Pydantic structural validation. It collects all errors rather than failing on the first, so authors see every issue at once.
+The semantic validator (`aces.core.sdl.validator.SemanticValidator`) runs the
+named semantic pass set after Pydantic structural validation. It collects all
+errors rather than failing on the first, so authors see every issue at once.
 
 Under the repository's [coding standards](../reference/coding-standards.md),
 this layer is primarily an `FM1` and `FM2` surface. It is where static semantic
@@ -37,7 +39,8 @@ becoming a validator-only interpretation of the SDL.
 |------|----------------|
 | `verify_content` | Content targets reference existing VM nodes. |
 | `verify_accounts` | Account nodes reference existing VM nodes. |
-| `verify_relationships` | Source and target resolve to any named element in any section, including variables, relationships, content item names, named service bindings, and named ACL rules. Ambiguous bare refs are rejected with qualified alternatives. |
+| `verify_relationships` | Source and target resolve to any named element in any section, including variables, relationships, content item names, named service bindings, runtime identity-authority refs, and named ACL rules. Ambiguous bare refs are rejected with qualified alternatives. |
+| `verify_runtime_identity_authorities` | Runtime identity-authority services resolve to same-node service bindings. Local relationship and policy refs resolve within the owning authority across authority, service, subject, policy, and relationship stable ids. |
 | `verify_agents` | Entity references resolve. Starting accounts and initial-knowledge accounts exist in accounts section. Allowed subnets and initial-knowledge subnets must resolve to switch-backed infrastructure entries. Initial-knowledge hosts must resolve to VM nodes. Initial-knowledge services exist in `nodes.*.services[].name`. |
 | `verify_participant_behavior` | Agent action refs resolve to declared action contracts, observation-boundary refs resolve to declared boundaries, interaction refs resolve to declared actions or targetable state, and boundary view rules/transitions resolve to declared observable, hidden, or evidence refs. |
 | `verify_objectives` | Objective actors resolve (`agent` or `entity`). Objective actions must be declared by the referenced agent. Targets resolve to named scenario elements, including qualified service/ACL refs and section-qualified top-level refs. Ambiguous bare refs are rejected with qualified alternatives. Success criteria resolve to declared conditions/metrics/evaluations/TLOs/goals. Optional windows resolve through one shared normalized analysis over stories/scripts/events/workflows/workflow-steps, must remain internally consistent, and fail closed on dangling or out-of-window refs. Objective dependencies must resolve and stay acyclic. |
@@ -66,6 +69,19 @@ by `username`, local groups are unique by both `name` and `gid`, and sudo rules
 are unique by principal plus command scope. A sudo rule with
 `command_redacted: true` must omit its `commands` list, keeping a withheld
 command scope distinct from a genuinely empty one.
+
+The optional `runtime.identity_authorities` inventory also has model-local and
+semantic rules. Authorities, services, subjects, policies, relationships,
+attributes, and settings use stable non-empty ids or names. Stable ids must be
+unique across the authority-local reference namespace, not just within each
+child collection. The model also rejects duplicate attribute and setting names,
+normalizes bounded kind/protocol/provenance/value classifications, and keeps
+raw values out of secret-bearing attributes or settings. Authority services may
+reference only services declared on the same node. Authority-local refs resolve
+against all stable ids in the authority:
+`authority_id`, `service_id`, `subject_id`, `policy_id`, and
+`relationship_id`. Provider names and external object identifiers are data, not
+reference keys.
 
 The optional `source.build` container image provenance block carries its own
 model-local rules. Build-argument and image-default-environment names must be
@@ -174,4 +190,15 @@ Generic refs are indexed in two forms:
 - bare names like `webapp` when they are unique in the generic-ref namespace
 - qualified names like `nodes.webapp`, `features.postgres`, `infrastructure.dmz-net`, or `content.mailbox.items.invoice.eml`
 
-The index also includes nested entity dot-paths, named service bindings (`nodes.<node>.services.<service_name>`), and named ACL rules (`infrastructure.<infra>.acls.<acl_name>`). This means a relationship can reference any node, feature, condition, vulnerability, infrastructure entry, metric, evaluation, TLO, goal, entity (including nested), inject, event, script, story, content entry, content item, account, agent, objective, workflow, relationship, variable, named service binding, or named ACL rule. When a bare ref maps to multiple elements, validation fails and asks the author to use one of the qualified alternatives.
+The index also includes nested entity dot-paths, named service bindings
+(`nodes.<node>.services.<service_name>`), runtime identity-authority refs
+(`nodes.<node>.runtime.identity_authorities.<authority_id>` plus nested
+service, subject, policy, and relationship refs), and named ACL rules
+(`infrastructure.<infra>.acls.<acl_name>`). This means a relationship can
+reference any node, feature, condition, vulnerability, infrastructure entry,
+metric, evaluation, TLO, goal, entity (including nested), inject, event,
+script, story, content entry, content item, account, agent, objective,
+workflow, relationship, variable, named service binding, runtime
+identity-authority object, or named ACL rule. When a bare ref maps to multiple
+elements, validation fails and asks the author to use one of the qualified
+alternatives.
