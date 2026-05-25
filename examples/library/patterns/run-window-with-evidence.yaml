@@ -1,0 +1,23 @@
+pattern: aces-library-pattern
+version: 1
+id: run-window-with-evidence
+surface: run
+requirement_refs: [AUT-806]
+source_refs:
+  - examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
+  - docs/explain/sdl/sections.md
+summary: Represent current run templates with stories, scripts, events, objectives, and workflow windows.
+intent: >
+  Give authors a reusable run shape that connects timed exercise material to
+  objective validation without adding backend-specific run storage.
+use_when:
+  - A run needs a timed story or script window.
+  - Objective success should be scoped to a specific event or story interval.
+authoring_steps:
+  - Define injects and events before scripts reference them.
+  - Put events in scripts, scripts in stories, and stories in objective windows.
+  - Keep workflow steps aligned with the same objective boundaries.
+  - Capture evidence as named content or evidence refs where current surfaces allow it.
+validation:
+  - command: parse_sdl_file
+    expected: story, script, event, objective, and workflow references resolve.
