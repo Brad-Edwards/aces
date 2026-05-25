@@ -85,6 +85,13 @@ explain/sdl/runtime-architecture
 
 ```{toctree}
 :maxdepth: 2
+:caption: Asset Inventory
+
+aces/inventory/index
+```
+
+```{toctree}
+:maxdepth: 2
 :caption: Architecture Decisions
 
 decisions/adrs/README
