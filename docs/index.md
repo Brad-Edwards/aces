@@ -121,6 +121,7 @@ decisions/adrs/adr-030-process-scoped-linux-capability-policy
 decisions/adrs/adr-031-ssh-server-configuration-surface
 decisions/adrs/adr-032-directory-domain-identity-runtime-surface
 decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state
+decisions/adrs/adr-034-runtime-software-component-inventory
 decisions/sem-213-temporal-participant-preflight
 ```
 

@@ -244,6 +244,7 @@ taxonomy of container, orchestrator, or host-security concerns.
 | Dockerfile/build execution              | Build executor mechanics are delivery/packaging; observable image/source provenance is an artifact-boundary fact | Backend implementation layer for execution mechanics; `Source.build` provenance when observed; see ADR-023 |
 | Observable container image build provenance | Artifact provenance, not deployment authoring | SDL source-artifact surface; see ADR-023 |
 | Runtime-effective container entrypoints | Backend/runtime state              | `Node.runtime.container` when observed |
+| Runtime software component identity below package-manager rows | Runtime-observed state, not deployment authoring, process execution, or HTTP/API inventory | `Node.runtime.software_components` when observed; see ADR-034 |
 | Local identity database (`/etc/passwd`, `/etc/group`, sudoers) | Runtime-observed state, not deployment authoring | `Node.runtime.local_identity` when observed; see ADR-024 |
 | Container network realization (aliases, DNS names, endpoint metadata, host-published bindings) | Runtime-observed state, not topology authoring | `Node.runtime.network` when observed; see ADR-025 |
 | Application HTTP route/API/UI surface (routes, methods, request inputs, responses, route-specific weakness placement) | Participant-observable application state, not transport-service or vulnerability authoring | `Node.runtime.applications` when observed; see ADR-026 |

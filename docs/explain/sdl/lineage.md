@@ -37,6 +37,13 @@ see [Design Precedents](precedents.md).
 - CyRIS, KYPO, OCR, VSDL, and CRACK are prior scenario-definition systems.
   Their strongest shared lesson is that scenario meaning must be more than a
   deployment script.
+- SBOM standards such as [CycloneDX](https://cyclonedx.org/specification/overview/)
+  and [SPDX](https://spdx.dev/use/specifications/) inform the runtime software
+  component identity vocabulary: component type, version, purl/CPE, hashes, and
+  package or manifest lineage are useful portable facts. ACES adapts those
+  identity concepts under `Node.runtime.software_components`; it does not import
+  raw SBOM documents, scanner output, or invocation/capability semantics into
+  the SDL schema.
 
 ## Directory, Domain, And Identity Authority Semantics
 

@@ -9,6 +9,9 @@ phases:
       - GOV-920
       - GOV-921
       - GOV-922
+  - id: sdl-language
+    patterns:
+      - ^DSL-
   - id: api400-core
     requirements:
       - API-412
@@ -89,6 +92,14 @@ ownership:
     - implementations/python/packages/aces_processor
     - implementations/python/pyproject.toml
     - implementations/python/src/aces
+    - implementations/python/tests
+    - CHANGELOG.md
+  sdl-language:
+    - contracts/schemas/sdl
+    - docs/decisions/adrs
+    - docs/explain/sdl
+    - docs/index.md
+    - implementations/python/packages/aces_sdl
     - implementations/python/tests
     - CHANGELOG.md
   api400-core:

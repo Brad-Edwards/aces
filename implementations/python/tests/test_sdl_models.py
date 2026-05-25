@@ -83,6 +83,8 @@ from aces.core.sdl.nodes import (
     RuntimePublishedPort,
     RuntimeRestartPolicy,
     RuntimeSensitivityClassification,
+    RuntimeSoftwareComponentProvenance,
+    RuntimeSoftwareComponentType,
     RuntimeSudoPrincipalKind,
     RuntimeSudoRule,
     parse_ram,
@@ -414,6 +416,24 @@ class TestNode:
                         "version": "1.2.4-r2",
                     }
                 ],
+                "software_components": [
+                    {
+                        "component_id": "shuffle-backend-app",
+                        "name": "shuffle-backend",
+                        "version": "1.2.3",
+                        "component_type": "application",
+                        "provenance": "scanner",
+                        "ecosystem": "go",
+                        "purl": "pkg:golang/github.com/frikky/shuffle@1.2.3",
+                        "cpe": "cpe:2.3:a:shuffle:shuffle:1.2.3:*:*:*:*:*:*:*",
+                        "package_manager": "apk",
+                        "package_name": "shuffle-backend",
+                        "package_version": "1.2.3-r0",
+                        "manifest_path": "/app/go.mod",
+                        "installed_paths": ["/app/shufflebackend", "/app/go.mod"],
+                        "hashes": [{"algorithm": "sha256", "value": "abc123"}],
+                    }
+                ],
                 "dependency_manifests": [
                     {
                         "ecosystem": "go",
@@ -456,6 +476,20 @@ class TestNode:
         assert runtime.packages[0].manager == "apk"
         assert runtime.packages[0].name == "musl"
         assert runtime.packages[0].version == "1.2.4-r2"
+        assert runtime.software_components[0].component_id == "shuffle-backend-app"
+        assert runtime.software_components[0].name == "shuffle-backend"
+        assert runtime.software_components[0].version == "1.2.3"
+        assert runtime.software_components[0].component_type == RuntimeSoftwareComponentType.APPLICATION
+        assert runtime.software_components[0].provenance == RuntimeSoftwareComponentProvenance.SCANNER
+        assert runtime.software_components[0].ecosystem == "go"
+        assert runtime.software_components[0].purl == "pkg:golang/github.com/frikky/shuffle@1.2.3"
+        assert runtime.software_components[0].cpe == "cpe:2.3:a:shuffle:shuffle:1.2.3:*:*:*:*:*:*:*"
+        assert runtime.software_components[0].package_manager == "apk"
+        assert runtime.software_components[0].package_name == "shuffle-backend"
+        assert runtime.software_components[0].package_version == "1.2.3-r0"
+        assert runtime.software_components[0].manifest_path == "/app/go.mod"
+        assert runtime.software_components[0].installed_paths == ["/app/shufflebackend", "/app/go.mod"]
+        assert runtime.software_components[0].hashes[0].algorithm == "sha256"
         assert runtime.dependency_manifests[0].ecosystem == "go"
         assert runtime.dependency_manifests[0].path == "/app/go.mod"
         assert runtime.dependency_manifests[0].format == "go-module"
@@ -467,6 +501,33 @@ class TestNode:
         assert runtime.package_vulnerabilities[0].scanner == "trivy"
         assert runtime.package_vulnerabilities[0].image_digest == "sha256:abc123"
         assert runtime.package_vulnerabilities[0].scan_time == "2026-05-20T12:00:00Z"
+
+    def test_vm_runtime_rejects_duplicate_software_component_id(self):
+        with pytest.raises(ValidationError, match="Duplicate runtime software component 'webapp'"):
+            Node(
+                type="vm",
+                runtime={
+                    "software_components": [
+                        {"component_id": "webapp", "name": "web application"},
+                        {"component_id": "webapp", "name": "bundled library"},
+                    ],
+                },
+            )
+
+    def test_vm_runtime_software_component_paths_must_be_absolute(self):
+        with pytest.raises(ValidationError, match="manifest_path must be an absolute path"):
+            Node(
+                type="vm",
+                runtime={
+                    "software_components": [
+                        {
+                            "component_id": "webapp",
+                            "name": "web application",
+                            "manifest_path": "app/package-lock.json",
+                        }
+                    ],
+                },
+            )
 
     def test_vm_runtime_operational_surfaces(self):
         n = Node(

@@ -357,6 +357,23 @@ nodes:
         - manager: apk
           name: musl
           version: 1.2.4-r2
+      software-components:
+        - component-id: shuffle-backend-app
+          name: shuffle-backend
+          version: 1.2.3
+          component-type: application
+          provenance: scanner
+          ecosystem: go
+          purl: "pkg:golang/github.com/frikky/shuffle@1.2.3"
+          cpe: "cpe:2.3:a:shuffle:shuffle:1.2.3:*:*:*:*:*:*:*"
+          package-manager: apk
+          package-name: shuffle-backend
+          package-version: 1.2.3-r0
+          manifest-path: /app/go.mod
+          installed-paths: [/app/shufflebackend, /app/go.mod]
+          hashes:
+            - algorithm: sha256
+              value: abc123
       dependency-manifests:
         - ecosystem: go
           path: /app/go.mod
@@ -444,6 +461,19 @@ nodes:
         assert node.runtime.packages[0].manager == "apk"
         assert node.runtime.packages[0].name == "musl"
         assert node.runtime.packages[0].version == "1.2.4-r2"
+        assert node.runtime.software_components[0].component_id == "shuffle-backend-app"
+        assert node.runtime.software_components[0].name == "shuffle-backend"
+        assert node.runtime.software_components[0].version == "1.2.3"
+        assert node.runtime.software_components[0].component_type == "application"
+        assert node.runtime.software_components[0].provenance == "scanner"
+        assert node.runtime.software_components[0].ecosystem == "go"
+        assert node.runtime.software_components[0].purl == "pkg:golang/github.com/frikky/shuffle@1.2.3"
+        assert node.runtime.software_components[0].package_manager == "apk"
+        assert node.runtime.software_components[0].package_name == "shuffle-backend"
+        assert node.runtime.software_components[0].package_version == "1.2.3-r0"
+        assert node.runtime.software_components[0].manifest_path == "/app/go.mod"
+        assert node.runtime.software_components[0].installed_paths == ["/app/shufflebackend", "/app/go.mod"]
+        assert node.runtime.software_components[0].hashes[0].value == "abc123"
         assert node.runtime.dependency_manifests[0].ecosystem == "go"
         assert node.runtime.dependency_manifests[0].path == "/app/go.mod"
         assert node.runtime.dependency_manifests[0].format == "go-module"

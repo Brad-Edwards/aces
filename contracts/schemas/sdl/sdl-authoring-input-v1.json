@@ -4402,6 +4402,13 @@
           "title": "Processes",
           "type": "array"
         },
+        "software_components": {
+          "items": {
+            "$ref": "#/$defs/RuntimeSoftwareComponent"
+          },
+          "title": "Software Components",
+          "type": "array"
+        },
         "ssh_servers": {
           "items": {
             "$ref": "#/$defs/SshServerConfig"
@@ -6981,6 +6988,167 @@
         "unknown"
       ],
       "title": "RuntimeSensitivityClassification",
+      "type": "string"
+    },
+    "RuntimeSoftwareComponent": {
+      "additionalProperties": false,
+      "description": "A software component observed as part of a runtime node's state.",
+      "properties": {
+        "component_id": {
+          "title": "Component Id",
+          "type": "string"
+        },
+        "component_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSoftwareComponentType"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Component Type"
+        },
+        "cpe": {
+          "default": "",
+          "title": "Cpe",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "ecosystem": {
+          "default": "",
+          "title": "Ecosystem",
+          "type": "string"
+        },
+        "hashes": {
+          "items": {
+            "$ref": "#/$defs/RuntimeSoftwareComponentHash"
+          },
+          "title": "Hashes",
+          "type": "array"
+        },
+        "installed_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Installed Paths",
+          "type": "array"
+        },
+        "manifest_path": {
+          "default": "",
+          "title": "Manifest Path",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "package_manager": {
+          "default": "",
+          "title": "Package Manager",
+          "type": "string"
+        },
+        "package_name": {
+          "default": "",
+          "title": "Package Name",
+          "type": "string"
+        },
+        "package_version": {
+          "default": "",
+          "title": "Package Version",
+          "type": "string"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSoftwareComponentProvenance"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        },
+        "purl": {
+          "default": "",
+          "title": "Purl",
+          "type": "string"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "component_id",
+        "name"
+      ],
+      "title": "RuntimeSoftwareComponent",
+      "type": "object"
+    },
+    "RuntimeSoftwareComponentHash": {
+      "additionalProperties": false,
+      "description": "Digest attached to an observed runtime software component.",
+      "properties": {
+        "algorithm": {
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "title": "RuntimeSoftwareComponentHash",
+      "type": "object"
+    },
+    "RuntimeSoftwareComponentProvenance": {
+      "description": "Origin class for an observed runtime software component fact.",
+      "enum": [
+        "package_manager",
+        "dependency_manifest",
+        "sbom",
+        "scanner",
+        "image_metadata",
+        "filesystem",
+        "process_inspection",
+        "operator",
+        "self_reported",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeSoftwareComponentProvenance",
+      "type": "string"
+    },
+    "RuntimeSoftwareComponentType": {
+      "description": "Portable type for a software component observed on a runtime node.",
+      "enum": [
+        "application",
+        "framework",
+        "library",
+        "container",
+        "platform",
+        "operating_system",
+        "device",
+        "device_driver",
+        "firmware",
+        "file",
+        "data",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeSoftwareComponentType",
       "type": "string"
     },
     "RuntimeSudoPrincipalKind": {
