@@ -87,6 +87,9 @@ _BACKEND_CONCEPT_BINDING_SCOPES = frozenset(
         "capabilities.provisioner.supported_account_features",
         "capabilities.orchestrator.supported_sections",
         "capabilities.evaluator.supported_sections",
+        "capabilities.participant_runtime.supported_participant_roles",
+        "capabilities.participant_runtime.supported_behavior_features",
+        "capabilities.participant_runtime.supported_interaction_features",
     }
 )
 
@@ -740,10 +743,45 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
     ``restart`` / ``terminate`` plus ``status`` / ``results`` /
     ``history``. Consumers of the manifest can infer the
     ``FULL_REMOTE_CONTROL_PLANE`` conformance profile from this block.
+
+    API-405 support dimensions live here because they are backend apparatus
+    claims: which participant roles, behavior features, and interaction
+    features this participant runtime can actually realize.
     """
 
     name: NonEmptyString
+    supported_participant_roles: list[NonEmptyString] = Field(
+        min_length=1,
+        json_schema_extra={"uniqueItems": True},
+    )
+    supported_behavior_features: list[NonEmptyString] = Field(
+        min_length=1,
+        json_schema_extra={"uniqueItems": True},
+    )
+    supported_interaction_features: list[NonEmptyString] = Field(
+        min_length=1,
+        json_schema_extra={"uniqueItems": True},
+    )
     constraints: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _validate_api_405_declarations(self) -> ParticipantRuntimeCapabilitiesModel:
+        _validate_unique_string_values("supported_participant_roles", self.supported_participant_roles)
+        _validate_unique_string_values("supported_behavior_features", self.supported_behavior_features)
+        _validate_unique_string_values("supported_interaction_features", self.supported_interaction_features)
+        _validate_controlled_vocabulary_terms(
+            "capabilities.participant_runtime.supported_participant_roles",
+            self.supported_participant_roles,
+        )
+        _validate_controlled_vocabulary_terms(
+            "capabilities.participant_runtime.supported_behavior_features",
+            self.supported_behavior_features,
+        )
+        _validate_controlled_vocabulary_terms(
+            "capabilities.participant_runtime.supported_interaction_features",
+            self.supported_interaction_features,
+        )
+        return self
 
 
 class BackendCapabilitiesV2Model(ContractModel):
@@ -1301,6 +1339,13 @@ def _validate_controlled_vocabulary_terms(scope: str, values: list[str]) -> None
     from .controlled_vocabularies import validate_controlled_vocabulary_scope_values
 
     validate_controlled_vocabulary_scope_values(scope, values)
+
+
+def _validate_unique_string_values(field_name: str, values: list[str]) -> None:
+    duplicates = sorted({value for value in values if values.count(value) > 1})
+    if duplicates:
+        joined = ", ".join(duplicates)
+        raise ValueError(f"{field_name} must not contain duplicate values: {joined}")
 
 
 def _validate_canonical_concept_bindings(model: ContractModel, *, allowed_scopes: frozenset[str]) -> None:

@@ -92,6 +92,11 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
             "participant_runtime": (
                 {
                     "name": manifest.participant_runtime.name,
+                    "supported_participant_roles": sorted(manifest.participant_runtime.supported_participant_roles),
+                    "supported_behavior_features": sorted(manifest.participant_runtime.supported_behavior_features),
+                    "supported_interaction_features": sorted(
+                        manifest.participant_runtime.supported_interaction_features
+                    ),
                     "constraints": dict(manifest.participant_runtime.constraints),
                 }
                 if manifest.participant_runtime is not None
