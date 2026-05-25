@@ -159,6 +159,24 @@ def _reject_duplicates(values: Any, *, label: str, container_label: str) -> None
         seen.add(value)
 
 
+def _reject_duplicate_local_ref_ids(authority: "RuntimeIdentityAuthority") -> None:
+    seen: dict[str, str] = {}
+    entries: list[tuple[str, str]] = [("authority_id", authority.authority_id)]
+    entries.extend(("service_id", service.service_id) for service in authority.services)
+    entries.extend(("subject_id", subject.subject_id) for subject in authority.subjects)
+    entries.extend(("policy_id", policy.policy_id) for policy in authority.policies)
+    entries.extend(("relationship_id", relationship.relationship_id) for relationship in authority.relationships)
+
+    for label, value in entries:
+        prior = seen.get(value)
+        if prior is not None:
+            raise ValueError(
+                f"Duplicate runtime identity stable id '{value}' in identity authority "
+                f"'{authority.authority_id}' across {prior} and {label}"
+            )
+        seen[value] = label
+
+
 class RuntimeIdentityAttribute(SDLModel):
     """Observed identity attribute or bounded setting.
 
@@ -441,4 +459,5 @@ class RuntimeIdentityAuthority(SDLModel):
             label="relationship_id",
             container_label=container,
         )
+        _reject_duplicate_local_ref_ids(self)
         return self

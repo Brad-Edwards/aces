@@ -250,11 +250,12 @@ class SemanticValidator:
         return refs
 
     def _qualified_runtime_refs(self) -> set[str]:
-        """Qualified refs for node-scoped runtime applications and database objects.
+        """Qualified refs for node-scoped runtime inventories.
 
         These let a top-level relationship endpoint resolve to a runtime
-        application surface or a database service / logical database, so an
-        application-to-database access edge is expressible (ADR-029 §4).
+        application surface, database service / logical database, or
+        identity-authority object. This keeps runtime-observed logical state
+        targetable without promoting those records to top-level SDL sections.
         """
         refs: set[str] = set()
         for node_name, node in self._s.nodes.items():
@@ -778,7 +779,8 @@ class SemanticValidator:
 
         The ref is a bare ``Node.services[].name`` or the qualified
         ``nodes.<node>.services.<name>`` form, and must resolve to a service on
-        the same node. Shared by runtime applications and database services.
+        the same node. Shared by runtime applications, database services, and
+        identity authority services.
         """
         if not ref or self._is_unresolved_var(ref):
             return
@@ -1018,8 +1020,10 @@ class SemanticValidator:
     @staticmethod
     def _identity_authority_local_refs(authority: object) -> set[str]:
         refs = {authority.authority_id}
+        refs.update(service.service_id for service in authority.services)
         refs.update(subject.subject_id for subject in authority.subjects)
         refs.update(policy.policy_id for policy in authority.policies)
+        refs.update(relationship.relationship_id for relationship in authority.relationships)
         return refs
 
     def _verify_identity_authority_relationships(

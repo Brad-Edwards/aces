@@ -34,6 +34,28 @@ LDAP/X.500, Kerberos realms, SAML/OIDC identity providers, cloud IAM
 directories, SCIM provisioning systems, and authorization systems share enough
 identity-authority pressure that the boundary should be provider-neutral.
 
+The design uses primary standards for protocol and object semantics:
+LDAP/X.500 directory information models
+([RFC 4510](https://www.rfc-editor.org/rfc/rfc4510),
+[RFC 4512](https://www.rfc-editor.org/rfc/rfc4512)), Kerberos
+([RFC 4120](https://www.rfc-editor.org/rfc/rfc4120)), SCIM
+([RFC 7643](https://www.rfc-editor.org/rfc/rfc7643),
+[RFC 7644](https://www.rfc-editor.org/rfc/rfc7644)),
+[SAML V2.0 Assertions and Protocols](http://docs.oasis-open.org/security/saml/v2.0/saml-core-2.0-os.pdf),
+OAuth 2.0 ([RFC 6749](https://www.rfc-editor.org/rfc/rfc6749)),
+[OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0-18.html),
+[NIST SP 800-63C-4](https://doi.org/10.6028/NIST.SP.800-63C-4),
+[NIST SP 800-162](https://doi.org/10.6028/NIST.SP.800-162), and
+[NIST SP 800-207](https://doi.org/10.6028/NIST.SP.800-207). It uses
+access-control literature, especially Lampson's access matrix, Saltzer and
+Schroeder's protection principles, RBAC, and ABAC, to justify separating
+subjects, attributes, policies, and authority boundaries. It uses cyber-range
+and verification/validation literature as adjacent evidence for why authored
+scenario state, observed runtime state, and evidence/telemetry must remain
+separate and reviewable. It does not treat any one vendor export format,
+BloodHound/OpenGraph graph, OCSF event, UCO object, or backend inspect payload
+as the normative SDL shape.
+
 ## Decision
 
 ### 1. Model identity authorities under node runtime
@@ -84,19 +106,33 @@ The portable reference targets are stable ids:
 - `policy_id`
 - `relationship_id`
 
+Those ids share one authority-local namespace. A `service_id`, `subject_id`,
+`policy_id`, or `relationship_id` must not reuse the authority id or any other
+stable id in the same authority, because local refs are intentionally bare
+symbols.
+
 Membership, trust, federation, sync, delegation, ownership, and association
 facts are typed `RuntimeIdentityRelationship` records. Local `source_ref` and
 `target_ref` values resolve within the owning authority. Trust/federation to a
 system outside the inventory uses `external_target`.
 
-Qualified references are published for the authority and subjects, for example:
+Qualified references are published for every stable id family, for example:
 
 `nodes.<node>.runtime.identity_authorities.<authority_id>`
 
+`nodes.<node>.runtime.identity_authorities.<authority_id>.services.<service_id>`
+
 `nodes.<node>.runtime.identity_authorities.<authority_id>.subjects.<subject_id>`
 
+`nodes.<node>.runtime.identity_authorities.<authority_id>.policies.<policy_id>`
+
+`nodes.<node>.runtime.identity_authorities.<authority_id>.relationships.<relationship_id>`
+
 Those refs participate in generic relationship/objective resolution and module
-composition rewrites.
+composition rewrites. Authority-local refs use the same stable id set, so
+`source_ref`, `target_ref`, and `applies_to_refs` may target the owning
+authority, a service, a subject, a policy, or a relationship without forcing a
+fully qualified path inside the authority.
 
 ### 4. Model only a neutral core
 
@@ -118,6 +154,16 @@ The initial neutral core is:
 Vendor-specific AD DS, LDAP schema, SCIM enterprise, IAM, SAML, OIDC, or UCO
 fields may be added later only by extending this neutral seam deliberately. The
 base shape must not mirror any vendor schema wholesale.
+
+Provider-stable external identifiers are carried as observed data rather than
+ACES reference identity. Where a portable field exists, it is used directly
+(`distinguished_name`, `principal_name`, `service_principal_names`, `issuer`,
+`tenant_id`, or `base_dn`). Otherwise the identifier belongs in a bounded
+attribute or setting with provenance and value classification, for example AD
+`objectGUID`/SID, LDAP `entryUUID`, SCIM `id`/`externalId`, SAML NameID, or
+OIDC `iss` + `sub`. This lets ACES preserve evidence needed for comparison or
+translation without promising provider-level equality semantics across
+unrelated authorities.
 
 ### 5. Reuse existing SDL gates
 

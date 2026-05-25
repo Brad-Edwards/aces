@@ -117,6 +117,9 @@ decisions/adrs/adr-026-application-http-surface-inventory
 decisions/adrs/adr-027-container-init-reaper-runtime-surface
 decisions/adrs/adr-028-container-seccomp-security-options-surface
 decisions/adrs/adr-029-database-logical-state-runtime-surface
+decisions/adrs/adr-030-process-scoped-linux-capability-policy
+decisions/adrs/adr-031-ssh-server-configuration-surface
+decisions/adrs/adr-032-directory-domain-identity-runtime-surface
 decisions/sem-213-temporal-participant-preflight
 ```
 

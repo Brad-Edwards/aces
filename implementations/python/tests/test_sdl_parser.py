@@ -1904,6 +1904,94 @@ nodes:
         with pytest.raises(SDLValidationError, match="applies_to_ref 'missing-subject' does not resolve"):
             parse_sdl(sdl)
 
+    def test_identity_authority_local_refs_include_stable_service_and_relationship_ids(self):
+        sdl = """
+name: directory-local-refs
+nodes:
+  ad:
+    type: vm
+    os: windows
+    services:
+      - {port: 389, name: ldap}
+    runtime:
+      identity-authorities:
+        - authority-id: techvault-domain
+          services:
+            - service-id: ldap-endpoint
+              service: ldap
+              protocol: ldap
+          subjects:
+            - {subject-id: alice, kind: user, name: alice}
+            - {subject-id: domain-admins, kind: group, name: Domain Admins}
+          relationships:
+            - relationship-id: alice-admin
+              relationship-type: member-of
+              source-ref: alice
+              target-ref: domain-admins
+            - relationship-id: ldap-documents-membership
+              relationship-type: associated
+              source-ref: ldap-endpoint
+              target-ref: alice-admin
+          policies:
+            - policy-id: ldap-audit-policy
+              policy-kind: other
+              applies-to-refs: [ldap-endpoint, alice-admin]
+"""
+        authority = parse_sdl(sdl).nodes["ad"].runtime.identity_authorities[0]
+
+        assert authority.relationships[1].source_ref == "ldap-endpoint"
+        assert authority.relationships[1].target_ref == "alice-admin"
+        assert authority.policies[0].applies_to_refs == ["ldap-endpoint", "alice-admin"]
+
+    @pytest.mark.parametrize(
+        ("left", "right"),
+        [
+            ("authority", "service"),
+            ("authority", "subject"),
+            ("authority", "policy"),
+            ("authority", "relationship"),
+            ("service", "subject"),
+            ("service", "policy"),
+            ("service", "relationship"),
+            ("subject", "policy"),
+            ("subject", "relationship"),
+            ("policy", "relationship"),
+        ],
+    )
+    def test_identity_authority_local_ref_ids_must_be_unique_across_id_families(self, left, right):
+        authority_id = "shared" if "authority" in (left, right) else "techvault-domain"
+        service_id = "shared" if "service" in (left, right) else "ldap-endpoint"
+        subject_id = "shared" if "subject" in (left, right) else "alice"
+        policy_id = "shared" if "policy" in (left, right) else "default-policy"
+        relationship_id = "shared" if "relationship" in (left, right) else "alice-external"
+        sdl = f"""
+name: ambiguous-directory-local-ref
+nodes:
+  ad:
+    type: vm
+    os: windows
+    runtime:
+      identity-authorities:
+        - authority-id: {authority_id}
+          services:
+            - service-id: {service_id}
+              protocol: ldap
+          subjects:
+            - subject-id: {subject_id}
+              kind: user
+              name: alice
+          relationships:
+            - relationship-id: {relationship_id}
+              relationship-type: associated
+              source-ref: {subject_id}
+              external-target: external.example
+          policies:
+            - policy-id: {policy_id}
+              applies-to-refs: [{subject_id}]
+"""
+        with pytest.raises(SDLParseError, match="Duplicate runtime identity stable id 'shared'"):
+            parse_sdl(sdl)
+
     def test_imported_identity_authority_refs_survive_module_namespacing(self, tmp_path):
         imported = tmp_path / "shared-directory.yaml"
         imported.write_text(
