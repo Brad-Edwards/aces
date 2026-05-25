@@ -41,6 +41,20 @@ from .runtime_container import (
     RuntimeNamespaceConfiguration,
 )
 from .runtime_database import DatabaseService
+from .runtime_directory_identity import (
+    RuntimeIdentityAttribute,
+    RuntimeIdentityAuthority,
+    RuntimeIdentityAuthorityKind,
+    RuntimeIdentityAuthorityProtocol,
+    RuntimeIdentityAuthorityService,
+    RuntimeIdentityPolicy,
+    RuntimeIdentityPolicyKind,
+    RuntimeIdentityRecordOrigin,
+    RuntimeIdentityRelationship,
+    RuntimeIdentityRelationshipKind,
+    RuntimeIdentitySubject,
+    RuntimeIdentitySubjectKind,
+)
 from .runtime_filesystem import (
     RuntimeFilesystemEntry,
     RuntimeFilesystemEntryType,
@@ -121,7 +135,19 @@ __all__ = [
     "RuntimeHealthObservation",
     "RuntimeHealthStatus",
     "RuntimeHealthcheckLog",
+    "RuntimeIdentityAttribute",
+    "RuntimeIdentityAuthority",
+    "RuntimeIdentityAuthorityKind",
+    "RuntimeIdentityAuthorityProtocol",
+    "RuntimeIdentityAuthorityService",
+    "RuntimeIdentityPolicy",
+    "RuntimeIdentityPolicyKind",
     "RuntimeIdentityProvenance",
+    "RuntimeIdentityRecordOrigin",
+    "RuntimeIdentityRelationship",
+    "RuntimeIdentityRelationshipKind",
+    "RuntimeIdentitySubject",
+    "RuntimeIdentitySubjectKind",
     "RuntimeInitProcess",
     "RuntimeLocalGroup",
     "RuntimeLocalIdentityInventory",
@@ -479,6 +505,7 @@ class RuntimeConfiguration(SDLModel):
     container: RuntimeContainerConfiguration | None = None
     health: RuntimeHealthObservation | None = None
     local_identity: RuntimeLocalIdentityInventory | None = None
+    identity_authorities: list[RuntimeIdentityAuthority] = Field(default_factory=list)
     network: RuntimeNetworkRealization | None = None
     applications: list[RuntimeApplicationSurface] = Field(default_factory=list)
     database_services: list[DatabaseService] = Field(default_factory=list)
@@ -497,4 +524,5 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.applications, attr="application_id", label="application_id")
         _reject_duplicate_keys(self.database_services, attr="database_service_id", label="database_service_id")
         _reject_duplicate_keys(self.ssh_servers, attr="server_id", label="ssh_server server_id")
+        _reject_duplicate_keys(self.identity_authorities, attr="authority_id", label="identity authority")
         return self

@@ -4305,6 +4305,13 @@
           ],
           "default": null
         },
+        "identity_authorities": {
+          "items": {
+            "$ref": "#/$defs/RuntimeIdentityAuthority"
+          },
+          "title": "Identity Authorities",
+          "type": "array"
+        },
         "linux_capabilities": {
           "anyOf": [
             {
@@ -5147,6 +5154,307 @@
       "title": "RuntimeHealthcheckLog",
       "type": "object"
     },
+    "RuntimeIdentityAttribute": {
+      "additionalProperties": false,
+      "description": "Observed identity attribute or bounded setting.\n\nSecret-bearing names must not carry raw values. This keeps directory\npasswords, Kerberos keys, keytabs, tokens, and client secrets out of\nfixtures, diagnostics, schemas, and generated runtime artifacts.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeIdentityRecordOrigin"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Origin"
+        },
+        "value_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Value Classification"
+        },
+        "values": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "RuntimeIdentityAttribute",
+      "type": "object"
+    },
+    "RuntimeIdentityAuthority": {
+      "additionalProperties": false,
+      "description": "A node-scoped identity authority inventory.",
+      "properties": {
+        "authority_id": {
+          "title": "Authority Id",
+          "type": "string"
+        },
+        "base_dn": {
+          "default": "",
+          "title": "Base Dn",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domain_name": {
+          "default": "",
+          "title": "Domain Name",
+          "type": "string"
+        },
+        "issuer": {
+          "default": "",
+          "title": "Issuer",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeIdentityAuthorityKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Kind"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "namespace": {
+          "default": "",
+          "title": "Namespace",
+          "type": "string"
+        },
+        "policies": {
+          "items": {
+            "$ref": "#/$defs/RuntimeIdentityPolicy"
+          },
+          "title": "Policies",
+          "type": "array"
+        },
+        "realm": {
+          "default": "",
+          "title": "Realm",
+          "type": "string"
+        },
+        "relationships": {
+          "items": {
+            "$ref": "#/$defs/RuntimeIdentityRelationship"
+          },
+          "title": "Relationships",
+          "type": "array"
+        },
+        "services": {
+          "items": {
+            "$ref": "#/$defs/RuntimeIdentityAuthorityService"
+          },
+          "title": "Services",
+          "type": "array"
+        },
+        "subjects": {
+          "items": {
+            "$ref": "#/$defs/RuntimeIdentitySubject"
+          },
+          "title": "Subjects",
+          "type": "array"
+        },
+        "tenant_id": {
+          "default": "",
+          "title": "Tenant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authority_id"
+      ],
+      "title": "RuntimeIdentityAuthority",
+      "type": "object"
+    },
+    "RuntimeIdentityAuthorityKind": {
+      "description": "Portable kind of identity authority represented by the inventory.",
+      "enum": [
+        "directory",
+        "domain",
+        "kerberos_realm",
+        "identity_provider",
+        "cloud_iam",
+        "authorization_system",
+        "other"
+      ],
+      "title": "RuntimeIdentityAuthorityKind",
+      "type": "string"
+    },
+    "RuntimeIdentityAuthorityProtocol": {
+      "description": "Protocol or API family exposed by an identity authority service.",
+      "enum": [
+        "ldap",
+        "ldaps",
+        "kerberos",
+        "saml",
+        "oidc",
+        "oauth2",
+        "scim",
+        "ad_ds_rpc",
+        "graph_api",
+        "other"
+      ],
+      "title": "RuntimeIdentityAuthorityProtocol",
+      "type": "string"
+    },
+    "RuntimeIdentityAuthorityService": {
+      "additionalProperties": false,
+      "description": "A protocol/API endpoint associated with an identity authority.",
+      "properties": {
+        "address": {
+          "default": "",
+          "title": "Address",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Port"
+        },
+        "protocol": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeIdentityAuthorityProtocol"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Protocol"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        },
+        "service_id": {
+          "title": "Service Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "service_id"
+      ],
+      "title": "RuntimeIdentityAuthorityService",
+      "type": "object"
+    },
+    "RuntimeIdentityPolicy": {
+      "additionalProperties": false,
+      "description": "Observed identity authority policy or bounded policy setting group.",
+      "properties": {
+        "applies_to_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Applies To Refs",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "policy_id": {
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "policy_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeIdentityPolicyKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Policy Kind"
+        },
+        "settings": {
+          "items": {
+            "$ref": "#/$defs/RuntimeIdentityAttribute"
+          },
+          "title": "Settings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "policy_id"
+      ],
+      "title": "RuntimeIdentityPolicy",
+      "type": "object"
+    },
+    "RuntimeIdentityPolicyKind": {
+      "description": "Portable policy family attached to an identity authority.",
+      "enum": [
+        "password",
+        "lockout",
+        "kerberos",
+        "access",
+        "conditional_access",
+        "mfa",
+        "group_policy",
+        "trust",
+        "other"
+      ],
+      "title": "RuntimeIdentityPolicyKind",
+      "type": "string"
+    },
     "RuntimeIdentityProvenance": {
       "description": "Origin class for an observed local identity record.",
       "enum": [
@@ -5158,6 +5466,201 @@
         "other"
       ],
       "title": "RuntimeIdentityProvenance",
+      "type": "string"
+    },
+    "RuntimeIdentityRecordOrigin": {
+      "description": "Origin class for an observed identity authority record.",
+      "enum": [
+        "built_in",
+        "directory",
+        "synchronized",
+        "federated",
+        "provisioned",
+        "runtime_created",
+        "operator",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeIdentityRecordOrigin",
+      "type": "string"
+    },
+    "RuntimeIdentityRelationship": {
+      "additionalProperties": false,
+      "description": "Observed membership, trust, federation, or delegation relationship.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "external_target": {
+          "default": "",
+          "title": "External Target",
+          "type": "string"
+        },
+        "relationship_id": {
+          "title": "Relationship Id",
+          "type": "string"
+        },
+        "relationship_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeIdentityRelationshipKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Relationship Type"
+        },
+        "source_ref": {
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "target_ref": {
+          "default": "",
+          "title": "Target Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "relationship_id",
+        "source_ref"
+      ],
+      "title": "RuntimeIdentityRelationship",
+      "type": "object"
+    },
+    "RuntimeIdentityRelationshipKind": {
+      "description": "Portable relationship kind between authority-local identity objects.",
+      "enum": [
+        "member_of",
+        "has_member",
+        "trusts",
+        "federates_with",
+        "manages",
+        "owns",
+        "delegated_admin",
+        "syncs_from",
+        "associated",
+        "other"
+      ],
+      "title": "RuntimeIdentityRelationshipKind",
+      "type": "string"
+    },
+    "RuntimeIdentitySubject": {
+      "additionalProperties": false,
+      "description": "An authority-local user, group, device, role, or service principal.",
+      "properties": {
+        "attributes": {
+          "items": {
+            "$ref": "#/$defs/RuntimeIdentityAttribute"
+          },
+          "title": "Attributes",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "display_name": {
+          "default": "",
+          "title": "Display Name",
+          "type": "string"
+        },
+        "distinguished_name": {
+          "default": "",
+          "title": "Distinguished Name",
+          "type": "string"
+        },
+        "domain": {
+          "default": "",
+          "title": "Domain",
+          "type": "string"
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeIdentitySubjectKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Kind"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeIdentityRecordOrigin"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Origin"
+        },
+        "principal_name": {
+          "default": "",
+          "title": "Principal Name",
+          "type": "string"
+        },
+        "service_principal_names": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Service Principal Names",
+          "type": "array"
+        },
+        "subject_id": {
+          "title": "Subject Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "subject_id",
+        "name"
+      ],
+      "title": "RuntimeIdentitySubject",
+      "type": "object"
+    },
+    "RuntimeIdentitySubjectKind": {
+      "description": "Portable subject/principal kind within an identity authority.",
+      "enum": [
+        "user",
+        "group",
+        "computer",
+        "device",
+        "service_account",
+        "service_principal",
+        "role",
+        "application",
+        "organizational_unit",
+        "other"
+      ],
+      "title": "RuntimeIdentitySubjectKind",
       "type": "string"
     },
     "RuntimeInitProcess": {

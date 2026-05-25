@@ -42,7 +42,7 @@ Canonical `imports.source` classes are:
 | Section | Type | Purpose | Adapted From |
 |---------|------|---------|--------------|
 | `content` | `dict[str, Content]` | Data placed into systems (files, datasets, emails) | CyRIS `copy_content` |
-| `accounts` | `dict[str, Account]` | User accounts on nodes (AD users, SSH, DB users) | CyRIS `add_account` |
+| `accounts` | `dict[str, Account]` | Curated scenario/provisioning accounts on nodes, not full runtime identity inventory | CyRIS `add_account` |
 | `relationships` | `dict[str, Relationship]` | Typed edges between elements (auth, trust, federation) | STIX Relationship SRO |
 | `agents` | `dict[str, Agent]` | Autonomous participants (actions, knowledge, scope) | CybORG Agents |
 | `objectives` | `dict[str, Objective]` | Declarative experiment tasks binding actors, targets, windows, and success | OCR scoring + CACAO action/target/agent |
@@ -85,6 +85,8 @@ nodes:
         name: http
       - port: 443
         name: https
+      - port: 389
+        name: ldap
     runtime:                            # observed runtime configuration facts
       mounts:
         - target: /shuffle-database
@@ -347,6 +349,45 @@ nodes:
             - name: password_encryption     # secret-bearing settings omit value
               value_classification: redacted
               provenance: operator_override
+      identity_authorities:             # observed directory/domain/IdP/IAM state
+        - authority_id: techvault-domain
+          kind: domain
+          namespace: techvault.local
+          domain_name: TECHVAULT
+          realm: TECHVAULT.LOCAL
+          base_dn: DC=techvault,DC=local
+          services:
+            - service_id: ldap-endpoint
+              service: ldap             # owning same-node Node.services[].name
+              protocol: ldap
+              address: dc.techvault.local
+              port: 389
+          subjects:
+            - subject_id: alice
+              kind: user
+              name: alice
+              principal_name: alice@TECHVAULT.LOCAL
+              distinguished_name: CN=Alice,CN=Users,DC=techvault,DC=local
+              enabled: true
+            - subject_id: domain-admins
+              kind: group
+              name: Domain Admins
+            - subject_id: app-svc
+              kind: service_principal
+              name: webapp
+              service_principal_names: [HTTP/web.techvault.local]
+          relationships:
+            - relationship_id: alice-admin
+              relationship_type: member_of
+              source_ref: alice
+              target_ref: domain-admins
+          policies:
+            - policy_id: default-domain-policy
+              policy_kind: password
+              applies_to_refs: [techvault-domain, ldap-endpoint, alice-admin]
+              settings:
+                - name: min_length
+                  values: "14"
     asset_value:                        # CIA triad (from CybORG)
       confidentiality: high
       integrity: medium
@@ -472,6 +513,31 @@ to the runtime application and the database service or logical database, and a
 typed `database_access` block keeps the access `role_ref` and `auth_method`
 structurally validated (see
 [ADR-029](../../decisions/adrs/adr-029-database-logical-state-runtime-surface.md)).
+
+`runtime.identity_authorities` records observed directory, domain, realm,
+identity-provider, cloud-IAM, authorization-system, and federation state. It is
+not a provisioning command surface and it is not an Active Directory, LDAP,
+SCIM, SAML, OIDC, or IAM schema clone. Each authority has a stable
+`authority_id`; optional namespace facts such as `domain_name`, `realm`,
+`issuer`, `tenant_id`, and `base_dn`; protocol/API services that may reference
+same-node `Node.services[].name` transport bindings; identity-bearing
+subjects; policies; and typed relationships for membership, trust,
+federation, delegation, ownership, synchronization, and association. Stable
+ACES ids (`authority_id`, `service_id`, `subject_id`, `policy_id`, and
+`relationship_id`) are the portable reference surface and must be unique across
+the owning authority's local namespace. Provider-stable object identifiers
+remain observed data: use the specific field when one exists
+(`distinguished_name`, `principal_name`, `service_principal_names`,
+`issuer`, `tenant_id`, `base_dn`) or a bounded `attributes` entry for values
+such as AD `objectGUID`/SID, LDAP `entryUUID`, SCIM `id`/`externalId`, SAML
+NameID, or the OIDC `iss` + `sub` pair. Secret-bearing attribute or policy
+setting names must omit raw values and use the runtime sensitivity vocabulary.
+Local authority references resolve against all stable ids in the owning
+authority; fully qualified references such as
+`nodes.ad.runtime.identity_authorities.corp-domain.subjects.alice` participate
+in top-level relationships, objectives, module import rewriting, and generic
+reference validation (see
+[ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).
 
 `source` identifies the node's artifact by provider-neutral `name` and
 `version`. When that artifact is a custom-built container image, the optional
@@ -727,25 +793,32 @@ content:
 
 ## Accounts
 
-User accounts within scenario nodes. Adapted from CyRIS `add_account`.
+Curated scenario/provisioning account resources within scenario nodes. Adapted
+from CyRIS `add_account`.
 
 ```yaml
 accounts:
-  domain-admin:
-    username: Administrator
-    node: dc01
-    groups: [Domain Admins]
-    password_strength: strong           # weak, medium, strong, none
-  svc-sql:
-    username: svc_mssql
-    node: dc01
+  phished-user:
+    username: jane
+    node: workstation-01
+    groups: [Users]
+    password_strength: medium           # weak, medium, strong, none
+    mail: jane@example.test
+  app-service:
+    username: appsvc
+    node: web-server
     password_strength: weak
-    spn: "MSSQL/db.corp.local"         # Kerberos SPN
     auth_method: password               # password, key, certificate
-    mail: ""
 ```
 
 `username` and `node` are required. `node` must reference a VM node, not a switch/network node.
+Directory users, groups, service principals, devices, IAM roles, IdP
+applications, and federation subjects belong in
+`nodes.<node>.runtime.identity_authorities` when they are observed
+identity-authority inventory. A top-level account may intentionally mirror one
+of those subjects when the scenario needs a provisioned or participant starting
+credential, but that is a second authored resource rather than the directory
+model itself.
 
 ---
 
@@ -780,7 +853,14 @@ relationships:
 
 Types: `authenticates_with`, `trusts`, `federates_with`, `connects_to`, `depends_on`, `manages`, `replicates_to`.
 
-Relationship endpoints resolve against the scenario's named elements, including top-level section keys, nested entity dot-paths, variables, other relationships, content item `name` values, named service bindings (`nodes.<node>.services.<service_name>`), and named ACL rules (`infrastructure.<infra>.acls.<acl_name>`).
+Relationship endpoints resolve against the scenario's named elements,
+including top-level section keys, nested entity dot-paths, variables, other
+relationships, content item `name` values, named service bindings
+(`nodes.<node>.services.<service_name>`), runtime identity-authority refs
+(`nodes.<node>.runtime.identity_authorities.<authority_id>` and nested
+`.services.<service_id>`, `.subjects.<subject_id>`, `.policies.<policy_id>`,
+or `.relationships.<relationship_id>` refs), and named ACL rules
+(`infrastructure.<infra>.acls.<acl_name>`).
 
 Bare refs like `webapp` are valid when they are unambiguous. Any top-level section key may also be referenced explicitly as `<section>.<name>`, for example `nodes.webapp`, `features.postgres`, `accounts.db-admin`, or `infrastructure.dmz-net`. Content items may be referenced as `content.<content_name>.items.<item_name>` when a bare item `name` would collide with some other named element.
 
@@ -1040,7 +1120,7 @@ variables:
 
 Variables are referenced as `${var_name}` in other sections. They are **not resolved at parse time** — resolution happens at instantiation.
 
-Full-value placeholders are currently supported in ordinary string fields, common scalar fields (counts, booleans, scores, timings, RAM/CPU, ports), many reference values, and selected leaf enum-backed property fields such as `accounts.*.password_strength`, `entities.*.role`, `nodes.*.os`, `nodes.*.asset_value.*`, `infrastructure.*.acls[*].action`, and `objectives.*.success.mode`. The semantic validator checks that `${var_name}` refers to a declared variable, and the repo-owned instantiation phase substitutes concrete values before compilation/runtime planning. User-defined mapping keys and discriminant/schema-shaping enum fields such as section `type` tags still need concrete values, and placeholder keys are rejected at parse time.
+Full-value placeholders are currently supported in ordinary string fields, common scalar fields (counts, booleans, scores, timings, RAM/CPU, ports), many reference values, and selected leaf enum-backed property fields such as `accounts.*.password_strength`, `entities.*.role`, `nodes.*.os`, `nodes.*.asset_value.*`, `nodes.*.runtime.identity_authorities.*.kind`, identity-authority subject/policy/relationship kinds, identity-authority ports and enabled flags, `infrastructure.*.acls[*].action`, and `objectives.*.success.mode`. The semantic validator checks that `${var_name}` refers to a declared variable, and the repo-owned instantiation phase substitutes concrete values before compilation/runtime planning. User-defined mapping keys and discriminant/schema-shaping enum fields such as section `type` tags still need concrete values, and placeholder keys are rejected at parse time.
 
 Think of variables as parameterizing **properties of declared objects**, not the object graph itself. For example, a node's hostname, a content file's text, or a subnet CIDR may be variable-backed, while top-level identifiers like `nodes.web`, `features.nginx`, or `accounts.domain-admin` must remain literal.
 
