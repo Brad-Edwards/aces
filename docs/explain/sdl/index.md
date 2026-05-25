@@ -143,6 +143,7 @@ accounts:
 - [Semantic Validation](validation.md) — Cross-reference checks and what the validator enforces
 - [Design Precedents](precedents.md) — Where each SDL element comes from
 - [Academic Lineage](lineage.md) — Primary-source lineage for SDL semantics
+- [Scenario/Delivery Drift Audit](scenario-delivery-drift-audit.md) — Audit and remediation record for classification drift after ADR-033
 - [Limitations](limitations.md) — Current expressiveness and materialization gaps
 - [Testing](testing.md) — How to run unit tests, stress tests, and fuzz tests
 - [Complex Scenario Designs](complex-scenarios.md) — Up-front design briefs for large example exercises

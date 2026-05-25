@@ -70,6 +70,7 @@ explain/sdl/agent-guidance
 explain/sdl/validation
 explain/sdl/precedents
 explain/sdl/lineage
+explain/sdl/scenario-delivery-drift-audit
 explain/sdl/complex-scenarios
 explain/sdl/limitations
 explain/sdl/testing
