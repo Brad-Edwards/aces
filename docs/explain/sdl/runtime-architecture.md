@@ -1,18 +1,21 @@
-# Runtime Architecture: SDL -> Runtime Model -> Composite Plans
+# Runtime Architecture: SDL -> Processor -> Runtime -> Backend
 
-This document describes the runtime layer that sits directly on top of the SDL.
-It is an SDL-native runtime architecture built for the SDL itself and its
-backend contracts. See
-[ADR-004](../../decisions/adrs/adr-004-sdl-runtime-layer.md) for the decision record.
+This document describes the processor and runtime path that turns authored SDL
+into executable backend operations. It is an SDL-native architecture built for
+the SDL itself and its backend contracts. See
+[ADR-004](../../decisions/adrs/adr-004-sdl-runtime-layer.md) and
+[ADR-035](../../decisions/adrs/adr-035-sdl-processor-runtime-module-boundaries.md)
+for the decision records.
 
 In the broader ecosystem architecture, this document focuses on the
-processor-plus-backend path that is currently implemented in code. It does not
-attempt to fully specify every other apparatus surface. In particular, the
+processor-runtime-backend path that is currently implemented in code. It does
+not attempt to fully specify every other apparatus surface. In particular, the
 ecosystem distinguishes:
 
 - authored scenario meaning in SDL
-- the processor that instantiates, compiles, plans, and coordinates execution
-- the backend that realizes deployable or simulated targets
+- the processor that instantiates, compiles, plans, and determines support
+- the runtime that coordinates live execution against a target
+- the backend that realizes deployable or simulated target operations
 - optional participant implementations that consume participant contracts
 - live runtime state
 - archival run, evidence, and provenance records
@@ -31,9 +34,9 @@ provenance when different realizations are compared.
 
 Under the repository's [coding standards](../reference/coding-standards.md),
 this layer is where `FM2` and `FM3` work becomes most relevant. The
-formalization target here is not raw YAML, but the typed runtime model and the
-contracts that preserve semantic meaning across validation, compilation,
-planning, and backend execution.
+formalization target here is not raw YAML, but the typed runtime model,
+processor plans, and execution contracts that preserve semantic meaning across
+validation, compilation, planning, and backend execution.
 
 This layer also draws from a different precedent set than the author-facing SDL
 surface. OCR and CACAO still matter, but the strongest implementation models
@@ -47,9 +50,12 @@ here come from mature workflow and distributed-runtime systems:
 ## Package Boundary
 
 ```text
-aces.core.sdl      -> parse + validate
-aces.core.runtime  -> compile + plan + execute contracts
-aces.backends.*    -> concrete target implementations
+aces_sdl                -> parse + instantiate + SDL-language semantics
+aces_processor          -> compile + plan + support/contract semantics
+aces_runtime            -> live control + manager + control-plane APIs
+aces_backend_protocols  -> backend protocol contracts
+aces_backend_stubs      -> non-normative in-memory target implementations
+aces.*                  -> legacy compatibility wrappers
 ```
 
 ## Runtime Stages
@@ -301,9 +307,11 @@ Python typed workflow result models remain useful internally, but only as
 normalization helpers after boundary validation. They are not the backend
 protocol.
 
-This is also why semantic modeling belongs here: backend-agnostic guarantees
-such as allowed transitions, result visibility, and portability of workflow
-state are runtime-contract questions, not parser questions.
+This is also why semantic modeling is split across processor and runtime
+contracts rather than parser code. The processor compiles backend-agnostic
+guarantees such as allowed transitions, result visibility, and portability of
+workflow state; the runtime validates live backend reports against those
+compiled contracts.
 
 This mirrors the contract style used by mature multi-runtime systems:
 
@@ -339,7 +347,7 @@ Planner FM2 semantics are explicit rather than incidental:
 - refresh propagation is transitive over the refresh graph
 - cross-domain refresh does not create startup ordering
 
-Those rules are owned by `aces.core.semantics.planner`, not by local planner
+Those rules are owned by `aces_processor.semantics.planner`, not by local planner
 algorithm shape.
 
 This phase is also intentionally composition-ready. Module/import expansion
@@ -388,6 +396,7 @@ The current runtime scope includes:
 - planner
 - runtime manager
 - registry
+- control plane, HTTP adapter, operation store, security, and audit
 - honest in-memory stubs
 - tests and docs
 

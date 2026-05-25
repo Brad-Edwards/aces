@@ -130,6 +130,7 @@ decisions/adrs/adr-031-ssh-server-configuration-surface
 decisions/adrs/adr-032-directory-domain-identity-runtime-surface
 decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state
 decisions/adrs/adr-034-runtime-software-component-inventory
+decisions/adrs/adr-035-sdl-processor-runtime-module-boundaries
 decisions/sem-213-temporal-participant-preflight
 ```
 
@@ -174,5 +175,6 @@ api/sdl
 api/sdl-semantics
 api/processor
 api/processor-semantics
+api/runtime
 api/cli
 ```
