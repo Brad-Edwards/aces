@@ -11,14 +11,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from .control_plane_store import (
-    AuditEvent,
-    ControlPlaneOperationRecord,
-    ControlPlaneStore,
-    InMemoryControlPlaneStore,
-)
-from .manager import _call_backend_apply, _call_backend_diagnostics
-from .models import (
+from aces_processor.models import (
     Diagnostic,
     EvaluationPlan,
     OperationReceipt,
@@ -35,12 +28,21 @@ from .models import (
     RuntimeSnapshot,
     RuntimeSnapshotEnvelope,
     WorkflowCompensationStatus,
-    WorkflowExecutionContract,
     WorkflowExecutionState,
     WorkflowHistoryEvent,
     WorkflowHistoryEventType,
     WorkflowStatus,
 )
+
+from .backend_calls import _call_backend_diagnostics
+from .control_plane_execution import execute_operation, execute_participant_action
+from .control_plane_store import (
+    AuditEvent,
+    ControlPlaneOperationRecord,
+    ControlPlaneStore,
+    InMemoryControlPlaneStore,
+)
+from .control_plane_workflows import maybe_apply_compensation, parse_timestamp
 from .registry import RuntimeTarget
 
 
@@ -87,7 +89,8 @@ class RuntimeControlPlane:
             plan,
             address="runtime.control-plane.provisioning.validate",
         )
-        return self._execute_operation(
+        return execute_operation(
+            self,
             domain=RuntimeDomain.PROVISIONING,
             method=self._target.provisioner.apply,
             plan=plan,
@@ -111,7 +114,8 @@ class RuntimeControlPlane:
                 domain=RuntimeDomain.ORCHESTRATION,
                 message="Target does not provide an orchestrator.",
             )
-        return self._execute_operation(
+        return execute_operation(
+            self,
             domain=RuntimeDomain.ORCHESTRATION,
             method=self._target.orchestrator.start,
             plan=plan,
@@ -135,7 +139,8 @@ class RuntimeControlPlane:
                 domain=RuntimeDomain.EVALUATION,
                 message="Target does not provide an evaluator.",
             )
-        return self._execute_operation(
+        return execute_operation(
+            self,
             domain=RuntimeDomain.EVALUATION,
             method=self._target.evaluator.start,
             plan=plan,
@@ -152,119 +157,6 @@ class RuntimeControlPlane:
 
     def get_snapshot(self) -> RuntimeSnapshotEnvelope:
         return RuntimeSnapshotEnvelope(snapshot=self._snapshot)
-
-    def _compiled_execution_contract(
-        self,
-        workflow_address: str,
-    ) -> WorkflowExecutionContract | None:
-        entry = self._snapshot.entries.get(workflow_address)
-        if entry is None or not isinstance(entry.payload, dict):
-            return None
-        payload = entry.payload.get("execution_contract")
-        if not isinstance(payload, dict):
-            return None
-        try:
-            return WorkflowExecutionContract.from_mapping(payload)
-        except (TypeError, ValueError):
-            return None
-
-    def _maybe_apply_compensation(
-        self,
-        *,
-        workflow_address: str,
-        result: WorkflowExecutionState,
-        history: list[dict[str, object]],
-        submitted_at: str,
-    ) -> tuple[dict[str, object], list[dict[str, object]]]:
-        contract = self._compiled_execution_contract(workflow_address)
-        if contract is None:
-            return result.to_payload(), history
-        if contract.compensation_mode != "automatic":
-            return result.to_payload(), history
-        if result.workflow_status.value not in set(contract.compensation_triggers):
-            return result.to_payload(), history
-
-        completed_events: list[WorkflowHistoryEvent] = []
-        for raw in history:
-            try:
-                event = WorkflowHistoryEvent.from_payload(raw)
-            except (TypeError, ValueError):
-                continue
-            if event.event_type != WorkflowHistoryEventType.STEP_COMPLETED:
-                continue
-            if event.step_name is None or event.outcome is None:
-                continue
-            if event.outcome.value != "succeeded":
-                continue
-            if event.step_name not in contract.compensation_targets:
-                continue
-            completed_events.append(event)
-
-        if not completed_events:
-            return result.to_payload(), history
-
-        ordered = sorted(completed_events, key=lambda event: event.timestamp, reverse=True)
-        mutated_history = list(history)
-        mutated_history.append(
-            WorkflowHistoryEvent(
-                event_type=WorkflowHistoryEventType.COMPENSATION_STARTED,
-                timestamp=submitted_at,
-                details={"trigger": result.workflow_status.value},
-            ).to_payload()
-        )
-        for event in ordered:
-            step_name = event.step_name or ""
-            target = contract.compensation_targets[step_name]
-            mutated_history.append(
-                WorkflowHistoryEvent(
-                    event_type=WorkflowHistoryEventType.COMPENSATION_REGISTERED,
-                    timestamp=submitted_at,
-                    step_name=step_name,
-                    details={
-                        "workflow_address": target,
-                        "completed_at": event.timestamp,
-                    },
-                ).to_payload()
-            )
-            mutated_history.append(
-                WorkflowHistoryEvent(
-                    event_type=WorkflowHistoryEventType.COMPENSATION_WORKFLOW_STARTED,
-                    timestamp=submitted_at,
-                    step_name=step_name,
-                    details={"workflow_address": target},
-                ).to_payload()
-            )
-            mutated_history.append(
-                WorkflowHistoryEvent(
-                    event_type=WorkflowHistoryEventType.COMPENSATION_WORKFLOW_COMPLETED,
-                    timestamp=submitted_at,
-                    step_name=step_name,
-                    details={"workflow_address": target},
-                ).to_payload()
-            )
-        mutated_history.append(
-            WorkflowHistoryEvent(
-                event_type=WorkflowHistoryEventType.COMPENSATION_COMPLETED,
-                timestamp=submitted_at,
-                details={"count": len(ordered)},
-            ).to_payload()
-        )
-        return (
-            WorkflowExecutionState(
-                state_schema_version=result.state_schema_version,
-                workflow_status=result.workflow_status,
-                run_id=result.run_id,
-                started_at=result.started_at,
-                updated_at=submitted_at,
-                terminal_reason=result.terminal_reason,
-                compensation_status=WorkflowCompensationStatus.SUCCEEDED,
-                compensation_started_at=submitted_at,
-                compensation_updated_at=submitted_at,
-                compensation_failures=[],
-                steps=result.steps,
-            ).to_payload(),
-            mutated_history,
-        )
 
     def cancel_workflow(
         self,
@@ -349,7 +241,8 @@ class RuntimeControlPlane:
                 details={"reason": reason},
             ).to_payload()
         )
-        cancelled, history = self._maybe_apply_compensation(
+        cancelled, history = maybe_apply_compensation(
+            self._snapshot,
             workflow_address=workflow_address,
             result=cancelled_state,
             history=history,
@@ -427,8 +320,8 @@ class RuntimeControlPlane:
             if normalized.workflow_status != WorkflowStatus.RUNNING:
                 continue
             try:
-                deadline = _parse_timestamp(normalized.started_at).timestamp() + int(timeout_seconds)
-                current = _parse_timestamp(submitted_at).timestamp()
+                deadline = parse_timestamp(normalized.started_at).timestamp() + int(timeout_seconds)
+                current = parse_timestamp(submitted_at).timestamp()
             except Exception:
                 continue
             if current < deadline:
@@ -454,7 +347,8 @@ class RuntimeControlPlane:
                     details={"timeout_seconds": int(timeout_seconds)},
                 ).to_payload()
             )
-            payload, updated_history = self._maybe_apply_compensation(
+            payload, updated_history = maybe_apply_compensation(
+                self._snapshot,
                 workflow_address=workflow_address,
                 result=timed_out_state,
                 history=history,
@@ -513,7 +407,8 @@ class RuntimeControlPlane:
             participant_address=participant_address,
             episode_id=episode_id,
         )
-        return self._execute_participant_action(
+        return execute_participant_action(
+            self,
             method=self._target.participant_runtime.initialize,
             request=request,
             address=f"runtime.control-plane.participant.{participant_address}.initialize",
@@ -542,7 +437,8 @@ class RuntimeControlPlane:
             episode_id=episode_id,
             reason=reason,
         )
-        return self._execute_participant_action(
+        return execute_participant_action(
+            self,
             method=self._target.participant_runtime.reset,
             request=request,
             address=f"runtime.control-plane.participant.{participant_address}.reset",
@@ -571,7 +467,8 @@ class RuntimeControlPlane:
             episode_id=episode_id,
             reason=reason,
         )
-        return self._execute_participant_action(
+        return execute_participant_action(
+            self,
             method=self._target.participant_runtime.restart,
             request=request,
             address=f"runtime.control-plane.participant.{participant_address}.restart",
@@ -600,80 +497,14 @@ class RuntimeControlPlane:
             terminal_reason=terminal_reason,
             detail=detail,
         )
-        return self._execute_participant_action(
+        return execute_participant_action(
+            self,
             method=self._target.participant_runtime.terminate,
             request=request,
             address=f"runtime.control-plane.participant.{participant_address}.terminate",
             idempotency_key=idempotency_key,
             request_fingerprint=request_fingerprint,
         )
-
-    def _execute_participant_action(
-        self,
-        *,
-        method,
-        request,
-        address: str,
-        idempotency_key: str,
-        request_fingerprint: str,
-    ) -> OperationReceipt:
-        existing = self._idempotent_receipt(
-            idempotency_key=idempotency_key,
-            request_fingerprint=request_fingerprint,
-        )
-        if existing is not None:
-            return existing
-        operation_id = str(uuid4())
-        submitted_at = _utc_now()
-        status = OperationStatus(
-            operation_id=operation_id,
-            domain=RuntimeDomain.PARTICIPANT,
-            state=OperationState.RUNNING,
-            submitted_at=submitted_at,
-            updated_at=submitted_at,
-        )
-        receipt = OperationReceipt(
-            operation_id=operation_id,
-            domain=RuntimeDomain.PARTICIPANT,
-            submitted_at=submitted_at,
-            accepted=True,
-        )
-        self._persist_record(
-            ControlPlaneOperationRecord(
-                receipt=receipt,
-                status=status,
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
-            )
-        )
-        result = _call_backend_apply(
-            method,
-            request,
-            self._snapshot,
-            address=address,
-            snapshot=self._snapshot,
-        )
-        self._snapshot = result.snapshot
-        self._store.save_snapshot(self._snapshot)
-        final_state = OperationState.SUCCEEDED if result.success else OperationState.FAILED
-        final_status = OperationStatus(
-            operation_id=operation_id,
-            domain=RuntimeDomain.PARTICIPANT,
-            state=final_state,
-            submitted_at=submitted_at,
-            updated_at=_utc_now(),
-            diagnostics=[*status.diagnostics, *result.diagnostics],
-            changed_addresses=list(result.changed_addresses),
-        )
-        self._persist_record(
-            ControlPlaneOperationRecord(
-                receipt=receipt,
-                status=final_status,
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
-            )
-        )
-        return receipt
 
     def record_audit(
         self,
@@ -740,79 +571,6 @@ class RuntimeControlPlane:
         )
         return receipt
 
-    def _execute_operation(
-        self,
-        *,
-        domain: RuntimeDomain,
-        method,
-        plan,
-        address: str,
-        diagnostics,
-        base_snapshot: RuntimeSnapshot | None,
-        idempotency_key: str,
-        request_fingerprint: str,
-    ) -> OperationReceipt:
-        existing = self._idempotent_receipt(
-            idempotency_key=idempotency_key,
-            request_fingerprint=request_fingerprint,
-        )
-        if existing is not None:
-            return existing
-        operation_id = str(uuid4())
-        submitted_at = _utc_now()
-        snapshot = base_snapshot if base_snapshot is not None else self._snapshot
-        status = OperationStatus(
-            operation_id=operation_id,
-            domain=domain,
-            state=OperationState.RUNNING,
-            submitted_at=submitted_at,
-            updated_at=submitted_at,
-            diagnostics=list(diagnostics),
-        )
-        receipt = OperationReceipt(
-            operation_id=operation_id,
-            domain=domain,
-            submitted_at=submitted_at,
-            accepted=True,
-            diagnostics=list(diagnostics),
-        )
-        self._persist_record(
-            ControlPlaneOperationRecord(
-                receipt=receipt,
-                status=status,
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
-            )
-        )
-        result = _call_backend_apply(
-            method,
-            plan,
-            snapshot,
-            address=address,
-            snapshot=snapshot,
-        )
-        self._snapshot = result.snapshot
-        self._store.save_snapshot(self._snapshot)
-        final_state = OperationState.SUCCEEDED if result.success else OperationState.FAILED
-        final_status = OperationStatus(
-            operation_id=operation_id,
-            domain=domain,
-            state=final_state,
-            submitted_at=submitted_at,
-            updated_at=_utc_now(),
-            diagnostics=[*status.diagnostics, *result.diagnostics],
-            changed_addresses=list(result.changed_addresses),
-        )
-        self._persist_record(
-            ControlPlaneOperationRecord(
-                receipt=receipt,
-                status=final_status,
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
-            )
-        )
-        return receipt
-
     def _idempotent_receipt(
         self,
         *,
@@ -832,12 +590,3 @@ class RuntimeControlPlane:
     def _persist_record(self, record: ControlPlaneOperationRecord) -> None:
         self._operations[record.receipt.operation_id] = record
         self._store.save_record(record)
-
-
-def _parse_timestamp(raw: str) -> datetime:
-    if raw.endswith("Z"):
-        raw = raw[:-1] + "+00:00"
-    parsed = datetime.fromisoformat(raw)
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=UTC)
-    return parsed

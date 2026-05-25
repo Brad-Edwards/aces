@@ -43,7 +43,7 @@ from aces_processor.models import (
     RuntimeSnapshot,
     SnapshotEntry,
 )
-from aces_processor.registry import RuntimeTarget, RuntimeTargetComponents
+from aces_runtime.registry import RuntimeTarget, RuntimeTargetComponents
 
 REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = BACKEND_SUPPORTED_CONTRACT_IDS
 REFERENCE_PARTICIPANT_ROLES = frozenset(

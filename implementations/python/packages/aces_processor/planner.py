@@ -1,9 +1,9 @@
 """Planner for compiled SDL runtime models."""
 
 from aces_backend_protocols.capabilities import BackendManifest
-from aces_sdl._base import extract_variable_name, parse_enum_or_var, parse_int_or_var
 from aces_sdl.infrastructure import MINIMUM_NODE_COUNT
 from aces_sdl.nodes import OSFamily
+from aces_sdl.value_parsing import extract_variable_name, parse_enum_or_var, parse_int_or_var
 
 from .models import (
     ChangeAction,
@@ -805,6 +805,12 @@ def _delete_order(entries: dict[str, SnapshotEntry]) -> list[str]:
         for address, entry in entries.items()
     }
     return resource_delete_order(resources)
+
+
+def snapshot_delete_order(entries: dict[str, SnapshotEntry]) -> list[str]:
+    """Return delete order for existing snapshot entries."""
+
+    return _delete_order(entries)
 
 
 def _build_provisioning_plan(

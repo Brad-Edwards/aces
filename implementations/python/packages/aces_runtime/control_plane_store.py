@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
-from .models import (
+from aces_processor.models import (
     Diagnostic,
     OperationReceipt,
     OperationState,

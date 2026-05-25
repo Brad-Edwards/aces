@@ -6,7 +6,6 @@ import textwrap
 
 import pytest
 from aces_processor.compiler import compile_runtime_model
-from aces_processor.control_plane_store import LocalControlPlaneStore
 from aces_processor.models import (
     Diagnostic,
     ParticipantActionEffectResult,
@@ -21,6 +20,7 @@ from aces_processor.models import (
     iter_participant_behavior_history_violations,
     map_backend_diagnostic_to_participant_failure,
 )
+from aces_runtime.control_plane_store import LocalControlPlaneStore
 from aces_sdl._errors import SDLParseError
 from aces_sdl.parser import parse_sdl
 from aces_sdl.participant_behavior import (

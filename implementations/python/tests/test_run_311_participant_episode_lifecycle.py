@@ -26,7 +26,7 @@ from pathlib import Path
 
 import pytest
 from aces_contracts.contracts import schema_bundle
-from aces_processor.manager import _participant_episode_contract_diagnostics
+from aces_runtime.result_contracts import participant_episode_contract_diagnostics
 
 from aces.core.runtime.models import (
     ParticipantEpisodeControlAction,
@@ -528,7 +528,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             )
 
     def test_runtime_apply_path_rejects_invalid_participant_episode_result(self):
-        """Runtime integration — ``_participant_episode_contract_diagnostics``
+        """Runtime integration — ``participant_episode_contract_diagnostics``
         is called on every backend apply. It must emit a
         ``runtime.backend-contract-invalid`` diagnostic for any participant
         episode result that violates the dataclass invariants, so invalid
@@ -553,7 +553,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         assert diagnostics, "apply path must reject invalid participant episode result"
         assert all(diag.code == "runtime.backend-contract-invalid" for diag in diagnostics)
@@ -584,7 +584,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         assert diagnostics, "apply path must reject invalid participant episode history"
         assert all(diag.code == "runtime.backend-contract-invalid" for diag in diagnostics)
@@ -615,7 +615,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         assert diagnostics, "apply path must reject participant episode result with outer-key mismatch"
         assert all(diag.code == "runtime.backend-contract-invalid" for diag in diagnostics)
@@ -643,7 +643,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         assert diagnostics
         assert all(diag.code == "runtime.backend-contract-invalid" for diag in diagnostics)
@@ -692,7 +692,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         assert diagnostics
         assert any("sequence_number went backward" in diag.message for diag in diagnostics)
@@ -730,7 +730,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         assert diagnostics
         assert any("must arrive via episode_reset or episode_restarted" in diag.message for diag in diagnostics)
@@ -768,7 +768,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         assert diagnostics
         assert any("episode_id changed within sequence_number" in diag.message for diag in diagnostics)
@@ -818,7 +818,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         gate_messages = [
             diag.message for diag in diagnostics if "must arrive via episode_reset or episode_restarted" in diag.message
@@ -860,7 +860,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         mismatch_messages = [
             diag.message for diag in diagnostics if "episode_id changed within sequence_number" in diag.message
@@ -945,7 +945,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         assert diagnostics, (
             "apply path must reject a stale result that does not match the "
@@ -1002,7 +1002,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         assert diagnostics
         assert any("terminated" in diag.message and "not a terminal event" in diag.message for diag in diagnostics)
@@ -1046,7 +1046,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         assert diagnostics
         assert any("terminal_reason" in diag.message and "does not match" in diag.message for diag in diagnostics)
@@ -1089,7 +1089,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         assert diagnostics
         assert any("running" in diag.message and "terminal" in diag.message for diag in diagnostics)
@@ -1162,7 +1162,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         assert diagnostics == []
 
@@ -1204,7 +1204,7 @@ class TestRun311ParticipantEpisodeLifecycle:
             },
         )
 
-        diagnostics = _participant_episode_contract_diagnostics(snapshot)
+        diagnostics = participant_episode_contract_diagnostics(snapshot)
 
         assert diagnostics == []
 
