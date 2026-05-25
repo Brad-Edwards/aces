@@ -51,7 +51,12 @@ from aces_sdl.participant_temporal_semantics import (
     ParticipantTemporalState,
     ParticipantTimeDomain,
 )
-from aces_sdl.semantics.workflow import WorkflowStepSemanticContract
+from aces_sdl.semantics.workflow import (
+    WorkflowStepSemanticContract,
+)
+from aces_sdl.semantics.workflow import (
+    validate_workflow_step_result as _validate_workflow_step_result,
+)
 
 _PARTICIPANT_ACTION_CONTRACT_PREFIX = "participant.action-contract."
 _PARTICIPANT_OBSERVATION_BOUNDARY_PREFIX = "participant.observation-boundary."
@@ -784,6 +789,23 @@ class WorkflowResultContract:
             state_schema_version=str(payload.get("state_schema_version", WORKFLOW_STATE_SCHEMA_VERSION)),
             observable_steps=observable_steps,
         )
+
+
+def validate_workflow_step_result_contract(
+    contract: WorkflowStepSemanticContract,
+    *,
+    lifecycle: str,
+    outcome: str | None,
+    attempts: int,
+) -> tuple[str, ...]:
+    """Validate a backend-reported workflow step result against a compiled contract."""
+
+    return _validate_workflow_step_result(
+        contract,
+        lifecycle=lifecycle,
+        outcome=outcome,
+        attempts=attempts,
+    )
 
 
 @dataclass(frozen=True)

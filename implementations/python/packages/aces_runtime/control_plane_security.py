@@ -25,7 +25,11 @@ class ControlPlaneIdentity:
 
 @dataclass(frozen=True)
 class ControlPlaneSecurityConfig:
-    """Reference security settings for the HTTP/JSON control-plane adapter."""
+    """Reference security settings for the HTTP/JSON control-plane adapter.
+
+    Header identities are only trustworthy behind an authenticated proxy that
+    strips caller-supplied identity headers before setting its own values.
+    """
 
     require_verified_identity: bool = True
     verified_header: str = "x-aces-client-verified"
@@ -40,22 +44,11 @@ class ControlPlaneSecurityConfig:
         *,
         target_name: str | None = None,
     ) -> ControlPlaneSecurityConfig:
-        backend_identity = ControlPlaneIdentity(
-            identity="backend-service",
-            roles=frozenset({ControlPlaneRole.BACKEND}),
-            target_name=target_name,
-        )
-        operator_identity = ControlPlaneIdentity(
-            identity="operator",
-            roles=frozenset({ControlPlaneRole.OPERATOR, ControlPlaneRole.AUDITOR}),
-            target_name=target_name,
-        )
+        """Return fail-closed defaults with no built-in principals or tokens."""
+
+        _ = target_name
         return cls(
             require_verified_identity=True,
-            trusted_identities={
-                backend_identity.identity: backend_identity,
-            },
-            bearer_tokens={
-                "operator-token": operator_identity,
-            },
+            trusted_identities={},
+            bearer_tokens={},
         )

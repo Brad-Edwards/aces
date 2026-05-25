@@ -89,7 +89,6 @@ module_boundaries:
         - aces_backend_protocols
         - aces_contracts
         - aces_processor
-        - aces_sdl
       forbidden_import_prefixes:
         - aces_backend_stubs
         - aces_cli
@@ -104,10 +103,6 @@ module_boundaries:
       root: implementations/python/packages/aces_backend_protocols
       allowed_top_level_imports:
         - aces_contracts
-        - aces_processor
-      public_import_prefixes:
-        aces_processor:
-          - aces_processor.models
     - id: aces_backend_stubs
       root: implementations/python/packages/aces_backend_stubs
       allowed_top_level_imports:

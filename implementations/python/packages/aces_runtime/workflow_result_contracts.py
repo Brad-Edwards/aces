@@ -15,8 +15,8 @@ from aces_processor.models import (
     WorkflowHistoryEventType,
     WorkflowResultContract,
     WorkflowStatus,
+    validate_workflow_step_result_contract,
 )
-from aces_sdl.semantics.workflow import validate_workflow_step_result
 
 from .diagnostics import _failure_diagnostic, _parse_timestamp
 
@@ -270,7 +270,7 @@ def workflow_result_contract_diagnostics(
             contract = result_contract.observable_steps.get(step_name)
             if contract is None:
                 continue
-            violations = validate_workflow_step_result(
+            violations = validate_workflow_step_result_contract(
                 contract,
                 lifecycle=step_state.lifecycle.value,
                 outcome=step_state.outcome.value if step_state.outcome else None,

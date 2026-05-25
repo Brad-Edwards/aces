@@ -35,35 +35,46 @@ Split the current implementation into these owning packages:
   security, persistence, operation history/audit, backend invocation, runtime
   snapshots, participant episode control, and backend result validation at the
   execution boundary.
-- `aces_backend_protocols` owns backend protocol types.
+- `aces_backend_protocols` owns backend capability and protocol declarations.
+  It must not import processor/runtime implementation modules; protocol methods
+  describe the backend call shape while the runtime supplies compiled processor
+  artifacts at execution time.
 - `aces_backend_stubs` owns non-normative in-memory backend implementations.
 - `aces_cli` and `aces_mcp` are authoring/orchestration surfaces that consume
   SDL and processor APIs. They must not own semantic truth or call runtime
   internals.
 
-This ADR supersedes the part of ADR-008 that placed execution-facing runtime
-control inside the processor package. It does not change ADR-008's decision
-that processor artifacts are the compiled, semantics-bearing middle layer, and
-it does not change ADR-009/ADR-010 compatibility policy: owning-package shims
-are not preserved. The only compatibility shim layer is the legacy `aces.*`
-namespace.
+This ADR supersedes:
+
+- the part of ADR-008 that placed execution-facing runtime control inside the
+  processor package
+- the ADR-010 section 3 ownership statement that listed
+  runtime/control-plane behavior under `aces_processor`
+
+It does not change ADR-008's decision that processor artifacts are the
+compiled, semantics-bearing middle layer, and it does not change ADR-009/ADR-010
+compatibility policy: owning-package shims are not preserved. The only
+compatibility shim layer is the legacy `aces.*` namespace.
 
 Runtime may consume public processor APIs and shared contracts. It may not
-import processor private modules. Backends remain behind runtime/backend
-protocol interfaces; authoring surfaces do not import runtime internals.
+import processor private modules or SDL semantic implementation modules.
+Backends remain behind runtime/backend protocol interfaces; authoring surfaces
+do not import runtime internals.
 
 ## Enforcement
 
-Add a `module_boundaries` block to `tools/policy/adr_policy.yaml` and enforce it
-in `tools/policy/repo_policy.py`. The checker walks changed Python files under
-configured package roots and rejects:
+Add a required `module_boundaries` block to `tools/policy/adr_policy.yaml` and
+enforce it in `tools/policy/repo_policy.py`. The checker validates that the
+block exists, that module roots resolve to existing in-repository directories,
+and then rejects:
 
 - imports from packages that the owner explicitly forbids
 - imports of private modules such as `aces_processor._private`
 - imports from packages that are only allowed through named public prefixes
 
-The gate is intentionally structural and changed-file scoped, matching the
-existing ADR-015 policy style.
+The file-local gate checks the selected changed paths. The full policy gate
+scans every Python file under every configured module root, so pre-commit and
+CI cannot hide a latent boundary violation behind an unrelated changed file.
 
 ## Consequences
 
@@ -75,7 +86,7 @@ existing ADR-015 policy style.
 - Authoring surfaces have an explicit boundary: they call SDL/processor APIs,
   not runtime internals.
 - The policy gate catches accidental boundary regressions during normal PR
-  review.
+  review and full verification.
 
 ### Negative
 
@@ -88,7 +99,7 @@ existing ADR-015 policy style.
 
 - The policy is still in-repository code and configuration, so deliberate
   weakening is a review concern rather than a cryptographic enforcement
-  mechanism.
+  mechanism. The config is fail-closed to prevent accidental opt-out.
 - Some shared result-contract types still live in `aces_processor.models`
   because they are compiled processor artifacts consumed by runtime validation.
   If that file is split later, the public runtime-facing contract exports must

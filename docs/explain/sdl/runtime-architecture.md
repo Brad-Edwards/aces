@@ -53,10 +53,15 @@ here come from mature workflow and distributed-runtime systems:
 aces_sdl                -> parse + instantiate + SDL-language semantics
 aces_processor          -> compile + plan + support/contract semantics
 aces_runtime            -> live control + manager + control-plane APIs
-aces_backend_protocols  -> backend protocol contracts
+aces_backend_protocols  -> backend capability/protocol declarations
 aces_backend_stubs      -> non-normative in-memory target implementations
 aces.*                  -> legacy compatibility wrappers
 ```
+
+ADR-035 backs this package boundary with `tools/check_repo_policy.py`: the
+full policy gate scans every Python file under each configured package root,
+and the pre-commit gate runs the same architecture-as-code check against
+staged changes.
 
 ## Runtime Stages
 
@@ -387,6 +392,12 @@ snapshot than the one it was reconciled against.
 `RuntimeManager` also hardens the execution boundary at call time. Backend
 exceptions and invalid lifecycle return payloads are converted into structured
 runtime diagnostics instead of surfacing as unhandled crashes.
+
+The HTTP adapter defaults to a fail-closed security configuration: no trusted
+header identities and no bearer tokens are built in. Deployments that use
+header identity must pass an explicit `ControlPlaneSecurityConfig` and only
+trust those headers behind an authenticated proxy that strips caller-supplied
+identity headers.
 
 ## Current Scope
 

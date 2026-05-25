@@ -5,6 +5,7 @@ import shutil
 import sys
 import types
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
@@ -12,6 +13,7 @@ if str(REPO_ROOT) not in sys.path:
 
 import pytest
 import tools.check_generated_schemas as check_generated_schemas
+import yaml
 from tools.check_generated_schemas import _extra_published_schema_paths
 from tools.check_json_artifacts import collect_validation_targets, should_run_full_validation
 from tools.check_schema_publication import validate_schema_publication_manifest
@@ -74,11 +76,40 @@ def setup_policy_repo(tmp_path: Path) -> Path:
         "| --- | --- | --- | --- |\n"
         "| [001](adr-001-example.md) | Example ADR | Accepted | 2026-04-05 |\n",
     )
+    for package in (
+        "aces_sdl",
+        "aces_processor",
+        "aces_runtime",
+        "aces_backend_protocols",
+        "aces_backend_stubs",
+        "aces_conformance",
+        "aces_cli",
+        "aces_mcp",
+        "aces_contracts",
+    ):
+        write_text(
+            tmp_path / "implementations" / "python" / "packages" / package / "__init__.py",
+            "",
+        )
     return tmp_path
 
 
 def structural_runner_stub(_: dict) -> list[PolicyFailure]:
     return []
+
+
+def _load_test_policy(repo_root: Path) -> dict[str, Any]:
+    with (repo_root / "tools" / "policy" / "adr_policy.yaml").open("r", encoding="utf-8") as handle:
+        data = yaml.safe_load(handle)
+    assert isinstance(data, dict)
+    return data
+
+
+def _write_test_policy(repo_root: Path, policy: dict[str, Any]) -> None:
+    (repo_root / "tools" / "policy" / "adr_policy.yaml").write_text(
+        yaml.safe_dump(policy, sort_keys=False),
+        encoding="utf-8",
+    )
 
 
 def test_hygiene_parser_ignores_policy_only_verify_args(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -306,7 +337,6 @@ module_boundaries:
         - aces_backend_protocols
         - aces_contracts
         - aces_processor
-        - aces_sdl
       public_import_prefixes:
         aces_processor:
           - aces_processor.compiler
@@ -388,6 +418,88 @@ def test_module_boundaries_reject_authoring_importing_runtime_internals(tmp_path
     write_text(repo_root / rel, "from aces_runtime.control_plane import RuntimeControlPlane\n")
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["module-boundary-import"]
+
+
+def test_module_boundaries_config_is_required(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    policy = _load_test_policy(repo_root)
+    policy.pop("module_boundaries")
+    _write_test_policy(repo_root, policy)
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        ["tools/policy/adr_policy.yaml"],
+        check_set="file-local",
+        structural_runner=structural_runner_stub,
+    )
+
+    assert [f.rule_id for f in failures] == ["policy-config-malformed"]
+    assert "module_boundaries block is required" in failures[0].message
+
+
+def test_module_boundaries_config_is_required_even_without_changed_paths(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    policy = _load_test_policy(repo_root)
+    policy.pop("module_boundaries")
+    _write_test_policy(repo_root, policy)
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        [],
+        check_set="full",
+        structural_runner=structural_runner_stub,
+    )
+
+    assert [f.rule_id for f in failures] == ["policy-config-malformed"]
+    assert "module_boundaries block is required" in failures[0].message
+
+
+def test_module_boundaries_reject_missing_module_root(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    policy = _load_test_policy(repo_root)
+    policy["module_boundaries"]["modules"][0]["root"] = "implementations/python/packages/aces_typo"
+    _write_test_policy(repo_root, policy)
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        ["tools/policy/adr_policy.yaml"],
+        check_set="file-local",
+        structural_runner=structural_runner_stub,
+    )
+
+    assert [f.rule_id for f in failures] == ["policy-config-malformed"]
+    assert "must resolve to an existing directory" in failures[0].message
+
+
+def test_module_boundaries_full_check_scans_all_module_sources(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    rel = "implementations/python/packages/aces_processor/latent_runtime_import.py"
+    write_text(repo_root / rel, "from aces_runtime.manager import RuntimeManager\n")
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        ["tools/policy/adr_policy.yaml"],
+        check_set="full",
+        structural_runner=structural_runner_stub,
+    )
+
+    assert [f.rule_id for f in failures] == ["module-boundary-import"]
+    assert failures[0].path == rel
+
+
+def test_module_boundaries_reject_runtime_importing_sdl_semantics(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    rel = "implementations/python/packages/aces_runtime/uses_sdl_workflow_semantics.py"
+    write_text(repo_root / rel, "from aces_sdl.semantics.workflow import validate_workflow_step_result\n")
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        [rel],
+        check_set="file-local",
+        structural_runner=structural_runner_stub,
+    )
 
     assert [f.rule_id for f in failures] == ["module-boundary-import"]
 

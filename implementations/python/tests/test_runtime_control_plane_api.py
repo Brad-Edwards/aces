@@ -11,7 +11,11 @@ from aces.backends.stubs import create_stub_target
 from aces.core.runtime.compiler import compile_runtime_model
 from aces.core.runtime.control_plane import RuntimeControlPlane
 from aces.core.runtime.control_plane_api import create_control_plane_app
-from aces.core.runtime.control_plane_security import ControlPlaneSecurityConfig
+from aces.core.runtime.control_plane_security import (
+    ControlPlaneIdentity,
+    ControlPlaneRole,
+    ControlPlaneSecurityConfig,
+)
 from aces.core.runtime.control_plane_store import LocalControlPlaneStore
 from aces.core.runtime.planner import plan
 from aces.core.sdl import parse_sdl
@@ -19,6 +23,56 @@ from aces.core.sdl import parse_sdl
 
 def _scenario(yaml_str: str):
     return parse_sdl(textwrap.dedent(yaml_str))
+
+
+def _test_security(target_name: str, *, max_request_bytes: int = 1_000_000) -> ControlPlaneSecurityConfig:
+    return ControlPlaneSecurityConfig(
+        max_request_bytes=max_request_bytes,
+        trusted_identities={
+            "backend-service": ControlPlaneIdentity(
+                identity="backend-service",
+                roles=frozenset({ControlPlaneRole.BACKEND}),
+                target_name=target_name,
+            ),
+        },
+        bearer_tokens={
+            "test-operator-token": ControlPlaneIdentity(
+                identity="operator",
+                roles=frozenset({ControlPlaneRole.OPERATOR, ControlPlaneRole.AUDITOR}),
+                target_name=target_name,
+            ),
+        },
+    )
+
+
+def test_control_plane_strict_defaults_ship_without_builtin_principals():
+    security = ControlPlaneSecurityConfig.strict_defaults(target_name="target")
+
+    assert security.require_verified_identity is True
+    assert security.trusted_identities == {}
+    assert security.bearer_tokens == {}
+
+
+def test_control_plane_api_default_security_does_not_trust_builtin_headers_or_tokens():
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(control_plane)
+
+    with TestClient(app) as client:
+        header_response = client.get(
+            "/snapshot",
+            headers={
+                "x-aces-client-verified": "true",
+                "x-aces-client-identity": "backend-service",
+            },
+        )
+        token_response = client.get(
+            "/snapshot",
+            headers={"authorization": "Bearer operator-token"},
+        )
+
+    assert header_response.status_code == 401
+    assert token_response.status_code == 401
 
 
 def test_control_plane_api_accepts_orchestration_plan_and_exposes_snapshot():
@@ -54,7 +108,7 @@ workflows:
     control_plane = RuntimeControlPlane(target)
     app = create_control_plane_app(
         control_plane,
-        security=ControlPlaneSecurityConfig.strict_defaults(target_name=target.name),
+        security=_test_security(target.name),
     )
     headers = {
         "x-aces-client-verified": "true",
@@ -99,7 +153,7 @@ def test_control_plane_api_rejects_unauthenticated_mutations():
     control_plane = RuntimeControlPlane(target)
     app = create_control_plane_app(
         control_plane,
-        security=ControlPlaneSecurityConfig.strict_defaults(target_name=target.name),
+        security=_test_security(target.name),
     )
 
     with TestClient(app) as client:
@@ -116,7 +170,7 @@ def test_control_plane_api_supports_idempotent_retries():
     control_plane = RuntimeControlPlane(target)
     app = create_control_plane_app(
         control_plane,
-        security=ControlPlaneSecurityConfig.strict_defaults(target_name=target.name),
+        security=_test_security(target.name),
     )
     headers = {
         "x-aces-client-verified": "true",
@@ -156,7 +210,7 @@ nodes:
     control_plane = RuntimeControlPlane(target, store=store)
     app = create_control_plane_app(
         control_plane,
-        security=ControlPlaneSecurityConfig.strict_defaults(target_name=target.name),
+        security=_test_security(target.name),
     )
     headers = {
         "x-aces-client-verified": "true",
@@ -193,7 +247,7 @@ def test_control_plane_api_records_audit_events_for_denials():
     control_plane = RuntimeControlPlane(target)
     app = create_control_plane_app(
         control_plane,
-        security=ControlPlaneSecurityConfig.strict_defaults(target_name=target.name),
+        security=_test_security(target.name),
     )
 
     with TestClient(app) as client:
@@ -207,15 +261,7 @@ def test_control_plane_api_records_audit_events_for_denials():
 def test_control_plane_api_enforces_request_size_limit():
     target = create_stub_target()
     control_plane = RuntimeControlPlane(target)
-    security = ControlPlaneSecurityConfig.strict_defaults(target_name=target.name)
-    security = ControlPlaneSecurityConfig(
-        require_verified_identity=security.require_verified_identity,
-        verified_header=security.verified_header,
-        identity_header=security.identity_header,
-        max_request_bytes=32,
-        trusted_identities=security.trusted_identities,
-        bearer_tokens=security.bearer_tokens,
-    )
+    security = _test_security(target.name, max_request_bytes=32)
     app = create_control_plane_app(control_plane, security=security)
     headers = {
         "x-aces-client-verified": "true",
@@ -265,7 +311,7 @@ workflows:
     control_plane = RuntimeControlPlane(target)
     app = create_control_plane_app(
         control_plane,
-        security=ControlPlaneSecurityConfig.strict_defaults(target_name=target.name),
+        security=_test_security(target.name),
     )
     headers = {
         "x-aces-client-verified": "true",
@@ -339,7 +385,7 @@ workflows:
     control_plane = RuntimeControlPlane(target)
     app = create_control_plane_app(
         control_plane,
-        security=ControlPlaneSecurityConfig.strict_defaults(target_name=target.name),
+        security=_test_security(target.name),
     )
     headers = {
         "x-aces-client-verified": "true",
@@ -421,7 +467,7 @@ workflows:
     control_plane = RuntimeControlPlane(target)
     app = create_control_plane_app(
         control_plane,
-        security=ControlPlaneSecurityConfig.strict_defaults(target_name=target.name),
+        security=_test_security(target.name),
     )
     headers = {
         "x-aces-client-verified": "true",
@@ -539,7 +585,7 @@ workflows:
     control_plane = RuntimeControlPlane(target)
     app = create_control_plane_app(
         control_plane,
-        security=ControlPlaneSecurityConfig.strict_defaults(target_name=target.name),
+        security=_test_security(target.name),
     )
     headers = {
         "x-aces-client-verified": "true",
@@ -620,7 +666,7 @@ class TestParticipantEpisodeHttpRoutes:
         control_plane = RuntimeControlPlane(target)
         app = create_control_plane_app(
             control_plane,
-            security=ControlPlaneSecurityConfig.strict_defaults(target_name=target.name),
+            security=_test_security(target.name),
         )
         return TestClient(app)
 

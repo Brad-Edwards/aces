@@ -1,33 +1,22 @@
 """Runtime execution protocols."""
 
-from typing import Any, Protocol
+from __future__ import annotations
 
-from aces_processor.models import (
-    ApplyResult,
-    Diagnostic,
-    EvaluationPlan,
-    OrchestrationPlan,
-    ParticipantEpisodeInitializeRequest,
-    ParticipantEpisodeResetRequest,
-    ParticipantEpisodeRestartRequest,
-    ParticipantEpisodeTerminateRequest,
-    ProvisioningPlan,
-    RuntimeSnapshot,
-)
+from typing import Any, Protocol
 
 
 class Provisioner(Protocol):
     """Applies provisioning plans to the target environment."""
 
-    def validate(self, plan: ProvisioningPlan) -> list[Diagnostic]:
+    def validate(self, plan: Any) -> list[Any]:
         """Return planner/runtime diagnostics for an apply attempt."""
         ...
 
     def apply(
         self,
-        plan: ProvisioningPlan,
-        snapshot: RuntimeSnapshot,
-    ) -> ApplyResult:
+        plan: Any,
+        snapshot: Any,
+    ) -> Any:
         """Apply provisioning reconciliation operations."""
         ...
 
@@ -37,9 +26,9 @@ class Orchestrator(Protocol):
 
     def start(
         self,
-        plan: OrchestrationPlan,
-        snapshot: RuntimeSnapshot,
-    ) -> ApplyResult:
+        plan: Any,
+        snapshot: Any,
+    ) -> Any:
         """Start or refresh orchestration state."""
         ...
 
@@ -55,7 +44,7 @@ class Orchestrator(Protocol):
         """Return workflow execution history events."""
         ...
 
-    def stop(self, snapshot: RuntimeSnapshot) -> ApplyResult:
+    def stop(self, snapshot: Any) -> Any:
         """Stop orchestration and clear orchestration state."""
         ...
 
@@ -65,9 +54,9 @@ class Evaluator(Protocol):
 
     def start(
         self,
-        plan: EvaluationPlan,
-        snapshot: RuntimeSnapshot,
-    ) -> ApplyResult:
+        plan: Any,
+        snapshot: Any,
+    ) -> Any:
         """Start or refresh evaluation state."""
         ...
 
@@ -83,7 +72,7 @@ class Evaluator(Protocol):
         """Return evaluation history events."""
         ...
 
-    def stop(self, snapshot: RuntimeSnapshot) -> ApplyResult:
+    def stop(self, snapshot: Any) -> Any:
         """Stop evaluation and clear evaluation state."""
         ...
 
@@ -103,17 +92,17 @@ class ParticipantRuntime(Protocol):
 
     def initialize(
         self,
-        request: ParticipantEpisodeInitializeRequest,
-        snapshot: RuntimeSnapshot,
-    ) -> ApplyResult:
+        request: Any,
+        snapshot: Any,
+    ) -> Any:
         """Create the first episode for a participant (sequence_number=0)."""
         ...
 
     def reset(
         self,
-        request: ParticipantEpisodeResetRequest,
-        snapshot: RuntimeSnapshot,
-    ) -> ApplyResult:
+        request: Any,
+        snapshot: Any,
+    ) -> Any:
         """Start a new episode instance from a non-terminal predecessor.
 
         Must allocate a new ``episode_id`` and increment
@@ -124,9 +113,9 @@ class ParticipantRuntime(Protocol):
 
     def restart(
         self,
-        request: ParticipantEpisodeRestartRequest,
-        snapshot: RuntimeSnapshot,
-    ) -> ApplyResult:
+        request: Any,
+        snapshot: Any,
+    ) -> Any:
         """Start a new episode instance from a terminated predecessor.
 
         Must allocate a new ``episode_id`` and increment
@@ -137,9 +126,9 @@ class ParticipantRuntime(Protocol):
 
     def terminate(
         self,
-        request: ParticipantEpisodeTerminateRequest,
-        snapshot: RuntimeSnapshot,
-    ) -> ApplyResult:
+        request: Any,
+        snapshot: Any,
+    ) -> Any:
         """Drive the current episode to ``TERMINATED`` with the given reason."""
         ...
 

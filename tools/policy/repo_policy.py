@@ -74,6 +74,7 @@ def evaluate_repo_policy(
         # allow-listed-and-over-cap or genuinely split below it) must still
         # hold regardless, so run that portion before returning.
         failures.extend(_check_layering_and_oversized(repo_root, policy, []))
+        failures.extend(_check_module_boundaries(repo_root, policy, [], check_set=check_set))
         return failures
 
     if structural_runner is None:
@@ -93,7 +94,7 @@ def evaluate_repo_policy(
     failures.extend(_check_package_import_direction(repo_root, policy, changed))
     failures.extend(_check_compatibility_wrappers(repo_root, policy, changed))
     failures.extend(_check_layering_and_oversized(repo_root, policy, changed))
-    failures.extend(_check_module_boundaries(repo_root, policy, changed))
+    failures.extend(_check_module_boundaries(repo_root, policy, changed, check_set=check_set))
 
     if check_set == "full":
         failures.extend(_check_adr_index(repo_root, policy, changed))
@@ -606,12 +607,12 @@ def _is_wrapper_module(tree: ast.Module) -> bool:
     return True
 
 
-def _validate_module_boundary_config(config: object) -> tuple[list[dict], list[PolicyFailure]]:
+def _validate_module_boundary_config(repo_root: Path, config: object) -> tuple[list[dict], list[PolicyFailure]]:
     """Validate the ADR-035 module-boundary policy block."""
 
-    if config is None:
-        return [], []
     fail = lambda msg: PolicyFailure("policy-config-malformed", msg, _POLICY_CONFIG_PATH)  # noqa: E731
+    if config is None:
+        return [], [fail("module_boundaries block is required (ADR-035 / MOD-001) but is absent")]
     if not isinstance(config, dict):
         return [], [fail(f"module_boundaries must be a mapping; got {type(config).__name__}")]
     adr = config.get("adr")
@@ -644,6 +645,18 @@ def _validate_module_boundary_config(config: object) -> tuple[list[dict], list[P
         elif root in seen_roots:
             failures.append(fail(f"module_boundaries.modules[{index}].root '{root}' is duplicated"))
             ok = False
+        else:
+            safe_root = _safe_repo_path(repo_root, str(root))
+            if safe_root is None:
+                failures.append(
+                    fail(f"module_boundaries.modules[{index}].root '{root}' must be a safe repo-relative path")
+                )
+                ok = False
+            elif not safe_root.is_dir():
+                failures.append(
+                    fail(f"module_boundaries.modules[{index}].root '{root}' must resolve to an existing directory")
+                )
+                ok = False
         allowed = module.get("allowed_top_level_imports", [])
         forbidden = module.get("forbidden_import_prefixes", [])
         if not _str_list_ok(allowed, allow_empty=True):
@@ -690,15 +703,22 @@ def _validate_module_boundary_config(config: object) -> tuple[list[dict], list[P
     return validated, failures
 
 
-def _check_module_boundaries(repo_root: Path, policy: dict, changed: list[str]) -> list[PolicyFailure]:
-    rules, config_failures = _validate_module_boundary_config(policy.get("module_boundaries"))
+def _check_module_boundaries(
+    repo_root: Path,
+    policy: dict,
+    changed: list[str],
+    *,
+    check_set: str,
+) -> list[PolicyFailure]:
+    rules, config_failures = _validate_module_boundary_config(repo_root, policy.get("module_boundaries"))
     if config_failures or not rules:
         return config_failures
 
     known_modules = frozenset(rule["id"] for rule in rules)
     failures: list[PolicyFailure] = []
+    candidate_paths = _module_boundary_candidate_paths(repo_root, rules, changed, check_set=check_set)
     for rule in rules:
-        for rel_path in changed:
+        for rel_path in candidate_paths:
             if not rel_path.endswith(".py") or not path_matches_prefix(rel_path, rule["root"]):
                 continue
             path = repo_root / rel_path
@@ -707,6 +727,31 @@ def _check_module_boundaries(repo_root: Path, policy: dict, changed: list[str]) 
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel_path)
             failures.extend(_check_module_imports(rel_path, rule, known_modules, tree))
     return failures
+
+
+def _module_boundary_candidate_paths(
+    repo_root: Path,
+    rules: list[dict],
+    changed: list[str],
+    *,
+    check_set: str,
+) -> list[str]:
+    if check_set != "full":
+        return changed
+
+    paths: list[str] = []
+    seen: set[str] = set()
+    for rule in rules:
+        root = repo_root / rule["root"]
+        for path in sorted(root.rglob("*.py")):
+            if not path.is_file():
+                continue
+            rel_path = path.relative_to(repo_root).as_posix()
+            if rel_path in seen:
+                continue
+            seen.add(rel_path)
+            paths.append(rel_path)
+    return paths
 
 
 def _check_module_imports(
