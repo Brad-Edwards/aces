@@ -5,7 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from aces_processor.models import OperationReceipt, OperationState, OperationStatus, RuntimeDomain, RuntimeSnapshot
+from aces_contracts.planning import RuntimeDomain
+from aces_contracts.runtime_state import OperationReceipt, OperationState, OperationStatus, RuntimeSnapshot
 
 from .backend_calls import _call_backend_apply
 from .control_plane_store import ControlPlaneOperationRecord

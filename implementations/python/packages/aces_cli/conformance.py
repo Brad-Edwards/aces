@@ -17,7 +17,7 @@ from aces_conformance.conformance import (
     BackendConformanceReport,
     run_fixture_suite,
 )
-from aces_processor.models import Diagnostic
+from aces_contracts.diagnostics import Diagnostic
 
 _DEFAULT_PROFILE_ID = BackendCapabilityProfile.ORCHESTRATION_EVALUATION.value
 _KNOWN_PROFILE_HINT = ", ".join(sorted(profile.value for profile in BackendCapabilityProfile))

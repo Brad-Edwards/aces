@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from aces_processor.models import Diagnostic, RuntimeSnapshot, iter_participant_episode_snapshot_violations
+from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.participant_episode import iter_participant_episode_snapshot_violations
+from aces_contracts.runtime_state import RuntimeSnapshot
 
 from .diagnostics import _failure_diagnostic
 

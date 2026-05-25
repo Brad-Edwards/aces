@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from aces_processor.models import (
-    Diagnostic,
+from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.evaluation import (
     EvaluationExecutionContract,
     EvaluationExecutionState,
     EvaluationHistoryEvent,
     EvaluationHistoryEventType,
     EvaluationResultContract,
     EvaluationResultStatus,
-    RuntimeDomain,
-    RuntimeSnapshot,
     validate_evaluation_result,
 )
+from aces_contracts.planning import RuntimeDomain
+from aces_contracts.runtime_state import RuntimeSnapshot
 
 from .diagnostics import _failure_diagnostic, _parse_timestamp
 

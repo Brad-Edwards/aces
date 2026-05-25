@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from aces_processor.models import (
-    Diagnostic,
-    RuntimeDomain,
-    RuntimeSnapshot,
+from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.planning import RuntimeDomain
+from aces_contracts.runtime_state import RuntimeSnapshot
+from aces_contracts.workflow import (
     WorkflowCompensationStatus,
     WorkflowExecutionContract,
     WorkflowExecutionState,

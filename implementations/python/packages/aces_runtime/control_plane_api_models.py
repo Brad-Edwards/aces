@@ -13,20 +13,18 @@ from aces_contracts.contracts import (
     ProvisioningPlanModel,
     RuntimeSnapshotEnvelopeModel,
 )
-from aces_processor.models import (
+from aces_contracts.diagnostics import Diagnostic, Severity
+from aces_contracts.participant_episode import ParticipantEpisodeTerminalReason
+from aces_contracts.planning import (
     ChangeAction,
-    Diagnostic,
     EvaluationOp,
     EvaluationPlan,
-    OperationStatus,
     OrchestrationOp,
     OrchestrationPlan,
-    ParticipantEpisodeTerminalReason,
     ProvisioningPlan,
     ProvisionOp,
-    RuntimeSnapshotEnvelope,
-    Severity,
 )
+from aces_contracts.runtime_state import OperationStatus, RuntimeSnapshotEnvelope
 from fastapi import Request
 from pydantic import BaseModel, ConfigDict, Field
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from aces_processor.models import Diagnostic
+from aces_contracts.diagnostics import Diagnostic
 
 
 def _has_error_diagnostic(diagnostics: list[Diagnostic]) -> bool:

@@ -7,15 +7,14 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
-from aces_processor.models import (
-    Diagnostic,
+from aces_contracts.diagnostics import Diagnostic, Severity
+from aces_contracts.planning import RuntimeDomain
+from aces_contracts.runtime_state import (
     OperationReceipt,
     OperationState,
     OperationStatus,
-    RuntimeDomain,
     RuntimeSnapshot,
     RuntimeSnapshotEnvelope,
-    Severity,
     SnapshotEntry,
 )
 

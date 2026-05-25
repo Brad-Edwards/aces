@@ -11,22 +11,23 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from aces_processor.models import (
-    Diagnostic,
-    EvaluationPlan,
-    OperationReceipt,
-    OperationState,
-    OperationStatus,
-    OrchestrationPlan,
+from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.participant_episode import (
     ParticipantEpisodeInitializeRequest,
     ParticipantEpisodeResetRequest,
     ParticipantEpisodeRestartRequest,
     ParticipantEpisodeTerminalReason,
     ParticipantEpisodeTerminateRequest,
-    ProvisioningPlan,
-    RuntimeDomain,
+)
+from aces_contracts.planning import EvaluationPlan, OrchestrationPlan, ProvisioningPlan, RuntimeDomain
+from aces_contracts.runtime_state import (
+    OperationReceipt,
+    OperationState,
+    OperationStatus,
     RuntimeSnapshot,
     RuntimeSnapshotEnvelope,
+)
+from aces_contracts.workflow import (
     WorkflowCompensationStatus,
     WorkflowExecutionState,
     WorkflowHistoryEvent,

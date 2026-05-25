@@ -1,16 +1,11 @@
 """Runtime manager for compiled SDL runtime plans."""
 
+from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
+from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
 from aces_processor.compiler import compile_scenario_runtime_model
 from aces_processor.models import (
-    ApplyResult,
-    ChangeAction,
-    Diagnostic,
     ExecutionPlan,
-    ProvisioningPlan,
-    ProvisionOp,
-    RuntimeDomain,
-    RuntimeSnapshot,
-    SnapshotEntry,
 )
 from aces_processor.planner import plan, snapshot_delete_order
 

@@ -13,7 +13,6 @@ the current ``RuntimeSnapshot`` and emits a composite ``ExecutionPlan``.
 
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import asdict, dataclass, field
-from enum import Enum
 from typing import Any
 
 from aces_backend_protocols.capabilities import (
@@ -21,12 +20,179 @@ from aces_backend_protocols.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
+from aces_contracts.diagnostics import Diagnostic as Diagnostic
+from aces_contracts.diagnostics import Severity as Severity
+from aces_contracts.evaluation import (
+    EvaluationExecutionContract as EvaluationExecutionContract,
+)
+from aces_contracts.evaluation import (
+    EvaluationExecutionState as EvaluationExecutionState,
+)
+from aces_contracts.evaluation import (
+    EvaluationHistoryEvent as EvaluationHistoryEvent,
+)
+from aces_contracts.evaluation import (
+    EvaluationHistoryEventType as EvaluationHistoryEventType,
+)
+from aces_contracts.evaluation import (
+    EvaluationResultContract as EvaluationResultContract,
+)
+from aces_contracts.evaluation import (
+    EvaluationResultStatus as EvaluationResultStatus,
+)
+from aces_contracts.evaluation import (
+    validate_evaluation_result as validate_evaluation_result,
+)
+from aces_contracts.participant_behavior import (
+    ParticipantActionPreconditionStatus as ParticipantActionPreconditionStatus,
+)
+from aces_contracts.participant_behavior import (
+    ParticipantActionResultStatus as ParticipantActionResultStatus,
+)
+from aces_contracts.participant_behavior import (
+    ParticipantBehaviorHistoryEventType as ParticipantBehaviorHistoryEventType,
+)
+from aces_contracts.participant_behavior import (
+    ParticipantObservationStatus as ParticipantObservationStatus,
+)
+from aces_contracts.participant_episode import (
+    PARTICIPANT_EPISODE_CONTROL_EVENTS,
+    PARTICIPANT_EPISODE_TERMINAL_EVENTS,
+)
+from aces_contracts.participant_episode import (
+    ParticipantEpisodeControlAction as ParticipantEpisodeControlAction,
+)
+from aces_contracts.participant_episode import (
+    ParticipantEpisodeExecutionState as ParticipantEpisodeExecutionState,
+)
+from aces_contracts.participant_episode import (
+    ParticipantEpisodeHistoryEvent as ParticipantEpisodeHistoryEvent,
+)
+from aces_contracts.participant_episode import (
+    ParticipantEpisodeHistoryEventType as ParticipantEpisodeHistoryEventType,
+)
+from aces_contracts.participant_episode import (
+    ParticipantEpisodeInitializeRequest as ParticipantEpisodeInitializeRequest,
+)
+from aces_contracts.participant_episode import (
+    ParticipantEpisodeResetRequest as ParticipantEpisodeResetRequest,
+)
+from aces_contracts.participant_episode import (
+    ParticipantEpisodeRestartRequest as ParticipantEpisodeRestartRequest,
+)
+from aces_contracts.participant_episode import (
+    ParticipantEpisodeStatus as ParticipantEpisodeStatus,
+)
+from aces_contracts.participant_episode import (
+    ParticipantEpisodeTerminalReason as ParticipantEpisodeTerminalReason,
+)
+from aces_contracts.participant_episode import (
+    ParticipantEpisodeTerminateRequest as ParticipantEpisodeTerminateRequest,
+)
+from aces_contracts.participant_episode import (
+    iter_participant_episode_snapshot_violations as iter_participant_episode_snapshot_violations,
+)
+from aces_contracts.planning import (
+    ChangeAction as ChangeAction,
+)
+from aces_contracts.planning import (
+    EvaluationOp as EvaluationOp,
+)
+from aces_contracts.planning import (
+    EvaluationPlan as EvaluationPlan,
+)
+from aces_contracts.planning import (
+    OrchestrationOp as OrchestrationOp,
+)
+from aces_contracts.planning import (
+    OrchestrationPlan as OrchestrationPlan,
+)
+from aces_contracts.planning import (
+    PlannedResource as PlannedResource,
+)
+from aces_contracts.planning import (
+    PlanOperation as PlanOperation,
+)
+from aces_contracts.planning import (
+    ProvisioningPlan as ProvisioningPlan,
+)
+from aces_contracts.planning import (
+    ProvisionOp as ProvisionOp,
+)
+from aces_contracts.planning import (
+    RuntimeDomain as RuntimeDomain,
+)
+from aces_contracts.runtime_state import (
+    ApplyResult as ApplyResult,
+)
+from aces_contracts.runtime_state import (
+    OperationReceipt as OperationReceipt,
+)
+from aces_contracts.runtime_state import (
+    OperationState as OperationState,
+)
+from aces_contracts.runtime_state import (
+    OperationStatus as OperationStatus,
+)
+from aces_contracts.runtime_state import (
+    RuntimeSnapshot as RuntimeSnapshot,
+)
+from aces_contracts.runtime_state import (
+    RuntimeSnapshotEnvelope as RuntimeSnapshotEnvelope,
+)
+from aces_contracts.runtime_state import (
+    SnapshotEntry as SnapshotEntry,
+)
 from aces_contracts.versions import (
-    EVALUATION_STATE_SCHEMA_VERSION,
-    OPERATION_SCHEMA_VERSION,
-    PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION,
-    RUNTIME_SNAPSHOT_SCHEMA_VERSION,
-    WORKFLOW_STATE_SCHEMA_VERSION,
+    EVALUATION_STATE_SCHEMA_VERSION as EVALUATION_STATE_SCHEMA_VERSION,
+)
+from aces_contracts.versions import (
+    OPERATION_SCHEMA_VERSION as OPERATION_SCHEMA_VERSION,
+)
+from aces_contracts.versions import (
+    PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION as PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION,
+)
+from aces_contracts.versions import (
+    RUNTIME_SNAPSHOT_SCHEMA_VERSION as RUNTIME_SNAPSHOT_SCHEMA_VERSION,
+)
+from aces_contracts.versions import (
+    WORKFLOW_STATE_SCHEMA_VERSION as WORKFLOW_STATE_SCHEMA_VERSION,
+)
+from aces_contracts.workflow import (
+    WorkflowCancellationRequest as WorkflowCancellationRequest,
+)
+from aces_contracts.workflow import (
+    WorkflowCompensationStatus as WorkflowCompensationStatus,
+)
+from aces_contracts.workflow import (
+    WorkflowExecutionContract as WorkflowExecutionContract,
+)
+from aces_contracts.workflow import (
+    WorkflowExecutionState as WorkflowExecutionState,
+)
+from aces_contracts.workflow import (
+    WorkflowHistoryEvent as WorkflowHistoryEvent,
+)
+from aces_contracts.workflow import (
+    WorkflowHistoryEventType as WorkflowHistoryEventType,
+)
+from aces_contracts.workflow import (
+    WorkflowResultContract as WorkflowResultContract,
+)
+from aces_contracts.workflow import (
+    WorkflowStatus as WorkflowStatus,
+)
+from aces_contracts.workflow import (
+    WorkflowStepExecutionState as WorkflowStepExecutionState,
+)
+from aces_contracts.workflow import (
+    WorkflowStepLifecycle as WorkflowStepLifecycle,
+)
+from aces_contracts.workflow import (
+    WorkflowStepOutcome as WorkflowStepOutcome,
+)
+from aces_contracts.workflow import (
+    validate_workflow_step_result_contract as validate_workflow_step_result_contract,
 )
 from aces_sdl.participant_attribution_semantics import (
     OUTCOME_ATTRIBUTION_CANDIDATE_KINDS,
@@ -54,238 +220,13 @@ from aces_sdl.participant_temporal_semantics import (
 from aces_sdl.semantics.workflow import (
     WorkflowStepSemanticContract,
 )
-from aces_sdl.semantics.workflow import (
-    validate_workflow_step_result as _validate_workflow_step_result,
-)
 
 _PARTICIPANT_ACTION_CONTRACT_PREFIX = "participant.action-contract."
 _PARTICIPANT_OBSERVATION_BOUNDARY_PREFIX = "participant.observation-boundary."
 _PARTICIPANT_OUTCOME_RULE_PREFIX = "participant.outcome-interpretation-rule."
 _PARTICIPANT_BEHAVIOR_HISTORY_KEY = "runtime.snapshot.participant-behavior-history"
-
-
-class RuntimeDomain(str, Enum):
-    """Top-level runtime concern."""
-
-    PROVISIONING = "provisioning"
-    ORCHESTRATION = "orchestration"
-    EVALUATION = "evaluation"
-    PARTICIPANT = "participant"
-
-
-class ChangeAction(str, Enum):
-    """Planner reconciliation result for a resource."""
-
-    CREATE = "create"
-    UPDATE = "update"
-    DELETE = "delete"
-    UNCHANGED = "unchanged"
-
-
-class Severity(str, Enum):
-    """Diagnostic severity level."""
-
-    ERROR = "error"
-    WARNING = "warning"
-    INFO = "info"
-
-
-class OperationState(str, Enum):
-    """Lifecycle for async control-plane operations."""
-
-    ACCEPTED = "accepted"
-    RUNNING = "running"
-    SUCCEEDED = "succeeded"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-
-
-class WorkflowStepLifecycle(str, Enum):
-    """Portable execution lifecycle for workflow-visible step state."""
-
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-
-
-class WorkflowStepOutcome(str, Enum):
-    """Portable execution outcomes for workflow-visible step state."""
-
-    SUCCEEDED = "succeeded"
-    FAILED = "failed"
-    EXHAUSTED = "exhausted"
-
-
-class WorkflowStatus(str, Enum):
-    """Portable workflow-level execution status."""
-
-    PENDING = "pending"
-    RUNNING = "running"
-    SUCCEEDED = "succeeded"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-    TIMED_OUT = "timed_out"
-
-
-class WorkflowCompensationStatus(str, Enum):
-    """Portable workflow compensation status."""
-
-    NOT_REQUIRED = "not_required"
-    PENDING = "pending"
-    RUNNING = "running"
-    SUCCEEDED = "succeeded"
-    FAILED = "failed"
-
-
-class WorkflowHistoryEventType(str, Enum):
-    """Portable workflow history event kinds."""
-
-    WORKFLOW_STARTED = "workflow_started"
-    STEP_STARTED = "step_started"
-    STEP_COMPLETED = "step_completed"
-    SWITCH_CASE_SELECTED = "switch_case_selected"
-    CALL_STARTED = "call_started"
-    CALL_COMPLETED = "call_completed"
-    BRANCH_ENTERED = "branch_entered"
-    BRANCH_CONVERGED = "branch_converged"
-    WORKFLOW_COMPLETED = "workflow_completed"
-    WORKFLOW_FAILED = "workflow_failed"
-    WORKFLOW_CANCELLED = "workflow_cancelled"
-    WORKFLOW_TIMED_OUT = "workflow_timed_out"
-    COMPENSATION_REGISTERED = "compensation_registered"
-    COMPENSATION_STARTED = "compensation_started"
-    COMPENSATION_WORKFLOW_STARTED = "compensation_workflow_started"
-    COMPENSATION_WORKFLOW_COMPLETED = "compensation_workflow_completed"
-    COMPENSATION_WORKFLOW_FAILED = "compensation_workflow_failed"
-    COMPENSATION_COMPLETED = "compensation_completed"
-    COMPENSATION_FAILED = "compensation_failed"
-
-
-class EvaluationResultStatus(str, Enum):
-    """Portable lifecycle for evaluator-observable results."""
-
-    PENDING = "pending"
-    RUNNING = "running"
-    READY = "ready"
-    FAILED = "failed"
-
-
-class EvaluationHistoryEventType(str, Enum):
-    """Portable evaluator history event kinds."""
-
-    EVALUATION_STARTED = "evaluation_started"
-    EVALUATION_UPDATED = "evaluation_updated"
-    EVALUATION_READY = "evaluation_ready"
-    EVALUATION_FAILED = "evaluation_failed"
-
-
-class ParticipantEpisodeStatus(str, Enum):
-    """Portable lifecycle position for one participant episode instance."""
-
-    INITIALIZING = "initializing"
-    RUNNING = "running"
-    TERMINATED = "terminated"
-
-
-class ParticipantEpisodeTerminalReason(str, Enum):
-    """Portable terminal-reason classifier for participant episodes."""
-
-    COMPLETED = "completed"
-    TIMED_OUT = "timed_out"
-    TRUNCATED = "truncated"
-    INTERRUPTED = "interrupted"
-
-
-class ParticipantEpisodeControlAction(str, Enum):
-    """Portable control actions that drive participant-episode transitions."""
-
-    INITIALIZE = "initialize"
-    RESET = "reset"
-    RESTART = "restart"
-
-
-class ParticipantEpisodeHistoryEventType(str, Enum):
-    """Portable history event kinds for participant episodes."""
-
-    EPISODE_INITIALIZED = "episode_initialized"
-    EPISODE_RUNNING = "episode_running"
-    EPISODE_COMPLETED = "episode_completed"
-    EPISODE_TIMED_OUT = "episode_timed_out"
-    EPISODE_TRUNCATED = "episode_truncated"
-    EPISODE_INTERRUPTED = "episode_interrupted"
-    EPISODE_RESET = "episode_reset"
-    EPISODE_RESTARTED = "episode_restarted"
-
-
-class ParticipantBehaviorHistoryEventType(str, Enum):
-    """Portable history event kinds for participant behavior semantics."""
-
-    ACTION_ATTEMPTED = "action_attempted"
-    STATE_TRANSITION_RECORDED = "state_transition_recorded"
-    OBSERVATION_EMITTED = "observation_emitted"
-
-
-class ParticipantObservationStatus(str, Enum):
-    """Terminal interpretation of a participant observation event."""
-
-    TERMINAL = "terminal"
-    ORPHANED_ACTION = "orphaned_action"
-
-
-class ParticipantActionPreconditionStatus(str, Enum):
-    """Runtime resolution state for one SEM-211 action precondition."""
-
-    SATISFIED = "satisfied"
-    UNSATISFIED = "unsatisfied"
-    UNRESOLVED = "unresolved"
-
-
-class ParticipantActionResultStatus(str, Enum):
-    """Portable local status for a SEM-211 participant action attempt."""
-
-    ACCEPTED = "accepted"
-    REJECTED = "rejected"
-    WITHHELD = "withheld"
-    SUCCEEDED = "succeeded"
-    FAILED = "failed"
-    PARTIAL_SUCCESS = "partial_success"
-    UNKNOWN = "unknown"
-
-
-_PARTICIPANT_EPISODE_TERMINAL_EVENTS: dict[
-    ParticipantEpisodeHistoryEventType,
-    ParticipantEpisodeTerminalReason,
-] = {
-    ParticipantEpisodeHistoryEventType.EPISODE_COMPLETED: ParticipantEpisodeTerminalReason.COMPLETED,
-    ParticipantEpisodeHistoryEventType.EPISODE_TIMED_OUT: ParticipantEpisodeTerminalReason.TIMED_OUT,
-    ParticipantEpisodeHistoryEventType.EPISODE_TRUNCATED: ParticipantEpisodeTerminalReason.TRUNCATED,
-    ParticipantEpisodeHistoryEventType.EPISODE_INTERRUPTED: ParticipantEpisodeTerminalReason.INTERRUPTED,
-}
-
-
-_PARTICIPANT_EPISODE_CONTROL_EVENTS: dict[
-    ParticipantEpisodeHistoryEventType,
-    ParticipantEpisodeControlAction,
-] = {
-    ParticipantEpisodeHistoryEventType.EPISODE_INITIALIZED: ParticipantEpisodeControlAction.INITIALIZE,
-    ParticipantEpisodeHistoryEventType.EPISODE_RESET: ParticipantEpisodeControlAction.RESET,
-    ParticipantEpisodeHistoryEventType.EPISODE_RESTARTED: ParticipantEpisodeControlAction.RESTART,
-}
-
-
-@dataclass(frozen=True)
-class Diagnostic:
-    """Structured planner/runtime message."""
-
-    code: str
-    domain: str
-    address: str
-    message: str
-    severity: Severity = Severity.ERROR
-
-    @property
-    def is_error(self) -> bool:
-        return self.severity == Severity.ERROR
+_PARTICIPANT_EPISODE_CONTROL_EVENTS = PARTICIPANT_EPISODE_CONTROL_EVENTS
+_PARTICIPANT_EPISODE_TERMINAL_EVENTS = PARTICIPANT_EPISODE_TERMINAL_EVENTS
 
 
 @dataclass(frozen=True)
@@ -747,1101 +688,6 @@ class WorkflowRuntime(ResolvedResource):
     result_contract: "WorkflowResultContract" = field(default_factory=lambda: WorkflowResultContract())
     execution_contract: "WorkflowExecutionContract" = field(default_factory=lambda: WorkflowExecutionContract())
     state_schema_version: str = WORKFLOW_STATE_SCHEMA_VERSION
-
-
-@dataclass(frozen=True)
-class WorkflowResultContract:
-    """Compiled contract for validating portable workflow result envelopes."""
-
-    state_schema_version: str = WORKFLOW_STATE_SCHEMA_VERSION
-    observable_steps: dict[str, WorkflowStepSemanticContract] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.state_schema_version, str) or not self.state_schema_version:
-            raise TypeError("workflow result contract state_schema_version must be a non-empty string")
-        if not isinstance(self.observable_steps, dict):
-            raise TypeError("workflow result contract observable_steps must be a dict")
-        if any(not isinstance(step_name, str) for step_name in self.observable_steps):
-            raise TypeError("workflow result contract step names must be strings")
-        if any(not isinstance(contract, WorkflowStepSemanticContract) for contract in self.observable_steps.values()):
-            raise TypeError("workflow result contract step contracts must be WorkflowStepSemanticContract values")
-
-    @classmethod
-    def from_mapping(
-        cls,
-        payload: Mapping[str, Any],
-    ) -> "WorkflowResultContract":
-        if not isinstance(payload, Mapping):
-            raise TypeError("workflow result contract must be a mapping")
-        observable_steps_payload = payload.get("observable_steps", {})
-        if not isinstance(observable_steps_payload, Mapping):
-            raise TypeError("workflow result contract observable_steps must be a mapping")
-        observable_steps: dict[str, WorkflowStepSemanticContract] = {}
-        for step_name, step_payload in observable_steps_payload.items():
-            if not isinstance(step_name, str):
-                raise TypeError("workflow result contract step names must be strings")
-            if not isinstance(step_payload, Mapping):
-                raise TypeError("workflow result contract step payloads must be mappings")
-            observable_steps[step_name] = WorkflowStepSemanticContract.from_mapping(step_payload)
-            if not observable_steps[step_name].state_observable:
-                raise ValueError("workflow result contract may only include observable steps")
-        return cls(
-            state_schema_version=str(payload.get("state_schema_version", WORKFLOW_STATE_SCHEMA_VERSION)),
-            observable_steps=observable_steps,
-        )
-
-
-def validate_workflow_step_result_contract(
-    contract: WorkflowStepSemanticContract,
-    *,
-    lifecycle: str,
-    outcome: str | None,
-    attempts: int,
-) -> tuple[str, ...]:
-    """Validate a backend-reported workflow step result against a compiled contract."""
-
-    return _validate_workflow_step_result(
-        contract,
-        lifecycle=lifecycle,
-        outcome=outcome,
-        attempts=attempts,
-    )
-
-
-@dataclass(frozen=True)
-class WorkflowExecutionContract:
-    """Compiled contract for validating workflow-level execution state/history."""
-
-    state_schema_version: str = WORKFLOW_STATE_SCHEMA_VERSION
-    start_step: str = ""
-    timeout_seconds: int | None = None
-    steps: dict[str, WorkflowStepSemanticContract] = field(default_factory=dict)
-    step_types: dict[str, str] = field(default_factory=dict)
-    control_edges: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    join_owners: dict[str, str] = field(default_factory=dict)
-    call_steps: dict[str, str] = field(default_factory=dict)
-    compensation_mode: str = "disabled"
-    compensation_triggers: tuple[str, ...] = ()
-    compensation_targets: dict[str, str] = field(default_factory=dict)
-    compensation_ordering: str = "reverse_completion"
-    compensation_failure_policy: str = "fail_workflow"
-    observable_steps: tuple[str, ...] = ()
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.state_schema_version, str) or not self.state_schema_version:
-            raise TypeError("workflow execution contract state_schema_version must be a non-empty string")
-        if not isinstance(self.start_step, str):
-            raise TypeError("workflow execution contract start_step must be a string")
-        if self.timeout_seconds is not None:
-            if isinstance(self.timeout_seconds, bool) or not isinstance(self.timeout_seconds, int):
-                raise TypeError("workflow execution contract timeout_seconds must be an int or None")
-            if self.timeout_seconds <= 0:
-                raise ValueError("workflow execution contract timeout_seconds must be > 0")
-        if not isinstance(self.steps, dict):
-            raise TypeError("workflow execution contract steps must be a dict")
-        if any(not isinstance(name, str) for name in self.steps):
-            raise TypeError("workflow execution contract step names must be strings")
-        if any(not isinstance(contract, WorkflowStepSemanticContract) for contract in self.steps.values()):
-            raise TypeError("workflow execution contract step contracts must be WorkflowStepSemanticContract values")
-        if not isinstance(self.step_types, dict):
-            raise TypeError("workflow execution contract step_types must be a dict")
-        if any(
-            not isinstance(name, str) or not isinstance(step_type, str) for name, step_type in self.step_types.items()
-        ):
-            raise TypeError("workflow execution contract step_types must map strings to strings")
-        if not isinstance(self.control_edges, dict):
-            raise TypeError("workflow execution contract control_edges must be a dict")
-        if not isinstance(self.join_owners, dict):
-            raise TypeError("workflow execution contract join_owners must be a dict")
-        if not isinstance(self.call_steps, dict):
-            raise TypeError("workflow execution contract call_steps must be a dict")
-        if any(
-            not isinstance(step_name, str) or not isinstance(workflow_address, str)
-            for step_name, workflow_address in self.call_steps.items()
-        ):
-            raise TypeError("workflow execution contract call_steps must map strings to strings")
-        if not isinstance(self.compensation_mode, str):
-            raise TypeError("workflow execution contract compensation_mode must be a string")
-        if any(not isinstance(trigger, str) for trigger in self.compensation_triggers):
-            raise TypeError("workflow execution contract compensation_triggers must be strings")
-        if not isinstance(self.compensation_targets, dict):
-            raise TypeError("workflow execution contract compensation_targets must be a dict")
-        if any(
-            not isinstance(step_name, str) or not isinstance(workflow_address, str)
-            for step_name, workflow_address in self.compensation_targets.items()
-        ):
-            raise TypeError("workflow execution contract compensation_targets must map strings to strings")
-        if not isinstance(self.compensation_ordering, str):
-            raise TypeError("workflow execution contract compensation_ordering must be a string")
-        if not isinstance(self.compensation_failure_policy, str):
-            raise TypeError("workflow execution contract compensation_failure_policy must be a string")
-        if any(not isinstance(step_name, str) for step_name in self.observable_steps):
-            raise TypeError("workflow execution contract observable_steps must be strings")
-
-    @classmethod
-    def from_mapping(
-        cls,
-        payload: Mapping[str, Any],
-    ) -> "WorkflowExecutionContract":
-        if not isinstance(payload, Mapping):
-            raise TypeError("workflow execution contract must be a mapping")
-        steps_payload = payload.get("steps", {})
-        if not isinstance(steps_payload, Mapping):
-            raise TypeError("workflow execution contract steps must be a mapping")
-        steps: dict[str, WorkflowStepSemanticContract] = {}
-        for step_name, step_payload in steps_payload.items():
-            if not isinstance(step_name, str):
-                raise TypeError("workflow execution contract step names must be strings")
-            if not isinstance(step_payload, Mapping):
-                raise TypeError("workflow execution contract step payloads must be mappings")
-            steps[step_name] = WorkflowStepSemanticContract.from_mapping(step_payload)
-        control_edges_payload = payload.get("control_edges", {})
-        if not isinstance(control_edges_payload, Mapping):
-            raise TypeError("workflow execution contract control_edges must be a mapping")
-        control_edges = {
-            str(step_name): tuple(str(successor) for successor in successors)
-            for step_name, successors in control_edges_payload.items()
-            if isinstance(successors, Iterable)
-        }
-        join_owners_payload = payload.get("join_owners", {})
-        if not isinstance(join_owners_payload, Mapping):
-            raise TypeError("workflow execution contract join_owners must be a mapping")
-        return cls(
-            state_schema_version=str(payload.get("state_schema_version", WORKFLOW_STATE_SCHEMA_VERSION)),
-            start_step=str(payload.get("start_step", "")),
-            timeout_seconds=(int(payload["timeout_seconds"]) if payload.get("timeout_seconds") is not None else None),
-            steps=steps,
-            step_types={
-                str(step_name): str(step_type) for step_name, step_type in payload.get("step_types", {}).items()
-            },
-            control_edges=control_edges,
-            join_owners={str(join): str(owner) for join, owner in join_owners_payload.items()},
-            call_steps={
-                str(step_name): str(workflow_address)
-                for step_name, workflow_address in payload.get("call_steps", {}).items()
-            },
-            compensation_mode=str(payload.get("compensation_mode", "disabled")),
-            compensation_triggers=tuple(str(trigger) for trigger in payload.get("compensation_triggers", ())),
-            compensation_targets={
-                str(step_name): str(workflow_address)
-                for step_name, workflow_address in payload.get("compensation_targets", {}).items()
-            },
-            compensation_ordering=str(payload.get("compensation_ordering", "reverse_completion")),
-            compensation_failure_policy=str(payload.get("compensation_failure_policy", "fail_workflow")),
-            observable_steps=tuple(str(step_name) for step_name in payload.get("observable_steps", ())),
-        )
-
-
-@dataclass(frozen=True)
-class WorkflowHistoryEvent:
-    """Internal normalized workflow history event."""
-
-    event_type: WorkflowHistoryEventType
-    timestamp: str
-    step_name: str | None = None
-    branch_name: str | None = None
-    join_step: str | None = None
-    outcome: WorkflowStepOutcome | None = None
-    details: dict[str, Any] = field(default_factory=dict)
-
-    @classmethod
-    def from_payload(
-        cls,
-        payload: Mapping[str, Any],
-    ) -> "WorkflowHistoryEvent":
-        if not isinstance(payload, Mapping):
-            raise TypeError("workflow history event must be a mapping")
-        event_type_raw = payload.get("event_type")
-        timestamp_raw = payload.get("timestamp")
-        if event_type_raw is None or timestamp_raw is None:
-            raise ValueError("workflow history event is missing required fields: event_type, timestamp")
-        outcome_raw = payload.get("outcome")
-        return cls(
-            event_type=(
-                event_type_raw
-                if isinstance(event_type_raw, WorkflowHistoryEventType)
-                else WorkflowHistoryEventType(str(event_type_raw))
-            ),
-            timestamp=str(timestamp_raw),
-            step_name=(str(payload["step_name"]) if payload.get("step_name") is not None else None),
-            branch_name=(str(payload["branch_name"]) if payload.get("branch_name") is not None else None),
-            join_step=(str(payload["join_step"]) if payload.get("join_step") is not None else None),
-            outcome=(
-                outcome_raw
-                if isinstance(outcome_raw, WorkflowStepOutcome)
-                else (WorkflowStepOutcome(str(outcome_raw)) if outcome_raw is not None else None)
-            ),
-            details=dict(payload.get("details", {})) if isinstance(payload.get("details", {}), Mapping) else {},
-        )
-
-    def to_payload(self) -> dict[str, Any]:
-        return {
-            "event_type": self.event_type.value,
-            "timestamp": self.timestamp,
-            "step_name": self.step_name,
-            "branch_name": self.branch_name,
-            "join_step": self.join_step,
-            "outcome": self.outcome.value if self.outcome is not None else None,
-            "details": dict(self.details),
-        }
-
-
-@dataclass(frozen=True)
-class WorkflowStepExecutionState:
-    """Internal normalized execution state for one workflow-visible step."""
-
-    lifecycle: WorkflowStepLifecycle = WorkflowStepLifecycle.PENDING
-    outcome: WorkflowStepOutcome | None = None
-    attempts: int = 0
-
-    @classmethod
-    def from_payload(
-        cls,
-        payload: Mapping[str, Any],
-    ) -> "WorkflowStepExecutionState":
-        if not isinstance(payload, Mapping):
-            raise TypeError("workflow step result must be a mapping")
-        missing_keys = [key for key in ("lifecycle", "outcome", "attempts") if key not in payload]
-        if missing_keys:
-            raise ValueError("workflow step result is missing required fields: " + ", ".join(missing_keys))
-        lifecycle_raw = payload.get("lifecycle")
-        outcome_raw = payload.get("outcome")
-        attempts_raw = payload.get("attempts")
-        lifecycle = (
-            lifecycle_raw
-            if isinstance(lifecycle_raw, WorkflowStepLifecycle)
-            else WorkflowStepLifecycle(str(lifecycle_raw))
-        )
-        outcome = None
-        if outcome_raw is not None:
-            outcome = (
-                outcome_raw if isinstance(outcome_raw, WorkflowStepOutcome) else WorkflowStepOutcome(str(outcome_raw))
-            )
-        if isinstance(attempts_raw, bool) or not isinstance(attempts_raw, int):
-            raise TypeError("workflow step attempts must be an int")
-        return cls(
-            lifecycle=lifecycle,
-            outcome=outcome,
-            attempts=attempts_raw,
-        )
-
-    def to_payload(self) -> dict[str, Any]:
-        return {
-            "lifecycle": self.lifecycle.value,
-            "outcome": self.outcome.value if self.outcome is not None else None,
-            "attempts": self.attempts,
-        }
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.lifecycle, WorkflowStepLifecycle):
-            raise TypeError("lifecycle must be a WorkflowStepLifecycle")
-        if self.outcome is not None and not isinstance(self.outcome, WorkflowStepOutcome):
-            raise TypeError("outcome must be a WorkflowStepOutcome or None")
-        if isinstance(self.attempts, bool) or not isinstance(self.attempts, int):
-            raise TypeError("attempts must be an int")
-        if self.attempts < 0:
-            raise ValueError("attempts must be >= 0")
-        if self.lifecycle != WorkflowStepLifecycle.COMPLETED and self.outcome is not None:
-            raise ValueError("non-completed workflow steps may not report an outcome")
-        if self.lifecycle == WorkflowStepLifecycle.PENDING and self.attempts != 0:
-            raise ValueError("pending workflow steps must report 0 attempts")
-
-
-@dataclass(frozen=True)
-class WorkflowExecutionState:
-    """Internal normalized workflow result envelope."""
-
-    state_schema_version: str = WORKFLOW_STATE_SCHEMA_VERSION
-    workflow_status: WorkflowStatus = WorkflowStatus.PENDING
-    run_id: str = ""
-    started_at: str = ""
-    updated_at: str = ""
-    terminal_reason: str | None = None
-    compensation_status: WorkflowCompensationStatus = WorkflowCompensationStatus.NOT_REQUIRED
-    compensation_started_at: str | None = None
-    compensation_updated_at: str | None = None
-    compensation_failures: list[dict[str, Any]] = field(default_factory=list)
-    steps: dict[str, WorkflowStepExecutionState] = field(default_factory=dict)
-
-    @classmethod
-    def from_payload(
-        cls,
-        payload: Mapping[str, Any],
-    ) -> "WorkflowExecutionState":
-        if not isinstance(payload, Mapping):
-            raise TypeError("workflow result payload must be a mapping")
-        missing_keys = [
-            key
-            for key in (
-                "state_schema_version",
-                "workflow_status",
-                "run_id",
-                "started_at",
-                "updated_at",
-                "compensation_status",
-                "compensation_failures",
-                "steps",
-            )
-            if key not in payload
-        ]
-        if missing_keys:
-            raise ValueError("workflow result payload is missing required fields: " + ", ".join(missing_keys))
-        state_schema_version = str(payload.get("state_schema_version"))
-        workflow_status_raw = payload.get("workflow_status")
-        steps_payload = payload.get("steps")
-        if not isinstance(steps_payload, Mapping):
-            raise TypeError("workflow result steps must be a mapping")
-        steps: dict[str, WorkflowStepExecutionState] = {}
-        for step_name, step_payload in steps_payload.items():
-            if not isinstance(step_name, str):
-                raise TypeError("workflow result step names must be strings")
-            if not isinstance(step_payload, Mapping):
-                raise TypeError("workflow result step payloads must be mappings")
-            steps[step_name] = WorkflowStepExecutionState.from_payload(step_payload)
-        return cls(
-            state_schema_version=state_schema_version,
-            workflow_status=(
-                workflow_status_raw
-                if isinstance(workflow_status_raw, WorkflowStatus)
-                else WorkflowStatus(str(workflow_status_raw))
-            ),
-            run_id=str(payload.get("run_id")),
-            started_at=str(payload.get("started_at")),
-            updated_at=str(payload.get("updated_at")),
-            terminal_reason=(str(payload["terminal_reason"]) if payload.get("terminal_reason") is not None else None),
-            compensation_status=(
-                payload.get("compensation_status")
-                if isinstance(payload.get("compensation_status"), WorkflowCompensationStatus)
-                else WorkflowCompensationStatus(str(payload.get("compensation_status")))
-            ),
-            compensation_started_at=(
-                str(payload["compensation_started_at"]) if payload.get("compensation_started_at") is not None else None
-            ),
-            compensation_updated_at=(
-                str(payload["compensation_updated_at"]) if payload.get("compensation_updated_at") is not None else None
-            ),
-            compensation_failures=[
-                dict(item) for item in payload.get("compensation_failures", []) if isinstance(item, Mapping)
-            ],
-            steps=steps,
-        )
-
-    def to_payload(self) -> dict[str, Any]:
-        return {
-            "state_schema_version": self.state_schema_version,
-            "workflow_status": self.workflow_status.value,
-            "run_id": self.run_id,
-            "started_at": self.started_at,
-            "updated_at": self.updated_at,
-            "terminal_reason": self.terminal_reason,
-            "compensation_status": self.compensation_status.value,
-            "compensation_started_at": self.compensation_started_at,
-            "compensation_updated_at": self.compensation_updated_at,
-            "compensation_failures": [dict(item) for item in self.compensation_failures],
-            "steps": {step_name: step_state.to_payload() for step_name, step_state in self.steps.items()},
-        }
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.state_schema_version, str) or not self.state_schema_version:
-            raise TypeError("workflow result state_schema_version must be a non-empty string")
-        if not isinstance(self.workflow_status, WorkflowStatus):
-            raise TypeError("workflow_status must be a WorkflowStatus")
-        if not isinstance(self.run_id, str) or not self.run_id:
-            raise TypeError("run_id must be a non-empty string")
-        if not isinstance(self.started_at, str) or not self.started_at:
-            raise TypeError("started_at must be a non-empty string")
-        if not isinstance(self.updated_at, str) or not self.updated_at:
-            raise TypeError("updated_at must be a non-empty string")
-        if self.terminal_reason is not None and not isinstance(self.terminal_reason, str):
-            raise TypeError("terminal_reason must be a string or None")
-        if not isinstance(self.compensation_status, WorkflowCompensationStatus):
-            raise TypeError("compensation_status must be a WorkflowCompensationStatus")
-        if self.compensation_started_at is not None and not isinstance(self.compensation_started_at, str):
-            raise TypeError("compensation_started_at must be a string or None")
-        if self.compensation_updated_at is not None and not isinstance(self.compensation_updated_at, str):
-            raise TypeError("compensation_updated_at must be a string or None")
-        if not isinstance(self.compensation_failures, list):
-            raise TypeError("compensation_failures must be a list")
-        if any(not isinstance(item, dict) for item in self.compensation_failures):
-            raise TypeError("compensation_failures entries must be dicts")
-        if not isinstance(self.steps, dict):
-            raise TypeError("workflow step results must be stored in a dict")
-        if any(not isinstance(step_name, str) for step_name in self.steps):
-            raise TypeError("workflow step result keys must be strings")
-        if any(not isinstance(step_state, WorkflowStepExecutionState) for step_state in self.steps.values()):
-            raise TypeError("workflow step results must be WorkflowStepExecutionState values")
-        if (
-            self.workflow_status
-            in {
-                WorkflowStatus.SUCCEEDED,
-                WorkflowStatus.FAILED,
-                WorkflowStatus.CANCELLED,
-                WorkflowStatus.TIMED_OUT,
-            }
-            and self.terminal_reason is None
-        ):
-            raise ValueError("terminal workflow statuses must include terminal_reason")
-        if (
-            self.workflow_status in {WorkflowStatus.PENDING, WorkflowStatus.RUNNING}
-            and self.terminal_reason is not None
-        ):
-            raise ValueError("non-terminal workflow statuses may not include terminal_reason")
-        if self.workflow_status in {WorkflowStatus.PENDING, WorkflowStatus.RUNNING}:
-            if self.compensation_status != WorkflowCompensationStatus.NOT_REQUIRED:
-                raise ValueError("non-terminal workflow statuses may not report compensation activity")
-            if self.compensation_started_at is not None or self.compensation_updated_at is not None:
-                raise ValueError("non-terminal workflow statuses may not report compensation timestamps")
-        if self.compensation_status == WorkflowCompensationStatus.NOT_REQUIRED:
-            if self.compensation_started_at is not None or self.compensation_updated_at is not None:
-                raise ValueError("compensation_status=not_required may not report compensation timestamps")
-            if self.compensation_failures:
-                raise ValueError("compensation_status=not_required may not report compensation failures")
-        if self.compensation_status == WorkflowCompensationStatus.RUNNING:
-            if self.compensation_started_at is None:
-                raise ValueError("compensation_status=running requires compensation_started_at")
-
-
-@dataclass(frozen=True)
-class EvaluationResultContract:
-    """Compiled contract for validating evaluator result envelopes."""
-
-    state_schema_version: str = EVALUATION_STATE_SCHEMA_VERSION
-    resource_type: str = ""
-    supports_passed: bool = False
-    supports_score: bool = False
-    fixed_max_score: int | None = None
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.state_schema_version, str) or not self.state_schema_version:
-            raise TypeError("evaluation result contract state_schema_version must be a non-empty string")
-        if not isinstance(self.resource_type, str) or not self.resource_type:
-            raise TypeError("evaluation result contract resource_type must be a non-empty string")
-        if not isinstance(self.supports_passed, bool):
-            raise TypeError("evaluation result contract supports_passed must be a bool")
-        if not isinstance(self.supports_score, bool):
-            raise TypeError("evaluation result contract supports_score must be a bool")
-        if self.fixed_max_score is not None:
-            if isinstance(self.fixed_max_score, bool) or not isinstance(self.fixed_max_score, int):
-                raise TypeError("evaluation result contract fixed_max_score must be an int or None")
-            if self.fixed_max_score < 0:
-                raise ValueError("evaluation result contract fixed_max_score must be >= 0")
-            if not self.supports_score:
-                raise ValueError("evaluation result contract fixed_max_score requires supports_score")
-
-    @classmethod
-    def from_mapping(
-        cls,
-        payload: Mapping[str, Any],
-    ) -> "EvaluationResultContract":
-        if not isinstance(payload, Mapping):
-            raise TypeError("evaluation result contract must be a mapping")
-        fixed_max_score_raw = payload.get("fixed_max_score")
-        fixed_max_score: int | None
-        if fixed_max_score_raw is None:
-            fixed_max_score = None
-        elif isinstance(fixed_max_score_raw, bool) or not isinstance(fixed_max_score_raw, int):
-            raise TypeError("evaluation result contract fixed_max_score must be an int or None")
-        else:
-            fixed_max_score = fixed_max_score_raw
-        return cls(
-            state_schema_version=str(payload.get("state_schema_version", EVALUATION_STATE_SCHEMA_VERSION)),
-            resource_type=str(payload.get("resource_type", "")),
-            supports_passed=bool(payload.get("supports_passed", False)),
-            supports_score=bool(payload.get("supports_score", False)),
-            fixed_max_score=fixed_max_score,
-        )
-
-
-@dataclass(frozen=True)
-class EvaluationExecutionContract:
-    """Compiled contract for validating evaluator history/state transitions."""
-
-    state_schema_version: str = EVALUATION_STATE_SCHEMA_VERSION
-    resource_type: str = ""
-    allowed_statuses: tuple[str, ...] = (
-        EvaluationResultStatus.PENDING.value,
-        EvaluationResultStatus.RUNNING.value,
-        EvaluationResultStatus.READY.value,
-        EvaluationResultStatus.FAILED.value,
-    )
-    history_event_types: tuple[str, ...] = (
-        EvaluationHistoryEventType.EVALUATION_STARTED.value,
-        EvaluationHistoryEventType.EVALUATION_UPDATED.value,
-        EvaluationHistoryEventType.EVALUATION_READY.value,
-        EvaluationHistoryEventType.EVALUATION_FAILED.value,
-    )
-    requires_start_event: bool = True
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.state_schema_version, str) or not self.state_schema_version:
-            raise TypeError("evaluation execution contract state_schema_version must be a non-empty string")
-        if not isinstance(self.resource_type, str) or not self.resource_type:
-            raise TypeError("evaluation execution contract resource_type must be a non-empty string")
-        if any(not isinstance(status, str) for status in self.allowed_statuses):
-            raise TypeError("evaluation execution contract allowed_statuses must be strings")
-        if any(not isinstance(event_type, str) for event_type in self.history_event_types):
-            raise TypeError("evaluation execution contract history_event_types must be strings")
-        if not isinstance(self.requires_start_event, bool):
-            raise TypeError("evaluation execution contract requires_start_event must be a bool")
-
-    @classmethod
-    def from_mapping(
-        cls,
-        payload: Mapping[str, Any],
-    ) -> "EvaluationExecutionContract":
-        if not isinstance(payload, Mapping):
-            raise TypeError("evaluation execution contract must be a mapping")
-        return cls(
-            state_schema_version=str(payload.get("state_schema_version", EVALUATION_STATE_SCHEMA_VERSION)),
-            resource_type=str(payload.get("resource_type", "")),
-            allowed_statuses=tuple(
-                str(status)
-                for status in payload.get(
-                    "allowed_statuses",
-                    (
-                        EvaluationResultStatus.PENDING.value,
-                        EvaluationResultStatus.RUNNING.value,
-                        EvaluationResultStatus.READY.value,
-                        EvaluationResultStatus.FAILED.value,
-                    ),
-                )
-            ),
-            history_event_types=tuple(
-                str(event_type)
-                for event_type in payload.get(
-                    "history_event_types",
-                    (
-                        EvaluationHistoryEventType.EVALUATION_STARTED.value,
-                        EvaluationHistoryEventType.EVALUATION_UPDATED.value,
-                        EvaluationHistoryEventType.EVALUATION_READY.value,
-                        EvaluationHistoryEventType.EVALUATION_FAILED.value,
-                    ),
-                )
-            ),
-            requires_start_event=bool(payload.get("requires_start_event", True)),
-        )
-
-
-@dataclass(frozen=True)
-class EvaluationHistoryEvent:
-    """Internal normalized evaluator history event."""
-
-    event_type: EvaluationHistoryEventType
-    timestamp: str
-    status: EvaluationResultStatus
-    passed: bool | None = None
-    score: float | int | None = None
-    max_score: int | None = None
-    detail: str | None = None
-    evidence_refs: tuple[str, ...] = ()
-    details: dict[str, Any] = field(default_factory=dict)
-
-    @classmethod
-    def from_payload(
-        cls,
-        payload: Mapping[str, Any],
-    ) -> "EvaluationHistoryEvent":
-        if not isinstance(payload, Mapping):
-            raise TypeError("evaluation history event must be a mapping")
-        missing_keys = [key for key in ("event_type", "timestamp", "status") if key not in payload]
-        if missing_keys:
-            raise ValueError("evaluation history event is missing required fields: " + ", ".join(missing_keys))
-        score_raw = payload.get("score")
-        max_score_raw = payload.get("max_score")
-        evidence_refs_raw = payload.get("evidence_refs", ())
-        if isinstance(evidence_refs_raw, (str, bytes)) or not isinstance(evidence_refs_raw, Iterable):
-            raise TypeError("evaluation history event evidence_refs must be an iterable of strings")
-        evidence_ref_items = list(evidence_refs_raw)
-        evidence_refs = tuple(str(ref) for ref in evidence_ref_items if isinstance(ref, str))
-        if len(evidence_refs) != len(evidence_ref_items):
-            raise TypeError("evaluation history event evidence_refs must contain only strings")
-        return cls(
-            event_type=(
-                payload["event_type"]
-                if isinstance(payload["event_type"], EvaluationHistoryEventType)
-                else EvaluationHistoryEventType(str(payload["event_type"]))
-            ),
-            timestamp=str(payload["timestamp"]),
-            status=(
-                payload["status"]
-                if isinstance(payload["status"], EvaluationResultStatus)
-                else EvaluationResultStatus(str(payload["status"]))
-            ),
-            passed=(payload.get("passed") if isinstance(payload.get("passed"), bool) else None),
-            score=(score_raw if isinstance(score_raw, (int, float)) and not isinstance(score_raw, bool) else None),
-            max_score=(
-                max_score_raw if isinstance(max_score_raw, int) and not isinstance(max_score_raw, bool) else None
-            ),
-            detail=(str(payload["detail"]) if payload.get("detail") is not None else None),
-            evidence_refs=evidence_refs,
-            details=dict(payload.get("details", {})) if isinstance(payload.get("details", {}), Mapping) else {},
-        )
-
-    def to_payload(self) -> dict[str, Any]:
-        return {
-            "event_type": self.event_type.value,
-            "timestamp": self.timestamp,
-            "status": self.status.value,
-            "passed": self.passed,
-            "score": self.score,
-            "max_score": self.max_score,
-            "detail": self.detail,
-            "evidence_refs": list(self.evidence_refs),
-            "details": dict(self.details),
-        }
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.event_type, EvaluationHistoryEventType):
-            raise TypeError("event_type must be an EvaluationHistoryEventType")
-        if not isinstance(self.timestamp, str) or not self.timestamp:
-            raise TypeError("timestamp must be a non-empty string")
-        if not isinstance(self.status, EvaluationResultStatus):
-            raise TypeError("status must be an EvaluationResultStatus")
-        if self.passed is not None and not isinstance(self.passed, bool):
-            raise TypeError("passed must be a bool or None")
-        if self.score is not None and (isinstance(self.score, bool) or not isinstance(self.score, (int, float))):
-            raise TypeError("score must be numeric or None")
-        if self.max_score is not None and (isinstance(self.max_score, bool) or not isinstance(self.max_score, int)):
-            raise TypeError("max_score must be an int or None")
-        if self.detail is not None and not isinstance(self.detail, str):
-            raise TypeError("detail must be a string or None")
-        if any(not isinstance(ref, str) for ref in self.evidence_refs):
-            raise TypeError("evidence_refs must contain only strings")
-        if not isinstance(self.details, dict):
-            raise TypeError("details must be a dict")
-        if self.status in {
-            EvaluationResultStatus.PENDING,
-            EvaluationResultStatus.RUNNING,
-            EvaluationResultStatus.FAILED,
-        }:
-            if self.passed is not None or self.score is not None or self.max_score is not None:
-                raise ValueError("pending/running/failed evaluation history events may not report result values")
-        if self.status == EvaluationResultStatus.READY:
-            if self.passed is None and self.score is None:
-                raise ValueError("ready evaluation history events must report passed or score")
-        if self.max_score is not None and self.score is None:
-            raise ValueError("evaluation history events may not report max_score without score")
-
-
-@dataclass(frozen=True)
-class EvaluationExecutionState:
-    """Internal normalized execution state for one evaluator-observable resource."""
-
-    state_schema_version: str = EVALUATION_STATE_SCHEMA_VERSION
-    resource_type: str = ""
-    run_id: str = ""
-    status: EvaluationResultStatus = EvaluationResultStatus.PENDING
-    observed_at: str = ""
-    updated_at: str = ""
-    passed: bool | None = None
-    score: float | int | None = None
-    max_score: int | None = None
-    detail: str | None = None
-    evidence_refs: tuple[str, ...] = ()
-
-    @classmethod
-    def from_payload(
-        cls,
-        payload: Mapping[str, Any],
-    ) -> "EvaluationExecutionState":
-        if not isinstance(payload, Mapping):
-            raise TypeError("evaluation result payload must be a mapping")
-        missing_keys = [
-            key
-            for key in (
-                "state_schema_version",
-                "resource_type",
-                "run_id",
-                "status",
-                "observed_at",
-                "updated_at",
-            )
-            if key not in payload
-        ]
-        if missing_keys:
-            raise ValueError("evaluation result payload is missing required fields: " + ", ".join(missing_keys))
-        score_raw = payload.get("score")
-        max_score_raw = payload.get("max_score")
-        evidence_refs_raw = payload.get("evidence_refs", ())
-        if isinstance(evidence_refs_raw, (str, bytes)) or not isinstance(evidence_refs_raw, Iterable):
-            raise TypeError("evaluation result evidence_refs must be an iterable of strings")
-        evidence_ref_items = list(evidence_refs_raw)
-        evidence_refs = tuple(str(ref) for ref in evidence_ref_items if isinstance(ref, str))
-        if len(evidence_refs) != len(evidence_ref_items):
-            raise TypeError("evaluation result evidence_refs must contain only strings")
-        return cls(
-            state_schema_version=str(payload["state_schema_version"]),
-            resource_type=str(payload["resource_type"]),
-            run_id=str(payload["run_id"]),
-            status=(
-                payload["status"]
-                if isinstance(payload["status"], EvaluationResultStatus)
-                else EvaluationResultStatus(str(payload["status"]))
-            ),
-            observed_at=str(payload["observed_at"]),
-            updated_at=str(payload["updated_at"]),
-            passed=(payload.get("passed") if isinstance(payload.get("passed"), bool) else None),
-            score=(score_raw if isinstance(score_raw, (int, float)) and not isinstance(score_raw, bool) else None),
-            max_score=(
-                max_score_raw if isinstance(max_score_raw, int) and not isinstance(max_score_raw, bool) else None
-            ),
-            detail=(str(payload["detail"]) if payload.get("detail") is not None else None),
-            evidence_refs=evidence_refs,
-        )
-
-    def to_payload(self) -> dict[str, Any]:
-        return {
-            "state_schema_version": self.state_schema_version,
-            "resource_type": self.resource_type,
-            "run_id": self.run_id,
-            "status": self.status.value,
-            "observed_at": self.observed_at,
-            "updated_at": self.updated_at,
-            "passed": self.passed,
-            "score": self.score,
-            "max_score": self.max_score,
-            "detail": self.detail,
-            "evidence_refs": list(self.evidence_refs),
-        }
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.state_schema_version, str) or not self.state_schema_version:
-            raise TypeError("evaluation result state_schema_version must be a non-empty string")
-        if not isinstance(self.resource_type, str) or not self.resource_type:
-            raise TypeError("evaluation result resource_type must be a non-empty string")
-        if not isinstance(self.run_id, str) or not self.run_id:
-            raise TypeError("evaluation result run_id must be a non-empty string")
-        if not isinstance(self.status, EvaluationResultStatus):
-            raise TypeError("status must be an EvaluationResultStatus")
-        if not isinstance(self.observed_at, str) or not self.observed_at:
-            raise TypeError("observed_at must be a non-empty string")
-        if not isinstance(self.updated_at, str) or not self.updated_at:
-            raise TypeError("updated_at must be a non-empty string")
-        if self.passed is not None and not isinstance(self.passed, bool):
-            raise TypeError("passed must be a bool or None")
-        if self.score is not None and (isinstance(self.score, bool) or not isinstance(self.score, (int, float))):
-            raise TypeError("score must be numeric or None")
-        if self.max_score is not None and (isinstance(self.max_score, bool) or not isinstance(self.max_score, int)):
-            raise TypeError("max_score must be an int or None")
-        if self.detail is not None and not isinstance(self.detail, str):
-            raise TypeError("detail must be a string or None")
-        if any(not isinstance(ref, str) for ref in self.evidence_refs):
-            raise TypeError("evidence_refs must contain only strings")
-        if self.status in {
-            EvaluationResultStatus.PENDING,
-            EvaluationResultStatus.RUNNING,
-            EvaluationResultStatus.FAILED,
-        }:
-            if self.passed is not None or self.score is not None or self.max_score is not None:
-                raise ValueError("pending/running/failed evaluation results may not report result values")
-        if self.status == EvaluationResultStatus.READY:
-            if self.passed is None and self.score is None:
-                raise ValueError("ready evaluation results must report passed or score")
-        if self.max_score is not None and self.score is None:
-            raise ValueError("evaluation results may not report max_score without score")
-        if self.score is not None and self.max_score is not None and float(self.score) > float(self.max_score):
-            raise ValueError("evaluation result score may not exceed max_score")
-
-
-@dataclass(frozen=True)
-class ParticipantEpisodeExecutionState:
-    """Internal normalized participant-episode execution state envelope.
-
-    Models one bounded participant-execution episode with explicit identity.
-    Stable participant identity (``participant_address``) is preserved across
-    resets and restarts; each episode instance gets a fresh ``episode_id`` and
-    an incremented ``sequence_number``, and links back to the prior episode
-    via ``previous_episode_id`` so reset/restart history is never rewritten in
-    place.
-    """
-
-    state_schema_version: str = PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION
-    participant_address: str = ""
-    episode_id: str = ""
-    sequence_number: int = 0
-    status: ParticipantEpisodeStatus = ParticipantEpisodeStatus.INITIALIZING
-    terminal_reason: ParticipantEpisodeTerminalReason | None = None
-    initialized_at: str = ""
-    updated_at: str = ""
-    terminated_at: str | None = None
-    last_control_action: ParticipantEpisodeControlAction = ParticipantEpisodeControlAction.INITIALIZE
-    previous_episode_id: str | None = None
-
-    @classmethod
-    def from_payload(
-        cls,
-        payload: Mapping[str, Any],
-    ) -> "ParticipantEpisodeExecutionState":
-        if not isinstance(payload, Mapping):
-            raise TypeError("participant episode payload must be a mapping")
-        missing_keys = [
-            key
-            for key in (
-                "state_schema_version",
-                "participant_address",
-                "episode_id",
-                "sequence_number",
-                "status",
-                "initialized_at",
-                "updated_at",
-                "last_control_action",
-            )
-            if key not in payload
-        ]
-        if missing_keys:
-            raise ValueError("participant episode payload is missing required fields: " + ", ".join(missing_keys))
-        sequence_number_raw = payload.get("sequence_number")
-        if isinstance(sequence_number_raw, bool) or not isinstance(sequence_number_raw, int):
-            raise TypeError("participant episode sequence_number must be an int")
-        status_raw = payload.get("status")
-        terminal_reason_raw = payload.get("terminal_reason")
-        last_control_action_raw = payload.get("last_control_action")
-        return cls(
-            state_schema_version=str(payload.get("state_schema_version")),
-            participant_address=str(payload.get("participant_address")),
-            episode_id=str(payload.get("episode_id")),
-            sequence_number=sequence_number_raw,
-            status=(
-                status_raw
-                if isinstance(status_raw, ParticipantEpisodeStatus)
-                else ParticipantEpisodeStatus(str(status_raw))
-            ),
-            terminal_reason=(
-                terminal_reason_raw
-                if isinstance(terminal_reason_raw, ParticipantEpisodeTerminalReason)
-                else (
-                    ParticipantEpisodeTerminalReason(str(terminal_reason_raw))
-                    if terminal_reason_raw is not None
-                    else None
-                )
-            ),
-            initialized_at=str(payload.get("initialized_at")),
-            updated_at=str(payload.get("updated_at")),
-            terminated_at=(str(payload["terminated_at"]) if payload.get("terminated_at") is not None else None),
-            last_control_action=(
-                last_control_action_raw
-                if isinstance(last_control_action_raw, ParticipantEpisodeControlAction)
-                else ParticipantEpisodeControlAction(str(last_control_action_raw))
-            ),
-            previous_episode_id=(
-                str(payload["previous_episode_id"]) if payload.get("previous_episode_id") is not None else None
-            ),
-        )
-
-    def to_payload(self) -> dict[str, Any]:
-        return {
-            "state_schema_version": self.state_schema_version,
-            "participant_address": self.participant_address,
-            "episode_id": self.episode_id,
-            "sequence_number": self.sequence_number,
-            "status": self.status.value,
-            "terminal_reason": self.terminal_reason.value if self.terminal_reason is not None else None,
-            "initialized_at": self.initialized_at,
-            "updated_at": self.updated_at,
-            "terminated_at": self.terminated_at,
-            "last_control_action": self.last_control_action.value,
-            "previous_episode_id": self.previous_episode_id,
-        }
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.state_schema_version, str) or not self.state_schema_version:
-            raise TypeError("participant episode state_schema_version must be a non-empty string")
-        if not isinstance(self.participant_address, str) or not self.participant_address:
-            raise TypeError("participant_address must be a non-empty string")
-        if not isinstance(self.episode_id, str) or not self.episode_id:
-            raise TypeError("episode_id must be a non-empty string")
-        if isinstance(self.sequence_number, bool) or not isinstance(self.sequence_number, int):
-            raise TypeError("sequence_number must be an int")
-        if self.sequence_number < 0:
-            raise ValueError("sequence_number must be >= 0")
-        if not isinstance(self.status, ParticipantEpisodeStatus):
-            raise TypeError("status must be a ParticipantEpisodeStatus")
-        if self.terminal_reason is not None and not isinstance(self.terminal_reason, ParticipantEpisodeTerminalReason):
-            raise TypeError("terminal_reason must be a ParticipantEpisodeTerminalReason or None")
-        if not isinstance(self.initialized_at, str) or not self.initialized_at:
-            raise TypeError("initialized_at must be a non-empty string")
-        if not isinstance(self.updated_at, str) or not self.updated_at:
-            raise TypeError("updated_at must be a non-empty string")
-        if self.terminated_at is not None and (not isinstance(self.terminated_at, str) or not self.terminated_at):
-            raise TypeError("terminated_at must be a non-empty string or None")
-        if not isinstance(self.last_control_action, ParticipantEpisodeControlAction):
-            raise TypeError("last_control_action must be a ParticipantEpisodeControlAction")
-        if self.previous_episode_id is not None and (
-            not isinstance(self.previous_episode_id, str) or not self.previous_episode_id
-        ):
-            raise TypeError("previous_episode_id must be a non-empty string or None")
-        if self.status in {ParticipantEpisodeStatus.INITIALIZING, ParticipantEpisodeStatus.RUNNING}:
-            if self.terminal_reason is not None:
-                raise ValueError("non-terminal participant episodes may not report a terminal_reason")
-            if self.terminated_at is not None:
-                raise ValueError("non-terminal participant episodes may not report a terminated_at timestamp")
-        if self.status == ParticipantEpisodeStatus.TERMINATED:
-            if self.terminal_reason is None:
-                raise ValueError("terminated participant episodes must report a terminal_reason")
-            if self.terminated_at is None:
-                raise ValueError("terminated participant episodes must report a terminated_at timestamp")
-        if self.sequence_number == 0:
-            if self.last_control_action != ParticipantEpisodeControlAction.INITIALIZE:
-                raise ValueError(
-                    "the first participant episode (sequence_number=0) must use the INITIALIZE control action"
-                )
-            if self.previous_episode_id is not None:
-                raise ValueError(
-                    "the first participant episode (sequence_number=0) must not link to a previous episode"
-                )
-        else:
-            if self.last_control_action == ParticipantEpisodeControlAction.INITIALIZE:
-                raise ValueError(
-                    "subsequent participant episodes (sequence_number>0) must use RESET or RESTART, not INITIALIZE"
-                )
-            if self.previous_episode_id is None:
-                raise ValueError(
-                    "subsequent participant episodes (sequence_number>0) must link to a previous_episode_id"
-                )
-            if self.previous_episode_id == self.episode_id:
-                raise ValueError("previous_episode_id must differ from episode_id; reset/restart create a new instance")
-
-
-@dataclass(frozen=True)
-class ParticipantEpisodeHistoryEvent:
-    """Internal normalized participant-episode history event.
-
-    History is append-only and per-episode-instance. Each event carries the
-    participant identity, the owning episode identity, and (when applicable)
-    the terminal reason or control action that the event records. The event
-    type, terminal reason, and control action are kept distinct categories so
-    history records cannot conflate "what happened" with "why it stopped" or
-    "what action drove the transition".
-    """
-
-    event_type: ParticipantEpisodeHistoryEventType
-    timestamp: str
-    participant_address: str
-    episode_id: str
-    sequence_number: int
-    terminal_reason: ParticipantEpisodeTerminalReason | None = None
-    control_action: ParticipantEpisodeControlAction | None = None
-    details: dict[str, Any] = field(default_factory=dict)
-
-    @classmethod
-    def from_payload(
-        cls,
-        payload: Mapping[str, Any],
-    ) -> "ParticipantEpisodeHistoryEvent":
-        if not isinstance(payload, Mapping):
-            raise TypeError("participant episode history event must be a mapping")
-        missing_keys = [
-            key
-            for key in (
-                "event_type",
-                "timestamp",
-                "participant_address",
-                "episode_id",
-                "sequence_number",
-            )
-            if key not in payload
-        ]
-        if missing_keys:
-            raise ValueError("participant episode history event is missing required fields: " + ", ".join(missing_keys))
-        sequence_number_raw = payload.get("sequence_number")
-        if isinstance(sequence_number_raw, bool) or not isinstance(sequence_number_raw, int):
-            raise TypeError("participant episode history sequence_number must be an int")
-        terminal_reason_raw = payload.get("terminal_reason")
-        control_action_raw = payload.get("control_action")
-        return cls(
-            event_type=(
-                payload["event_type"]
-                if isinstance(payload["event_type"], ParticipantEpisodeHistoryEventType)
-                else ParticipantEpisodeHistoryEventType(str(payload["event_type"]))
-            ),
-            timestamp=str(payload["timestamp"]),
-            participant_address=str(payload["participant_address"]),
-            episode_id=str(payload["episode_id"]),
-            sequence_number=sequence_number_raw,
-            terminal_reason=(
-                terminal_reason_raw
-                if isinstance(terminal_reason_raw, ParticipantEpisodeTerminalReason)
-                else (
-                    ParticipantEpisodeTerminalReason(str(terminal_reason_raw))
-                    if terminal_reason_raw is not None
-                    else None
-                )
-            ),
-            control_action=(
-                control_action_raw
-                if isinstance(control_action_raw, ParticipantEpisodeControlAction)
-                else (
-                    ParticipantEpisodeControlAction(str(control_action_raw)) if control_action_raw is not None else None
-                )
-            ),
-            details=dict(payload.get("details", {})) if isinstance(payload.get("details", {}), Mapping) else {},
-        )
-
-    def to_payload(self) -> dict[str, Any]:
-        return {
-            "event_type": self.event_type.value,
-            "timestamp": self.timestamp,
-            "participant_address": self.participant_address,
-            "episode_id": self.episode_id,
-            "sequence_number": self.sequence_number,
-            "terminal_reason": self.terminal_reason.value if self.terminal_reason is not None else None,
-            "control_action": self.control_action.value if self.control_action is not None else None,
-            "details": dict(self.details),
-        }
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.event_type, ParticipantEpisodeHistoryEventType):
-            raise TypeError("event_type must be a ParticipantEpisodeHistoryEventType")
-        if not isinstance(self.timestamp, str) or not self.timestamp:
-            raise TypeError("timestamp must be a non-empty string")
-        if not isinstance(self.participant_address, str) or not self.participant_address:
-            raise TypeError("participant_address must be a non-empty string")
-        if not isinstance(self.episode_id, str) or not self.episode_id:
-            raise TypeError("episode_id must be a non-empty string")
-        if isinstance(self.sequence_number, bool) or not isinstance(self.sequence_number, int):
-            raise TypeError("sequence_number must be an int")
-        if self.sequence_number < 0:
-            raise ValueError("sequence_number must be >= 0")
-        if self.terminal_reason is not None and not isinstance(self.terminal_reason, ParticipantEpisodeTerminalReason):
-            raise TypeError("terminal_reason must be a ParticipantEpisodeTerminalReason or None")
-        if self.control_action is not None and not isinstance(self.control_action, ParticipantEpisodeControlAction):
-            raise TypeError("control_action must be a ParticipantEpisodeControlAction or None")
-        if not isinstance(self.details, dict):
-            raise TypeError("details must be a dict")
-        expected_terminal_reason = _PARTICIPANT_EPISODE_TERMINAL_EVENTS.get(self.event_type)
-        if expected_terminal_reason is not None:
-            if self.terminal_reason != expected_terminal_reason:
-                raise ValueError(
-                    f"{self.event_type.value} history events must report terminal_reason "
-                    f"{expected_terminal_reason.value}"
-                )
-        elif self.terminal_reason is not None:
-            raise ValueError(f"{self.event_type.value} history events may not report a terminal_reason")
-        expected_control_action = _PARTICIPANT_EPISODE_CONTROL_EVENTS.get(self.event_type)
-        if expected_control_action is not None:
-            if self.control_action != expected_control_action:
-                raise ValueError(
-                    f"{self.event_type.value} history events must report control_action {expected_control_action.value}"
-                )
-        elif self.control_action is not None:
-            raise ValueError(f"{self.event_type.value} history events may not report a control_action")
-        if self.event_type == ParticipantEpisodeHistoryEventType.EPISODE_INITIALIZED and self.sequence_number != 0:
-            raise ValueError(
-                "episode_initialized history events must report sequence_number=0; "
-                "later episodes arrive via episode_reset or episode_restarted"
-            )
-        if (
-            self.event_type
-            in {
-                ParticipantEpisodeHistoryEventType.EPISODE_RESET,
-                ParticipantEpisodeHistoryEventType.EPISODE_RESTARTED,
-            }
-            and self.sequence_number == 0
-        ):
-            raise ValueError(
-                f"{self.event_type.value} history events must report sequence_number>0; "
-                "the first episode uses episode_initialized"
-            )
 
 
 def _participant_observation_status_from_payload(value: Any) -> ParticipantObservationStatus | None:
@@ -5166,279 +4012,6 @@ def iter_participant_behavior_joint_action_violations(
     yield from _participant_behavior_joint_action_order_violations(normalized_events)
 
 
-def iter_participant_episode_snapshot_violations(
-    participant_episode_results: Any,
-    participant_episode_history: Any,
-) -> Iterator[tuple[str, str]]:
-    """Yield every participant-episode invariant violation in a snapshot.
-
-    Both arguments are the raw ``RuntimeSnapshot.participant_episode_results``
-    and ``RuntimeSnapshot.participant_episode_history`` maps keyed by the
-    stable ``participant_address``. The helper exists so that the runtime
-    manager apply path and the conformance semantic-check path share one
-    source of truth for RUN-311 invariants; each caller wraps the yielded
-    ``(address, message)`` tuples in its own diagnostic type.
-
-    The following invariants are checked:
-
-    - ``participant_episode_results`` / ``_history`` are mappings.
-    - Each outer key is a non-empty string.
-    - Each result value is a mapping and reconstructs through
-      ``ParticipantEpisodeExecutionState.from_payload`` (i.e. respects the
-      state-machine invariants enforced in ``__post_init__``).
-    - Each result's inner ``participant_address`` matches the outer key.
-    - Each history value is a list of mappings and every event reconstructs
-      through ``ParticipantEpisodeHistoryEvent.from_payload``.
-    - Each history event's inner ``participant_address`` matches the outer
-      key.
-    - Within one participant's history, ``sequence_number`` is monotonic
-      non-decreasing.
-    - Within one sequence number, ``episode_id`` is stable.
-    - Cross-sequence transitions are gated by an ``EPISODE_RESET`` or
-      ``EPISODE_RESTARTED`` event (the first sequence number observed in
-      a history stream is exempt because history may be truncated).
-    - When both a ``participant_episode_results`` entry and a non-empty
-      ``participant_episode_history`` entry exist for the same
-      participant, the current result must match the head of the history
-      chain: same ``episode_id``, same ``sequence_number``, and a status
-      that is consistent with the head event type and terminal reason.
-      A stale result that points at an earlier episode than the history
-      shows is a semantic inconsistency that breaks replay and operator
-      reasoning.
-    """
-
-    results_key = "runtime.snapshot.participant-episode-results"
-    history_key = "runtime.snapshot.participant-episode-history"
-
-    if not isinstance(participant_episode_results, Mapping):
-        yield (results_key, "participant_episode_results must be a mapping")
-    else:
-        for outer_key, result in participant_episode_results.items():
-            if not isinstance(outer_key, str) or not outer_key:
-                yield (results_key, "participant episode result keys must be non-empty strings")
-                continue
-            if not isinstance(result, Mapping):
-                yield (outer_key, "participant episode result must be a mapping")
-                continue
-            try:
-                normalized_result = ParticipantEpisodeExecutionState.from_payload(result)
-            except (TypeError, ValueError) as exc:
-                yield (outer_key, f"participant episode result is invalid: {exc}")
-                continue
-            if normalized_result.participant_address != outer_key:
-                yield (
-                    outer_key,
-                    (
-                        f"participant episode result outer key {outer_key!r} does not match "
-                        f"inner participant_address {normalized_result.participant_address!r}"
-                    ),
-                )
-
-    if not isinstance(participant_episode_history, Mapping):
-        yield (history_key, "participant_episode_history must be a mapping")
-        return
-
-    for outer_key, history in participant_episode_history.items():
-        if not isinstance(outer_key, str) or not outer_key:
-            yield (history_key, "participant episode history keys must be non-empty strings")
-            continue
-        if not isinstance(history, list):
-            yield (outer_key, "participant episode history must be a list of events")
-            continue
-        normalized_events: list[ParticipantEpisodeHistoryEvent] = []
-        per_entry_violations = False
-        for index, event in enumerate(history):
-            locator = f"{outer_key}[{index}]"
-            if not isinstance(event, Mapping):
-                yield (locator, "participant episode history event must be a mapping")
-                per_entry_violations = True
-                continue
-            try:
-                normalized_event = ParticipantEpisodeHistoryEvent.from_payload(event)
-            except (TypeError, ValueError) as exc:
-                yield (locator, f"participant episode history event is invalid: {exc}")
-                per_entry_violations = True
-                continue
-            if normalized_event.participant_address != outer_key:
-                yield (
-                    locator,
-                    (
-                        f"participant episode history event outer key {outer_key!r} does not match "
-                        f"inner participant_address {normalized_event.participant_address!r}"
-                    ),
-                )
-                per_entry_violations = True
-                continue
-            normalized_events.append(normalized_event)
-
-        if per_entry_violations:
-            continue
-
-        last_sequence = -1
-        sequence_to_episode: dict[int, str] = {}
-        for index, event in enumerate(normalized_events):
-            locator = f"{outer_key}[{index}]"
-            # A strict backward movement cannot be reconciled into the same
-            # stream, so the event is dropped and stream state is not
-            # advanced for it. Every other violation path still advances
-            # stream state so that downstream events are not re-checked
-            # against stale ``last_sequence`` / ``sequence_to_episode``
-            # values.
-            if event.sequence_number < last_sequence:
-                yield (
-                    locator,
-                    (
-                        f"participant episode history sequence_number went backward "
-                        f"({last_sequence} -> {event.sequence_number})"
-                    ),
-                )
-                continue
-            if (
-                event.sequence_number > last_sequence
-                and last_sequence != -1
-                and event.event_type
-                not in {
-                    ParticipantEpisodeHistoryEventType.EPISODE_RESET,
-                    ParticipantEpisodeHistoryEventType.EPISODE_RESTARTED,
-                }
-            ):
-                yield (
-                    locator,
-                    (
-                        f"participant episode transition to sequence_number "
-                        f"{event.sequence_number} must arrive via episode_reset or "
-                        f"episode_restarted; saw {event.event_type.value}"
-                    ),
-                )
-            expected_episode_id = sequence_to_episode.get(event.sequence_number)
-            if expected_episode_id is not None and expected_episode_id != event.episode_id:
-                yield (
-                    locator,
-                    (
-                        f"participant episode history episode_id changed within "
-                        f"sequence_number {event.sequence_number}: "
-                        f"{expected_episode_id!r} -> {event.episode_id!r}"
-                    ),
-                )
-            sequence_to_episode[event.sequence_number] = event.episode_id
-            last_sequence = event.sequence_number
-
-    # Cross-check: when both a result and a non-empty history exist for the
-    # same participant, the result must match the head of the history chain.
-    # An absent history is allowed (truncated observation); a present history
-    # whose last event describes a different episode than the current result
-    # is a stale result that breaks replay and operator reasoning.
-    if isinstance(participant_episode_results, Mapping) and isinstance(participant_episode_history, Mapping):
-        for outer_key, result in participant_episode_results.items():
-            if not isinstance(outer_key, str) or not outer_key:
-                continue
-            if not isinstance(result, Mapping):
-                continue
-            history = participant_episode_history.get(outer_key)
-            if not isinstance(history, list) or not history:
-                continue
-            try:
-                normalized_result = ParticipantEpisodeExecutionState.from_payload(result)
-            except (TypeError, ValueError):
-                continue
-            last_event: ParticipantEpisodeHistoryEvent | None = None
-            for event in history:
-                if not isinstance(event, Mapping):
-                    continue
-                try:
-                    candidate = ParticipantEpisodeHistoryEvent.from_payload(event)
-                except (TypeError, ValueError):
-                    continue
-                if candidate.participant_address != outer_key:
-                    continue
-                last_event = candidate
-            if last_event is None:
-                continue
-            if (
-                last_event.episode_id != normalized_result.episode_id
-                or last_event.sequence_number != normalized_result.sequence_number
-            ):
-                yield (
-                    outer_key,
-                    (
-                        f"participant episode result (episode_id="
-                        f"{normalized_result.episode_id!r}, sequence_number="
-                        f"{normalized_result.sequence_number}) does not match head of "
-                        f"history chain (episode_id={last_event.episode_id!r}, "
-                        f"sequence_number={last_event.sequence_number})"
-                    ),
-                )
-                continue
-            if normalized_result.status == ParticipantEpisodeStatus.TERMINATED:
-                if last_event.event_type not in _PARTICIPANT_EPISODE_TERMINAL_EVENTS:
-                    yield (
-                        outer_key,
-                        (
-                            f"participant episode result status is 'terminated' but head "
-                            f"history event is {last_event.event_type.value!r}, not a "
-                            f"terminal event"
-                        ),
-                    )
-                elif normalized_result.terminal_reason != last_event.terminal_reason:
-                    expected = (
-                        normalized_result.terminal_reason.value
-                        if normalized_result.terminal_reason is not None
-                        else None
-                    )
-                    got = last_event.terminal_reason.value if last_event.terminal_reason is not None else None
-                    yield (
-                        outer_key,
-                        (
-                            f"participant episode result terminal_reason {expected!r} does "
-                            f"not match head history terminal_reason {got!r}"
-                        ),
-                    )
-            elif normalized_result.status in (
-                ParticipantEpisodeStatus.INITIALIZING,
-                ParticipantEpisodeStatus.RUNNING,
-            ):
-                if last_event.event_type in _PARTICIPANT_EPISODE_TERMINAL_EVENTS:
-                    yield (
-                        outer_key,
-                        (
-                            f"participant episode result status is "
-                            f"{normalized_result.status.value!r} but head history event is "
-                            f"terminal ({last_event.event_type.value!r})"
-                        ),
-                    )
-
-
-def validate_evaluation_result(
-    contract: EvaluationResultContract,
-    state: EvaluationExecutionState,
-) -> list[str]:
-    """Return contract violations for one evaluator result envelope."""
-
-    violations: list[str] = []
-    if state.resource_type != contract.resource_type:
-        violations.append(
-            f"Result resource_type {state.resource_type!r} does not match compiled contract {contract.resource_type!r}."
-        )
-    if state.state_schema_version != contract.state_schema_version:
-        violations.append(
-            "Result state_schema_version "
-            f"{state.state_schema_version!r} does not match compiled contract "
-            f"{contract.state_schema_version!r}."
-        )
-    if not contract.supports_passed and state.passed is not None:
-        violations.append("Result may not report 'passed' for this resource type.")
-    if contract.supports_passed and state.status == EvaluationResultStatus.READY and state.passed is None:
-        violations.append("Ready result must report 'passed' for this resource type.")
-    if not contract.supports_score and (state.score is not None or state.max_score is not None):
-        violations.append("Result may not report score fields for this resource type.")
-    if contract.supports_score and state.status == EvaluationResultStatus.READY and state.score is None:
-        violations.append("Ready result must report 'score' for this resource type.")
-    if contract.fixed_max_score is not None:
-        if state.status == EvaluationResultStatus.READY and state.max_score != contract.fixed_max_score:
-            violations.append(f"Ready result must report max_score {contract.fixed_max_score} for this resource type.")
-    return violations
-
-
 @dataclass(frozen=True)
 class MetricRuntime(ResolvedResource):
     """Resolved metric node."""
@@ -5566,83 +4139,6 @@ class RuntimeModel:
 
 
 @dataclass(frozen=True)
-class PlannedResource:
-    """Normalized resource used by the planner and snapshot."""
-
-    address: str
-    domain: RuntimeDomain
-    resource_type: str
-    payload: dict[str, Any]
-    ordering_dependencies: tuple[str, ...] = ()
-    refresh_dependencies: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True)
-class PlanOperation:
-    """A reconciliation operation for a planned resource."""
-
-    action: ChangeAction
-    address: str
-    resource_type: str
-    payload: dict[str, Any]
-    ordering_dependencies: tuple[str, ...] = ()
-    refresh_dependencies: tuple[str, ...] = ()
-
-
-class ProvisionOp(PlanOperation):
-    """Provisioning reconciliation operation."""
-
-
-class OrchestrationOp(PlanOperation):
-    """Orchestration reconciliation operation."""
-
-
-class EvaluationOp(PlanOperation):
-    """Evaluation reconciliation operation."""
-
-
-@dataclass(frozen=True)
-class ProvisioningPlan:
-    """Provisioning plan over canonical deployment resources."""
-
-    resources: dict[str, PlannedResource] = field(default_factory=dict)
-    operations: list[ProvisionOp] = field(default_factory=list)
-    diagnostics: list[Diagnostic] = field(default_factory=list)
-
-    @property
-    def actionable_operations(self) -> list[ProvisionOp]:
-        return [op for op in self.operations if op.action != ChangeAction.UNCHANGED]
-
-
-@dataclass(frozen=True)
-class OrchestrationPlan:
-    """Resolved orchestration graph and reconciliation actions."""
-
-    resources: dict[str, PlannedResource] = field(default_factory=dict)
-    operations: list[OrchestrationOp] = field(default_factory=list)
-    startup_order: list[str] = field(default_factory=list)
-    diagnostics: list[Diagnostic] = field(default_factory=list)
-
-    @property
-    def actionable_operations(self) -> list[OrchestrationOp]:
-        return [op for op in self.operations if op.action != ChangeAction.UNCHANGED]
-
-
-@dataclass(frozen=True)
-class EvaluationPlan:
-    """Resolved evaluation graph and reconciliation actions."""
-
-    resources: dict[str, PlannedResource] = field(default_factory=dict)
-    operations: list[EvaluationOp] = field(default_factory=list)
-    startup_order: list[str] = field(default_factory=list)
-    diagnostics: list[Diagnostic] = field(default_factory=list)
-
-    @property
-    def actionable_operations(self) -> list[EvaluationOp]:
-        return [op for op in self.operations if op.action != ChangeAction.UNCHANGED]
-
-
-@dataclass(frozen=True)
 class ExecutionPlan:
     """Composite runtime execution plan."""
 
@@ -5659,223 +4155,6 @@ class ExecutionPlan:
     @property
     def is_valid(self) -> bool:
         return not any(diag.is_error for diag in self.diagnostics)
-
-
-@dataclass(frozen=True)
-class SnapshotEntry:
-    """Recorded runtime state for a single canonical resource."""
-
-    address: str
-    domain: RuntimeDomain
-    resource_type: str
-    payload: dict[str, Any]
-    ordering_dependencies: tuple[str, ...] = ()
-    refresh_dependencies: tuple[str, ...] = ()
-    status: str = "ready"
-
-
-@dataclass
-class RuntimeSnapshot:
-    """Current runtime snapshot.
-
-    Participant episode surfaces (``participant_episode_results`` and
-    ``participant_episode_history``) are both keyed by the stable
-    ``participant_address``. Participant behavior history is also keyed by
-    that stable address and records SEM-208 action/observation/state
-    transition events using compiled behavior-contract addresses. The episode
-    results map holds the *current* live episode state for each participant;
-    prior episode instances are preserved only through append-only history
-    streams and the ``previous_episode_id`` chain on each state.
-    """
-
-    entries: dict[str, SnapshotEntry] = field(default_factory=dict)
-    orchestration_results: dict[str, dict[str, Any]] = field(default_factory=dict)
-    orchestration_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
-    evaluation_results: dict[str, dict[str, Any]] = field(default_factory=dict)
-    evaluation_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
-    participant_episode_results: dict[str, dict[str, Any]] = field(default_factory=dict)
-    participant_episode_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
-    participant_behavior_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-    def get(self, address: str) -> SnapshotEntry | None:
-        return self.entries.get(address)
-
-    def for_domain(self, domain: RuntimeDomain) -> dict[str, SnapshotEntry]:
-        return {address: entry for address, entry in self.entries.items() if entry.domain == domain}
-
-    def with_entries(
-        self,
-        entries: dict[str, SnapshotEntry],
-        *,
-        orchestration_results: dict[str, dict[str, Any]] | None = None,
-        orchestration_history: dict[str, list[dict[str, Any]]] | None = None,
-        evaluation_results: dict[str, dict[str, Any]] | None = None,
-        evaluation_history: dict[str, list[dict[str, Any]]] | None = None,
-        participant_episode_results: dict[str, dict[str, Any]] | None = None,
-        participant_episode_history: dict[str, list[dict[str, Any]]] | None = None,
-        participant_behavior_history: dict[str, list[dict[str, Any]]] | None = None,
-        metadata: dict[str, Any] | None = None,
-    ) -> "RuntimeSnapshot":
-        return RuntimeSnapshot(
-            entries=entries,
-            orchestration_results=(
-                dict(self.orchestration_results) if orchestration_results is None else dict(orchestration_results)
-            ),
-            orchestration_history=(
-                {workflow_address: list(events) for workflow_address, events in self.orchestration_history.items()}
-                if orchestration_history is None
-                else {workflow_address: list(events) for workflow_address, events in orchestration_history.items()}
-            ),
-            evaluation_results=(
-                dict(self.evaluation_results) if evaluation_results is None else dict(evaluation_results)
-            ),
-            evaluation_history=(
-                {address: list(events) for address, events in self.evaluation_history.items()}
-                if evaluation_history is None
-                else {address: list(events) for address, events in evaluation_history.items()}
-            ),
-            participant_episode_results=(
-                dict(self.participant_episode_results)
-                if participant_episode_results is None
-                else dict(participant_episode_results)
-            ),
-            participant_episode_history=(
-                {
-                    participant_address: list(events)
-                    for participant_address, events in self.participant_episode_history.items()
-                }
-                if participant_episode_history is None
-                else {
-                    participant_address: list(events)
-                    for participant_address, events in participant_episode_history.items()
-                }
-            ),
-            participant_behavior_history=(
-                {
-                    participant_address: list(events)
-                    for participant_address, events in self.participant_behavior_history.items()
-                }
-                if participant_behavior_history is None
-                else {
-                    participant_address: list(events)
-                    for participant_address, events in participant_behavior_history.items()
-                }
-            ),
-            metadata=dict(self.metadata) if metadata is None else dict(metadata),
-        )
-
-
-@dataclass
-class ApplyResult:
-    """Result of applying or starting a runtime plan."""
-
-    success: bool
-    snapshot: RuntimeSnapshot
-    diagnostics: list[Diagnostic] = field(default_factory=list)
-    changed_addresses: list[str] = field(default_factory=list)
-    details: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class WorkflowCancellationRequest:
-    """Portable request for cancelling one workflow run."""
-
-    workflow_address: str
-    run_id: str | None = None
-    reason: str = "cancelled by operator"
-
-
-@dataclass(frozen=True)
-class ParticipantEpisodeInitializeRequest:
-    """Portable request for initializing the first episode of a participant.
-
-    Carries the stable ``participant_address`` plus an optional
-    caller-provided ``episode_id`` hint (the backend allocates one if the
-    caller does not supply one). See RUN-311.
-    """
-
-    participant_address: str
-    episode_id: str | None = None
-
-
-@dataclass(frozen=True)
-class ParticipantEpisodeResetRequest:
-    """Portable request for resetting a non-terminal participant episode.
-
-    The backend must allocate a new ``episode_id``, increment
-    ``sequence_number``, preserve the stable participant identity, and
-    link to the prior episode via ``previous_episode_id``.
-    """
-
-    participant_address: str
-    episode_id: str | None = None
-    reason: str = "reset by operator"
-
-
-@dataclass(frozen=True)
-class ParticipantEpisodeRestartRequest:
-    """Portable request for restarting a terminated participant episode.
-
-    The backend must allocate a new ``episode_id``, increment
-    ``sequence_number``, preserve the stable participant identity, and
-    link to the prior episode via ``previous_episode_id``.
-    """
-
-    participant_address: str
-    episode_id: str | None = None
-    reason: str = "restarted by operator"
-
-
-@dataclass(frozen=True)
-class ParticipantEpisodeTerminateRequest:
-    """Portable request for driving the current episode to ``TERMINATED``.
-
-    The ``terminal_reason`` must be one of the published
-    ``ParticipantEpisodeTerminalReason`` values; the control plane
-    defaults to ``INTERRUPTED`` for operator-driven termination but
-    backends may also call this method with a terminal reason reflecting
-    an internally-detected ``COMPLETED``, ``TIMED_OUT``, or ``TRUNCATED``
-    condition.
-    """
-
-    participant_address: str
-    terminal_reason: ParticipantEpisodeTerminalReason = ParticipantEpisodeTerminalReason.INTERRUPTED
-    detail: str = "terminated by operator"
-
-
-@dataclass(frozen=True)
-class OperationReceipt:
-    """Portable acknowledgment for an accepted control-plane operation."""
-
-    schema_version: str = OPERATION_SCHEMA_VERSION
-    operation_id: str = ""
-    domain: RuntimeDomain = RuntimeDomain.PROVISIONING
-    submitted_at: str = ""
-    accepted: bool = True
-    diagnostics: list[Diagnostic] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
-class OperationStatus:
-    """Portable status for a submitted control-plane operation."""
-
-    schema_version: str = OPERATION_SCHEMA_VERSION
-    operation_id: str = ""
-    domain: RuntimeDomain = RuntimeDomain.PROVISIONING
-    state: OperationState = OperationState.ACCEPTED
-    submitted_at: str = ""
-    updated_at: str = ""
-    diagnostics: list[Diagnostic] = field(default_factory=list)
-    changed_addresses: list[str] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
-class RuntimeSnapshotEnvelope:
-    """Portable envelope around the current runtime snapshot."""
-
-    schema_version: str = RUNTIME_SNAPSHOT_SCHEMA_VERSION
-    snapshot: RuntimeSnapshot = field(default_factory=RuntimeSnapshot)
 
 
 def resource_payload(resource: ResolvedResource) -> dict[str, Any]:

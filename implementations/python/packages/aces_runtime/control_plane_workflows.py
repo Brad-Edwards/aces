@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from aces_processor.models import (
-    RuntimeSnapshot,
+from aces_contracts.runtime_state import RuntimeSnapshot
+from aces_contracts.workflow import (
     WorkflowCompensationStatus,
     WorkflowExecutionContract,
     WorkflowExecutionState,

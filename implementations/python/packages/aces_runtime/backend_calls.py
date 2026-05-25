@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from aces_processor.models import ApplyResult, Diagnostic, RuntimeSnapshot
+from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 
 from .diagnostics import _failure_diagnostic
 from .evaluation_result_contracts import evaluation_result_contract_diagnostics
