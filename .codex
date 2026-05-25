@@ -24,3 +24,12 @@ such as `GOV-918`.
 - Keep concept-authority artifacts in the approved concept-authority surfaces.
 - Keep IMPLEMENTS and TESTS traceability in Ground Control aligned with changed
   code and tests.
+
+## Repo skills
+
+- For Codex, use `.codex-skills/aces-asset-inventory-capture/SKILL.md`.
+  This server also links it at
+  `~/.codex/skills/aces-asset-inventory-capture`.
+- For Claude Code, use
+  `.claude/skills/aces-asset-inventory-capture/SKILL.md`. This server also
+  links it at `~/.claude/skills/aces-asset-inventory-capture`.
