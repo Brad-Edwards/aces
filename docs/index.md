@@ -37,7 +37,7 @@ for advisory in scenario.advisories:
 - **Semantic validation** and formal semantic artifacts
 - **Processor layer** with compiler, planner, and control-plane contracts
 - **Schemas** and backend conformance fixtures
-- **CLI commands**, docs, examples, and tests
+- **CLI commands**, docs, examples, reusable authoring templates, patterns, and tests
 
 ## Reader Map
 

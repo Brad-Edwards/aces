@@ -15,19 +15,20 @@ ACES can currently support:
 - parsing and validating SDL through the Python implementation
 - instantiating variables and compiling runtime models in the reference stack
 - checking backend contract fixtures and conformance profiles
+- browsing validated, non-normative examples, templates, and reusable patterns
+  for scenarios, workflows, participant behavior, tasks, runs, and studies
 - reviewing the specifications, ADRs, and examples that define current claims
 
 ACES does not currently provide:
 
 - production range deployment
 - hosted backend operation
-- a general template catalog
-- participant-behavior templates
-- task, run, or study templates
-- a reusable pattern library with versioned catalog metadata
+- first-class SDL sections named `tasks`, `runs`, or `studies`
+- backend-specific deployment recipes for the example library
+- production run storage, study management, or participant-control services
 
-Treat the examples as worked examples, not as conformance fixtures or schema
-authority.
+Treat the examples and library templates as authoring aids, not as conformance
+fixtures or schema authority.
 
 ## Choose A Path
 
@@ -35,6 +36,7 @@ authority.
 |------|------------|---------------|---------------------|
 | Understand the repository | `README.md`, [`docs/index.md`](../index.md), [`docs/explain/reference/canonical-reference-map.md`](reference/canonical-reference-map.md) | Read the referenced docs | The repository layout and current boundaries are understood. |
 | Read a complete scenario | `examples/README.md`, `examples/scenarios/*.sdl.yaml` | `pytest tests/test_scenarios.py` | The checked examples load through the current parser boundary. |
+| Start from a reusable template or pattern | `examples/library/catalog.yaml`, `examples/library/templates/`, `examples/library/patterns/` | `python tools/check_example_library.py` | The catalog covers scenario, workflow, participant behavior, task, run, and study surfaces with parser-validated template bodies. |
 | Author a small SDL file | [`docs/explain/sdl/index.md`](sdl/index.md), [`docs/explain/sdl/sections.md`](sdl/sections.md), [`docs/explain/sdl/validation.md`](sdl/validation.md) | `parse_sdl_file()` or `load_scenario()` | The file is accepted by the current SDL model and semantic validator. |
 | Use an agent-facing authoring surface | `aces-mcp`, then `aces_tool_surface`, `aces_agent_guidance`, and [`docs/explain/sdl/language-service.md`](sdl/language-service.md) | `aces_agent_guidance`, `sdl_completions`, `sdl_apply_edit`, `sdl_diagnostics`, `sdl_format`, `sdl_references`, `sdl_validate`, `sdl_design_assessment`, `sdl_plan`, `sdl_claims_assessment` | The agent can help author, inspect, edit, dry-run, and qualify claims without repository-local code access. |
 | Use variables or imports | [`docs/explain/sdl/parser.md`](sdl/parser.md), [`docs/explain/sdl/sections.md`](sdl/sections.md) | `aces sdl resolve`, `aces sdl verify-imports` | Imports and variable placeholders follow the current parser rules. |
@@ -51,6 +53,7 @@ Use the lowest level that answers the question.
 | Orientation | You need to know what ACES is and is not. | README, docs index, reference map | Current repository scope and entrypoints | SDL validity, backend behavior, or experiment adequacy |
 | SDL parse and validation | You have an SDL file and need current parser feedback. | `parse_sdl_file()`, `load_scenario()`, SDL parser/model/validator tests | Structural and semantic acceptance by the reference implementation | Deployment viability or general domain completeness |
 | Example-backed authoring | You need a worked scenario to study or adapt. | `examples/scenarios/*.sdl.yaml`, `test_scenarios.py` | The example loads from disk without advisories under current tests | Suitability for another range, backend, exercise, or research design |
+| Template and pattern authoring | You need a reusable starting shape for a scenario, workflow, participant behavior, task, run, or study. | `examples/library/catalog.yaml`, `tools/check_example_library.py` | The cataloged template body validates as current SDL and the pattern has stable metadata | New runtime semantics or first-class task, run, or study sections |
 | Runtime and contracts | You need processor or backend integration context. | Runtime compiler/planner, contract schemas, backend profiles, conformance fixtures | Current reference-stack and contract behavior | Production backend correctness or operational reliability |
 | Specification review | You need to evaluate a semantic or authority claim. | `specs/`, ADRs, formal notes, tests | The current reasoning and normative boundary for a claim | Completed implementation when the materialized code/contracts are absent |
 
@@ -130,43 +133,51 @@ Use the Python parser boundary or the test suite for direct validation.
 
 The current positive example corpus is under `examples/scenarios/`. Each file
 is real SDL and is loaded by `implementations/python/tests/test_scenarios.py`.
+The reusable authoring library is under `examples/library/` and indexed by
+`examples/library/catalog.yaml`.
 
 Use examples to:
 
 - inspect large SDL structure
 - see current workflow, objective, relationship, content, and runtime surfaces
 - exercise parser and semantic validation with real files
+- start from validated templates for scenario, workflow, participant behavior,
+  task, run, and study authoring
+- compare reusable patterns against current limitations before claiming support
 - identify authoring friction against current limits
 
 Do not use examples to claim:
 
 - production backend support
 - complete cyber-range domain coverage
-- participant-behavior adequacy
-- task, run, or study provenance support
+- complete participant-behavior adequacy
+- first-class task, run, or study runtime support
 - conformance to any backend beyond published fixtures and tests
 
-## Unsupported Template And Pattern Surfaces
+## Template And Pattern Boundary
 
-Some useful artifacts are not present because the current system lacks the
-syntax, contracts, or validation boundary needed to make them useful now.
+The current library provides validated authoring aids, not new runtime
+authority.
 
 Current status:
 
 - Scenario examples exist as valid SDL files.
-- Workflow examples exist inside scenario files and workflow specs.
-- Participant behavior has architecture and partial contract work, but no
-  reusable authoring template catalog.
-- Tasks, runs, and studies are recognized ecosystem concepts, but no current
-  template or pattern catalog exists for them.
+- Workflow examples exist inside scenario files, workflow specs, and the
+  workflow template.
+- Participant behavior has a reusable action-contract and observation-boundary
+  template validated through current SDL semantics.
+- Tasks, runs, and studies have reusable templates and patterns that map those
+  concepts onto current objectives, workflows, timing, scoring, and evidence
+  references.
 - Evidence and provenance concerns are documented at architecture and
-  limitation surfaces, but not fully materialized as published template
-  artifacts.
+  limitation surfaces, but not fully materialized as published runtime
+  contracts.
 
 When adding an artifact, put it where its current role matches the repository
 authority boundary:
 
 - valid worked SDL examples: `examples/scenarios/*.sdl.yaml`
+- reusable non-normative templates and patterns: `examples/library/`
 - explanatory snippets: `docs/`
 - normative rules: `specs/`
 - published schemas and fixtures: `contracts/`

@@ -27,6 +27,7 @@ TARGETED_POLICY_TESTS = [
     "implementations/python/tests/test_assurance_policy.py",
     "implementations/python/tests/test_authority_boundary.py",
     "implementations/python/tests/test_agent_guidance_policy.py",
+    "implementations/python/tests/test_example_library_policy.py",
 ]
 CONTRACT_TRIGGER_PREFIXES = (
     "contracts/",
@@ -514,6 +515,10 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
             "policy / agent guidance profile",
             "skipped on staged check; runs on push and verify",
         )
+        reporter.skip(
+            "policy / example library catalog",
+            "skipped on staged check; runs on push and verify",
+        )
     else:
         reporter.run(
             "policy / semantic coverage ADR",
@@ -530,6 +535,10 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
         reporter.run(
             "policy / agent guidance profile",
             lambda: _run_project_python(session, "tools/check_agent_guidance.py"),
+        )
+        reporter.run(
+            "policy / example library catalog",
+            lambda: _run_project_python(session, "tools/check_example_library.py"),
         )
 
 
