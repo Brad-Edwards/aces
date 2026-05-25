@@ -55,6 +55,121 @@ layering_rules:
     scope_root: implementations/python/packages/aces_sdl
     forbidden_top_level: aces_processor
 
+# ADR-035 / MOD-001: explicit module ownership boundaries.
+module_boundaries:
+  adr: ADR-035
+  modules:
+    - id: aces_sdl
+      root: implementations/python/packages/aces_sdl
+      allowed_top_level_imports:
+        - aces_contracts
+      forbidden_import_prefixes:
+        - aces_processor
+        - aces_runtime
+        - aces_backend_protocols
+        - aces_backend_stubs
+        - aces_cli
+        - aces_conformance
+        - aces_mcp
+    - id: aces_processor
+      root: implementations/python/packages/aces_processor
+      allowed_top_level_imports:
+        - aces_backend_protocols
+        - aces_contracts
+        - aces_sdl
+      forbidden_import_prefixes:
+        - aces_runtime
+        - aces_backend_stubs
+        - aces_cli
+        - aces_conformance
+        - aces_mcp
+    - id: aces_runtime
+      root: implementations/python/packages/aces_runtime
+      allowed_top_level_imports:
+        - aces_backend_protocols
+        - aces_contracts
+        - aces_processor
+        - aces_sdl
+      forbidden_import_prefixes:
+        - aces_backend_stubs
+        - aces_cli
+        - aces_conformance
+        - aces_mcp
+      public_import_prefixes:
+        aces_processor:
+          - aces_processor.compiler
+          - aces_processor.models
+          - aces_processor.planner
+    - id: aces_backend_protocols
+      root: implementations/python/packages/aces_backend_protocols
+      allowed_top_level_imports:
+        - aces_contracts
+        - aces_processor
+      public_import_prefixes:
+        aces_processor:
+          - aces_processor.models
+    - id: aces_backend_stubs
+      root: implementations/python/packages/aces_backend_stubs
+      allowed_top_level_imports:
+        - aces_backend_protocols
+        - aces_contracts
+        - aces_processor
+        - aces_runtime
+      public_import_prefixes:
+        aces_processor:
+          - aces_processor.models
+        aces_runtime:
+          - aces_runtime.registry
+    - id: aces_conformance
+      root: implementations/python/packages/aces_conformance
+      allowed_top_level_imports:
+        - aces_backend_protocols
+        - aces_cli
+        - aces_contracts
+        - aces_processor
+        - aces_runtime
+        - aces_sdl
+      public_import_prefixes:
+        aces_processor:
+          - aces_processor.compiler
+          - aces_processor.models
+          - aces_processor.planner
+        aces_runtime:
+          - aces_runtime.control_plane
+          - aces_runtime.registry
+          - aces_runtime.result_contracts
+    - id: aces_cli
+      root: implementations/python/packages/aces_cli
+      allowed_top_level_imports:
+        - aces_conformance
+        - aces_processor
+        - aces_sdl
+      forbidden_import_prefixes:
+        - aces_runtime
+      public_import_prefixes:
+        aces_processor:
+          - aces_processor.manifest
+          - aces_processor.models
+    - id: aces_mcp
+      root: implementations/python/packages/aces_mcp
+      allowed_top_level_imports:
+        - aces_backend_protocols
+        - aces_backend_stubs
+        - aces_processor
+        - aces_sdl
+      forbidden_import_prefixes:
+        - aces_runtime
+      public_import_prefixes:
+        aces_processor:
+          - aces_processor.compiler
+          - aces_processor.manifest
+          - aces_processor.models
+          - aces_processor.planner
+    - id: aces_contracts
+      root: implementations/python/packages/aces_contracts
+      allowed_top_level_imports:
+        - aces_sdl
+
 # ADR-015: non-test source files under packages/ cap at 600 lines.
 # The allowlist (oversized_allowlist.yaml) lists the files that were over
 # the cap when ADR-015 landed; each split PR (child of issue #3) removes

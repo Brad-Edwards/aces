@@ -223,7 +223,7 @@ def test_layering_rule_rejects_aces_processor_imports(tmp_path: Path, import_lin
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
-    assert [f.rule_id for f in failures] == ["layering-rule-violation"], (
+    assert "layering-rule-violation" in [f.rule_id for f in failures], (
         f"import line {import_line!r} should fire layering-rule-violation; got {[f.rule_id for f in failures]}"
     )
 
@@ -262,6 +262,134 @@ def test_layering_rule_does_not_check_files_outside_scope(tmp_path: Path) -> Non
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
     assert failures == []
+
+
+# ── ADR-035: module ownership boundaries ────────────────────────────────
+
+
+def install_module_boundary_policy(repo_root: Path) -> None:
+    policy_path = repo_root / "tools" / "policy" / "adr_policy.yaml"
+    policy_path.write_text(
+        policy_path.read_text(encoding="utf-8")
+        + """
+
+module_boundaries:
+  adr: ADR-035
+  modules:
+    - id: aces_sdl
+      root: implementations/python/packages/aces_sdl
+      allowed_top_level_imports:
+        - aces_contracts
+      forbidden_import_prefixes:
+        - aces_processor
+        - aces_runtime
+        - aces_backend_protocols
+        - aces_backend_stubs
+        - aces_cli
+        - aces_conformance
+        - aces_mcp
+    - id: aces_processor
+      root: implementations/python/packages/aces_processor
+      allowed_top_level_imports:
+        - aces_backend_protocols
+        - aces_contracts
+        - aces_sdl
+      forbidden_import_prefixes:
+        - aces_runtime
+        - aces_backend_stubs
+        - aces_cli
+        - aces_conformance
+        - aces_mcp
+    - id: aces_runtime
+      root: implementations/python/packages/aces_runtime
+      allowed_top_level_imports:
+        - aces_backend_protocols
+        - aces_contracts
+        - aces_processor
+        - aces_sdl
+      public_import_prefixes:
+        aces_processor:
+          - aces_processor.compiler
+          - aces_processor.models
+          - aces_processor.planner
+    - id: aces_mcp
+      root: implementations/python/packages/aces_mcp
+      forbidden_import_prefixes:
+        - aces_runtime
+""",
+        encoding="utf-8",
+    )
+
+
+def test_module_boundaries_reject_processor_importing_runtime(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/aces_processor/uses_runtime.py"
+    write_text(repo_root / rel, "from aces_runtime.manager import RuntimeManager\n")
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["module-boundary-import"]
+
+
+def test_module_boundaries_reject_runtime_importing_processor_private_modules(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/aces_runtime/uses_private_processor.py"
+    write_text(repo_root / rel, "from aces_processor._private import helper\n")
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["module-boundary-private-import"]
+
+
+def test_module_boundaries_allow_runtime_using_processor_public_api(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/aces_runtime/uses_processor.py"
+    write_text(
+        repo_root / rel,
+        "from aces_processor.compiler import compile_runtime_model\n"
+        "from aces_processor.models import RuntimeSnapshot\n"
+        "from aces_processor.planner import plan\n",
+    )
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert failures == []
+
+
+def test_module_boundaries_reject_runtime_using_non_public_processor_module(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/aces_runtime/uses_processor_semantics.py"
+    write_text(repo_root / rel, "from aces_processor.semantics.planner import reverse_delete_order\n")
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["module-boundary-public-api"]
+
+
+def test_module_boundaries_reject_sdl_importing_runtime(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/aces_sdl/uses_runtime.py"
+    write_text(repo_root / rel, "import aces_runtime\n")
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["module-boundary-import"]
+
+
+def test_module_boundaries_reject_authoring_importing_runtime_internals(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/aces_mcp/tools/authoring_runtime.py"
+    write_text(repo_root / rel, "from aces_runtime.control_plane import RuntimeControlPlane\n")
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["module-boundary-import"]
 
 
 # ── ADR-015: 600-line source-file cap ───────────────────────────────────

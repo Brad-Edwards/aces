@@ -1,0 +1,95 @@
+# ADR-035: SDL, Processor, Runtime Module Boundaries
+
+## Status
+
+accepted
+
+## Date
+
+2026-05-25
+
+## Context
+
+ADR-008 established the processor as the semantics-bearing middle layer, but
+the Python package boundary drifted: `aces_processor` also contained the live
+runtime manager, control plane, control-plane HTTP adapter, operation store,
+security policy, and backend registry. That made the package name lie about
+ownership, encouraged authoring tools to reach into runtime internals, and left
+future runtime work without a clear import boundary.
+
+ADR-015 added SDL/processor layering and a file-size cap, but it explicitly
+left the risk that a later top-level package such as `aces_runtime` would need
+its own policy. Issue #410 is that follow-up.
+
+## Decision
+
+Split the current implementation into these owning packages:
+
+- `aces_sdl` owns the SDL language model, parsing, instantiation, and
+  SDL-language semantic helpers.
+- `aces_processor` owns SDL processing: validation-facing semantic diagnostics,
+  support determination, manifests, compilation, planning, reconciliation
+  semantics, and processor runtime model/result contract dataclasses.
+- `aces_runtime` owns live runtime control: `RuntimeManager`,
+  `RuntimeControlPlane`, `RuntimeTarget`, `BackendRegistry`, control-plane API,
+  security, persistence, operation history/audit, backend invocation, runtime
+  snapshots, participant episode control, and backend result validation at the
+  execution boundary.
+- `aces_backend_protocols` owns backend protocol types.
+- `aces_backend_stubs` owns non-normative in-memory backend implementations.
+- `aces_cli` and `aces_mcp` are authoring/orchestration surfaces that consume
+  SDL and processor APIs. They must not own semantic truth or call runtime
+  internals.
+
+This ADR supersedes the part of ADR-008 that placed execution-facing runtime
+control inside the processor package. It does not change ADR-008's decision
+that processor artifacts are the compiled, semantics-bearing middle layer, and
+it does not change ADR-009/ADR-010 compatibility policy: owning-package shims
+are not preserved. The only compatibility shim layer is the legacy `aces.*`
+namespace.
+
+Runtime may consume public processor APIs and shared contracts. It may not
+import processor private modules. Backends remain behind runtime/backend
+protocol interfaces; authoring surfaces do not import runtime internals.
+
+## Enforcement
+
+Add a `module_boundaries` block to `tools/policy/adr_policy.yaml` and enforce it
+in `tools/policy/repo_policy.py`. The checker walks changed Python files under
+configured package roots and rejects:
+
+- imports from packages that the owner explicitly forbids
+- imports of private modules such as `aces_processor._private`
+- imports from packages that are only allowed through named public prefixes
+
+The gate is intentionally structural and changed-file scoped, matching the
+existing ADR-015 policy style.
+
+## Consequences
+
+### Positive
+
+- Runtime control has a package name that matches its responsibility.
+- Processor code can evolve as pure SDL processing without depending on live
+  runtime control.
+- Authoring surfaces have an explicit boundary: they call SDL/processor APIs,
+  not runtime internals.
+- The policy gate catches accidental boundary regressions during normal PR
+  review.
+
+### Negative
+
+- Direct imports from removed owning-package paths such as
+  `aces_processor.manager` are no longer supported.
+- Documentation and tests must distinguish processor model contracts from
+  runtime live-control APIs.
+
+### Risks
+
+- The policy is still in-repository code and configuration, so deliberate
+  weakening is a review concern rather than a cryptographic enforcement
+  mechanism.
+- Some shared result-contract types still live in `aces_processor.models`
+  because they are compiled processor artifacts consumed by runtime validation.
+  If that file is split later, the public runtime-facing contract exports must
+  remain stable.

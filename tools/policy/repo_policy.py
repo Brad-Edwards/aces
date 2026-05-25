@@ -93,6 +93,7 @@ def evaluate_repo_policy(
     failures.extend(_check_package_import_direction(repo_root, policy, changed))
     failures.extend(_check_compatibility_wrappers(repo_root, policy, changed))
     failures.extend(_check_layering_and_oversized(repo_root, policy, changed))
+    failures.extend(_check_module_boundaries(repo_root, policy, changed))
 
     if check_set == "full":
         failures.extend(_check_adr_index(repo_root, policy, changed))
@@ -603,6 +604,188 @@ def _is_wrapper_module(tree: ast.Module) -> bool:
             continue
         return False
     return True
+
+
+def _validate_module_boundary_config(config: object) -> tuple[list[dict], list[PolicyFailure]]:
+    """Validate the ADR-035 module-boundary policy block."""
+
+    if config is None:
+        return [], []
+    fail = lambda msg: PolicyFailure("policy-config-malformed", msg, _POLICY_CONFIG_PATH)  # noqa: E731
+    if not isinstance(config, dict):
+        return [], [fail(f"module_boundaries must be a mapping; got {type(config).__name__}")]
+    adr = config.get("adr")
+    if not _is_str(adr) or not adr:
+        return [], [fail(f"module_boundaries.adr must be a non-empty string; got {adr!r}")]
+    modules = config.get("modules")
+    if not isinstance(modules, list) or not modules:
+        return [], [fail("module_boundaries.modules must be a non-empty list")]
+
+    failures: list[PolicyFailure] = []
+    validated: list[dict] = []
+    seen_ids: set[str] = set()
+    seen_roots: set[str] = set()
+    for index, module in enumerate(modules):
+        if not isinstance(module, dict):
+            failures.append(fail(f"module_boundaries.modules[{index}] must be a mapping"))
+            continue
+        module_id = module.get("id")
+        root = module.get("root")
+        ok = True
+        if not _is_str(module_id) or not module_id:
+            failures.append(fail(f"module_boundaries.modules[{index}].id must be a non-empty string"))
+            ok = False
+        elif module_id in seen_ids:
+            failures.append(fail(f"module_boundaries.modules[{index}].id '{module_id}' is duplicated"))
+            ok = False
+        if not _is_str(root) or not root:
+            failures.append(fail(f"module_boundaries.modules[{index}].root must be a non-empty string"))
+            ok = False
+        elif root in seen_roots:
+            failures.append(fail(f"module_boundaries.modules[{index}].root '{root}' is duplicated"))
+            ok = False
+        allowed = module.get("allowed_top_level_imports", [])
+        forbidden = module.get("forbidden_import_prefixes", [])
+        if not _str_list_ok(allowed, allow_empty=True):
+            failures.append(
+                fail(f"module_boundaries.modules[{index}].allowed_top_level_imports must be a list of strings")
+            )
+            ok = False
+        if not _str_list_ok(forbidden, allow_empty=True):
+            failures.append(
+                fail(f"module_boundaries.modules[{index}].forbidden_import_prefixes must be a list of strings")
+            )
+            ok = False
+        public_imports = module.get("public_import_prefixes", {})
+        if public_imports is None:
+            public_imports = {}
+        if not isinstance(public_imports, dict):
+            failures.append(fail(f"module_boundaries.modules[{index}].public_import_prefixes must be a mapping"))
+            ok = False
+        elif any(
+            not _is_str(key) or not _str_list_ok(value, allow_empty=False) for key, value in public_imports.items()
+        ):
+            failures.append(
+                fail(
+                    f"module_boundaries.modules[{index}].public_import_prefixes values must be non-empty "
+                    "lists of strings"
+                )
+            )
+            ok = False
+        if not ok:
+            continue
+        seen_ids.add(str(module_id))
+        seen_roots.add(str(root))
+        validated.append(
+            {
+                "id": str(module_id),
+                "root": str(root),
+                "allowed_top_level_imports": frozenset(str(item) for item in allowed),
+                "forbidden_import_prefixes": tuple(str(item) for item in forbidden),
+                "public_import_prefixes": {
+                    str(key): tuple(str(prefix) for prefix in value) for key, value in public_imports.items()
+                },
+            }
+        )
+    return validated, failures
+
+
+def _check_module_boundaries(repo_root: Path, policy: dict, changed: list[str]) -> list[PolicyFailure]:
+    rules, config_failures = _validate_module_boundary_config(policy.get("module_boundaries"))
+    if config_failures or not rules:
+        return config_failures
+
+    known_modules = frozenset(rule["id"] for rule in rules)
+    failures: list[PolicyFailure] = []
+    for rule in rules:
+        for rel_path in changed:
+            if not rel_path.endswith(".py") or not path_matches_prefix(rel_path, rule["root"]):
+                continue
+            path = repo_root / rel_path
+            if not path.is_file():
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel_path)
+            failures.extend(_check_module_imports(rel_path, rule, known_modules, tree))
+    return failures
+
+
+def _check_module_imports(
+    rel_path: str,
+    rule: dict,
+    known_modules: frozenset[str],
+    tree: ast.Module,
+) -> list[PolicyFailure]:
+    failures: list[PolicyFailure] = []
+    for imported in _imported_names(tree):
+        top_level = imported.split(".", 1)[0]
+        if top_level == rule["id"] or top_level not in known_modules:
+            continue
+        if _matches_any_import_prefix(imported, rule["forbidden_import_prefixes"]):
+            failures.append(
+                PolicyFailure(
+                    "module-boundary-import",
+                    (
+                        f"{rule['id']} must not import {imported!r}; "
+                        "module-boundary rules are defined by module_boundaries"
+                    ),
+                    rel_path,
+                )
+            )
+            continue
+        if _uses_private_module_path(imported):
+            failures.append(
+                PolicyFailure(
+                    "module-boundary-private-import",
+                    f"{rule['id']} must not import private/internal module path {imported!r}",
+                    rel_path,
+                )
+            )
+            continue
+        public_prefixes = rule["public_import_prefixes"].get(top_level)
+        if public_prefixes and not _matches_any_import_prefix(imported, public_prefixes):
+            failures.append(
+                PolicyFailure(
+                    "module-boundary-public-api",
+                    f"{rule['id']} may import {top_level} only through public prefixes {sorted(public_prefixes)!r}",
+                    rel_path,
+                )
+            )
+            continue
+        if top_level not in rule["allowed_top_level_imports"]:
+            failures.append(
+                PolicyFailure(
+                    "module-boundary-import",
+                    f"{rule['id']} may not import {top_level}; add an ADR-backed module-boundary allowance first",
+                    rel_path,
+                )
+            )
+    return failures
+
+
+def _imported_names(tree: ast.Module) -> list[str]:
+    names: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.extend(alias.name for alias in node.names)
+            continue
+        if isinstance(node, ast.ImportFrom):
+            if node.level or not node.module:
+                continue
+            for alias in node.names:
+                if alias.name == "*":
+                    names.append(node.module)
+                    continue
+                names.append(f"{node.module}.{alias.name}")
+    return names
+
+
+def _matches_any_import_prefix(imported: str, prefixes: tuple[str, ...]) -> bool:
+    return any(imported == prefix or imported.startswith(f"{prefix}.") for prefix in prefixes)
+
+
+def _uses_private_module_path(imported: str) -> bool:
+    parts = imported.split(".")
+    return any(part.startswith("_") for part in parts[1:])
 
 
 CHANGELOG_HEADING_RE = re.compile(r"^## \[(.+?)\]", re.MULTILINE)
