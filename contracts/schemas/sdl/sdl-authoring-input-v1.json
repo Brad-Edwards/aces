@@ -4636,6 +4636,42 @@
     },
     "RuntimeControlInterface": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "bind_source_sensitivity": {
+                "anyOf": [
+                  {
+                    "pattern": "^[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]$",
+                    "type": "string"
+                  },
+                  {
+                    "pattern": "^[Oo][Pp][Ee][Rr][Aa][Tt][Oo][Rr][_-][Ss][Ee][Cc][Rr][Ee][Tt]$",
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "bind_source_sensitivity"
+            ]
+          },
+          "then": {
+            "not": {
+              "properties": {
+                "bind_source": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "bind_source"
+              ]
+            }
+          }
+        }
+      ],
       "description": "A non-network local control API exposed inside a runtime node.",
       "properties": {
         "access": {
@@ -4654,6 +4690,18 @@
           "default": "",
           "title": "Bind Source",
           "type": "string"
+        },
+        "bind_source_sensitivity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Bind Source Sensitivity"
         },
         "description": {
           "default": "",
@@ -5962,6 +6010,76 @@
     },
     "RuntimeMount": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "source_sensitivity": {
+                "anyOf": [
+                  {
+                    "pattern": "^[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]$",
+                    "type": "string"
+                  },
+                  {
+                    "pattern": "^[Oo][Pp][Ee][Rr][Aa][Tt][Oo][Rr][_-][Ss][Ee][Cc][Rr][Ee][Tt]$",
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "source_sensitivity"
+            ]
+          },
+          "then": {
+            "not": {
+              "properties": {
+                "source": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "options_sensitivity": {
+                "anyOf": [
+                  {
+                    "pattern": "^[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]$",
+                    "type": "string"
+                  },
+                  {
+                    "pattern": "^[Oo][Pp][Ee][Rr][Aa][Tt][Oo][Rr][_-][Ss][Ee][Cc][Rr][Ee][Tt]$",
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "options_sensitivity"
+            ]
+          },
+          "then": {
+            "not": {
+              "properties": {
+                "options": {
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "options"
+              ]
+            }
+          }
+        }
+      ],
       "description": "A filesystem mount observed on a runtime node.",
       "properties": {
         "backend_generated": {
@@ -5995,6 +6113,18 @@
           },
           "title": "Options",
           "type": "array"
+        },
+        "options_sensitivity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Options Sensitivity"
         },
         "propagation": {
           "anyOf": [
@@ -6036,6 +6166,18 @@
           ],
           "default": "other",
           "title": "Source Kind"
+        },
+        "source_sensitivity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Source Sensitivity"
         },
         "stability": {
           "anyOf": [

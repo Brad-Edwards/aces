@@ -15,6 +15,7 @@ from aces_contracts.manifest_authority import (
     PROCESSOR_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_SDL_VERSION_IDS,
 )
+from jsonschema import Draft202012Validator
 
 from aces.core.runtime import contracts as compat_runtime_contracts
 
@@ -52,6 +53,93 @@ def test_closed_world_contract_models_for_runtime_envelopes():
     assert generated["controlled-vocabularies-v1"]["additionalProperties"] is False
     assert generated["semantic-profile-v1"]["additionalProperties"] is False
     assert "backend-manifest-v1" not in generated
+
+
+def test_sdl_schema_rejects_redacted_runtime_mount_and_bind_raw_values():
+    validator = Draft202012Validator(schema_bundle()["sdl-authoring-input-v1"])
+
+    validator.validate(
+        {
+            "name": "redaction-contract",
+            "nodes": {
+                "n": {
+                    "type": "vm",
+                    "runtime": {
+                        "mounts": [{"target": "/host-keys", "source_sensitivity": "operator_secret"}],
+                        "local_control_interfaces": [
+                            {"path": "/run/docker.sock", "bind_source_sensitivity": "operator_secret"}
+                        ],
+                    },
+                }
+            },
+        }
+    )
+
+    invalid_mount_options = {
+        "name": "redaction-contract",
+        "nodes": {
+            "n": {
+                "type": "vm",
+                "runtime": {
+                    "mounts": [
+                        {
+                            "target": "/",
+                            "options": ["lowerdir=/var/lib/containerd/snapshots/1/fs"],
+                            "options_sensitivity": "redacted",
+                        }
+                    ]
+                },
+            }
+        },
+    }
+    invalid_bind_source = {
+        "name": "redaction-contract",
+        "nodes": {
+            "n": {
+                "type": "vm",
+                "runtime": {
+                    "local_control_interfaces": [
+                        {
+                            "path": "/run/docker.sock",
+                            "bind_source": "/var/run/docker.sock",
+                            "bind_source_sensitivity": "operator_secret",
+                        }
+                    ]
+                },
+            }
+        },
+    }
+
+    for sensitivity in (
+        "operator_secret",
+        "operator-secret",
+        "OPERATOR_SECRET",
+        "OPERATOR-SECRET",
+        "Operator-Secret",
+        "redacted",
+        "REDACTED",
+    ):
+        invalid_mount_source = {
+            "name": "redaction-contract",
+            "nodes": {
+                "n": {
+                    "type": "vm",
+                    "runtime": {
+                        "mounts": [
+                            {
+                                "target": "/host-keys",
+                                "source": "/home/operator/.ssh",
+                                "source_sensitivity": sensitivity,
+                            }
+                        ]
+                    },
+                }
+            },
+        }
+        assert list(validator.iter_errors(invalid_mount_source)), sensitivity
+
+    assert list(validator.iter_errors(invalid_mount_options))
+    assert list(validator.iter_errors(invalid_bind_source))
 
 
 def test_manifest_schemas_publish_backend_and_processor_v2_with_surface_specific_constraints():

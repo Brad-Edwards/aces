@@ -91,10 +91,12 @@ nodes:
       mounts:
         - target: /shuffle-database
           source: aptl_shuffle_data
+          source_sensitivity: plain
           source_kind: volume
           filesystem_type: ext4
           read_only: false
           options: [rw, nosuid]
+          options_sensitivity: plain
           propagation: rprivate
           stability: volume_backed
           backend_generated: true
@@ -122,7 +124,7 @@ nodes:
         - path: /run/docker.sock
           kind: unix_socket
           protocol: docker
-          bind_source: /var/run/docker.sock
+          bind_source_sensitivity: operator_secret
           access: read_write
       process:
         pid: 1
@@ -406,15 +408,22 @@ Concrete service bindings on a VM must be unique by `protocol` + `port`. Reusing
 
 `runtime` captures observed VM/runtime facts that are not authored deployable
 features or exposed network services. Mounts describe realized filesystem
-attachments, including filesystem type, propagation, stability, and whether a
-backend generated the source. `filesystem_inventory` records runtime-observed
-filesystem entries with absolute path, entry type, ownership, UID/GID, mode,
-size, digest algorithm/value pairs, source-package path, provenance, stability,
-and sensitivity classification. `local_control_interfaces` describe path-local
-control APIs such as Unix sockets; `process` records primary execution
-identity; `processes` records a supervised or load-bearing process set;
-`environment` records observed runtime environment variables with provenance
-and redaction classification; `linux_capabilities` records container/Linux
+attachments, including filesystem type, propagation, stability, whether a
+backend generated the source, and sensitivity classifications for the source
+and option strings. Mount sources or options classified as `redacted` or
+`operator_secret` must omit the raw value. This sensitivity vocabulary is an
+ACES runtime contract, not an adopted taxonomy from Docker, Compose, or the
+cited scenario-language precedents. `filesystem_inventory` records
+runtime-observed filesystem entries with absolute path, entry type, ownership,
+UID/GID, mode, size, digest algorithm/value pairs, source-package path,
+provenance, stability, and sensitivity classification.
+`local_control_interfaces` describe path-local control APIs such as Unix
+sockets; host-side bind sources use `bind_source_sensitivity` and must omit
+`bind_source` when classified as `redacted` or `operator_secret`; `process`
+records primary execution identity; `processes` records a supervised or
+load-bearing process set; `environment` records observed runtime environment
+variables with provenance and redaction classification; `linux_capabilities`
+records container/Linux
 capability policy; `operational_policy` records restart policy and observed
 resource limits; `container` records observed host/container configuration and
 namespace/security facts, including `seccomp_profile` (the portable seccomp
