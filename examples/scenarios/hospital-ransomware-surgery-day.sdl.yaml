@@ -88,6 +88,98 @@ nodes:
         entities: [hospital-blue.identity]
       federation-admin:
         username: adfs_svc
+    runtime:
+      identity_authorities:
+        - authority_id: hospital-domain
+          kind: domain
+          name: Hospital Active Directory Domain
+          namespace: hospital.local
+          domain_name: HOSPITAL
+          realm: HOSPITAL.LOCAL
+          base_dn: DC=hospital,DC=local
+          services:
+            - service_id: ldap-endpoint
+              service: ad-ldap
+              protocol: ldap
+              address: dc.hospital.local
+              port: 389
+          subjects:
+            - subject_id: nurse-user
+              kind: user
+              name: nurse.jane
+              principal_name: nurse.jane@HOSPITAL.LOCAL
+              distinguished_name: CN=nurse.jane,OU=Clinical,DC=hospital,DC=local
+              domain: hospital.local
+              enabled: true
+              origin: directory
+              attributes:
+                - name: objectGUID
+                  values: [hospital-guid-nurse-jane]
+                  origin: directory
+            - subject_id: clinical-group
+              kind: group
+              name: Clinical
+              distinguished_name: CN=Clinical,OU=Groups,DC=hospital,DC=local
+              origin: directory
+            - subject_id: surgery-group
+              kind: group
+              name: Surgery
+              distinguished_name: CN=Surgery,OU=Groups,DC=hospital,DC=local
+              origin: directory
+            - subject_id: appservices-group
+              kind: group
+              name: AppServices
+              distinguished_name: CN=AppServices,OU=Groups,DC=hospital,DC=local
+              origin: directory
+            - subject_id: ehr-service-principal
+              kind: service_principal
+              name: ehrsvc
+              principal_name: ehrsvc@HOSPITAL.LOCAL
+              service_principal_names: [HTTP/ehr.hospital.local]
+              origin: directory
+          relationships:
+            - relationship_id: nurse-clinical-membership
+              relationship_type: member_of
+              source_ref: nurse-user
+              target_ref: clinical-group
+            - relationship_id: ehr-service-appservices-membership
+              relationship_type: member_of
+              source_ref: ehr-service-principal
+              target_ref: appservices-group
+          policies:
+            - policy_id: default-domain-password-policy
+              policy_kind: password
+              name: Default Domain Password Policy
+              applies_to_refs: [hospital-domain, ldap-endpoint, nurse-clinical-membership]
+              settings:
+                - name: min_length
+                  values: ["14"]
+                  origin: directory
+                - name: history_count
+                  values: ["24"]
+                  origin: directory
+        - authority_id: hospital-adfs
+          kind: identity_provider
+          name: Hospital ADFS
+          namespace: https://adfs.hospital.local
+          issuer: https://adfs.hospital.local/adfs
+          services:
+            - service_id: adfs-saml
+              service: adfs-https
+              protocol: saml
+              address: adfs.hospital.local
+              port: 443
+          subjects:
+            - subject_id: ehr-application
+              kind: application
+              name: ehr-service
+              principal_name: https://ehr.hospital.local/
+              origin: federated
+          relationships:
+            - relationship_id: adfs-federates-ehr
+              relationship_type: federates_with
+              source_ref: hospital-adfs
+              target_ref: ehr-application
 
   exchange01:
     type: VM

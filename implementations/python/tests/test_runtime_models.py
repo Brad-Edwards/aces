@@ -259,6 +259,47 @@ nodes:
         assert runtime["package_vulnerabilities"][0]["scan_time"] == "2026-05-20T12:00:00Z"
         assert not model.diagnostics
 
+    def test_node_runtime_preserves_identity_authority_inventory(self):
+        model = compile_runtime_model(
+            _scenario("""
+name: directory-identity-runtime
+nodes:
+  ad:
+    type: vm
+    os: windows
+    resources: {ram: 2 gib, cpu: 2}
+    services:
+      - {port: 389, name: ldap}
+      - {port: 88, name: kerberos}
+    runtime:
+      identity-authorities:
+        - authority-id: techvault-domain
+          kind: domain
+          namespace: techvault.local
+          domain-name: TECHVAULT
+          realm: TECHVAULT.LOCAL
+          services:
+            - {service-id: ldap-endpoint, service: ldap, protocol: ldap, port: 389}
+          subjects:
+            - {subject-id: alice, kind: user, name: alice}
+            - {subject-id: domain-admins, kind: group, name: Domain Admins}
+          relationships:
+            - relationship-id: alice-admin
+              relationship-type: member-of
+              source-ref: alice
+              target-ref: domain-admins
+""")
+        )
+
+        runtime = model.node_deployments["provision.node.ad"].spec["node"]["runtime"]
+        authority = runtime["identity_authorities"][0]
+        assert authority["authority_id"] == "techvault-domain"
+        assert authority["kind"] == "domain"
+        assert authority["services"][0]["protocol"] == "ldap"
+        assert authority["subjects"][1]["kind"] == "group"
+        assert authority["relationships"][0]["relationship_type"] == "member_of"
+        assert not model.diagnostics
+
     def test_feature_binding_tracks_same_node_dependencies(self):
         model = compile_runtime_model(
             _scenario("""

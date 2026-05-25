@@ -119,7 +119,8 @@ decisions/adrs/adr-028-container-seccomp-security-options-surface
 decisions/adrs/adr-029-database-logical-state-runtime-surface
 decisions/adrs/adr-030-process-scoped-linux-capability-policy
 decisions/adrs/adr-031-ssh-server-configuration-surface
-decisions/adrs/adr-032-scenario-delivery-boundary-for-runtime-node-state
+decisions/adrs/adr-032-directory-domain-identity-runtime-surface
+decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state
 decisions/sem-213-temporal-participant-preflight
 ```
 

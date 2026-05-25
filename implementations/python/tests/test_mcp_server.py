@@ -229,12 +229,10 @@ class TestReferenceTools:
 
     def test_sdl_validation_reference(self, server):
         text = _call(server, "sdl_validation_reference")
-        # Both pieces of evidence: the documented "22 named passes" count
-        # AND a section heading specific to the validation reference. An OR
-        # disjunction over the generic "validation" substring would be
-        # vacuously satisfied by any response.
-        assert "22" in text
+        # Require both the section heading and a specific pass name so the
+        # response cannot satisfy the test with a generic "validation" string.
         assert "Validation Passes" in text
+        assert "verify_runtime_identity_authorities" in text
 
 
 # ---------------------------------------------------------------------------

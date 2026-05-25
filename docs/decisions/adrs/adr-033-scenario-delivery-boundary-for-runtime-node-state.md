@@ -1,4 +1,4 @@
-# ADR-032: Scenario/Delivery Boundary for Runtime Node State
+# ADR-033: Scenario/Delivery Boundary for Runtime Node State
 
 ## Status
 

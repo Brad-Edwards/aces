@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from aces.core.sdl import instantiate_scenario
-from aces.core.sdl._errors import SDLParseError
+from aces.core.sdl._errors import SDLParseError, SDLValidationError
 from aces.core.sdl.nodes import NodeType
 from aces.core.sdl.parser import parse_sdl, parse_sdl_file
 
@@ -1755,6 +1755,313 @@ nodes:
         # because SshServerConfig.server_id rejects variable refs at model validation time.
         with pytest.raises((SDLParseError, SDLInstantiationError)):
             parse_sdl(sdl)
+
+
+class TestRuntimeIdentityAuthorityParsing:
+    def test_identity_authority_surface_parses_with_kebab_keys(self):
+        sdl = """
+name: techvault-directory-identity
+nodes:
+  ad:
+    type: vm
+    os: windows
+    services:
+      - {port: 389, name: ldap}
+      - {port: 88, name: kerberos}
+    runtime:
+      identity-authorities:
+        - authority-id: techvault-domain
+          kind: domain
+          name: TechVault Domain
+          namespace: techvault.local
+          domain-name: TECHVAULT
+          realm: TECHVAULT.LOCAL
+          base-dn: DC=techvault,DC=local
+          services:
+            - service-id: ldap-endpoint
+              service: ldap
+              protocol: LDAP
+              address: dc.techvault.local
+              port: "389"
+          subjects:
+            - subject-id: alice
+              kind: user
+              name: alice
+              principal-name: alice@TECHVAULT.LOCAL
+              distinguished-name: CN=Alice,CN=Users,DC=techvault,DC=local
+              enabled: true
+              attributes:
+                - name: department
+                  values: security
+            - subject-id: domain-admins
+              kind: group
+              name: Domain Admins
+            - subject-id: ldap-svc
+              kind: service-principal
+              name: ldap
+              service-principal-names: [LDAP/dc.techvault.local]
+          relationships:
+            - relationship-id: alice-admin
+              relationship-type: member-of
+              source-ref: alice
+              target-ref: domain-admins
+          policies:
+            - policy-id: default-password-policy
+              policy-kind: password
+              name: Default Domain Policy
+              applies-to-refs: [techvault-domain]
+              settings:
+                - name: min_length
+                  values: "14"
+"""
+        scenario = parse_sdl(sdl)
+        authority = scenario.nodes["ad"].runtime.identity_authorities[0]
+        assert authority.authority_id == "techvault-domain"
+        assert authority.domain_name == "TECHVAULT"
+        assert authority.services[0].service_id == "ldap-endpoint"
+        assert authority.services[0].port == 389
+        assert authority.subjects[0].principal_name == "alice@TECHVAULT.LOCAL"
+        assert authority.subjects[0].attributes[0].values == ["security"]
+        assert authority.subjects[2].service_principal_names == ["LDAP/dc.techvault.local"]
+        assert authority.relationships[0].target_ref == "domain-admins"
+        assert authority.policies[0].settings[0].values == ["14"]
+
+    def test_identity_authority_value_fields_substitute_on_instantiation(self):
+        sdl = """
+name: techvault-directory-variable
+variables:
+  tenant_id:
+    type: string
+    required: true
+nodes:
+  idp:
+    type: vm
+    os: linux
+    runtime:
+      identity-authorities:
+        - authority-id: techvault-idp
+          kind: identity-provider
+          namespace: https://idp.techvault.local
+          tenant-id: ${tenant_id}
+"""
+        raw = parse_sdl(sdl)
+        authority = raw.nodes["idp"].runtime.identity_authorities[0]
+        assert authority.tenant_id == "${tenant_id}"
+        instantiated = instantiate_scenario(raw, parameters={"tenant_id": "tenant-123"})
+        authority = instantiated.nodes["idp"].runtime.identity_authorities[0]
+        assert authority.tenant_id == "tenant-123"
+
+    def test_identity_authority_service_ref_must_resolve_to_same_node_service(self):
+        sdl = """
+name: bad-directory-service-ref
+nodes:
+  ad:
+    type: vm
+    os: windows
+    services:
+      - {port: 389, name: ldap}
+    runtime:
+      identity-authorities:
+        - authority-id: techvault-domain
+          services:
+            - service-id: ldap-endpoint
+              service: missing-ldap
+              protocol: ldap
+"""
+        with pytest.raises(SDLValidationError, match="references undefined service 'missing-ldap'"):
+            parse_sdl(sdl)
+
+    def test_identity_authority_relationship_refs_must_resolve_inside_authority(self):
+        sdl = """
+name: bad-directory-relationship-ref
+nodes:
+  ad:
+    type: vm
+    os: windows
+    runtime:
+      identity-authorities:
+        - authority-id: techvault-domain
+          subjects:
+            - {subject-id: domain-admins, kind: group, name: Domain Admins}
+          relationships:
+            - relationship-id: alice-admin
+              relationship-type: member-of
+              source-ref: alice
+              target-ref: domain-admins
+"""
+        with pytest.raises(SDLValidationError, match="source_ref 'alice' does not resolve"):
+            parse_sdl(sdl)
+
+    def test_identity_authority_policy_applies_to_ref_must_resolve_inside_authority(self):
+        sdl = """
+name: bad-policy-ref
+nodes:
+  ad:
+    type: vm
+    os: windows
+    runtime:
+      identity-authorities:
+        - authority-id: techvault-domain
+          policies:
+            - policy-id: default-policy
+              applies-to-refs: [missing-subject]
+"""
+        with pytest.raises(SDLValidationError, match="applies_to_ref 'missing-subject' does not resolve"):
+            parse_sdl(sdl)
+
+    def test_identity_authority_local_refs_include_stable_service_and_relationship_ids(self):
+        sdl = """
+name: directory-local-refs
+nodes:
+  ad:
+    type: vm
+    os: windows
+    services:
+      - {port: 389, name: ldap}
+    runtime:
+      identity-authorities:
+        - authority-id: techvault-domain
+          services:
+            - service-id: ldap-endpoint
+              service: ldap
+              protocol: ldap
+          subjects:
+            - {subject-id: alice, kind: user, name: alice}
+            - {subject-id: domain-admins, kind: group, name: Domain Admins}
+          relationships:
+            - relationship-id: alice-admin
+              relationship-type: member-of
+              source-ref: alice
+              target-ref: domain-admins
+            - relationship-id: ldap-documents-membership
+              relationship-type: associated
+              source-ref: ldap-endpoint
+              target-ref: alice-admin
+          policies:
+            - policy-id: ldap-audit-policy
+              policy-kind: other
+              applies-to-refs: [ldap-endpoint, alice-admin]
+"""
+        authority = parse_sdl(sdl).nodes["ad"].runtime.identity_authorities[0]
+
+        assert authority.relationships[1].source_ref == "ldap-endpoint"
+        assert authority.relationships[1].target_ref == "alice-admin"
+        assert authority.policies[0].applies_to_refs == ["ldap-endpoint", "alice-admin"]
+
+    @pytest.mark.parametrize(
+        ("left", "right"),
+        [
+            ("authority", "service"),
+            ("authority", "subject"),
+            ("authority", "policy"),
+            ("authority", "relationship"),
+            ("service", "subject"),
+            ("service", "policy"),
+            ("service", "relationship"),
+            ("subject", "policy"),
+            ("subject", "relationship"),
+            ("policy", "relationship"),
+        ],
+    )
+    def test_identity_authority_local_ref_ids_must_be_unique_across_id_families(self, left, right):
+        authority_id = "shared" if "authority" in (left, right) else "techvault-domain"
+        service_id = "shared" if "service" in (left, right) else "ldap-endpoint"
+        subject_id = "shared" if "subject" in (left, right) else "alice"
+        policy_id = "shared" if "policy" in (left, right) else "default-policy"
+        relationship_id = "shared" if "relationship" in (left, right) else "alice-external"
+        sdl = f"""
+name: ambiguous-directory-local-ref
+nodes:
+  ad:
+    type: vm
+    os: windows
+    runtime:
+      identity-authorities:
+        - authority-id: {authority_id}
+          services:
+            - service-id: {service_id}
+              protocol: ldap
+          subjects:
+            - subject-id: {subject_id}
+              kind: user
+              name: alice
+          relationships:
+            - relationship-id: {relationship_id}
+              relationship-type: associated
+              source-ref: {subject_id}
+              external-target: external.example
+          policies:
+            - policy-id: {policy_id}
+              applies-to-refs: [{subject_id}]
+"""
+        with pytest.raises(SDLParseError, match="Duplicate runtime identity stable id 'shared'"):
+            parse_sdl(sdl)
+
+    def test_imported_identity_authority_refs_survive_module_namespacing(self, tmp_path):
+        imported = tmp_path / "shared-directory.yaml"
+        imported.write_text(
+            """
+name: shared-directory
+version: 1.0.0
+nodes:
+  ad:
+    type: vm
+    os: windows
+    runtime:
+      identity-authorities:
+        - authority-id: techvault-domain
+          services:
+            - {service-id: ldap-endpoint, protocol: ldap}
+          subjects:
+            - {subject-id: alice, kind: user, name: alice}
+            - {subject-id: domain-admins, kind: group, name: Domain Admins}
+          policies:
+            - policy-id: default-policy
+              applies-to-refs: [techvault-domain]
+          relationships:
+            - relationship-id: alice-admin
+              relationship-type: member-of
+              source-ref: alice
+              target-ref: domain-admins
+relationships:
+  alice-admin:
+    type: trusts
+    source: nodes.ad.runtime.identity_authorities.techvault-domain.subjects.alice
+    target: nodes.ad.runtime.identity_authorities.techvault-domain.subjects.domain-admins
+  ldap-policy:
+    type: depends_on
+    source: nodes.ad.runtime.identity_authorities.techvault-domain.services.ldap-endpoint
+    target: nodes.ad.runtime.identity_authorities.techvault-domain.policies.default-policy
+  membership-policy:
+    type: depends_on
+    source: nodes.ad.runtime.identity_authorities.techvault-domain.relationships.alice-admin
+    target: nodes.ad.runtime.identity_authorities.techvault-domain.policies.default-policy
+""",
+            encoding="utf-8",
+        )
+        root = tmp_path / "root.yaml"
+        root.write_text(
+            """
+name: root
+imports:
+  - path: shared-directory.yaml
+    namespace: shared
+    version: 1.0.0
+""",
+            encoding="utf-8",
+        )
+
+        scenario = parse_sdl_file(root)
+
+        rel = scenario.relationships["shared.alice-admin"]
+        assert rel.source == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.subjects.alice"
+        assert rel.target == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.subjects.domain-admins"
+        rel = scenario.relationships["shared.ldap-policy"]
+        assert rel.source == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.services.ldap-endpoint"
+        assert rel.target == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.policies.default-policy"
+        rel = scenario.relationships["shared.membership-policy"]
+        assert rel.source == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.relationships.alice-admin"
+        assert rel.target == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.policies.default-policy"
 
 
 class TestRuntimeDatabaseParsing:

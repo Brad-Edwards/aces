@@ -183,6 +183,98 @@ def _nested_node_database_aliases(
     return aliases
 
 
+def _identity_authority_collection_aliases(
+    *,
+    bare_base: str,
+    prefixed_base: str,
+    collection: list[Any],
+    collection_name: str,
+    id_field: str,
+) -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    for item in collection:
+        item_id = getattr(item, id_field, "")
+        if item_id:
+            aliases[f"{bare_base}.{collection_name}.{item_id}"] = f"{prefixed_base}.{collection_name}.{item_id}"
+    return aliases
+
+
+def _identity_authority_aliases(
+    *,
+    node_name: str,
+    prefixed_node: str,
+    authority: Any,
+) -> dict[str, str]:
+    """Aliases for one identity authority and its stable child records."""
+    authority_id = getattr(authority, "authority_id", "")
+    if not authority_id:
+        return {}
+    bare_base = f"nodes.{node_name}.runtime.identity_authorities.{authority_id}"
+    prefixed_base = f"nodes.{prefixed_node}.runtime.identity_authorities.{authority_id}"
+    aliases: dict[str, str] = {bare_base: prefixed_base}
+    aliases.update(
+        _identity_authority_collection_aliases(
+            bare_base=bare_base,
+            prefixed_base=prefixed_base,
+            collection=getattr(authority, "services", []),
+            collection_name="services",
+            id_field="service_id",
+        )
+    )
+    aliases.update(
+        _identity_authority_collection_aliases(
+            bare_base=bare_base,
+            prefixed_base=prefixed_base,
+            collection=getattr(authority, "subjects", []),
+            collection_name="subjects",
+            id_field="subject_id",
+        )
+    )
+    aliases.update(
+        _identity_authority_collection_aliases(
+            bare_base=bare_base,
+            prefixed_base=prefixed_base,
+            collection=getattr(authority, "policies", []),
+            collection_name="policies",
+            id_field="policy_id",
+        )
+    )
+    aliases.update(
+        _identity_authority_collection_aliases(
+            bare_base=bare_base,
+            prefixed_base=prefixed_base,
+            collection=getattr(authority, "relationships", []),
+            collection_name="relationships",
+            id_field="relationship_id",
+        )
+    )
+    return aliases
+
+
+def _nested_node_identity_authority_aliases(
+    scenario: Scenario,
+    node_rename_map: Mapping[str, str],
+) -> dict[str, str]:
+    """Qualified identity authority refs ``nodes.<vm>.runtime.identity_authorities.<id>[...]``."""
+    aliases: dict[str, str] = {}
+    for node_name, node in scenario.nodes.items():
+        prefixed_node = node_rename_map.get(node_name, node_name)
+        if prefixed_node == node_name:
+            continue
+        runtime = getattr(node, "runtime", None)
+        if runtime is None:
+            continue
+        for authority in getattr(runtime, "identity_authorities", []):
+            aliases.update(
+                _identity_authority_aliases(
+                    node_name=node_name,
+                    prefixed_node=prefixed_node,
+                    authority=authority,
+                )
+            )
+    return aliases
+
+
 def _nested_content_item_aliases(
     scenario: Scenario,
     content_rename_map: Mapping[str, str],
@@ -236,6 +328,7 @@ def symbol_index(
     named.update(_nested_node_service_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_application_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_database_aliases(scenario, section_maps.get("nodes", {})))
+    named.update(_nested_node_identity_authority_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_content_item_aliases(scenario, section_maps.get("content", {})))
 
     return {

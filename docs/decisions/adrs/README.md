@@ -57,4 +57,5 @@ Each ADR includes:
 | [029](adr-029-database-logical-state-runtime-surface.md) | Database Logical-State Runtime Surface | accepted | 2026-05-22 |
 | [030](adr-030-process-scoped-linux-capability-policy.md) | Process-Scoped Linux Capability Policy | accepted | 2026-05-23 |
 | [031](adr-031-ssh-server-configuration-surface.md) | SSH Server Configuration Surface | accepted | 2026-05-23 |
-| [032](adr-032-scenario-delivery-boundary-for-runtime-node-state.md) | Scenario/Delivery Boundary for Runtime Node State | accepted | 2026-05-24 |
+| [032](adr-032-directory-domain-identity-runtime-surface.md) | Directory and Domain Identity Runtime Surface | accepted | 2026-05-24 |
+| [033](adr-033-scenario-delivery-boundary-for-runtime-node-state.md) | Scenario/Delivery Boundary for Runtime Node State | accepted | 2026-05-24 |

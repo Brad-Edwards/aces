@@ -71,7 +71,9 @@ _NESTED_HASHMAP_FIELDS = frozenset(
 
 def _child_is_hashmap_field(key: str, value: Any) -> bool:
     """Return whether the children of ``key`` are user-defined hashmap keys."""
-    if key in _HASHMAP_SECTIONS or key in _NESTED_HASHMAP_FIELDS:
+    if key in _HASHMAP_SECTIONS:
+        return isinstance(value, dict)
+    if key in _NESTED_HASHMAP_FIELDS:
         return True
     # Complex properties use list items like ``[{switch-name: "10.0.0.10"}]``.
     return key == "properties" and isinstance(value, list)

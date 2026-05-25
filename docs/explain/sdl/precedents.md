@@ -104,7 +104,29 @@ shared-state references without making framework/tool APIs the SDL authority.
 | SDL Element | CyRIS Source                              | What We Adapted                                   |
 | ----------- | ----------------------------------------- | ------------------------------------------------- |
 | `Content`   | `copy_content`, `emulate_traffic_capture` | Generalized to file/dataset/directory types       |
-| `Account`   | `add_account`, `modify_account`           | Added groups, password_strength, SPN, auth_method |
+| `Account`   | `add_account`, `modify_account`           | Preserved host account-placement lineage; ACES-specific account metadata such as groups, password strength, SPN, and auth method are extensions, not CyRIS-derived directory semantics |
+
+
+### From Identity, Directory, And Access-Control Sources
+
+The `runtime.identity_authorities` surface is a neutral runtime inventory
+surface. It borrows concepts from standards and literature, but does not adopt
+one provider schema as the SDL schema.
+
+| SDL Element | Source Class | What We Adapted |
+| ----------- | ------------ | --------------- |
+| `RuntimeIdentityAuthority` | LDAP/X.500 naming contexts, Kerberos realms, SAML/OIDC issuers, SCIM/IAM tenants, NIST SP 800-63C-4 federation guidance | An authority boundary with stable ACES id plus observed namespace facts such as domain, realm, issuer, tenant, and base DN; all authority-local stable ids share one namespace |
+| `RuntimeIdentityService` | LDAP/Kerberos/SAML/OIDC/SCIM/IAM protocol endpoints and same-node `Node.services` transport bindings | Protocol/API endpoint inventory without treating the endpoint as the directory contents |
+| `RuntimeIdentitySubject` | LDAP entries, SCIM Users/Groups, AD users/groups/computers/service principals, SAML/OIDC subjects/clients, IAM roles/applications | Identity-bearing subjects with stable ACES ids, observed names/principals, provider identifiers as data, and bounded attributes |
+| `RuntimeIdentityPolicy` | NIST SP 800-162 ABAC, RBAC, group policy, Kerberos/domain policy, conditional-access/MFA policy concepts | Portable policy records with `applies_to_refs` rather than provider-specific policy-object cloning |
+| `RuntimeIdentityRelationship` | Access matrix/RBAC relationship concepts, directory membership, trust/federation/delegation/sync/ownership relations, BloodHound/OpenGraph node-edge analysis | Typed local authority edges with stable ids, usable by top-level relationship/objective refs and later attack-graph translation |
+| Attribute and setting value classification | OCSF/UCO sensitivity/evidence posture, repository runtime sensitivity vocabulary | Secret-bearing identity values are redacted/classified rather than copied into SDL fixtures or diagnostics |
+
+This surface depends on industry standards for protocol/object terminology and
+on academic/security literature for the subject-policy-authority separation.
+BloodHound/OpenGraph, OCSF, UCO, CASE, LDAP dumps, Graph API payloads, and
+backend inspect output are treated as downstream/evidence sources, not as the
+canonical authored SDL shape.
 
 
 ### From STIX 2.1
@@ -201,7 +223,7 @@ participants is scenario/runtime state even when Docker, Compose, a harness, or
 another backend exposes the evidence. The delivery layer is the orchestrator,
 host kernel, container runtime, backend adapter, control plane, build executor,
 and host-local machinery that creates or controls the range. See
-[ADR-032](../../decisions/adrs/adr-032-scenario-delivery-boundary-for-runtime-node-state.md).
+[ADR-033](../../decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state.md).
 
 This table is checked against the current ACES runtime/source models and the
 downstream [Brad-Edwards/aptl#339](https://github.com/Brad-Edwards/aptl/issues/339)
@@ -215,7 +237,7 @@ taxonomy of container, orchestrator, or host-security concerns.
 
 | Concept                                 | Current Disposition                | Where It Belongs                       |
 | --------------------------------------- | ---------------------------------- | -------------------------------------- |
-| Port mappings (host:container)          | Host publication is runtime/host exposure when observed; the backend decision to publish remains delivery machinery | Container-side listeners remain `Node.services`; observed host bindings belong in `Node.runtime.network.published_ports`; see ADR-025 and ADR-032 |
+| Port mappings (host:container)          | Host publication is runtime/host exposure when observed; the backend decision to publish remains delivery machinery | Container-side listeners remain `Node.services`; observed host bindings belong in `Node.runtime.network.published_ports`; see ADR-025 and ADR-033 |
 | Volume mounts                           | Guest-visible filesystem attachments are runtime node state; host source paths and orchestration choices remain delivery/evidence concerns | `Node.runtime.mounts` and `runtime.filesystem_inventory` when observed; authored file placement remains `Content`; mount `source` and `options` carry sensitivity classification, and `redacted` / `operator_secret` values omit raw host-local details |
 | Linux capabilities (NET_RAW, SYS_ADMIN) | Participant-relevant capability posture is runtime node security state, not a raw Compose security field | `Node.runtime.linux_capabilities`, including scoped `process_overrides`; see ADR-030 |
 | Docker Compose profiles                 | Backend packaging/selection groups are delivery mechanics unless promoted to an ACES scenario/profile composition surface | Backend implementation layer today; realized node set is represented by SDL `nodes`, not raw Compose profile labels |
@@ -225,6 +247,7 @@ taxonomy of container, orchestrator, or host-security concerns.
 | Local identity database (`/etc/passwd`, `/etc/group`, sudoers) | Runtime-observed state, not deployment authoring | `Node.runtime.local_identity` when observed; see ADR-024 |
 | Container network realization (aliases, DNS names, endpoint metadata, host-published bindings) | Runtime-observed state, not topology authoring | `Node.runtime.network` when observed; see ADR-025 |
 | Application HTTP route/API/UI surface (routes, methods, request inputs, responses, route-specific weakness placement) | Participant-observable application state, not transport-service or vulnerability authoring | `Node.runtime.applications` when observed; see ADR-026 |
+| Vendor-specific AD DS/LDAP/SCIM/IAM/SAML/OIDC schema clone | Provider coupling and false portability | Neutral `Node.runtime.identity_authorities` inventory when observed; provider identifiers remain data; see ADR-032 |
 | Framework-specific participant APIs | Framework coupling | Integration adapters outside the core SDL/runtime |
 | Terraform module composition            | Import, version, namespace, parameter, locking, and packaging patterns | Implemented as deterministic SDL module/import expansion with OCI packaging, lockfiles, and trust policy |
 | Full CACAO workflow surface             | Current SDL covers decisions, switch/case routing, reusable workflow calls, retries, explicit joins, cancel/timeout lifecycle contracts, and explicit compensation targets/order | Not implemented: richer exception control and compensation-of-compensation semantics |
