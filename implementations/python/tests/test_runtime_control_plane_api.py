@@ -28,6 +28,7 @@ def _scenario(yaml_str: str):
 def _test_security(target_name: str, *, max_request_bytes: int = 1_000_000) -> ControlPlaneSecurityConfig:
     return ControlPlaneSecurityConfig(
         max_request_bytes=max_request_bytes,
+        trust_proxy_identity_headers=True,
         trusted_identities={
             "backend-service": ControlPlaneIdentity(
                 identity="backend-service",
@@ -46,9 +47,10 @@ def _test_security(target_name: str, *, max_request_bytes: int = 1_000_000) -> C
 
 
 def test_control_plane_strict_defaults_ship_without_builtin_principals():
-    security = ControlPlaneSecurityConfig.strict_defaults(target_name="target")
+    security = ControlPlaneSecurityConfig.strict_defaults()
 
     assert security.require_verified_identity is True
+    assert security.trust_proxy_identity_headers is False
     assert security.trusted_identities == {}
     assert security.bearer_tokens == {}
 

@@ -13,7 +13,7 @@ from aces_contracts.contracts import (
     RuntimeSnapshotEnvelopeModel,
     WorkflowCancellationRequestModel,
 )
-from aces_processor.models import ParticipantEpisodeTerminalReason
+from aces_contracts.participant_episode import ParticipantEpisodeTerminalReason
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
@@ -44,7 +44,7 @@ def create_control_plane_app(
 ) -> FastAPI:
     """Create a reference HTTP/JSON control-plane app."""
 
-    security = security or ControlPlaneSecurityConfig.strict_defaults(target_name=control_plane.target_name)
+    security = security or ControlPlaneSecurityConfig.strict_defaults()
     app = FastAPI(
         title="ACES Runtime Control Plane",
         version="0.1.0",
@@ -94,6 +94,8 @@ def create_control_plane_app(
             identity = security.bearer_tokens.get(token)
             if identity is not None:
                 return identity
+        if not security.trust_proxy_identity_headers:
+            raise HTTPException(status_code=401, detail="trusted proxy identity headers are not enabled")
         identity_name = request.headers.get(security.identity_header, "")
         verified = request.headers.get(security.verified_header, "").lower()
         if security.require_verified_identity and verified != "true":

@@ -175,6 +175,7 @@ api/sdl
 api/sdl-semantics
 api/processor
 api/processor-semantics
+api/contracts
 api/runtime
 api/cli
 ```

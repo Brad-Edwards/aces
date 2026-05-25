@@ -6,6 +6,11 @@ backend registry integration, manager lifecycle execution, control-plane
 submission and observation, operation persistence, security, and backend
 result-contract validation helpers.
 
+Runtime APIs consume neutral DTOs from ``aces_contracts`` at backend and
+control-plane boundaries. Header-based control-plane identity is disabled by
+default and requires an explicit ``ControlPlaneSecurityConfig`` with
+``trust_proxy_identity_headers=True``.
+
 .. currentmodule:: aces_runtime
 
 Public API

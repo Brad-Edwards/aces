@@ -34,21 +34,18 @@ class ControlPlaneSecurityConfig:
     require_verified_identity: bool = True
     verified_header: str = "x-aces-client-verified"
     identity_header: str = "x-aces-client-identity"
+    trust_proxy_identity_headers: bool = False
     max_request_bytes: int = 1_000_000
     trusted_identities: dict[str, ControlPlaneIdentity] = field(default_factory=dict)
     bearer_tokens: dict[str, ControlPlaneIdentity] = field(default_factory=dict)
 
     @classmethod
-    def strict_defaults(
-        cls,
-        *,
-        target_name: str | None = None,
-    ) -> ControlPlaneSecurityConfig:
+    def strict_defaults(cls) -> ControlPlaneSecurityConfig:
         """Return fail-closed defaults with no built-in principals or tokens."""
 
-        _ = target_name
         return cls(
             require_verified_identity=True,
+            trust_proxy_identity_headers=False,
             trusted_identities={},
             bearer_tokens={},
         )

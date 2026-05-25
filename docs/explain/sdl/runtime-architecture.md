@@ -395,9 +395,9 @@ runtime diagnostics instead of surfacing as unhandled crashes.
 
 The HTTP adapter defaults to a fail-closed security configuration: no trusted
 header identities and no bearer tokens are built in. Deployments that use
-header identity must pass an explicit `ControlPlaneSecurityConfig` and only
-trust those headers behind an authenticated proxy that strips caller-supplied
-identity headers.
+header identity must pass an explicit `ControlPlaneSecurityConfig`, set
+`trust_proxy_identity_headers=True`, and only trust those headers behind an
+authenticated proxy that strips caller-supplied identity headers.
 
 ## Current Scope
 
