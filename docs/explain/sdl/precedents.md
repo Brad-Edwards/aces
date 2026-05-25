@@ -216,16 +216,32 @@ The primary research set for this area is curated in
 
 ## Deliberate Omissions
 
-These were considered and explicitly excluded:
+These concerns have been considered against the scenario/delivery boundary.
+The current rule is semantic, not syntax-based: state that exists on a realized
+range node and can be invoked, observed, depended on, or affected by
+participants is scenario/runtime state even when Docker, Compose, a harness, or
+another backend exposes the evidence. The delivery layer is the orchestrator,
+host kernel, container runtime, backend adapter, control plane, build executor,
+and host-local machinery that creates or controls the range. See
+[ADR-033](../../decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state.md).
+
+This table is checked against the current ACES runtime/source models and the
+downstream [Brad-Edwards/aptl#339](https://github.com/Brad-Edwards/aptl/issues/339)
+Kali inventory evidence class: Compose service slices, Docker inspect output,
+runtime mount/network/capability observations, and image provenance are evidence
+to classify, not schema authority. The APTL inventory is motivating downstream
+evidence; it is not a claim that all APTL artifacts already satisfy the ACES
+redaction contract. The table is a current ACES disposition, not a complete
+taxonomy of container, orchestrator, or host-security concerns.
 
 
-| Concept                                 | Why Excluded                       | Where It Belongs                       |
+| Concept                                 | Current Disposition                | Where It Belongs                       |
 | --------------------------------------- | ---------------------------------- | -------------------------------------- |
-| Port mappings (host:container)          | Backend-specific deployment detail | Backend implementation layer           |
-| Volume mounts                           | Backend-specific deployment detail | Backend implementation layer           |
-| Linux capabilities (NET_RAW, SYS_ADMIN) | Backend-specific security config   | Backend implementation layer           |
-| Docker Compose profiles                 | Backend-specific grouping          | Backend implementation layer           |
-| Dockerfile/build execution              | Backend-specific build mechanic    | Backend implementation layer           |
+| Port mappings (host:container)          | Host publication is runtime/host exposure when observed; the backend decision to publish remains delivery machinery | Container-side listeners remain `Node.services`; observed host bindings belong in `Node.runtime.network.published_ports`; see ADR-025 and ADR-033 |
+| Volume mounts                           | Guest-visible filesystem attachments are runtime node state; host source paths and orchestration choices remain delivery/evidence concerns | `Node.runtime.mounts` and `runtime.filesystem_inventory` when observed; authored file placement remains `Content`; mount `source` and `options` carry sensitivity classification, and `redacted` / `operator_secret` values omit raw host-local details |
+| Linux capabilities (NET_RAW, SYS_ADMIN) | Participant-relevant capability posture is runtime node security state, not a raw Compose security field | `Node.runtime.linux_capabilities`, including scoped `process_overrides`; see ADR-030 |
+| Docker Compose profiles                 | Backend packaging/selection groups are delivery mechanics unless promoted to an ACES scenario/profile composition surface | Backend implementation layer today; realized node set is represented by SDL `nodes`, not raw Compose profile labels |
+| Dockerfile/build execution              | Build executor mechanics are delivery/packaging; observable image/source provenance is an artifact-boundary fact | Backend implementation layer for execution mechanics; `Source.build` provenance when observed; see ADR-023 |
 | Observable container image build provenance | Artifact provenance, not deployment authoring | SDL source-artifact surface; see ADR-023 |
 | Runtime-effective container entrypoints | Backend/runtime state              | `Node.runtime.container` when observed |
 | Local identity database (`/etc/passwd`, `/etc/group`, sudoers) | Runtime-observed state, not deployment authoring | `Node.runtime.local_identity` when observed; see ADR-024 |

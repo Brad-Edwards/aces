@@ -7,8 +7,6 @@ from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from ._base import (
     SDLModel,
-    is_variable_ref,
-    parse_bool_or_var,
     parse_float_or_var,
     parse_int_or_var,
 )
@@ -70,6 +68,13 @@ from .runtime_identity import (
     RuntimeSudoPrincipalKind,
     RuntimeSudoRule,
 )
+from .runtime_mounts import (
+    RuntimeControlInterface,
+    RuntimeControlInterfaceAccess,
+    RuntimeControlInterfaceKind,
+    RuntimeMount,
+    RuntimeMountSourceKind,
+)
 from .runtime_network import (
     RuntimeNetworkBackendDetail,
     RuntimeNetworkDriver,
@@ -88,15 +93,6 @@ from .runtime_ssh_server import (
 )
 from .runtime_values import (
     absolute_path_or_var as _absolute_path_or_var,
-)
-from .runtime_values import (
-    control_interface_path_or_var as _control_interface_path_or_var,
-)
-from .runtime_values import (
-    is_windows_named_pipe as _is_windows_named_pipe,
-)
-from .runtime_values import (
-    parse_optional_bool_or_var as _parse_optional_bool_or_var,
 )
 from .runtime_values import (
     parse_ram,
@@ -184,33 +180,6 @@ __all__ = [
 ]
 
 
-class RuntimeMountSourceKind(str, Enum):
-    """Portable source kind for a runtime filesystem mount."""
-
-    VOLUME = "volume"
-    BIND = "bind"
-    TMPFS = "tmpfs"
-    IMAGE = "image"
-    OTHER = "other"
-
-
-class RuntimeControlInterfaceKind(str, Enum):
-    """Path-local control interface shape observed at runtime."""
-
-    UNIX_SOCKET = "unix_socket"
-    NAMED_PIPE = "named_pipe"
-    FILE = "file"
-    OTHER = "other"
-
-
-class RuntimeControlInterfaceAccess(str, Enum):
-    """Observed local-control access mode."""
-
-    READ_ONLY = "read_only"
-    READ_WRITE = "read_write"
-    UNKNOWN = "unknown"
-
-
 class RuntimePackageVulnerabilitySeverity(str, Enum):
     """Scanner-derived package finding severity."""
 
@@ -251,91 +220,6 @@ class RuntimeRestartPolicy(str, Enum):
     UNLESS_STOPPED = "unless_stopped"
     UNKNOWN = "unknown"
     OTHER = "other"
-
-
-class RuntimeMount(SDLModel):
-    """A filesystem mount observed on a runtime node."""
-
-    target: str
-    source: str = ""
-    source_kind: RuntimeMountSourceKind | str = RuntimeMountSourceKind.OTHER
-    filesystem_type: str = ""
-    read_only: bool | str = False
-    options: list[str] = Field(default_factory=list)
-    propagation: RuntimeMountPropagation | str = RuntimeMountPropagation.UNKNOWN
-    stability: RuntimeFilesystemStability | str = RuntimeFilesystemStability.UNKNOWN
-    backend_generated: bool | str | None = None
-    description: str = ""
-
-    @field_validator("target")
-    @classmethod
-    def validate_target(cls, v: str) -> str:
-        return _absolute_path_or_var(v, field_name="target")
-
-    @field_validator("source_kind", mode="before")
-    @classmethod
-    def normalize_source_kind(cls, v: RuntimeMountSourceKind | str) -> RuntimeMountSourceKind | str:
-        return _parse_runtime_enum_or_var(v, RuntimeMountSourceKind, field_name="source_kind")
-
-    @field_validator("read_only", mode="before")
-    @classmethod
-    def parse_read_only(cls, v: bool | str) -> bool | str:
-        return parse_bool_or_var(v, field_name="read_only")
-
-    @field_validator("propagation", mode="before")
-    @classmethod
-    def normalize_propagation(cls, v: RuntimeMountPropagation | str) -> RuntimeMountPropagation | str:
-        return _parse_runtime_enum_or_var(v, RuntimeMountPropagation, field_name="propagation")
-
-    @field_validator("stability", mode="before")
-    @classmethod
-    def normalize_stability(cls, v: RuntimeFilesystemStability | str) -> RuntimeFilesystemStability | str:
-        return _parse_runtime_enum_or_var(v, RuntimeFilesystemStability, field_name="stability")
-
-    @field_validator("backend_generated", mode="before")
-    @classmethod
-    def parse_backend_generated(cls, v: bool | str | None) -> bool | str | None:
-        return _parse_optional_bool_or_var(v, field_name="backend_generated")
-
-
-class RuntimeControlInterface(SDLModel):
-    """A non-network local control API exposed inside a runtime node."""
-
-    path: str
-    kind: RuntimeControlInterfaceKind | str = RuntimeControlInterfaceKind.UNIX_SOCKET
-    protocol: str = ""
-    bind_source: str = ""
-    access: RuntimeControlInterfaceAccess | str = RuntimeControlInterfaceAccess.UNKNOWN
-    description: str = ""
-
-    @field_validator("path")
-    @classmethod
-    def validate_path(cls, v: str) -> str:
-        return _control_interface_path_or_var(v, field_name="path")
-
-    @field_validator("bind_source")
-    @classmethod
-    def validate_bind_source(cls, v: str) -> str:
-        return _control_interface_path_or_var(v, field_name="bind_source") if v else v
-
-    @field_validator("kind", mode="before")
-    @classmethod
-    def normalize_kind(cls, v: RuntimeControlInterfaceKind | str) -> RuntimeControlInterfaceKind | str:
-        return _parse_runtime_enum_or_var(v, RuntimeControlInterfaceKind, field_name="kind")
-
-    @field_validator("access", mode="before")
-    @classmethod
-    def normalize_access(cls, v: RuntimeControlInterfaceAccess | str) -> RuntimeControlInterfaceAccess | str:
-        return _parse_runtime_enum_or_var(v, RuntimeControlInterfaceAccess, field_name="access")
-
-    @model_validator(mode="after")
-    def validate_named_pipe_kind(self) -> "RuntimeControlInterface":
-        if is_variable_ref(self.kind):
-            return self
-        has_windows_named_pipe_endpoint = _is_windows_named_pipe(self.path) or _is_windows_named_pipe(self.bind_source)
-        if has_windows_named_pipe_endpoint and self.kind != RuntimeControlInterfaceKind.NAMED_PIPE:
-            raise ValueError("Windows named pipe paths require kind 'named_pipe'")
-        return self
 
 
 class RuntimeEnvironmentVariable(SDLModel):

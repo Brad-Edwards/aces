@@ -232,10 +232,12 @@ nodes:
       mounts:
         - target: /shuffle-database
           source: aptl_shuffle_data
+          source-sensitivity: plain
           source-kind: volume
           filesystem-type: ext4
           read-only: false
           options: [rw, nosuid]
+          options-sensitivity: plain
           propagation: rprivate
           stability: volume-backed
           backend-generated: true
@@ -263,7 +265,7 @@ nodes:
         - path: /run/docker.sock
           kind: unix-socket
           protocol: docker
-          bind-source: /var/run/docker.sock
+          bind-source-sensitivity: operator-secret
           access: read-write
       process:
         pid: 1
@@ -376,7 +378,9 @@ nodes:
         assert scenario.vulnerabilities == {}
         assert node.runtime is not None
         assert node.runtime.mounts[0].target == "/shuffle-database"
+        assert node.runtime.mounts[0].source_sensitivity == "plain"
         assert node.runtime.mounts[0].filesystem_type == "ext4"
+        assert node.runtime.mounts[0].options_sensitivity == "plain"
         assert node.runtime.mounts[0].propagation == "rprivate"
         assert node.runtime.mounts[0].stability == "volume_backed"
         assert node.runtime.mounts[0].backend_generated is True
@@ -393,6 +397,7 @@ nodes:
         assert node.runtime.filesystem_inventory[1].stability == "log"
         assert node.runtime.filesystem_inventory[1].sensitivity == "operator_secret"
         assert node.runtime.local_control_interfaces[0].path == "/run/docker.sock"
+        assert node.runtime.local_control_interfaces[0].bind_source_sensitivity == "operator_secret"
         assert node.runtime.process is not None
         assert node.runtime.process.command == ["./shufflebackend"]
         assert node.runtime.processes[0].name == "supervisord"

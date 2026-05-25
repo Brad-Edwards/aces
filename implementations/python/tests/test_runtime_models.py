@@ -61,10 +61,12 @@ nodes:
       mounts:
         - target: /shuffle-database
           source: aptl_shuffle_data
+          source-sensitivity: plain
           source-kind: volume
           filesystem-type: ext4
           read-only: false
           options: [rw, nosuid]
+          options-sensitivity: plain
           propagation: rprivate
           stability: volume-backed
           backend-generated: true
@@ -92,7 +94,7 @@ nodes:
         - path: /run/docker.sock
           kind: unix-socket
           protocol: docker
-          bind-source: /var/run/docker.sock
+          bind-source-sensitivity: operator-secret
           access: read-write
       process:
         pid: 1
@@ -191,7 +193,9 @@ nodes:
 
         runtime = model.node_deployments["provision.node.shuffle-backend"].spec["node"]["runtime"]
         assert runtime["mounts"][0]["target"] == "/shuffle-database"
+        assert runtime["mounts"][0]["source_sensitivity"] == "plain"
         assert runtime["mounts"][0]["filesystem_type"] == "ext4"
+        assert runtime["mounts"][0]["options_sensitivity"] == "plain"
         assert runtime["mounts"][0]["propagation"] == "rprivate"
         assert runtime["mounts"][0]["stability"] == "volume_backed"
         assert runtime["mounts"][0]["backend_generated"] is True
@@ -207,6 +211,7 @@ nodes:
         assert runtime["filesystem_inventory"][1]["stability"] == "log"
         assert runtime["filesystem_inventory"][1]["sensitivity"] == "operator_secret"
         assert runtime["local_control_interfaces"][0]["path"] == "/run/docker.sock"
+        assert runtime["local_control_interfaces"][0]["bind_source_sensitivity"] == "operator_secret"
         assert runtime["process"]["pid"] == 1
         assert runtime["process"]["command"] == ["./shufflebackend"]
         assert runtime["processes"][0]["name"] == "supervisord"
