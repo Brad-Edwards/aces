@@ -280,7 +280,8 @@ class RuntimeManager:
                 self._record_phase_result(state, rollback_result)
                 self._fail_apply_state(state)
 
-    def _record_phase_result(self, state: _RuntimeApplyState, result: ApplyResult) -> None:
+    @staticmethod
+    def _record_phase_result(state: _RuntimeApplyState, result: ApplyResult) -> None:
         state.diagnostics.extend(result.diagnostics)
         state.changed_addresses.extend(result.changed_addresses)
         state.working_snapshot = result.snapshot
