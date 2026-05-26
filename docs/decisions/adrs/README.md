@@ -62,3 +62,4 @@ Each ADR includes:
 | [034](adr-034-runtime-software-component-inventory.md) | Runtime Software Component Inventory | accepted | 2026-05-25 |
 | [035](adr-035-service-manager-unit-state-runtime-surface.md) | Service-Manager Unit State Runtime Surface | accepted | 2026-05-26 |
 | [036](adr-036-sdl-processor-runtime-module-boundaries.md) | SDL, Processor, Runtime Module Boundaries | accepted | 2026-05-26 |
+| [037](adr-037-runtime-file-service-and-filesystem-presence-semantics.md) | Runtime File-Service and Filesystem Presence Semantics | accepted | 2026-05-26 |

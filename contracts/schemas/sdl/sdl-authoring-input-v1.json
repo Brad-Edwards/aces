@@ -4287,6 +4287,13 @@
           "title": "Environment",
           "type": "array"
         },
+        "file_services": {
+          "items": {
+            "$ref": "#/$defs/RuntimeFileService"
+          },
+          "title": "File Services",
+          "type": "array"
+        },
         "filesystem_inventory": {
           "items": {
             "$ref": "#/$defs/RuntimeFilesystemEntry"
@@ -4940,6 +4947,567 @@
       "title": "RuntimeExtraHost",
       "type": "object"
     },
+    "RuntimeFileService": {
+      "additionalProperties": false,
+      "description": "A node-scoped runtime file-service inventory.\n\n``service`` references the owning same-node ``Node.services[].name``\n(bare name or qualified ``nodes.<node>.services.<name>``).",
+      "properties": {
+        "access_observations": {
+          "items": {
+            "$ref": "#/$defs/RuntimeFileServiceAccessObservation"
+          },
+          "title": "Access Observations",
+          "type": "array"
+        },
+        "access_rules": {
+          "items": {
+            "$ref": "#/$defs/RuntimeFileServiceAccessRule"
+          },
+          "title": "Access Rules",
+          "type": "array"
+        },
+        "backend": {
+          "default": "",
+          "title": "Backend",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "principals": {
+          "items": {
+            "$ref": "#/$defs/RuntimeFileServicePrincipal"
+          },
+          "title": "Principals",
+          "type": "array"
+        },
+        "protocol": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFileServiceProtocol"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Protocol"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        },
+        "service_id": {
+          "title": "Service Id",
+          "type": "string"
+        },
+        "shares": {
+          "items": {
+            "$ref": "#/$defs/RuntimeFileServiceShare"
+          },
+          "title": "Shares",
+          "type": "array"
+        }
+      },
+      "required": [
+        "service_id"
+      ],
+      "title": "RuntimeFileService",
+      "type": "object"
+    },
+    "RuntimeFileServiceAccessAction": {
+      "description": "Portable action vocabulary for file-service access policy/observations.",
+      "enum": [
+        "browse",
+        "list",
+        "read",
+        "write",
+        "create",
+        "delete",
+        "execute",
+        "administer",
+        "other"
+      ],
+      "title": "RuntimeFileServiceAccessAction",
+      "type": "string"
+    },
+    "RuntimeFileServiceAccessBasis": {
+      "description": "Basis/provenance for an access claim or observation.",
+      "enum": [
+        "share_config",
+        "passdb",
+        "filesystem_acl",
+        "directory_policy",
+        "observed_probe",
+        "computed",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeFileServiceAccessBasis",
+      "type": "string"
+    },
+    "RuntimeFileServiceAccessEffect": {
+      "description": "Portable effect for an authored or computed file-service access rule.",
+      "enum": [
+        "allow",
+        "deny",
+        "not_applicable",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeFileServiceAccessEffect",
+      "type": "string"
+    },
+    "RuntimeFileServiceAccessObservation": {
+      "additionalProperties": false,
+      "description": "An observed probe outcome against a file-service resource.\n\nObservations are evidence; they support but do not overwrite authored\nor configured policy.",
+      "properties": {
+        "action": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFileServiceAccessAction"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Action"
+        },
+        "basis": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFileServiceAccessBasis"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "observed_probe",
+          "title": "Basis"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "observation_id": {
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFileServiceAccessOutcome"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Outcome"
+        },
+        "resource_ref": {
+          "title": "Resource Ref",
+          "type": "string"
+        },
+        "sensitivity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Sensitivity"
+        },
+        "subject_ref": {
+          "title": "Subject Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id",
+        "subject_ref",
+        "resource_ref"
+      ],
+      "title": "RuntimeFileServiceAccessObservation",
+      "type": "object"
+    },
+    "RuntimeFileServiceAccessOutcome": {
+      "description": "Observed outcome class for a per-share access probe.",
+      "enum": [
+        "allowed",
+        "denied",
+        "error",
+        "not_observed",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeFileServiceAccessOutcome",
+      "type": "string"
+    },
+    "RuntimeFileServiceAccessRule": {
+      "additionalProperties": false,
+      "description": "An authored or computed access rule for a file-service resource.",
+      "properties": {
+        "action": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFileServiceAccessAction"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Action"
+        },
+        "basis": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFileServiceAccessBasis"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Basis"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFileServiceAccessEffect"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Effect"
+        },
+        "resource_ref": {
+          "title": "Resource Ref",
+          "type": "string"
+        },
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "subject_ref": {
+          "title": "Subject Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_id",
+        "subject_ref",
+        "resource_ref"
+      ],
+      "title": "RuntimeFileServiceAccessRule",
+      "type": "object"
+    },
+    "RuntimeFileServiceCredentialClassification": {
+      "description": "Semantic classification of a service-local credential.\n\nThe raw credential value MUST NOT be recorded; the principal model\nhas no field that can hold one. This vocabulary is the only credential\nrepresentation in the file-service surface \u2014 it describes the\nstrength/posture of the credential as observed (or its absence) so\ndownstream consumers can reason about exposure without leaking secret\nmaterial into fixtures, schemas, diagnostics, or logs.",
+      "enum": [
+        "no_credential",
+        "weak",
+        "default_or_trivial",
+        "strong",
+        "redacted",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeFileServiceCredentialClassification",
+      "type": "string"
+    },
+    "RuntimeFileServicePrincipal": {
+      "additionalProperties": false,
+      "description": "A service-local principal (Samba passdb-style account or group).\n\nService-local principals are NOT promoted to top-level ``accounts``,\n``runtime.local_identity``, or ``runtime.identity_authorities``.\nOptional ``local_user_ref`` and ``directory_subject_ref`` carry refs to\nthose surfaces when a mapping is observed.\n\nRaw credential material (passwords, NT/LM hashes, Kerberos keys, private\nkeys, bearer tokens, captured credentials) is unrepresentable on this\nrecord per ADR-037 \u00a74 and the secret-handling gate; only\n``credential_classification`` is carried, so the field surface itself\ncannot smuggle a secret into models, schemas, fixtures, diagnostics, or\nsnapshots.",
+      "properties": {
+        "credential_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFileServiceCredentialClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Credential Classification"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "directory_subject_ref": {
+          "default": "",
+          "title": "Directory Subject Ref",
+          "type": "string"
+        },
+        "external_id": {
+          "default": "",
+          "title": "External Id",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFileServicePrincipalKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Kind"
+        },
+        "local_user_ref": {
+          "default": "",
+          "title": "Local User Ref",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFileServicePrincipalOrigin"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Origin"
+        },
+        "principal_id": {
+          "title": "Principal Id",
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFileServicePrincipalStatus"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Status"
+        }
+      },
+      "required": [
+        "principal_id",
+        "name"
+      ],
+      "title": "RuntimeFileServicePrincipal",
+      "type": "object"
+    },
+    "RuntimeFileServicePrincipalKind": {
+      "description": "Portable kind of a service-local principal in a file service.",
+      "enum": [
+        "user",
+        "group",
+        "machine",
+        "alias",
+        "guest",
+        "anonymous",
+        "service_account",
+        "other"
+      ],
+      "title": "RuntimeFileServicePrincipalKind",
+      "type": "string"
+    },
+    "RuntimeFileServicePrincipalOrigin": {
+      "description": "Origin/provenance class for a service-local principal record.",
+      "enum": [
+        "built_in",
+        "provisioned",
+        "synchronized",
+        "runtime_created",
+        "operator",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeFileServicePrincipalOrigin",
+      "type": "string"
+    },
+    "RuntimeFileServicePrincipalStatus": {
+      "description": "Observed account status for a service-local principal.",
+      "enum": [
+        "enabled",
+        "disabled",
+        "locked",
+        "no_login",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeFileServicePrincipalStatus",
+      "type": "string"
+    },
+    "RuntimeFileServiceProtocol": {
+      "description": "Portable protocol family for an observed runtime file service.",
+      "enum": [
+        "smb",
+        "cifs",
+        "nfs",
+        "afp",
+        "ftp",
+        "sftp",
+        "webdav",
+        "object_store",
+        "other"
+      ],
+      "title": "RuntimeFileServiceProtocol",
+      "type": "string"
+    },
+    "RuntimeFileServiceShare": {
+      "additionalProperties": false,
+      "description": "A published share/resource on a runtime file service.",
+      "properties": {
+        "backing_path": {
+          "default": "",
+          "title": "Backing Path",
+          "type": "string"
+        },
+        "browseable": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Browseable"
+        },
+        "comment": {
+          "default": "",
+          "title": "Comment",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "guest_ok": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Guest Ok"
+        },
+        "invalid_users": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Invalid Users",
+          "type": "array"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFileShareKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "disk",
+          "title": "Kind"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "read_only": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Read Only"
+        },
+        "share_id": {
+          "title": "Share Id",
+          "type": "string"
+        },
+        "valid_groups": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Valid Groups",
+          "type": "array"
+        },
+        "valid_users": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Valid Users",
+          "type": "array"
+        },
+        "write_users": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Write Users",
+          "type": "array"
+        }
+      },
+      "required": [
+        "share_id",
+        "name"
+      ],
+      "title": "RuntimeFileServiceShare",
+      "type": "object"
+    },
+    "RuntimeFileShareKind": {
+      "description": "Observed kind of a published file-service share/resource.",
+      "enum": [
+        "disk",
+        "ipc",
+        "printer",
+        "other"
+      ],
+      "title": "RuntimeFileShareKind",
+      "type": "string"
+    },
     "RuntimeFilesystemEntry": {
       "additionalProperties": false,
       "description": "A filesystem entry observed inside a runtime node or container asset.",
@@ -5004,6 +5572,18 @@
         "path": {
           "title": "Path",
           "type": "string"
+        },
+        "presence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeFilesystemPresence"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "present",
+          "title": "Presence"
         },
         "provenance": {
           "default": "",
@@ -5088,6 +5668,17 @@
         "other"
       ],
       "title": "RuntimeFilesystemEntryType",
+      "type": "string"
+    },
+    "RuntimeFilesystemPresence": {
+      "description": "Observed presence state for a runtime filesystem inventory entry.\n\n``present`` is the default and preserves prior behavior. ``expected_absent``\nrecords an authored or expected path that was not observed at capture time \u2014\nfor example a deploy-key path attempted by setup code but missing in the\ncaptured steady state. Absent entries retain their expected ``entry_type``\ninstead of collapsing to ``other``; present-only facts (size, content\ndigest, owner ids, mode) must be omitted, per ADR-037.",
+      "enum": [
+        "present",
+        "expected_absent",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeFilesystemPresence",
       "type": "string"
     },
     "RuntimeFilesystemStability": {

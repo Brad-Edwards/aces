@@ -324,6 +324,97 @@ nodes:
         assert authority["relationships"][0]["relationship_type"] == "member_of"
         assert not model.diagnostics
 
+    def test_node_runtime_preserves_file_service_inventory(self):
+        model = compile_runtime_model(
+            _scenario("""
+name: fileshare-runtime
+nodes:
+  fileshare:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    services:
+      - {port: 445, name: smb}
+    runtime:
+      local-identity:
+        users:
+          - {username: svc-fileshare, uid: 1100, primary_gid: 1100, primary_group: svc-fileshare}
+      file-services:
+        - service-id: fileshare-smb
+          service: smb
+          protocol: smb
+          backend: samba-4.x
+          shares:
+            - share-id: public
+              name: public
+              kind: disk
+              backing-path: /srv/samba/public
+              read-only: true
+              browseable: true
+              guest-ok: true
+            - share-id: deploy-keys
+              name: deploy_keys
+              kind: disk
+              backing-path: /srv/samba/deploy_keys
+              read-only: false
+              browseable: false
+              guest-ok: false
+              valid-users: [svc-fileshare]
+              write-users: [svc-fileshare]
+          principals:
+            - principal-id: nobody
+              kind: guest
+              name: nobody
+              external-id: S-1-5-21-0-501
+              status: enabled
+              credential-classification: no_credential
+              origin: built_in
+            - principal-id: svc-fileshare
+              kind: service_account
+              name: svc-fileshare
+              status: enabled
+              credential-classification: redacted
+              origin: provisioned
+              local-user-ref: svc-fileshare
+          access-rules:
+            - rule-id: public-read
+              subject-ref: nobody
+              resource-ref: public
+              action: read
+              effect: allow
+              basis: share_config
+          access-observations:
+            - observation-id: anon-mount-allowed
+              subject-ref: anonymous
+              resource-ref: public
+              action: browse
+              outcome: allowed
+              basis: observed_probe
+      filesystem-inventory:
+        - path: /srv/samba/public
+          entry-type: directory
+          presence: present
+        - path: /srv/samba/deploy_keys/id_ed25519
+          entry-type: file
+          presence: expected_absent
+          description: Expected deploy-key attempted by setup, absent at capture.
+""")
+        )
+
+        runtime = model.node_deployments["provision.node.fileshare"].spec["node"]["runtime"]
+        file_service = runtime["file_services"][0]
+        assert file_service["service_id"] == "fileshare-smb"
+        assert file_service["protocol"] == "smb"
+        assert file_service["shares"][0]["kind"] == "disk"
+        assert file_service["shares"][0]["guest_ok"] is True
+        assert file_service["principals"][0]["kind"] == "guest"
+        assert file_service["principals"][1]["credential_classification"] == "redacted"
+        assert file_service["access_rules"][0]["effect"] == "allow"
+        assert file_service["access_observations"][0]["outcome"] == "allowed"
+        assert runtime["filesystem_inventory"][1]["presence"] == "expected_absent"
+        assert runtime["filesystem_inventory"][1]["entry_type"] == "file"
+        assert not model.diagnostics
+
     def test_feature_binding_tracks_same_node_dependencies(self):
         model = compile_runtime_model(
             _scenario("""
