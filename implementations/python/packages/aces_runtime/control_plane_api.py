@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import asdict
 from typing import Annotated
 
@@ -15,7 +16,8 @@ from aces_contracts.contracts import (
     WorkflowCancellationRequestModel,
 )
 from aces_contracts.participant_episode import ParticipantEpisodeTerminalReason
-from fastapi import Depends, FastAPI, HTTPException, Request
+from aces_contracts.runtime_state import OperationReceipt
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
 from .control_plane import RuntimeControlPlane
@@ -169,7 +171,10 @@ def _install_request_guards(
     security: ControlPlaneSecurityConfig,
 ) -> None:
     @app.middleware("http")
-    async def _limit_request_size(request: Request, call_next):
+    async def _limit_request_size(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         content_length = request.headers.get("content-length")
         if content_length is not None and _content_length_exceeds_limit(content_length, security.max_request_bytes):
             return _request_too_large_response(control_plane, request)
@@ -180,7 +185,7 @@ def _install_request_guards(
         return await call_next(request)
 
     @app.exception_handler(Exception)
-    async def _redacted_errors(request: Request, exc: Exception):
+    async def _redacted_errors(request: Request, exc: Exception) -> JSONResponse:
         control_plane.record_audit(
             action=request.method,
             identity="anonymous",
@@ -213,6 +218,14 @@ def _request_too_large_response(
 
 
 def _register_operation_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
+    _register_operation_submission_routes(app, control_plane)
+    _register_operation_read_routes(app, control_plane)
+
+
+def _register_operation_submission_routes(
     app: FastAPI,
     control_plane: RuntimeControlPlane,
 ) -> None:
@@ -294,6 +307,11 @@ def _register_operation_routes(
         )
         return _receipt_response(receipt)
 
+
+def _register_operation_read_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
     @app.get("/operations/{operation_id}", responses=_NOT_FOUND_RESPONSES)
     async def get_operation(
         operation_id: str,
@@ -389,6 +407,14 @@ def _register_participant_episode_routes(
     app: FastAPI,
     control_plane: RuntimeControlPlane,
 ) -> None:
+    _register_participant_episode_start_routes(app, control_plane)
+    _register_participant_episode_end_routes(app, control_plane)
+
+
+def _register_participant_episode_start_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
     @app.post(
         "/participants/{participant_address}/episodes/initialize",
         responses=_CONFLICT_RESPONSES,
@@ -454,6 +480,11 @@ def _register_participant_episode_routes(
         )
         return _receipt_response(receipt)
 
+
+def _register_participant_episode_end_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
     @app.post(
         "/participants/{participant_address}/episodes/restart",
         responses=_CONFLICT_RESPONSES,
@@ -525,7 +556,7 @@ def _register_participant_episode_routes(
         return _receipt_response(receipt)
 
 
-def _receipt_response(receipt) -> OperationReceiptModel:
+def _receipt_response(receipt: OperationReceipt) -> OperationReceiptModel:
     return OperationReceiptModel.model_validate(
         {
             "schema_version": receipt.schema_version,

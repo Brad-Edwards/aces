@@ -61,6 +61,44 @@ def _validate_evaluation_values(
         raise ValueError(f"{context} may not report max_score without score")
 
 
+def _optional_fixed_max_score(raw: object) -> int | None:
+    if raw is None:
+        return None
+    if isinstance(raw, bool) or not isinstance(raw, int):
+        raise TypeError("evaluation result contract fixed_max_score must be an int or None")
+    return raw
+
+
+def _optional_bool(raw: object) -> bool | None:
+    return raw if isinstance(raw, bool) else None
+
+
+def _optional_number(raw: object) -> float | int | None:
+    return raw if isinstance(raw, (int, float)) and not isinstance(raw, bool) else None
+
+
+def _optional_int(raw: object) -> int | None:
+    return raw if isinstance(raw, int) and not isinstance(raw, bool) else None
+
+
+def _optional_string(raw: object) -> str | None:
+    return str(raw) if raw is not None else None
+
+
+def _details_mapping(raw: object) -> dict[str, Any]:
+    return dict(raw) if isinstance(raw, Mapping) else {}
+
+
+def _evidence_refs(raw: object, *, context: str) -> tuple[str, ...]:
+    if isinstance(raw, (str, bytes)) or not isinstance(raw, Iterable):
+        raise TypeError(f"{context} evidence_refs must be an iterable of strings")
+    evidence_ref_items = list(raw)
+    evidence_refs = tuple(str(ref) for ref in evidence_ref_items if isinstance(ref, str))
+    if len(evidence_refs) != len(evidence_ref_items):
+        raise TypeError(f"{context} evidence_refs must contain only strings")
+    return evidence_refs
+
+
 @dataclass(frozen=True)
 class EvaluationResultContract:
     """Compiled contract for validating evaluator result envelopes."""
@@ -72,21 +110,8 @@ class EvaluationResultContract:
     fixed_max_score: int | None = None
 
     def __post_init__(self) -> None:
-        if not isinstance(self.state_schema_version, str) or not self.state_schema_version:
-            raise TypeError("evaluation result contract state_schema_version must be a non-empty string")
-        if not isinstance(self.resource_type, str) or not self.resource_type:
-            raise TypeError("evaluation result contract resource_type must be a non-empty string")
-        if not isinstance(self.supports_passed, bool):
-            raise TypeError("evaluation result contract supports_passed must be a bool")
-        if not isinstance(self.supports_score, bool):
-            raise TypeError("evaluation result contract supports_score must be a bool")
-        if self.fixed_max_score is not None:
-            if isinstance(self.fixed_max_score, bool) or not isinstance(self.fixed_max_score, int):
-                raise TypeError("evaluation result contract fixed_max_score must be an int or None")
-            if self.fixed_max_score < 0:
-                raise ValueError("evaluation result contract fixed_max_score must be >= 0")
-            if not self.supports_score:
-                raise ValueError("evaluation result contract fixed_max_score requires supports_score")
+        _validate_result_contract_identity(self)
+        _validate_result_contract_capabilities(self)
 
     @classmethod
     def from_mapping(
@@ -95,21 +120,38 @@ class EvaluationResultContract:
     ) -> EvaluationResultContract:
         if not isinstance(payload, Mapping):
             raise TypeError("evaluation result contract must be a mapping")
-        fixed_max_score_raw = payload.get("fixed_max_score")
-        fixed_max_score: int | None
-        if fixed_max_score_raw is None:
-            fixed_max_score = None
-        elif isinstance(fixed_max_score_raw, bool) or not isinstance(fixed_max_score_raw, int):
-            raise TypeError("evaluation result contract fixed_max_score must be an int or None")
-        else:
-            fixed_max_score = fixed_max_score_raw
         return cls(
             state_schema_version=str(payload.get("state_schema_version", EVALUATION_STATE_SCHEMA_VERSION)),
             resource_type=str(payload.get("resource_type", "")),
             supports_passed=bool(payload.get("supports_passed", False)),
             supports_score=bool(payload.get("supports_score", False)),
-            fixed_max_score=fixed_max_score,
+            fixed_max_score=_optional_fixed_max_score(payload.get("fixed_max_score")),
         )
+
+
+def _validate_result_contract_identity(contract: EvaluationResultContract) -> None:
+    if not isinstance(contract.state_schema_version, str) or not contract.state_schema_version:
+        raise TypeError("evaluation result contract state_schema_version must be a non-empty string")
+    if not isinstance(contract.resource_type, str) or not contract.resource_type:
+        raise TypeError("evaluation result contract resource_type must be a non-empty string")
+
+
+def _validate_result_contract_capabilities(contract: EvaluationResultContract) -> None:
+    if not isinstance(contract.supports_passed, bool):
+        raise TypeError("evaluation result contract supports_passed must be a bool")
+    if not isinstance(contract.supports_score, bool):
+        raise TypeError("evaluation result contract supports_score must be a bool")
+    if contract.fixed_max_score is not None:
+        _validate_fixed_max_score(contract)
+
+
+def _validate_fixed_max_score(contract: EvaluationResultContract) -> None:
+    if isinstance(contract.fixed_max_score, bool) or not isinstance(contract.fixed_max_score, int):
+        raise TypeError("evaluation result contract fixed_max_score must be an int or None")
+    if contract.fixed_max_score < 0:
+        raise ValueError("evaluation result contract fixed_max_score must be >= 0")
+    if not contract.supports_score:
+        raise ValueError("evaluation result contract fixed_max_score requires supports_score")
 
 
 @dataclass(frozen=True)
@@ -208,25 +250,16 @@ class EvaluationHistoryEvent:
             raise ValueError("evaluation history event is missing required fields: " + ", ".join(missing_keys))
         score_raw = payload.get("score")
         max_score_raw = payload.get("max_score")
-        evidence_refs_raw = payload.get("evidence_refs", ())
-        if isinstance(evidence_refs_raw, (str, bytes)) or not isinstance(evidence_refs_raw, Iterable):
-            raise TypeError("evaluation history event evidence_refs must be an iterable of strings")
-        evidence_ref_items = list(evidence_refs_raw)
-        evidence_refs = tuple(str(ref) for ref in evidence_ref_items if isinstance(ref, str))
-        if len(evidence_refs) != len(evidence_ref_items):
-            raise TypeError("evaluation history event evidence_refs must contain only strings")
         return cls(
             event_type=(enum_value(EvaluationHistoryEventType, payload["event_type"])),
             timestamp=str(payload["timestamp"]),
             status=(enum_value(EvaluationResultStatus, payload["status"])),
-            passed=(payload.get("passed") if isinstance(payload.get("passed"), bool) else None),
-            score=(score_raw if isinstance(score_raw, (int, float)) and not isinstance(score_raw, bool) else None),
-            max_score=(
-                max_score_raw if isinstance(max_score_raw, int) and not isinstance(max_score_raw, bool) else None
-            ),
-            detail=(str(payload["detail"]) if payload.get("detail") is not None else None),
-            evidence_refs=evidence_refs,
-            details=dict(payload.get("details", {})) if isinstance(payload.get("details", {}), Mapping) else {},
+            passed=_optional_bool(payload.get("passed")),
+            score=_optional_number(score_raw),
+            max_score=_optional_int(max_score_raw),
+            detail=_optional_string(payload.get("detail")),
+            evidence_refs=_evidence_refs(payload.get("evidence_refs", ()), context="evaluation history event"),
+            details=_details_mapping(payload.get("details", {})),
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -302,13 +335,6 @@ class EvaluationExecutionState:
             raise ValueError("evaluation result payload is missing required fields: " + ", ".join(missing_keys))
         score_raw = payload.get("score")
         max_score_raw = payload.get("max_score")
-        evidence_refs_raw = payload.get("evidence_refs", ())
-        if isinstance(evidence_refs_raw, (str, bytes)) or not isinstance(evidence_refs_raw, Iterable):
-            raise TypeError("evaluation result evidence_refs must be an iterable of strings")
-        evidence_ref_items = list(evidence_refs_raw)
-        evidence_refs = tuple(str(ref) for ref in evidence_ref_items if isinstance(ref, str))
-        if len(evidence_refs) != len(evidence_ref_items):
-            raise TypeError("evaluation result evidence_refs must contain only strings")
         return cls(
             state_schema_version=str(payload["state_schema_version"]),
             resource_type=str(payload["resource_type"]),
@@ -316,13 +342,11 @@ class EvaluationExecutionState:
             status=(enum_value(EvaluationResultStatus, payload["status"])),
             observed_at=str(payload["observed_at"]),
             updated_at=str(payload["updated_at"]),
-            passed=(payload.get("passed") if isinstance(payload.get("passed"), bool) else None),
-            score=(score_raw if isinstance(score_raw, (int, float)) and not isinstance(score_raw, bool) else None),
-            max_score=(
-                max_score_raw if isinstance(max_score_raw, int) and not isinstance(max_score_raw, bool) else None
-            ),
-            detail=(str(payload["detail"]) if payload.get("detail") is not None else None),
-            evidence_refs=evidence_refs,
+            passed=_optional_bool(payload.get("passed")),
+            score=_optional_number(score_raw),
+            max_score=_optional_int(max_score_raw),
+            detail=_optional_string(payload.get("detail")),
+            evidence_refs=_evidence_refs(payload.get("evidence_refs", ()), context="evaluation result"),
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -370,6 +394,16 @@ def validate_evaluation_result(
 ) -> list[str]:
     """Return contract violations for one evaluator result envelope."""
 
+    violations = _evaluation_result_identity_violations(contract, state)
+    violations.extend(_evaluation_passed_contract_violations(contract, state))
+    violations.extend(_evaluation_score_contract_violations(contract, state))
+    return violations
+
+
+def _evaluation_result_identity_violations(
+    contract: EvaluationResultContract,
+    state: EvaluationExecutionState,
+) -> list[str]:
     violations: list[str] = []
     if state.resource_type != contract.resource_type:
         violations.append(
@@ -381,17 +415,36 @@ def validate_evaluation_result(
             f"{state.state_schema_version!r} does not match compiled contract "
             f"{contract.state_schema_version!r}."
         )
+    return violations
+
+
+def _evaluation_passed_contract_violations(
+    contract: EvaluationResultContract,
+    state: EvaluationExecutionState,
+) -> list[str]:
+    violations: list[str] = []
     if not contract.supports_passed and state.passed is not None:
         violations.append("Result may not report 'passed' for this resource type.")
     if contract.supports_passed and state.status == EvaluationResultStatus.READY and state.passed is None:
         violations.append("Ready result must report 'passed' for this resource type.")
+    return violations
+
+
+def _evaluation_score_contract_violations(
+    contract: EvaluationResultContract,
+    state: EvaluationExecutionState,
+) -> list[str]:
+    violations: list[str] = []
     if not contract.supports_score and (state.score is not None or state.max_score is not None):
         violations.append("Result may not report score fields for this resource type.")
     if contract.supports_score and state.status == EvaluationResultStatus.READY and state.score is None:
         violations.append("Ready result must report 'score' for this resource type.")
-    if contract.fixed_max_score is not None:
-        if state.status == EvaluationResultStatus.READY and state.max_score != contract.fixed_max_score:
-            violations.append(f"Ready result must report max_score {contract.fixed_max_score} for this resource type.")
+    if (
+        contract.fixed_max_score is not None
+        and state.status == EvaluationResultStatus.READY
+        and state.max_score != contract.fixed_max_score
+    ):
+        violations.append(f"Ready result must report max_score {contract.fixed_max_score} for this resource type.")
     return violations
 
 

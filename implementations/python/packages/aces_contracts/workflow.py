@@ -174,51 +174,63 @@ class WorkflowExecutionContract:
     ) -> WorkflowExecutionContract:
         if not isinstance(payload, Mapping):
             raise TypeError("workflow execution contract must be a mapping")
-        steps_payload = payload.get("steps", {})
-        if not isinstance(steps_payload, Mapping):
-            raise TypeError("workflow execution contract steps must be a mapping")
-        steps: dict[str, WorkflowStepSemanticContract] = {}
-        for step_name, step_payload in steps_payload.items():
-            if not isinstance(step_name, str):
-                raise TypeError("workflow execution contract step names must be strings")
-            if not isinstance(step_payload, Mapping):
-                raise TypeError("workflow execution contract step payloads must be mappings")
-            steps[step_name] = WorkflowStepSemanticContract.from_mapping(step_payload)
-        control_edges_payload = payload.get("control_edges", {})
-        if not isinstance(control_edges_payload, Mapping):
-            raise TypeError("workflow execution contract control_edges must be a mapping")
-        control_edges = {
-            str(step_name): tuple(str(successor) for successor in successors)
-            for step_name, successors in control_edges_payload.items()
-            if isinstance(successors, Iterable)
-        }
-        join_owners_payload = payload.get("join_owners", {})
-        if not isinstance(join_owners_payload, Mapping):
-            raise TypeError("workflow execution contract join_owners must be a mapping")
         return cls(
             state_schema_version=str(payload.get("state_schema_version", WORKFLOW_STATE_SCHEMA_VERSION)),
             start_step=str(payload.get("start_step", "")),
             timeout_seconds=(int(payload["timeout_seconds"]) if payload.get("timeout_seconds") is not None else None),
-            steps=steps,
-            step_types={
-                str(step_name): str(step_type) for step_name, step_type in payload.get("step_types", {}).items()
-            },
-            control_edges=control_edges,
-            join_owners={str(join): str(owner) for join, owner in join_owners_payload.items()},
-            call_steps={
-                str(step_name): str(workflow_address)
-                for step_name, workflow_address in payload.get("call_steps", {}).items()
-            },
+            steps=_workflow_contract_steps(payload.get("steps", {})),
+            step_types=_workflow_contract_string_mapping(
+                payload.get("step_types", {}),
+                "workflow execution contract step_types",
+            ),
+            control_edges=_workflow_contract_edges(payload.get("control_edges", {})),
+            join_owners=_workflow_contract_string_mapping(
+                payload.get("join_owners", {}),
+                "workflow execution contract join_owners",
+            ),
+            call_steps=_workflow_contract_string_mapping(
+                payload.get("call_steps", {}),
+                "workflow execution contract call_steps",
+            ),
             compensation_mode=str(payload.get("compensation_mode", "disabled")),
             compensation_triggers=tuple(str(trigger) for trigger in payload.get("compensation_triggers", ())),
-            compensation_targets={
-                str(step_name): str(workflow_address)
-                for step_name, workflow_address in payload.get("compensation_targets", {}).items()
-            },
+            compensation_targets=_workflow_contract_string_mapping(
+                payload.get("compensation_targets", {}),
+                "workflow execution contract compensation_targets",
+            ),
             compensation_ordering=str(payload.get("compensation_ordering", "reverse_completion")),
             compensation_failure_policy=str(payload.get("compensation_failure_policy", "fail_workflow")),
             observable_steps=tuple(str(step_name) for step_name in payload.get("observable_steps", ())),
         )
+
+
+def _workflow_contract_steps(raw: object) -> dict[str, WorkflowStepSemanticContract]:
+    if not isinstance(raw, Mapping):
+        raise TypeError("workflow execution contract steps must be a mapping")
+    steps: dict[str, WorkflowStepSemanticContract] = {}
+    for step_name, step_payload in raw.items():
+        if not isinstance(step_name, str):
+            raise TypeError("workflow execution contract step names must be strings")
+        if not isinstance(step_payload, Mapping):
+            raise TypeError("workflow execution contract step payloads must be mappings")
+        steps[step_name] = WorkflowStepSemanticContract.from_mapping(step_payload)
+    return steps
+
+
+def _workflow_contract_edges(raw: object) -> dict[str, tuple[str, ...]]:
+    if not isinstance(raw, Mapping):
+        raise TypeError("workflow execution contract control_edges must be a mapping")
+    return {
+        str(step_name): tuple(str(successor) for successor in successors)
+        for step_name, successors in raw.items()
+        if isinstance(successors, Iterable)
+    }
+
+
+def _workflow_contract_string_mapping(raw: object, field_name: str) -> dict[str, str]:
+    if not isinstance(raw, Mapping):
+        raise TypeError(f"{field_name} must be a mapping")
+    return {str(key): str(value) for key, value in raw.items()}
 
 
 def _validate_workflow_execution_contract_identity(contract: WorkflowExecutionContract) -> None:
@@ -356,18 +368,8 @@ class WorkflowStepExecutionState:
         }
 
     def __post_init__(self) -> None:
-        if not isinstance(self.lifecycle, WorkflowStepLifecycle):
-            raise TypeError("lifecycle must be a WorkflowStepLifecycle")
-        if self.outcome is not None and not isinstance(self.outcome, WorkflowStepOutcome):
-            raise TypeError("outcome must be a WorkflowStepOutcome or None")
-        if isinstance(self.attempts, bool) or not isinstance(self.attempts, int):
-            raise TypeError("attempts must be an int")
-        if self.attempts < 0:
-            raise ValueError("attempts must be >= 0")
-        if self.lifecycle != WorkflowStepLifecycle.COMPLETED and self.outcome is not None:
-            raise ValueError("non-completed workflow steps may not report an outcome")
-        if self.lifecycle == WorkflowStepLifecycle.PENDING and self.attempts != 0:
-            raise ValueError("pending workflow steps must report 0 attempts")
+        _validate_workflow_step_state_types(self)
+        _validate_workflow_step_state_progress(self)
 
 
 @dataclass(frozen=True)
@@ -411,16 +413,6 @@ class WorkflowExecutionState:
             raise ValueError("workflow result payload is missing required fields: " + ", ".join(missing_keys))
         state_schema_version = str(payload.get("state_schema_version"))
         workflow_status_raw = payload.get("workflow_status")
-        steps_payload = payload.get("steps")
-        if not isinstance(steps_payload, Mapping):
-            raise TypeError("workflow result steps must be a mapping")
-        steps: dict[str, WorkflowStepExecutionState] = {}
-        for step_name, step_payload in steps_payload.items():
-            if not isinstance(step_name, str):
-                raise TypeError("workflow result step names must be strings")
-            if not isinstance(step_payload, Mapping):
-                raise TypeError("workflow result step payloads must be mappings")
-            steps[step_name] = WorkflowStepExecutionState.from_payload(step_payload)
         return cls(
             state_schema_version=state_schema_version,
             workflow_status=(enum_value(WorkflowStatus, workflow_status_raw)),
@@ -438,7 +430,7 @@ class WorkflowExecutionState:
             compensation_failures=[
                 dict(item) for item in payload.get("compensation_failures", []) if isinstance(item, Mapping)
             ],
-            steps=steps,
+            steps=_workflow_steps_from_payload(payload.get("steps")),
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -473,6 +465,37 @@ _NON_TERMINAL_WORKFLOW_STATUSES = {
     WorkflowStatus.PENDING,
     WorkflowStatus.RUNNING,
 }
+
+
+def _validate_workflow_step_state_types(state: WorkflowStepExecutionState) -> None:
+    if not isinstance(state.lifecycle, WorkflowStepLifecycle):
+        raise TypeError("lifecycle must be a WorkflowStepLifecycle")
+    if state.outcome is not None and not isinstance(state.outcome, WorkflowStepOutcome):
+        raise TypeError("outcome must be a WorkflowStepOutcome or None")
+    if isinstance(state.attempts, bool) or not isinstance(state.attempts, int):
+        raise TypeError("attempts must be an int")
+    if state.attempts < 0:
+        raise ValueError("attempts must be >= 0")
+
+
+def _validate_workflow_step_state_progress(state: WorkflowStepExecutionState) -> None:
+    if state.lifecycle != WorkflowStepLifecycle.COMPLETED and state.outcome is not None:
+        raise ValueError("non-completed workflow steps may not report an outcome")
+    if state.lifecycle == WorkflowStepLifecycle.PENDING and state.attempts != 0:
+        raise ValueError("pending workflow steps must report 0 attempts")
+
+
+def _workflow_steps_from_payload(raw: object) -> dict[str, WorkflowStepExecutionState]:
+    if not isinstance(raw, Mapping):
+        raise TypeError("workflow result steps must be a mapping")
+    steps: dict[str, WorkflowStepExecutionState] = {}
+    for step_name, step_payload in raw.items():
+        if not isinstance(step_name, str):
+            raise TypeError("workflow result step names must be strings")
+        if not isinstance(step_payload, Mapping):
+            raise TypeError("workflow result step payloads must be mappings")
+        steps[step_name] = WorkflowStepExecutionState.from_payload(step_payload)
+    return steps
 
 
 def _validate_workflow_execution_state_types(state: WorkflowExecutionState) -> None:

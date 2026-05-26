@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -57,63 +58,84 @@ class RuntimeSnapshot:
     def with_entries(
         self,
         entries: dict[str, SnapshotEntry],
-        *,
-        orchestration_results: dict[str, dict[str, Any]] | None = None,
-        orchestration_history: dict[str, list[dict[str, Any]]] | None = None,
-        evaluation_results: dict[str, dict[str, Any]] | None = None,
-        evaluation_history: dict[str, list[dict[str, Any]]] | None = None,
-        participant_episode_results: dict[str, dict[str, Any]] | None = None,
-        participant_episode_history: dict[str, list[dict[str, Any]]] | None = None,
-        participant_behavior_history: dict[str, list[dict[str, Any]]] | None = None,
-        metadata: dict[str, Any] | None = None,
+        **updates: object,
     ) -> RuntimeSnapshot:
+        _validate_snapshot_update_keys(updates)
         return RuntimeSnapshot(
             entries=entries,
-            orchestration_results=(
-                dict(self.orchestration_results) if orchestration_results is None else dict(orchestration_results)
+            orchestration_results=_mapping_update(
+                updates,
+                "orchestration_results",
+                self.orchestration_results,
             ),
-            orchestration_history=(
-                {workflow_address: list(events) for workflow_address, events in self.orchestration_history.items()}
-                if orchestration_history is None
-                else {workflow_address: list(events) for workflow_address, events in orchestration_history.items()}
+            orchestration_history=_history_update(
+                updates,
+                "orchestration_history",
+                self.orchestration_history,
             ),
-            evaluation_results=(
-                dict(self.evaluation_results) if evaluation_results is None else dict(evaluation_results)
+            evaluation_results=_mapping_update(updates, "evaluation_results", self.evaluation_results),
+            evaluation_history=_history_update(updates, "evaluation_history", self.evaluation_history),
+            participant_episode_results=_mapping_update(
+                updates,
+                "participant_episode_results",
+                self.participant_episode_results,
             ),
-            evaluation_history=(
-                {address: list(events) for address, events in self.evaluation_history.items()}
-                if evaluation_history is None
-                else {address: list(events) for address, events in evaluation_history.items()}
+            participant_episode_history=_history_update(
+                updates,
+                "participant_episode_history",
+                self.participant_episode_history,
             ),
-            participant_episode_results=(
-                dict(self.participant_episode_results)
-                if participant_episode_results is None
-                else dict(participant_episode_results)
+            participant_behavior_history=_history_update(
+                updates,
+                "participant_behavior_history",
+                self.participant_behavior_history,
             ),
-            participant_episode_history=(
-                {
-                    participant_address: list(events)
-                    for participant_address, events in self.participant_episode_history.items()
-                }
-                if participant_episode_history is None
-                else {
-                    participant_address: list(events)
-                    for participant_address, events in participant_episode_history.items()
-                }
-            ),
-            participant_behavior_history=(
-                {
-                    participant_address: list(events)
-                    for participant_address, events in self.participant_behavior_history.items()
-                }
-                if participant_behavior_history is None
-                else {
-                    participant_address: list(events)
-                    for participant_address, events in participant_behavior_history.items()
-                }
-            ),
-            metadata=dict(self.metadata) if metadata is None else dict(metadata),
+            metadata=_mapping_update(updates, "metadata", self.metadata),
         )
+
+
+_SNAPSHOT_UPDATE_KEYS = {
+    "orchestration_results",
+    "orchestration_history",
+    "evaluation_results",
+    "evaluation_history",
+    "participant_episode_results",
+    "participant_episode_history",
+    "participant_behavior_history",
+    "metadata",
+}
+
+
+def _validate_snapshot_update_keys(updates: Mapping[str, object]) -> None:
+    unknown = sorted(key for key in updates if key not in _SNAPSHOT_UPDATE_KEYS)
+    if unknown:
+        raise TypeError("unknown runtime snapshot update fields: " + ", ".join(unknown))
+
+
+def _mapping_update(
+    updates: Mapping[str, object],
+    key: str,
+    current: Mapping[str, Any],
+) -> dict[str, Any]:
+    raw = updates.get(key)
+    if raw is None:
+        return dict(current)
+    if not isinstance(raw, Mapping):
+        raise TypeError(f"{key} must be a mapping")
+    return dict(raw)
+
+
+def _history_update(
+    updates: Mapping[str, object],
+    key: str,
+    current: Mapping[str, list[dict[str, Any]]],
+) -> dict[str, list[dict[str, Any]]]:
+    raw = updates.get(key)
+    if raw is None:
+        return {address: list(events) for address, events in current.items()}
+    if not isinstance(raw, Mapping):
+        raise TypeError(f"{key} must be a mapping")
+    return {str(address): list(events) for address, events in raw.items()}
 
 
 @dataclass

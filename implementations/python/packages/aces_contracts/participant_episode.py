@@ -359,8 +359,8 @@ def _validate_episode_history_sequence(event: ParticipantEpisodeHistoryEvent) ->
 
 
 def iter_participant_episode_snapshot_violations(
-    participant_episode_results: Any,
-    participant_episode_history: Any,
+    participant_episode_results: object,
+    participant_episode_history: object,
 ) -> Iterator[tuple[str, str]]:
     from aces_contracts.participant_episode_snapshot import (
         iter_participant_episode_snapshot_violations as _iter_snapshot_violations,

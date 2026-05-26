@@ -1,5 +1,7 @@
 """Runtime manager for compiled SDL runtime plans."""
 
+from dataclasses import dataclass
+
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
@@ -18,6 +20,15 @@ _APPLY_EVALUATOR_ADDRESS = "runtime.apply.evaluator"
 _APPLY_ORCHESTRATOR_ADDRESS = "runtime.apply.orchestrator"
 _APPLY_PHASE_FAILED = "runtime.apply-phase-failed"
 _DESTROY_PHASE_FAILED = "runtime.destroy-phase-failed"
+
+
+@dataclass
+class _RuntimeApplyState:
+    working_snapshot: RuntimeSnapshot
+    diagnostics: list[Diagnostic]
+    changed_addresses: list[str]
+    started_evaluator: bool = False
+    failure: ApplyResult | None = None
 
 
 def _delete_order(entries: dict[str, SnapshotEntry]) -> list[str]:
@@ -159,92 +170,102 @@ class RuntimeManager:
 
     def apply(self, execution_plan: ExecutionPlan) -> ApplyResult:
         diagnostics: list[Diagnostic] = list(execution_plan.diagnostics)
-        changed_addresses: list[str] = []
 
         precondition_failure = self._apply_precondition_failure(execution_plan, diagnostics)
         if precondition_failure is not None:
             return precondition_failure
 
-        evaluation_needed = bool(execution_plan.evaluation.actionable_operations)
-        orchestration_needed = bool(execution_plan.orchestration.actionable_operations)
-        working_snapshot = execution_plan.base_snapshot
+        state = _RuntimeApplyState(
+            working_snapshot=execution_plan.base_snapshot,
+            diagnostics=diagnostics,
+            changed_addresses=[],
+        )
+        self._apply_provisioning_phase(execution_plan, state)
+        if state.failure is None:
+            self._apply_evaluation_phase(execution_plan, state)
+        if state.failure is None:
+            self._apply_orchestration_phase(execution_plan, state)
+        if state.failure is None:
+            self._snapshot = state.working_snapshot
+            state.failure = ApplyResult(
+                success=not _has_error_diagnostic(state.diagnostics),
+                snapshot=self._snapshot,
+                diagnostics=state.diagnostics,
+                changed_addresses=state.changed_addresses,
+            )
+        return state.failure
+
+    def _apply_provisioning_phase(
+        self,
+        execution_plan: ExecutionPlan,
+        state: _RuntimeApplyState,
+    ) -> None:
         provision_result = _call_backend_apply(
             self._target.provisioner.apply,
             execution_plan.provisioning,
-            working_snapshot,
+            state.working_snapshot,
             address="runtime.apply.provisioning",
-            snapshot=working_snapshot,
+            snapshot=state.working_snapshot,
         )
-        diagnostics.extend(provision_result.diagnostics)
-        changed_addresses.extend(provision_result.changed_addresses)
-        working_snapshot = provision_result.snapshot
+        self._record_phase_result(state, provision_result)
         if not provision_result.success:
             _maybe_synthesize_failure(
-                diagnostics,
+                state.diagnostics,
                 result=provision_result,
                 code=_APPLY_PHASE_FAILED,
                 address="runtime.apply.provisioning",
                 message="Provisioning apply failed.",
             )
-            self._snapshot = working_snapshot
-            return ApplyResult(
-                success=False,
-                snapshot=self._snapshot,
-                diagnostics=diagnostics,
-                changed_addresses=changed_addresses,
-            )
+            self._fail_apply_state(state)
 
-        started_evaluator = False
-        if evaluation_needed and self._target.evaluator is not None:
+    def _apply_evaluation_phase(
+        self,
+        execution_plan: ExecutionPlan,
+        state: _RuntimeApplyState,
+    ) -> None:
+        if execution_plan.evaluation.actionable_operations and self._target.evaluator is not None:
             evaluation_result = _call_backend_apply(
                 self._target.evaluator.start,
                 execution_plan.evaluation,
-                working_snapshot,
+                state.working_snapshot,
                 address=_APPLY_EVALUATOR_ADDRESS,
-                snapshot=working_snapshot,
+                snapshot=state.working_snapshot,
             )
-            diagnostics.extend(evaluation_result.diagnostics)
-            changed_addresses.extend(evaluation_result.changed_addresses)
-            working_snapshot = evaluation_result.snapshot
+            self._record_phase_result(state, evaluation_result)
             if evaluation_result.success:
-                started_evaluator = True
+                state.started_evaluator = True
             else:
                 _maybe_synthesize_failure(
-                    diagnostics,
+                    state.diagnostics,
                     result=evaluation_result,
                     code=_APPLY_PHASE_FAILED,
                     address=_APPLY_EVALUATOR_ADDRESS,
                     message="Evaluator failed to start.",
                 )
                 rollback_result = _rollback_services(
-                    working_snapshot,
+                    state.working_snapshot,
                     [("runtime.rollback.evaluator", self._target.evaluator)],
                 )
-                diagnostics.extend(rollback_result.diagnostics)
-                changed_addresses.extend(rollback_result.changed_addresses)
-                working_snapshot = rollback_result.snapshot
-                self._snapshot = working_snapshot
-                return ApplyResult(
-                    success=False,
-                    snapshot=self._snapshot,
-                    diagnostics=diagnostics,
-                    changed_addresses=changed_addresses,
-                )
+                self._record_phase_result(state, rollback_result)
+                self._fail_apply_state(state)
 
-        if orchestration_needed and self._target.orchestrator is not None:
+    def _apply_orchestration_phase(
+        self,
+        execution_plan: ExecutionPlan,
+        state: _RuntimeApplyState,
+    ) -> None:
+        if execution_plan.orchestration.actionable_operations and self._target.orchestrator is not None:
             orchestration_result = _call_backend_apply(
                 self._target.orchestrator.start,
                 execution_plan.orchestration,
-                working_snapshot,
+                state.working_snapshot,
                 address=_APPLY_ORCHESTRATOR_ADDRESS,
-                snapshot=working_snapshot,
+                snapshot=state.working_snapshot,
             )
-            diagnostics.extend(orchestration_result.diagnostics)
-            changed_addresses.extend(orchestration_result.changed_addresses)
-            working_snapshot = orchestration_result.snapshot
+            self._record_phase_result(state, orchestration_result)
             if not orchestration_result.success:
                 _maybe_synthesize_failure(
-                    diagnostics,
+                    state.diagnostics,
                     result=orchestration_result,
                     code=_APPLY_PHASE_FAILED,
                     address=_APPLY_ORCHESTRATOR_ADDRESS,
@@ -253,26 +274,24 @@ class RuntimeManager:
                 rollback_services = [
                     ("runtime.rollback.orchestrator", self._target.orchestrator),
                 ]
-                if started_evaluator and self._target.evaluator is not None:
+                if state.started_evaluator and self._target.evaluator is not None:
                     rollback_services.append(("runtime.rollback.evaluator", self._target.evaluator))
-                rollback_result = _rollback_services(working_snapshot, rollback_services)
-                diagnostics.extend(rollback_result.diagnostics)
-                changed_addresses.extend(rollback_result.changed_addresses)
-                working_snapshot = rollback_result.snapshot
-                self._snapshot = working_snapshot
-                return ApplyResult(
-                    success=False,
-                    snapshot=self._snapshot,
-                    diagnostics=diagnostics,
-                    changed_addresses=changed_addresses,
-                )
+                rollback_result = _rollback_services(state.working_snapshot, rollback_services)
+                self._record_phase_result(state, rollback_result)
+                self._fail_apply_state(state)
 
-        self._snapshot = working_snapshot
-        return ApplyResult(
-            success=not _has_error_diagnostic(diagnostics),
+    def _record_phase_result(self, state: _RuntimeApplyState, result: ApplyResult) -> None:
+        state.diagnostics.extend(result.diagnostics)
+        state.changed_addresses.extend(result.changed_addresses)
+        state.working_snapshot = result.snapshot
+
+    def _fail_apply_state(self, state: _RuntimeApplyState) -> None:
+        self._snapshot = state.working_snapshot
+        state.failure = ApplyResult(
+            success=False,
             snapshot=self._snapshot,
-            diagnostics=diagnostics,
-            changed_addresses=changed_addresses,
+            diagnostics=state.diagnostics,
+            changed_addresses=state.changed_addresses,
         )
 
     def _apply_precondition_failure(
@@ -286,22 +305,14 @@ class RuntimeManager:
             self._snapshot,
         )
         diagnostics.extend(provenance_diagnostics)
-        if provenance_diagnostics:
-            return ApplyResult(
+        failure = None
+        if provenance_diagnostics or not execution_plan.is_valid:
+            failure = ApplyResult(
                 success=False,
                 snapshot=self._snapshot,
                 diagnostics=diagnostics,
             )
-
-        if not execution_plan.is_valid:
-            return ApplyResult(
-                success=False,
-                snapshot=self._snapshot,
-                diagnostics=diagnostics,
-            )
-
-        evaluation_needed = bool(execution_plan.evaluation.actionable_operations)
-        if evaluation_needed and self._target.evaluator is None:
+        elif execution_plan.evaluation.actionable_operations and self._target.evaluator is None:
             diagnostics.append(
                 _failure_diagnostic(
                     "runtime.apply-missing-evaluator",
@@ -309,14 +320,12 @@ class RuntimeManager:
                     "Execution plan requires an evaluator, but the target does not provide one.",
                 )
             )
-            return ApplyResult(
+            failure = ApplyResult(
                 success=False,
                 snapshot=self._snapshot,
                 diagnostics=diagnostics,
             )
-
-        orchestration_needed = bool(execution_plan.orchestration.actionable_operations)
-        if orchestration_needed and self._target.orchestrator is None:
+        elif execution_plan.orchestration.actionable_operations and self._target.orchestrator is None:
             diagnostics.append(
                 _failure_diagnostic(
                     "runtime.apply-missing-orchestrator",
@@ -324,25 +333,25 @@ class RuntimeManager:
                     "Execution plan requires an orchestrator, but the target does not provide one.",
                 )
             )
-            return ApplyResult(
+            failure = ApplyResult(
                 success=False,
                 snapshot=self._snapshot,
                 diagnostics=diagnostics,
             )
-
-        validation = _call_backend_diagnostics(
-            self._target.provisioner.validate,
-            execution_plan.provisioning,
-            address="runtime.apply.provisioning.validate",
-        )
-        diagnostics.extend(validation)
-        if _has_error_diagnostic(validation):
-            return ApplyResult(
-                success=False,
-                snapshot=self._snapshot,
-                diagnostics=diagnostics,
+        else:
+            validation = _call_backend_diagnostics(
+                self._target.provisioner.validate,
+                execution_plan.provisioning,
+                address="runtime.apply.provisioning.validate",
             )
-        return None
+            diagnostics.extend(validation)
+            if _has_error_diagnostic(validation):
+                failure = ApplyResult(
+                    success=False,
+                    snapshot=self._snapshot,
+                    diagnostics=diagnostics,
+                )
+        return failure
 
     def status(self) -> dict[str, object]:
         info: dict[str, object] = {

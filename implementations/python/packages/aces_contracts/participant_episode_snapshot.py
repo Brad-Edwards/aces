@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
-from typing import Any
 
 from aces_contracts.participant_episode import (
     PARTICIPANT_EPISODE_TERMINAL_EVENTS,
@@ -15,8 +14,8 @@ from aces_contracts.participant_episode import (
 
 
 def iter_participant_episode_snapshot_violations(
-    participant_episode_results: Any,
-    participant_episode_history: Any,
+    participant_episode_results: object,
+    participant_episode_history: object,
 ) -> Iterator[tuple[str, str]]:
     """Yield every participant-episode invariant violation in a snapshot."""
 
@@ -29,27 +28,28 @@ def iter_participant_episode_snapshot_violations(
 
 
 def _iter_participant_episode_result_violations(
-    participant_episode_results: Any,
-) -> Iterator[tuple[str, str]]:
+    participant_episode_results: object,
+) -> list[tuple[str, str]]:
     results_key = "runtime.snapshot.participant-episode-results"
 
     if not isinstance(participant_episode_results, Mapping):
-        yield (results_key, "participant_episode_results must be a mapping")
-        return
+        return [(results_key, "participant_episode_results must be a mapping")]
 
+    violations: list[tuple[str, str]] = []
     for outer_key, result in participant_episode_results.items():
         if not isinstance(outer_key, str) or not outer_key:
-            yield (results_key, "participant episode result keys must be non-empty strings")
+            violations.append((results_key, "participant episode result keys must be non-empty strings"))
             continue
         if not isinstance(result, Mapping):
-            yield (outer_key, "participant episode result must be a mapping")
+            violations.append((outer_key, "participant episode result must be a mapping"))
             continue
-        yield from _iter_result_payload_violations(outer_key, result)
+        violations.extend(_iter_result_payload_violations(outer_key, result))
+    return violations
 
 
 def _iter_result_payload_violations(
     outer_key: str,
-    result: Mapping[str, Any],
+    result: Mapping[object, object],
 ) -> Iterator[tuple[str, str]]:
     try:
         normalized_result = ParticipantEpisodeExecutionState.from_payload(result)
@@ -67,31 +67,32 @@ def _iter_result_payload_violations(
 
 
 def _iter_participant_episode_history_violations(
-    participant_episode_history: Any,
-) -> Iterator[tuple[str, str]]:
+    participant_episode_history: object,
+) -> list[tuple[str, str]]:
     history_key = "runtime.snapshot.participant-episode-history"
 
     if not isinstance(participant_episode_history, Mapping):
-        yield (history_key, "participant_episode_history must be a mapping")
-        return
+        return [(history_key, "participant_episode_history must be a mapping")]
 
+    violations: list[tuple[str, str]] = []
     for outer_key, history in participant_episode_history.items():
         if not isinstance(outer_key, str) or not outer_key:
-            yield (history_key, "participant episode history keys must be non-empty strings")
+            violations.append((history_key, "participant episode history keys must be non-empty strings"))
             continue
         if not isinstance(history, list):
-            yield (outer_key, "participant episode history must be a list of events")
+            violations.append((outer_key, "participant episode history must be a list of events"))
             continue
         normalized_events, entry_violations = _normalize_participant_episode_history(outer_key, history)
         if entry_violations:
-            yield from entry_violations
+            violations.extend(entry_violations)
             continue
-        yield from _iter_participant_episode_sequence_violations(outer_key, normalized_events)
+        violations.extend(_iter_participant_episode_sequence_violations(outer_key, normalized_events))
+    return violations
 
 
 def _normalize_participant_episode_history(
     outer_key: str,
-    history: list[Any],
+    history: list[object],
 ) -> tuple[list[ParticipantEpisodeHistoryEvent], list[tuple[str, str]]]:
     normalized_events: list[ParticipantEpisodeHistoryEvent] = []
     violations: list[tuple[str, str]] = []
@@ -120,7 +121,7 @@ def _normalize_participant_episode_history(
     return normalized_events, violations
 
 
-def _normalize_history_event(event: Any) -> tuple[ParticipantEpisodeHistoryEvent | None, str | None]:
+def _normalize_history_event(event: object) -> tuple[ParticipantEpisodeHistoryEvent | None, str | None]:
     if not isinstance(event, Mapping):
         return None, "participant episode history event must be a mapping"
     try:
@@ -191,21 +192,23 @@ def _is_invalid_sequence_advance(event: ParticipantEpisodeHistoryEvent, last_seq
 
 
 def _iter_participant_episode_result_head_violations(
-    participant_episode_results: Any,
-    participant_episode_history: Any,
-) -> Iterator[tuple[str, str]]:
+    participant_episode_results: object,
+    participant_episode_history: object,
+) -> list[tuple[str, str]]:
     if not isinstance(participant_episode_results, Mapping) or not isinstance(participant_episode_history, Mapping):
-        return
+        return []
 
+    violations: list[tuple[str, str]] = []
     for outer_key, result in participant_episode_results.items():
         context = _result_history_context(outer_key, result, participant_episode_history)
         if context is None:
             continue
         normalized_result, last_event = context
         if _result_differs_from_history_head(normalized_result, last_event):
-            yield (outer_key, _result_history_head_mismatch_message(normalized_result, last_event))
+            violations.append((outer_key, _result_history_head_mismatch_message(normalized_result, last_event)))
             continue
-        yield from _iter_participant_episode_status_head_violations(outer_key, normalized_result, last_event)
+        violations.extend(_iter_participant_episode_status_head_violations(outer_key, normalized_result, last_event))
+    return violations
 
 
 def _result_history_context(
@@ -213,26 +216,33 @@ def _result_history_context(
     result: object,
     participant_episode_history: Mapping[object, object],
 ) -> tuple[ParticipantEpisodeExecutionState, ParticipantEpisodeHistoryEvent] | None:
-    if not isinstance(outer_key, str) or not outer_key:
-        return None
-    if not isinstance(result, Mapping):
-        return None
-    history = participant_episode_history.get(outer_key)
-    if not isinstance(history, list) or not history:
-        return None
+    context = None
+    if isinstance(outer_key, str) and outer_key and isinstance(result, Mapping):
+        history = participant_episode_history.get(outer_key)
+        if isinstance(history, list) and history:
+            context = _normalized_result_history_context(outer_key, result, history)
+    return context
+
+
+def _normalized_result_history_context(
+    outer_key: str,
+    result: Mapping[object, object],
+    history: list[object],
+) -> tuple[ParticipantEpisodeExecutionState, ParticipantEpisodeHistoryEvent] | None:
+    context = None
     try:
         normalized_result = ParticipantEpisodeExecutionState.from_payload(result)
     except (TypeError, ValueError):
-        return None
+        normalized_result = None
     last_event = _last_matching_participant_episode_event(outer_key, history)
-    if last_event is None:
-        return None
-    return normalized_result, last_event
+    if normalized_result is not None and last_event is not None:
+        context = normalized_result, last_event
+    return context
 
 
 def _last_matching_participant_episode_event(
     outer_key: str,
-    history: list[Any],
+    history: list[object],
 ) -> ParticipantEpisodeHistoryEvent | None:
     last_event: ParticipantEpisodeHistoryEvent | None = None
 

@@ -16,6 +16,7 @@ from aces_contracts.workflow import (
     WorkflowHistoryEventType,
     WorkflowResultContract,
     WorkflowStatus,
+    WorkflowStepExecutionState,
     validate_workflow_step_result_contract,
 )
 
@@ -23,6 +24,7 @@ from .diagnostics import _failure_diagnostic, _parse_timestamp
 from .workflow_result_contract_compensation import (
     compensation_history_diagnostics as _compensation_history_diagnostics_impl,
 )
+from .workflow_result_contract_context import compiled_workflow_contracts
 
 _BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
 _ORCHESTRATION_RESULTS_ADDRESS = "runtime.apply.orchestration-results"
@@ -111,67 +113,74 @@ def _workflow_context(
     workflow_address: object,
     workflow_result: object,
 ) -> tuple[_WorkflowContext | None, list[Diagnostic]]:
+    context = None
+    diagnostics = _workflow_key_diagnostics(workflow_address, workflow_result)
+    if not diagnostics and isinstance(workflow_address, str) and isinstance(workflow_result, dict):
+        context, diagnostics = _typed_workflow_context(
+            snapshot,
+            workflow_entries,
+            workflow_address,
+            workflow_result,
+        )
+    return context, diagnostics
+
+
+def _workflow_key_diagnostics(workflow_address: object, workflow_result: object) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
     if not isinstance(workflow_address, str):
-        return None, [
+        diagnostics.append(
             _contract_diagnostic(_ORCHESTRATION_RESULTS_ADDRESS, "Workflow orchestration result keys must be strings.")
-        ]
-    if not isinstance(workflow_result, dict):
-        return None, [
+        )
+    elif not isinstance(workflow_result, dict):
+        diagnostics.append(
             _contract_diagnostic(workflow_address, "Workflow orchestration results must use plain-data mapping values.")
-        ]
+        )
+    return diagnostics
+
+
+def _typed_workflow_context(
+    snapshot: RuntimeSnapshot,
+    workflow_entries: dict[str, SnapshotEntry],
+    workflow_address: str,
+    workflow_result: dict[str, object],
+) -> tuple[_WorkflowContext | None, list[Diagnostic]]:
+    context = None
+    diagnostics: list[Diagnostic] = []
     workflow_entry = workflow_entries.get(workflow_address)
     if workflow_entry is None:
-        return None, [
+        diagnostics.append(
             _contract_diagnostic(
                 workflow_address,
                 "Workflow orchestration results must correspond to a workflow entry in the runtime snapshot.",
             )
-        ]
-    contracts, diagnostics = _compiled_workflow_contracts(workflow_address, workflow_entry)
-    if contracts is None:
-        return None, diagnostics
-    normalized_result, result_diagnostics = _normalized_workflow_result(workflow_address, workflow_result)
-    if normalized_result is None:
-        return None, result_diagnostics
-    normalized_history, history_diagnostics = _normalized_workflow_history(snapshot, workflow_address)
-    if normalized_history is None:
-        return None, history_diagnostics
-    result_contract, execution_contract = contracts
-    return (
-        _WorkflowContext(
-            workflow_address,
-            result_contract,
-            execution_contract,
-            normalized_result,
-            normalized_history,
-        ),
-        history_diagnostics,
-    )
+        )
+    else:
+        context, diagnostics = _workflow_context_from_entry(snapshot, workflow_address, workflow_result, workflow_entry)
+    return context, diagnostics
 
 
-def _compiled_workflow_contracts(
+def _workflow_context_from_entry(
+    snapshot: RuntimeSnapshot,
     workflow_address: str,
+    workflow_result: dict[str, object],
     workflow_entry: SnapshotEntry,
-) -> tuple[tuple[WorkflowResultContract, WorkflowExecutionContract] | None, list[Diagnostic]]:
-    result_contract_payload = workflow_entry.payload.get("result_contract")
-    execution_contract_payload = workflow_entry.payload.get("execution_contract")
-    if not isinstance(result_contract_payload, dict):
-        return None, [
-            _contract_diagnostic(workflow_address, "Workflow snapshot payload is missing compiled result_contract.")
-        ]
-    if not isinstance(execution_contract_payload, dict):
-        return None, [
-            _contract_diagnostic(workflow_address, "Workflow snapshot payload is missing compiled execution_contract.")
-        ]
-    try:
-        result_contract = WorkflowResultContract.from_mapping(result_contract_payload)
-    except (TypeError, ValueError) as exc:
-        return None, [_contract_diagnostic(workflow_address, f"Workflow result_contract is invalid: {exc}")]
-    try:
-        execution_contract = WorkflowExecutionContract.from_mapping(execution_contract_payload)
-    except (TypeError, ValueError) as exc:
-        return None, [_contract_diagnostic(workflow_address, f"Workflow execution_contract is invalid: {exc}")]
-    return (result_contract, execution_contract), []
+) -> tuple[_WorkflowContext | None, list[Diagnostic]]:
+    context = None
+    contracts, diagnostics = compiled_workflow_contracts(workflow_address, workflow_entry, _contract_diagnostic)
+    if contracts is not None:
+        normalized_result, diagnostics = _normalized_workflow_result(workflow_address, workflow_result)
+        if normalized_result is not None:
+            normalized_history, diagnostics = _normalized_workflow_history(snapshot, workflow_address)
+            if normalized_history is not None:
+                result_contract, execution_contract = contracts
+                context = _WorkflowContext(
+                    workflow_address,
+                    result_contract,
+                    execution_contract,
+                    normalized_result,
+                    normalized_history,
+                )
+    return context, diagnostics
 
 
 def _normalized_workflow_result(
@@ -378,7 +387,10 @@ def _workflow_execution_step_diagnostics(context: _WorkflowContext) -> list[Diag
     return diagnostics
 
 
-def _completed_outcome_exceeds_contract(step_state, step_contract) -> bool:
+def _completed_outcome_exceeds_contract(
+    step_state: WorkflowStepExecutionState,
+    step_contract: object,
+) -> bool:
     return (
         step_state.lifecycle == step_state.lifecycle.COMPLETED
         and step_state.outcome is not None
@@ -431,15 +443,20 @@ def _switch_history_event_diagnostics(context: _WorkflowContext, event: Workflow
 
 
 def _call_history_event_diagnostics(context: _WorkflowContext, event: WorkflowHistoryEvent) -> list[Diagnostic]:
-    if event.event_type not in {WorkflowHistoryEventType.CALL_STARTED, WorkflowHistoryEventType.CALL_COMPLETED}:
-        return []
-    if event.step_name is None or context.execution_contract.step_types.get(event.step_name) != "call":
-        return [_contract_diagnostic(context.address, f"{event.event_type.value} events must reference a call step.")]
-    expected_workflow = context.execution_contract.call_steps.get(event.step_name)
-    actual_workflow = str(event.details.get("workflow_address", ""))
-    if expected_workflow and actual_workflow and actual_workflow != expected_workflow:
-        return [_workflow_target_mismatch(context, event, actual_workflow, expected_workflow, "call target")]
-    return []
+    diagnostics: list[Diagnostic] = []
+    if event.event_type in {WorkflowHistoryEventType.CALL_STARTED, WorkflowHistoryEventType.CALL_COMPLETED}:
+        if event.step_name is None or context.execution_contract.step_types.get(event.step_name) != "call":
+            diagnostics.append(
+                _contract_diagnostic(context.address, f"{event.event_type.value} events must reference a call step.")
+            )
+        else:
+            expected_workflow = context.execution_contract.call_steps.get(event.step_name)
+            actual_workflow = str(event.details.get("workflow_address", ""))
+            if expected_workflow and actual_workflow and actual_workflow != expected_workflow:
+                diagnostics.append(
+                    _workflow_target_mismatch(context, event, actual_workflow, expected_workflow, "call target")
+                )
+    return diagnostics
 
 
 def _workflow_target_mismatch(
@@ -477,21 +494,33 @@ def _compensation_registration_diagnostics(context: _WorkflowContext, event: Wor
 def _compensation_workflow_event_diagnostics(
     context: _WorkflowContext, event: WorkflowHistoryEvent
 ) -> list[Diagnostic]:
-    if event.event_type not in {
+    diagnostics: list[Diagnostic] = []
+    if event.event_type in {
         WorkflowHistoryEventType.COMPENSATION_WORKFLOW_STARTED,
         WorkflowHistoryEventType.COMPENSATION_WORKFLOW_COMPLETED,
         WorkflowHistoryEventType.COMPENSATION_WORKFLOW_FAILED,
     }:
-        return []
-    if event.step_name is None or event.step_name not in context.execution_contract.compensation_targets:
-        return [
-            _contract_diagnostic(context.address, f"{event.event_type.value} events must reference a compensable step.")
-        ]
-    expected_workflow = context.execution_contract.compensation_targets[event.step_name]
-    actual_workflow = str(event.details.get("workflow_address", ""))
-    if actual_workflow and actual_workflow != expected_workflow:
-        return [_workflow_target_mismatch(context, event, actual_workflow, expected_workflow, "compensation target")]
-    return []
+        if event.step_name is None or event.step_name not in context.execution_contract.compensation_targets:
+            diagnostics.append(
+                _contract_diagnostic(
+                    context.address,
+                    f"{event.event_type.value} events must reference a compensable step.",
+                )
+            )
+        else:
+            expected_workflow = context.execution_contract.compensation_targets[event.step_name]
+            actual_workflow = str(event.details.get("workflow_address", ""))
+            if actual_workflow and actual_workflow != expected_workflow:
+                diagnostics.append(
+                    _workflow_target_mismatch(
+                        context,
+                        event,
+                        actual_workflow,
+                        expected_workflow,
+                        "compensation target",
+                    )
+                )
+    return diagnostics
 
 
 def _terminal_history_diagnostics(context: _WorkflowContext) -> list[Diagnostic]:

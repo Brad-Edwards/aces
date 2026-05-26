@@ -23,42 +23,58 @@ def workflow_timeout_update(
     orchestration_history: dict[str, list[dict[str, object]]],
     submitted_at: str,
 ) -> tuple[dict[str, object], list[dict[str, object]]] | None:
-    if entry.domain != RuntimeDomain.ORCHESTRATION or entry.resource_type != "workflow":
-        return None
-    timeout_seconds = _workflow_timeout_seconds(entry.payload)
-    if timeout_seconds is None:
-        return None
-    result_payload = orchestration_results.get(workflow_address)
-    if not isinstance(result_payload, dict):
-        return None
-    normalized = WorkflowExecutionState.from_payload(result_payload)
-    if normalized.workflow_status != WorkflowStatus.RUNNING:
-        return None
-    if not _workflow_has_timed_out(normalized, timeout_seconds, submitted_at):
-        return None
-    return _timed_out_workflow_update(
-        snapshot,
-        workflow_address,
-        normalized,
-        timeout_seconds,
-        orchestration_history,
-        submitted_at,
-    )
+    update = None
+    timeout_seconds = _eligible_workflow_timeout_seconds(entry)
+    normalized = _running_workflow_result(orchestration_results.get(workflow_address))
+    if (
+        timeout_seconds is not None
+        and normalized is not None
+        and _workflow_has_timed_out(normalized, timeout_seconds, submitted_at)
+    ):
+        update = _timed_out_workflow_update(
+            snapshot,
+            workflow_address,
+            normalized,
+            timeout_seconds,
+            orchestration_history,
+            submitted_at,
+        )
+    return update
+
+
+def _eligible_workflow_timeout_seconds(entry: SnapshotEntry) -> int | None:
+    timeout_seconds = None
+    if entry.domain == RuntimeDomain.ORCHESTRATION and entry.resource_type == "workflow":
+        timeout_seconds = _workflow_timeout_seconds(entry.payload)
+    return timeout_seconds
+
+
+def _running_workflow_result(result_payload: object) -> WorkflowExecutionState | None:
+    normalized = None
+    if isinstance(result_payload, dict):
+        candidate = WorkflowExecutionState.from_payload(result_payload)
+        if candidate.workflow_status == WorkflowStatus.RUNNING:
+            normalized = candidate
+    return normalized
 
 
 def _workflow_timeout_seconds(payload: object) -> int | None:
-    if not isinstance(payload, dict):
-        return None
-    execution_contract_payload = payload.get("execution_contract")
-    if not isinstance(execution_contract_payload, dict):
-        return None
-    timeout_seconds = execution_contract_payload.get("timeout_seconds")
-    if timeout_seconds in (None, "", 0):
-        return None
-    try:
-        return int(timeout_seconds)
-    except (TypeError, ValueError):
-        return None
+    timeout = None
+    if isinstance(payload, dict):
+        execution_contract_payload = payload.get("execution_contract")
+        if isinstance(execution_contract_payload, dict):
+            timeout = _coerce_timeout_seconds(execution_contract_payload.get("timeout_seconds"))
+    return timeout
+
+
+def _coerce_timeout_seconds(raw: object) -> int | None:
+    timeout = None
+    if raw not in (None, "", 0):
+        try:
+            timeout = int(raw)
+        except (TypeError, ValueError):
+            timeout = None
+    return timeout
 
 
 def _workflow_has_timed_out(

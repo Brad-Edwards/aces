@@ -36,7 +36,13 @@ from aces_contracts.workflow import (
 )
 
 from .backend_calls import _call_backend_diagnostics
-from .control_plane_execution import execute_operation, execute_participant_action
+from .control_plane_execution import (
+    OperationExecutionRequest,
+    SucceededOperationRequest,
+    execute_operation,
+    execute_participant_action,
+    persist_succeeded_operation,
+)
 from .control_plane_store import (
     AuditEvent,
     ControlPlaneOperationRecord,
@@ -48,6 +54,12 @@ from .control_plane_workflows import maybe_apply_compensation
 from .registry import RuntimeTarget
 
 _NO_PARTICIPANT_RUNTIME_MESSAGE = "Target does not provide a participant runtime."
+_TERMINAL_WORKFLOW_STATUSES = {
+    WorkflowStatus.SUCCEEDED,
+    WorkflowStatus.FAILED,
+    WorkflowStatus.CANCELLED,
+    WorkflowStatus.TIMED_OUT,
+}
 
 
 def _utc_now() -> str:
@@ -95,14 +107,16 @@ class RuntimeControlPlane:
         )
         return execute_operation(
             self,
-            domain=RuntimeDomain.PROVISIONING,
-            method=self._target.provisioner.apply,
-            plan=plan,
-            address="runtime.control-plane.provisioning",
-            diagnostics=diagnostics,
-            base_snapshot=base_snapshot,
-            idempotency_key=idempotency_key,
-            request_fingerprint=request_fingerprint,
+            OperationExecutionRequest(
+                domain=RuntimeDomain.PROVISIONING,
+                method=self._target.provisioner.apply,
+                plan=plan,
+                address="runtime.control-plane.provisioning",
+                diagnostics=diagnostics,
+                base_snapshot=base_snapshot,
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            ),
         )
 
     def submit_orchestration(
@@ -120,14 +134,16 @@ class RuntimeControlPlane:
             )
         return execute_operation(
             self,
-            domain=RuntimeDomain.ORCHESTRATION,
-            method=self._target.orchestrator.start,
-            plan=plan,
-            address="runtime.control-plane.orchestration",
-            diagnostics=[],
-            base_snapshot=base_snapshot,
-            idempotency_key=idempotency_key,
-            request_fingerprint=request_fingerprint,
+            OperationExecutionRequest(
+                domain=RuntimeDomain.ORCHESTRATION,
+                method=self._target.orchestrator.start,
+                plan=plan,
+                address="runtime.control-plane.orchestration",
+                diagnostics=[],
+                base_snapshot=base_snapshot,
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            ),
         )
 
     def submit_evaluation(
@@ -145,14 +161,16 @@ class RuntimeControlPlane:
             )
         return execute_operation(
             self,
-            domain=RuntimeDomain.EVALUATION,
-            method=self._target.evaluator.start,
-            plan=plan,
-            address="runtime.control-plane.evaluation",
-            diagnostics=[],
-            base_snapshot=base_snapshot,
-            idempotency_key=idempotency_key,
-            request_fingerprint=request_fingerprint,
+            OperationExecutionRequest(
+                domain=RuntimeDomain.EVALUATION,
+                method=self._target.evaluator.start,
+                plan=plan,
+                address="runtime.control-plane.evaluation",
+                diagnostics=[],
+                base_snapshot=base_snapshot,
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            ),
         )
 
     def get_operation(self, operation_id: str) -> OperationStatus | None:
@@ -179,51 +197,75 @@ class RuntimeControlPlane:
             return existing
         submitted_at = _utc_now()
         operation_id = str(uuid4())
-        result = dict(self._snapshot.orchestration_results.get(workflow_address, {}))
-        if not result:
-            return self._reject_submission(
-                domain=RuntimeDomain.ORCHESTRATION,
-                message=f"Unknown workflow run: {workflow_address}",
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
-            )
-        normalized = WorkflowExecutionState.from_payload(result)
-        if run_id and normalized.run_id != run_id:
-            return self._reject_submission(
-                domain=RuntimeDomain.ORCHESTRATION,
-                message=(f"Workflow run_id mismatch for {workflow_address}: {run_id!r} != {normalized.run_id!r}"),
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
-            )
-        if normalized.workflow_status in {
-            WorkflowStatus.SUCCEEDED,
-            WorkflowStatus.FAILED,
-            WorkflowStatus.CANCELLED,
-            WorkflowStatus.TIMED_OUT,
-        }:
-            receipt = OperationReceipt(
-                operation_id=operation_id,
-                domain=RuntimeDomain.ORCHESTRATION,
-                submitted_at=submitted_at,
-                accepted=True,
-                diagnostics=[],
-            )
-            status = OperationStatus(
-                operation_id=operation_id,
-                domain=RuntimeDomain.ORCHESTRATION,
-                state=OperationState.SUCCEEDED,
-                submitted_at=submitted_at,
-                updated_at=submitted_at,
-            )
-            self._persist_record(
-                ControlPlaneOperationRecord(
-                    receipt=receipt,
-                    status=status,
+        context = self._cancellable_workflow_state(
+            workflow_address,
+            run_id=run_id,
+            idempotency_key=idempotency_key,
+            request_fingerprint=request_fingerprint,
+        )
+        if isinstance(context, OperationReceipt):
+            return context
+        if context.workflow_status in _TERMINAL_WORKFLOW_STATUSES:
+            receipt = persist_succeeded_operation(
+                self,
+                SucceededOperationRequest(
+                    operation_id=operation_id,
+                    domain=RuntimeDomain.ORCHESTRATION,
+                    submitted_at=submitted_at,
                     idempotency_key=idempotency_key,
                     request_fingerprint=request_fingerprint,
-                )
+                ),
             )
-            return receipt
+        else:
+            receipt = self._cancel_active_workflow(
+                workflow_address,
+                normalized=context,
+                reason=reason,
+                operation_id=operation_id,
+                submitted_at=submitted_at,
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            )
+        return receipt
+
+    def _cancellable_workflow_state(
+        self,
+        workflow_address: str,
+        *,
+        run_id: str | None,
+        idempotency_key: str,
+        request_fingerprint: str,
+    ) -> WorkflowExecutionState | OperationReceipt:
+        result = dict(self._snapshot.orchestration_results.get(workflow_address, {}))
+        rejection = None
+        normalized: WorkflowExecutionState | None = None
+        if not result:
+            rejection = f"Unknown workflow run: {workflow_address}"
+        else:
+            normalized = WorkflowExecutionState.from_payload(result)
+            if run_id and normalized.run_id != run_id:
+                rejection = f"Workflow run_id mismatch for {workflow_address}: {run_id!r} != {normalized.run_id!r}"
+        if rejection is not None:
+            return self._reject_submission(
+                domain=RuntimeDomain.ORCHESTRATION,
+                message=rejection,
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            )
+        assert normalized is not None
+        return normalized
+
+    def _cancel_active_workflow(
+        self,
+        workflow_address: str,
+        *,
+        normalized: WorkflowExecutionState,
+        reason: str,
+        operation_id: str,
+        submitted_at: str,
+        idempotency_key: str,
+        request_fingerprint: str,
+    ) -> OperationReceipt:
         cancelled_state = WorkflowExecutionState(
             state_schema_version=normalized.state_schema_version,
             workflow_status=WorkflowStatus.CANCELLED,

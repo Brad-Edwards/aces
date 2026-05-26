@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.workflow import WorkflowCompensationStatus, WorkflowHistoryEvent, WorkflowHistoryEventType
 
+if TYPE_CHECKING:
+    from .workflow_result_contract_checks import _WorkflowContext
+
 
 def compensation_history_diagnostics(
-    context,
+    context: _WorkflowContext,
     compensation_event_types: set[WorkflowHistoryEventType],
     contract_diagnostic: Callable[[str, str], Diagnostic],
 ) -> list[Diagnostic]:
@@ -21,7 +25,7 @@ def compensation_history_diagnostics(
 
 
 def _not_required_compensation_history_diagnostics(
-    context,
+    context: _WorkflowContext,
     compensation_events: list[WorkflowHistoryEvent],
     contract_diagnostic: Callable[[str, str], Diagnostic],
 ) -> list[Diagnostic]:
@@ -35,7 +39,7 @@ def _not_required_compensation_history_diagnostics(
 
 
 def _running_compensation_history_diagnostics(
-    context,
+    context: _WorkflowContext,
     compensation_events: list[WorkflowHistoryEvent],
     contract_diagnostic: Callable[[str, str], Diagnostic],
 ) -> list[Diagnostic]:
@@ -51,33 +55,43 @@ def _running_compensation_history_diagnostics(
 
 
 def _completed_compensation_history_diagnostics(
-    context,
+    context: _WorkflowContext,
     compensation_events: list[WorkflowHistoryEvent],
     contract_diagnostic: Callable[[str, str], Diagnostic],
 ) -> list[Diagnostic]:
-    if not compensation_events:
-        return []
-    if context.result.compensation_status == WorkflowCompensationStatus.SUCCEEDED:
-        return _final_compensation_event_diagnostics(
+    diagnostics: list[Diagnostic] = []
+    expected = _expected_final_compensation_event(context)
+    if compensation_events and expected is not None:
+        expected_event, message = expected
+        diagnostics = _final_compensation_event_diagnostics(
             context,
             compensation_events,
+            expected_event,
+            message,
+            contract_diagnostic,
+        )
+    return diagnostics
+
+
+def _expected_final_compensation_event(
+    context: _WorkflowContext,
+) -> tuple[WorkflowHistoryEventType, str] | None:
+    expected = None
+    if context.result.compensation_status == WorkflowCompensationStatus.SUCCEEDED:
+        expected = (
             WorkflowHistoryEventType.COMPENSATION_COMPLETED,
             "compensation_status=succeeded requires a final compensation_completed history event.",
-            contract_diagnostic,
         )
-    if context.result.compensation_status == WorkflowCompensationStatus.FAILED:
-        return _final_compensation_event_diagnostics(
-            context,
-            compensation_events,
+    elif context.result.compensation_status == WorkflowCompensationStatus.FAILED:
+        expected = (
             WorkflowHistoryEventType.COMPENSATION_FAILED,
             "compensation_status=failed requires a final compensation_failed history event.",
-            contract_diagnostic,
         )
-    return []
+    return expected
 
 
 def _final_compensation_event_diagnostics(
-    context,
+    context: _WorkflowContext,
     compensation_events: list[WorkflowHistoryEvent],
     expected_event: WorkflowHistoryEventType,
     message: str,

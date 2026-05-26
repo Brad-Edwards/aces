@@ -110,34 +110,74 @@ def _evaluation_context(
     evaluation_address: object,
     evaluation_result: object,
 ) -> tuple[_EvaluationContext | None, list[Diagnostic]]:
+    context = None
+    diagnostics = _evaluation_key_diagnostics(evaluation_address, evaluation_result)
+    if not diagnostics and isinstance(evaluation_address, str) and isinstance(evaluation_result, dict):
+        context, diagnostics = _typed_evaluation_context(
+            snapshot,
+            observable_entries,
+            evaluation_address,
+            evaluation_result,
+        )
+    return context, diagnostics
+
+
+def _evaluation_key_diagnostics(evaluation_address: object, evaluation_result: object) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
     if not isinstance(evaluation_address, str):
-        return None, [_contract_diagnostic(_EVALUATION_RESULTS_ADDRESS, "Evaluation result keys must be strings.")]
-    if not isinstance(evaluation_result, dict):
-        return None, [
+        diagnostics.append(_contract_diagnostic(_EVALUATION_RESULTS_ADDRESS, "Evaluation result keys must be strings."))
+    elif not isinstance(evaluation_result, dict):
+        diagnostics.append(
             _contract_diagnostic(evaluation_address, "Evaluation results must use plain-data mapping values.")
-        ]
+        )
+    return diagnostics
+
+
+def _typed_evaluation_context(
+    snapshot: RuntimeSnapshot,
+    observable_entries: dict[str, SnapshotEntry],
+    evaluation_address: str,
+    evaluation_result: dict[str, object],
+) -> tuple[_EvaluationContext | None, list[Diagnostic]]:
+    context = None
+    diagnostics: list[Diagnostic] = []
     evaluation_entry = observable_entries.get(evaluation_address)
     if evaluation_entry is None:
-        return None, [
+        diagnostics.append(
             _contract_diagnostic(
                 evaluation_address,
                 "Evaluation results must correspond to an observable evaluation entry in the runtime snapshot.",
             )
-        ]
+        )
+    else:
+        context, diagnostics = _evaluation_context_from_entry(
+            snapshot, evaluation_address, evaluation_result, evaluation_entry
+        )
+    return context, diagnostics
+
+
+def _evaluation_context_from_entry(
+    snapshot: RuntimeSnapshot,
+    evaluation_address: str,
+    evaluation_result: dict[str, object],
+    evaluation_entry: SnapshotEntry,
+) -> tuple[_EvaluationContext | None, list[Diagnostic]]:
+    context = None
     contracts, diagnostics = _compiled_evaluation_contracts(evaluation_address, evaluation_entry)
-    if contracts is None:
-        return None, diagnostics
-    normalized_result, result_diagnostics = _normalized_evaluation_result(evaluation_address, evaluation_result)
-    if normalized_result is None:
-        return None, result_diagnostics
-    history, history_diagnostics = _normalized_evaluation_history(snapshot, evaluation_address)
-    if history is None:
-        return None, history_diagnostics
-    result_contract, execution_contract = contracts
-    return (
-        _EvaluationContext(evaluation_address, result_contract, execution_contract, normalized_result, history),
-        history_diagnostics,
-    )
+    if contracts is not None:
+        normalized_result, diagnostics = _normalized_evaluation_result(evaluation_address, evaluation_result)
+        if normalized_result is not None:
+            history, diagnostics = _normalized_evaluation_history(snapshot, evaluation_address)
+            if history is not None:
+                result_contract, execution_contract = contracts
+                context = _EvaluationContext(
+                    evaluation_address,
+                    result_contract,
+                    execution_contract,
+                    normalized_result,
+                    history,
+                )
+    return context, diagnostics
 
 
 def _compiled_evaluation_contracts(
@@ -146,25 +186,53 @@ def _compiled_evaluation_contracts(
 ) -> tuple[tuple[EvaluationResultContract, EvaluationExecutionContract] | None, list[Diagnostic]]:
     result_contract_payload = evaluation_entry.payload.get("result_contract")
     execution_contract_payload = evaluation_entry.payload.get("execution_contract")
+    contracts = None
+    diagnostics: list[Diagnostic] = []
     if not isinstance(result_contract_payload, dict):
-        return None, [
+        diagnostics.append(
             _contract_diagnostic(evaluation_address, "Evaluation snapshot payload is missing compiled result_contract.")
-        ]
-    if not isinstance(execution_contract_payload, dict):
-        return None, [
+        )
+    elif not isinstance(execution_contract_payload, dict):
+        diagnostics.append(
             _contract_diagnostic(
                 evaluation_address, "Evaluation snapshot payload is missing compiled execution_contract."
             )
-        ]
+        )
+    else:
+        result_contract, diagnostics = _compiled_result_contract(evaluation_address, result_contract_payload)
+        if result_contract is not None:
+            execution_contract, diagnostics = _compiled_execution_contract(
+                evaluation_address, execution_contract_payload
+            )
+            if execution_contract is not None:
+                contracts = (result_contract, execution_contract)
+    return contracts, diagnostics
+
+
+def _compiled_result_contract(
+    evaluation_address: str,
+    payload: dict[str, object],
+) -> tuple[EvaluationResultContract | None, list[Diagnostic]]:
+    contract = None
+    diagnostics: list[Diagnostic] = []
     try:
-        result_contract = EvaluationResultContract.from_mapping(result_contract_payload)
+        contract = EvaluationResultContract.from_mapping(payload)
     except (TypeError, ValueError) as exc:
-        return None, [_contract_diagnostic(evaluation_address, f"Evaluation result_contract is invalid: {exc}")]
+        diagnostics.append(_contract_diagnostic(evaluation_address, f"Evaluation result_contract is invalid: {exc}"))
+    return contract, diagnostics
+
+
+def _compiled_execution_contract(
+    evaluation_address: str,
+    payload: dict[str, object],
+) -> tuple[EvaluationExecutionContract | None, list[Diagnostic]]:
+    contract = None
+    diagnostics: list[Diagnostic] = []
     try:
-        execution_contract = EvaluationExecutionContract.from_mapping(execution_contract_payload)
+        contract = EvaluationExecutionContract.from_mapping(payload)
     except (TypeError, ValueError) as exc:
-        return None, [_contract_diagnostic(evaluation_address, f"Evaluation execution_contract is invalid: {exc}")]
-    return (result_contract, execution_contract), []
+        diagnostics.append(_contract_diagnostic(evaluation_address, f"Evaluation execution_contract is invalid: {exc}"))
+    return contract, diagnostics
 
 
 def _normalized_evaluation_result(

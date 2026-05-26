@@ -18,16 +18,16 @@ def compiled_execution_contract(
     snapshot: RuntimeSnapshot,
     workflow_address: str,
 ) -> WorkflowExecutionContract | None:
+    contract = None
     entry = snapshot.entries.get(workflow_address)
-    if entry is None or not isinstance(entry.payload, dict):
-        return None
-    payload = entry.payload.get("execution_contract")
-    if not isinstance(payload, dict):
-        return None
-    try:
-        return WorkflowExecutionContract.from_mapping(payload)
-    except (TypeError, ValueError):
-        return None
+    if entry is not None and isinstance(entry.payload, dict):
+        payload = entry.payload.get("execution_contract")
+        if isinstance(payload, dict):
+            try:
+                contract = WorkflowExecutionContract.from_mapping(payload)
+            except (TypeError, ValueError):
+                contract = None
+    return contract
 
 
 def maybe_apply_compensation(
@@ -39,24 +39,29 @@ def maybe_apply_compensation(
     submitted_at: str,
 ) -> tuple[dict[str, object], list[dict[str, object]]]:
     contract = compiled_execution_contract(snapshot, workflow_address)
-    if contract is None:
-        return result.to_payload(), history
-    if contract.compensation_mode != "automatic":
-        return result.to_payload(), history
-    if result.workflow_status.value not in set(contract.compensation_triggers):
-        return result.to_payload(), history
+    payload = result.to_payload()
+    updated_history = history
+    if not _compensation_required(contract, result):
+        return payload, updated_history
 
+    assert contract is not None
     completed_events = _completed_compensable_events(history, contract)
+    if completed_events:
+        ordered = sorted(completed_events, key=lambda event: event.timestamp, reverse=True)
+        updated_history = list(history)
+        _append_compensation_history(updated_history, ordered, contract, result, submitted_at)
+        payload = _compensated_workflow_payload(result, submitted_at)
+    return payload, updated_history
 
-    if not completed_events:
-        return result.to_payload(), history
 
-    ordered = sorted(completed_events, key=lambda event: event.timestamp, reverse=True)
-    mutated_history = list(history)
-    _append_compensation_history(mutated_history, ordered, contract, result, submitted_at)
+def _compensation_required(
+    contract: WorkflowExecutionContract | None,
+    result: WorkflowExecutionState,
+) -> bool:
     return (
-        _compensated_workflow_payload(result, submitted_at),
-        mutated_history,
+        contract is not None
+        and contract.compensation_mode == "automatic"
+        and result.workflow_status.value in set(contract.compensation_triggers)
     )
 
 
@@ -76,19 +81,27 @@ def _completed_compensable_event(
     raw: dict[str, object],
     contract: WorkflowExecutionContract,
 ) -> WorkflowHistoryEvent | None:
+    completed_event = None
     try:
         event = WorkflowHistoryEvent.from_payload(raw)
     except (TypeError, ValueError):
-        return None
-    if event.event_type != WorkflowHistoryEventType.STEP_COMPLETED:
-        return None
-    if event.step_name is None or event.outcome is None:
-        return None
-    if event.outcome.value != "succeeded":
-        return None
-    if event.step_name not in contract.compensation_targets:
-        return None
-    return event
+        event = None
+    if event is not None and _is_compensable_completion(event, contract):
+        completed_event = event
+    return completed_event
+
+
+def _is_compensable_completion(
+    event: WorkflowHistoryEvent,
+    contract: WorkflowExecutionContract,
+) -> bool:
+    return (
+        event.event_type == WorkflowHistoryEventType.STEP_COMPLETED
+        and event.step_name is not None
+        and event.outcome is not None
+        and event.outcome.value == "succeeded"
+        and event.step_name in contract.compensation_targets
+    )
 
 
 def _append_compensation_history(
