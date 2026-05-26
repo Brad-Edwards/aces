@@ -130,7 +130,8 @@ decisions/adrs/adr-031-ssh-server-configuration-surface
 decisions/adrs/adr-032-directory-domain-identity-runtime-surface
 decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state
 decisions/adrs/adr-034-runtime-software-component-inventory
-decisions/adrs/adr-035-sdl-processor-runtime-module-boundaries
+decisions/adrs/adr-035-service-manager-unit-state-runtime-surface
+decisions/adrs/adr-036-sdl-processor-runtime-module-boundaries
 decisions/sem-213-temporal-participant-preflight
 ```
 

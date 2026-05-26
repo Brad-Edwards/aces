@@ -3,7 +3,7 @@ Processor Layer
 
 The ``aces_processor`` package provides SDL processing: instantiation-aware
 compilation, reconciliation planning, support determination, manifest
-authority, and compiled processor runtime models. Per ADR-035, live runtime
+authority, and compiled processor runtime models. Per ADR-036, live runtime
 control lives in ``aces_runtime`` and cross-package runtime/backend DTOs live
 in ``aces_contracts``.
 

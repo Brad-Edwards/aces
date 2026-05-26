@@ -4,7 +4,7 @@ This document describes the processor and runtime path that turns authored SDL
 into executable backend operations. It is an SDL-native architecture built for
 the SDL itself and its backend contracts. See
 [ADR-004](../../decisions/adrs/adr-004-sdl-runtime-layer.md) and
-[ADR-035](../../decisions/adrs/adr-035-sdl-processor-runtime-module-boundaries.md)
+[ADR-036](../../decisions/adrs/adr-036-sdl-processor-runtime-module-boundaries.md)
 for the decision records.
 
 In the broader ecosystem architecture, this document focuses on the
@@ -58,7 +58,7 @@ aces_backend_stubs      -> non-normative in-memory target implementations
 aces.*                  -> legacy compatibility wrappers
 ```
 
-ADR-035 backs this package boundary with `tools/check_repo_policy.py`: the
+ADR-036 backs this package boundary with `tools/check_repo_policy.py`: the
 full policy gate scans every Python file under each configured package root,
 and the pre-commit gate runs the same architecture-as-code check against
 staged changes.

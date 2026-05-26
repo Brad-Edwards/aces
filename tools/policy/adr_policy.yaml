@@ -55,9 +55,9 @@ layering_rules:
     scope_root: implementations/python/packages/aces_sdl
     forbidden_top_level: aces_processor
 
-# ADR-035 / MOD-001: explicit module ownership boundaries.
+# ADR-036 / MOD-001: explicit module ownership boundaries.
 module_boundaries:
-  adr: ADR-035
+  adr: ADR-036
   package_coverage_roots:
     - implementations/python/packages
   modules:

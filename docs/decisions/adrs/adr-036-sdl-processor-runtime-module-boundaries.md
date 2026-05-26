@@ -1,4 +1,4 @@
-# ADR-035: SDL, Processor, Runtime Module Boundaries
+# ADR-036: SDL, Processor, Runtime Module Boundaries
 
 ## Status
 
@@ -6,7 +6,7 @@ accepted
 
 ## Date
 
-2026-05-25
+2026-05-26
 
 ## Context
 

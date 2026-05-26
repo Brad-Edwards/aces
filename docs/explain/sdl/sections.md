@@ -467,6 +467,40 @@ route inventory, build provenance, or authored deployment intent (see
 Package findings are separate from the top-level `vulnerabilities` section,
 which remains the CWE-classified scenario vulnerability surface.
 
+`runtime.service_manager_units` records observed service-manager unit
+lifecycle state — what `systemctl` exposes from inside a realized range node.
+Each entry carries a stable ACES `unit_id`, a `manager_kind` (initially
+`systemd`, with `other` reserved), the native `unit_name` such as
+`sshd.service`, a `unit_type` (`service`/`socket`/`target`/`timer`/`path`/
+`mount`/`automount`/`swap`/`device`/`slice`/`scope`/`other`), and the
+participant-observable state quadruple `load_state` (loaded/not_found/masked/
+error/merged/stub/bad_setting/unknown), `active_state` (active/reloading/
+inactive/failed/activating/deactivating/unknown), bounded free-form `sub_state`
+(e.g. `running`/`exited`/`dead`), and `enabled_state` (enabled/enabled_runtime/
+disabled/static/alias/masked/generated/indirect/transient/unknown). The last
+run is classified via `result` (success/exit_code/signal/timeout/watchdog/
+oom_kill/core_dump/start_limit_hit/resources/protocol/other/unknown) with
+optional `exit_code` (only valid when `result` is `exit_code`) and a short
+`status_text` for evidence like `226/NAMESPACE`. Optional fields capture the
+`main_pid` when a live process exists, the `unit_file_path` (cross-checked
+against `runtime.filesystem_inventory` when that inventory is non-empty), and
+a redactable `exec_start` (`command_kind` `absolute_path` / `redacted`, with
+`command_redacted` forcing an empty `command`). An optional `service` ref
+pointing at the same-node `Node.services[].name` (bare or
+`nodes.<node>.services.<name>`) ties a unit to the transport service it
+launches. This surface is observed WHAT-IS lifecycle state: it is not
+`Node.services` (transport bindings), not `conditions` (authored
+monitoring/readiness intent), not `runtime.processes` (live processes — a
+failed, disabled, static, or active/exited unit may have no live process),
+not `runtime.container.init_process` (container PID-1/init configuration),
+not `runtime.operational_policy.restart` (orchestrator restart policy), not
+`runtime.ssh_servers` (sshd policy — `sshd.service` lifecycle is the unit,
+sshd directives are the SSH surface), and not package/software/filesystem
+inventory. Raw `systemctl`, `journalctl`, unit-file text, and backend
+inspector payloads are not portable schema; secret-bearing `ExecStart` values
+must be classified `redacted` and omit the raw command (see
+[ADR-035](../../decisions/adrs/adr-035-service-manager-unit-state-runtime-surface.md)).
+
 `runtime.local_identity` records the observed local identity database — the
 node-scoped `/etc/passwd`, `/etc/group`, and sudo/sudoers facts. `users` carry
 `username`, `uid`, `primary_gid`, `primary_group`, `gecos`, `home`, `shell`,

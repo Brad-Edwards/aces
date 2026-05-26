@@ -295,7 +295,7 @@ def test_layering_rule_does_not_check_files_outside_scope(tmp_path: Path) -> Non
     assert failures == []
 
 
-# ── ADR-035: module ownership boundaries ────────────────────────────────
+# ── ADR-036: module ownership boundaries ────────────────────────────────
 
 
 def install_module_boundary_policy(repo_root: Path) -> None:

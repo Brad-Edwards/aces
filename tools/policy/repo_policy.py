@@ -608,11 +608,11 @@ def _is_wrapper_module(tree: ast.Module) -> bool:
 
 
 def _validate_module_boundary_config(repo_root: Path, config: object) -> tuple[list[dict], list[PolicyFailure]]:
-    """Validate the ADR-035 module-boundary policy block."""
+    """Validate the ADR-036 module-boundary policy block."""
 
     fail = lambda msg: PolicyFailure("policy-config-malformed", msg, _POLICY_CONFIG_PATH)  # noqa: E731
     if config is None:
-        return [], [fail("module_boundaries block is required (ADR-035 / MOD-001) but is absent")]
+        return [], [fail("module_boundaries block is required (ADR-036 / MOD-001) but is absent")]
     if not isinstance(config, dict):
         return [], [fail(f"module_boundaries must be a mapping; got {type(config).__name__}")]
     adr = config.get("adr")

@@ -7,7 +7,8 @@ methodology is `docs/aces/inventory/asset-inventory-methodology.md`.
 This note is the local architecture preflight for SCN-010 / issue #330 after
 `gc_codex_architecture_preflight` timed out twice on 2026-05-21. It is a
 binding implementation guardrail for the webapp steady-state inventory, not a
-replacement for ADR-035 or the ACES asset-inventorying methodology.
+replacement for downstream APTL ADR-035 or the ACES asset-inventorying
+methodology.
 
 ## Architecture Decisions
 

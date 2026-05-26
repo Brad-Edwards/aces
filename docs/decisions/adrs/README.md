@@ -60,4 +60,5 @@ Each ADR includes:
 | [032](adr-032-directory-domain-identity-runtime-surface.md) | Directory and Domain Identity Runtime Surface | accepted | 2026-05-24 |
 | [033](adr-033-scenario-delivery-boundary-for-runtime-node-state.md) | Scenario/Delivery Boundary for Runtime Node State | accepted | 2026-05-24 |
 | [034](adr-034-runtime-software-component-inventory.md) | Runtime Software Component Inventory | accepted | 2026-05-25 |
-| [035](adr-035-sdl-processor-runtime-module-boundaries.md) | SDL, Processor, Runtime Module Boundaries | accepted | 2026-05-25 |
+| [035](adr-035-service-manager-unit-state-runtime-surface.md) | Service-Manager Unit State Runtime Surface | accepted | 2026-05-26 |
+| [036](adr-036-sdl-processor-runtime-module-boundaries.md) | SDL, Processor, Runtime Module Boundaries | accepted | 2026-05-26 |
