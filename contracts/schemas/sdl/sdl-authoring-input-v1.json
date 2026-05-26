@@ -4402,6 +4402,13 @@
           "title": "Processes",
           "type": "array"
         },
+        "service_manager_units": {
+          "items": {
+            "$ref": "#/$defs/ServiceManagerUnit"
+          },
+          "title": "Service Manager Units",
+          "type": "array"
+        },
         "software_components": {
           "items": {
             "$ref": "#/$defs/RuntimeSoftwareComponent"
@@ -7320,6 +7327,173 @@
       "title": "Script",
       "type": "object"
     },
+    "ServiceManagerKind": {
+      "description": "Kind of service manager whose unit inventory is being recorded.\n\nInitially scoped to ``systemd``; ``other`` is the escape hatch for managers\nthat have not yet been promoted to their own typed enum value (per\nADR-035 \u00a7 5).",
+      "enum": [
+        "systemd",
+        "other"
+      ],
+      "title": "ServiceManagerKind",
+      "type": "string"
+    },
+    "ServiceManagerUnit": {
+      "additionalProperties": false,
+      "description": "Observed service-manager unit state on a realized range node.\n\nEach record carries a stable ACES ``unit_id`` (the reference target), the\nnative ``unit_name`` (e.g. ``sshd.service``), the participant-observable\nlifecycle facts captured by ``systemctl`` (load/active/sub/enabled/result),\nand bounded optional evidence: the unit-file path, an ``ExecStart``\ndescriptor with explicit redaction discipline, the main PID when present,\nand an optional same-node ``Node.services[]`` ref.\n\nThis is observed WHAT-IS state, not provisioning intent or authored\nbehavior; see ADR-035 for the boundary against ``Node.services``,\n``conditions``, ``runtime.processes``, ``runtime.container.init_process``,\n``runtime.operational_policy``, and ``runtime.ssh_servers``.",
+      "properties": {
+        "active_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServiceUnitActiveState"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Active State"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "enabled_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServiceUnitEnabledState"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Enabled State"
+        },
+        "exec_start": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServiceUnitExecStart"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "exit_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exit Code"
+        },
+        "load_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServiceUnitLoadState"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Load State"
+        },
+        "main_pid": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Main Pid"
+        },
+        "manager_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServiceManagerKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "systemd",
+          "title": "Manager Kind"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServiceUnitResult"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Result"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        },
+        "status_text": {
+          "default": "",
+          "title": "Status Text",
+          "type": "string"
+        },
+        "sub_state": {
+          "default": "",
+          "title": "Sub State",
+          "type": "string"
+        },
+        "unit_file_path": {
+          "default": "",
+          "title": "Unit File Path",
+          "type": "string"
+        },
+        "unit_id": {
+          "title": "Unit Id",
+          "type": "string"
+        },
+        "unit_name": {
+          "title": "Unit Name",
+          "type": "string"
+        },
+        "unit_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServiceUnitKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Unit Type"
+        }
+      },
+      "required": [
+        "unit_id",
+        "unit_name"
+      ],
+      "title": "ServiceManagerUnit",
+      "type": "object"
+    },
     "ServicePort": {
       "additionalProperties": false,
       "description": "A network service exposed by a node. From OCSF NetworkEndpoint.",
@@ -7356,6 +7530,141 @@
       ],
       "title": "ServicePort",
       "type": "object"
+    },
+    "ServiceUnitActiveState": {
+      "description": "Observed unit *active* state (``systemctl list-units`` ACTIVE column).",
+      "enum": [
+        "active",
+        "reloading",
+        "inactive",
+        "failed",
+        "activating",
+        "deactivating",
+        "unknown"
+      ],
+      "title": "ServiceUnitActiveState",
+      "type": "string"
+    },
+    "ServiceUnitEnabledState": {
+      "description": "Observed unit-file enable state (``systemctl is-enabled``).",
+      "enum": [
+        "enabled",
+        "enabled_runtime",
+        "disabled",
+        "static",
+        "alias",
+        "masked",
+        "generated",
+        "indirect",
+        "transient",
+        "unknown"
+      ],
+      "title": "ServiceUnitEnabledState",
+      "type": "string"
+    },
+    "ServiceUnitExecStart": {
+      "additionalProperties": false,
+      "description": "A typed service-manager ``ExecStart`` configuration.\n\nMirrors the SSH ``ForcedCommand`` redaction discipline (ADR-031): the\n``command_kind`` discriminates how ``command`` is interpreted, and\n``command_redacted=True`` forces ``command`` empty and\n``command_kind=redacted``. The model never carries raw secret-bearing\nargv -- if the underlying ``ExecStart=`` includes credentials, tokens, or\noperator-only arguments, the surface stores only the redacted shape.",
+      "properties": {
+        "command": {
+          "default": "",
+          "title": "Command",
+          "type": "string"
+        },
+        "command_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ServiceUnitExecStartKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "absolute_path",
+          "title": "Command Kind"
+        },
+        "command_redacted": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": false,
+          "title": "Command Redacted"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "title": "ServiceUnitExecStart",
+      "type": "object"
+    },
+    "ServiceUnitExecStartKind": {
+      "description": "How a service-manager unit's ``ExecStart`` command is carried.\n\n``absolute_path`` records a concrete executable path; ``redacted`` records\nthat the underlying ``ExecStart`` carries secret-bearing arguments and is\nwithheld from the SDL model.",
+      "enum": [
+        "absolute_path",
+        "redacted"
+      ],
+      "title": "ServiceUnitExecStartKind",
+      "type": "string"
+    },
+    "ServiceUnitKind": {
+      "description": "Type of service-manager unit (systemd unit kinds with ``other`` escape).",
+      "enum": [
+        "service",
+        "socket",
+        "target",
+        "timer",
+        "path",
+        "mount",
+        "automount",
+        "swap",
+        "device",
+        "slice",
+        "scope",
+        "other"
+      ],
+      "title": "ServiceUnitKind",
+      "type": "string"
+    },
+    "ServiceUnitLoadState": {
+      "description": "Observed unit *load* state (``systemctl list-units`` LOAD column).",
+      "enum": [
+        "loaded",
+        "not_found",
+        "masked",
+        "error",
+        "merged",
+        "stub",
+        "bad_setting",
+        "unknown"
+      ],
+      "title": "ServiceUnitLoadState",
+      "type": "string"
+    },
+    "ServiceUnitResult": {
+      "description": "Observed last-run unit result class (systemd ``Result=`` values).",
+      "enum": [
+        "success",
+        "exit_code",
+        "signal",
+        "timeout",
+        "watchdog",
+        "oom_kill",
+        "core_dump",
+        "start_limit_hit",
+        "resources",
+        "protocol",
+        "other",
+        "unknown"
+      ],
+      "title": "ServiceUnitResult",
+      "type": "string"
     },
     "SimpleProperties": {
       "additionalProperties": false,

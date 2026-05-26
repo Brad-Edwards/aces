@@ -502,6 +502,7 @@ class SemanticValidator:
         self._verify_runtime_capability_overrides()
         self._verify_runtime_database_services()
         self._verify_runtime_ssh_servers()
+        self._verify_runtime_service_manager_units()
         self._verify_runtime_identity_authorities()
         self._verify_features()
         self._verify_conditions()
@@ -826,6 +827,43 @@ class SemanticValidator:
                     self._err(
                         f"Node '{node_name}' runtime application '{app_id}' route '{route_id}' "
                         f"{field_name} ref '{ref}' does not resolve to an observed file on the node"
+                    )
+
+    def _verify_runtime_service_manager_units(self) -> None:
+        """Validate observed service-manager unit inventories (ADR-035).
+
+        Each ``ServiceManagerUnit.service`` ref, when set and not a variable,
+        must resolve to a service on the same node (bare name OR
+        ``nodes.<this-node>.services.<name>``). When a ``unit_file_path`` is set
+        and ``runtime.filesystem_inventory`` is non-empty, the path SHOULD
+        appear in that inventory; otherwise we emit a soft semantic error so
+        downstream consumers can tell unit-file evidence and filesystem
+        inventory apart.
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.service_manager_units:
+                continue
+            service_names = self._node_service_names(node)
+            observed_paths = self._node_observed_paths(node)
+            for unit in runtime.service_manager_units:
+                owner_label = f"Node '{node_name}' runtime service_manager_unit '{unit.unit_id}'"
+                self._verify_owned_service_ref(
+                    node_name,
+                    getattr(unit, "service", ""),
+                    service_names,
+                    owner_label=owner_label,
+                )
+                unit_file_path = getattr(unit, "unit_file_path", "")
+                if (
+                    unit_file_path
+                    and observed_paths
+                    and not self._is_unresolved_var(unit_file_path)
+                    and unit_file_path not in observed_paths
+                ):
+                    self._err(
+                        f"{owner_label} unit_file_path '{unit_file_path}' does not resolve to an "
+                        f"observed file on the node"
                     )
 
     def _verify_runtime_ssh_servers(self) -> None:

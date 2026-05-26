@@ -247,6 +247,39 @@ schemas.
 
 **Disposition:** already-corrected. No unremediated drift found.
 
+### A-006 Service-manager unit state was corrected as participant-observable lifecycle state
+
+**Surface:** ADR-035 and the implemented service-manager unit runtime surface.
+
+**Citation:** `docs/decisions/adrs/adr-035-service-manager-unit-state-runtime-surface.md:54`
+puts service-manager unit state under `Node.runtime.service_manager_units`;
+lines around
+`docs/decisions/adrs/adr-035-service-manager-unit-state-runtime-surface.md:62`
+enumerate the participant-observable fields (manager kind, native unit name,
+load/enable/active/sub state, result/exit code, main PID, unit-file path,
+redactable `ExecStart`, optional same-node service ref). Implementation
+evidence appears in
+`implementations/python/packages/aces_sdl/runtime_service_units.py` and the
+new validator hook in
+`implementations/python/packages/aces_sdl/validator.py:832`.
+
+**Suspect exclusion or scope language:** `systemctl` output, unit-file text,
+journal excerpts, and Docker/container-host configuration adjacency can look
+like a backend-only delivery concern.
+
+**Boundary analysis:** The corrected classification is explicit: failed,
+disabled, static, enabled-but-not-running, and active/exited units are
+participant-observable lifecycle facts that the existing `Node.services`,
+`conditions`, `runtime.processes`, `runtime.container`,
+`runtime.operational_policy`, `runtime.ssh_servers`, packages, software
+components, content, and filesystem inventory surfaces cannot semantically
+own. The surface keeps raw `systemctl`/`journalctl`/unit-file output out of
+the portable schema; secret-bearing `ExecStart` values use the redacted
+shape.
+
+**Disposition:** already-corrected. No further drift remediation needed in
+this surface.
+
 ### R-001 Image build provenance remains source-artifact state, not runtime node state
 
 **Surface:** ADR-023 and `precedents.md`
