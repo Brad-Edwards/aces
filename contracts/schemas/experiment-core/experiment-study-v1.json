@@ -2,6 +2,7 @@
   "$defs": {
     "ExperimentAnalysisPlanModel": {
       "additionalProperties": false,
+      "description": "Analysis plan metadata for metrics, uncertainty, and missing data.",
       "properties": {
         "analysis_id": {
           "minLength": 1,
@@ -83,6 +84,7 @@
     },
     "ExperimentArtifactRefModel": {
       "additionalProperties": false,
+      "description": "Reference to an artifact that supports a task, run, apparatus, or study.",
       "properties": {
         "artifact_id": {
           "minLength": 1,
@@ -177,6 +179,7 @@
     },
     "ExperimentChecksumModel": {
       "additionalProperties": false,
+      "description": "Checksum metadata for an experiment-core artifact reference.",
       "properties": {
         "algorithm": {
           "minLength": 1,
@@ -273,6 +276,7 @@
     },
     "ExperimentStudyFactorModel": {
       "additionalProperties": false,
+      "description": "Treatment, control, blocking, or apparatus factor for study analysis.",
       "properties": {
         "factor_kind": {
           "enum": [
@@ -309,6 +313,7 @@
     },
     "ExperimentStudyMembershipModel": {
       "additionalProperties": false,
+      "description": "Typed member reference within a study or collection.",
       "properties": {
         "grouping": {
           "anyOf": [
@@ -364,6 +369,7 @@
     },
     "ExperimentValidityNoteModel": {
       "additionalProperties": false,
+      "description": "Validity threat, limitation, or mitigation note for experiment interpretation.",
       "properties": {
         "category": {
           "enum": [
@@ -408,6 +414,7 @@
     }
   },
   "additionalProperties": false,
+  "description": "Study or collection contract for grouping experiment artifacts.",
   "properties": {
     "analysis_plan": {
       "anyOf": [

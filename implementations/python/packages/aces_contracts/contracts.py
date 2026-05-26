@@ -907,11 +907,15 @@ class ExperimentManifestReferenceModel(ExperimentReferenceModel):
 
 
 class ExperimentChecksumModel(ContractModel):
+    """Checksum metadata for an experiment-core artifact reference."""
+
     algorithm: NonEmptyString
     value: NonEmptyString
 
 
 class ExperimentArtifactRefModel(ContractModel):
+    """Reference to an artifact that supports a task, run, apparatus, or study."""
+
     artifact_id: NonEmptyString
     role: Literal[
         "protocol",
@@ -934,6 +938,8 @@ class ExperimentArtifactRefModel(ContractModel):
 
 
 class ExperimentValidityNoteModel(ContractModel):
+    """Validity threat, limitation, or mitigation note for experiment interpretation."""
+
     category: Literal[
         "construct",
         "internal",
@@ -950,6 +956,8 @@ class ExperimentValidityNoteModel(ContractModel):
 
 
 class ExperimentMetricDefinitionModel(ContractModel):
+    """Metric definition bound to a measured construct and unit of analysis."""
+
     name: NonEmptyString
     measured_construct: NonEmptyString
     unit_of_analysis: NonEmptyString
@@ -962,6 +970,8 @@ class ExperimentMetricDefinitionModel(ContractModel):
 
 
 class ExperimentEvaluationProtocolModel(ContractModel):
+    """Evaluation protocol that binds metrics and observation requirements."""
+
     protocol_id: NonEmptyString
     protocol_version: NonEmptyString
     intent: NonEmptyString
@@ -973,6 +983,8 @@ class ExperimentEvaluationProtocolModel(ContractModel):
 
 
 class ExperimentSplitAndLeakageControlsModel(ContractModel):
+    """Controls for data partitioning, hidden material, and leakage risk."""
+
     partitioning_strategy: NonEmptyString | None = None
     grouping_constraints: list[NonEmptyString] = Field(default_factory=list)
     temporal_availability: NonEmptyString | None = None
@@ -982,6 +994,8 @@ class ExperimentSplitAndLeakageControlsModel(ContractModel):
 
 
 class ExperimentApparatusConstraintModel(ContractModel):
+    """Apparatus compatibility and capability constraints for a task."""
+
     allowed_processor_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
     allowed_backend_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
     required_manifest_refs: list[ExperimentManifestReferenceModel] = Field(default_factory=list)
@@ -990,6 +1004,8 @@ class ExperimentApparatusConstraintModel(ContractModel):
 
 
 class ExperimentTaskModel(ContractModel):
+    """Experiment task contract that separates scenario material from protocol intent."""
+
     schema_version: Literal[EXPERIMENT_TASK_SCHEMA_VERSION] = EXPERIMENT_TASK_SCHEMA_VERSION
     task_id: NonEmptyString
     task_version: NonEmptyString
@@ -1007,6 +1023,8 @@ class ExperimentTaskModel(ContractModel):
 
 
 class ExperimentParameterModel(ContractModel):
+    """Redaction-aware parameter captured for a task, run, or apparatus context."""
+
     name: NonEmptyString
     value: str | int | float | bool | None
     value_kind: Literal["configuration", "protocol", "apparatus", "analysis", "other"]
@@ -1014,6 +1032,8 @@ class ExperimentParameterModel(ContractModel):
 
 
 class ExperimentStochasticControlModel(ContractModel):
+    """Seed, randomization, sampling, or scheduler control for reproducibility."""
+
     control_id: NonEmptyString
     role: Literal["seed", "randomization", "sampling", "scheduler", "agent-policy", "other"]
     value: str | int | None = None
@@ -1021,6 +1041,8 @@ class ExperimentStochasticControlModel(ContractModel):
 
 
 class ExperimentClockContextModel(ContractModel):
+    """Clock authority and time-domain metadata for run interpretation."""
+
     clock_id: NonEmptyString
     authority: NonEmptyString
     time_domain: Literal["wall-clock", "monotonic", "simulated", "logical", "other"]
@@ -1028,6 +1050,8 @@ class ExperimentClockContextModel(ContractModel):
 
 
 class ExperimentApparatusComponentModel(ContractModel):
+    """Identity and manifest context for one apparatus component."""
+
     component_kind: Literal[
         "processor",
         "backend",
@@ -1048,6 +1072,8 @@ class ExperimentApparatusComponentModel(ContractModel):
 
 
 class ExperimentApparatusContextModel(ContractModel):
+    """Run-scoped apparatus context for interpreting experiment evidence."""
+
     schema_version: Literal[EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION] = EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION
     apparatus_context_id: NonEmptyString
     context_version: NonEmptyString
@@ -1064,6 +1090,8 @@ class ExperimentApparatusContextModel(ContractModel):
 
 
 class ExperimentResultSummaryModel(ContractModel):
+    """Reported metric value summary and evidence links for an experiment run."""
+
     metric_id: NonEmptyString | None = None
     value: str | int | float | bool | None = None
     value_status: Literal["reported", "missing", "withheld", "not-applicable"] = "reported"
@@ -1073,12 +1101,16 @@ class ExperimentResultSummaryModel(ContractModel):
 
 
 class ExperimentInvalidationModel(ContractModel):
+    """Details explaining why an experiment run was invalidated."""
+
     invalidated_at: NonEmptyString
     reason: NonEmptyString
     superseded_by: ExperimentReferenceModel | None = None
 
 
 class ExperimentRunModel(ContractModel):
+    """Archival provenance record for one execution of an experiment task."""
+
     schema_version: Literal[EXPERIMENT_RUN_SCHEMA_VERSION] = EXPERIMENT_RUN_SCHEMA_VERSION
     run_id: NonEmptyString
     run_version: NonEmptyString
@@ -1130,6 +1162,8 @@ class ExperimentRunModel(ContractModel):
 
 
 class ExperimentStudyMembershipModel(ContractModel):
+    """Typed member reference within a study or collection."""
+
     target_ref: ExperimentReferenceModel
     role: Literal[
         "primary-task",
@@ -1147,12 +1181,16 @@ class ExperimentStudyMembershipModel(ContractModel):
 
 
 class ExperimentStudyFactorModel(ContractModel):
+    """Treatment, control, blocking, or apparatus factor for study analysis."""
+
     name: NonEmptyString
     factor_kind: Literal["treatment", "control", "blocking", "stratification", "apparatus", "other"]
     levels: list[NonEmptyString] = Field(default_factory=list)
 
 
 class ExperimentAnalysisPlanModel(ContractModel):
+    """Analysis plan metadata for metrics, uncertainty, and missing data."""
+
     analysis_id: NonEmptyString
     description: NonEmptyString
     metrics: list[NonEmptyString] = Field(default_factory=list)
@@ -1163,6 +1201,8 @@ class ExperimentAnalysisPlanModel(ContractModel):
 
 
 class ExperimentStudyModel(ContractModel):
+    """Study or collection contract for grouping experiment artifacts."""
+
     schema_version: Literal[EXPERIMENT_STUDY_SCHEMA_VERSION] = EXPERIMENT_STUDY_SCHEMA_VERSION
     study_id: NonEmptyString
     study_version: NonEmptyString

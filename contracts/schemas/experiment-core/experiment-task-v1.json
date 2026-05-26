@@ -2,6 +2,7 @@
   "$defs": {
     "ExperimentApparatusConstraintModel": {
       "additionalProperties": false,
+      "description": "Apparatus compatibility and capability constraints for a task.",
       "properties": {
         "allowed_backend_refs": {
           "items": {
@@ -46,6 +47,7 @@
     },
     "ExperimentArtifactRefModel": {
       "additionalProperties": false,
+      "description": "Reference to an artifact that supports a task, run, apparatus, or study.",
       "properties": {
         "artifact_id": {
           "minLength": 1,
@@ -140,6 +142,7 @@
     },
     "ExperimentChecksumModel": {
       "additionalProperties": false,
+      "description": "Checksum metadata for an experiment-core artifact reference.",
       "properties": {
         "algorithm": {
           "minLength": 1,
@@ -161,6 +164,7 @@
     },
     "ExperimentEvaluationProtocolModel": {
       "additionalProperties": false,
+      "description": "Evaluation protocol that binds metrics and observation requirements.",
       "properties": {
         "acceptance_policy": {
           "anyOf": [
@@ -300,6 +304,7 @@
     },
     "ExperimentMetricDefinitionModel": {
       "additionalProperties": false,
+      "description": "Metric definition bound to a measured construct and unit of analysis.",
       "properties": {
         "aggregation": {
           "anyOf": [
@@ -537,6 +542,7 @@
     },
     "ExperimentSplitAndLeakageControlsModel": {
       "additionalProperties": false,
+      "description": "Controls for data partitioning, hidden material, and leakage risk.",
       "properties": {
         "grouping_constraints": {
           "items": {
@@ -607,6 +613,7 @@
     },
     "ExperimentValidityNoteModel": {
       "additionalProperties": false,
+      "description": "Validity threat, limitation, or mitigation note for experiment interpretation.",
       "properties": {
         "category": {
           "enum": [
@@ -651,6 +658,7 @@
     }
   },
   "additionalProperties": false,
+  "description": "Experiment task contract that separates scenario material from protocol intent.",
   "properties": {
     "apparatus_constraints": {
       "anyOf": [

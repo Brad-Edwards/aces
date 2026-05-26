@@ -23,6 +23,7 @@
     },
     "ExperimentApparatusComponentModel": {
       "additionalProperties": false,
+      "description": "Identity and manifest context for one apparatus component.",
       "properties": {
         "compatibility_refs": {
           "items": {
@@ -84,6 +85,7 @@
     },
     "ExperimentApparatusContextModel": {
       "additionalProperties": false,
+      "description": "Run-scoped apparatus context for interpreting experiment evidence.",
       "properties": {
         "apparatus_context_id": {
           "minLength": 1,
@@ -192,6 +194,7 @@
     },
     "ExperimentArtifactRefModel": {
       "additionalProperties": false,
+      "description": "Reference to an artifact that supports a task, run, apparatus, or study.",
       "properties": {
         "artifact_id": {
           "minLength": 1,
@@ -286,6 +289,7 @@
     },
     "ExperimentChecksumModel": {
       "additionalProperties": false,
+      "description": "Checksum metadata for an experiment-core artifact reference.",
       "properties": {
         "algorithm": {
           "minLength": 1,
@@ -307,6 +311,7 @@
     },
     "ExperimentClockContextModel": {
       "additionalProperties": false,
+      "description": "Clock authority and time-domain metadata for run interpretation.",
       "properties": {
         "authority": {
           "minLength": 1,
@@ -353,6 +358,7 @@
     },
     "ExperimentInvalidationModel": {
       "additionalProperties": false,
+      "description": "Details explaining why an experiment run was invalidated.",
       "properties": {
         "invalidated_at": {
           "minLength": 1,
@@ -446,6 +452,7 @@
     },
     "ExperimentParameterModel": {
       "additionalProperties": false,
+      "description": "Redaction-aware parameter captured for a task, run, or apparatus context.",
       "properties": {
         "name": {
           "minLength": 1,
@@ -579,6 +586,7 @@
     },
     "ExperimentResultSummaryModel": {
       "additionalProperties": false,
+      "description": "Reported metric value summary and evidence links for an experiment run.",
       "properties": {
         "evidence_refs": {
           "items": {
@@ -725,6 +733,7 @@
     },
     "ExperimentStochasticControlModel": {
       "additionalProperties": false,
+      "description": "Seed, randomization, sampling, or scheduler control for reproducibility.",
       "properties": {
         "control_id": {
           "minLength": 1,
@@ -842,6 +851,7 @@
     },
     "ExperimentValidityNoteModel": {
       "additionalProperties": false,
+      "description": "Validity threat, limitation, or mitigation note for experiment interpretation.",
       "properties": {
         "category": {
           "enum": [
@@ -910,6 +920,7 @@
       }
     }
   ],
+  "description": "Archival provenance record for one execution of an experiment task.",
   "properties": {
     "apparatus_context": {
       "$ref": "#/$defs/ExperimentApparatusContextModel"
