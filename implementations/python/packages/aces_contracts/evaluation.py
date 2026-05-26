@@ -7,6 +7,16 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from aces_contracts._validation import (
+    enum_value,
+    require_dict,
+    require_non_empty_string,
+    require_optional_bool,
+    require_optional_int,
+    require_optional_numeric,
+    require_optional_string,
+    require_strings,
+)
 from aces_contracts.versions import EVALUATION_STATE_SCHEMA_VERSION
 
 
@@ -26,6 +36,29 @@ class EvaluationHistoryEventType(str, Enum):
     EVALUATION_UPDATED = "evaluation_updated"
     EVALUATION_READY = "evaluation_ready"
     EVALUATION_FAILED = "evaluation_failed"
+
+
+_EVALUATION_NON_RESULT_STATUSES = {
+    EvaluationResultStatus.PENDING,
+    EvaluationResultStatus.RUNNING,
+    EvaluationResultStatus.FAILED,
+}
+
+
+def _validate_evaluation_values(
+    *,
+    status: EvaluationResultStatus,
+    passed: bool | None,
+    score: float | int | None,
+    max_score: int | None,
+    context: str,
+) -> None:
+    if status in _EVALUATION_NON_RESULT_STATUSES and (passed is not None or score is not None or max_score is not None):
+        raise ValueError(f"pending/running/failed {context} may not report result values")
+    if status == EvaluationResultStatus.READY and passed is None and score is None:
+        raise ValueError(f"ready {context} must report passed or score")
+    if max_score is not None and score is None:
+        raise ValueError(f"{context} may not report max_score without score")
 
 
 @dataclass(frozen=True)
@@ -183,17 +216,9 @@ class EvaluationHistoryEvent:
         if len(evidence_refs) != len(evidence_ref_items):
             raise TypeError("evaluation history event evidence_refs must contain only strings")
         return cls(
-            event_type=(
-                payload["event_type"]
-                if isinstance(payload["event_type"], EvaluationHistoryEventType)
-                else EvaluationHistoryEventType(str(payload["event_type"]))
-            ),
+            event_type=(enum_value(EvaluationHistoryEventType, payload["event_type"])),
             timestamp=str(payload["timestamp"]),
-            status=(
-                payload["status"]
-                if isinstance(payload["status"], EvaluationResultStatus)
-                else EvaluationResultStatus(str(payload["status"]))
-            ),
+            status=(enum_value(EvaluationResultStatus, payload["status"])),
             passed=(payload.get("passed") if isinstance(payload.get("passed"), bool) else None),
             score=(score_raw if isinstance(score_raw, (int, float)) and not isinstance(score_raw, bool) else None),
             max_score=(
@@ -220,33 +245,22 @@ class EvaluationHistoryEvent:
     def __post_init__(self) -> None:
         if not isinstance(self.event_type, EvaluationHistoryEventType):
             raise TypeError("event_type must be an EvaluationHistoryEventType")
-        if not isinstance(self.timestamp, str) or not self.timestamp:
-            raise TypeError("timestamp must be a non-empty string")
         if not isinstance(self.status, EvaluationResultStatus):
             raise TypeError("status must be an EvaluationResultStatus")
-        if self.passed is not None and not isinstance(self.passed, bool):
-            raise TypeError("passed must be a bool or None")
-        if self.score is not None and (isinstance(self.score, bool) or not isinstance(self.score, (int, float))):
-            raise TypeError("score must be numeric or None")
-        if self.max_score is not None and (isinstance(self.max_score, bool) or not isinstance(self.max_score, int)):
-            raise TypeError("max_score must be an int or None")
-        if self.detail is not None and not isinstance(self.detail, str):
-            raise TypeError("detail must be a string or None")
-        if any(not isinstance(ref, str) for ref in self.evidence_refs):
-            raise TypeError("evidence_refs must contain only strings")
-        if not isinstance(self.details, dict):
-            raise TypeError("details must be a dict")
-        if self.status in {
-            EvaluationResultStatus.PENDING,
-            EvaluationResultStatus.RUNNING,
-            EvaluationResultStatus.FAILED,
-        }:
-            if self.passed is not None or self.score is not None or self.max_score is not None:
-                raise ValueError("pending/running/failed evaluation history events may not report result values")
-        if self.status == EvaluationResultStatus.READY and self.passed is None and self.score is None:
-            raise ValueError("ready evaluation history events must report passed or score")
-        if self.max_score is not None and self.score is None:
-            raise ValueError("evaluation history events may not report max_score without score")
+        require_non_empty_string(self.timestamp, "timestamp")
+        require_optional_bool(self.passed, "passed")
+        require_optional_numeric(self.score, "score")
+        require_optional_int(self.max_score, "max_score")
+        require_optional_string(self.detail, "detail")
+        require_strings(self.evidence_refs, "evidence_refs")
+        require_dict(self.details, "details")
+        _validate_evaluation_values(
+            status=self.status,
+            passed=self.passed,
+            score=self.score,
+            max_score=self.max_score,
+            context="evaluation history events",
+        )
 
 
 @dataclass(frozen=True)
@@ -299,11 +313,7 @@ class EvaluationExecutionState:
             state_schema_version=str(payload["state_schema_version"]),
             resource_type=str(payload["resource_type"]),
             run_id=str(payload["run_id"]),
-            status=(
-                payload["status"]
-                if isinstance(payload["status"], EvaluationResultStatus)
-                else EvaluationResultStatus(str(payload["status"]))
-            ),
+            status=(enum_value(EvaluationResultStatus, payload["status"])),
             observed_at=str(payload["observed_at"]),
             updated_at=str(payload["updated_at"]),
             passed=(payload.get("passed") if isinstance(payload.get("passed"), bool) else None),
@@ -331,39 +341,25 @@ class EvaluationExecutionState:
         }
 
     def __post_init__(self) -> None:
-        if not isinstance(self.state_schema_version, str) or not self.state_schema_version:
-            raise TypeError("evaluation result state_schema_version must be a non-empty string")
-        if not isinstance(self.resource_type, str) or not self.resource_type:
-            raise TypeError("evaluation result resource_type must be a non-empty string")
-        if not isinstance(self.run_id, str) or not self.run_id:
-            raise TypeError("evaluation result run_id must be a non-empty string")
+        require_non_empty_string(self.state_schema_version, "evaluation result state_schema_version")
+        require_non_empty_string(self.resource_type, "evaluation result resource_type")
+        require_non_empty_string(self.run_id, "evaluation result run_id")
         if not isinstance(self.status, EvaluationResultStatus):
             raise TypeError("status must be an EvaluationResultStatus")
-        if not isinstance(self.observed_at, str) or not self.observed_at:
-            raise TypeError("observed_at must be a non-empty string")
-        if not isinstance(self.updated_at, str) or not self.updated_at:
-            raise TypeError("updated_at must be a non-empty string")
-        if self.passed is not None and not isinstance(self.passed, bool):
-            raise TypeError("passed must be a bool or None")
-        if self.score is not None and (isinstance(self.score, bool) or not isinstance(self.score, (int, float))):
-            raise TypeError("score must be numeric or None")
-        if self.max_score is not None and (isinstance(self.max_score, bool) or not isinstance(self.max_score, int)):
-            raise TypeError("max_score must be an int or None")
-        if self.detail is not None and not isinstance(self.detail, str):
-            raise TypeError("detail must be a string or None")
-        if any(not isinstance(ref, str) for ref in self.evidence_refs):
-            raise TypeError("evidence_refs must contain only strings")
-        if self.status in {
-            EvaluationResultStatus.PENDING,
-            EvaluationResultStatus.RUNNING,
-            EvaluationResultStatus.FAILED,
-        }:
-            if self.passed is not None or self.score is not None or self.max_score is not None:
-                raise ValueError("pending/running/failed evaluation results may not report result values")
-        if self.status == EvaluationResultStatus.READY and self.passed is None and self.score is None:
-            raise ValueError("ready evaluation results must report passed or score")
-        if self.max_score is not None and self.score is None:
-            raise ValueError("evaluation results may not report max_score without score")
+        require_non_empty_string(self.observed_at, "observed_at")
+        require_non_empty_string(self.updated_at, "updated_at")
+        require_optional_bool(self.passed, "passed")
+        require_optional_numeric(self.score, "score")
+        require_optional_int(self.max_score, "max_score")
+        require_optional_string(self.detail, "detail")
+        require_strings(self.evidence_refs, "evidence_refs")
+        _validate_evaluation_values(
+            status=self.status,
+            passed=self.passed,
+            score=self.score,
+            max_score=self.max_score,
+            context="evaluation results",
+        )
         if self.score is not None and self.max_score is not None and float(self.score) > float(self.max_score):
             raise ValueError("evaluation result score may not exceed max_score")
 

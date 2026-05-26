@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from typing import Annotated
 
 from aces_contracts.contracts import (
     EvaluationPlanModel,
@@ -36,6 +37,110 @@ from .control_plane_security import (
     ControlPlaneSecurityConfig,
 )
 
+_REQUEST_TOO_LARGE_DETAIL = "request too large"
+_CONFLICT_RESPONSES = {409: {"description": "Conflict"}}
+_NOT_FOUND_RESPONSES = {404: {"description": "Not found"}}
+_BAD_REQUEST_CONFLICT_RESPONSES = {
+    400: {"description": "Bad request"},
+    409: {"description": "Conflict"},
+}
+
+
+class _ControlPlaneApiAuth:
+    def __init__(
+        self,
+        control_plane: RuntimeControlPlane,
+        security: ControlPlaneSecurityConfig,
+    ) -> None:
+        self._control_plane = control_plane
+        self._security = security
+
+    def mutating_identity(self, request: Request) -> ControlPlaneIdentity:
+        identity = self._authenticated_identity(request)
+        return self._authorize(
+            identity,
+            roles={ControlPlaneRole.BACKEND, ControlPlaneRole.OPERATOR},
+            request=request,
+        )
+
+    def read_identity(self, request: Request) -> ControlPlaneIdentity:
+        identity = self._authenticated_identity(request)
+        return self._authorize(
+            identity,
+            roles={
+                ControlPlaneRole.BACKEND,
+                ControlPlaneRole.OPERATOR,
+                ControlPlaneRole.AUDITOR,
+            },
+            request=request,
+        )
+
+    def _authenticated_identity(self, request: Request) -> ControlPlaneIdentity:
+        try:
+            return self._authenticate_request(request)
+        except HTTPException as exc:
+            self._record_denial(request, str(exc.detail))
+            raise
+
+    def _authenticate_request(self, request: Request) -> ControlPlaneIdentity:
+        authorization = request.headers.get("authorization", "")
+        if authorization.lower().startswith("bearer "):
+            token = authorization.split(" ", 1)[1].strip()
+            identity = self._security.bearer_tokens.get(token)
+            if identity is not None:
+                return identity
+        if not self._security.trust_proxy_identity_headers:
+            raise HTTPException(status_code=401, detail="trusted proxy identity headers are not enabled")
+        identity_name = request.headers.get(self._security.identity_header, "")
+        verified = request.headers.get(self._security.verified_header, "").lower()
+        if self._security.require_verified_identity and verified != "true":
+            raise HTTPException(status_code=401, detail="verified client identity required")
+        identity = self._security.trusted_identities.get(identity_name)
+        if identity is None:
+            raise HTTPException(status_code=401, detail="unknown client identity")
+        if identity.target_name and identity.target_name != self._control_plane.target_name:
+            raise HTTPException(status_code=403, detail="identity is not authorized for this target")
+        return identity
+
+    def _authorize(
+        self,
+        identity: ControlPlaneIdentity,
+        *,
+        roles: set[ControlPlaneRole],
+        request: Request,
+    ) -> ControlPlaneIdentity:
+        if not identity.roles.isdisjoint(roles):
+            return identity
+        self._control_plane.record_audit(
+            action=request.method,
+            identity=identity.identity,
+            allowed=False,
+            target=str(request.url.path),
+            reason="forbidden",
+        )
+        raise HTTPException(status_code=403, detail="forbidden")
+
+    def _record_denial(self, request: Request, reason: str) -> None:
+        self._control_plane.record_audit(
+            action=request.method,
+            identity="anonymous",
+            allowed=False,
+            target=str(request.url.path),
+            reason=reason,
+        )
+
+
+def _mutating_identity_dependency(request: Request) -> ControlPlaneIdentity:
+    return request.app.state.control_plane_api_auth.mutating_identity(request)
+
+
+def _read_identity_dependency(request: Request) -> ControlPlaneIdentity:
+    return request.app.state.control_plane_api_auth.read_identity(request)
+
+
+_MutatingIdentity = Annotated[ControlPlaneIdentity, Depends(_mutating_identity_dependency)]
+_ReadIdentity = Annotated[ControlPlaneIdentity, Depends(_read_identity_dependency)]
+
 
 def create_control_plane_app(
     control_plane: RuntimeControlPlane,
@@ -50,29 +155,27 @@ def create_control_plane_app(
         version="0.1.0",
         description="Reference HTTP/JSON adapter over the repo-owned runtime control plane.",
     )
+    app.state.control_plane_api_auth = _ControlPlaneApiAuth(control_plane, security)
+    _install_request_guards(app, control_plane, security)
+    _register_operation_routes(app, control_plane)
+    _register_workflow_routes(app, control_plane)
+    _register_participant_episode_routes(app, control_plane)
+    return app
 
+
+def _install_request_guards(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+    security: ControlPlaneSecurityConfig,
+) -> None:
     @app.middleware("http")
     async def _limit_request_size(request: Request, call_next):
         content_length = request.headers.get("content-length")
-        if content_length is not None and int(content_length) > security.max_request_bytes:
-            control_plane.record_audit(
-                action=request.method,
-                identity="anonymous",
-                allowed=False,
-                target=str(request.url.path),
-                reason="request too large",
-            )
-            return JSONResponse(status_code=413, content={"detail": "request too large"})
+        if content_length is not None and _content_length_exceeds_limit(content_length, security.max_request_bytes):
+            return _request_too_large_response(control_plane, request)
         body = await request.body()
         if len(body) > security.max_request_bytes:
-            control_plane.record_audit(
-                action=request.method,
-                identity="anonymous",
-                allowed=False,
-                target=str(request.url.path),
-                reason="request too large",
-            )
-            return JSONResponse(status_code=413, content={"detail": "request too large"})
+            return _request_too_large_response(control_plane, request)
         request.state.raw_body = body
         return await call_next(request)
 
@@ -87,88 +190,37 @@ def create_control_plane_app(
         )
         return JSONResponse(status_code=500, content={"detail": "internal server error"})
 
-    def _authenticate_request(request: Request) -> ControlPlaneIdentity:
-        authorization = request.headers.get("authorization", "")
-        if authorization.lower().startswith("bearer "):
-            token = authorization.split(" ", 1)[1].strip()
-            identity = security.bearer_tokens.get(token)
-            if identity is not None:
-                return identity
-        if not security.trust_proxy_identity_headers:
-            raise HTTPException(status_code=401, detail="trusted proxy identity headers are not enabled")
-        identity_name = request.headers.get(security.identity_header, "")
-        verified = request.headers.get(security.verified_header, "").lower()
-        if security.require_verified_identity and verified != "true":
-            raise HTTPException(status_code=401, detail="verified client identity required")
-        identity = security.trusted_identities.get(identity_name)
-        if identity is None:
-            raise HTTPException(status_code=401, detail="unknown client identity")
-        if identity.target_name and identity.target_name != control_plane.target_name:
-            raise HTTPException(status_code=403, detail="identity is not authorized for this target")
-        return identity
 
-    def _authorize(
-        identity: ControlPlaneIdentity,
-        *,
-        roles: set[ControlPlaneRole],
-        request: Request,
-    ) -> ControlPlaneIdentity:
-        if identity.roles.isdisjoint(roles):
-            control_plane.record_audit(
-                action=request.method,
-                identity=identity.identity,
-                allowed=False,
-                target=str(request.url.path),
-                reason="forbidden",
-            )
-            raise HTTPException(status_code=403, detail="forbidden")
-        return identity
+def _content_length_exceeds_limit(content_length: str, max_request_bytes: int) -> bool:
+    try:
+        return int(content_length) > max_request_bytes
+    except ValueError:
+        return False
 
-    def _mutating_identity(request: Request) -> ControlPlaneIdentity:
-        try:
-            identity = _authenticate_request(request)
-        except HTTPException as exc:
-            control_plane.record_audit(
-                action=request.method,
-                identity="anonymous",
-                allowed=False,
-                target=str(request.url.path),
-                reason=exc.detail,
-            )
-            raise
-        return _authorize(
-            identity,
-            roles={ControlPlaneRole.BACKEND, ControlPlaneRole.OPERATOR},
-            request=request,
-        )
 
-    def _read_identity(request: Request) -> ControlPlaneIdentity:
-        try:
-            identity = _authenticate_request(request)
-        except HTTPException as exc:
-            control_plane.record_audit(
-                action=request.method,
-                identity="anonymous",
-                allowed=False,
-                target=str(request.url.path),
-                reason=exc.detail,
-            )
-            raise
-        return _authorize(
-            identity,
-            roles={
-                ControlPlaneRole.BACKEND,
-                ControlPlaneRole.OPERATOR,
-                ControlPlaneRole.AUDITOR,
-            },
-            request=request,
-        )
+def _request_too_large_response(
+    control_plane: RuntimeControlPlane,
+    request: Request,
+) -> JSONResponse:
+    control_plane.record_audit(
+        action=request.method,
+        identity="anonymous",
+        allowed=False,
+        target=str(request.url.path),
+        reason=_REQUEST_TOO_LARGE_DETAIL,
+    )
+    return JSONResponse(status_code=413, content={"detail": _REQUEST_TOO_LARGE_DETAIL})
 
-    @app.post("/operations/provisioning", response_model=OperationReceiptModel)
+
+def _register_operation_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
+    @app.post("/operations/provisioning", responses=_CONFLICT_RESPONSES)
     async def submit_provisioning(
         request: Request,
         plan: ProvisioningPlanModel,
-        identity: ControlPlaneIdentity = Depends(_mutating_identity),
+        identity: _MutatingIdentity,
     ) -> OperationReceiptModel:
         try:
             receipt = control_plane.submit_provisioning(
@@ -188,22 +240,13 @@ def create_control_plane_app(
             target=str(request.url.path),
             operation_id=receipt.operation_id,
         )
-        return OperationReceiptModel.model_validate(
-            {
-                "schema_version": receipt.schema_version,
-                "operation_id": receipt.operation_id,
-                "domain": receipt.domain.value,
-                "submitted_at": receipt.submitted_at,
-                "accepted": receipt.accepted,
-                "diagnostics": [asdict(diag) for diag in receipt.diagnostics],
-            }
-        )
+        return _receipt_response(receipt)
 
-    @app.post("/operations/orchestration", response_model=OperationReceiptModel)
+    @app.post("/operations/orchestration", responses=_CONFLICT_RESPONSES)
     async def submit_orchestration(
         request: Request,
         plan: OrchestrationPlanModel,
-        identity: ControlPlaneIdentity = Depends(_mutating_identity),
+        identity: _MutatingIdentity,
     ) -> OperationReceiptModel:
         try:
             receipt = control_plane.submit_orchestration(
@@ -223,22 +266,13 @@ def create_control_plane_app(
             target=str(request.url.path),
             operation_id=receipt.operation_id,
         )
-        return OperationReceiptModel.model_validate(
-            {
-                "schema_version": receipt.schema_version,
-                "operation_id": receipt.operation_id,
-                "domain": receipt.domain.value,
-                "submitted_at": receipt.submitted_at,
-                "accepted": receipt.accepted,
-                "diagnostics": [asdict(diag) for diag in receipt.diagnostics],
-            }
-        )
+        return _receipt_response(receipt)
 
-    @app.post("/operations/evaluation", response_model=OperationReceiptModel)
+    @app.post("/operations/evaluation", responses=_CONFLICT_RESPONSES)
     async def submit_evaluation(
         request: Request,
         plan: EvaluationPlanModel,
-        identity: ControlPlaneIdentity = Depends(_mutating_identity),
+        identity: _MutatingIdentity,
     ) -> OperationReceiptModel:
         try:
             receipt = control_plane.submit_evaluation(
@@ -258,22 +292,13 @@ def create_control_plane_app(
             target=str(request.url.path),
             operation_id=receipt.operation_id,
         )
-        return OperationReceiptModel.model_validate(
-            {
-                "schema_version": receipt.schema_version,
-                "operation_id": receipt.operation_id,
-                "domain": receipt.domain.value,
-                "submitted_at": receipt.submitted_at,
-                "accepted": receipt.accepted,
-                "diagnostics": [asdict(diag) for diag in receipt.diagnostics],
-            }
-        )
+        return _receipt_response(receipt)
 
-    @app.get("/operations/{operation_id}", response_model=OperationStatusModel)
+    @app.get("/operations/{operation_id}", responses=_NOT_FOUND_RESPONSES)
     async def get_operation(
         operation_id: str,
         request: Request,
-        identity: ControlPlaneIdentity = Depends(_read_identity),
+        identity: _ReadIdentity,
     ) -> OperationStatusModel:
         status = control_plane.get_operation(operation_id)
         if status is None:
@@ -287,10 +312,10 @@ def create_control_plane_app(
         )
         return _operation_status_model(status)
 
-    @app.get("/snapshot", response_model=RuntimeSnapshotEnvelopeModel)
+    @app.get("/snapshot")
     async def get_snapshot(
         request: Request,
-        identity: ControlPlaneIdentity = Depends(_read_identity),
+        identity: _ReadIdentity,
     ) -> RuntimeSnapshotEnvelopeModel:
         control_plane.record_audit(
             action="get_snapshot",
@@ -300,12 +325,17 @@ def create_control_plane_app(
         )
         return _snapshot_model(control_plane.get_snapshot())
 
-    @app.post("/workflows/{workflow_address}/cancel", response_model=OperationReceiptModel)
+
+def _register_workflow_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
+    @app.post("/workflows/{workflow_address}/cancel", responses=_CONFLICT_RESPONSES)
     async def cancel_workflow(
         workflow_address: str,
         request: Request,
+        identity: _MutatingIdentity,
         cancellation: WorkflowCancellationRequestModel | None = None,
-        identity: ControlPlaneIdentity = Depends(_mutating_identity),
     ) -> OperationReceiptModel:
         payload = cancellation or WorkflowCancellationRequestModel()
         try:
@@ -328,21 +358,12 @@ def create_control_plane_app(
             target=str(request.url.path),
             operation_id=receipt.operation_id,
         )
-        return OperationReceiptModel.model_validate(
-            {
-                "schema_version": receipt.schema_version,
-                "operation_id": receipt.operation_id,
-                "domain": receipt.domain.value,
-                "submitted_at": receipt.submitted_at,
-                "accepted": receipt.accepted,
-                "diagnostics": [asdict(diag) for diag in receipt.diagnostics],
-            }
-        )
+        return _receipt_response(receipt)
 
-    @app.post("/workflows/reconcile-timeouts", response_model=OperationReceiptModel)
+    @app.post("/workflows/reconcile-timeouts", responses=_CONFLICT_RESPONSES)
     async def reconcile_timeouts(
         request: Request,
-        identity: ControlPlaneIdentity = Depends(_mutating_identity),
+        identity: _MutatingIdentity,
     ) -> OperationReceiptModel:
         try:
             receipt = control_plane.reconcile_workflow_timeouts(
@@ -361,38 +382,22 @@ def create_control_plane_app(
             target=str(request.url.path),
             operation_id=receipt.operation_id,
         )
-        return OperationReceiptModel.model_validate(
-            {
-                "schema_version": receipt.schema_version,
-                "operation_id": receipt.operation_id,
-                "domain": receipt.domain.value,
-                "submitted_at": receipt.submitted_at,
-                "accepted": receipt.accepted,
-                "diagnostics": [asdict(diag) for diag in receipt.diagnostics],
-            }
-        )
+        return _receipt_response(receipt)
 
-    def _receipt_response(receipt) -> OperationReceiptModel:
-        return OperationReceiptModel.model_validate(
-            {
-                "schema_version": receipt.schema_version,
-                "operation_id": receipt.operation_id,
-                "domain": receipt.domain.value,
-                "submitted_at": receipt.submitted_at,
-                "accepted": receipt.accepted,
-                "diagnostics": [asdict(diag) for diag in receipt.diagnostics],
-            }
-        )
 
+def _register_participant_episode_routes(
+    app: FastAPI,
+    control_plane: RuntimeControlPlane,
+) -> None:
     @app.post(
         "/participants/{participant_address}/episodes/initialize",
-        response_model=OperationReceiptModel,
+        responses=_CONFLICT_RESPONSES,
     )
     async def initialize_participant_episode(
         participant_address: str,
         request: Request,
+        identity: _MutatingIdentity,
         body: _ParticipantInitializeBody | None = None,
-        identity: ControlPlaneIdentity = Depends(_mutating_identity),
     ) -> OperationReceiptModel:
         payload = body or _ParticipantInitializeBody()
         try:
@@ -418,13 +423,13 @@ def create_control_plane_app(
 
     @app.post(
         "/participants/{participant_address}/episodes/reset",
-        response_model=OperationReceiptModel,
+        responses=_CONFLICT_RESPONSES,
     )
     async def reset_participant_episode(
         participant_address: str,
         request: Request,
+        identity: _MutatingIdentity,
         body: _ParticipantResetBody | None = None,
-        identity: ControlPlaneIdentity = Depends(_mutating_identity),
     ) -> OperationReceiptModel:
         payload = body or _ParticipantResetBody()
         try:
@@ -451,13 +456,13 @@ def create_control_plane_app(
 
     @app.post(
         "/participants/{participant_address}/episodes/restart",
-        response_model=OperationReceiptModel,
+        responses=_CONFLICT_RESPONSES,
     )
     async def restart_participant_episode(
         participant_address: str,
         request: Request,
+        identity: _MutatingIdentity,
         body: _ParticipantRestartBody | None = None,
-        identity: ControlPlaneIdentity = Depends(_mutating_identity),
     ) -> OperationReceiptModel:
         payload = body or _ParticipantRestartBody()
         try:
@@ -484,13 +489,13 @@ def create_control_plane_app(
 
     @app.post(
         "/participants/{participant_address}/episodes/terminate",
-        response_model=OperationReceiptModel,
+        responses=_BAD_REQUEST_CONFLICT_RESPONSES,
     )
     async def terminate_participant_episode(
         participant_address: str,
         request: Request,
+        identity: _MutatingIdentity,
         body: _ParticipantTerminateBody | None = None,
-        identity: ControlPlaneIdentity = Depends(_mutating_identity),
     ) -> OperationReceiptModel:
         payload = body or _ParticipantTerminateBody()
         try:
@@ -519,4 +524,15 @@ def create_control_plane_app(
         )
         return _receipt_response(receipt)
 
-    return app
+
+def _receipt_response(receipt) -> OperationReceiptModel:
+    return OperationReceiptModel.model_validate(
+        {
+            "schema_version": receipt.schema_version,
+            "operation_id": receipt.operation_id,
+            "domain": receipt.domain.value,
+            "submitted_at": receipt.submitted_at,
+            "accepted": receipt.accepted,
+            "diagnostics": [asdict(diag) for diag in receipt.diagnostics],
+        }
+    )

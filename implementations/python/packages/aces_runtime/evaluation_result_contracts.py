@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.evaluation import (
     EvaluationExecutionContract,
@@ -13,306 +15,361 @@ from aces_contracts.evaluation import (
     validate_evaluation_result,
 )
 from aces_contracts.planning import RuntimeDomain
-from aces_contracts.runtime_state import RuntimeSnapshot
+from aces_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
 
 from .diagnostics import _failure_diagnostic, _parse_timestamp
+
+_BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
+_EVALUATION_RESULTS_ADDRESS = "runtime.apply.evaluation-results"
+_EVALUATION_HISTORY_ADDRESS = "runtime.apply.evaluation-history"
+
+
+@dataclass(frozen=True)
+class _EvaluationContext:
+    address: str
+    result_contract: EvaluationResultContract
+    execution_contract: EvaluationExecutionContract
+    result: EvaluationExecutionState
+    history: list[EvaluationHistoryEvent]
 
 
 def evaluation_result_contract_diagnostics(
     snapshot: RuntimeSnapshot,
 ) -> list[Diagnostic]:
-    diagnostics: list[Diagnostic] = []
+    shape_diagnostics = _snapshot_shape_diagnostics(snapshot)
+    if shape_diagnostics:
+        return shape_diagnostics
+
+    observable_entries = _observable_evaluation_entries(snapshot)
+    diagnostics = _missing_result_diagnostics(snapshot, observable_entries)
+    for evaluation_address, evaluation_result in snapshot.evaluation_results.items():
+        context, context_diagnostics = _evaluation_context(
+            snapshot,
+            observable_entries,
+            evaluation_address,
+            evaluation_result,
+        )
+        diagnostics.extend(context_diagnostics)
+        if context is not None:
+            diagnostics.extend(_evaluation_context_diagnostics(context))
+
+    return diagnostics
+
+
+def _contract_diagnostic(address: str, message: str) -> Diagnostic:
+    return _failure_diagnostic(_BACKEND_CONTRACT_INVALID, address, message)
+
+
+def _snapshot_shape_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic]:
     if not isinstance(snapshot.evaluation_results, dict):
         return [
-            _failure_diagnostic(
-                "runtime.backend-contract-invalid",
-                "runtime.apply.evaluation-results",
+            _contract_diagnostic(
+                _EVALUATION_RESULTS_ADDRESS,
                 "RuntimeSnapshot.evaluation_results must be a dict.",
             )
         ]
     if not isinstance(snapshot.evaluation_history, dict):
         return [
-            _failure_diagnostic(
-                "runtime.backend-contract-invalid",
-                "runtime.apply.evaluation-history",
+            _contract_diagnostic(
+                _EVALUATION_HISTORY_ADDRESS,
                 "RuntimeSnapshot.evaluation_history must be a dict.",
             )
         ]
+    return []
 
-    evaluation_entries = {
-        address: entry for address, entry in snapshot.entries.items() if entry.domain == RuntimeDomain.EVALUATION
-    }
-    observable_entries = {
+
+def _observable_evaluation_entries(snapshot: RuntimeSnapshot) -> dict[str, SnapshotEntry]:
+    return {
         address: entry
-        for address, entry in evaluation_entries.items()
-        if isinstance(entry.payload, dict)
+        for address, entry in snapshot.entries.items()
+        if entry.domain == RuntimeDomain.EVALUATION
+        and isinstance(entry.payload, dict)
         and isinstance(entry.payload.get("result_contract"), dict)
         and isinstance(entry.payload.get("execution_contract"), dict)
     }
 
+
+def _missing_result_diagnostics(
+    snapshot: RuntimeSnapshot,
+    observable_entries: dict[str, SnapshotEntry],
+) -> list[Diagnostic]:
     missing_results = sorted(address for address in observable_entries if address not in snapshot.evaluation_results)
-    if missing_results:
+    if not missing_results:
+        return []
+    return [
+        _contract_diagnostic(
+            _EVALUATION_RESULTS_ADDRESS,
+            "Evaluation results must include all observable evaluation addresses: " + ", ".join(missing_results),
+        )
+    ]
+
+
+def _evaluation_context(
+    snapshot: RuntimeSnapshot,
+    observable_entries: dict[str, SnapshotEntry],
+    evaluation_address: object,
+    evaluation_result: object,
+) -> tuple[_EvaluationContext | None, list[Diagnostic]]:
+    if not isinstance(evaluation_address, str):
+        return None, [_contract_diagnostic(_EVALUATION_RESULTS_ADDRESS, "Evaluation result keys must be strings.")]
+    if not isinstance(evaluation_result, dict):
+        return None, [
+            _contract_diagnostic(evaluation_address, "Evaluation results must use plain-data mapping values.")
+        ]
+    evaluation_entry = observable_entries.get(evaluation_address)
+    if evaluation_entry is None:
+        return None, [
+            _contract_diagnostic(
+                evaluation_address,
+                "Evaluation results must correspond to an observable evaluation entry in the runtime snapshot.",
+            )
+        ]
+    contracts, diagnostics = _compiled_evaluation_contracts(evaluation_address, evaluation_entry)
+    if contracts is None:
+        return None, diagnostics
+    normalized_result, result_diagnostics = _normalized_evaluation_result(evaluation_address, evaluation_result)
+    if normalized_result is None:
+        return None, result_diagnostics
+    history, history_diagnostics = _normalized_evaluation_history(snapshot, evaluation_address)
+    if history is None:
+        return None, history_diagnostics
+    result_contract, execution_contract = contracts
+    return (
+        _EvaluationContext(evaluation_address, result_contract, execution_contract, normalized_result, history),
+        history_diagnostics,
+    )
+
+
+def _compiled_evaluation_contracts(
+    evaluation_address: str,
+    evaluation_entry: SnapshotEntry,
+) -> tuple[tuple[EvaluationResultContract, EvaluationExecutionContract] | None, list[Diagnostic]]:
+    result_contract_payload = evaluation_entry.payload.get("result_contract")
+    execution_contract_payload = evaluation_entry.payload.get("execution_contract")
+    if not isinstance(result_contract_payload, dict):
+        return None, [
+            _contract_diagnostic(evaluation_address, "Evaluation snapshot payload is missing compiled result_contract.")
+        ]
+    if not isinstance(execution_contract_payload, dict):
+        return None, [
+            _contract_diagnostic(
+                evaluation_address, "Evaluation snapshot payload is missing compiled execution_contract."
+            )
+        ]
+    try:
+        result_contract = EvaluationResultContract.from_mapping(result_contract_payload)
+    except (TypeError, ValueError) as exc:
+        return None, [_contract_diagnostic(evaluation_address, f"Evaluation result_contract is invalid: {exc}")]
+    try:
+        execution_contract = EvaluationExecutionContract.from_mapping(execution_contract_payload)
+    except (TypeError, ValueError) as exc:
+        return None, [_contract_diagnostic(evaluation_address, f"Evaluation execution_contract is invalid: {exc}")]
+    return (result_contract, execution_contract), []
+
+
+def _normalized_evaluation_result(
+    evaluation_address: str,
+    evaluation_result: dict[str, object],
+) -> tuple[EvaluationExecutionState | None, list[Diagnostic]]:
+    try:
+        return EvaluationExecutionState.from_payload(evaluation_result), []
+    except (TypeError, ValueError) as exc:
+        return None, [_contract_diagnostic(evaluation_address, f"Evaluation result payload is invalid: {exc}")]
+
+
+def _normalized_evaluation_history(
+    snapshot: RuntimeSnapshot,
+    evaluation_address: str,
+) -> tuple[list[EvaluationHistoryEvent] | None, list[Diagnostic]]:
+    history_payload = snapshot.evaluation_history.get(evaluation_address)
+    if history_payload is None:
+        return None, [
+            _contract_diagnostic(
+                evaluation_address,
+                "Evaluation results must include a history stream for each observable address.",
+            )
+        ]
+    if not isinstance(history_payload, list):
+        return None, [
+            _contract_diagnostic(evaluation_address, "Evaluation history payload must be a list of event mappings.")
+        ]
+    return _normalize_evaluation_history_payload(evaluation_address, history_payload)
+
+
+def _normalize_evaluation_history_payload(
+    evaluation_address: str,
+    history_payload: list[object],
+) -> tuple[list[EvaluationHistoryEvent], list[Diagnostic]]:
+    normalized_history: list[EvaluationHistoryEvent] = []
+    diagnostics: list[Diagnostic] = []
+    for event_payload in history_payload:
+        try:
+            normalized_history.append(EvaluationHistoryEvent.from_payload(event_payload))
+        except (TypeError, ValueError) as exc:
+            diagnostics.append(
+                _contract_diagnostic(evaluation_address, f"Evaluation history payload is invalid: {exc}")
+            )
+    diagnostics.extend(_timestamp_diagnostics(evaluation_address, normalized_history))
+    return normalized_history, diagnostics
+
+
+def _timestamp_diagnostics(
+    evaluation_address: str,
+    normalized_history: list[EvaluationHistoryEvent],
+) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    previous_timestamp = None
+    for event in normalized_history:
+        try:
+            current_timestamp = _parse_timestamp(event.timestamp)
+        except ValueError as exc:
+            diagnostics.append(
+                _contract_diagnostic(evaluation_address, f"Evaluation history event timestamp is invalid: {exc}")
+            )
+            continue
+        if previous_timestamp is not None and current_timestamp < previous_timestamp:
+            diagnostics.append(
+                _contract_diagnostic(evaluation_address, "Evaluation history timestamps must be monotonic.")
+            )
+        previous_timestamp = current_timestamp
+    return diagnostics
+
+
+def _evaluation_context_diagnostics(context: _EvaluationContext) -> list[Diagnostic]:
+    diagnostics = _schema_diagnostics(context)
+    diagnostics.extend(_result_contract_diagnostics(context))
+    diagnostics.extend(_execution_status_diagnostics(context))
+    diagnostics.extend(_history_contract_diagnostics(context))
+    return diagnostics
+
+
+def _schema_diagnostics(context: _EvaluationContext) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    if context.result.state_schema_version != context.result_contract.state_schema_version:
         diagnostics.append(
-            _failure_diagnostic(
-                "runtime.backend-contract-invalid",
-                "runtime.apply.evaluation-results",
-                ("Evaluation results must include all observable evaluation addresses: " + ", ".join(missing_results)),
+            _contract_diagnostic(
+                context.address,
+                (
+                    "Evaluation result schema version "
+                    f"{context.result.state_schema_version!r} does not match "
+                    f"compiled contract {context.result_contract.state_schema_version!r}."
+                ),
             )
         )
-
-    for evaluation_address, evaluation_result in snapshot.evaluation_results.items():
-        if not isinstance(evaluation_address, str):
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    "runtime.apply.evaluation-results",
-                    "Evaluation result keys must be strings.",
-                )
+    if context.result.state_schema_version != context.execution_contract.state_schema_version:
+        diagnostics.append(
+            _contract_diagnostic(
+                context.address,
+                (
+                    "Evaluation result schema version "
+                    f"{context.result.state_schema_version!r} does not match "
+                    f"execution contract {context.execution_contract.state_schema_version!r}."
+                ),
             )
-            continue
-        if not isinstance(evaluation_result, dict):
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    evaluation_address,
-                    "Evaluation results must use plain-data mapping values.",
-                )
-            )
-            continue
-
-        evaluation_entry = observable_entries.get(evaluation_address)
-        if evaluation_entry is None:
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    evaluation_address,
-                    ("Evaluation results must correspond to an observable evaluation entry in the runtime snapshot."),
-                )
-            )
-            continue
-
-        payload = evaluation_entry.payload
-        result_contract_payload = payload.get("result_contract") if isinstance(payload, dict) else None
-        execution_contract_payload = payload.get("execution_contract") if isinstance(payload, dict) else None
-        if not isinstance(result_contract_payload, dict):
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    evaluation_address,
-                    "Evaluation snapshot payload is missing compiled result_contract.",
-                )
-            )
-            continue
-        if not isinstance(execution_contract_payload, dict):
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    evaluation_address,
-                    "Evaluation snapshot payload is missing compiled execution_contract.",
-                )
-            )
-            continue
-
-        try:
-            result_contract = EvaluationResultContract.from_mapping(result_contract_payload)
-        except (TypeError, ValueError) as exc:
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    evaluation_address,
-                    f"Evaluation result_contract is invalid: {exc}",
-                )
-            )
-            continue
-
-        try:
-            execution_contract = EvaluationExecutionContract.from_mapping(execution_contract_payload)
-        except (TypeError, ValueError) as exc:
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    evaluation_address,
-                    f"Evaluation execution_contract is invalid: {exc}",
-                )
-            )
-            continue
-
-        try:
-            normalized_result = EvaluationExecutionState.from_payload(evaluation_result)
-        except (TypeError, ValueError) as exc:
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    evaluation_address,
-                    f"Evaluation result payload is invalid: {exc}",
-                )
-            )
-            continue
-
-        history_payload = snapshot.evaluation_history.get(evaluation_address)
-        if history_payload is None:
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    evaluation_address,
-                    "Evaluation results must include a history stream for each observable address.",
-                )
-            )
-            continue
-        if not isinstance(history_payload, list):
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    evaluation_address,
-                    "Evaluation history payload must be a list of event mappings.",
-                )
-            )
-            continue
-        normalized_history: list[EvaluationHistoryEvent] = []
-        for event_payload in history_payload:
-            try:
-                normalized_history.append(EvaluationHistoryEvent.from_payload(event_payload))
-            except (TypeError, ValueError) as exc:
-                diagnostics.append(
-                    _failure_diagnostic(
-                        "runtime.backend-contract-invalid",
-                        evaluation_address,
-                        f"Evaluation history payload is invalid: {exc}",
-                    )
-                )
-        if normalized_history:
-            previous_timestamp = None
-            for event in normalized_history:
-                try:
-                    current_timestamp = _parse_timestamp(event.timestamp)
-                except ValueError as exc:
-                    diagnostics.append(
-                        _failure_diagnostic(
-                            "runtime.backend-contract-invalid",
-                            evaluation_address,
-                            f"Evaluation history event timestamp is invalid: {exc}",
-                        )
-                    )
-                    continue
-                if previous_timestamp is not None and current_timestamp < previous_timestamp:
-                    diagnostics.append(
-                        _failure_diagnostic(
-                            "runtime.backend-contract-invalid",
-                            evaluation_address,
-                            "Evaluation history timestamps must be monotonic.",
-                        )
-                    )
-                previous_timestamp = current_timestamp
-
-        if normalized_result.state_schema_version != result_contract.state_schema_version:
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    evaluation_address,
-                    (
-                        "Evaluation result schema version "
-                        f"{normalized_result.state_schema_version!r} does not match "
-                        f"compiled contract {result_contract.state_schema_version!r}."
-                    ),
-                )
-            )
-        if normalized_result.state_schema_version != execution_contract.state_schema_version:
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    evaluation_address,
-                    (
-                        "Evaluation result schema version "
-                        f"{normalized_result.state_schema_version!r} does not match "
-                        f"execution contract {execution_contract.state_schema_version!r}."
-                    ),
-                )
-            )
-        violations = validate_evaluation_result(result_contract, normalized_result)
-        for violation in violations:
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    evaluation_address,
-                    violation,
-                )
-            )
-
-        if normalized_result.status.value not in execution_contract.allowed_statuses:
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
-                    evaluation_address,
-                    (
-                        "Evaluation result status "
-                        f"{normalized_result.status.value!r} is outside execution contract "
-                        f"{execution_contract.allowed_statuses!r}."
-                    ),
-                )
-            )
-        if normalized_history:
-            if (
-                execution_contract.requires_start_event
-                and normalized_history[0].event_type != EvaluationHistoryEventType.EVALUATION_STARTED
-            ):
-                diagnostics.append(
-                    _failure_diagnostic(
-                        "runtime.backend-contract-invalid",
-                        evaluation_address,
-                        "Evaluation history must start with evaluation_started.",
-                    )
-                )
-            for event in normalized_history:
-                if event.event_type.value not in execution_contract.history_event_types:
-                    diagnostics.append(
-                        _failure_diagnostic(
-                            "runtime.backend-contract-invalid",
-                            evaluation_address,
-                            (
-                                "Evaluation history event type "
-                                f"{event.event_type.value!r} is outside execution contract "
-                                f"{execution_contract.history_event_types!r}."
-                            ),
-                        )
-                    )
-                if event.status.value not in execution_contract.allowed_statuses:
-                    diagnostics.append(
-                        _failure_diagnostic(
-                            "runtime.backend-contract-invalid",
-                            evaluation_address,
-                            (
-                                "Evaluation history status "
-                                f"{event.status.value!r} is outside execution contract "
-                                f"{execution_contract.allowed_statuses!r}."
-                            ),
-                        )
-                    )
-            expected_final_event = {
-                EvaluationResultStatus.READY: EvaluationHistoryEventType.EVALUATION_READY,
-                EvaluationResultStatus.FAILED: EvaluationHistoryEventType.EVALUATION_FAILED,
-            }.get(normalized_result.status)
-            if expected_final_event is not None and normalized_history[-1].event_type != expected_final_event:
-                diagnostics.append(
-                    _failure_diagnostic(
-                        "runtime.backend-contract-invalid",
-                        evaluation_address,
-                        (
-                            "Evaluation result status "
-                            f"{normalized_result.status.value!r} requires final history event "
-                            f"{expected_final_event.value!r}."
-                        ),
-                    )
-                )
-            if normalized_result.status == EvaluationResultStatus.RUNNING and normalized_history[-1].event_type in {
-                EvaluationHistoryEventType.EVALUATION_READY,
-                EvaluationHistoryEventType.EVALUATION_FAILED,
-            }:
-                diagnostics.append(
-                    _failure_diagnostic(
-                        "runtime.backend-contract-invalid",
-                        evaluation_address,
-                        "Running evaluation results may not end history with a terminal event.",
-                    )
-                )
-
+        )
     return diagnostics
+
+
+def _result_contract_diagnostics(context: _EvaluationContext) -> list[Diagnostic]:
+    return [
+        _contract_diagnostic(context.address, violation)
+        for violation in validate_evaluation_result(context.result_contract, context.result)
+    ]
+
+
+def _execution_status_diagnostics(context: _EvaluationContext) -> list[Diagnostic]:
+    if context.result.status.value in context.execution_contract.allowed_statuses:
+        return []
+    return [
+        _contract_diagnostic(
+            context.address,
+            (
+                "Evaluation result status "
+                f"{context.result.status.value!r} is outside execution contract "
+                f"{context.execution_contract.allowed_statuses!r}."
+            ),
+        )
+    ]
+
+
+def _history_contract_diagnostics(context: _EvaluationContext) -> list[Diagnostic]:
+    if not context.history:
+        return []
+    diagnostics = _history_start_diagnostics(context)
+    for event in context.history:
+        diagnostics.extend(_history_event_contract_diagnostics(context, event))
+    diagnostics.extend(_history_final_event_diagnostics(context))
+    diagnostics.extend(_running_result_history_diagnostics(context))
+    return diagnostics
+
+
+def _history_start_diagnostics(context: _EvaluationContext) -> list[Diagnostic]:
+    if not context.execution_contract.requires_start_event:
+        return []
+    if context.history[0].event_type == EvaluationHistoryEventType.EVALUATION_STARTED:
+        return []
+    return [_contract_diagnostic(context.address, "Evaluation history must start with evaluation_started.")]
+
+
+def _history_event_contract_diagnostics(
+    context: _EvaluationContext,
+    event: EvaluationHistoryEvent,
+) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    if event.event_type.value not in context.execution_contract.history_event_types:
+        diagnostics.append(
+            _contract_diagnostic(
+                context.address,
+                (
+                    "Evaluation history event type "
+                    f"{event.event_type.value!r} is outside execution contract "
+                    f"{context.execution_contract.history_event_types!r}."
+                ),
+            )
+        )
+    if event.status.value not in context.execution_contract.allowed_statuses:
+        diagnostics.append(
+            _contract_diagnostic(
+                context.address,
+                (
+                    "Evaluation history status "
+                    f"{event.status.value!r} is outside execution contract "
+                    f"{context.execution_contract.allowed_statuses!r}."
+                ),
+            )
+        )
+    return diagnostics
+
+
+def _history_final_event_diagnostics(context: _EvaluationContext) -> list[Diagnostic]:
+    expected_final_event = {
+        EvaluationResultStatus.READY: EvaluationHistoryEventType.EVALUATION_READY,
+        EvaluationResultStatus.FAILED: EvaluationHistoryEventType.EVALUATION_FAILED,
+    }.get(context.result.status)
+    if expected_final_event is None or context.history[-1].event_type == expected_final_event:
+        return []
+    return [
+        _contract_diagnostic(
+            context.address,
+            (
+                "Evaluation result status "
+                f"{context.result.status.value!r} requires final history event "
+                f"{expected_final_event.value!r}."
+            ),
+        )
+    ]
+
+
+def _running_result_history_diagnostics(context: _EvaluationContext) -> list[Diagnostic]:
+    terminal_events = {
+        EvaluationHistoryEventType.EVALUATION_READY,
+        EvaluationHistoryEventType.EVALUATION_FAILED,
+    }
+    if context.result.status != EvaluationResultStatus.RUNNING or context.history[-1].event_type not in terminal_events:
+        return []
+    return [
+        _contract_diagnostic(
+            context.address,
+            "Running evaluation results may not end history with a terminal event.",
+        )
+    ]

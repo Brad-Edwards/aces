@@ -43,8 +43,11 @@ from .control_plane_store import (
     ControlPlaneStore,
     InMemoryControlPlaneStore,
 )
-from .control_plane_workflows import maybe_apply_compensation, parse_timestamp
+from .control_plane_timeouts import workflow_timeout_update
+from .control_plane_workflows import maybe_apply_compensation
 from .registry import RuntimeTarget
+
+_NO_PARTICIPANT_RUNTIME_MESSAGE = "Target does not provide a participant runtime."
 
 
 def _utc_now() -> str:
@@ -305,58 +308,18 @@ class RuntimeControlPlane:
             address: list(events) for address, events in self._snapshot.orchestration_history.items()
         }
         for workflow_address, entry in self._snapshot.entries.items():
-            if entry.domain != RuntimeDomain.ORCHESTRATION or entry.resource_type != "workflow":
-                continue
-            payload = dict(entry.payload)
-            execution_contract_payload = payload.get("execution_contract")
-            if not isinstance(execution_contract_payload, dict):
-                continue
-            timeout_seconds = execution_contract_payload.get("timeout_seconds")
-            if timeout_seconds in (None, "", 0):
-                continue
-            result_payload = orchestration_results.get(workflow_address)
-            if not isinstance(result_payload, dict):
-                continue
-            normalized = WorkflowExecutionState.from_payload(result_payload)
-            if normalized.workflow_status != WorkflowStatus.RUNNING:
-                continue
-            try:
-                deadline = parse_timestamp(normalized.started_at).timestamp() + int(timeout_seconds)
-                current = parse_timestamp(submitted_at).timestamp()
-            except Exception:
-                continue
-            if current < deadline:
-                continue
-            timed_out_state = WorkflowExecutionState(
-                state_schema_version=normalized.state_schema_version,
-                workflow_status=WorkflowStatus.TIMED_OUT,
-                run_id=normalized.run_id,
-                started_at=normalized.started_at,
-                updated_at=submitted_at,
-                terminal_reason="workflow timed out",
-                compensation_status=WorkflowCompensationStatus.NOT_REQUIRED,
-                compensation_started_at=None,
-                compensation_updated_at=None,
-                compensation_failures=[],
-                steps=normalized.steps,
-            )
-            history = orchestration_history.setdefault(workflow_address, [])
-            history.append(
-                WorkflowHistoryEvent(
-                    event_type=WorkflowHistoryEventType.WORKFLOW_TIMED_OUT,
-                    timestamp=submitted_at,
-                    details={"timeout_seconds": int(timeout_seconds)},
-                ).to_payload()
-            )
-            payload, updated_history = maybe_apply_compensation(
+            timed_out = workflow_timeout_update(
                 self._snapshot,
-                workflow_address=workflow_address,
-                result=timed_out_state,
-                history=history,
-                submitted_at=submitted_at,
+                workflow_address,
+                entry,
+                orchestration_results,
+                orchestration_history,
+                submitted_at,
             )
-            orchestration_results[workflow_address] = payload
-            orchestration_history[workflow_address] = updated_history
+            if timed_out is None:
+                continue
+            orchestration_results[workflow_address] = timed_out[0]
+            orchestration_history[workflow_address] = timed_out[1]
             changed.append(workflow_address)
         operation_id = str(uuid4())
         self._snapshot = self._snapshot.with_entries(
@@ -400,7 +363,7 @@ class RuntimeControlPlane:
         if self._target.participant_runtime is None:
             return self._reject_submission(
                 domain=RuntimeDomain.PARTICIPANT,
-                message="Target does not provide a participant runtime.",
+                message=_NO_PARTICIPANT_RUNTIME_MESSAGE,
                 idempotency_key=idempotency_key,
                 request_fingerprint=request_fingerprint,
             )
@@ -429,7 +392,7 @@ class RuntimeControlPlane:
         if self._target.participant_runtime is None:
             return self._reject_submission(
                 domain=RuntimeDomain.PARTICIPANT,
-                message="Target does not provide a participant runtime.",
+                message=_NO_PARTICIPANT_RUNTIME_MESSAGE,
                 idempotency_key=idempotency_key,
                 request_fingerprint=request_fingerprint,
             )
@@ -459,7 +422,7 @@ class RuntimeControlPlane:
         if self._target.participant_runtime is None:
             return self._reject_submission(
                 domain=RuntimeDomain.PARTICIPANT,
-                message="Target does not provide a participant runtime.",
+                message=_NO_PARTICIPANT_RUNTIME_MESSAGE,
                 idempotency_key=idempotency_key,
                 request_fingerprint=request_fingerprint,
             )
@@ -489,7 +452,7 @@ class RuntimeControlPlane:
         if self._target.participant_runtime is None:
             return self._reject_submission(
                 domain=RuntimeDomain.PARTICIPANT,
-                message="Target does not provide a participant runtime.",
+                message=_NO_PARTICIPANT_RUNTIME_MESSAGE,
                 idempotency_key=idempotency_key,
                 request_fingerprint=request_fingerprint,
             )

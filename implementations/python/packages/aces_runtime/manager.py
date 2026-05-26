@@ -13,6 +13,12 @@ from .backend_calls import _call_backend_apply, _call_backend_diagnostics
 from .diagnostics import _failure_diagnostic, _has_error_diagnostic
 from .registry import RuntimeTarget, _validate_runtime_target_shape
 
+_RUNTIME_APPLY_ADDRESS = "runtime.apply"
+_APPLY_EVALUATOR_ADDRESS = "runtime.apply.evaluator"
+_APPLY_ORCHESTRATOR_ADDRESS = "runtime.apply.orchestrator"
+_APPLY_PHASE_FAILED = "runtime.apply-phase-failed"
+_DESTROY_PHASE_FAILED = "runtime.destroy-phase-failed"
+
 
 def _delete_order(entries: dict[str, SnapshotEntry]) -> list[str]:
     return snapshot_delete_order(entries)
@@ -28,7 +34,7 @@ def _provenance_diagnostics(
         diagnostics.append(
             _failure_diagnostic(
                 "runtime.plan-target-unbound",
-                "runtime.apply",
+                _RUNTIME_APPLY_ADDRESS,
                 (
                     "Execution plan is not bound to a runtime target. Use "
                     "RuntimeManager.plan() or pass target_name explicitly."
@@ -39,7 +45,7 @@ def _provenance_diagnostics(
         diagnostics.append(
             _failure_diagnostic(
                 "runtime.plan-target-mismatch",
-                "runtime.apply",
+                _RUNTIME_APPLY_ADDRESS,
                 (f"Execution plan targets '{execution_plan.target_name}', but manager target is '{target.name}'."),
             )
         )
@@ -47,7 +53,7 @@ def _provenance_diagnostics(
         diagnostics.append(
             _failure_diagnostic(
                 "runtime.plan-manifest-mismatch",
-                "runtime.apply",
+                _RUNTIME_APPLY_ADDRESS,
                 "Execution plan manifest does not match the manager target manifest.",
             )
         )
@@ -55,7 +61,7 @@ def _provenance_diagnostics(
         diagnostics.append(
             _failure_diagnostic(
                 "runtime.plan-snapshot-mismatch",
-                "runtime.apply",
+                _RUNTIME_APPLY_ADDRESS,
                 "Execution plan base snapshot does not match the manager snapshot.",
             )
         )
@@ -155,69 +161,12 @@ class RuntimeManager:
         diagnostics: list[Diagnostic] = list(execution_plan.diagnostics)
         changed_addresses: list[str] = []
 
-        provenance_diagnostics = _provenance_diagnostics(
-            execution_plan,
-            self._target,
-            self._snapshot,
-        )
-        diagnostics.extend(provenance_diagnostics)
-        if provenance_diagnostics:
-            return ApplyResult(
-                success=False,
-                snapshot=self._snapshot,
-                diagnostics=diagnostics,
-            )
-
-        if not execution_plan.is_valid:
-            return ApplyResult(
-                success=False,
-                snapshot=self._snapshot,
-                diagnostics=diagnostics,
-            )
+        precondition_failure = self._apply_precondition_failure(execution_plan, diagnostics)
+        if precondition_failure is not None:
+            return precondition_failure
 
         evaluation_needed = bool(execution_plan.evaluation.actionable_operations)
-        if evaluation_needed and self._target.evaluator is None:
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.apply-missing-evaluator",
-                    "runtime.apply.evaluator",
-                    "Execution plan requires an evaluator, but the target does not provide one.",
-                )
-            )
-            return ApplyResult(
-                success=False,
-                snapshot=self._snapshot,
-                diagnostics=diagnostics,
-            )
-
         orchestration_needed = bool(execution_plan.orchestration.actionable_operations)
-        if orchestration_needed and self._target.orchestrator is None:
-            diagnostics.append(
-                _failure_diagnostic(
-                    "runtime.apply-missing-orchestrator",
-                    "runtime.apply.orchestrator",
-                    "Execution plan requires an orchestrator, but the target does not provide one.",
-                )
-            )
-            return ApplyResult(
-                success=False,
-                snapshot=self._snapshot,
-                diagnostics=diagnostics,
-            )
-
-        validation = _call_backend_diagnostics(
-            self._target.provisioner.validate,
-            execution_plan.provisioning,
-            address="runtime.apply.provisioning.validate",
-        )
-        diagnostics.extend(validation)
-        if _has_error_diagnostic(validation):
-            return ApplyResult(
-                success=False,
-                snapshot=self._snapshot,
-                diagnostics=diagnostics,
-            )
-
         working_snapshot = execution_plan.base_snapshot
         provision_result = _call_backend_apply(
             self._target.provisioner.apply,
@@ -233,7 +182,7 @@ class RuntimeManager:
             _maybe_synthesize_failure(
                 diagnostics,
                 result=provision_result,
-                code="runtime.apply-phase-failed",
+                code=_APPLY_PHASE_FAILED,
                 address="runtime.apply.provisioning",
                 message="Provisioning apply failed.",
             )
@@ -251,7 +200,7 @@ class RuntimeManager:
                 self._target.evaluator.start,
                 execution_plan.evaluation,
                 working_snapshot,
-                address="runtime.apply.evaluator",
+                address=_APPLY_EVALUATOR_ADDRESS,
                 snapshot=working_snapshot,
             )
             diagnostics.extend(evaluation_result.diagnostics)
@@ -263,8 +212,8 @@ class RuntimeManager:
                 _maybe_synthesize_failure(
                     diagnostics,
                     result=evaluation_result,
-                    code="runtime.apply-phase-failed",
-                    address="runtime.apply.evaluator",
+                    code=_APPLY_PHASE_FAILED,
+                    address=_APPLY_EVALUATOR_ADDRESS,
                     message="Evaluator failed to start.",
                 )
                 rollback_result = _rollback_services(
@@ -287,7 +236,7 @@ class RuntimeManager:
                 self._target.orchestrator.start,
                 execution_plan.orchestration,
                 working_snapshot,
-                address="runtime.apply.orchestrator",
+                address=_APPLY_ORCHESTRATOR_ADDRESS,
                 snapshot=working_snapshot,
             )
             diagnostics.extend(orchestration_result.diagnostics)
@@ -297,8 +246,8 @@ class RuntimeManager:
                 _maybe_synthesize_failure(
                     diagnostics,
                     result=orchestration_result,
-                    code="runtime.apply-phase-failed",
-                    address="runtime.apply.orchestrator",
+                    code=_APPLY_PHASE_FAILED,
+                    address=_APPLY_ORCHESTRATOR_ADDRESS,
                     message="Orchestrator failed to start.",
                 )
                 rollback_services = [
@@ -325,6 +274,75 @@ class RuntimeManager:
             diagnostics=diagnostics,
             changed_addresses=changed_addresses,
         )
+
+    def _apply_precondition_failure(
+        self,
+        execution_plan: ExecutionPlan,
+        diagnostics: list[Diagnostic],
+    ) -> ApplyResult | None:
+        provenance_diagnostics = _provenance_diagnostics(
+            execution_plan,
+            self._target,
+            self._snapshot,
+        )
+        diagnostics.extend(provenance_diagnostics)
+        if provenance_diagnostics:
+            return ApplyResult(
+                success=False,
+                snapshot=self._snapshot,
+                diagnostics=diagnostics,
+            )
+
+        if not execution_plan.is_valid:
+            return ApplyResult(
+                success=False,
+                snapshot=self._snapshot,
+                diagnostics=diagnostics,
+            )
+
+        evaluation_needed = bool(execution_plan.evaluation.actionable_operations)
+        if evaluation_needed and self._target.evaluator is None:
+            diagnostics.append(
+                _failure_diagnostic(
+                    "runtime.apply-missing-evaluator",
+                    _APPLY_EVALUATOR_ADDRESS,
+                    "Execution plan requires an evaluator, but the target does not provide one.",
+                )
+            )
+            return ApplyResult(
+                success=False,
+                snapshot=self._snapshot,
+                diagnostics=diagnostics,
+            )
+
+        orchestration_needed = bool(execution_plan.orchestration.actionable_operations)
+        if orchestration_needed and self._target.orchestrator is None:
+            diagnostics.append(
+                _failure_diagnostic(
+                    "runtime.apply-missing-orchestrator",
+                    _APPLY_ORCHESTRATOR_ADDRESS,
+                    "Execution plan requires an orchestrator, but the target does not provide one.",
+                )
+            )
+            return ApplyResult(
+                success=False,
+                snapshot=self._snapshot,
+                diagnostics=diagnostics,
+            )
+
+        validation = _call_backend_diagnostics(
+            self._target.provisioner.validate,
+            execution_plan.provisioning,
+            address="runtime.apply.provisioning.validate",
+        )
+        diagnostics.extend(validation)
+        if _has_error_diagnostic(validation):
+            return ApplyResult(
+                success=False,
+                snapshot=self._snapshot,
+                diagnostics=diagnostics,
+            )
+        return None
 
     def status(self) -> dict[str, object]:
         info: dict[str, object] = {
@@ -367,7 +385,7 @@ class RuntimeManager:
                 _maybe_synthesize_failure(
                     diagnostics,
                     result=stop_result,
-                    code="runtime.destroy-phase-failed",
+                    code=_DESTROY_PHASE_FAILED,
                     address="runtime.destroy.orchestrator",
                     message="Orchestrator stop failed.",
                 )
@@ -387,7 +405,7 @@ class RuntimeManager:
                 _maybe_synthesize_failure(
                     diagnostics,
                     result=stop_result,
-                    code="runtime.destroy-phase-failed",
+                    code=_DESTROY_PHASE_FAILED,
                     address="runtime.destroy.evaluator",
                     message="Evaluator stop failed.",
                 )
@@ -422,7 +440,7 @@ class RuntimeManager:
             _maybe_synthesize_failure(
                 diagnostics,
                 result=provision_result,
-                code="runtime.destroy-phase-failed",
+                code=_DESTROY_PHASE_FAILED,
                 address="runtime.destroy.provisioning",
                 message="Provisioning destroy failed.",
             )

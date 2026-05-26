@@ -10,6 +10,16 @@ from typing import Any
 from aces_sdl.semantics.workflow import WorkflowStepSemanticContract
 from aces_sdl.semantics.workflow import validate_workflow_step_result as _validate_workflow_step_result
 
+from aces_contracts._validation import (
+    enum_value,
+    optional_enum_value,
+    require_dict,
+    require_list,
+    require_non_empty_string,
+    require_optional_string,
+    require_string,
+    require_strings,
+)
 from aces_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
 
 
@@ -153,55 +163,9 @@ class WorkflowExecutionContract:
     observable_steps: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if not isinstance(self.state_schema_version, str) or not self.state_schema_version:
-            raise TypeError("workflow execution contract state_schema_version must be a non-empty string")
-        if not isinstance(self.start_step, str):
-            raise TypeError("workflow execution contract start_step must be a string")
-        if self.timeout_seconds is not None:
-            if isinstance(self.timeout_seconds, bool) or not isinstance(self.timeout_seconds, int):
-                raise TypeError("workflow execution contract timeout_seconds must be an int or None")
-            if self.timeout_seconds <= 0:
-                raise ValueError("workflow execution contract timeout_seconds must be > 0")
-        if not isinstance(self.steps, dict):
-            raise TypeError("workflow execution contract steps must be a dict")
-        if any(not isinstance(name, str) for name in self.steps):
-            raise TypeError("workflow execution contract step names must be strings")
-        if any(not isinstance(contract, WorkflowStepSemanticContract) for contract in self.steps.values()):
-            raise TypeError("workflow execution contract step contracts must be WorkflowStepSemanticContract values")
-        if not isinstance(self.step_types, dict):
-            raise TypeError("workflow execution contract step_types must be a dict")
-        if any(
-            not isinstance(name, str) or not isinstance(step_type, str) for name, step_type in self.step_types.items()
-        ):
-            raise TypeError("workflow execution contract step_types must map strings to strings")
-        if not isinstance(self.control_edges, dict):
-            raise TypeError("workflow execution contract control_edges must be a dict")
-        if not isinstance(self.join_owners, dict):
-            raise TypeError("workflow execution contract join_owners must be a dict")
-        if not isinstance(self.call_steps, dict):
-            raise TypeError("workflow execution contract call_steps must be a dict")
-        if any(
-            not isinstance(step_name, str) or not isinstance(workflow_address, str)
-            for step_name, workflow_address in self.call_steps.items()
-        ):
-            raise TypeError("workflow execution contract call_steps must map strings to strings")
-        if not isinstance(self.compensation_mode, str):
-            raise TypeError("workflow execution contract compensation_mode must be a string")
-        if any(not isinstance(trigger, str) for trigger in self.compensation_triggers):
-            raise TypeError("workflow execution contract compensation_triggers must be strings")
-        if not isinstance(self.compensation_targets, dict):
-            raise TypeError("workflow execution contract compensation_targets must be a dict")
-        if any(
-            not isinstance(step_name, str) or not isinstance(workflow_address, str)
-            for step_name, workflow_address in self.compensation_targets.items()
-        ):
-            raise TypeError("workflow execution contract compensation_targets must map strings to strings")
-        if not isinstance(self.compensation_ordering, str):
-            raise TypeError("workflow execution contract compensation_ordering must be a string")
-        if not isinstance(self.compensation_failure_policy, str):
-            raise TypeError("workflow execution contract compensation_failure_policy must be a string")
-        if any(not isinstance(step_name, str) for step_name in self.observable_steps):
-            raise TypeError("workflow execution contract observable_steps must be strings")
+        _validate_workflow_execution_contract_identity(self)
+        _validate_workflow_execution_contract_steps(self)
+        _validate_workflow_execution_contract_compensation(self)
 
     @classmethod
     def from_mapping(
@@ -257,6 +221,48 @@ class WorkflowExecutionContract:
         )
 
 
+def _validate_workflow_execution_contract_identity(contract: WorkflowExecutionContract) -> None:
+    require_non_empty_string(
+        contract.state_schema_version,
+        "workflow execution contract state_schema_version",
+    )
+    require_string(contract.start_step, "workflow execution contract start_step")
+    if contract.timeout_seconds is None:
+        return
+    if isinstance(contract.timeout_seconds, bool) or not isinstance(contract.timeout_seconds, int):
+        raise TypeError("workflow execution contract timeout_seconds must be an int or None")
+    if contract.timeout_seconds <= 0:
+        raise ValueError("workflow execution contract timeout_seconds must be > 0")
+
+
+def _validate_workflow_execution_contract_steps(contract: WorkflowExecutionContract) -> None:
+    require_dict(contract.steps, "workflow execution contract steps")
+    require_strings(contract.steps, "workflow execution contract step names")
+    if any(not isinstance(step_contract, WorkflowStepSemanticContract) for step_contract in contract.steps.values()):
+        raise TypeError("workflow execution contract step contracts must be WorkflowStepSemanticContract values")
+    require_dict(contract.step_types, "workflow execution contract step_types")
+    if any(not isinstance(name, str) or not isinstance(kind, str) for name, kind in contract.step_types.items()):
+        raise TypeError("workflow execution contract step_types must map strings to strings")
+    require_dict(contract.control_edges, "workflow execution contract control_edges")
+    require_dict(contract.join_owners, "workflow execution contract join_owners")
+    _require_string_mapping(contract.call_steps, "workflow execution contract call_steps")
+    require_strings(contract.observable_steps, "workflow execution contract observable_steps")
+
+
+def _validate_workflow_execution_contract_compensation(contract: WorkflowExecutionContract) -> None:
+    require_string(contract.compensation_mode, "workflow execution contract compensation_mode")
+    require_strings(contract.compensation_triggers, "workflow execution contract compensation_triggers")
+    _require_string_mapping(contract.compensation_targets, "workflow execution contract compensation_targets")
+    require_string(contract.compensation_ordering, "workflow execution contract compensation_ordering")
+    require_string(contract.compensation_failure_policy, "workflow execution contract compensation_failure_policy")
+
+
+def _require_string_mapping(value: object, field_name: str) -> None:
+    require_dict(value, field_name)
+    if any(not isinstance(key, str) or not isinstance(item, str) for key, item in value.items()):
+        raise TypeError(f"{field_name} must map strings to strings")
+
+
 @dataclass(frozen=True)
 class WorkflowHistoryEvent:
     """Internal normalized workflow history event."""
@@ -291,11 +297,7 @@ class WorkflowHistoryEvent:
             step_name=(str(payload["step_name"]) if payload.get("step_name") is not None else None),
             branch_name=(str(payload["branch_name"]) if payload.get("branch_name") is not None else None),
             join_step=(str(payload["join_step"]) if payload.get("join_step") is not None else None),
-            outcome=(
-                outcome_raw
-                if isinstance(outcome_raw, WorkflowStepOutcome)
-                else (WorkflowStepOutcome(str(outcome_raw)) if outcome_raw is not None else None)
-            ),
+            outcome=optional_enum_value(WorkflowStepOutcome, outcome_raw),
             details=dict(payload.get("details", {})) if isinstance(payload.get("details", {}), Mapping) else {},
         )
 
@@ -421,20 +423,12 @@ class WorkflowExecutionState:
             steps[step_name] = WorkflowStepExecutionState.from_payload(step_payload)
         return cls(
             state_schema_version=state_schema_version,
-            workflow_status=(
-                workflow_status_raw
-                if isinstance(workflow_status_raw, WorkflowStatus)
-                else WorkflowStatus(str(workflow_status_raw))
-            ),
+            workflow_status=(enum_value(WorkflowStatus, workflow_status_raw)),
             run_id=str(payload.get("run_id")),
             started_at=str(payload.get("started_at")),
             updated_at=str(payload.get("updated_at")),
             terminal_reason=(str(payload["terminal_reason"]) if payload.get("terminal_reason") is not None else None),
-            compensation_status=(
-                payload.get("compensation_status")
-                if isinstance(payload.get("compensation_status"), WorkflowCompensationStatus)
-                else WorkflowCompensationStatus(str(payload.get("compensation_status")))
-            ),
+            compensation_status=(enum_value(WorkflowCompensationStatus, payload.get("compensation_status"))),
             compensation_started_at=(
                 str(payload["compensation_started_at"]) if payload.get("compensation_started_at") is not None else None
             ),
@@ -463,62 +457,73 @@ class WorkflowExecutionState:
         }
 
     def __post_init__(self) -> None:
-        if not isinstance(self.state_schema_version, str) or not self.state_schema_version:
-            raise TypeError("workflow result state_schema_version must be a non-empty string")
-        if not isinstance(self.workflow_status, WorkflowStatus):
-            raise TypeError("workflow_status must be a WorkflowStatus")
-        if not isinstance(self.run_id, str) or not self.run_id:
-            raise TypeError("run_id must be a non-empty string")
-        if not isinstance(self.started_at, str) or not self.started_at:
-            raise TypeError("started_at must be a non-empty string")
-        if not isinstance(self.updated_at, str) or not self.updated_at:
-            raise TypeError("updated_at must be a non-empty string")
-        if self.terminal_reason is not None and not isinstance(self.terminal_reason, str):
-            raise TypeError("terminal_reason must be a string or None")
-        if not isinstance(self.compensation_status, WorkflowCompensationStatus):
-            raise TypeError("compensation_status must be a WorkflowCompensationStatus")
-        if self.compensation_started_at is not None and not isinstance(self.compensation_started_at, str):
-            raise TypeError("compensation_started_at must be a string or None")
-        if self.compensation_updated_at is not None and not isinstance(self.compensation_updated_at, str):
-            raise TypeError("compensation_updated_at must be a string or None")
-        if not isinstance(self.compensation_failures, list):
-            raise TypeError("compensation_failures must be a list")
-        if any(not isinstance(item, dict) for item in self.compensation_failures):
-            raise TypeError("compensation_failures entries must be dicts")
-        if not isinstance(self.steps, dict):
-            raise TypeError("workflow step results must be stored in a dict")
-        if any(not isinstance(step_name, str) for step_name in self.steps):
-            raise TypeError("workflow step result keys must be strings")
-        if any(not isinstance(step_state, WorkflowStepExecutionState) for step_state in self.steps.values()):
-            raise TypeError("workflow step results must be WorkflowStepExecutionState values")
-        if (
-            self.workflow_status
-            in {
-                WorkflowStatus.SUCCEEDED,
-                WorkflowStatus.FAILED,
-                WorkflowStatus.CANCELLED,
-                WorkflowStatus.TIMED_OUT,
-            }
-            and self.terminal_reason is None
-        ):
-            raise ValueError("terminal workflow statuses must include terminal_reason")
-        if (
-            self.workflow_status in {WorkflowStatus.PENDING, WorkflowStatus.RUNNING}
-            and self.terminal_reason is not None
-        ):
-            raise ValueError("non-terminal workflow statuses may not include terminal_reason")
-        if self.workflow_status in {WorkflowStatus.PENDING, WorkflowStatus.RUNNING}:
-            if self.compensation_status != WorkflowCompensationStatus.NOT_REQUIRED:
-                raise ValueError("non-terminal workflow statuses may not report compensation activity")
-            if self.compensation_started_at is not None or self.compensation_updated_at is not None:
-                raise ValueError("non-terminal workflow statuses may not report compensation timestamps")
-        if self.compensation_status == WorkflowCompensationStatus.NOT_REQUIRED:
-            if self.compensation_started_at is not None or self.compensation_updated_at is not None:
-                raise ValueError("compensation_status=not_required may not report compensation timestamps")
-            if self.compensation_failures:
-                raise ValueError("compensation_status=not_required may not report compensation failures")
-        if self.compensation_status == WorkflowCompensationStatus.RUNNING and self.compensation_started_at is None:
-            raise ValueError("compensation_status=running requires compensation_started_at")
+        _validate_workflow_execution_state_types(self)
+        _validate_workflow_execution_state_terminal_status(self)
+        _validate_workflow_execution_state_compensation(self)
+
+
+_TERMINAL_WORKFLOW_STATUSES = {
+    WorkflowStatus.SUCCEEDED,
+    WorkflowStatus.FAILED,
+    WorkflowStatus.CANCELLED,
+    WorkflowStatus.TIMED_OUT,
+}
+
+_NON_TERMINAL_WORKFLOW_STATUSES = {
+    WorkflowStatus.PENDING,
+    WorkflowStatus.RUNNING,
+}
+
+
+def _validate_workflow_execution_state_types(state: WorkflowExecutionState) -> None:
+    require_non_empty_string(state.state_schema_version, "workflow result state_schema_version")
+    if not isinstance(state.workflow_status, WorkflowStatus):
+        raise TypeError("workflow_status must be a WorkflowStatus")
+    require_non_empty_string(state.run_id, "run_id")
+    require_non_empty_string(state.started_at, "started_at")
+    require_non_empty_string(state.updated_at, "updated_at")
+    require_optional_string(state.terminal_reason, "terminal_reason")
+    if not isinstance(state.compensation_status, WorkflowCompensationStatus):
+        raise TypeError("compensation_status must be a WorkflowCompensationStatus")
+    require_optional_string(state.compensation_started_at, "compensation_started_at")
+    require_optional_string(state.compensation_updated_at, "compensation_updated_at")
+    require_list(state.compensation_failures, "compensation_failures")
+    if any(not isinstance(item, dict) for item in state.compensation_failures):
+        raise TypeError("compensation_failures entries must be dicts")
+    require_dict(state.steps, "workflow step results")
+    require_strings(state.steps, "workflow step result keys")
+    if any(not isinstance(step_state, WorkflowStepExecutionState) for step_state in state.steps.values()):
+        raise TypeError("workflow step results must be WorkflowStepExecutionState values")
+
+
+def _validate_workflow_execution_state_terminal_status(state: WorkflowExecutionState) -> None:
+    if state.workflow_status in _TERMINAL_WORKFLOW_STATUSES and state.terminal_reason is None:
+        raise ValueError("terminal workflow statuses must include terminal_reason")
+    if state.workflow_status in _NON_TERMINAL_WORKFLOW_STATUSES and state.terminal_reason is not None:
+        raise ValueError("non-terminal workflow statuses may not include terminal_reason")
+
+
+def _validate_workflow_execution_state_compensation(state: WorkflowExecutionState) -> None:
+    if state.workflow_status in _NON_TERMINAL_WORKFLOW_STATUSES:
+        _validate_non_terminal_workflow_compensation(state)
+    if state.compensation_status == WorkflowCompensationStatus.NOT_REQUIRED:
+        _validate_absent_workflow_compensation(state)
+    if state.compensation_status == WorkflowCompensationStatus.RUNNING and state.compensation_started_at is None:
+        raise ValueError("compensation_status=running requires compensation_started_at")
+
+
+def _validate_non_terminal_workflow_compensation(state: WorkflowExecutionState) -> None:
+    if state.compensation_status != WorkflowCompensationStatus.NOT_REQUIRED:
+        raise ValueError("non-terminal workflow statuses may not report compensation activity")
+    if state.compensation_started_at is not None or state.compensation_updated_at is not None:
+        raise ValueError("non-terminal workflow statuses may not report compensation timestamps")
+
+
+def _validate_absent_workflow_compensation(state: WorkflowExecutionState) -> None:
+    if state.compensation_started_at is not None or state.compensation_updated_at is not None:
+        raise ValueError("compensation_status=not_required may not report compensation timestamps")
+    if state.compensation_failures:
+        raise ValueError("compensation_status=not_required may not report compensation failures")
 
 
 @dataclass(frozen=True)

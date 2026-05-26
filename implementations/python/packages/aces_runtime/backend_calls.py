@@ -12,6 +12,8 @@ from .evaluation_result_contracts import evaluation_result_contract_diagnostics
 from .participant_result_contracts import participant_episode_contract_diagnostics
 from .workflow_result_contracts import workflow_result_contract_diagnostics
 
+_BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
+
 
 def _call_backend_diagnostics(
     method,
@@ -32,7 +34,7 @@ def _call_backend_diagnostics(
     if not isinstance(result, Iterable) or isinstance(result, (str, bytes)):
         return [
             _failure_diagnostic(
-                "runtime.backend-contract-invalid",
+                _BACKEND_CONTRACT_INVALID,
                 address,
                 (f"Backend method '{address}' returned {type(result).__name__}; expected diagnostics iterable."),
             )
@@ -42,7 +44,7 @@ def _call_backend_diagnostics(
     if any(not isinstance(diagnostic, Diagnostic) for diagnostic in diagnostics):
         return [
             _failure_diagnostic(
-                "runtime.backend-contract-invalid",
+                _BACKEND_CONTRACT_INVALID,
                 address,
                 (f"Backend method '{address}' returned a diagnostics iterable containing non-Diagnostic values."),
             )
@@ -78,7 +80,7 @@ def _call_backend_apply(
             snapshot=snapshot,
             diagnostics=[
                 _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
+                    _BACKEND_CONTRACT_INVALID,
                     address,
                     (f"Backend method '{address}' returned {type(result).__name__}; expected ApplyResult."),
                 )
@@ -91,7 +93,7 @@ def _call_backend_apply(
             snapshot=snapshot,
             diagnostics=[
                 _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
+                    _BACKEND_CONTRACT_INVALID,
                     address,
                     (
                         f"Backend method '{address}' returned ApplyResult.snapshot "
@@ -107,7 +109,7 @@ def _call_backend_apply(
             snapshot=snapshot,
             diagnostics=[
                 _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
+                    _BACKEND_CONTRACT_INVALID,
                     address,
                     (
                         f"Backend method '{address}' returned ApplyResult.diagnostics "
@@ -123,7 +125,7 @@ def _call_backend_apply(
             snapshot=snapshot,
             diagnostics=[
                 _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
+                    _BACKEND_CONTRACT_INVALID,
                     address,
                     (f"Backend method '{address}' returned ApplyResult.diagnostics containing non-Diagnostic values."),
                 )
@@ -136,7 +138,7 @@ def _call_backend_apply(
             snapshot=snapshot,
             diagnostics=[
                 _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
+                    _BACKEND_CONTRACT_INVALID,
                     address,
                     (
                         f"Backend method '{address}' returned ApplyResult.changed_addresses "
@@ -152,7 +154,7 @@ def _call_backend_apply(
             snapshot=snapshot,
             diagnostics=[
                 _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
+                    _BACKEND_CONTRACT_INVALID,
                     address,
                     (
                         f"Backend method '{address}' returned ApplyResult.changed_addresses "
@@ -168,7 +170,7 @@ def _call_backend_apply(
             snapshot=snapshot,
             diagnostics=[
                 _failure_diagnostic(
-                    "runtime.backend-contract-invalid",
+                    _BACKEND_CONTRACT_INVALID,
                     address,
                     (
                         f"Backend method '{address}' returned ApplyResult.details "

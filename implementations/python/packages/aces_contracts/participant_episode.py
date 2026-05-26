@@ -7,6 +7,14 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from aces_contracts._validation import (
+    enum_value,
+    optional_enum_value,
+    require_dict,
+    require_non_empty_string,
+    require_non_negative_int,
+    require_optional_non_empty_string,
+)
 from aces_contracts.versions import PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION
 
 
@@ -149,28 +157,12 @@ class ParticipantEpisodeExecutionState:
             participant_address=str(payload.get("participant_address")),
             episode_id=str(payload.get("episode_id")),
             sequence_number=sequence_number_raw,
-            status=(
-                status_raw
-                if isinstance(status_raw, ParticipantEpisodeStatus)
-                else ParticipantEpisodeStatus(str(status_raw))
-            ),
-            terminal_reason=(
-                terminal_reason_raw
-                if isinstance(terminal_reason_raw, ParticipantEpisodeTerminalReason)
-                else (
-                    ParticipantEpisodeTerminalReason(str(terminal_reason_raw))
-                    if terminal_reason_raw is not None
-                    else None
-                )
-            ),
+            status=enum_value(ParticipantEpisodeStatus, status_raw),
+            terminal_reason=optional_enum_value(ParticipantEpisodeTerminalReason, terminal_reason_raw),
             initialized_at=str(payload.get("initialized_at")),
             updated_at=str(payload.get("updated_at")),
             terminated_at=(str(payload["terminated_at"]) if payload.get("terminated_at") is not None else None),
-            last_control_action=(
-                last_control_action_raw
-                if isinstance(last_control_action_raw, ParticipantEpisodeControlAction)
-                else ParticipantEpisodeControlAction(str(last_control_action_raw))
-            ),
+            last_control_action=enum_value(ParticipantEpisodeControlAction, last_control_action_raw),
             previous_episode_id=(
                 str(payload["previous_episode_id"]) if payload.get("previous_episode_id") is not None else None
             ),
@@ -192,62 +184,9 @@ class ParticipantEpisodeExecutionState:
         }
 
     def __post_init__(self) -> None:
-        if not isinstance(self.state_schema_version, str) or not self.state_schema_version:
-            raise TypeError("participant episode state_schema_version must be a non-empty string")
-        if not isinstance(self.participant_address, str) or not self.participant_address:
-            raise TypeError("participant_address must be a non-empty string")
-        if not isinstance(self.episode_id, str) or not self.episode_id:
-            raise TypeError("episode_id must be a non-empty string")
-        if isinstance(self.sequence_number, bool) or not isinstance(self.sequence_number, int):
-            raise TypeError("sequence_number must be an int")
-        if self.sequence_number < 0:
-            raise ValueError("sequence_number must be >= 0")
-        if not isinstance(self.status, ParticipantEpisodeStatus):
-            raise TypeError("status must be a ParticipantEpisodeStatus")
-        if self.terminal_reason is not None and not isinstance(self.terminal_reason, ParticipantEpisodeTerminalReason):
-            raise TypeError("terminal_reason must be a ParticipantEpisodeTerminalReason or None")
-        if not isinstance(self.initialized_at, str) or not self.initialized_at:
-            raise TypeError("initialized_at must be a non-empty string")
-        if not isinstance(self.updated_at, str) or not self.updated_at:
-            raise TypeError("updated_at must be a non-empty string")
-        if self.terminated_at is not None and (not isinstance(self.terminated_at, str) or not self.terminated_at):
-            raise TypeError("terminated_at must be a non-empty string or None")
-        if not isinstance(self.last_control_action, ParticipantEpisodeControlAction):
-            raise TypeError("last_control_action must be a ParticipantEpisodeControlAction")
-        if self.previous_episode_id is not None and (
-            not isinstance(self.previous_episode_id, str) or not self.previous_episode_id
-        ):
-            raise TypeError("previous_episode_id must be a non-empty string or None")
-        if self.status in {ParticipantEpisodeStatus.INITIALIZING, ParticipantEpisodeStatus.RUNNING}:
-            if self.terminal_reason is not None:
-                raise ValueError("non-terminal participant episodes may not report a terminal_reason")
-            if self.terminated_at is not None:
-                raise ValueError("non-terminal participant episodes may not report a terminated_at timestamp")
-        if self.status == ParticipantEpisodeStatus.TERMINATED:
-            if self.terminal_reason is None:
-                raise ValueError("terminated participant episodes must report a terminal_reason")
-            if self.terminated_at is None:
-                raise ValueError("terminated participant episodes must report a terminated_at timestamp")
-        if self.sequence_number == 0:
-            if self.last_control_action != ParticipantEpisodeControlAction.INITIALIZE:
-                raise ValueError(
-                    "the first participant episode (sequence_number=0) must use the INITIALIZE control action"
-                )
-            if self.previous_episode_id is not None:
-                raise ValueError(
-                    "the first participant episode (sequence_number=0) must not link to a previous episode"
-                )
-        else:
-            if self.last_control_action == ParticipantEpisodeControlAction.INITIALIZE:
-                raise ValueError(
-                    "subsequent participant episodes (sequence_number>0) must use RESET or RESTART, not INITIALIZE"
-                )
-            if self.previous_episode_id is None:
-                raise ValueError(
-                    "subsequent participant episodes (sequence_number>0) must link to a previous_episode_id"
-                )
-            if self.previous_episode_id == self.episode_id:
-                raise ValueError("previous_episode_id must differ from episode_id; reset/restart create a new instance")
+        _validate_episode_state_types(self)
+        _validate_episode_state_status(self)
+        _validate_episode_state_sequence(self)
 
 
 @dataclass(frozen=True)
@@ -289,31 +228,13 @@ class ParticipantEpisodeHistoryEvent:
         terminal_reason_raw = payload.get("terminal_reason")
         control_action_raw = payload.get("control_action")
         return cls(
-            event_type=(
-                payload["event_type"]
-                if isinstance(payload["event_type"], ParticipantEpisodeHistoryEventType)
-                else ParticipantEpisodeHistoryEventType(str(payload["event_type"]))
-            ),
+            event_type=enum_value(ParticipantEpisodeHistoryEventType, payload["event_type"]),
             timestamp=str(payload["timestamp"]),
             participant_address=str(payload["participant_address"]),
             episode_id=str(payload["episode_id"]),
             sequence_number=sequence_number_raw,
-            terminal_reason=(
-                terminal_reason_raw
-                if isinstance(terminal_reason_raw, ParticipantEpisodeTerminalReason)
-                else (
-                    ParticipantEpisodeTerminalReason(str(terminal_reason_raw))
-                    if terminal_reason_raw is not None
-                    else None
-                )
-            ),
-            control_action=(
-                control_action_raw
-                if isinstance(control_action_raw, ParticipantEpisodeControlAction)
-                else (
-                    ParticipantEpisodeControlAction(str(control_action_raw)) if control_action_raw is not None else None
-                )
-            ),
+            terminal_reason=optional_enum_value(ParticipantEpisodeTerminalReason, terminal_reason_raw),
+            control_action=optional_enum_value(ParticipantEpisodeControlAction, control_action_raw),
             details=dict(payload.get("details", {})) if isinstance(payload.get("details", {}), Mapping) else {},
         )
 
@@ -330,254 +251,122 @@ class ParticipantEpisodeHistoryEvent:
         }
 
     def __post_init__(self) -> None:
-        if not isinstance(self.event_type, ParticipantEpisodeHistoryEventType):
-            raise TypeError("event_type must be a ParticipantEpisodeHistoryEventType")
-        if not isinstance(self.timestamp, str) or not self.timestamp:
-            raise TypeError("timestamp must be a non-empty string")
-        if not isinstance(self.participant_address, str) or not self.participant_address:
-            raise TypeError("participant_address must be a non-empty string")
-        if not isinstance(self.episode_id, str) or not self.episode_id:
-            raise TypeError("episode_id must be a non-empty string")
-        if isinstance(self.sequence_number, bool) or not isinstance(self.sequence_number, int):
-            raise TypeError("sequence_number must be an int")
-        if self.sequence_number < 0:
-            raise ValueError("sequence_number must be >= 0")
-        if self.terminal_reason is not None and not isinstance(self.terminal_reason, ParticipantEpisodeTerminalReason):
-            raise TypeError("terminal_reason must be a ParticipantEpisodeTerminalReason or None")
-        if self.control_action is not None and not isinstance(self.control_action, ParticipantEpisodeControlAction):
-            raise TypeError("control_action must be a ParticipantEpisodeControlAction or None")
-        if not isinstance(self.details, dict):
-            raise TypeError("details must be a dict")
-        expected_terminal_reason = _PARTICIPANT_EPISODE_TERMINAL_EVENTS.get(self.event_type)
-        if expected_terminal_reason is not None:
-            if self.terminal_reason != expected_terminal_reason:
-                raise ValueError(
-                    f"{self.event_type.value} history events must report terminal_reason "
-                    f"{expected_terminal_reason.value}"
-                )
-        elif self.terminal_reason is not None:
-            raise ValueError(f"{self.event_type.value} history events may not report a terminal_reason")
-        expected_control_action = _PARTICIPANT_EPISODE_CONTROL_EVENTS.get(self.event_type)
-        if expected_control_action is not None:
-            if self.control_action != expected_control_action:
-                raise ValueError(
-                    f"{self.event_type.value} history events must report control_action {expected_control_action.value}"
-                )
-        elif self.control_action is not None:
-            raise ValueError(f"{self.event_type.value} history events may not report a control_action")
-        if self.event_type == ParticipantEpisodeHistoryEventType.EPISODE_INITIALIZED and self.sequence_number != 0:
-            raise ValueError(
-                "episode_initialized history events must report sequence_number=0; "
-                "later episodes arrive via episode_reset or episode_restarted"
-            )
-        if (
-            self.event_type
-            in {
-                ParticipantEpisodeHistoryEventType.EPISODE_RESET,
-                ParticipantEpisodeHistoryEventType.EPISODE_RESTARTED,
-            }
-            and self.sequence_number == 0
-        ):
-            raise ValueError(
-                f"{self.event_type.value} history events must report sequence_number>0; "
-                "the first episode uses episode_initialized"
-            )
+        _validate_episode_history_types(self)
+        _validate_episode_history_terminal_reason(self)
+        _validate_episode_history_control_action(self)
+        _validate_episode_history_sequence(self)
+
+
+def _validate_episode_state_types(state: ParticipantEpisodeExecutionState) -> None:
+    require_non_empty_string(state.state_schema_version, "participant episode state_schema_version")
+    require_non_empty_string(state.participant_address, "participant_address")
+    require_non_empty_string(state.episode_id, "episode_id")
+    require_non_negative_int(state.sequence_number, "sequence_number")
+    if not isinstance(state.status, ParticipantEpisodeStatus):
+        raise TypeError("status must be a ParticipantEpisodeStatus")
+    if state.terminal_reason is not None and not isinstance(state.terminal_reason, ParticipantEpisodeTerminalReason):
+        raise TypeError("terminal_reason must be a ParticipantEpisodeTerminalReason or None")
+    require_non_empty_string(state.initialized_at, "initialized_at")
+    require_non_empty_string(state.updated_at, "updated_at")
+    require_optional_non_empty_string(state.terminated_at, "terminated_at")
+    if not isinstance(state.last_control_action, ParticipantEpisodeControlAction):
+        raise TypeError("last_control_action must be a ParticipantEpisodeControlAction")
+    require_optional_non_empty_string(state.previous_episode_id, "previous_episode_id")
+
+
+def _validate_episode_state_status(state: ParticipantEpisodeExecutionState) -> None:
+    if state.status in {ParticipantEpisodeStatus.INITIALIZING, ParticipantEpisodeStatus.RUNNING}:
+        if state.terminal_reason is not None:
+            raise ValueError("non-terminal participant episodes may not report a terminal_reason")
+        if state.terminated_at is not None:
+            raise ValueError("non-terminal participant episodes may not report a terminated_at timestamp")
+    if state.status == ParticipantEpisodeStatus.TERMINATED:
+        if state.terminal_reason is None:
+            raise ValueError("terminated participant episodes must report a terminal_reason")
+        if state.terminated_at is None:
+            raise ValueError("terminated participant episodes must report a terminated_at timestamp")
+
+
+def _validate_episode_state_sequence(state: ParticipantEpisodeExecutionState) -> None:
+    if state.sequence_number == 0:
+        if state.last_control_action != ParticipantEpisodeControlAction.INITIALIZE:
+            raise ValueError("the first participant episode (sequence_number=0) must use the INITIALIZE control action")
+        if state.previous_episode_id is not None:
+            raise ValueError("the first participant episode (sequence_number=0) must not link to a previous episode")
+        return
+    if state.last_control_action == ParticipantEpisodeControlAction.INITIALIZE:
+        raise ValueError(
+            "subsequent participant episodes (sequence_number>0) must use RESET or RESTART, not INITIALIZE"
+        )
+    if state.previous_episode_id is None:
+        raise ValueError("subsequent participant episodes (sequence_number>0) must link to a previous_episode_id")
+    if state.previous_episode_id == state.episode_id:
+        raise ValueError("previous_episode_id must differ from episode_id; reset/restart create a new instance")
+
+
+def _validate_episode_history_types(event: ParticipantEpisodeHistoryEvent) -> None:
+    if not isinstance(event.event_type, ParticipantEpisodeHistoryEventType):
+        raise TypeError("event_type must be a ParticipantEpisodeHistoryEventType")
+    require_non_empty_string(event.timestamp, "timestamp")
+    require_non_empty_string(event.participant_address, "participant_address")
+    require_non_empty_string(event.episode_id, "episode_id")
+    require_non_negative_int(event.sequence_number, "sequence_number")
+    if event.terminal_reason is not None and not isinstance(event.terminal_reason, ParticipantEpisodeTerminalReason):
+        raise TypeError("terminal_reason must be a ParticipantEpisodeTerminalReason or None")
+    if event.control_action is not None and not isinstance(event.control_action, ParticipantEpisodeControlAction):
+        raise TypeError("control_action must be a ParticipantEpisodeControlAction or None")
+    require_dict(event.details, "details")
+
+
+def _validate_episode_history_terminal_reason(event: ParticipantEpisodeHistoryEvent) -> None:
+    expected = _PARTICIPANT_EPISODE_TERMINAL_EVENTS.get(event.event_type)
+    if expected is None:
+        if event.terminal_reason is not None:
+            raise ValueError(f"{event.event_type.value} history events may not report a terminal_reason")
+        return
+    if event.terminal_reason != expected:
+        raise ValueError(f"{event.event_type.value} history events must report terminal_reason {expected.value}")
+
+
+def _validate_episode_history_control_action(event: ParticipantEpisodeHistoryEvent) -> None:
+    expected = _PARTICIPANT_EPISODE_CONTROL_EVENTS.get(event.event_type)
+    if expected is None:
+        if event.control_action is not None:
+            raise ValueError(f"{event.event_type.value} history events may not report a control_action")
+        return
+    if event.control_action != expected:
+        raise ValueError(f"{event.event_type.value} history events must report control_action {expected.value}")
+
+
+def _validate_episode_history_sequence(event: ParticipantEpisodeHistoryEvent) -> None:
+    if event.event_type == ParticipantEpisodeHistoryEventType.EPISODE_INITIALIZED and event.sequence_number != 0:
+        raise ValueError(
+            "episode_initialized history events must report sequence_number=0; "
+            "later episodes arrive via episode_reset or episode_restarted"
+        )
+    if (
+        event.event_type
+        in {
+            ParticipantEpisodeHistoryEventType.EPISODE_RESET,
+            ParticipantEpisodeHistoryEventType.EPISODE_RESTARTED,
+        }
+        and event.sequence_number == 0
+    ):
+        raise ValueError(
+            f"{event.event_type.value} history events must report sequence_number>0; "
+            "the first episode uses episode_initialized"
+        )
 
 
 def iter_participant_episode_snapshot_violations(
     participant_episode_results: Any,
     participant_episode_history: Any,
 ) -> Iterator[tuple[str, str]]:
-    """Yield every participant-episode invariant violation in a snapshot."""
+    from aces_contracts.participant_episode_snapshot import (
+        iter_participant_episode_snapshot_violations as _iter_snapshot_violations,
+    )
 
-    results_key = "runtime.snapshot.participant-episode-results"
-    history_key = "runtime.snapshot.participant-episode-history"
-
-    if not isinstance(participant_episode_results, Mapping):
-        yield (results_key, "participant_episode_results must be a mapping")
-    else:
-        for outer_key, result in participant_episode_results.items():
-            if not isinstance(outer_key, str) or not outer_key:
-                yield (results_key, "participant episode result keys must be non-empty strings")
-                continue
-            if not isinstance(result, Mapping):
-                yield (outer_key, "participant episode result must be a mapping")
-                continue
-            try:
-                normalized_result = ParticipantEpisodeExecutionState.from_payload(result)
-            except (TypeError, ValueError) as exc:
-                yield (outer_key, f"participant episode result is invalid: {exc}")
-                continue
-            if normalized_result.participant_address != outer_key:
-                yield (
-                    outer_key,
-                    (
-                        f"participant episode result outer key {outer_key!r} does not match "
-                        f"inner participant_address {normalized_result.participant_address!r}"
-                    ),
-                )
-
-    if not isinstance(participant_episode_history, Mapping):
-        yield (history_key, "participant_episode_history must be a mapping")
-        return
-
-    for outer_key, history in participant_episode_history.items():
-        if not isinstance(outer_key, str) or not outer_key:
-            yield (history_key, "participant episode history keys must be non-empty strings")
-            continue
-        if not isinstance(history, list):
-            yield (outer_key, "participant episode history must be a list of events")
-            continue
-        normalized_events: list[ParticipantEpisodeHistoryEvent] = []
-        per_entry_violations = False
-        for index, event in enumerate(history):
-            locator = f"{outer_key}[{index}]"
-            if not isinstance(event, Mapping):
-                yield (locator, "participant episode history event must be a mapping")
-                per_entry_violations = True
-                continue
-            try:
-                normalized_event = ParticipantEpisodeHistoryEvent.from_payload(event)
-            except (TypeError, ValueError) as exc:
-                yield (locator, f"participant episode history event is invalid: {exc}")
-                per_entry_violations = True
-                continue
-            if normalized_event.participant_address != outer_key:
-                yield (
-                    locator,
-                    (
-                        f"participant episode history event outer key {outer_key!r} does not match "
-                        f"inner participant_address {normalized_event.participant_address!r}"
-                    ),
-                )
-                per_entry_violations = True
-                continue
-            normalized_events.append(normalized_event)
-
-        if per_entry_violations:
-            continue
-
-        last_sequence = -1
-        sequence_to_episode: dict[int, str] = {}
-        for index, event in enumerate(normalized_events):
-            locator = f"{outer_key}[{index}]"
-            if event.sequence_number < last_sequence:
-                yield (
-                    locator,
-                    (
-                        f"participant episode history sequence_number went backward "
-                        f"({last_sequence} -> {event.sequence_number})"
-                    ),
-                )
-                continue
-            if (
-                event.sequence_number > last_sequence
-                and last_sequence != -1
-                and event.event_type
-                not in {
-                    ParticipantEpisodeHistoryEventType.EPISODE_RESET,
-                    ParticipantEpisodeHistoryEventType.EPISODE_RESTARTED,
-                }
-            ):
-                yield (
-                    locator,
-                    (
-                        f"participant episode transition to sequence_number "
-                        f"{event.sequence_number} must arrive via episode_reset or "
-                        f"episode_restarted; saw {event.event_type.value}"
-                    ),
-                )
-            expected_episode_id = sequence_to_episode.get(event.sequence_number)
-            if expected_episode_id is not None and expected_episode_id != event.episode_id:
-                yield (
-                    locator,
-                    (
-                        f"participant episode history episode_id changed within "
-                        f"sequence_number {event.sequence_number}: "
-                        f"{expected_episode_id!r} -> {event.episode_id!r}"
-                    ),
-                )
-            sequence_to_episode[event.sequence_number] = event.episode_id
-            last_sequence = event.sequence_number
-
-    if isinstance(participant_episode_results, Mapping) and isinstance(participant_episode_history, Mapping):
-        for outer_key, result in participant_episode_results.items():
-            if not isinstance(outer_key, str) or not outer_key:
-                continue
-            if not isinstance(result, Mapping):
-                continue
-            history = participant_episode_history.get(outer_key)
-            if not isinstance(history, list) or not history:
-                continue
-            try:
-                normalized_result = ParticipantEpisodeExecutionState.from_payload(result)
-            except (TypeError, ValueError):
-                continue
-            last_event: ParticipantEpisodeHistoryEvent | None = None
-            for event in history:
-                if not isinstance(event, Mapping):
-                    continue
-                try:
-                    candidate = ParticipantEpisodeHistoryEvent.from_payload(event)
-                except (TypeError, ValueError):
-                    continue
-                if candidate.participant_address != outer_key:
-                    continue
-                last_event = candidate
-            if last_event is None:
-                continue
-            if (
-                last_event.episode_id != normalized_result.episode_id
-                or last_event.sequence_number != normalized_result.sequence_number
-            ):
-                yield (
-                    outer_key,
-                    (
-                        f"participant episode result (episode_id="
-                        f"{normalized_result.episode_id!r}, sequence_number="
-                        f"{normalized_result.sequence_number}) does not match head of "
-                        f"history chain (episode_id={last_event.episode_id!r}, "
-                        f"sequence_number={last_event.sequence_number})"
-                    ),
-                )
-                continue
-            if normalized_result.status == ParticipantEpisodeStatus.TERMINATED:
-                if last_event.event_type not in _PARTICIPANT_EPISODE_TERMINAL_EVENTS:
-                    yield (
-                        outer_key,
-                        (
-                            f"participant episode result status is 'terminated' but head "
-                            f"history event is {last_event.event_type.value!r}, not a "
-                            f"terminal event"
-                        ),
-                    )
-                elif normalized_result.terminal_reason != last_event.terminal_reason:
-                    expected = (
-                        normalized_result.terminal_reason.value
-                        if normalized_result.terminal_reason is not None
-                        else None
-                    )
-                    got = last_event.terminal_reason.value if last_event.terminal_reason is not None else None
-                    yield (
-                        outer_key,
-                        (
-                            f"participant episode result terminal_reason {expected!r} does "
-                            f"not match head history terminal_reason {got!r}"
-                        ),
-                    )
-            elif normalized_result.status in (
-                ParticipantEpisodeStatus.INITIALIZING,
-                ParticipantEpisodeStatus.RUNNING,
-            ):
-                if last_event.event_type in _PARTICIPANT_EPISODE_TERMINAL_EVENTS:
-                    yield (
-                        outer_key,
-                        (
-                            f"participant episode result status is "
-                            f"{normalized_result.status.value!r} but head history event is "
-                            f"terminal ({last_event.event_type.value!r})"
-                        ),
-                    )
+    yield from _iter_snapshot_violations(participant_episode_results, participant_episode_history)
 
 
 __all__ = (

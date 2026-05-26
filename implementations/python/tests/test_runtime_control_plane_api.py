@@ -77,6 +77,32 @@ def test_control_plane_api_default_security_does_not_trust_builtin_headers_or_to
     assert token_response.status_code == 401
 
 
+def test_control_plane_api_openapi_documents_explicit_error_responses():
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+
+    operation_responses = app.openapi()["paths"]
+
+    assert "409" in operation_responses["/operations/provisioning"]["post"]["responses"]
+    assert "409" in operation_responses["/operations/orchestration"]["post"]["responses"]
+    assert "409" in operation_responses["/operations/evaluation"]["post"]["responses"]
+    assert "404" in operation_responses["/operations/{operation_id}"]["get"]["responses"]
+    assert "409" in operation_responses["/workflows/{workflow_address}/cancel"]["post"]["responses"]
+    assert "409" in operation_responses["/workflows/reconcile-timeouts"]["post"]["responses"]
+    assert "409" in operation_responses["/participants/{participant_address}/episodes/initialize"]["post"]["responses"]
+    assert "409" in operation_responses["/participants/{participant_address}/episodes/reset"]["post"]["responses"]
+    assert "409" in operation_responses["/participants/{participant_address}/episodes/restart"]["post"]["responses"]
+    terminate_responses = operation_responses["/participants/{participant_address}/episodes/terminate"]["post"][
+        "responses"
+    ]
+    assert "400" in terminate_responses
+    assert "409" in terminate_responses
+
+
 def test_control_plane_api_accepts_orchestration_plan_and_exposes_snapshot():
     scenario = _scenario("""
 name: workflow
