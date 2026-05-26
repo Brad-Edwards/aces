@@ -42,15 +42,16 @@ The design therefore needs a runtime-observable lifecycle, not a required
 participant-internal loop. The primary lineage reinforces that boundary:
 Gymnasium, PettingZoo, OpenSpiel, CybORG, CyberBattleSim, and CyGIL expose
 actions, observations, rewards or returns, legal-action spaces or masks,
-termination/truncation, episode control, and multi-agent interaction without
-requiring access to private agent internals. OpenSpiel's information-state
-discipline reinforces that observation, action-observation history, and
-perfect recall are separate claims. Lamport clocks, HLA time management, Time
-Warp, DEVS, and FMI separate timestamp, ordering, causality, pacing,
-synchronization, lookahead, rollback, and realization. OCSF, STIX, CACAO,
-OpenC2, and CALDERA show that portable event and command semantics need typed
-envelopes, identity, versioning, classification, normalized status, provenance,
-markings, and extension rules rather than raw backend objects.
+termination/truncation, episode control, active-agent/current-actor state,
+chance nodes, mean-field updates, and multi-agent interaction without requiring
+access to private agent internals. OpenSpiel's information-state discipline
+reinforces that observation, action-observation history, and perfect recall are
+separate claims. Lamport clocks, HLA time management, Time Warp, DEVS, and FMI
+separate timestamp, ordering, causality, pacing, synchronization, lookahead,
+rollback, and realization. OCSF, STIX, CACAO, OpenC2, and CALDERA show that
+portable event and command semantics need typed envelopes, identity,
+versioning, classification, normalized status, provenance, markings, and
+extension rules rather than raw backend objects.
 
 ## Decision
 
@@ -215,10 +216,11 @@ The observation function is a contract boundary: it maps runtime state, a
 visibility rule, participant identity, and an order point to an observation
 record. A stronger information-state claim is valid only when the portable
 action-observation history, visibility rule, redaction markings, stochastic or
-noise disclosure, and ordering context are sufficient to reproduce the claimed
-information state. Global state exposed for centralized training, debugging,
-scoring, or backend operation is not participant-visible state unless an
-explicit visibility rule projects it to that participant.
+noise disclosure, ordering context, and governed reconstruction algorithm or
+proof reference are sufficient to reproduce the claimed information state.
+Global state exposed for centralized training, debugging, scoring, or backend
+operation is not participant-visible state unless an explicit visibility rule
+projects it to that participant.
 
 ### 6. RL and multi-agent step signals are explicit but separate
 
@@ -227,6 +229,10 @@ participant-visible step signals without adopting Gymnasium, PettingZoo, or
 OpenSpiel as the runtime protocol. The runtime envelope may therefore carry:
 
 - action-space and observation-space references;
+- interaction-context records for the order point, including interaction mode,
+  active agent set, current actor for sequential/AEC surfaces, simultaneous
+  actor set for parallel surfaces, chance mode/distribution or sampled outcome,
+  and mean-field population/update references;
 - action masks or legal-action references, including the projection and order
   point at which the mask was valid;
 - participant-visible reward and cumulative return records;
@@ -241,6 +247,14 @@ objective success, scorer state, or backend debug fields. If they are used for
 benchmark comparison, they must be recorded as governed step signals with
 space definitions, visibility policy, seed/randomization context, and run
 provenance.
+
+Sequential, AEC, simultaneous, chance, and mean-field claims are not implied by
+the presence of a step signal. A participant action is valid only when the
+participant is in the recorded active-agent set and, for sequential/AEC
+surfaces, is the current actor. Chance and mean-field nodes are environment
+updates unless a scenario explicitly models them as participants; their
+distribution, sampled outcome, or population update must be recorded or the
+claim must downgrade.
 
 ### 7. Shared operational state is a versioned runtime contract
 
@@ -368,17 +382,24 @@ they must carry the fields needed to make benchmark claims auditable:
 - evaluator/scoring references, assistance disclosures, cost/resource traces,
   timeout/budget limits, and relevant environment build references.
 - statistical repetition plan, trial/replicate identity, baseline/evaluator
-  version, cost-normalization policy, exclusion/retry policy, and comparison
+  version, metric aggregation plan, confidence-interval/test/effect-size
+  policy, cost-normalization policy, exclusion/retry policy, and comparison
   cohort when records are used for comparative claims;
+- evaluator leakage model, baseline eligibility policy, paired-run group,
+  artifact immutability refs, and exclusion decision refs when records are used
+  to support an academic or engineering benchmark conclusion;
 - contamination-audit evidence, holdout asset digests, canary policy, scaffold
   exposure matrix, and public/private material labels sufficient to support the
   claim that hidden benchmark material was not exposed to a participant.
 
 These fields align the runtime surface with the benchmark lineage while keeping
 the full archival study lifecycle out of scope for this ADR. ACES can preserve
-the runtime evidence needed for later statistical analysis, but it does not
-declare a result academically comparable unless the comparison design,
-repetition, baseline, and exposure evidence are also present.
+the runtime evidence needed for later statistical analysis, but run context
+alone is not a validity model. A comparative or non-contamination conclusion
+requires an explicit benchmark-validity claim that cites the metric,
+aggregation, uncertainty, baseline comparability, evaluator leakage, exposure,
+exclusion/retry, cost-normalization, and artifact-immutability procedures it
+depends on.
 
 ### 11. Participant internals are apparatus, not portable semantics
 

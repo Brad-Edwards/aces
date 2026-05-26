@@ -70,10 +70,11 @@ This design is constrained by the primary sources listed in
   access to private policy internals.
 - PettingZoo and OpenSpiel require per-agent observations, local histories,
   action masks or legal-action surfaces, rewards, termination/truncation,
-  simultaneous or sequential interaction, and information-state discipline.
-  ACES therefore separates hidden state, participant-visible observations,
-  action-observation histories, centralized-training state, reward/return
-  signals, and review evidence.
+  simultaneous or sequential interaction, current-actor/active-agent semantics,
+  chance-node disclosure, mean-field update disclosure, and information-state
+  discipline. ACES therefore separates hidden state, participant-visible
+  observations, action-observation histories, centralized-training state,
+  reward/return signals, interaction context, and review evidence.
 - POMDP, Dec-POMDP, POSG, and Markov-game lineage means a participant's
   observation is not world truth. Strong information-state claims require a
   reconstructible observation history, not just a final state dump.
@@ -93,8 +94,10 @@ This design is constrained by the primary sources listed in
 - Cybench, AutoPenBench, CAIBench, AI Agents That Matter, and related agent
   benchmark critiques require run records, scaffold/tool exposure, seeds,
   repeated-run ids, statistical repetition plans, resource/cost traces,
-  baseline/evaluator disclosure, cost normalization, contamination audits, and
-  holdout/canary exposure evidence for auditable comparisons.
+  baseline/evaluator disclosure, metric aggregation and uncertainty procedures,
+  cost normalization, evaluator leakage controls, contamination audits,
+  immutable artifact evidence, and holdout/canary exposure evidence for
+  auditable comparisons.
 
 These sources do not make ACES a compatibility layer for any one project. They
 define review constraints: the model must preserve the concepts needed to make
@@ -188,6 +191,25 @@ spawned implementation issues.
   only for the declared action space, visibility projection, and state revision
   context that produced it.
 
+`Active agent set`
+: The participant addresses that may legally choose an action at a game or
+  environment order point. Sequential/AEC surfaces have one current actor;
+  simultaneous and parallel surfaces may have more than one; chance and
+  mean-field nodes have no participant action unless explicitly wrapped by a
+  scenario participant.
+
+`Chance node`
+: A runtime order point where stochastic environment/nature behavior, not a
+  participant decision, selects an outcome. Portable claims require the chance
+  mode, distribution or sampled-outcome disclosure, seed/randomization context,
+  and ordering basis.
+
+`Mean-field node`
+: A runtime order point where the environment updates or consumes a population
+  distribution rather than accepting an ordinary participant action. Portable
+  claims require the distribution reference, update rule, and affected
+  participant population scope.
+
 `Conflict policy`
 : The explicit rule or disclosure used when concurrent attempts touch the same
   shared operational state, resource, visibility surface, evidence stream, or
@@ -201,6 +223,12 @@ spawned implementation issues.
 : The declared time domain, clock authority, advancement, lookahead,
   message-causality, pacing, rollback, or step-negotiation basis for a
   distributed or simulated runtime claim.
+
+`Benchmark validity claim`
+: A bounded claim that a runtime record supports reproducibility, comparison,
+  non-contamination, or cost-normalized evaluation. It is separate from the raw
+  run context and must cite a statistical/evaluation procedure when used for
+  comparative conclusions.
 
 `Marking`
 : A security, sensitivity, sharing, or redaction label attached to a record or
@@ -228,6 +256,7 @@ RuntimeState =
   operation_records
   observations
   participant_interfaces
+  interaction_contexts
   step_signals
   action_observation_histories
   information_states
@@ -236,6 +265,7 @@ RuntimeState =
   time_management_contexts
   evidence_index
   run_context
+  benchmark_claims
   capability_declarations
   capability_components
   marking_policies
@@ -253,6 +283,8 @@ Where:
 - `observations[p,e]` is the emitted participant-visible observation stream.
 - `participant_interfaces[p,e,t]` records action/observation spaces and
   legal-action or mask surfaces visible at order point `t`.
+- `interaction_contexts[t]` records active-agent, chance, simultaneous, and
+  mean-field node semantics for game/RL/MARL surfaces.
 - `step_signals[p,e,t]` records reward, return, termination, truncation,
   action-mask, observation, and auxiliary-info signals when exposed.
 - `action_observation_histories[p,e,t]` is the prefix of visible actions and
@@ -267,6 +299,8 @@ Where:
 - `evidence_index` maps safe evidence references to evidence contracts and
   redaction policies.
 - `run_context` contains reproducibility and benchmark context.
+- `benchmark_claims[id]` records the explicit validity procedure for any
+  reproducibility, comparison, non-contamination, or cost-normalized claim.
 - `capability_declarations[backend, concern]` is the backend's declared
   contribution to the effective guarantee vector.
 - `capability_components[component, concern]` records adapter, backend,
@@ -516,6 +550,35 @@ InformationGuarantee =
   Unsupported
 ```
 
+Interaction mode is:
+
+```text
+InteractionMode =
+  SingleAgent
+  SequentialTurn
+  AgentEnvironmentCycle
+  Parallel
+  Simultaneous
+  Chance
+  MeanField
+  BackendSerialized
+  Terminal
+  Unknown
+  Unsupported
+```
+
+Chance mode is:
+
+```text
+ChanceMode =
+  NotApplicable
+  Deterministic
+  ExplicitStochastic
+  SampledStochastic
+  Unknown
+  Unsupported
+```
+
 Observation envelopes carry:
 
 ```text
@@ -532,6 +595,9 @@ ObservationEnvelope =
   loss_descriptor
   stochastic_context
   noise_model_ref
+  reconstruction_algorithm_ref
+  reconstruction_proof_ref
+  belief_support_ref
   redacted_field_refs
 ```
 
@@ -544,6 +610,10 @@ ParticipantInterface =
   BaseEnvelope
   participant_address
   episode_id
+  interaction_mode
+  possible_agent_set_ref
+  active_agent_set_ref
+  current_actor_ref
   action_space_ref
   action_space_schema_ref
   observation_space_ref
@@ -551,8 +621,38 @@ ParticipantInterface =
   legal_action_policy_ref
   action_mask_policy_ref
   action_mask_location
+  null_action_policy_ref
+  chance_policy_ref
+  mean_field_policy_ref
   space_version
   applicability
+```
+
+```text
+InteractionContextEnvelope =
+  BaseEnvelope
+  interaction_context_id
+  interaction_mode
+  order_point
+  possible_agent_set_ref
+  active_agent_set
+  current_actor_ref
+  simultaneous_group_ref
+  nonacting_agent_policy_ref
+  legal_action_snapshot_refs
+  chance_mode
+  chance_distribution_ref
+  chance_distribution_digest
+  sampled_chance_outcome_ref
+  chance_seed_ref
+  chance_visibility
+  mean_field_population_ref
+  mean_field_distribution_ref
+  mean_field_distribution_digest
+  mean_field_update_rule_ref
+  mean_field_update_ref
+  terminal_node
+  unsupported_interaction_disclosure
 ```
 
 ```text
@@ -560,6 +660,7 @@ ActionMaskEnvelope =
   BaseEnvelope
   participant_address
   episode_id
+  interaction_context_ref
   action_space_ref
   mask_ref
   legal_action_refs
@@ -619,6 +720,9 @@ StepSignalEnvelope =
   BaseEnvelope
   participant_address
   episode_id
+  interaction_context_ref
+  active_agent_set_ref
+  current_actor_ref
   action_ref
   observation_ref
   action_mask_ref
@@ -791,6 +895,7 @@ CapabilityConcern =
   operation_state
   observation_information_state
   participant_interface
+  interaction_context
   action_mask
   reward_signal
   return_signal
@@ -806,6 +911,7 @@ CapabilityConcern =
   redaction
   replay
   benchmark_reproducibility
+  benchmark_validity
 ```
 
 Guarantee strength per concern is:
@@ -863,7 +969,47 @@ Ev = runtime event ids
 T  = logical order points
 C  = capability concerns
 M  = markings and marking definitions
+K  = interaction-context ids
+BC = benchmark-claim ids
 ```
+
+The model uses these additional carrier sets. They are explicit so that the
+abstract model is not relying on implicit prose symbols:
+
+```text
+Component =
+  participant_adapter
+  runtime_coordinator
+  backend_engine
+  observation_apparatus
+  evidence_store
+  redaction_policy
+  clock_authority
+  replay_engine
+  benchmark_harness
+
+Consumer =
+  participant
+  runtime_operator
+  evaluator
+  auditor
+  backend_adapter
+  public_artifact
+
+Digest       = algorithm-tagged immutable digest values
+StateSpace   = abstract runtime states reachable by valid traces
+VisibleEvent = participant-visible projected event records
+InformationState = governed information-state records or digests
+ObservationValue = governed observation values or references
+Probability = real values in [0, 1]
+Distribution[X] = finite-support probability distribution over X
+Maybe[X] = X union {none}
+Result[X] = X union {Unknown, Unsupported, Lossy}
+```
+
+Only symbols defined in this document are normative. A future executable model
+may refine the carrier sets, but it must preserve the predicates and downgrade
+rules below.
 
 The abstract functions are partial unless stated otherwise:
 
@@ -875,7 +1021,7 @@ phase: Ev -> LifecyclePhase
 realization: Ev -> PhaseRealization
 admission: Ev -> AdmissionDisposition
 operation_state: Op x T -> OperationState
-visible_history: P x E x T -> Seq(Ev)
+visible_history: P x E x T -> Seq(VisibleEvent)
 observation: Obs -> ObservationEnvelope
 information_claim: P x E x T -> InformationGuarantee
 state_revision: S x T -> R
@@ -884,7 +1030,34 @@ order_relation: T -> Relation(Ev, Ev)
 capability: Component x C -> CapabilityValue
 effective_capability: C -> CapabilityValue
 authorized: Consumer x BaseEnvelope -> Bool
+interaction_context: K -> InteractionContextEnvelope
+interaction_context_at: T -> Maybe[K]
+active_agents: K -> Set(P)
+current_actor: K -> Maybe[P]
+chance_distribution: K -> Result[Distribution[ObservationValue]]
+mean_field_distribution: K -> Result[Digest]
+benchmark_claim: BC -> BenchmarkValidityClaim
 ```
+
+Trace helpers are defined as follows:
+
+```text
+prefix(tr, i) =
+  <ev_1, ..., ev_i> when tr = <ev_1, ..., ev_n> and 0 <= i <= n
+
+prefix_state(tr, i) =
+  fold_apply(initial_state(tr), prefix(tr, i))
+
+fold_apply(s, <>) = s
+fold_apply(s, <ev_1, ..., ev_n>) =
+  Reject if Apply(s, ev_1) = Reject
+  else fold_apply(Apply(s, ev_1), <ev_2, ..., ev_n>)
+```
+
+`initial_state(tr)` is the declared run initialization state containing
+participants, admitted episodes, run context, capability components, marking
+policies, and controlled vocabulary versions. If that declaration is missing,
+`InitOK` is false.
 
 `CapabilityValue` is `not_applicable` or a `GuaranteeStrength`. The strength
 order is:
@@ -1028,6 +1201,13 @@ or claim a capability stronger than the effective declared support.
   non-RL participants and must not fabricate signals when the backend does not
   expose them.
 
+`RecordInteractionContext`
+: Records the game/environment node semantics for an order point: active agent
+  set, current actor, simultaneous group, chance mode and distribution or
+  sampled outcome, mean-field distribution update, terminal node, or unsupported
+  disclosure. This transition is required before a runtime claim uses AEC,
+  simultaneous, chance, or mean-field semantics.
+
 `CommitStateUpdate`
 : Writes participant-local, shared operational, visibility, evidence-facing, or
   outcome-facing state records with revision, digest, ordering, provenance,
@@ -1105,6 +1285,15 @@ or claim a capability stronger than the effective declared support.
   termination and truncation are represented separately; and no hidden state is
   exposed through `info_refs` unless a visibility rule authorizes it.
 
+`RecordInteractionContext`
+: Precondition: a step, joint action, observation, reward, terminal signal, or
+  state update makes a claim about turn order, active actors, simultaneous
+  actors, chance, mean-field, terminal-node, or backend-serialized game
+  semantics. Postcondition: an `InteractionContextEnvelope` exists for the
+  order point, `active_agents`, `current_actor`, chance disclosure, and
+  mean-field disclosure satisfy `InteractionClaimOK`, and related step-signal
+  or joint-action records cite the context.
+
 `CommitStateUpdate`
 : Precondition: the update has a stable state address, declared state kind,
   marking policy, and conflict policy or unsupported-concurrency disclosure.
@@ -1151,23 +1340,56 @@ Let:
 
 - `H(p,e,t)` be the participant-visible action-observation history for
   participant `p`, episode `e`, through order point `t`.
-- `O(p,e,t,projection)` be the observation function that maps abstract runtime
-  state through a visibility projection to an observation envelope.
-- `I(p,e,t)` be the information state ACES claims for participant `p` at order
-  point `t`.
+- `O(p,e,t,projection)` be the observation function that maps an abstract
+  runtime state through a visibility projection to an observation envelope.
+- `I(p,e,t)` be the `InformationState` ACES claims for participant `p` at
+  order point `t`.
 - `h1 ~p h2` mean two histories are indistinguishable to participant `p` under
   the declared visibility projection, markings, timing, noise, and redaction
   rules.
+
+The visible-history projection is typed:
+
+```text
+Project_p,policy : Ev x P -> Maybe[VisibleEvent]
+
+For a valid trace `tr`:
+
+H_tr(p,e,t) =
+  ordered sequence of Project_p,policy(ev, p)
+  for ev in tr whose declared order point is at or before t
+  where Project_p,policy(ev, p) != none
+```
+
+A `VisibleEvent` contains only:
+
+```text
+VisibleEvent =
+  event_id
+  delivered_order
+  visible_payload_ref_or_digest
+  visible_field_selectors
+  marking_projection_digest
+  redaction_token_refs
+  stochastic_disclosure_ref
+  source_projection_version
+```
+
+Hidden field values are never members of `VisibleEvent`; redacted values appear
+only as stable redaction tokens or omission markers governed by the referenced
+redaction policy.
 
 The indistinguishability relation is defined by visible projection, not by
 backend state equality:
 
 ```text
 h1 ~p h2 iff
-  ProjectVisible(p, h1) = ProjectVisible(p, h2)
-  /\ ProjectMarkings(p, h1) = ProjectMarkings(p, h2)
-  /\ ProjectDeliveredOrder(p, h1) = ProjectDeliveredOrder(p, h2)
-  /\ ProjectNoiseDisclosure(p, h1) = ProjectNoiseDisclosure(p, h2)
+  VisiblePayloads(p, h1) = VisiblePayloads(p, h2)
+  /\ VisibleSelectors(p, h1) = VisibleSelectors(p, h2)
+  /\ VisibleMarkingDigests(p, h1) = VisibleMarkingDigests(p, h2)
+  /\ VisibleDeliveredOrder(p, h1) = VisibleDeliveredOrder(p, h2)
+  /\ VisibleStochasticDisclosures(p, h1) =
+     VisibleStochasticDisclosures(p, h2)
 ```
 
 `~p` must be reflexive, symmetric, and transitive for the recorded projection
@@ -1177,33 +1399,65 @@ must downgrade to `LossyProjection`, `Unknown`, or `Unsupported`.
 The observation kernel is:
 
 ```text
-Z_p(o | s, a?, t, projection, noise) =
-  probability or deterministic support that observation o is emitted to p
+Z_p,projection,noise,t : StateSpace x Maybe[A] -> Distribution[ObservationValue]
+
+Z_p,projection,noise,t(s, a?)(o) =
+  probability that observation value o is emitted to p
   from abstract runtime state s after optional action a at order point t
 ```
 
-Deterministic observations are the degenerate case where the support contains
-one observation. Stochastic observations are valid only when the envelope
-records either reproducible generator/seed context, a declared probability
-model, or a downgrade explaining that the exact kernel is unavailable.
+The kernel is valid only when:
+
+```text
+KernelOK(p,e,t) =
+  sum({ Z_p,projection,noise,t(s, a?)(o) | o in support }) = 1
+  /\ all probabilities are in [0, 1]
+  /\ support observations satisfy ObservationEnvelope schema and markings
+  /\ stochastic context cites a seed/generator, probability model, or downgrade
+```
+
+Deterministic observations are the degenerate case where the support has one
+observation with probability `1`. If the distribution cannot be reconstructed
+or bounded, the observation may still be recorded, but the guarantee must
+downgrade to `LossyProjection`, `Unknown`, or `Unsupported`.
 
 The reconstructed information state is:
 
 ```text
-Reconstruct(p,e,t) =
-  Fold(visible_history[p,e,t],
-       projection_version,
-       redaction_policy,
-       delivery_order,
-       stochastic_context)
+Reconstruct_p :
+  Seq(VisibleEvent)
+  x projection_version
+  x redaction_policy
+  x order_relation
+  x stochastic_context
+  -> Result[InformationState]
+
+Reconstruct_p(H, projection_version, redaction_policy, order_relation,
+              stochastic_context) =
+  fold_left(reconstruct_step_p, initial_information_state_p, H)
 ```
 
-`HistoryConsistent` requires `Reconstruct(p,e,t)` to equal the claimed
-`I(p,e,t)` after applying redaction tokens and declared lossy transforms.
-`PerfectRecall` additionally requires that for every `t' < t`, the visible
-event prefix `H(p,e,t')` remains embedded in `H(p,e,t)` with stable identity
-and order. Compaction is allowed only when it preserves a proof reference that
-can reconstruct the earlier prefix.
+`reconstruct_step_p` is a governed algorithm referenced by
+`reconstruction_algorithm_ref`; the algorithm version and test/proof artifact
+must be stable for the schema version making the claim. If no governed
+algorithm or proof reference exists, `Reconstruct_p` returns `Unsupported`.
+If the algorithm reaches a lossy redaction, aggregation, delayed delivery, or
+unknown stochastic branch that cannot prove equality with the claimed
+information state, it returns `Lossy` or `Unknown`.
+
+`HistoryConsistent` requires:
+
+```text
+Reconstruct_p(H(p,e,t), projection_version, redaction_policy,
+              order_relation(t), stochastic_context) = I(p,e,t)
+```
+
+after applying the same redaction tokens and declared lossy transforms used in
+the observation envelope. `PerfectRecall` additionally requires that for every
+`t' < t`, the visible event prefix `H(p,e,t')` remains embedded in `H(p,e,t)`
+with stable event identity and order. Compaction is allowed only when it cites
+a `reconstruction_proof_ref` that can reproduce the earlier prefix or prove
+that the compact representation is information-state equivalent.
 
 For belief-state consumers, ACES may record a belief support:
 
@@ -1248,7 +1502,9 @@ Rules:
   to `LossyProjection`, `Unknown`, or `Unsupported`.
 - A history-consistent or perfect-recall claim is invalid if the action,
   observation, projection version, redaction policy, or order context needed to
-  reconstruct the information state is missing.
+  reconstruct the information state is missing, or if
+  `reconstruction_algorithm_ref` cannot be executed or audited for the relevant
+  schema/projection version.
 - A centralized-training/global-state view may be recorded as evidence or
   apparatus state, but it must use a distinct scope and marking from
   participant-visible observation.
@@ -1263,6 +1519,26 @@ it preserves the concepts that make RL/MARL results reviewable.
 
 Rules:
 
+- `InteractionContextEnvelope` is required whenever a step claim depends on
+  turn order, an AEC current actor, simultaneous actors, a chance outcome, a
+  mean-field population update, or backend serialization. Without it, ACES can
+  record observations but cannot claim MARL/game-node semantics.
+- In `SequentialTurn` and `AgentEnvironmentCycle` modes, `current_actor_ref`
+  must be exactly one participant in `active_agent_set`. Non-acting
+  participants may receive observations or reward updates only when the
+  interaction context records the non-acting-agent policy.
+- In `Parallel` and `Simultaneous` modes, `active_agent_set` is the set of
+  participants whose actions are admitted for that order point. A joint action
+  or step signal must cite the same set or disclose the mismatch.
+- In `Chance` mode, participant `action_ref` is null unless a scenario
+  explicitly models nature as a participant. The record must cite
+  `chance_mode`, a distribution or sampled-outcome disclosure,
+  seed/randomization context when available, and the visibility policy that
+  determines which participants can observe the chance event.
+- In `MeanField` mode, no ordinary participant action is consumed at the node.
+  The record must cite the population scope, distribution digest, update rule,
+  and affected observations/rewards or disclose unsupported mean-field
+  semantics.
 - `action_space_ref` and `observation_space_ref` identify governed space
   definitions. They are required for claims that an action, observation, or
   policy trace is valid relative to an RL/game environment space.
@@ -1295,6 +1571,9 @@ Conformance obligations:
 ```text
 ActionValid(p,e,a,t) =>
   a in ActionSpace(p,e,t)
+  /\ exists k = interaction_context_at(t):
+       p in active_agents(k)
+       /\ (current_actor(k) != none => current_actor(k) = p)
   /\ (MaskPresent(p,e,t) => MaskAllows(p,e,a,t))
 
 RewardClaimOK(p,e,t) =>
@@ -1303,7 +1582,27 @@ RewardClaimOK(p,e,t) =>
 TerminationClaimOK(p,e,t) =>
   terminated and truncated are separate booleans
   /\ terminal observation, if any, is emitted through the observation boundary
+
+InteractionClaimOK(k) =>
+  (interaction_context(k).interaction_mode in
+     {SequentialTurn, AgentEnvironmentCycle} =>
+     current_actor(k) in active_agents(k) /\ |active_agents(k)| = 1)
+  /\ (interaction_context(k).interaction_mode in {Parallel, Simultaneous} =>
+     |active_agents(k)| >= 1 /\ joint action linkage cites active_agents(k))
+  /\ (interaction_context(k).interaction_mode = Chance =>
+     active_agents(k) = {}
+     /\ ChanceDisclosureOK(k))
+  /\ (interaction_context(k).interaction_mode = MeanField =>
+     active_agents(k) = {}
+     /\ MeanFieldDisclosureOK(k))
 ```
+
+`ChanceDisclosureOK(k)` requires a chance mode and either a deterministic
+outcome, an explicit probability distribution with digest, a sampled-outcome
+record with seed/randomization context, or an `Unknown`/`Unsupported`
+downgrade. `MeanFieldDisclosureOK(k)` requires population scope, distribution
+digest, update rule, and update record, or an `Unknown`/`Unsupported`
+downgrade.
 
 ## Concurrency And Conflict Semantics
 
@@ -1685,10 +1984,19 @@ RunContext =
   run_config_digest
   evaluator_refs
   evaluator_version_refs
+  evaluator_leakage_model_ref
   scoring_refs
+  result_metric_refs
+  aggregation_plan_ref
+  confidence_interval_policy_ref
+  statistical_test_policy_ref
+  effect_size_policy_ref
+  power_or_precision_target_ref
   baseline_refs
   baseline_version_refs
+  baseline_eligibility_policy_ref
   comparison_cohort_ref
+  paired_run_group_ref
   statistical_plan_ref
   preregistration_ref
   assistance_disclosures
@@ -1698,7 +2006,11 @@ RunContext =
   canary_exposure_labels
   canary_policy_ref
   contamination_audit_refs
+  contamination_audit_procedure_ref
   training_corpus_disclosure_refs
+  dataset_split_ref
+  training_data_cutoff_ref
+  participant_knowledge_cutoff_ref
   cost_trace_refs
   cost_normalization_policy_ref
   resource_trace_refs
@@ -1707,7 +2019,46 @@ RunContext =
   timeout_budget_refs
   retry_policy_ref
   exclusion_policy_ref
+  exclusion_decision_refs
+  artifact_immutability_refs
   environment_build_refs
+```
+
+Explicit benchmark validity claims carry:
+
+```text
+BenchmarkValidityClaim =
+  BaseEnvelope
+  claim_id
+  claim_type
+  run_context_ref
+  population_scope_ref
+  metric_refs
+  aggregation_plan_ref
+  replicate_set_ref
+  unit_of_analysis_ref
+  confidence_interval_ref
+  statistical_test_ref
+  effect_size_ref
+  minimum_effect_or_margin_ref
+  baseline_refs
+  baseline_eligibility_policy_ref
+  comparison_cohort_ref
+  paired_run_group_ref
+  evaluator_version_refs
+  evaluator_leakage_model_ref
+  exclusion_policy_ref
+  exclusion_decision_refs
+  retry_policy_ref
+  cost_normalization_policy_ref
+  contamination_audit_refs
+  contamination_audit_procedure_ref
+  holdout_non_exposure_evidence_refs
+  canary_evidence_refs
+  scaffold_exposure_matrix_ref
+  artifact_immutability_refs
+  conclusion_scope
+  unsupported_or_unknown_limits
 ```
 
 Rules:
@@ -1716,6 +2067,25 @@ Rules:
 - Comparative claims require a statistical plan, replicate identity and count,
   baseline version, evaluator version, comparison cohort, retry/exclusion
   policy, and cost/resource normalization policy.
+- Statistical plans must define the unit of analysis, metric aggregation,
+  uncertainty interval, effect-size or equivalence margin when relevant, and
+  how paired or clustered runs are handled. A final score without these fields
+  is a descriptive result, not a portable comparative claim.
+- Exclusions and retries must be interpreted through the preregistered or
+  otherwise disclosed policy and recorded as decision refs. Dropped failed
+  attempts, evaluator crashes, manual interventions, or timeout retries cannot
+  be hidden inside aggregate metrics.
+- Baselines are comparable only when their participant implementation,
+  scaffold/tool exposure, evaluator, scenario, cost/resource normalization, and
+  allowed assistance satisfy the same eligibility policy or the mismatch is
+  disclosed in the claim limits.
+- Evaluator leakage claims require an evaluator leakage model, evaluator
+  version refs, public/private material labels, and contamination-audit
+  procedure refs. Runtime records alone do not prove that an evaluator, scaffold,
+  or agent could not access hidden material.
+- Artifacts used in a comparative claim must cite immutable digests or
+  equivalent registry/version evidence for scenario, contract bundle, evaluator,
+  baseline, scaffold, participant implementation, and backend manifest.
 - Seed/randomization claims require seed refs or an unsupported/unknown
   disclosure.
 - Scaffold, tool, model, policy, and human assistance exposure must be disclosed
@@ -1728,6 +2098,31 @@ Rules:
   unsupported claim.
 - Runtime records alone do not prove benchmark validity. They preserve the
   evidence needed for an external study design to make a valid comparison.
+
+Benchmark conformance predicates:
+
+```text
+BenchmarkClaimOK(claim) =
+  RunContextOK(claim.run_context_ref)
+  /\ MetricsOK(claim.metric_refs, claim.aggregation_plan_ref)
+  /\ ReplicationOK(claim.replicate_set_ref, claim.unit_of_analysis_ref)
+  /\ UncertaintyOK(claim.confidence_interval_ref,
+                   claim.statistical_test_ref,
+                   claim.effect_size_ref)
+  /\ BaselineComparabilityOK(claim.baseline_refs,
+                             claim.comparison_cohort_ref,
+                             claim.baseline_eligibility_policy_ref)
+  /\ ExposureOK(claim.scaffold_exposure_matrix_ref,
+                claim.holdout_non_exposure_evidence_refs,
+                claim.canary_evidence_refs,
+                claim.contamination_audit_refs)
+  /\ CostOK(claim.cost_normalization_policy_ref)
+  /\ ArtifactImmutabilityOK(claim.artifact_immutability_refs)
+```
+
+If any predicate is `Unknown` or `Unsupported`, the claim must either downgrade
+to the supported conclusion scope or explicitly record
+`unsupported_or_unknown_limits`.
 
 ## Refinement And Conformance Obligations
 
@@ -1784,10 +2179,10 @@ Future implementation issues should turn the normative core above into an
 executable model or mechanically checked test harness. The minimum executable
 surface is: valid trace predicate, `Apply` transition predicates, observation
 reconstruction, capability meet/satisfaction, shared-state revision discipline,
-and concurrency/time-management rules. TLA+/PlusCal, Alloy, state-machine
-property tests, or differential tests against backend traces are acceptable
-realizations only if they cover those predicates rather than rechecking schema
-shape alone.
+interaction-context validity, benchmark-validity predicates, and
+concurrency/time-management rules. TLA+/PlusCal, Alloy, state-machine property
+tests, or differential tests against backend traces are acceptable realizations
+only if they cover those predicates rather than rechecking schema shape alone.
 
 ## Invariants
 
@@ -2009,6 +2404,21 @@ version, cost normalization, retry/exclusion policy, scaffold exposure,
 holdout/canary non-exposure evidence, and contamination-audit records as
 applicable.
 
+### I33 - Active-Agent And Chance Discipline
+
+Sequential, AEC, simultaneous, parallel, chance, and mean-field step claims
+require an interaction context. Participant actions are valid only for the
+recorded active agent set and current actor; chance and mean-field nodes cannot
+be silently represented as participant choices.
+
+### I34 - Benchmark Validity Procedure
+
+Run context is evidence, not a conclusion. A comparative or
+non-contamination claim must cite a benchmark validity claim with metric,
+aggregation, uncertainty, baseline comparability, evaluator leakage, exposure,
+exclusion, retry, cost-normalization, and artifact-immutability procedures, or
+downgrade the conclusion scope.
+
 ## Canonical Design Examples
 
 The examples use snake_case wire-style values and complete fields for the
@@ -2026,6 +2436,14 @@ lifecycle_envelope:
   schema_version: 1.0.0
   event_type: execution_attempt
   extension_policy: reject_unknown_required
+  event_classification: null
+  source_status:
+    status_id: 1
+    status: success
+    status_code: tool_call_completed
+    status_detail: tool gateway accepted and completed the command
+    source_status_label: tool_call_completed
+    source_status_mapping: aces.lifecycle.operation_state.completed
   participant_address: participants.red.llm
   episode_id: ep-red-004
   sequence_number: 17
@@ -2043,11 +2461,35 @@ lifecycle_envelope:
   source_system_ref: tool-gateway.red
   source_record_ref: gateway-call-992
   source_raw_ref: evidence.raw.tool-call-992
+  source_pipeline:
+    product_ref: products.tool-gateway.red
+    product_version: 2.4.1
+    log_provider: tool-gateway
+    log_source: tool-gateway.red
+    log_name: tool-invocation
+    original_event_uid: gateway-call-992
+    original_time: 2026-05-26T10:15:01Z
+    processed_time: 2026-05-26T10:15:02Z
+    logged_time: 2026-05-26T10:15:02Z
+    transmit_time: 2026-05-26T10:15:03Z
+    correlation_uid: corr-tool-call-992
+    sequence: 992
+  raw_data_integrity:
+    raw_data_hash: sha256:1111111111111111111111111111111111111111111111111111111111111111
+    raw_data_hash_algorithm: sha256
+    raw_data_size: 4096
+    raw_data_is_truncated: false
+    raw_data_untruncated_size: 4096
   confidence: 0.82
   provenance_refs:
     - provenance.participant_observed
   evidence_refs:
     - evidence.tool-call-992-redacted
+  marking_definition_refs:
+    - markings.internal.v1
+    - markings.restricted_evidence.v1
+  object_marking_refs:
+    - markings.internal.v1
   markings:
     - internal
   granular_markings:
@@ -2080,6 +2522,14 @@ selection_envelope:
   schema_version: 1.0.0
   event_type: selection_or_admission
   extension_policy: reject_unknown_required
+  event_classification: null
+  source_status:
+    status_id: 0
+    status: unknown
+    status_code: model_private_choice
+    status_detail: selection existed inside opaque model apparatus
+    source_status_label: model_private_choice
+    source_status_mapping: aces.lifecycle.phase_realization.opaque
   participant_address: participants.red.llm
   episode_id: ep-red-004
   sequence_number: 16
@@ -2096,10 +2546,33 @@ selection_envelope:
   source_system_ref: llm-agent.red
   source_record_ref: null
   source_raw_ref: null
+  source_pipeline:
+    product_ref: products.llm-agent.red
+    product_version: 2.4.1
+    log_provider: null
+    log_source: null
+    log_name: null
+    original_event_uid: null
+    original_time: null
+    processed_time: null
+    logged_time: null
+    transmit_time: 2026-05-26T10:15:03Z
+    correlation_uid: corr-tool-call-992
+    sequence: 16
+  raw_data_integrity:
+    raw_data_hash: null
+    raw_data_hash_algorithm: null
+    raw_data_size: null
+    raw_data_is_truncated: null
+    raw_data_untruncated_size: null
   confidence: null
   provenance_refs:
     - provenance.apparatus_boundary
   evidence_refs: []
+  marking_definition_refs:
+    - markings.internal.v1
+  object_marking_refs:
+    - markings.internal.v1
   markings:
     - internal
   granular_markings: {}
@@ -2128,12 +2601,118 @@ content, chain-of-thought, policy logits, tool reasoning, or private memory.
 ### RL Policy Step With Observation-Only Guarantee
 
 ```yaml
+interaction_context_envelope:
+  event_id: interaction-cyborg-tick42
+  schema_name: aces.participant_runtime.interaction_context
+  schema_version: 1.0.0
+  event_type: interaction_context
+  extension_policy: reject_unknown_required
+  event_classification: null
+  source_status:
+    status_id: 1
+    status: success
+    status_code: aec_current_actor
+    status_detail: AEC step exposes blue as the current actor at tick 42
+    source_status_label: cyborg_aec_current_actor
+    source_status_mapping: aces.interaction_mode.agent_environment_cycle
+  participant_address: null
+  episode_id: null
+  sequence_number: null
+  occurred_at: 2026-05-26T10:20:10Z
+  recorded_at: 2026-05-26T10:20:10Z
+  ingested_at: 2026-05-26T10:20:11Z
+  clock_authority: sim.tick
+  temporal_context: tick-42
+  ordering_basis: simulation_tick
+  logical_order_ref: order.sim.42.interaction
+  predecessor_event_refs:
+    - interaction-cyborg-tick41
+  actor_ref: runtime.scheduler
+  producer_ref: adapters.cyborg-blue.v1
+  source_system_ref: cyborg.sim
+  source_record_ref: cyborg.interaction.42
+  source_raw_ref: evidence.raw.cyborg.interaction.42
+  source_pipeline:
+    product_ref: products.cyborg.sim
+    product_version: 1.0.0
+    log_provider: cyborg
+    log_source: cyborg.sim
+    log_name: interaction-context
+    original_event_uid: cyborg.interaction.42
+    original_time: 2026-05-26T10:20:10Z
+    processed_time: 2026-05-26T10:20:10Z
+    logged_time: 2026-05-26T10:20:10Z
+    transmit_time: 2026-05-26T10:20:11Z
+    correlation_uid: cyborg.tick42
+    sequence: 42
+  raw_data_integrity:
+    raw_data_hash: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    raw_data_hash_algorithm: sha256
+    raw_data_size: 1024
+    raw_data_is_truncated: false
+    raw_data_untruncated_size: 1024
+  confidence: 1.0
+  provenance_refs:
+    - provenance.backend_realized
+  evidence_refs:
+    - evidence.interaction-cyborg-tick42
+  marking_definition_refs:
+    - markings.internal.v1
+  object_marking_refs:
+    - markings.internal.v1
+  markings:
+    - internal
+  granular_markings: {}
+  redaction_policy_ref: redaction.blue-step-signal.v1
+  authorization_scope: runtime_review
+  interaction_context_id: interaction.cyborg.tick42
+  interaction_mode: agent_environment_cycle
+  order_point: order.sim.42.interaction
+  possible_agent_set_ref: agents.cyborg.possible
+  active_agent_set:
+    - participants.blue.rl
+  current_actor_ref: participants.blue.rl
+  simultaneous_group_ref: null
+  nonacting_agent_policy_ref: policies.cyborg.nonacting-observe-only
+  legal_action_snapshot_refs:
+    participants.blue.rl: masks.blue.tick42
+  chance_mode: not_applicable
+  chance_distribution_ref: null
+  chance_distribution_digest: null
+  sampled_chance_outcome_ref: null
+  chance_seed_ref: seeds.run-778-blue
+  chance_visibility: not_applicable
+  mean_field_population_ref: null
+  mean_field_distribution_ref: null
+  mean_field_distribution_digest: null
+  mean_field_update_rule_ref: null
+  mean_field_update_ref: null
+  terminal_node: false
+  unsupported_interaction_disclosure: null
 observation_envelope:
   event_id: obs-blue-43
   schema_name: aces.participant_runtime.observation
   schema_version: 1.0.0
   event_type: observation_emission
   extension_policy: reject_unknown_required
+  event_classification:
+    category_uid: 4
+    category_name: findings
+    class_uid: 4001
+    class_name: detection_finding
+    activity_id: 1
+    activity_name: telemetry_observed
+    type_uid: 800101
+    type_name: blue telemetry observation emitted
+    severity_id: 1
+    severity: informational
+  source_status:
+    status_id: 1
+    status: success
+    status_code: observation_emitted
+    status_detail: simulator emitted the blue local telemetry observation
+    source_status_label: cyborg_observation
+    source_status_mapping: aces.observation.emitted
   participant_address: participants.blue.rl
   episode_id: ep-blue-002
   sequence_number: 43
@@ -2151,11 +2730,35 @@ observation_envelope:
   source_system_ref: cyborg.sim
   source_record_ref: cyborg.obs.42.blue
   source_raw_ref: evidence.raw.cyborg.obs.42.blue
+  source_pipeline:
+    product_ref: products.cyborg.sim
+    product_version: 1.0.0
+    log_provider: cyborg
+    log_source: cyborg.sim
+    log_name: observation-step
+    original_event_uid: cyborg.obs.42.blue
+    original_time: 2026-05-26T10:20:10Z
+    processed_time: 2026-05-26T10:20:10Z
+    logged_time: 2026-05-26T10:20:10Z
+    transmit_time: 2026-05-26T10:20:11Z
+    correlation_uid: cyborg.tick42.blue
+    sequence: 42
+  raw_data_integrity:
+    raw_data_hash: sha256:2222222222222222222222222222222222222222222222222222222222222222
+    raw_data_hash_algorithm: sha256
+    raw_data_size: 2048
+    raw_data_is_truncated: false
+    raw_data_untruncated_size: 2048
   confidence: 1.0
   provenance_refs:
     - provenance.backend_realized
   evidence_refs:
     - evidence.obs-blue-43-redacted
+  marking_definition_refs:
+    - markings.participant_visible.v1
+    - markings.restricted_evidence.v1
+  object_marking_refs:
+    - markings.participant_visible.v1
   markings:
     - participant_visible
   granular_markings:
@@ -2181,6 +2784,9 @@ observation_envelope:
     seed_ref: seeds.run-778-blue
     randomization_policy_ref: randomization.cyborg.default.v1
   noise_model_ref: null
+  reconstruction_algorithm_ref: null
+  reconstruction_proof_ref: null
+  belief_support_ref: null
   redacted_field_refs:
     - /hidden_state_refs
 step_signal_envelope:
@@ -2189,6 +2795,14 @@ step_signal_envelope:
   schema_version: 1.0.0
   event_type: participant_step_signal
   extension_policy: reject_unknown_required
+  event_classification: null
+  source_status:
+    status_id: 1
+    status: success
+    status_code: step_signal_emitted
+    status_detail: simulator exposed governed step signal refs
+    source_status_label: cyborg_step
+    source_status_mapping: aces.step_signal.emitted
   participant_address: participants.blue.rl
   episode_id: ep-blue-002
   sequence_number: 43
@@ -2206,11 +2820,35 @@ step_signal_envelope:
   source_system_ref: cyborg.sim
   source_record_ref: cyborg.step.42.blue
   source_raw_ref: evidence.raw.cyborg.step.42.blue
+  source_pipeline:
+    product_ref: products.cyborg.sim
+    product_version: 1.0.0
+    log_provider: cyborg
+    log_source: cyborg.sim
+    log_name: step-signal
+    original_event_uid: cyborg.step.42.blue
+    original_time: 2026-05-26T10:20:10Z
+    processed_time: 2026-05-26T10:20:10Z
+    logged_time: 2026-05-26T10:20:10Z
+    transmit_time: 2026-05-26T10:20:11Z
+    correlation_uid: cyborg.tick42.blue
+    sequence: 42
+  raw_data_integrity:
+    raw_data_hash: sha256:3333333333333333333333333333333333333333333333333333333333333333
+    raw_data_hash_algorithm: sha256
+    raw_data_size: 1536
+    raw_data_is_truncated: false
+    raw_data_untruncated_size: 1536
   confidence: 1.0
   provenance_refs:
     - provenance.backend_realized
   evidence_refs:
     - evidence.step-blue-43-redacted
+  marking_definition_refs:
+    - markings.participant_visible.v1
+    - markings.restricted_evidence.v1
+  object_marking_refs:
+    - markings.participant_visible.v1
   markings:
     - participant_visible
   granular_markings:
@@ -2218,6 +2856,9 @@ step_signal_envelope:
       - restricted_evidence
   redaction_policy_ref: redaction.blue-step-signal.v1
   authorization_scope: participant:participants.blue.rl
+  interaction_context_ref: interaction.cyborg.tick42
+  active_agent_set_ref: active-agents.cyborg.tick42
+  current_actor_ref: participants.blue.rl
   action_ref: actions.blue.isolate_host
   observation_ref: observations.blue.local.telemetry.43
   action_mask_ref: masks.blue.tick42
@@ -2235,6 +2876,11 @@ step-signal records. Policy updates, optimizer state, and model state remain
 apparatus internals unless an explicit evidence contract exposes a redacted
 representation.
 
+Chance and mean-field order points use the same interaction-context envelope
+with an empty `active_agent_set`; their distribution, sampled outcome, update
+rule, or unsupported disclosure is recorded there rather than represented as a
+participant action.
+
 ### Human-Supplied Action
 
 ```yaml
@@ -2244,6 +2890,14 @@ lifecycle_envelope:
   schema_version: 1.0.0
   event_type: selection_or_admission
   extension_policy: reject_unknown_required
+  event_classification: null
+  source_status:
+    status_id: 1
+    status: success
+    status_code: submitted_by_operator
+    status_detail: operator submitted an admitted containment command
+    source_status_label: submitted_by_operator
+    source_status_mapping: aces.lifecycle.admission.admitted
   participant_address: participants.gold.operator
   episode_id: ep-gold-001
   sequence_number: 9
@@ -2261,11 +2915,34 @@ lifecycle_envelope:
   source_system_ref: operator-console
   source_record_ref: command-form-9
   source_raw_ref: evidence.operator-command-9
+  source_pipeline:
+    product_ref: products.operator-console
+    product_version: 1.8.0
+    log_provider: control-plane
+    log_source: operator-console
+    log_name: operator-command
+    original_event_uid: command-form-9
+    original_time: 2026-05-26T10:30:00Z
+    processed_time: 2026-05-26T10:30:02Z
+    logged_time: 2026-05-26T10:30:02Z
+    transmit_time: 2026-05-26T10:30:02Z
+    correlation_uid: operator-command-9
+    sequence: 9
+  raw_data_integrity:
+    raw_data_hash: sha256:4444444444444444444444444444444444444444444444444444444444444444
+    raw_data_hash_algorithm: sha256
+    raw_data_size: 1024
+    raw_data_is_truncated: false
+    raw_data_untruncated_size: 1024
   confidence: 1.0
   provenance_refs:
     - provenance.externally_supplied
   evidence_refs:
     - evidence.operator-command-9-redacted
+  marking_definition_refs:
+    - markings.internal.v1
+  object_marking_refs:
+    - markings.internal.v1
   markings:
     - internal
   granular_markings: {}
@@ -2301,6 +2978,14 @@ operation_record:
   schema_version: 1.0.0
   event_type: operation_advance
   extension_policy: reject_unknown_required
+  event_classification: null
+  source_status:
+    status_id: 2
+    status: in_progress
+    status_code: running
+    status_detail: caldera link is running
+    source_status_label: running
+    source_status_mapping: aces.operation_state.running
   participant_address: participants.red.playbook
   episode_id: ep-red-006
   sequence_number: 55
@@ -2318,11 +3003,35 @@ operation_record:
   source_system_ref: caldera.operation.abc
   source_record_ref: link.1234
   source_raw_ref: evidence.raw.caldera.link.1234
+  source_pipeline:
+    product_ref: products.caldera
+    product_version: 5.1.0
+    log_provider: caldera
+    log_source: caldera.operation.abc
+    log_name: link-state
+    original_event_uid: link.1234
+    original_time: 2026-05-26T10:40:30Z
+    processed_time: 2026-05-26T10:40:31Z
+    logged_time: 2026-05-26T10:40:31Z
+    transmit_time: 2026-05-26T10:40:32Z
+    correlation_uid: caldera.operation.abc.link.1234
+    sequence: 55
+  raw_data_integrity:
+    raw_data_hash: sha256:5555555555555555555555555555555555555555555555555555555555555555
+    raw_data_hash_algorithm: sha256
+    raw_data_size: 8192
+    raw_data_is_truncated: true
+    raw_data_untruncated_size: 23142
   confidence: 0.9
   provenance_refs:
     - provenance.backend_realized
   evidence_refs:
     - evidence.caldera.link.1234-redacted
+  marking_definition_refs:
+    - markings.internal.v1
+    - markings.restricted_evidence.v1
+  object_marking_refs:
+    - markings.internal.v1
   markings:
     - internal
   granular_markings:
@@ -2353,6 +3062,24 @@ cyber_action_envelope:
   schema_version: 1.0.0
   event_type: cyber_action_context
   extension_policy: reject_unknown_required
+  event_classification:
+    category_uid: 6
+    category_name: application_activity
+    class_uid: 6003
+    class_name: api_activity
+    activity_id: 1
+    activity_name: command_execution
+    type_uid: 1200301
+    type_name: caldera command execution context
+    severity_id: 2
+    severity: low
+  source_status:
+    status_id: 2
+    status: in_progress
+    status_code: running
+    status_detail: caldera command context recorded while link is running
+    source_status_label: running
+    source_status_mapping: aces.operation_state.running
   participant_address: participants.red.playbook
   episode_id: ep-red-006
   sequence_number: 55
@@ -2370,11 +3097,35 @@ cyber_action_envelope:
   source_system_ref: caldera.operation.abc
   source_record_ref: ability.cred-dump.link.1234
   source_raw_ref: evidence.raw.caldera.link.1234
+  source_pipeline:
+    product_ref: products.caldera
+    product_version: 5.1.0
+    log_provider: caldera
+    log_source: caldera.operation.abc
+    log_name: ability-link
+    original_event_uid: ability.cred-dump.link.1234
+    original_time: 2026-05-26T10:40:30Z
+    processed_time: 2026-05-26T10:40:31Z
+    logged_time: 2026-05-26T10:40:31Z
+    transmit_time: 2026-05-26T10:40:32Z
+    correlation_uid: caldera.operation.abc.link.1234
+    sequence: 55
+  raw_data_integrity:
+    raw_data_hash: sha256:6666666666666666666666666666666666666666666666666666666666666666
+    raw_data_hash_algorithm: sha256
+    raw_data_size: 8192
+    raw_data_is_truncated: true
+    raw_data_untruncated_size: 23142
   confidence: 0.9
   provenance_refs:
     - provenance.backend_realized
   evidence_refs:
     - evidence.caldera.link.1234-redacted
+  marking_definition_refs:
+    - markings.internal.v1
+    - markings.secret_ref.v1
+  object_marking_refs:
+    - markings.internal.v1
   markings:
     - internal
   granular_markings:
@@ -2461,6 +3212,14 @@ joint_action_record:
   schema_version: 1.0.0
   event_type: concurrent_attempt
   extension_policy: reject_unknown_required
+  event_classification: null
+  source_status:
+    status_id: 1
+    status: success
+    status_code: conflict_rejected
+    status_detail: runtime detected simultaneous shared-state conflict
+    source_status_label: conflict_rejected
+    source_status_mapping: aces.conflict_policy.reject
   participant_address: null
   episode_id: null
   sequence_number: null
@@ -2478,11 +3237,34 @@ joint_action_record:
   source_system_ref: cyborg.sim
   source_record_ref: sim.tick.88.joint
   source_raw_ref: evidence.raw.sim.tick88
+  source_pipeline:
+    product_ref: products.cyborg.sim
+    product_version: 1.0.0
+    log_provider: cyborg
+    log_source: cyborg.sim
+    log_name: joint-action
+    original_event_uid: sim.tick.88.joint
+    original_time: 2026-05-26T10:50:00Z
+    processed_time: 2026-05-26T10:50:01Z
+    logged_time: 2026-05-26T10:50:01Z
+    transmit_time: 2026-05-26T10:50:01Z
+    correlation_uid: sim.tick.88
+    sequence: 88
+  raw_data_integrity:
+    raw_data_hash: sha256:7777777777777777777777777777777777777777777777777777777777777777
+    raw_data_hash_algorithm: sha256
+    raw_data_size: 3072
+    raw_data_is_truncated: false
+    raw_data_untruncated_size: 3072
   confidence: 1.0
   provenance_refs:
     - provenance.backend_realized
   evidence_refs:
     - evidence.sim.tick88.joint
+  marking_definition_refs:
+    - markings.internal.v1
+  object_marking_refs:
+    - markings.internal.v1
   markings:
     - internal
   granular_markings: {}
@@ -2536,6 +3318,14 @@ time_management_context:
   schema_version: 1.0.0
   event_type: time_management_context
   extension_policy: reject_unknown_required
+  event_classification: null
+  source_status:
+    status_id: 1
+    status: success
+    status_code: time_grant_recorded
+    status_detail: logical time advance evidence recorded for tick 88
+    source_status_label: time_grant_recorded
+    source_status_mapping: aces.time_management.devs_discrete_event
   participant_address: null
   episode_id: null
   sequence_number: null
@@ -2553,11 +3343,34 @@ time_management_context:
   source_system_ref: cyborg.sim
   source_record_ref: sim.tick.88.time
   source_raw_ref: evidence.raw.sim.tick88
+  source_pipeline:
+    product_ref: products.cyborg.sim
+    product_version: 1.0.0
+    log_provider: cyborg
+    log_source: cyborg.sim
+    log_name: time-management
+    original_event_uid: sim.tick.88.time
+    original_time: 2026-05-26T10:50:00Z
+    processed_time: 2026-05-26T10:50:01Z
+    logged_time: 2026-05-26T10:50:01Z
+    transmit_time: 2026-05-26T10:50:01Z
+    correlation_uid: sim.tick.88
+    sequence: 88
+  raw_data_integrity:
+    raw_data_hash: sha256:8888888888888888888888888888888888888888888888888888888888888888
+    raw_data_hash_algorithm: sha256
+    raw_data_size: 3072
+    raw_data_is_truncated: false
+    raw_data_untruncated_size: 3072
   confidence: 1.0
   provenance_refs:
     - provenance.backend_realized
   evidence_refs:
     - evidence.sim.tick88.time
+  marking_definition_refs:
+    - markings.internal.v1
+  object_marking_refs:
+    - markings.internal.v1
   markings:
     - internal
   granular_markings: {}
@@ -2603,6 +3416,14 @@ joint_action_record:
   schema_version: 1.0.0
   event_type: backend_serialized_attempt
   extension_policy: reject_unknown_required
+  event_classification: null
+  source_status:
+    status_id: 2
+    status: weak_guarantee
+    status_code: backend_serialized
+    status_detail: backend serialized the attempts and cannot prove simultaneity
+    source_status_label: backend_serialized
+    source_status_mapping: aces.conflict_policy.disclose_weak_guarantee
   participant_address: null
   episode_id: null
   sequence_number: null
@@ -2620,11 +3441,34 @@ joint_action_record:
   source_system_ref: backend.scheduler
   source_record_ref: scheduler.log.21
   source_raw_ref: evidence.raw.scheduler.log.21
+  source_pipeline:
+    product_ref: products.backend.scheduler
+    product_version: 3.2.0
+    log_provider: backend
+    log_source: backend.scheduler
+    log_name: scheduler-order
+    original_event_uid: scheduler.log.21
+    original_time: 2026-05-26T11:00:00Z
+    processed_time: 2026-05-26T11:00:02Z
+    logged_time: 2026-05-26T11:00:02Z
+    transmit_time: 2026-05-26T11:00:03Z
+    correlation_uid: scheduler.window.21
+    sequence: 21
+  raw_data_integrity:
+    raw_data_hash: sha256:9999999999999999999999999999999999999999999999999999999999999999
+    raw_data_hash_algorithm: sha256
+    raw_data_size: 6144
+    raw_data_is_truncated: false
+    raw_data_untruncated_size: 6144
   confidence: 0.7
   provenance_refs:
     - provenance.backend_realized
   evidence_refs:
     - evidence.backend-scheduler-log-21
+  marking_definition_refs:
+    - markings.internal.v1
+  object_marking_refs:
+    - markings.internal.v1
   markings:
     - internal
   granular_markings: {}
@@ -2699,12 +3543,17 @@ Design commitments:
 - RL/MARL step signals are recorded as action/observation space, action-mask,
   reward, return, termination, truncation, and auxiliary-info records when a
   backend exposes them;
+- RL/MARL/game interaction context records preserve active-agent/current-actor,
+  simultaneous, chance-node, and mean-field update semantics when claims depend
+  on them;
 - information-state claim strength is explicit for each participant-visible
   observation;
 - opaque participant phases are recorded honestly as unknown or not exposed
   rather than fabricated;
 - benchmark run context is present when runtime records support comparison or
-  reproducibility claims.
+  reproducibility claims;
+- explicit benchmark validity claims are present when runtime records are used
+  for comparative, non-contamination, or cost-normalized conclusions.
 
 Future implementation artifacts:
 
@@ -2721,6 +3570,9 @@ Future implementation artifacts:
   are not exposed as participant-visible observations without projection rules;
 - validation that rewards, returns, action masks, and terminal/truncation
   signals cannot be inferred from hidden scorer/backend state;
+- validation that comparative benchmark conclusions cite metric aggregation,
+  uncertainty, baseline comparability, evaluator leakage, exposure, exclusion,
+  retry, cost-normalization, and artifact-immutability procedures;
 - tests proving reset/restart do not rewrite history;
 - fixtures for opaque participants that expose attempts and observations
   without internal planning traces;
@@ -2746,6 +3598,9 @@ Design commitments:
 - state updates commit through participant-local and shared-state records;
 - step signals preserve RL/game-facing rewards, returns, masks,
   termination/truncation, and info without requiring participant internals;
+- AEC/current-actor, simultaneous active-agent, chance, and mean-field node
+  semantics are separate interaction-context records, not inferred from final
+  observations or action lists;
 - the lifecycle is separate from episode lifecycle, workflow state, evaluator
   state, control-plane operation status, and participant internals.
 
@@ -2757,6 +3612,8 @@ Future implementation artifacts:
   episode, temporal context, operation, observation, and state update;
 - runtime step-signal envelope linking action attempts, observations, action
   masks, rewards, returns, termination, truncation, and info refs when present;
+- interaction-context envelope for sequential/AEC, simultaneous, chance, and
+  mean-field order points;
 - fixtures for `Opaque`, `Unknown`, `NotApplicable`, and `Unsupported` values
   that prove they are not collapsed;
 - fixtures for `Rejected`, `Withheld`, `TimedOut`, `Cancelled`, `Partial`, and
@@ -2833,6 +3690,8 @@ Future implementation artifacts:
   attempts;
 - model-checkable or executable state-machine tests for ordering/isolation,
   rollback, and time-management claims;
+- model-checkable or property tests for active-agent/current-actor, chance, and
+  mean-field claim validity where those surfaces are implemented;
 - conformance checks for missing order/revision/conflict/isolation metadata;
 - backend capability evidence for supported concurrency guarantees.
 
@@ -2844,7 +3703,8 @@ families:
 
 - Gymnasium/OpenAI Gym, PettingZoo, and OpenSpiel for action spaces,
   observation spaces, rewards, returns, termination/truncation, action masks,
-  per-agent histories, simultaneous moves, and information-state discipline.
+  per-agent histories, active-agent/current-actor state, chance nodes,
+  mean-field updates, simultaneous moves, and information-state discipline.
 - POMDP, Dec-POMDP, POSG, and Markov-game literature for partial observability
   and multi-agent information boundaries.
 - CybORG, CyberBattleSim, CyGIL, CALDERA, ATT&CK, OpenC2, and CACAO for cyber
