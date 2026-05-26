@@ -17,6 +17,8 @@ formal artifacts are warranted.
 - **Participant Semantics** (`specs/formal/participant-semantics/`) -- Participant
   action, observation, interaction, visibility, causality, temporal behavior,
   and outcome-interpretation semantics
+- **Experiment Core** (`specs/formal/experiment-core/`) -- Task, run,
+  apparatus-context, study/collection, and archival provenance contracts
 
 ## FM Classification
 

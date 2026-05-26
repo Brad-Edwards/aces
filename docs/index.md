@@ -132,6 +132,7 @@ decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state
 decisions/adrs/adr-034-runtime-software-component-inventory
 decisions/adrs/adr-035-service-manager-unit-state-runtime-surface
 decisions/adrs/adr-036-sdl-processor-runtime-module-boundaries
+decisions/adrs/adr-037-experiment-core-contract-boundary
 decisions/sem-213-temporal-participant-preflight
 ```
 
@@ -166,6 +167,7 @@ specs/formal
 
 lessons/README
 migration/README
+research/experiment-core/index
 ```
 
 ```{toctree}

@@ -1,0 +1,549 @@
+{
+  "$defs": {
+    "ExperimentAnalysisPlanModel": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_id": {
+          "minLength": 1,
+          "title": "Analysis Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "metrics": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Metrics",
+          "type": "array"
+        },
+        "missing_data_policy": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Missing Data Policy"
+        },
+        "multiple_comparison_policy": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Multiple Comparison Policy"
+        },
+        "statistical_method": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Statistical Method"
+        },
+        "uncertainty_method": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uncertainty Method"
+        }
+      },
+      "required": [
+        "analysis_id",
+        "description"
+      ],
+      "title": "ExperimentAnalysisPlanModel",
+      "type": "object"
+    },
+    "ExperimentArtifactRefModel": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "checksum": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentChecksumModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "media_type": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Media Type"
+        },
+        "role": {
+          "enum": [
+            "protocol",
+            "metric-definition",
+            "scenario-snapshot",
+            "manifest",
+            "apparatus-evidence",
+            "observation",
+            "result",
+            "analysis",
+            "report",
+            "export",
+            "other"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "sensitivity": {
+          "default": "internal",
+          "enum": [
+            "public",
+            "internal",
+            "restricted",
+            "redacted"
+          ],
+          "title": "Sensitivity",
+          "type": "string"
+        },
+        "uri": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uri"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "role"
+      ],
+      "title": "ExperimentArtifactRefModel",
+      "type": "object"
+    },
+    "ExperimentChecksumModel": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "minLength": 1,
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "title": "ExperimentChecksumModel",
+      "type": "object"
+    },
+    "ExperimentReferenceModel": {
+      "additionalProperties": false,
+      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "scenario",
+            "scenario-snapshot",
+            "task",
+            "protocol",
+            "apparatus-context",
+            "run",
+            "result",
+            "study",
+            "manifest",
+            "profile",
+            "evidence",
+            "analysis-artifact",
+            "other"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentReferenceModel",
+      "type": "object"
+    },
+    "ExperimentStudyFactorModel": {
+      "additionalProperties": false,
+      "properties": {
+        "factor_kind": {
+          "enum": [
+            "treatment",
+            "control",
+            "blocking",
+            "stratification",
+            "apparatus",
+            "other"
+          ],
+          "title": "Factor Kind",
+          "type": "string"
+        },
+        "levels": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Levels",
+          "type": "array"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "factor_kind"
+      ],
+      "title": "ExperimentStudyFactorModel",
+      "type": "object"
+    },
+    "ExperimentStudyMembershipModel": {
+      "additionalProperties": false,
+      "properties": {
+        "grouping": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Grouping"
+        },
+        "inclusion_rationale": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inclusion Rationale"
+        },
+        "role": {
+          "enum": [
+            "primary-task",
+            "comparison-task",
+            "calibration-run",
+            "evaluation-run",
+            "baseline-result",
+            "comparison-result",
+            "evidence",
+            "analysis",
+            "other"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "target_ref": {
+          "$ref": "#/$defs/ExperimentReferenceModel"
+        }
+      },
+      "required": [
+        "target_ref",
+        "role"
+      ],
+      "title": "ExperimentStudyMembershipModel",
+      "type": "object"
+    },
+    "ExperimentValidityNoteModel": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "enum": [
+            "construct",
+            "internal",
+            "external",
+            "conclusion",
+            "statistical",
+            "apparatus",
+            "reproducibility",
+            "security",
+            "other"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "mitigation": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mitigation"
+        },
+        "note": {
+          "minLength": 1,
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "note"
+      ],
+      "title": "ExperimentValidityNoteModel",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "analysis_plan": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExperimentAnalysisPlanModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "export_artifacts": {
+      "items": {
+        "$ref": "#/$defs/ExperimentArtifactRefModel"
+      },
+      "title": "Export Artifacts",
+      "type": "array"
+    },
+    "factors": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ExperimentStudyFactorModel"
+      },
+      "propertyNames": {
+        "minLength": 1
+      },
+      "title": "Factors",
+      "type": "object"
+    },
+    "inclusion_criteria": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Inclusion Criteria",
+      "type": "array"
+    },
+    "membership": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ExperimentStudyMembershipModel"
+      },
+      "minProperties": 1,
+      "propertyNames": {
+        "minLength": 1
+      },
+      "title": "Membership",
+      "type": "object"
+    },
+    "purpose": {
+      "minLength": 1,
+      "title": "Purpose",
+      "type": "string"
+    },
+    "report_artifacts": {
+      "items": {
+        "$ref": "#/$defs/ExperimentArtifactRefModel"
+      },
+      "title": "Report Artifacts",
+      "type": "array"
+    },
+    "research_questions": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Research Questions",
+      "type": "array"
+    },
+    "run_allocation": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Run Allocation"
+    },
+    "schema_version": {
+      "const": "experiment-study/v1",
+      "default": "experiment-study/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "study_id": {
+      "minLength": 1,
+      "title": "Study Id",
+      "type": "string"
+    },
+    "study_kind": {
+      "enum": [
+        "study",
+        "collection",
+        "benchmark",
+        "cohort"
+      ],
+      "title": "Study Kind",
+      "type": "string"
+    },
+    "study_version": {
+      "minLength": 1,
+      "title": "Study Version",
+      "type": "string"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "validity_notes": {
+      "items": {
+        "$ref": "#/$defs/ExperimentValidityNoteModel"
+      },
+      "title": "Validity Notes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "study_id",
+    "study_version",
+    "study_kind",
+    "title",
+    "description",
+    "purpose",
+    "membership",
+    "inclusion_criteria"
+  ],
+  "title": "ExperimentStudyModel",
+  "type": "object"
+}

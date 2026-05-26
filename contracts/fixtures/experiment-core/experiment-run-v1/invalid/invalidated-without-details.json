@@ -1,0 +1,30 @@
+{
+  "schema_version": "experiment-run/v1",
+  "run_id": "bad-run",
+  "run_version": "1.0.0",
+  "task_ref": {
+    "ref_kind": "task",
+    "ref_id": "task"
+  },
+  "scenario_snapshot_ref": {
+    "ref_kind": "scenario-snapshot",
+    "ref_id": "scenario"
+  },
+  "apparatus_context": {
+    "schema_version": "experiment-apparatus-context/v1",
+    "apparatus_context_id": "apparatus",
+    "context_version": "1.0.0",
+    "components": {
+      "processor": {
+        "component_kind": "processor",
+        "identity": {
+          "name": "processor",
+          "version": "1.0.0"
+        }
+      }
+    }
+  },
+  "started_at": "2026-05-26T00:10:00Z",
+  "run_status": "invalidated",
+  "outcome_status": "not-evaluated"
+}

@@ -1,0 +1,70 @@
+{
+  "schema_version": "experiment-study/v1",
+  "study_id": "study-techvault-baseline",
+  "study_version": "1.0.0",
+  "study_kind": "benchmark",
+  "title": "TechVault baseline benchmark",
+  "description": "Benchmark collection for TechVault red-team runs.",
+  "purpose": "Compare participant policies across repeated executions of the same task.",
+  "research_questions": [
+    "How often does each participant policy achieve initial foothold under the fixed task protocol?"
+  ],
+  "membership": {
+    "task": {
+      "target_ref": {
+        "ref_kind": "task",
+        "ref_id": "task-techvault-red-team-v1",
+        "ref_version": "1.0.0"
+      },
+      "role": "primary-task",
+      "inclusion_rationale": "Reference task for the benchmark."
+    },
+    "run-001": {
+      "target_ref": {
+        "ref_kind": "run",
+        "ref_id": "run-techvault-001"
+      },
+      "role": "evaluation-run",
+      "grouping": "baseline"
+    }
+  },
+  "inclusion_criteria": [
+    "Runs must use the declared task version and reference apparatus context.",
+    "Runs with unresolved setup deviations are excluded from benchmark estimates."
+  ],
+  "factors": {
+    "participant-policy": {
+      "name": "Participant policy",
+      "factor_kind": "treatment",
+      "levels": [
+        "baseline",
+        "candidate"
+      ]
+    }
+  },
+  "run_allocation": "Allocate equal repeated runs per participant policy.",
+  "analysis_plan": {
+    "analysis_id": "baseline-proportion",
+    "description": "Estimate success proportion with uncertainty per participant policy.",
+    "metrics": [
+      "foothold-achieved"
+    ],
+    "statistical_method": "Binomial proportion estimate.",
+    "uncertainty_method": "Wilson interval."
+  },
+  "validity_notes": [
+    {
+      "category": "conclusion",
+      "note": "Repeated runs are required before drawing comparison claims."
+    }
+  ],
+  "report_artifacts": [
+    {
+      "artifact_id": "study-report",
+      "role": "report",
+      "media_type": "text/markdown",
+      "uri": "studies/techvault-baseline/report.md",
+      "sensitivity": "internal"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": "experiment-apparatus-context/v1",
+  "apparatus_context_id": "bad-apparatus-manifest-ref",
+  "context_version": "1.0.0",
+  "components": {
+    "processor": {
+      "component_kind": "processor",
+      "identity": {
+        "name": "processor",
+        "version": "1.0.0"
+      }
+    }
+  },
+  "selected_manifests": [
+    {
+      "ref_kind": "run",
+      "ref_id": "run-not-a-manifest"
+    }
+  ]
+}

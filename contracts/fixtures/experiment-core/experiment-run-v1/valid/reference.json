@@ -1,0 +1,88 @@
+{
+  "schema_version": "experiment-run/v1",
+  "run_id": "run-techvault-001",
+  "run_version": "1.0.0",
+  "task_ref": {
+    "ref_kind": "task",
+    "ref_id": "task-techvault-red-team-v1",
+    "ref_version": "1.0.0"
+  },
+  "scenario_snapshot_ref": {
+    "ref_kind": "scenario-snapshot",
+    "ref_id": "scenario-techvault",
+    "ref_version": "2026-05-26",
+    "ref_digest": "sha256:111111"
+  },
+  "apparatus_context": {
+    "schema_version": "experiment-apparatus-context/v1",
+    "apparatus_context_id": "apparatus-techvault-reference",
+    "context_version": "1.0.0",
+    "components": {
+      "processor": {
+        "component_kind": "processor",
+        "identity": {
+          "name": "aces-reference-processor",
+          "version": "0.1.0"
+        }
+      }
+    }
+  },
+  "parameter_set": [
+    {
+      "name": "difficulty",
+      "value": "standard",
+      "value_kind": "protocol"
+    }
+  ],
+  "stochastic_controls": [
+    {
+      "control_id": "task-seed",
+      "role": "seed",
+      "value": 12345
+    }
+  ],
+  "started_at": "2026-05-26T00:10:00Z",
+  "ended_at": "2026-05-26T00:40:00Z",
+  "clock_context": {
+    "clock_id": "range-wall-clock",
+    "authority": "backend wall clock",
+    "time_domain": "wall-clock"
+  },
+  "run_status": "completed",
+  "outcome_status": "succeeded",
+  "evidence_artifacts": [
+    {
+      "artifact_id": "evaluation-history",
+      "role": "observation",
+      "media_type": "application/json",
+      "uri": "runs/run-techvault-001/evaluation-history.json",
+      "sensitivity": "internal"
+    }
+  ],
+  "result_summaries": {
+    "foothold-achieved-result": {
+      "metric_id": "foothold-achieved",
+      "value": true,
+      "value_status": "reported",
+      "evidence_refs": [
+        {
+          "ref_kind": "evidence",
+          "ref_id": "evaluation-history"
+        }
+      ]
+    }
+  },
+  "used_refs": [
+    {
+      "ref_kind": "task",
+      "ref_id": "task-techvault-red-team-v1",
+      "ref_version": "1.0.0"
+    }
+  ],
+  "generated_refs": [
+    {
+      "ref_kind": "result",
+      "ref_id": "foothold-achieved-result"
+    }
+  ]
+}

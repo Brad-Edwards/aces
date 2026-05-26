@@ -1,0 +1,754 @@
+{
+  "$defs": {
+    "ExperimentApparatusConstraintModel": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_backend_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentReferenceModel"
+          },
+          "title": "Allowed Backend Refs",
+          "type": "array"
+        },
+        "allowed_processor_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentReferenceModel"
+          },
+          "title": "Allowed Processor Refs",
+          "type": "array"
+        },
+        "notes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "required_capabilities": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Required Capabilities",
+          "type": "array"
+        },
+        "required_manifest_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentManifestReferenceModel"
+          },
+          "title": "Required Manifest Refs",
+          "type": "array"
+        }
+      },
+      "title": "ExperimentApparatusConstraintModel",
+      "type": "object"
+    },
+    "ExperimentArtifactRefModel": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "checksum": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentChecksumModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "media_type": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Media Type"
+        },
+        "role": {
+          "enum": [
+            "protocol",
+            "metric-definition",
+            "scenario-snapshot",
+            "manifest",
+            "apparatus-evidence",
+            "observation",
+            "result",
+            "analysis",
+            "report",
+            "export",
+            "other"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "sensitivity": {
+          "default": "internal",
+          "enum": [
+            "public",
+            "internal",
+            "restricted",
+            "redacted"
+          ],
+          "title": "Sensitivity",
+          "type": "string"
+        },
+        "uri": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uri"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "role"
+      ],
+      "title": "ExperimentArtifactRefModel",
+      "type": "object"
+    },
+    "ExperimentChecksumModel": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "minLength": 1,
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "title": "ExperimentChecksumModel",
+      "type": "object"
+    },
+    "ExperimentEvaluationProtocolModel": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance_policy": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Acceptance Policy"
+        },
+        "aggregation_policy": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Aggregation Policy"
+        },
+        "intent": {
+          "minLength": 1,
+          "title": "Intent",
+          "type": "string"
+        },
+        "metric_definitions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ExperimentMetricDefinitionModel"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Metric Definitions",
+          "type": "object"
+        },
+        "observation_requirements": {
+          "items": {
+            "$ref": "#/$defs/ExperimentReferenceModel"
+          },
+          "title": "Observation Requirements",
+          "type": "array"
+        },
+        "protocol_id": {
+          "minLength": 1,
+          "title": "Protocol Id",
+          "type": "string"
+        },
+        "protocol_version": {
+          "minLength": 1,
+          "title": "Protocol Version",
+          "type": "string"
+        },
+        "unit_of_analysis": {
+          "minLength": 1,
+          "title": "Unit Of Analysis",
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol_id",
+        "protocol_version",
+        "intent",
+        "unit_of_analysis",
+        "metric_definitions"
+      ],
+      "title": "ExperimentEvaluationProtocolModel",
+      "type": "object"
+    },
+    "ExperimentManifestReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to an apparatus or capability manifest.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "manifest",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentManifestReferenceModel",
+      "type": "object"
+    },
+    "ExperimentMetricDefinitionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "aggregation": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Aggregation"
+        },
+        "direction": {
+          "enum": [
+            "higher-is-better",
+            "lower-is-better",
+            "target",
+            "descriptive"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "evidence_requirements": {
+          "items": {
+            "$ref": "#/$defs/ExperimentReferenceModel"
+          },
+          "title": "Evidence Requirements",
+          "type": "array"
+        },
+        "measured_construct": {
+          "minLength": 1,
+          "title": "Measured Construct",
+          "type": "string"
+        },
+        "missingness_policy": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Missingness Policy"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "uncertainty_policy": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uncertainty Policy"
+        },
+        "unit_of_analysis": {
+          "minLength": 1,
+          "title": "Unit Of Analysis",
+          "type": "string"
+        },
+        "value_kind": {
+          "enum": [
+            "boolean",
+            "integer",
+            "number",
+            "duration",
+            "count",
+            "category",
+            "text"
+          ],
+          "title": "Value Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "measured_construct",
+        "unit_of_analysis",
+        "value_kind",
+        "direction"
+      ],
+      "title": "ExperimentMetricDefinitionModel",
+      "type": "object"
+    },
+    "ExperimentReferenceModel": {
+      "additionalProperties": false,
+      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "scenario",
+            "scenario-snapshot",
+            "task",
+            "protocol",
+            "apparatus-context",
+            "run",
+            "result",
+            "study",
+            "manifest",
+            "profile",
+            "evidence",
+            "analysis-artifact",
+            "other"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentReferenceModel",
+      "type": "object"
+    },
+    "ExperimentScenarioReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to authored scenario material.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "scenario",
+            "scenario-snapshot"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentScenarioReferenceModel",
+      "type": "object"
+    },
+    "ExperimentSplitAndLeakageControlsModel": {
+      "additionalProperties": false,
+      "properties": {
+        "grouping_constraints": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Grouping Constraints",
+          "type": "array"
+        },
+        "hidden_material_policy": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hidden Material Policy"
+        },
+        "leakage_checks": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Leakage Checks",
+          "type": "array"
+        },
+        "partitioning_strategy": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Partitioning Strategy"
+        },
+        "temporal_availability": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temporal Availability"
+        },
+        "unresolved_risks": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Unresolved Risks",
+          "type": "array"
+        }
+      },
+      "title": "ExperimentSplitAndLeakageControlsModel",
+      "type": "object"
+    },
+    "ExperimentValidityNoteModel": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "enum": [
+            "construct",
+            "internal",
+            "external",
+            "conclusion",
+            "statistical",
+            "apparatus",
+            "reproducibility",
+            "security",
+            "other"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "mitigation": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mitigation"
+        },
+        "note": {
+          "minLength": 1,
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "note"
+      ],
+      "title": "ExperimentValidityNoteModel",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "apparatus_constraints": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExperimentApparatusConstraintModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "artifact_refs": {
+      "items": {
+        "$ref": "#/$defs/ExperimentArtifactRefModel"
+      },
+      "title": "Artifact Refs",
+      "type": "array"
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "evaluation_protocol": {
+      "$ref": "#/$defs/ExperimentEvaluationProtocolModel"
+    },
+    "intended_use": {
+      "minLength": 1,
+      "title": "Intended Use",
+      "type": "string"
+    },
+    "non_use": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Non Use",
+      "type": "array"
+    },
+    "population_or_construct": {
+      "minLength": 1,
+      "title": "Population Or Construct",
+      "type": "string"
+    },
+    "scenario_ref": {
+      "$ref": "#/$defs/ExperimentScenarioReferenceModel"
+    },
+    "schema_version": {
+      "const": "experiment-task/v1",
+      "default": "experiment-task/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "split_and_leakage_controls": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExperimentSplitAndLeakageControlsModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "task_id": {
+      "minLength": 1,
+      "title": "Task Id",
+      "type": "string"
+    },
+    "task_version": {
+      "minLength": 1,
+      "title": "Task Version",
+      "type": "string"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "validity_notes": {
+      "items": {
+        "$ref": "#/$defs/ExperimentValidityNoteModel"
+      },
+      "title": "Validity Notes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "task_id",
+    "task_version",
+    "title",
+    "description",
+    "scenario_ref",
+    "evaluation_protocol",
+    "intended_use",
+    "population_or_construct"
+  ],
+  "title": "ExperimentTaskModel",
+  "type": "object"
+}

@@ -45,6 +45,10 @@ from .versions import (
     CONCEPT_FAMILIES_SCHEMA_VERSION,
     CONTROLLED_VOCABULARIES_SCHEMA_VERSION,
     EVALUATION_STATE_SCHEMA_VERSION,
+    EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION,
+    EXPERIMENT_RUN_SCHEMA_VERSION,
+    EXPERIMENT_STUDY_SCHEMA_VERSION,
+    EXPERIMENT_TASK_SCHEMA_VERSION,
     OPERATION_SCHEMA_VERSION,
     PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION,
     PROCESSOR_MANIFEST_V2_SCHEMA_VERSION,
@@ -854,6 +858,329 @@ class BackendManifestV2Model(ContractModel):
         return json_schema
 
 
+class ExperimentReferenceModel(ContractModel):
+    """Typed reference to an experiment-core or adjacent ACES artifact."""
+
+    ref_kind: Literal[
+        "scenario",
+        "scenario-snapshot",
+        "task",
+        "protocol",
+        "apparatus-context",
+        "run",
+        "result",
+        "study",
+        "manifest",
+        "profile",
+        "evidence",
+        "analysis-artifact",
+        "other",
+    ]
+    ref_id: NonEmptyString
+    ref_version: NonEmptyString | None = None
+    ref_digest: NonEmptyString | None = None
+    ref_path: NonEmptyString | None = None
+
+
+class ExperimentScenarioReferenceModel(ExperimentReferenceModel):
+    """Reference constrained to authored scenario material."""
+
+    ref_kind: Literal["scenario", "scenario-snapshot"]
+
+
+class ExperimentTaskReferenceModel(ExperimentReferenceModel):
+    """Reference constrained to an experiment task."""
+
+    ref_kind: Literal["task"]
+
+
+class ExperimentScenarioSnapshotReferenceModel(ExperimentReferenceModel):
+    """Reference constrained to a sealed scenario snapshot."""
+
+    ref_kind: Literal["scenario-snapshot"]
+
+
+class ExperimentManifestReferenceModel(ExperimentReferenceModel):
+    """Reference constrained to an apparatus or capability manifest."""
+
+    ref_kind: Literal["manifest"]
+
+
+class ExperimentChecksumModel(ContractModel):
+    algorithm: NonEmptyString
+    value: NonEmptyString
+
+
+class ExperimentArtifactRefModel(ContractModel):
+    artifact_id: NonEmptyString
+    role: Literal[
+        "protocol",
+        "metric-definition",
+        "scenario-snapshot",
+        "manifest",
+        "apparatus-evidence",
+        "observation",
+        "result",
+        "analysis",
+        "report",
+        "export",
+        "other",
+    ]
+    media_type: NonEmptyString | None = None
+    uri: NonEmptyString | None = None
+    checksum: ExperimentChecksumModel | None = None
+    sensitivity: Literal["public", "internal", "restricted", "redacted"] = "internal"
+    description: NonEmptyString | None = None
+
+
+class ExperimentValidityNoteModel(ContractModel):
+    category: Literal[
+        "construct",
+        "internal",
+        "external",
+        "conclusion",
+        "statistical",
+        "apparatus",
+        "reproducibility",
+        "security",
+        "other",
+    ]
+    note: NonEmptyString
+    mitigation: NonEmptyString | None = None
+
+
+class ExperimentMetricDefinitionModel(ContractModel):
+    name: NonEmptyString
+    measured_construct: NonEmptyString
+    unit_of_analysis: NonEmptyString
+    value_kind: Literal["boolean", "integer", "number", "duration", "count", "category", "text"]
+    direction: Literal["higher-is-better", "lower-is-better", "target", "descriptive"]
+    aggregation: NonEmptyString | None = None
+    missingness_policy: NonEmptyString | None = None
+    uncertainty_policy: NonEmptyString | None = None
+    evidence_requirements: list[ExperimentReferenceModel] = Field(default_factory=list)
+
+
+class ExperimentEvaluationProtocolModel(ContractModel):
+    protocol_id: NonEmptyString
+    protocol_version: NonEmptyString
+    intent: NonEmptyString
+    unit_of_analysis: NonEmptyString
+    metric_definitions: dict[NonEmptyString, ExperimentMetricDefinitionModel] = Field(min_length=1)
+    observation_requirements: list[ExperimentReferenceModel] = Field(default_factory=list)
+    aggregation_policy: NonEmptyString | None = None
+    acceptance_policy: NonEmptyString | None = None
+
+
+class ExperimentSplitAndLeakageControlsModel(ContractModel):
+    partitioning_strategy: NonEmptyString | None = None
+    grouping_constraints: list[NonEmptyString] = Field(default_factory=list)
+    temporal_availability: NonEmptyString | None = None
+    hidden_material_policy: NonEmptyString | None = None
+    leakage_checks: list[NonEmptyString] = Field(default_factory=list)
+    unresolved_risks: list[NonEmptyString] = Field(default_factory=list)
+
+
+class ExperimentApparatusConstraintModel(ContractModel):
+    allowed_processor_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+    allowed_backend_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+    required_manifest_refs: list[ExperimentManifestReferenceModel] = Field(default_factory=list)
+    required_capabilities: list[NonEmptyString] = Field(default_factory=list)
+    notes: list[NonEmptyString] = Field(default_factory=list)
+
+
+class ExperimentTaskModel(ContractModel):
+    schema_version: Literal[EXPERIMENT_TASK_SCHEMA_VERSION] = EXPERIMENT_TASK_SCHEMA_VERSION
+    task_id: NonEmptyString
+    task_version: NonEmptyString
+    title: NonEmptyString
+    description: NonEmptyString
+    scenario_ref: ExperimentScenarioReferenceModel
+    evaluation_protocol: ExperimentEvaluationProtocolModel
+    intended_use: NonEmptyString
+    non_use: list[NonEmptyString] = Field(default_factory=list)
+    population_or_construct: NonEmptyString
+    split_and_leakage_controls: ExperimentSplitAndLeakageControlsModel | None = None
+    apparatus_constraints: ExperimentApparatusConstraintModel | None = None
+    validity_notes: list[ExperimentValidityNoteModel] = Field(default_factory=list)
+    artifact_refs: list[ExperimentArtifactRefModel] = Field(default_factory=list)
+
+
+class ExperimentParameterModel(ContractModel):
+    name: NonEmptyString
+    value: str | int | float | bool | None
+    value_kind: Literal["configuration", "protocol", "apparatus", "analysis", "other"]
+    redaction: Literal["none", "redacted", "withheld"] = "none"
+
+
+class ExperimentStochasticControlModel(ContractModel):
+    control_id: NonEmptyString
+    role: Literal["seed", "randomization", "sampling", "scheduler", "agent-policy", "other"]
+    value: str | int | None = None
+    description: NonEmptyString | None = None
+
+
+class ExperimentClockContextModel(ContractModel):
+    clock_id: NonEmptyString
+    authority: NonEmptyString
+    time_domain: Literal["wall-clock", "monotonic", "simulated", "logical", "other"]
+    synchronization: NonEmptyString | None = None
+
+
+class ExperimentApparatusComponentModel(ContractModel):
+    component_kind: Literal[
+        "processor",
+        "backend",
+        "participant-implementation",
+        "host",
+        "container",
+        "vm",
+        "network",
+        "device",
+        "measurement-channel",
+        "other",
+    ]
+    identity: ApparatusIdentityModel
+    manifest_ref: ExperimentManifestReferenceModel | None = None
+    compatibility_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+    observed: bool = False
+    limitations: list[NonEmptyString] = Field(default_factory=list)
+
+
+class ExperimentApparatusContextModel(ContractModel):
+    schema_version: Literal[EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION] = EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION
+    apparatus_context_id: NonEmptyString
+    context_version: NonEmptyString
+    declared_at: NonEmptyString | None = None
+    components: dict[NonEmptyString, ExperimentApparatusComponentModel] = Field(min_length=1)
+    selected_manifests: list[ExperimentManifestReferenceModel] = Field(default_factory=list)
+    compatibility_declarations: list[ExperimentReferenceModel] = Field(default_factory=list)
+    configuration_parameters: list[ExperimentParameterModel] = Field(default_factory=list)
+    stochastic_controls: list[ExperimentStochasticControlModel] = Field(default_factory=list)
+    clocks: list[ExperimentClockContextModel] = Field(default_factory=list)
+    measurement_channels: list[ExperimentReferenceModel] = Field(default_factory=list)
+    observed_setup_evidence: list[ExperimentArtifactRefModel] = Field(default_factory=list)
+    known_limitations: list[ExperimentValidityNoteModel] = Field(default_factory=list)
+
+
+class ExperimentResultSummaryModel(ContractModel):
+    metric_id: NonEmptyString | None = None
+    value: str | int | float | bool | None = None
+    value_status: Literal["reported", "missing", "withheld", "not-applicable"] = "reported"
+    evidence_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+    uncertainty: NonEmptyString | None = None
+    notes: NonEmptyString | None = None
+
+
+class ExperimentInvalidationModel(ContractModel):
+    invalidated_at: NonEmptyString
+    reason: NonEmptyString
+    superseded_by: ExperimentReferenceModel | None = None
+
+
+class ExperimentRunModel(ContractModel):
+    schema_version: Literal[EXPERIMENT_RUN_SCHEMA_VERSION] = EXPERIMENT_RUN_SCHEMA_VERSION
+    run_id: NonEmptyString
+    run_version: NonEmptyString
+    task_ref: ExperimentTaskReferenceModel
+    scenario_snapshot_ref: ExperimentScenarioSnapshotReferenceModel
+    apparatus_context: ExperimentApparatusContextModel
+    parameter_set: list[ExperimentParameterModel] = Field(default_factory=list)
+    stochastic_controls: list[ExperimentStochasticControlModel] = Field(default_factory=list)
+    started_at: NonEmptyString
+    ended_at: NonEmptyString | None = None
+    clock_context: ExperimentClockContextModel | None = None
+    run_status: Literal["sealed", "completed", "failed", "aborted", "invalidated", "superseded"]
+    outcome_status: Literal["succeeded", "failed", "partial", "inconclusive", "not-evaluated"]
+    evidence_artifacts: list[ExperimentArtifactRefModel] = Field(default_factory=list)
+    result_summaries: dict[NonEmptyString, ExperimentResultSummaryModel] = Field(default_factory=dict)
+    deviations: list[NonEmptyString] = Field(default_factory=list)
+    invalidation: ExperimentInvalidationModel | None = None
+    used_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+    generated_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+    derived_from_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_invalidation_details(self) -> ExperimentRunModel:
+        if self.run_status == "invalidated" and self.invalidation is None:
+            raise ValueError("invalidated experiment runs must include invalidation details")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {
+                    "properties": {"run_status": {"const": "invalidated"}},
+                    "required": ["run_status"],
+                },
+                "then": {
+                    "required": ["invalidation"],
+                    "properties": {"invalidation": {"type": "object"}},
+                },
+            }
+        )
+        return json_schema
+
+
+class ExperimentStudyMembershipModel(ContractModel):
+    target_ref: ExperimentReferenceModel
+    role: Literal[
+        "primary-task",
+        "comparison-task",
+        "calibration-run",
+        "evaluation-run",
+        "baseline-result",
+        "comparison-result",
+        "evidence",
+        "analysis",
+        "other",
+    ]
+    grouping: NonEmptyString | None = None
+    inclusion_rationale: NonEmptyString | None = None
+
+
+class ExperimentStudyFactorModel(ContractModel):
+    name: NonEmptyString
+    factor_kind: Literal["treatment", "control", "blocking", "stratification", "apparatus", "other"]
+    levels: list[NonEmptyString] = Field(default_factory=list)
+
+
+class ExperimentAnalysisPlanModel(ContractModel):
+    analysis_id: NonEmptyString
+    description: NonEmptyString
+    metrics: list[NonEmptyString] = Field(default_factory=list)
+    statistical_method: NonEmptyString | None = None
+    uncertainty_method: NonEmptyString | None = None
+    multiple_comparison_policy: NonEmptyString | None = None
+    missing_data_policy: NonEmptyString | None = None
+
+
+class ExperimentStudyModel(ContractModel):
+    schema_version: Literal[EXPERIMENT_STUDY_SCHEMA_VERSION] = EXPERIMENT_STUDY_SCHEMA_VERSION
+    study_id: NonEmptyString
+    study_version: NonEmptyString
+    study_kind: Literal["study", "collection", "benchmark", "cohort"]
+    title: NonEmptyString
+    description: NonEmptyString
+    purpose: NonEmptyString
+    research_questions: list[NonEmptyString] = Field(default_factory=list)
+    membership: dict[NonEmptyString, ExperimentStudyMembershipModel] = Field(min_length=1)
+    inclusion_criteria: list[NonEmptyString] = Field(min_length=1)
+    factors: dict[NonEmptyString, ExperimentStudyFactorModel] = Field(default_factory=dict)
+    run_allocation: NonEmptyString | None = None
+    analysis_plan: ExperimentAnalysisPlanModel | None = None
+    validity_notes: list[ExperimentValidityNoteModel] = Field(default_factory=list)
+    report_artifacts: list[ExperimentArtifactRefModel] = Field(default_factory=list)
+    export_artifacts: list[ExperimentArtifactRefModel] = Field(default_factory=list)
+
+
 class ConceptFamilyDefinitionModel(ContractModel):
     title: NonEmptyString
     description: NonEmptyString
@@ -1408,6 +1735,10 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "controlled-vocabularies-v1": ControlledVocabularyCatalogModel.model_json_schema(),
         "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
+        "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
+        "experiment-run-v1": ExperimentRunModel.model_json_schema(),
+        "experiment-study-v1": ExperimentStudyModel.model_json_schema(),
+        "experiment-task-v1": ExperimentTaskModel.model_json_schema(),
         "provisioning-plan-v1": ProvisioningPlanModel.model_json_schema(),
         "orchestration-plan-v1": OrchestrationPlanModel.model_json_schema(),
         "evaluation-plan-v1": EvaluationPlanModel.model_json_schema(),
@@ -1455,6 +1786,35 @@ __all__ = [
     "ControlledVocabularyTermId",
     "ControlledVocabularyTermModel",
     "ContractModel",
+    "ExperimentAnalysisPlanModel",
+    "ExperimentApparatusComponentModel",
+    "ExperimentApparatusConstraintModel",
+    "ExperimentApparatusContextModel",
+    "ExperimentArtifactRefModel",
+    "ExperimentChecksumModel",
+    "ExperimentClockContextModel",
+    "ExperimentEvaluationProtocolModel",
+    "ExperimentInvalidationModel",
+    "ExperimentManifestReferenceModel",
+    "ExperimentMetricDefinitionModel",
+    "ExperimentParameterModel",
+    "ExperimentReferenceModel",
+    "ExperimentResultSummaryModel",
+    "ExperimentRunModel",
+    "ExperimentScenarioReferenceModel",
+    "ExperimentScenarioSnapshotReferenceModel",
+    "ExperimentSplitAndLeakageControlsModel",
+    "ExperimentStochasticControlModel",
+    "ExperimentStudyFactorModel",
+    "ExperimentStudyMembershipModel",
+    "ExperimentStudyModel",
+    "ExperimentTaskReferenceModel",
+    "ExperimentTaskModel",
+    "ExperimentValidityNoteModel",
+    "EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION",
+    "EXPERIMENT_RUN_SCHEMA_VERSION",
+    "EXPERIMENT_STUDY_SCHEMA_VERSION",
+    "EXPERIMENT_TASK_SCHEMA_VERSION",
     "EvaluationHistoryEventModel",
     "EvaluationPlanModel",
     "EvaluationResultStateModel",

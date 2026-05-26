@@ -5,8 +5,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from aces_contracts.contracts import (
     BackendManifestV2Model,
+    ExperimentApparatusContextModel,
+    ExperimentRunModel,
+    ExperimentStudyModel,
+    ExperimentTaskModel,
     ProcessorManifestV2Model,
     schema_bundle,
 )
@@ -16,8 +21,16 @@ from aces_contracts.manifest_authority import (
     PROCESSOR_SUPPORTED_SDL_VERSION_IDS,
 )
 from jsonschema import Draft202012Validator
+from pydantic import ValidationError
 
 from aces.core.runtime import contracts as compat_runtime_contracts
+
+EXPERIMENT_CORE_FIXTURE_MODELS = {
+    "experiment-apparatus-context-v1": ExperimentApparatusContextModel,
+    "experiment-run-v1": ExperimentRunModel,
+    "experiment-study-v1": ExperimentStudyModel,
+    "experiment-task-v1": ExperimentTaskModel,
+}
 
 
 def test_published_contract_schemas_exist_and_match_bundle():
@@ -53,6 +66,79 @@ def test_closed_world_contract_models_for_runtime_envelopes():
     assert generated["controlled-vocabularies-v1"]["additionalProperties"] is False
     assert generated["semantic-profile-v1"]["additionalProperties"] is False
     assert "backend-manifest-v1" not in generated
+
+
+def test_experiment_core_schemas_publish_closed_world_contracts():
+    generated = schema_bundle()
+
+    for contract_id in EXPERIMENT_CORE_FIXTURE_MODELS:
+        assert contract_id in generated
+        assert generated[contract_id]["additionalProperties"] is False
+
+    task_schema = generated["experiment-task-v1"]
+    run_schema = generated["experiment-run-v1"]
+    study_schema = generated["experiment-study-v1"]
+
+    assert task_schema["properties"]["scenario_ref"]["$ref"] == "#/$defs/ExperimentScenarioReferenceModel"
+    assert task_schema["properties"]["evaluation_protocol"]["$ref"] == "#/$defs/ExperimentEvaluationProtocolModel"
+    assert (
+        task_schema["$defs"]["ExperimentApparatusConstraintModel"]["properties"]["required_manifest_refs"]["items"][
+            "$ref"
+        ]
+        == "#/$defs/ExperimentManifestReferenceModel"
+    )
+    metric_definitions_schema = task_schema["$defs"]["ExperimentEvaluationProtocolModel"]["properties"][
+        "metric_definitions"
+    ]
+    assert metric_definitions_schema["type"] == "object"
+    assert run_schema["properties"]["apparatus_context"]["$ref"] == "#/$defs/ExperimentApparatusContextModel"
+    apparatus_schema = run_schema["$defs"]["ExperimentApparatusContextModel"]
+    component_schema = run_schema["$defs"]["ExperimentApparatusComponentModel"]
+    assert apparatus_schema["properties"]["selected_manifests"]["items"]["$ref"] == (
+        "#/$defs/ExperimentManifestReferenceModel"
+    )
+    assert (
+        component_schema["properties"]["manifest_ref"]["anyOf"][0]["$ref"] == "#/$defs/ExperimentManifestReferenceModel"
+    )
+    assert run_schema["properties"]["task_ref"]["$ref"] == "#/$defs/ExperimentTaskReferenceModel"
+    assert (
+        run_schema["properties"]["scenario_snapshot_ref"]["$ref"] == "#/$defs/ExperimentScenarioSnapshotReferenceModel"
+    )
+    assert run_schema["properties"]["result_summaries"]["type"] == "object"
+    assert study_schema["properties"]["study_kind"]["enum"] == ["study", "collection", "benchmark", "cohort"]
+    assert study_schema["properties"]["membership"]["type"] == "object"
+    assert any(
+        rule.get("if", {}).get("properties", {}).get("run_status", {}).get("const") == "invalidated"
+        for rule in run_schema["allOf"]
+    )
+
+
+def test_experiment_core_valid_fixtures_pass_model_validation():
+    repo_root = Path(__file__).resolve().parents[3]
+    fixture_root = repo_root / "contracts" / "fixtures" / "experiment-core"
+    schemas = schema_bundle()
+
+    for contract_id, model_cls in EXPERIMENT_CORE_FIXTURE_MODELS.items():
+        validator = Draft202012Validator(schemas[contract_id])
+        for path in sorted((fixture_root / contract_id / "valid").glob("*.json")):
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            validator.validate(payload)
+            model = model_cls.model_validate(payload)
+            assert model.schema_version == payload["schema_version"]
+
+
+def test_experiment_core_invalid_fixtures_fail_schema_and_model_validation():
+    repo_root = Path(__file__).resolve().parents[3]
+    fixture_root = repo_root / "contracts" / "fixtures" / "experiment-core"
+    schemas = schema_bundle()
+
+    for contract_id, model_cls in EXPERIMENT_CORE_FIXTURE_MODELS.items():
+        validator = Draft202012Validator(schemas[contract_id])
+        for path in sorted((fixture_root / contract_id / "invalid").glob("*.json")):
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            assert list(validator.iter_errors(payload)), path
+            with pytest.raises(ValidationError):
+                model_cls.model_validate(payload)
 
 
 def test_sdl_schema_rejects_redacted_runtime_mount_and_bind_raw_values():
