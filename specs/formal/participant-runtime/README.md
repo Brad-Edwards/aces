@@ -63,13 +63,17 @@ implementation coverage.
 This design is constrained by the primary sources listed in
 `docs/explain/sdl/lineage.md`:
 
-- Gymnasium and OpenAI Gym support an action/observation/episode boundary but
-  do not require access to private policy internals. ACES follows that
-  boundary, while adding multi-participant provenance and shared-state records.
+- Gymnasium and OpenAI Gym support an action/observation/reward/episode
+  boundary with action spaces, observation spaces, termination, truncation,
+  reset, and seeding. ACES follows that boundary, while adding
+  multi-participant provenance and shared-state records and without requiring
+  access to private policy internals.
 - PettingZoo and OpenSpiel require per-agent observations, local histories,
+  action masks or legal-action surfaces, rewards, termination/truncation,
   simultaneous or sequential interaction, and information-state discipline.
   ACES therefore separates hidden state, participant-visible observations,
-  action-observation histories, centralized-training state, and review evidence.
+  action-observation histories, centralized-training state, reward/return
+  signals, and review evidence.
 - POMDP, Dec-POMDP, POSG, and Markov-game lineage means a participant's
   observation is not world truth. Strong information-state claims require a
   reconstructible observation history, not just a final state dump.
@@ -78,15 +82,19 @@ This design is constrained by the primary sources listed in
   detection, foothold, and outcome semantics. ACES records those as portable
   references without adopting any one backend or playbook format as canonical.
 - OCSF and STIX establish the event-schema precedent for identity, schema
-  versioning, timestamps with distinct meanings, confidence, markings,
-  source/raw mapping, and extension rules.
+  versioning, classification, timestamps with distinct meanings, normalized
+  status/severity, confidence, source/raw mapping, raw-data integrity,
+  markings, granular selectors, and extension rules.
 - Lamport clocks, HLA time management, Time Warp, DEVS, FMI, and related
   runtime literature require ACES to separate wall-clock timestamps, logical
-  ordering, simulation time, causality, rollback, pacing, and synchronization.
+  ordering, simulation time, time-advance grants, lookahead, message
+  send/receive causality, rollback/anti-message handling, pacing, and
+  synchronization.
 - Cybench, AutoPenBench, CAIBench, AI Agents That Matter, and related agent
   benchmark critiques require run records, scaffold/tool exposure, seeds,
-  repeated-run ids, resource/cost traces, baseline/evaluator disclosure, and
-  holdout/canary exposure labels for auditable comparisons.
+  repeated-run ids, statistical repetition plans, resource/cost traces,
+  baseline/evaluator disclosure, cost normalization, contamination audits, and
+  holdout/canary exposure evidence for auditable comparisons.
 
 These sources do not make ACES a compatibility layer for any one project. They
 define review constraints: the model must preserve the concepts needed to make
@@ -170,6 +178,16 @@ spawned implementation issues.
   only the emitted observation, a history-consistent reconstruction, a
   perfect-recall history, a lossy projection, unknown, or unsupported.
 
+`Step signal`
+: A participant-visible or evaluator-visible signal produced at an action step:
+  observation, reward, return, action mask, termination, truncation, or
+  auxiliary info. Step signals are runtime records, not participant internals.
+
+`Action mask`
+: A participant-scoped legal-action projection at an order point. It is valid
+  only for the declared action space, visibility projection, and state revision
+  context that produced it.
+
 `Conflict policy`
 : The explicit rule or disclosure used when concurrent attempts touch the same
   shared operational state, resource, visibility surface, evidence stream, or
@@ -177,7 +195,12 @@ spawned implementation issues.
 
 `Capability guarantee`
 : A backend's declared strength for a specific runtime concern. Capability is a
-  vector over concerns, not one scalar level.
+  vector over concerns and runtime components, not one scalar level.
+
+`Time-management context`
+: The declared time domain, clock authority, advancement, lookahead,
+  message-causality, pacing, rollback, or step-negotiation basis for a
+  distributed or simulated runtime claim.
 
 `Marking`
 : A security, sensitivity, sharing, or redaction label attached to a record or
@@ -204,13 +227,17 @@ RuntimeState =
   lifecycle_events
   operation_records
   observations
+  participant_interfaces
+  step_signals
   action_observation_histories
   information_states
   shared_state
   joint_actions
+  time_management_contexts
   evidence_index
   run_context
   capability_declarations
+  capability_components
   marking_policies
   logical_order
 ```
@@ -224,6 +251,10 @@ Where:
 - `lifecycle_events` is the append-only set of lifecycle envelopes.
 - `operation_records` is the append-only set of long-running operation records.
 - `observations[p,e]` is the emitted participant-visible observation stream.
+- `participant_interfaces[p,e,t]` records action/observation spaces and
+  legal-action or mask surfaces visible at order point `t`.
+- `step_signals[p,e,t]` records reward, return, termination, truncation,
+  action-mask, observation, and auxiliary-info signals when exposed.
 - `action_observation_histories[p,e,t]` is the prefix of visible actions and
   observations available to participant `p` at order point `t`.
 - `information_states[p,e,t]` is the information state ACES claims for
@@ -231,10 +262,16 @@ Where:
 - `shared_state[address]` is the version chain for a shared operational state
   address.
 - `joint_actions[id]` records coordination intervals and concurrent attempts.
+- `time_management_contexts[id]` records simulation/distributed time semantics
+  used by joint action, operation, or state-update records.
 - `evidence_index` maps safe evidence references to evidence contracts and
   redaction policies.
 - `run_context` contains reproducibility and benchmark context.
-- `capability_declarations[backend, concern]` is the backend guarantee vector.
+- `capability_declarations[backend, concern]` is the backend's declared
+  contribution to the effective guarantee vector.
+- `capability_components[component, concern]` records adapter, backend,
+  evidence-store, redaction, clock, observer, and coordinator contributions to
+  the effective guarantee vector.
 - `marking_policies` contains field-level authorization and redaction rules.
 - `logical_order` is the recorded total or partial order relation over events.
 
@@ -249,6 +286,8 @@ BaseEnvelope =
   schema_version
   event_type
   extension_policy
+  event_classification
+  source_status
   participant_address
   episode_id
   sequence_number
@@ -265,9 +304,13 @@ BaseEnvelope =
   source_system_ref
   source_record_ref
   source_raw_ref
+  source_pipeline
+  raw_data_integrity
   confidence
   provenance_refs
   evidence_refs
+  marking_definition_refs
+  object_marking_refs
   markings
   granular_markings
   redaction_policy_ref
@@ -279,6 +322,9 @@ Rules:
 - `event_id` is globally stable within the run.
 - `schema_name` and `schema_version` identify the ACES contract projection, not
   the backend's native object.
+- `event_classification` and `source_status` are nullable only when the record
+  makes no normalized event-status, severity, or security-telemetry claim.
+  When populated they use the structures below.
 - `participant_address`, `episode_id`, and `sequence_number` may be null only
   for run-scoped records, such as a joint action record, that carry
   per-participant linkage through member event references.
@@ -289,8 +335,73 @@ Rules:
   timestamps alone do not establish causality.
 - `source_raw_ref` points to controlled evidence; it does not inline raw
   sensitive data into the portable envelope.
+- `raw_data_integrity` records hash, size, truncation, and untruncated-size
+  facts for raw data that supports a runtime claim.
+- `source_pipeline` records source product/version, original event identity,
+  processed/logged/transmitted times, correlation, and sequence information
+  when a source telemetry or command system is mapped into ACES.
 - `markings` and `granular_markings` are enforceable field-level disclosure
   labels.
+
+Event classification, source status, source pipeline metadata, raw-data
+integrity, and marking selectors follow the OCSF/STIX design pattern while
+remaining ACES-native:
+
+```text
+EventClassification =
+  category_uid
+  category_name
+  class_uid
+  class_name
+  activity_id
+  activity_name
+  type_uid
+  type_name
+  severity_id
+  severity
+```
+
+```text
+SourceStatus =
+  status_id
+  status
+  status_code
+  status_detail
+  source_status_label
+  source_status_mapping
+```
+
+```text
+SourcePipeline =
+  product_ref
+  product_version
+  log_provider
+  log_source
+  log_name
+  original_event_uid
+  original_time
+  processed_time
+  logged_time
+  transmit_time
+  correlation_uid
+  sequence
+```
+
+```text
+RawDataIntegrity =
+  raw_data_hash
+  raw_data_hash_algorithm
+  raw_data_size
+  raw_data_is_truncated
+  raw_data_untruncated_size
+```
+
+```text
+GranularMarking =
+  selectors
+  marking_ref
+  marking_scope
+```
 
 ### State Sets
 
@@ -424,6 +535,100 @@ ObservationEnvelope =
   redacted_field_refs
 ```
 
+Participant interface and step-signal records carry the RL/MARL-facing pieces
+that Gymnasium, PettingZoo, and OpenSpiel make first-class, without making them
+the ACES protocol:
+
+```text
+ParticipantInterface =
+  BaseEnvelope
+  participant_address
+  episode_id
+  action_space_ref
+  action_space_schema_ref
+  observation_space_ref
+  observation_space_schema_ref
+  legal_action_policy_ref
+  action_mask_policy_ref
+  action_mask_location
+  space_version
+  applicability
+```
+
+```text
+ActionMaskEnvelope =
+  BaseEnvelope
+  participant_address
+  episode_id
+  action_space_ref
+  mask_ref
+  legal_action_refs
+  illegal_action_refs
+  mask_encoding
+  valid_for_order_point
+  valid_for_state_revision_refs
+  visibility_projection_ref
+  stochastic_context
+```
+
+```text
+RewardEnvelope =
+  BaseEnvelope
+  participant_address
+  episode_id
+  reward_ref
+  reward_value_ref
+  reward_units
+  reward_range_ref
+  reward_model
+  reward_visibility
+  reward_timing
+  source_outcome_refs
+  scoring_refs
+```
+
+```text
+ReturnEnvelope =
+  BaseEnvelope
+  participant_address
+  episode_id
+  return_ref
+  cumulative_return_value_ref
+  return_horizon
+  return_discount_ref
+  reward_ref_prefix
+  terminal_basis_ref
+```
+
+```text
+TerminationEnvelope =
+  BaseEnvelope
+  participant_address
+  episode_id
+  terminated
+  truncated
+  termination_reason_ref
+  truncation_reason_ref
+  terminal_observation_ref
+  episode_terminal_reason_ref
+  local_only
+```
+
+```text
+StepSignalEnvelope =
+  BaseEnvelope
+  participant_address
+  episode_id
+  action_ref
+  observation_ref
+  action_mask_ref
+  reward_ref
+  return_ref
+  termination_ref
+  info_refs
+  centralized_state_refs
+```
+
 Shared operational state records carry:
 
 ```text
@@ -472,6 +677,7 @@ JointActionRecord =
   ordering_basis
   realized_order_relation
   clock_context
+  time_management_context_ref
   snapshot_basis
   isolation_guarantee
   atomicity_scope
@@ -484,6 +690,35 @@ JointActionRecord =
   rollback_refs
   capability_guarantee_vector
   participant_observation_refs
+```
+
+Time-management contexts carry:
+
+```text
+TimeManagementContext =
+  BaseEnvelope
+  time_context_id
+  time_domain
+  time_management_mode
+  logical_time
+  simulation_time
+  wall_clock_interval
+  lookahead
+  time_regulating
+  time_constrained
+  time_advance_request_ref
+  time_advance_grant_ref
+  next_event_request_ref
+  message_send_refs
+  message_receive_refs
+  pacing_policy_ref
+  step_size_ref
+  rollback_window_ref
+  rollback_refs
+  anti_message_refs
+  compensation_refs
+  superseded_event_refs
+  transition_basis
 ```
 
 Ordering basis is normalized:
@@ -499,6 +734,22 @@ OrderingBasis =
   LogicalClock
   VectorClock
   WallClockOnly
+  Unknown
+  Unsupported
+```
+
+Time-management mode is normalized:
+
+```text
+TimeManagementMode =
+  None
+  WallClockRealtime
+  ConservativeLogicalTime
+  HlaTimeManaged
+  OptimisticRollback
+  DevsDiscreteEvent
+  FmiCoSimulation
+  BackendSerialized
   Unknown
   Unsupported
 ```
@@ -539,8 +790,15 @@ CapabilityConcern =
   admission_disposition
   operation_state
   observation_information_state
+  participant_interface
+  action_mask
+  reward_signal
+  return_signal
+  termination_signal
   shared_state_revision
   ordering
+  time_management
+  rollback
   isolation
   conflict_detection
   conflict_resolution
@@ -560,9 +818,147 @@ GuaranteeStrength =
   exact
 ```
 
-`not_applicable` is outside the order and is represented by omitting the concern
-from the required vector or by a concern-specific `NotApplicable` value where
-that concern has one.
+Capability applicability is explicit:
+
+```text
+CapabilityApplicability =
+  required
+  optional
+  not_applicable
+```
+
+```text
+CapabilityValue =
+  not_applicable
+  unsupported
+  disclosed_weak
+  bounded
+  exact
+```
+
+`not_applicable` is outside the guarantee-strength order. It may appear only
+when the contract and claim both state that the concern has no semantic role.
+Omitting a required concern is not equivalent to `not_applicable`; it is a
+capability validation failure.
+
+## Normative Core Model
+
+This section is the reviewable abstract model. Concrete schemas and backend
+adapters refine it by mapping native records to these domains and predicates.
+
+### Domains
+
+Let:
+
+```text
+P  = participant addresses
+E  = episode ids
+A  = action attempt ids
+Op = operation ids
+Obs = observation ids
+S  = shared-state addresses
+R  = shared-state revisions
+J  = joint-action ids
+Ev = runtime event ids
+T  = logical order points
+C  = capability concerns
+M  = markings and marking definitions
+```
+
+The abstract functions are partial unless stated otherwise:
+
+```text
+episode_state: P x E -> EpisodeState
+seq: P x E -> Nat
+event: Ev -> BaseEnvelope
+phase: Ev -> LifecyclePhase
+realization: Ev -> PhaseRealization
+admission: Ev -> AdmissionDisposition
+operation_state: Op x T -> OperationState
+visible_history: P x E x T -> Seq(Ev)
+observation: Obs -> ObservationEnvelope
+information_claim: P x E x T -> InformationGuarantee
+state_revision: S x T -> R
+state_digest: S x R -> Digest
+order_relation: T -> Relation(Ev, Ev)
+capability: Component x C -> CapabilityValue
+effective_capability: C -> CapabilityValue
+authorized: Consumer x BaseEnvelope -> Bool
+```
+
+`CapabilityValue` is `not_applicable` or a `GuaranteeStrength`. The strength
+order is:
+
+```text
+unsupported < disclosed_weak < bounded < exact
+```
+
+### Valid Trace Predicate
+
+A trace `tr = <ev_1, ..., ev_n>` is valid iff all of the following hold:
+
+```text
+ValidTrace(tr) =
+  Unique(event_id, tr)
+  /\ InitOK(tr[1])
+  /\ forall i in 1..n:
+       BaseOK(ev_i)
+       /\ MarkingOK(ev_i)
+       /\ CapabilityOK(ev_i)
+       /\ RefOK(ev_i, prefix(tr, i - 1))
+       /\ Apply(prefix_state(tr, i - 1), ev_i) != Reject
+  /\ AppendOnly(tr)
+  /\ MonotoneSequence(tr)
+  /\ RevisionDiscipline(tr)
+  /\ OrderDiscipline(tr)
+```
+
+Where:
+
+- `BaseOK` checks envelope identity, schema version, timestamps, source/raw
+  references, classification/status requiredness, and extension policy.
+- `MarkingOK` checks record-level and granular marking selectors before a
+  record is published to any consumer.
+- `CapabilityOK` checks every claim against the effective capability vector.
+- `RefOK` checks referenced participants, episodes, actions, operations,
+  observations, state revisions, joint actions, evidence, and source mappings.
+- `AppendOnly` forbids deletion or mutation of prior history records; rollback
+  creates superseding records.
+- `MonotoneSequence` requires participant-scoped `sequence_number` to increase
+  within each `(participant_address, episode_id)` stream.
+- `RevisionDiscipline` requires every shared-state write to cite known prior
+  revisions or disclose unknown/unsupported revision support.
+- `OrderDiscipline` requires every ordering claim to be backed by a declared
+  order basis stronger than wall-clock-only display order.
+
+### Transition Schema
+
+Each transition is a predicate over pre-state `s`, event `ev`, and post-state
+`s'`:
+
+```text
+Transition_k(s, ev, s') =
+  Pre_k(s, ev)
+  /\ s' = Update_k(s, ev)
+  /\ Post_k(s, ev, s')
+```
+
+`Apply(s, ev)` returns `Reject` unless exactly one transition predicate matches
+the event type and all shared invariants hold. If multiple transitions could
+match, the event is invalid because its portable semantics are ambiguous.
+
+Shared transition obligations:
+
+```text
+HistoryAppend(s, ev, s')
+OrderAppend(s, ev, s')
+NoHiddenDisclosure(s, ev, s')
+NoCapabilityUpgrade(s, ev, s')
+NoUnauthorizedField(s, ev, s')
+```
+
+These obligations are part of every transition, including records that are
+externally supplied or opaque.
 
 ### Transition Relation
 
@@ -584,13 +980,13 @@ A trace is valid when:
    enters any public runtime surface;
 5. every transition preserves append-only history, monotonic participant
    sequence numbers, state revision discipline, and declared ordering;
-6. every runtime claim is no stronger than the backend guarantee vector and the
-   evidence actually recorded.
+6. every runtime claim is no stronger than the effective component-wise
+   capability vector and the evidence actually recorded.
 
 The state machine rejects an event when accepting it would require hidden truth
 to appear as participant-visible observation, infer ordering from wall clock
 alone, rewrite history, skip a required redaction, invent participant internals,
-or claim a capability stronger than the declared backend support.
+or claim a capability stronger than the effective declared support.
 
 ### Transitions
 
@@ -598,7 +994,7 @@ or claim a capability stronger than the declared backend support.
 : Records an intent/proposal/trigger when the runtime can observe it.
   Participants that do not expose intent may enter the lifecycle at
   `SelectionOrAdmission`, `ExecutionAttempt`, or a lifecycle envelope with
-  `Opaque`, `Unknown`, or `NotApplicable` phase realization.
+  `Opaque`, `Unknown`, `NotApplicable`, or `Unsupported` phase realization.
 
 `RecordAdmission`
 : Records admission, rejection, withholding, external supply, unknown
@@ -626,10 +1022,25 @@ or claim a capability stronger than the declared backend support.
   transition may update the participant-visible projection, but it does not
   expose hidden truth unless an explicit visibility rule permits it.
 
+`EmitStepSignal`
+: Emits an RL/MARL/game-style step signal such as action mask, reward, return,
+  termination, truncation, or auxiliary info. This transition is optional for
+  non-RL participants and must not fabricate signals when the backend does not
+  expose them.
+
 `CommitStateUpdate`
 : Writes participant-local, shared operational, visibility, evidence-facing, or
   outcome-facing state records with revision, digest, ordering, provenance,
   markings, and conflict semantics.
+
+`RecordTimeAdvance`
+: Records a time-management event such as lookahead declaration,
+  time-advance request/grant, step negotiation, message delivery, pacing, or
+  unsupported time-management disclosure.
+
+`RecordRollbackOrCompensation`
+: Records an optimistic rollback, anti-message, compensation, or supersession
+  relation. It never deletes earlier records.
 
 `ResolveConflict`
 : Applies a declared conflict policy for a joint action set. The policy may
@@ -685,12 +1096,37 @@ or claim a capability stronger than the declared backend support.
   declared visibility projection, and the envelope declares an
   `InformationGuarantee`.
 
+`EmitStepSignal`
+: Precondition: an execution attempt, observation, operation advancement,
+  scenario rule, or backend step produces a participant-visible or
+  evaluator-visible action mask, reward, return, termination, truncation, or
+  auxiliary info signal. Postcondition: the signal references its space,
+  visibility projection, order point, state revision basis, and marking policy;
+  termination and truncation are represented separately; and no hidden state is
+  exposed through `info_refs` unless a visibility rule authorizes it.
+
 `CommitStateUpdate`
 : Precondition: the update has a stable state address, declared state kind,
   marking policy, and conflict policy or unsupported-concurrency disclosure.
   Postcondition: the written state has a new revision or digest, the read/write
   access record references prior revisions when known, and the event is linked
   to behavior history.
+
+`RecordTimeAdvance`
+: Precondition: a joint action, operation, state update, or external
+  simulation/federation event depends on time-management semantics stronger
+  than wall-clock display order. Postcondition: the time-management context
+  records the time domain, mode, logical/simulation time, lookahead,
+  request/grant or step-negotiation refs, message send/receive refs, and any
+  unsupported disclosure needed for the ordering claim.
+
+`RecordRollbackOrCompensation`
+: Precondition: a backend performs or reports optimistic rollback,
+  anti-message cancellation, compensation, or supersession. Postcondition: the
+  rollback or compensation record references the affected prior events,
+  produces superseding records when claims change, preserves append-only
+  history, and downgrades replay/order guarantees unless the rollback evidence
+  supports the stronger claim.
 
 `ResolveConflict`
 : Precondition: two or more attempts in the same joint action set have
@@ -723,6 +1159,62 @@ Let:
   the declared visibility projection, markings, timing, noise, and redaction
   rules.
 
+The indistinguishability relation is defined by visible projection, not by
+backend state equality:
+
+```text
+h1 ~p h2 iff
+  ProjectVisible(p, h1) = ProjectVisible(p, h2)
+  /\ ProjectMarkings(p, h1) = ProjectMarkings(p, h2)
+  /\ ProjectDeliveredOrder(p, h1) = ProjectDeliveredOrder(p, h2)
+  /\ ProjectNoiseDisclosure(p, h1) = ProjectNoiseDisclosure(p, h2)
+```
+
+`~p` must be reflexive, symmetric, and transitive for the recorded projection
+version. If redaction or lossy projection prevents stable equality, the claim
+must downgrade to `LossyProjection`, `Unknown`, or `Unsupported`.
+
+The observation kernel is:
+
+```text
+Z_p(o | s, a?, t, projection, noise) =
+  probability or deterministic support that observation o is emitted to p
+  from abstract runtime state s after optional action a at order point t
+```
+
+Deterministic observations are the degenerate case where the support contains
+one observation. Stochastic observations are valid only when the envelope
+records either reproducible generator/seed context, a declared probability
+model, or a downgrade explaining that the exact kernel is unavailable.
+
+The reconstructed information state is:
+
+```text
+Reconstruct(p,e,t) =
+  Fold(visible_history[p,e,t],
+       projection_version,
+       redaction_policy,
+       delivery_order,
+       stochastic_context)
+```
+
+`HistoryConsistent` requires `Reconstruct(p,e,t)` to equal the claimed
+`I(p,e,t)` after applying redaction tokens and declared lossy transforms.
+`PerfectRecall` additionally requires that for every `t' < t`, the visible
+event prefix `H(p,e,t')` remains embedded in `H(p,e,t)` with stable identity
+and order. Compaction is allowed only when it preserves a proof reference that
+can reconstruct the earlier prefix.
+
+For belief-state consumers, ACES may record a belief support:
+
+```text
+B_p,t = { s in StateSpace | H_s(p,e,t) ~p H_actual(p,e,t) }
+```
+
+ACES does not require a participant to maintain this belief. It only records
+enough visibility, ordering, and stochastic evidence for downstream reviewers
+to know whether such a belief or information-state claim is supportable.
+
 Guarantee meanings:
 
 - `ObservationOnly`: only the emitted observation envelope is portable. ACES
@@ -745,6 +1237,10 @@ Rules:
 - Hidden world truth, scoring state, centralized-training state, backend debug
   state, and archival evidence are not participant-visible observations unless
   an explicit visibility rule projects them to `p`.
+- Observation emission, delivery, consumption, and acknowledgement are distinct
+  when the backend can observe them. A participant-visible history may include
+  an observation only after the declared delivery point, not merely because the
+  backend generated the observation.
 - Redacted fields remain part of the record shape as redacted tokens or omitted
   marked fields; the raw hidden value is not part of `H(p,e,t)`.
 - Stochastic or noisy observations must either disclose a reproducible generator
@@ -756,6 +1252,58 @@ Rules:
 - A centralized-training/global-state view may be recorded as evidence or
   apparatus state, but it must use a distinct scope and marking from
   participant-visible observation.
+- An action mask is participant-visible only when projected through the same
+  information boundary as the observation or through an explicitly linked
+  action-mask envelope.
+
+## RL And Multi-Agent Step Signal Semantics
+
+ACES does not adopt Gymnasium, PettingZoo, or OpenSpiel as wire protocols, but
+it preserves the concepts that make RL/MARL results reviewable.
+
+Rules:
+
+- `action_space_ref` and `observation_space_ref` identify governed space
+  definitions. They are required for claims that an action, observation, or
+  policy trace is valid relative to an RL/game environment space.
+- Action masks are time- and participant-scoped. A mask emitted at `t` cannot
+  justify an action at a different order point unless its validity interval,
+  state revision basis, and projection rule say so.
+- `RewardEnvelope` records participant-visible or evaluator-visible reward.
+  Reward is not the same as local action status, objective success, scoring
+  state, or episode terminal reason.
+- `ReturnEnvelope` records cumulative return over an explicit reward prefix,
+  horizon, and discount basis. It cannot be reconstructed from final objective
+  success unless an interpretation rule defines that mapping.
+- `TerminationEnvelope.terminated` means the task's MDP/game/scenario terminal
+  condition has been reached for that participant or environment scope.
+  `TerminationEnvelope.truncated` means an external bound, timeout, safety
+  limit, or administrative condition ended the step/episode before task
+  terminal semantics. These fields must remain separate.
+- Per-participant termination/truncation may differ from global episode
+  closure. ACES episode closure follows ADR-013 and references the local
+  termination/truncation signals when they contributed to closure.
+- `info_refs` may preserve auxiliary metrics or debug data, but marked hidden
+  state inside an info object is not participant-visible unless a visibility
+  projection explicitly exposes it.
+- Single-agent, AEC/turn-based, parallel, simultaneous, mean-field, and
+  backend-serialized multi-agent surfaces are valid only when their ordering
+  and participant-local signal projections are recorded.
+
+Conformance obligations:
+
+```text
+ActionValid(p,e,a,t) =>
+  a in ActionSpace(p,e,t)
+  /\ (MaskPresent(p,e,t) => MaskAllows(p,e,a,t))
+
+RewardClaimOK(p,e,t) =>
+  RewardEnvelope(p,e,t) has reward model, visibility, timing, and source basis
+
+TerminationClaimOK(p,e,t) =>
+  terminated and truncated are separate booleans
+  /\ terminal observation, if any, is emitted through the observation boundary
+```
 
 ## Concurrency And Conflict Semantics
 
@@ -789,6 +1337,48 @@ Rules:
   claims only when the clock authority and update rules are declared.
 - Simulation tick order, control-plane order, and serialized backend order are
   different claims and must not be collapsed.
+
+### Time Management
+
+Time-management claims are separate from ordering claims. A record may have
+valid ordering evidence without supporting real-time pacing, HLA time
+management, optimistic rollback, DEVS transition semantics, or FMI
+co-simulation semantics.
+
+Rules:
+
+- `WallClockRealtime` supports pacing and display claims only. It does not
+  prove causality or simultaneity.
+- `ConservativeLogicalTime` requires a declared safe-delivery rule. If
+  lookahead is used, a message with timestamp `ts` may be delivered only when
+  the receiver's grant and lookahead make earlier conflicting messages
+  impossible under the declared clock authority.
+- `HlaTimeManaged` requires explicit time-regulating/time-constrained
+  disclosure, lookahead where relevant, time-advance request/grant refs, and
+  message send/receive refs for causality claims.
+- `OptimisticRollback` requires rollback refs, anti-message or compensation
+  refs when messages are cancelled, superseded event refs, and a disclosure of
+  which prior observations or state updates remain participant-visible after
+  rollback.
+- `DevsDiscreteEvent` requires an internal, external, or confluent transition
+  basis and a time-advance function or unsupported disclosure for the modeled
+  component.
+- `FmiCoSimulation` requires step-size or step-negotiation refs, exchanged
+  input/output variable refs, rollback support or no-rollback disclosure, and
+  clock-domain mapping.
+- `BackendSerialized` is a weaker realization. It supports review of realized
+  order but not a claim that participants acted simultaneously unless a
+  separate simultaneity proof exists.
+
+Append-only rollback discipline:
+
+```text
+RollbackOK(r) =
+  affected_events(r) subset prior_events
+  /\ superseding_events(r) are appended after r
+  /\ no prior event is deleted or mutated
+  /\ every downstream claim cites either prior or superseding lineage
+```
 
 ### Isolation And Atomicity
 
@@ -831,16 +1421,58 @@ must be present. Otherwise the claim must be limited to observed outcome facts.
 
 ## Capability Guarantee Vectors
 
-A capability guarantee is a partial order over concern vectors.
+A capability guarantee is a component-wise partial order over concern vectors.
+The effective runtime capability for a claim is the meet of the declared
+capabilities for every component that can weaken that claim.
 
-Let `G` and `R` be guarantee vectors mapping concerns to strengths. `G` satisfies
-`R` only when every concern required by `R` appears in `G` with strength greater
-than or equal to the required strength:
+Runtime components are:
+
+```text
+CapabilityComponent =
+  participant_adapter
+  runtime_coordinator
+  backend_engine
+  observation_apparatus
+  evidence_store
+  redaction_policy
+  clock_authority
+  replay_engine
+  benchmark_harness
+```
+
+Let `G_component` be a component vector and `R_claim` be the required vector for
+a claim. Effective guarantee is:
+
+```text
+effective_capability[concern] =
+  meet({ G_component[concern] | component affects concern })
+```
+
+The meet operator uses the guarantee order:
+
+```text
+unsupported < disclosed_weak < bounded < exact
+```
+
+Rules:
+
+- `meet(exact, bounded) = bounded`.
+- `meet(x, unsupported) = unsupported`.
+- `meet(x, disclosed_weak) <= disclosed_weak` unless all weakening components
+  are marked `not_applicable` for that concern.
+- `not_applicable` is neutral only when the contract states that the concern
+  has no semantic role for the claim.
+- Missing value for a required concern is `Reject`, not `not_applicable`.
+
+`G` satisfies `R` only when every required concern appears in the effective
+vector with strength greater than or equal to the required strength:
 
 ```text
 satisfies(G, R) =
   for all concern in required(R):
-    G[concern] >= R[concern]
+    concern in domain(G)
+    /\ G[concern] != not_applicable
+    /\ G[concern] >= R[concern]
 ```
 
 Two vectors are incomparable when each is stronger on at least one required
@@ -858,10 +1490,19 @@ Examples:
   concurrent shared-state comparison claim.
 - A backend with serialized backend order can support a review claim about the
   realized order, but it cannot claim true simultaneity.
+- A backend with exact replay but an evidence store that truncates raw
+  observations without hashes has bounded or weak provenance, not exact
+  provenance.
+- A clock authority with unsupported lookahead makes HLA-style time-management
+  claims unsupported even if the backend records event order exactly.
 
 Every downgrade is recorded as a capability disclosure linked to the event or
 joint action it affects. Diagnostics may repeat the downgrade, but diagnostics
 are not the portable semantics.
+
+Capability registries are versioned. A concern cannot be introduced by prose in
+an adapter manifest; it must be added to the governed concern registry with
+applicability, ordering, required evidence, and downgrade behavior.
 
 ## Security Markings And Redaction
 
@@ -871,6 +1512,12 @@ Rules:
 
 - Markings apply to records and to individual fields through
   `granular_markings`.
+- `marking_definition_refs` identify governed marking definitions. Free-text
+  labels may be preserved as source labels, but they do not define disclosure
+  semantics.
+- `object_marking_refs` apply to the complete record; `granular_markings`
+  apply to selector paths inside the record. Selectors must be stable under the
+  published schema version.
 - A redaction policy states which fields are omitted, replaced by stable
   redaction tokens, summarized, hashed, or moved to controlled evidence.
 - Authorization checks apply before data enters public runtime envelopes,
@@ -937,6 +1584,36 @@ CyberActionEnvelope =
   action_verb
   target_ref
   argument_refs
+  openc2_profile_ref
+  openc2_command_id
+  openc2_request_id
+  openc2_action
+  openc2_target_ref
+  openc2_args_ref
+  openc2_actuator_ref
+  openc2_response_ref
+  openc2_response_status
+  openc2_response_status_text
+  openc2_response_results_ref
+  cacao_playbook_ref
+  cacao_workflow_step_ref
+  cacao_workflow_step_type
+  cacao_command_refs
+  cacao_agent_refs
+  cacao_target_refs
+  cacao_variable_refs
+  cacao_authentication_ref
+  cacao_on_completion_ref
+  cacao_on_success_ref
+  cacao_on_failure_ref
+  cacao_external_refs
+  caldera_operation_ref
+  caldera_adversary_ref
+  caldera_planner_ref
+  caldera_ability_ref
+  caldera_link_ref
+  caldera_fact_refs
+  caldera_agent_ref
   actuator_ref
   executor_ref
   session_ref
@@ -959,6 +1636,17 @@ Rules:
 
 - `credential_ref` points to a redacted or controlled evidence/state reference,
   never a raw credential value.
+- OpenC2 mappings preserve command/response correlation through
+  `openc2_command_id`, `openc2_request_id`, and response refs. ACES lifecycle
+  success or failure is not inferred from source response text without a
+  normalized status mapping.
+- CACAO mappings preserve playbook/workflow-step identity, commands,
+  agents/targets, variables, authentication references, external references,
+  and success/failure routing when those facts support behavior or outcome
+  claims.
+- CALDERA mappings preserve operation/adversary/planner/ability/link/fact/agent
+  identity when those facts support behavior, knowledge, foothold, detection,
+  or provenance claims.
 - Command mappings may cite OpenC2 actions/targets, CACAO playbook steps,
   CALDERA abilities/links/facts, ATT&CK techniques, CybORG actions, or
   backend-native commands as source mappings. Those mappings do not define ACES
@@ -976,7 +1664,12 @@ benchmark claims require an auditable runtime context:
 ```text
 RunContext =
   run_id
+  study_id
+  trial_id
   repeat_id
+  replicate_id
+  replicate_count
+  replicate_policy_ref
   scenario_ref
   scenario_version
   contract_bundle_digest
@@ -991,20 +1684,38 @@ RunContext =
   randomization_policy_ref
   run_config_digest
   evaluator_refs
+  evaluator_version_refs
   scoring_refs
   baseline_refs
+  baseline_version_refs
+  comparison_cohort_ref
+  statistical_plan_ref
+  preregistration_ref
   assistance_disclosures
+  scaffold_exposure_matrix_ref
   holdout_exposure_labels
+  holdout_asset_digest_refs
   canary_exposure_labels
+  canary_policy_ref
+  contamination_audit_refs
+  training_corpus_disclosure_refs
   cost_trace_refs
+  cost_normalization_policy_ref
   resource_trace_refs
+  hardware_profile_refs
+  software_profile_refs
   timeout_budget_refs
+  retry_policy_ref
+  exclusion_policy_ref
   environment_build_refs
 ```
 
 Rules:
 
 - Repeated runs must have distinct `repeat_id` or equivalent identity.
+- Comparative claims require a statistical plan, replicate identity and count,
+  baseline version, evaluator version, comparison cohort, retry/exclusion
+  policy, and cost/resource normalization policy.
 - Seed/randomization claims require seed refs or an unsupported/unknown
   disclosure.
 - Scaffold, tool, model, policy, and human assistance exposure must be disclosed
@@ -1012,6 +1723,11 @@ Rules:
 - Cost/resource traces may be summarized or redacted, but the loss must be
   disclosed when it affects comparison.
 - Holdout and canary labels must not reveal hidden answers to participants.
+  Claims about non-exposure require holdout asset digests, canary policy,
+  scaffold exposure matrix, and contamination-audit evidence or a disclosed
+  unsupported claim.
+- Runtime records alone do not prove benchmark validity. They preserve the
+  evidence needed for an external study design to make a valid comparison.
 
 ## Refinement And Conformance Obligations
 
@@ -1027,12 +1743,18 @@ Required preservation properties:
   state vocabulary;
 - observation function, visibility projection, action-observation history, and
   information-state guarantee;
+- action/observation space, action mask, reward, return, termination,
+  truncation, and auxiliary-info boundaries when the concrete backend exposes
+  RL/MARL/game step signals;
 - shared-state address, revision/digest, marking, and provenance discipline;
 - realized order, clock basis, isolation guarantee, atomicity scope, conflict
   predicate, and conflict policy;
+- time-management mode, lookahead, time-advance request/grant, message
+  causality, step negotiation, rollback, anti-message, and supersession
+  discipline when the concrete backend makes such claims;
 - component-wise capability guarantee vectors and explicit downgrades;
 - redaction and authorization policy before public disclosure;
-- run context needed for reproducibility claims.
+- run context needed for reproducibility, benchmark, and comparative claims.
 
 Safety properties:
 
@@ -1042,6 +1764,11 @@ Safety properties:
 - no unmarked sensitive field in public runtime records;
 - no capability claim stronger than backend declaration and evidence;
 - no conflation of opaque, unknown, not applicable, and unsupported.
+- no inferred reward, return, termination, truncation, or action mask from
+  hidden objective/scorer/backend internals;
+- no deletion or mutation of prior records during rollback or compensation;
+- no benchmark comparison claim without repetition, baseline, evaluator,
+  cost-normalization, and exposure evidence required by the claim.
 
 Liveness properties are bounded and contract-specific:
 
@@ -1053,9 +1780,14 @@ Liveness properties are bounded and contract-specific:
 - retry, fairness, and starvation-free claims require declared scheduler,
   retry, and bound evidence.
 
-Future implementation issues should turn the concurrency and information-state
-subsets into an executable model, such as TLA+/PlusCal, Alloy, state-machine
-property tests, or differential tests against backend traces.
+Future implementation issues should turn the normative core above into an
+executable model or mechanically checked test harness. The minimum executable
+surface is: valid trace predicate, `Apply` transition predicates, observation
+reconstruction, capability meet/satisfaction, shared-state revision discipline,
+and concurrency/time-management rules. TLA+/PlusCal, Alloy, state-machine
+property tests, or differential tests against backend traces are acceptable
+realizations only if they cover those predicates rather than rechecking schema
+shape alone.
 
 ## Invariants
 
@@ -1148,9 +1880,9 @@ representation.
 
 Backends claim participant runtime support through manifest capabilities and
 published evidence contracts. A backend that cannot preserve a lifecycle,
-admission, operation, observation, shared-state, ordering, isolation, conflict,
-redaction, provenance, replay, or benchmark guarantee must reject or disclose
-the weaker realization.
+admission, operation, observation, step-signal, shared-state, ordering,
+time-management, rollback, isolation, conflict, redaction, provenance, replay,
+or benchmark guarantee must reject or disclose the weaker realization.
 
 ### I15 - Replay Compatibility
 
@@ -1188,10 +1920,11 @@ physical storage collisions.
 
 ### I20 - Capability Vector Monotonicity
 
-A runtime claim cannot be stronger than the required backend guarantee vector
-for lifecycle, admission, operation, observation, shared-state revision,
-ordering, isolation, conflict, redaction, provenance, replay, and benchmark
-concerns. Downgrades are records, not diagnostics-only warnings.
+A runtime claim cannot be stronger than the required effective capability
+vector for lifecycle, admission, operation, observation, shared-state revision,
+step signals, ordering, time management, rollback, isolation, conflict,
+redaction, provenance, replay, and benchmark concerns. Downgrades are records,
+not diagnostics-only warnings.
 
 ### I21 - Capability Incomparability
 
@@ -1232,10 +1965,57 @@ participants, externally supplied human actions, asynchronous cyber actions,
 simultaneous joint actions, backend-serialized weak concurrency, and redacted
 evidence without changing the portable semantics.
 
+### I27 - RL Step Signal Separation
+
+Action spaces, observation spaces, action masks, rewards, returns,
+termination, truncation, and auxiliary info are portable only when represented
+as governed step signals. They must not be inferred from objective success,
+scoring state, hidden world state, backend debug fields, or participant private
+policy state.
+
+### I28 - Termination And Truncation Separation
+
+Task terminal semantics and external truncation semantics remain separate.
+Neither field is equivalent to ADR-013 episode terminal reason unless an
+explicit closure record relates them.
+
+### I29 - Information-State Reconstructability
+
+History-consistent and perfect-recall claims require a reconstructability
+procedure over visible action-observation history, projection version,
+redaction policy, delivery order, and stochastic context. If that procedure is
+missing or lossy, the claim must be downgraded.
+
+### I30 - Time-Management Honesty
+
+Claims about HLA-style time management, conservative logical time, optimistic
+rollback, DEVS transitions, FMI co-simulation, or true simultaneity require the
+corresponding lookahead, time-advance, message-causality, rollback, transition,
+or step-negotiation evidence. Otherwise the backend may claim only the weaker
+realized order it can prove.
+
+### I31 - Capability Composition
+
+Effective capability is the meet across all components that can weaken a
+claim. A strong backend engine cannot hide a weak adapter, clock authority,
+redaction policy, evidence store, observation apparatus, replay engine, or
+benchmark harness.
+
+### I32 - Benchmark Comparison Evidence
+
+Runtime provenance is necessary but not sufficient for benchmark comparison.
+Comparative claims require repetition, statistical plan, baseline/evaluator
+version, cost normalization, retry/exclusion policy, scaffold exposure,
+holdout/canary non-exposure evidence, and contamination-audit records as
+applicable.
+
 ## Canonical Design Examples
 
-The examples use snake_case wire-style values and complete abstract fields. Raw
-payloads are represented by governed refs, not omitted secrets.
+The examples use snake_case wire-style values and complete fields for the
+surface being exercised. Conditional source-alignment subobjects appear when
+relevant; concrete schemas may make non-applicable subobjects explicit nulls or
+omit them under a published extension policy. Raw payloads are represented by
+governed refs, not omitted secrets.
 
 ### Opaque LLM Agent Action
 
@@ -1403,10 +2183,57 @@ observation_envelope:
   noise_model_ref: null
   redacted_field_refs:
     - /hidden_state_refs
+step_signal_envelope:
+  event_id: step-blue-43
+  schema_name: aces.participant_runtime.step_signal
+  schema_version: 1.0.0
+  event_type: participant_step_signal
+  extension_policy: reject_unknown_required
+  participant_address: participants.blue.rl
+  episode_id: ep-blue-002
+  sequence_number: 43
+  occurred_at: 2026-05-26T10:20:10Z
+  recorded_at: 2026-05-26T10:20:10Z
+  ingested_at: 2026-05-26T10:20:11Z
+  clock_authority: sim.tick
+  temporal_context: tick-42
+  ordering_basis: simulation_tick
+  logical_order_ref: order.sim.42.blue.step43
+  predecessor_event_refs:
+    - evt-rl-42-exec
+  actor_ref: participants.blue.rl
+  producer_ref: adapters.cyborg-blue.v1
+  source_system_ref: cyborg.sim
+  source_record_ref: cyborg.step.42.blue
+  source_raw_ref: evidence.raw.cyborg.step.42.blue
+  confidence: 1.0
+  provenance_refs:
+    - provenance.backend_realized
+  evidence_refs:
+    - evidence.step-blue-43-redacted
+  markings:
+    - participant_visible
+  granular_markings:
+    /centralized_state_refs:
+      - restricted_evidence
+  redaction_policy_ref: redaction.blue-step-signal.v1
+  authorization_scope: participant:participants.blue.rl
+  action_ref: actions.blue.isolate_host
+  observation_ref: observations.blue.local.telemetry.43
+  action_mask_ref: masks.blue.tick42
+  reward_ref: rewards.blue.tick42
+  return_ref: returns.blue.prefix42
+  termination_ref: termination.blue.tick42
+  info_refs:
+    - info.blue.step42.redacted
+  centralized_state_refs:
+    - evidence.global-training-state.tick42
 ```
 
-The policy update, reward update, and model state are apparatus internals unless
-an explicit evidence contract exposes a redacted representation.
+The action mask, reward, return, and termination refs resolve to governed
+step-signal records. Policy updates, optimizer state, and model state remain
+apparatus internals unless an explicit evidence contract exposes a redacted
+representation.
 
 ### Human-Supplied Action
 
@@ -1563,6 +2390,42 @@ cyber_action_envelope:
   target_ref: hosts.workstation01
   argument_refs:
     - args.cred-dump.safe-summary
+  openc2_profile_ref: null
+  openc2_command_id: null
+  openc2_request_id: null
+  openc2_action: null
+  openc2_target_ref: null
+  openc2_args_ref: null
+  openc2_actuator_ref: null
+  openc2_response_ref: null
+  openc2_response_status: null
+  openc2_response_status_text: null
+  openc2_response_results_ref: null
+  cacao_playbook_ref: playbooks.red.credential-access
+  cacao_workflow_step_ref: cacao.step.credential-access.4
+  cacao_workflow_step_type: command
+  cacao_command_refs:
+    - commands.caldera.link.1234
+  cacao_agent_refs:
+    - agents.caldera.red.01
+  cacao_target_refs:
+    - hosts.workstation01
+  cacao_variable_refs:
+    - variables.target_host.redacted
+  cacao_authentication_ref: auth_refs.redacted.caldera-agent
+  cacao_on_completion_ref: cacao.step.credential-access.5
+  cacao_on_success_ref: cacao.step.credential-access.5
+  cacao_on_failure_ref: cacao.step.cleanup.1
+  cacao_external_refs:
+    - attack.T1003
+  caldera_operation_ref: caldera.operation.abc
+  caldera_adversary_ref: caldera.adversary.red
+  caldera_planner_ref: caldera.planner.atomic
+  caldera_ability_ref: caldera.ability.cred-dump
+  caldera_link_ref: caldera.link.1234
+  caldera_fact_refs:
+    - caldera.fact.credential-cache
+  caldera_agent_ref: agents.caldera.red.01
   actuator_ref: agents.caldera.red.01
   executor_ref: processes.agent-01
   session_ref: sessions.red.workstation01.user
@@ -1636,6 +2499,7 @@ joint_action_record:
     before: []
   clock_context:
     simulation_tick: 88
+  time_management_context_ref: time.sim.tick88
   snapshot_basis:
     hosts.web01.service.http: rev7
   isolation_guarantee: snapshot
@@ -1666,6 +2530,64 @@ joint_action_record:
   participant_observation_refs:
     participants.red: obs-red-88-conflict
     participants.blue: obs-blue-88-conflict
+time_management_context:
+  event_id: time-sim-88
+  schema_name: aces.participant_runtime.time_management
+  schema_version: 1.0.0
+  event_type: time_management_context
+  extension_policy: reject_unknown_required
+  participant_address: null
+  episode_id: null
+  sequence_number: null
+  occurred_at: 2026-05-26T10:50:00Z
+  recorded_at: 2026-05-26T10:50:01Z
+  ingested_at: 2026-05-26T10:50:01Z
+  clock_authority: sim.tick
+  temporal_context: tick-88
+  ordering_basis: simulation_tick
+  logical_order_ref: sim.tick.88
+  predecessor_event_refs:
+    - joint-12
+  actor_ref: runtime.scheduler
+  producer_ref: backend.cyborg-adapter.v1
+  source_system_ref: cyborg.sim
+  source_record_ref: sim.tick.88.time
+  source_raw_ref: evidence.raw.sim.tick88
+  confidence: 1.0
+  provenance_refs:
+    - provenance.backend_realized
+  evidence_refs:
+    - evidence.sim.tick88.time
+  markings:
+    - internal
+  granular_markings: {}
+  redaction_policy_ref: redaction.shared-state.v1
+  authorization_scope: runtime_review
+  time_context_id: time.sim.tick88
+  time_domain: simulation_tick
+  time_management_mode: devs_discrete_event
+  logical_time: 88
+  simulation_time: tick-88
+  wall_clock_interval: null
+  lookahead: 1_tick
+  time_regulating: true
+  time_constrained: true
+  time_advance_request_ref: time-request.tick88
+  time_advance_grant_ref: time-grant.tick88
+  next_event_request_ref: null
+  message_send_refs:
+    - msg.red.88.action
+    - msg.blue.88.action
+  message_receive_refs:
+    - msg.runtime.88.conflict-result
+  pacing_policy_ref: sim.pacing.logical
+  step_size_ref: step.tick.1
+  rollback_window_ref: null
+  rollback_refs: []
+  anti_message_refs: []
+  compensation_refs: []
+  superseded_event_refs: []
+  transition_basis: confluent
 ```
 
 The conflict is portable because read/write revisions, simultaneous grouping,
@@ -1721,6 +2643,7 @@ joint_action_record:
     scheduler_sequence:
       evt-a: 1201
       evt-b: 1202
+  time_management_context_ref: time.backend.window21
   snapshot_basis:
     shared.queue: rev44
   isolation_guarantee: best_effort
@@ -1773,6 +2696,9 @@ Design commitments:
   metadata;
 - history distinguishes participant-local state, shared state, visibility,
   evidence, outcomes, scoring state, and centralized-training state;
+- RL/MARL step signals are recorded as action/observation space, action-mask,
+  reward, return, termination, truncation, and auxiliary-info records when a
+  backend exposes them;
 - information-state claim strength is explicit for each participant-visible
   observation;
 - opaque participant phases are recorded honestly as unknown or not exposed
@@ -1786,11 +2712,15 @@ Future implementation artifacts:
 - base envelope fields for schema version, event type, source refs, markings,
   and temporal context;
 - operation record model for asynchronous actions;
+- step-signal contract models for action masks, rewards, returns,
+  termination/truncation, and auxiliary info;
 - schema publication through `aces_contracts`;
 - validation that history references known participant, episode, action,
   operation, observation, and shared-state addresses;
 - validation that hidden truth, scoring state, and centralized-training state
   are not exposed as participant-visible observations without projection rules;
+- validation that rewards, returns, action masks, and terminal/truncation
+  signals cannot be inferred from hidden scorer/backend state;
 - tests proving reset/restart do not rewrite history;
 - fixtures for opaque participants that expose attempts and observations
   without internal planning traces;
@@ -1814,6 +2744,8 @@ Design commitments:
   actor provenance, and operation records when asynchronous;
 - observations are emitted through participant observation boundaries;
 - state updates commit through participant-local and shared-state records;
+- step signals preserve RL/game-facing rewards, returns, masks,
+  termination/truncation, and info without requiring participant internals;
 - the lifecycle is separate from episode lifecycle, workflow state, evaluator
   state, control-plane operation status, and participant internals.
 
@@ -1823,6 +2755,8 @@ Future implementation artifacts:
   vocabulary;
 - runtime event envelope linking lifecycle phase, action contract, participant,
   episode, temporal context, operation, observation, and state update;
+- runtime step-signal envelope linking action attempts, observations, action
+  masks, rewards, returns, termination, truncation, and info refs when present;
 - fixtures for `Opaque`, `Unknown`, `NotApplicable`, and `Unsupported` values
   that prove they are not collapsed;
 - fixtures for `Rejected`, `Withheld`, `TimedOut`, `Cancelled`, `Partial`, and
@@ -1873,6 +2807,9 @@ Design commitments:
 - concurrency is modeled through joint action sets, realized order relations,
   logical clock context, isolation guarantees, atomicity scope, revisions, and
   conflict policy;
+- distributed-simulation concurrency additionally records time-management mode,
+  lookahead, time-advance grants, message causality, rollback/anti-message or
+  step-negotiation semantics when those claims are made;
 - coordination, contention, interference, serialization, rollback, retry,
   rejection, weak guarantee, and unsupported simultaneity remain explicit
   interaction classes;
@@ -1890,14 +2827,39 @@ Future implementation artifacts:
 
 - joint action / shared-state conflict validation;
 - capability guarantee validation across lifecycle, admission, operation,
-  observation, shared-state, ordering, isolation, conflict, redaction,
-  provenance, replay, and benchmark concerns;
+  observation, step-signal, shared-state, ordering, time-management, rollback,
+  isolation, conflict, redaction, provenance, replay, and benchmark concerns;
 - property or differential tests for serialized versus simultaneous conflicting
   attempts;
-- model-checkable or executable state-machine tests for ordering/isolation
-  claims;
+- model-checkable or executable state-machine tests for ordering/isolation,
+  rollback, and time-management claims;
 - conformance checks for missing order/revision/conflict/isolation metadata;
 - backend capability evidence for supported concurrency guarantees.
+
+## Primary Reference Surface
+
+This design should be reviewed against the source map in
+`docs/explain/sdl/lineage.md` and, at minimum, these primary reference
+families:
+
+- Gymnasium/OpenAI Gym, PettingZoo, and OpenSpiel for action spaces,
+  observation spaces, rewards, returns, termination/truncation, action masks,
+  per-agent histories, simultaneous moves, and information-state discipline.
+- POMDP, Dec-POMDP, POSG, and Markov-game literature for partial observability
+  and multi-agent information boundaries.
+- CybORG, CyberBattleSim, CyGIL, CALDERA, ATT&CK, OpenC2, and CACAO for cyber
+  action, sensing, command/response, playbook, knowledge, foothold, detection,
+  and sim-to-emulation realization disclosure.
+- OCSF and STIX for event classification, normalized status/severity, schema
+  versioning, source/raw mapping, confidence, markings, granular selectors, and
+  extension discipline.
+- Lamport clocks, IEEE HLA time management, Time Warp, DEVS, FMI, and related
+  distributed-simulation work for order, time advance, lookahead, rollback,
+  pacing, and synchronization.
+- Cybench, AutoPenBench, CAIBench, AI Agents That Matter, and offensive
+  security benchmark-methodology work for run records, repeated trials,
+  baseline/evaluator disclosure, cost normalization, scaffold exposure,
+  contamination audits, and holdout/canary discipline.
 
 ## Non-Goals
 
@@ -1907,10 +2869,12 @@ Future implementation artifacts:
   reward updates, private memory, or tool traces.
 - Treating backend-native stores, logs, timestamps, or scheduler order as the
   portable runtime semantics.
-- Treating reward, policy optimizer state, centralized-training state, model
-  internals, or scorer state as participant runtime semantics.
+- Treating hidden reward calculators, policy optimizer state,
+  centralized-training state, model internals, or scorer state as participant
+  runtime semantics. Participant-visible reward and return signals are portable
+  only through governed step-signal records.
 - Defining a solver, policy optimizer, reward-learning API, centralized-training
-  protocol, or reward API.
+  protocol, or training framework API.
 - Redesigning full archival study management beyond the runtime fields needed
   to preserve participant history, shared-state evidence, and reproducibility
   claims.

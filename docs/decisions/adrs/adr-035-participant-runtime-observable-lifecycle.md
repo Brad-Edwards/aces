@@ -41,13 +41,16 @@ stochastic, or not reported to ACES at all.
 The design therefore needs a runtime-observable lifecycle, not a required
 participant-internal loop. The primary lineage reinforces that boundary:
 Gymnasium, PettingZoo, OpenSpiel, CybORG, CyberBattleSim, and CyGIL expose
-actions, observations, rewards or outcomes, episode control, and multi-agent
-interaction without requiring access to private agent internals. Lamport
-clocks, HLA time management, Time Warp, DEVS, and FMI separate timestamp,
-ordering, causality, pacing, synchronization, and realization. OCSF, STIX,
-CACAO, OpenC2, and CALDERA show that portable event and command semantics need
-typed envelopes, identity, versioning, provenance, markings, and extension
-rules rather than raw backend objects.
+actions, observations, rewards or returns, legal-action spaces or masks,
+termination/truncation, episode control, and multi-agent interaction without
+requiring access to private agent internals. OpenSpiel's information-state
+discipline reinforces that observation, action-observation history, and
+perfect recall are separate claims. Lamport clocks, HLA time management, Time
+Warp, DEVS, and FMI separate timestamp, ordering, causality, pacing,
+synchronization, lookahead, rollback, and realization. OCSF, STIX, CACAO,
+OpenC2, and CALDERA show that portable event and command semantics need typed
+envelopes, identity, versioning, classification, normalized status, provenance,
+markings, and extension rules rather than raw backend objects.
 
 ## Decision
 
@@ -140,12 +143,17 @@ or evidence-facing record carries a common envelope foundation:
 
 - stable `event_id`, `schema_name`, `schema_version`, `event_type`, and
   extension policy;
+- normalized event classification and source status fields when the record
+  makes an event-status, severity, or security-telemetry claim, including
+  category, class, activity, type, severity, status, source status code, and
+  status detail;
 - `participant_address`, `episode_id`, monotonic `sequence_number`, and related
   action, command, operation, observation, state, and evidence references;
 - `occurred_at`, `recorded_at`, `ingested_at`, clock authority, temporal
   context, ordering basis, logical order, and predecessor event references;
 - actor, producer, source system, source record, raw source, confidence, and
-  provenance references;
+  provenance references, plus raw-data hash, size, and truncation metadata when
+  raw evidence is summarized or moved to controlled storage;
 - lifecycle phase, phase realization, admission disposition when applicable,
   operation state when applicable, and source-specific status labels when
   mapping loss exists;
@@ -156,8 +164,9 @@ or evidence-facing record carries a common envelope foundation:
 
 This follows the same design lesson as OCSF and STIX without adopting their
 full object models: portable records need event identity, schema evolution,
-timestamps with distinct meanings, confidence, markings, extension boundaries,
-and source/raw mapping. Raw logs, backend DTOs, command output, or telemetry
+classification, timestamps with distinct meanings, confidence, markings,
+extension boundaries, source/raw mapping, and granular selectors for
+field-level markings. Raw logs, backend DTOs, command output, or telemetry
 records are evidence inputs until ACES projects them through the governed
 runtime contract.
 
@@ -211,7 +220,29 @@ information state. Global state exposed for centralized training, debugging,
 scoring, or backend operation is not participant-visible state unless an
 explicit visibility rule projects it to that participant.
 
-### 6. Shared operational state is a versioned runtime contract
+### 6. RL and multi-agent step signals are explicit but separate
+
+When a backend exposes an RL-style or game-style step surface, ACES records the
+participant-visible step signals without adopting Gymnasium, PettingZoo, or
+OpenSpiel as the runtime protocol. The runtime envelope may therefore carry:
+
+- action-space and observation-space references;
+- action masks or legal-action references, including the projection and order
+  point at which the mask was valid;
+- participant-visible reward and cumulative return records;
+- per-participant termination and truncation signals, separate from ACES
+  episode terminal reason;
+- auxiliary info references when the backend exposes metrics or debug data,
+  with markings preventing hidden state from becoming participant-visible by
+  accident.
+
+Reward, return, termination, truncation, and action masks are not inferred from
+objective success, scorer state, or backend debug fields. If they are used for
+benchmark comparison, they must be recorded as governed step signals with
+space definitions, visibility policy, seed/randomization context, and run
+provenance.
+
+### 7. Shared operational state is a versioned runtime contract
 
 `RUN-307` shared state belongs in a typed runtime contract surface, not in
 `RuntimeSnapshot.metadata`, backend-native stores, raw logs, cache keys, or
@@ -239,7 +270,7 @@ operational state, and archival evidence remain distinct concepts. A backend
 may maintain richer native state internally, but portable ACES claims can only
 use the published contract projection.
 
-### 7. Concurrency is explicit ordering, isolation, and conflict semantics
+### 8. Concurrency is explicit ordering, isolation, and conflict semantics
 
 `RUN-308` concurrent participant execution is defined over shared state records
 and behavior-history events. It is not raw threads mutating a snapshot, and it
@@ -250,7 +281,8 @@ must preserve or disclose:
 
 - the joint action set or coordination interval;
 - realized total order, partial order, simultaneity group, or unsupported order;
-- logical/vector clock context or a disclosed weaker clock basis;
+- logical/vector clock context, simulation time, wall-clock time, lookahead,
+  time-advance grants, or a disclosed weaker clock basis;
 - state revisions read and written by each attempt;
 - snapshot basis, isolation guarantee, and atomicity scope;
 - conflict class and policy, such as coordination, contention, interference,
@@ -264,6 +296,16 @@ must preserve or disclose:
 Backends that cannot provide serializable, simultaneous, causal, or snapshot
 semantics must disclose the weaker guarantee before results are used for
 comparison.
+
+Distributed-simulation modes are explicit contract claims. A conservative or
+HLA-style runtime must record the time-regulation/time-constrained basis,
+lookahead, time-advance request/grant, and message send/receive causality that
+justify delivery order. An optimistic or Time Warp-style runtime must record
+rollback, anti-message or compensation references, and the post-rollback
+supersession relation without deleting prior records. A DEVS/FMI-style runtime
+must name the time domain, internal/external/confluent transition basis, and
+step negotiation or unsupported disclosure. Backend serialization is a valid
+weaker realization only when labeled as such.
 
 The conflict predicate is semantic, not just physical. Attempts conflict when
 their declared read/write sets, exclusive resource claims, visibility effects,
@@ -287,13 +329,21 @@ stronger on different required concerns. Downgrades must be recorded as
 component-level capability disclosures, not hidden in diagnostics or final
 state.
 
-### 8. Cyber actions preserve command, knowledge, and actuator context
+### 9. Cyber actions preserve command, knowledge, and actuator context
 
 Cyber actions are not just opaque strings. When an action maps to OpenC2,
 CACAO, CALDERA, ATT&CK, CybORG, CyberBattleSim, or backend-native commands, the
 runtime envelope preserves the portable parts of that mapping:
 
 - action or command verb, target, arguments, and contract reference;
+- OpenC2 profile, command id, request id, action, target, args, actuator, and
+  response status/result references when an OpenC2 command or response is the
+  source mapping;
+- CACAO playbook id, workflow step id/type, command, agent, target, variables,
+  authentication reference, success/failure successor, and external reference
+  mappings when a playbook step is the source mapping;
+- CALDERA operation, adversary, planner, ability, link, fact, agent, executor,
+  and tactic/technique references when CALDERA is the source mapping;
 - actuator, executor, session, authority, and privilege context;
 - credential and secret references as redacted evidence or state references,
   never raw secret values;
@@ -304,7 +354,7 @@ runtime envelope preserves the portable parts of that mapping:
 These fields make cyber behavior comparable without forcing ACES to adopt any
 one command language, playbook schema, attack graph, or RL environment API.
 
-### 9. Experiment and benchmark provenance is a runtime input
+### 10. Experiment and benchmark provenance is a runtime input
 
 Participant-runtime envelopes do not define a full study-management system, but
 they must carry the fields needed to make benchmark claims auditable:
@@ -317,11 +367,20 @@ they must carry the fields needed to make benchmark claims auditable:
   digest;
 - evaluator/scoring references, assistance disclosures, cost/resource traces,
   timeout/budget limits, and relevant environment build references.
+- statistical repetition plan, trial/replicate identity, baseline/evaluator
+  version, cost-normalization policy, exclusion/retry policy, and comparison
+  cohort when records are used for comparative claims;
+- contamination-audit evidence, holdout asset digests, canary policy, scaffold
+  exposure matrix, and public/private material labels sufficient to support the
+  claim that hidden benchmark material was not exposed to a participant.
 
 These fields align the runtime surface with the benchmark lineage while keeping
-the full archival study lifecycle out of scope for this ADR.
+the full archival study lifecycle out of scope for this ADR. ACES can preserve
+the runtime evidence needed for later statistical analysis, but it does not
+declare a result academically comparable unless the comparison design,
+repetition, baseline, and exposure evidence are also present.
 
-### 10. Participant internals are apparatus, not portable semantics
+### 11. Participant internals are apparatus, not portable semantics
 
 Concrete participant implementations are apparatus surfaces. They may be LLM
 agents, RL policies, scripts, humans, external APIs, simulators, tools, or
@@ -334,7 +393,7 @@ redaction, authorization, and leakage controls. They must not be smuggled into
 diagnostics, audit details, history `details`, snapshots, generated schemas, or
 changelog text.
 
-### 11. Reuse existing runtime and security boundaries
+### 12. Reuse existing runtime and security boundaries
 
 Future implementation must reuse:
 
@@ -364,6 +423,8 @@ logic for participant runtime state.
 - Closed realization, disposition, operation, observation, conflict, and
   capability vocabularies make weak or missing guarantees explicit instead of
   silently lossy.
+- RL/MARL step signals are preserved when present without forcing all
+  participants through an RL API shape.
 - `RUN-305`, `RUN-306`, `RUN-307`, and `RUN-308` share one runtime model
   instead of four drifting local designs.
 - Shared state and concurrency become reviewable through revisions, ordering,
@@ -372,6 +433,9 @@ logic for participant runtime state.
 - Information-state claims become falsifiable against action-observation
   histories, visibility projections, redaction markings, and stochastic/noise
   disclosures.
+- Distributed-simulation and backend-serialized executions can be compared only
+  when their time, causality, rollback, and guarantee disclosures support the
+  claim being made.
 - Existing episode lifecycle, participant semantics, runtime contract,
   manifest, conformance, and control-plane security patterns remain canonical.
 
@@ -406,6 +470,15 @@ logic for participant runtime state.
 - If observation records do not declare an information-boundary guarantee,
   hidden truth, centralized-training state, and participant-visible state may be
   accidentally collapsed.
+- If reward, return, action masks, termination, or truncation are inferred from
+  objective/scorer/backend internals, RL results will not be portable or
+  reviewable.
+- If time-advance, lookahead, rollback, or message-causality records are
+  missing, HLA/DEVS/FMI/Time-Warp-style claims will collapse into timestamp
+  folklore.
+- If benchmark comparison records omit statistical repetition, baseline
+  versions, cost normalization, scaffold exposure, or contamination evidence,
+  the runtime may preserve history but still fail academic benchmark review.
 - If security markings and redaction policies are not field-level, portable
   evidence may leak credentials, prompts, hidden answer keys, private traces, or
   sensitive state.
@@ -417,8 +490,10 @@ logic for participant runtime state.
 - Adding new SDL participant syntax.
 - Replacing ADR-013 participant episode lifecycle semantics.
 - Replacing ADR-022 participant behavior and interaction semantics.
-- Requiring chain-of-thought, prompts, policy internals, reward traces, or
-  planner steps from participant implementations.
+- Requiring chain-of-thought, prompts, policy internals, hidden reward traces,
+  or planner steps from participant implementations.
+- Making Gymnasium, PettingZoo, OpenSpiel, OpenC2, CACAO, CALDERA, OCSF, STIX,
+  HLA, DEVS, Time Warp, or FMI wire-compatible ACES protocols.
 - Defining a solver, policy optimizer, reward-learning API, centralized
   training protocol, or reward API.
 - Defining a full archival study-management system beyond the runtime fields
