@@ -139,7 +139,7 @@ creating a second network schema elsewhere.
   operation payloads, use the published `RuntimeSnapshotEnvelopeModel`,
   `OperationReceiptModel`, and `OperationStatusModel` shapes plus existing
   request-size, authentication, authorization, audit, idempotency, and redacted
-  error handling in `aces_processor.control_plane_api`.
+  error handling in `aces_runtime.control_plane_api`.
 - Host/OS exposure gate: host-published bindings are externally reachable
   attack surface. Do not log, fixture, diagnose, or persist raw backend payloads
   that include bearer tokens, registry credentials, private addresses that were

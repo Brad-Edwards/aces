@@ -1,10 +1,11 @@
 Processor Layer
 ===============
 
-The ``aces_processor`` package provides the SDL-to-runtime compiler,
-reconciliation planner, control plane, manifest authority, and backend
-contracts. Per ADR-008, the processor layer subsumes what was previously
-documented as ``aces.core.runtime``.
+The ``aces_processor`` package provides SDL processing: instantiation-aware
+compilation, reconciliation planning, support determination, manifest
+authority, and compiled processor runtime models. Per ADR-036, live runtime
+control lives in ``aces_runtime`` and cross-package runtime/backend DTOs live
+in ``aces_contracts``.
 
 .. currentmodule:: aces_processor
 
@@ -37,42 +38,6 @@ Planner
 -------
 
 .. automodule:: aces_processor.planner
-   :members:
-
-Control Plane
--------------
-
-.. automodule:: aces_processor.control_plane
-   :members:
-
-Control Plane API
------------------
-
-.. automodule:: aces_processor.control_plane_api
-   :members:
-
-Control Plane Store
--------------------
-
-.. automodule:: aces_processor.control_plane_store
-   :members:
-
-Control Plane Security
-----------------------
-
-.. automodule:: aces_processor.control_plane_security
-   :members:
-
-Processor Manager
------------------
-
-.. automodule:: aces_processor.manager
-   :members:
-
-Backend Registry
-----------------
-
-.. automodule:: aces_processor.registry
    :members:
 
 Capabilities
