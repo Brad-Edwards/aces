@@ -358,19 +358,18 @@ class ServiceManagerUnit(SDLModel):
         # exit_code is meaningful only when result=exit_code (or when result is
         # a deferred variable). Recording an exit code under e.g. result=success
         # is a category error: success has no exit code attached as a fact.
-        if self.exit_code is None:
-            return self
-        result = self.result
-        if isinstance(result, str) and is_variable_ref(result):
-            return self
-        if result != ServiceUnitResult.EXIT_CODE:
-            raise ValueError(
-                f"exit_code is only valid when result='exit_code'; got result={result!r}",
-            )
+        if self.exit_code is not None:
+            result = self.result
+            is_variable_result = isinstance(result, str) and is_variable_ref(result)
+            if not is_variable_result and result != ServiceUnitResult.EXIT_CODE:
+                raise ValueError(
+                    f"exit_code is only valid when result='exit_code'; got result={result!r}",
+                )
         return self
 
 
 def _bounded_text(value: str, *, max_len: int, field_name: str) -> str:
+    """Validate a bounded short string: must be a ``str`` no longer than ``max_len``."""
     if not isinstance(value, str):
         raise ValueError(f"{field_name} must be a string")
     if len(value) > max_len:
