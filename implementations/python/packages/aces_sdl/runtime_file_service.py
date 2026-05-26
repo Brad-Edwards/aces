@@ -122,7 +122,7 @@ class RuntimeFileServiceCredentialClassification(str, Enum):
     material into fixtures, schemas, diagnostics, or logs.
     """
 
-    NO_CREDENTIAL = "no_credential"  # noqa: S105
+    NO_CREDENTIAL = "no_credential"
     WEAK = "weak"
     DEFAULT_OR_TRIVIAL = "default_or_trivial"
     STRONG = "strong"

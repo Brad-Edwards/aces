@@ -11,10 +11,13 @@ the repo-policy line cap, mirroring ``_module_provenance.py``.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .entities import flatten_entities
 from .scenario import ModuleDescriptor, Scenario
+
+if TYPE_CHECKING:
+    from .runtime_file_service import RuntimeFileService
 
 # Canonical list of scenario top-level sections that hold user-defined
 # hashmap keys. Re-exported as both the public ``HASHMAP_SECTIONS`` name
@@ -279,7 +282,7 @@ def _file_service_aliases(
     *,
     node_name: str,
     prefixed_node: str,
-    service: Any,
+    service: RuntimeFileService,
 ) -> dict[str, str]:
     """Aliases for one file service and its stable child records (ADR-037)."""
     service_id = getattr(service, "service_id", "")

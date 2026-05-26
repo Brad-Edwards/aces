@@ -1207,7 +1207,7 @@ class SemanticValidator:
             if runtime is None:
                 continue
             for authority in runtime.identity_authorities:
-                base = f"nodes.{node_name}.runtime.identity_authorities.{authority.authority_id}"
+                base = f"{_NODES_PREFIX}{node_name}.runtime.identity_authorities.{authority.authority_id}"
                 for subject in authority.subjects:
                     refs.add(f"{base}.subjects.{subject.subject_id}")
         return refs
@@ -1230,7 +1230,7 @@ class SemanticValidator:
             directory_ref = getattr(principal, "directory_subject_ref", "")
             if not directory_ref or self._is_unresolved_var(directory_ref):
                 continue
-            if not directory_ref.startswith("nodes."):
+            if not directory_ref.startswith(_NODES_PREFIX):
                 self._err(
                     f"{owner_label} principal '{principal.principal_id}' "
                     f"directory_subject_ref '{directory_ref}' must be a qualified "
