@@ -6,7 +6,8 @@ methodology is `docs/aces/inventory/asset-inventory-methodology.md`.
 
 This note is the architecture preflight for SCN-010 / issue #339. It is a
 binding guardrail for the Kali steady-state inventory, not a replacement for
-ADR-035, ADR-033, ADR-029, or the ACES asset-inventorying methodology.
+downstream APTL ADR-035, ACES ADR-033, ACES ADR-029, or the ACES
+asset-inventorying methodology.
 
 ## Architecture Decisions
 
@@ -46,7 +47,7 @@ ADR-035, ADR-033, ADR-029, or the ACES asset-inventorying methodology.
   `docs/aces/inventory/webapp-preflight.md`, and
   `tests/test_webapp_inventory.py`.
 - ACES adoption and parity routing:
-  ADR-035, `docs/aces/parity-inventory.yaml`,
+  downstream APTL ADR-035, `docs/aces/parity-inventory.yaml`,
   `docs/aces/parity-inventory.md`, and `tests/test_parity_inventory.py`.
 - Kali realization owners:
   `docker-compose.yml` service `kali`, `containers/kali/Dockerfile`,
@@ -59,9 +60,10 @@ ADR-035, ADR-033, ADR-029, or the ACES asset-inventorying methodology.
   `_LAB_START_STEPS`, `DeploymentBackend`, `LabResult`,
   `StartupDiagnostic`, `RangeSnapshot.to_dict()`, `LocalRunStore`, and the
   MCP run/capture helpers mirrored under `mcp/aptl-mcp-common`.
-- Shared safety helpers and policies: ADR-028, ADR-029, ADR-033, ADR-036,
-  ADR-037, `aptl.utils.redaction.redact`, and `aptl.utils.curl_safe` when
-  commands would otherwise put credentials in process argv.
+- Shared safety helpers and policies: ACES ADR-028, ACES ADR-029, ACES
+  ADR-033, downstream APTL ADR-036, downstream APTL ADR-037,
+  `aptl.utils.redaction.redact`, and `aptl.utils.curl_safe` when commands
+  would otherwise put credentials in process argv.
 
 ## Security And Validation Layers
 
