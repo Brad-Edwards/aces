@@ -77,7 +77,49 @@ not-applicable, or unknown when the participant implementation does not expose
 that phase. The runtime MUST still record the observable attempt, observation,
 state transition, and evidence/provenance basis needed to interpret results.
 
-### 2. Keep episode lifecycle separate from behavior lifecycle
+### 2. Lifecycle status vocabulary and envelope shape are closed
+
+The lifecycle uses a closed semantic vocabulary. Adapters may preserve
+source-specific labels, but portable ACES claims use normalized status values:
+
+- `observed`: the phase occurred at the runtime boundary and was observed;
+- `runtime_mediated`: ACES or a governed backend admitted, selected, or
+  transformed the phase;
+- `externally_supplied`: a human, service, scenario rule, or external controller
+  supplied the phase;
+- `opaque`: the participant may have an internal counterpart, but it is not
+  exposed to ACES;
+- `unknown`: the phase might be relevant, but the adapter cannot determine what
+  happened;
+- `not_applicable`: the phase has no semantic counterpart for this participant
+  or action;
+- `unsupported`: the backend or adapter cannot provide the guarantee needed for
+  a portable claim.
+
+`opaque`, `unknown`, `not_applicable`, and `unsupported` are different claims and
+must not be collapsed into a generic missing value. `unsupported` is a capability
+disclosure. `unknown` is an epistemic disclosure. `opaque` is an apparatus
+boundary. `not_applicable` says the modeled participant or action has no such
+phase.
+
+A lifecycle envelope carries at minimum:
+
+- `event_id`, `participant_address`, `episode_id`, and monotonic
+  `sequence_number`;
+- lifecycle phase and normalized lifecycle status;
+- action or trigger reference, action contract reference when one exists, and
+  actor provenance;
+- temporal context, ordering basis, and predecessor event references;
+- observation references, shared-state read/write references, and emitted state
+  update references;
+- evidence references, redaction policy, and source-specific status label when
+  mapping loss exists.
+
+This follows the same design lesson as Gymnasium, PettingZoo, OpenSpiel, CybORG,
+and OCSF: the portable interface is a disciplined boundary record, not an
+assumption about private agent implementation or backend object layout.
+
+### 3. Keep episode lifecycle separate from behavior lifecycle
 
 Participant episode lifecycle from ADR-013 answers when a participant episode
 exists, resets, restarts, and terminates. The observable behavior lifecycle
@@ -93,7 +135,33 @@ The two surfaces must be linked by stable `participant_address`, per-episode
 - backend process restart is not participant episode restart;
 - action lifecycle phases are not episode lifecycle states.
 
-### 3. Shared operational state is a versioned runtime contract
+### 4. Observation records carry information-boundary guarantees
+
+Participant-visible observations must identify the visibility projection that
+produced them. The runtime must distinguish:
+
+- hidden world truth;
+- participant-visible observation;
+- participant information state or action-observation history;
+- centralized-training/global-state views;
+- archival evidence used for review or replay.
+
+An observation envelope declares an information guarantee:
+
+- `observation_only`: the record is only the emitted observation;
+- `history_consistent`: the participant's portable action-observation history can
+  reconstruct the information state ACES claims for that participant;
+- `perfect_recall`: the runtime preserves every prior action and observation
+  needed for a perfect-recall information state;
+- `lossy_projection`: the observation is intentionally partial, sampled,
+  delayed, redacted, or aggregated, with loss disclosed;
+- `unsupported`: the backend cannot support a portable information-state claim.
+
+Global state exposed for centralized training, debugging, scoring, or backend
+operation is not participant-visible state unless an explicit visibility rule
+projects it to that participant.
+
+### 5. Shared operational state is a versioned runtime contract
 
 `RUN-307` shared state belongs in a typed runtime contract surface, not in
 `RuntimeSnapshot.metadata`, backend-native stores, raw logs, cache keys, or
@@ -119,7 +187,7 @@ operational state, and archival evidence remain distinct concepts. A backend
 may maintain richer native state internally, but portable ACES claims can only
 use the published contract projection.
 
-### 4. Concurrency is explicit ordering, revision, and conflict semantics
+### 6. Concurrency is explicit ordering, revision, and conflict semantics
 
 `RUN-308` concurrent participant execution is defined over shared state records
 and behavior-history events. It is not raw threads mutating a snapshot and it
@@ -140,7 +208,25 @@ must preserve or disclose:
 Backends that cannot provide serializable or simultaneous semantics must
 disclose the weaker guarantee before results are used for comparison.
 
-### 5. Participant internals are apparatus, not portable semantics
+The conflict predicate is semantic, not just physical. Attempts conflict when
+their declared read/write sets, exclusive resource claims, visibility effects,
+evidence streams, or action contracts say one attempt can affect another's
+preconditions, observations, effects, or outcome. Last-writer-wins is only
+portable when represented as an explicit serialization policy with realized
+ordering, read/write revisions, and evidence.
+
+Capability claims use an ordered guarantee level:
+
+```text
+unsupported < disclosed_weak < bounded < exact
+```
+
+`not_applicable` is outside that order. A backend may satisfy a requirement only
+when its declared guarantee is at least as strong as the guarantee required by
+the contract being executed. Downgrades must be recorded as capability
+disclosures, not hidden in diagnostics or final state.
+
+### 7. Participant internals are apparatus, not portable semantics
 
 Concrete participant implementations are apparatus surfaces. They may be LLM
 agents, RL policies, scripts, humans, external APIs, simulators, tools, or
@@ -153,7 +239,7 @@ redaction and leakage controls. They must not be smuggled into diagnostics,
 audit details, history `details`, snapshots, generated schemas, or changelog
 text.
 
-### 6. Reuse existing runtime and security boundaries
+### 8. Reuse existing runtime and security boundaries
 
 Future implementation must reuse:
 
@@ -180,6 +266,8 @@ logic for participant runtime state.
 - `RUN-306` remains feasible for LLM agents, RL agents, humans, scripts, and
   opaque external services because the lifecycle is a boundary projection, not
   an internal algorithm contract.
+- Closed lifecycle, observation, conflict, and capability vocabularies make weak
+  or missing guarantees explicit instead of silently lossy.
 - `RUN-305`, `RUN-306`, `RUN-307`, and `RUN-308` share one runtime model
   instead of four drifting local designs.
 - Shared state and concurrency become reviewable through revisions, ordering,
@@ -195,6 +283,8 @@ logic for participant runtime state.
 - Some participants will legitimately produce incomplete lifecycle envelopes,
   so downstream consumers must handle opaque, unknown, externally selected, or
   unsupported phases.
+- Backends must classify information-state, ordering, conflict, and capability
+  guarantees before they can make comparable runtime claims.
 - The model adds another explicit contract layer before full implementation can
   land.
 
@@ -203,10 +293,16 @@ logic for participant runtime state.
 - If implementors treat the observable lifecycle as a required internal loop,
   ACES will exclude the LLM/RL/human/external-service participants it needs to
   model.
+- If `unknown`, `opaque`, `not_applicable`, and `unsupported` are conflated,
+  reviewers will be unable to tell missing evidence from an intentional
+  apparatus boundary or a backend capability limit.
 - If shared state is stored in `RuntimeSnapshot.metadata` or backend-native
   stores, portability and conformance will degrade.
 - If concurrency is inferred from timestamps or scheduler order, replay,
   attribution, and comparison claims will be invalid.
+- If observation records do not declare an information-boundary guarantee,
+  hidden truth, centralized-training state, and participant-visible state may be
+  accidentally collapsed.
 - If participant internals are recorded without explicit observation/evidence
   contracts, prompts, credentials, hidden answer keys, private traces, or
   sensitive state may leak.
@@ -220,6 +316,8 @@ logic for participant runtime state.
 - Replacing ADR-022 participant behavior and interaction semantics.
 - Requiring chain-of-thought, prompts, policy internals, reward traces, or
   planner steps from participant implementations.
+- Defining a solver, policy optimizer, reward-learning API, or centralized
+  training protocol.
 - Designing archival study provenance or benchmark asset lifecycle beyond the
   runtime fields needed to preserve participant history and shared-state
   evidence.
