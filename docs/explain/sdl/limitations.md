@@ -33,6 +33,10 @@ fixture secrets or diagnostic disclosures, and redirect/error behavior —
 database logical state (databases, schemas, tables, database-local roles,
 grants, listeners, settings, and database-access bindings -
 [ADR-029](../../decisions/adrs/adr-029-database-logical-state-runtime-surface.md)),
+DNS service logical state (authoritative zones, RRsets, typed common RDATA,
+resolver policy, forwarders, DNSSEC posture, dynamic-update posture, logging
+posture, settings, and evidence refs -
+[ADR-038](../../decisions/adrs/adr-038-dns-service-runtime-inventory.md)),
 and directory/domain/realm/IdP/IAM/federation identity-authority state
 (authority namespaces, services, subjects, policies, and typed relationships -
 [ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).
@@ -123,5 +127,11 @@ and model tests plus the hospital ransomware scenario's AD/ADFS
 `runtime.identity_authorities` example. That coverage validates ACES's neutral
 reference and redaction mechanics; it is not a claim that ACES mirrors full
 AD DS, LDAP, Kerberos, SCIM, SAML, OIDC, cloud IAM, or BloodHound schemas.
+
+The DNS runtime surface is covered by targeted parser, model, validator, and
+module-composition tests. That coverage validates ACES's neutral RRset,
+resolver-policy, evidence-ref, and reference mechanics; it is not a claim that
+ACES mirrors full BIND, CoreDNS, PowerDNS, NSD, Knot, provider API, passive
+DNS, or telemetry schemas.
 
 Property-based fuzz testing (Hypothesis) has run 1,050+ random inputs through the parser with zero unhandled crashes.

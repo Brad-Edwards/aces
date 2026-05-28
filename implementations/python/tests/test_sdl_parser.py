@@ -2094,6 +2094,105 @@ imports:
         assert rel.target == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.policies.default-policy"
 
 
+class TestRuntimeDnsParsing:
+    def test_dns_service_field_keys_normalized_names_preserved(self):
+        sdl = """
+name: techvault-dns
+nodes:
+  dns-host:
+    type: vm
+    os: linux
+    services:
+      - {port: 53, protocol: udp, name: dns}
+    runtime:
+      dns-services:
+        - dns-service-id: tv-dns
+          service: dns
+          implementation: BIND
+          roles: [authoritative, recursive-resolver]
+          resolver-policy:
+            recursion-enabled: true
+            dnssec-validation: auto
+            forwarders:
+              - {address: 8.8.8.8, port: 53}
+          zones:
+            - zone-id: techvault-local
+              name: TechVault.Local.
+              zone-class: IN
+              purpose: forward
+              rrsets:
+                - rrset-id: web-a
+                  owner: Web.TechVault.Local.
+                  record-type: A
+                  ttl: 300
+                  records:
+                    - {address: 172.20.10.20}
+"""
+        raw = parse_sdl(sdl)
+        dns = raw.nodes["dns-host"].runtime.dns_services[0]
+        assert dns.dns_service_id == "tv-dns"
+        assert dns.implementation.value == "bind"
+        assert dns.roles[1].value == "recursive_resolver"
+        assert dns.resolver_policy.dnssec_validation.value == "auto"
+        zone = dns.zones[0]
+        # Observed names are DNS data and are not case-folded.
+        assert zone.name == "TechVault.Local."
+        assert zone.rrsets[0].owner == "Web.TechVault.Local."
+        assert zone.rrsets[0].record_type.value == "a"
+
+    def test_dns_runtime_refs_rewrite_on_module_import(self, tmp_path):
+        shared = tmp_path / "shared-dns.yaml"
+        shared.write_text(
+            """
+name: shared-dns
+version: 1.0.0
+nodes:
+  dns:
+    type: vm
+    os: linux
+    services:
+      - {port: 53, protocol: udp, name: dns}
+    runtime:
+      dns-services:
+        - dns-service-id: tv-dns
+          service: dns
+          zones:
+            - zone-id: techvault-local
+              name: techvault.local.
+              rrsets:
+                - rrset-id: web-a
+                  owner: web.techvault.local.
+                  record-type: a
+                  ttl: 300
+                  records:
+                    - {address: 172.20.10.20}
+relationships:
+  dns-record:
+    type: connects_to
+    source: nodes.dns.runtime.dns_services.tv-dns
+    target: nodes.dns.runtime.dns_services.tv-dns.zones.techvault-local.rrsets.web-a
+""",
+            encoding="utf-8",
+        )
+        root = tmp_path / "root.yaml"
+        root.write_text(
+            """
+name: root
+imports:
+  - path: shared-dns.yaml
+    namespace: shared
+    version: 1.0.0
+""",
+            encoding="utf-8",
+        )
+
+        scenario = parse_sdl_file(root)
+
+        rel = scenario.relationships["shared.dns-record"]
+        assert rel.source == "nodes.shared.dns.runtime.dns_services.tv-dns"
+        assert rel.target == "nodes.shared.dns.runtime.dns_services.tv-dns.zones.techvault-local.rrsets.web-a"
+
+
 class TestRuntimeDatabaseParsing:
     def test_database_service_field_keys_normalized_names_preserved(self):
         # Field keys (hyphenated/cased) normalize; observed object names are

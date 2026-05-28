@@ -53,6 +53,31 @@ from .runtime_directory_identity import (
     RuntimeIdentitySubject,
     RuntimeIdentitySubjectKind,
 )
+from .runtime_dns import (
+    DnsDynamicUpdatePolicy,
+    DnsForwarder,
+    DnsForwarderTransport,
+    DnsForwardingPolicy,
+    DnsMxRdata,
+    DnsRecordClass,
+    DnsRecordProvenance,
+    DnsRecordType,
+    DnsResolverPolicy,
+    DnsResourceRecord,
+    DnsResourceRecordSet,
+    DnsRuntimeSetting,
+    DnssecValidationMode,
+    DnsServerImplementation,
+    DnsServiceRole,
+    DnsSettingProvenance,
+    DnsSoaRdata,
+    DnsSrvRdata,
+    DnsZone,
+    DnsZoneKind,
+    DnsZonePurpose,
+    DnsZoneTransferPolicy,
+    RuntimeDnsService,
+)
 from .runtime_file_service import (
     RuntimeFileService,
     RuntimeFileServiceAccessAction,
@@ -138,6 +163,28 @@ from .runtime_values import (
 
 __all__ = [
     "DatabaseService",
+    "DnsDynamicUpdatePolicy",
+    "DnsForwarder",
+    "DnsForwarderTransport",
+    "DnsForwardingPolicy",
+    "DnsMxRdata",
+    "DnsRecordClass",
+    "DnsRecordProvenance",
+    "DnsRecordType",
+    "DnsResolverPolicy",
+    "DnsResourceRecord",
+    "DnsResourceRecordSet",
+    "DnsRuntimeSetting",
+    "DnsServerImplementation",
+    "DnsServiceRole",
+    "DnsSettingProvenance",
+    "DnsSoaRdata",
+    "DnsSrvRdata",
+    "DnsZone",
+    "DnsZoneKind",
+    "DnsZonePurpose",
+    "DnsZoneTransferPolicy",
+    "DnssecValidationMode",
     "RuntimeApplicationDisclosure",
     "RuntimeApplicationExposedField",
     "RuntimeApplicationParameter",
@@ -156,6 +203,7 @@ __all__ = [
     "RuntimeControlInterfaceKind",
     "RuntimeDependencyManifest",
     "RuntimeDeviceMapping",
+    "RuntimeDnsService",
     "RuntimeEnvironmentValueClassification",
     "RuntimeEnvironmentVariable",
     "RuntimeEnvironmentVariableProvenance",
@@ -458,6 +506,7 @@ class RuntimeConfiguration(SDLModel):
     network: RuntimeNetworkRealization | None = None
     applications: list[RuntimeApplicationSurface] = Field(default_factory=list)
     database_services: list[DatabaseService] = Field(default_factory=list)
+    dns_services: list[RuntimeDnsService] = Field(default_factory=list)
     ssh_servers: list[SshServerConfig] = Field(default_factory=list)
     service_manager_units: list[ServiceManagerUnit] = Field(default_factory=list)
     packages: list[RuntimePackage] = Field(default_factory=list)
@@ -474,6 +523,7 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.processes, attr="pid", label="process pid")
         _reject_duplicate_keys(self.applications, attr="application_id", label="application_id")
         _reject_duplicate_keys(self.database_services, attr="database_service_id", label="database_service_id")
+        _reject_duplicate_keys(self.dns_services, attr="dns_service_id", label="dns_service_id")
         _reject_duplicate_keys(self.ssh_servers, attr="server_id", label="ssh_server server_id")
         _reject_duplicate_keys(
             self.service_manager_units,

@@ -253,9 +253,10 @@ class SemanticValidator:
         """Qualified refs for node-scoped runtime inventories.
 
         These let a top-level relationship endpoint resolve to a runtime
-        application surface, database service / logical database, or
-        identity-authority object. This keeps runtime-observed logical state
-        targetable without promoting those records to top-level SDL sections.
+        application surface, database service / logical database, DNS service
+        / zone / RRset, or identity-authority object. This keeps
+        runtime-observed logical state targetable without promoting those
+        records to top-level SDL sections.
         """
         refs: set[str] = set()
         for node_name, node in self._s.nodes.items():
@@ -269,6 +270,14 @@ class SemanticValidator:
                 refs.add(base)
                 for database in dbsvc.databases:
                     refs.add(f"{base}.databases.{database.database_id}")
+            for dns_service in runtime.dns_services:
+                base = f"nodes.{node_name}.runtime.dns_services.{dns_service.dns_service_id}"
+                refs.add(base)
+                for zone in dns_service.zones:
+                    zone_base = f"{base}.zones.{zone.zone_id}"
+                    refs.add(zone_base)
+                    for rrset in zone.rrsets:
+                        refs.add(f"{zone_base}.rrsets.{rrset.rrset_id}")
             for authority in runtime.identity_authorities:
                 base = f"nodes.{node_name}.runtime.identity_authorities.{authority.authority_id}"
                 refs.add(base)
@@ -501,6 +510,7 @@ class SemanticValidator:
         self._verify_runtime_application()
         self._verify_runtime_capability_overrides()
         self._verify_runtime_database_services()
+        self._verify_runtime_dns_services()
         self._verify_runtime_ssh_servers()
         self._verify_runtime_service_manager_units()
         self._verify_runtime_identity_authorities()
@@ -1309,6 +1319,65 @@ class SemanticValidator:
                 continue
             if grant.object_ref not in objects_by_type.get(type_value, set()):
                 self._err(f"{label} grant object_ref '{grant.object_ref}' is not a {type_value} in the service")
+
+    def _verify_runtime_dns_services(self) -> None:
+        """Validate observed DNS services against the scenario.
+
+        Each DNS service's owning transport service must resolve to a service
+        on the same node. Optional configuration, log, and zone-file refs are
+        checked against ``runtime.filesystem_inventory`` when the node has an
+        observed file inventory, keeping evidence paths tied to node-scoped
+        runtime facts without embedding raw zone-file content.
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.dns_services:
+                continue
+            service_names = self._node_service_names(node)
+            observed_paths = self._node_observed_paths(node)
+            for dns_service in runtime.dns_services:
+                owner_label = f"Node '{node_name}' runtime DNS service '{dns_service.dns_service_id}'"
+                self._verify_owned_service_ref(
+                    node_name,
+                    getattr(dns_service, "service", ""),
+                    service_names,
+                    owner_label=owner_label,
+                )
+                self._verify_dns_file_refs(
+                    owner_label,
+                    getattr(dns_service, "configuration_file_refs", []),
+                    field_name="configuration_file_refs",
+                    observed_paths=observed_paths,
+                )
+                self._verify_dns_file_refs(
+                    owner_label,
+                    getattr(dns_service, "log_file_refs", []),
+                    field_name="log_file_refs",
+                    observed_paths=observed_paths,
+                )
+                for zone in dns_service.zones:
+                    self._verify_dns_file_refs(
+                        f"{owner_label} zone '{zone.zone_id}'",
+                        getattr(zone, "zone_file_refs", []),
+                        field_name="zone_file_refs",
+                        observed_paths=observed_paths,
+                    )
+
+    def _verify_dns_file_refs(
+        self,
+        owner_label: str,
+        refs: list[str],
+        *,
+        field_name: str,
+        observed_paths: set[str],
+    ) -> None:
+        if not observed_paths:
+            return
+        for ref in refs:
+            if self._is_unresolved_var(ref):
+                continue
+            if ref not in observed_paths:
+                self._err(f"{owner_label} {field_name} ref '{ref}' does not resolve to an observed file on the node")
 
     def _split_runtime_ref(self, ref: object, *, surface: str) -> tuple[str, str] | None:
         """Split ``nodes.<node>.runtime.<surface>.<rest>`` into (node, rest).
