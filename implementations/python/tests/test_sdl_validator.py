@@ -2973,6 +2973,262 @@ class TestVerifyRuntimeApplication:
         assert any("does not resolve to an observed file" in e for e in errors)
 
 
+class TestVerifyRuntimeFileService:
+    def _service(self, **overrides) -> dict:
+        service = {
+            "service_id": "fileshare-smb",
+            "service": "smb",
+            "protocol": "smb",
+            "shares": [{"share_id": "public", "name": "public"}],
+            "principals": [{"principal_id": "nobody", "kind": "guest", "name": "nobody"}],
+            "access_rules": [],
+            "access_observations": [],
+        }
+        service.update(overrides)
+        return service
+
+    def _node(self, service: dict, **node_extra) -> dict:
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 445, "name": "smb"}],
+            "runtime": {"file_services": [service]},
+        }
+        node.update(node_extra)
+        return node
+
+    def test_file_service_resolves_with_same_node_service(self):
+        s = _make_scenario(nodes={"fs": self._node(self._service())})
+        assert _validate(s) == []
+
+    def test_file_service_rejects_unknown_service_ref(self):
+        s = _make_scenario(nodes={"fs": self._node(self._service(service="ghost"))})
+        errors = _validate(s)
+        assert any("ghost" in e and "file" in e.lower() for e in errors)
+
+    def test_file_service_rule_subject_ref_must_resolve(self):
+        svc = self._service(
+            access_rules=[
+                {
+                    "rule_id": "bad-rule",
+                    "subject_ref": "missing-principal",
+                    "resource_ref": "public",
+                    "action": "read",
+                    "effect": "allow",
+                    "basis": "share_config",
+                }
+            ]
+        )
+        s = _make_scenario(nodes={"fs": self._node(svc)})
+        errors = _validate(s)
+        assert any("subject_ref" in e and "missing-principal" in e for e in errors)
+
+    def test_file_service_rule_resource_ref_must_resolve(self):
+        svc = self._service(
+            access_rules=[
+                {
+                    "rule_id": "bad-rule",
+                    "subject_ref": "nobody",
+                    "resource_ref": "ghost-share",
+                    "action": "read",
+                    "effect": "allow",
+                    "basis": "share_config",
+                }
+            ]
+        )
+        s = _make_scenario(nodes={"fs": self._node(svc)})
+        errors = _validate(s)
+        assert any("resource_ref" in e and "ghost-share" in e for e in errors)
+
+    def test_file_service_observation_subject_resource_must_resolve(self):
+        svc = self._service(
+            access_observations=[
+                {
+                    "observation_id": "obs1",
+                    "subject_ref": "ghost",
+                    "resource_ref": "public",
+                    "action": "browse",
+                    "outcome": "allowed",
+                    "basis": "observed_probe",
+                }
+            ]
+        )
+        s = _make_scenario(nodes={"fs": self._node(svc)})
+        errors = _validate(s)
+        # 'guest' and 'anonymous' literals are accepted; 'ghost' is not.
+        assert any("subject_ref" in e and "ghost" in e for e in errors)
+
+    def test_file_service_observation_anonymous_subject_is_accepted(self):
+        svc = self._service(
+            access_observations=[
+                {
+                    "observation_id": "obs-anon",
+                    "subject_ref": "anonymous",
+                    "resource_ref": "public",
+                    "action": "browse",
+                    "outcome": "allowed",
+                    "basis": "observed_probe",
+                }
+            ]
+        )
+        s = _make_scenario(nodes={"fs": self._node(svc)})
+        assert _validate(s) == []
+
+    def test_file_service_local_user_ref_resolves_against_local_identity(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "service_account",
+                    "name": "svc-fileshare",
+                    "local_user_ref": "missing-user",
+                }
+            ]
+        )
+        node = self._node(svc)
+        node["runtime"]["local_identity"] = {
+            "users": [{"username": "real-user", "uid": 1100}],
+        }
+        s = _make_scenario(nodes={"fs": node})
+        errors = _validate(s)
+        assert any("local_user_ref" in e and "missing-user" in e for e in errors)
+
+    def test_file_service_local_user_ref_passes_when_present(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "service_account",
+                    "name": "svc-fileshare",
+                    "local_user_ref": "real-user",
+                }
+            ]
+        )
+        node = self._node(svc)
+        node["runtime"]["local_identity"] = {
+            "users": [{"username": "real-user", "uid": 1100}],
+        }
+        s = _make_scenario(nodes={"fs": node})
+        assert _validate(s) == []
+
+    def _ad_node(self) -> dict:
+        return {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 389, "name": "ldap"}],
+            "runtime": {
+                "identity_authorities": [
+                    {
+                        "authority_id": "techvault-domain",
+                        "kind": "domain",
+                        "name": "TechVault Domain",
+                        "services": [
+                            {
+                                "service_id": "ldap-endpoint",
+                                "service": "ldap",
+                                "protocol": "LDAP",
+                            }
+                        ],
+                        "subjects": [
+                            {"subject_id": "alice", "kind": "user", "name": "alice"},
+                        ],
+                    }
+                ]
+            },
+        }
+
+    def test_file_service_directory_subject_ref_resolves_against_identity_authority(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "user",
+                    "name": "svc-fileshare",
+                    "directory_subject_ref": ("nodes.ad.runtime.identity_authorities.techvault-domain.subjects.alice"),
+                }
+            ]
+        )
+        s = _make_scenario(
+            nodes={
+                "fs": self._node(svc),
+                "ad": self._ad_node(),
+            }
+        )
+        assert _validate(s) == []
+
+    def test_file_service_directory_subject_ref_rejects_missing_subject(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "user",
+                    "name": "svc-fileshare",
+                    "directory_subject_ref": ("nodes.ad.runtime.identity_authorities.techvault-domain.subjects.ghost"),
+                }
+            ]
+        )
+        s = _make_scenario(
+            nodes={
+                "fs": self._node(svc),
+                "ad": self._ad_node(),
+            }
+        )
+        errors = _validate(s)
+        assert any("directory_subject_ref" in e and "ghost" in e and "does not resolve" in e for e in errors)
+
+    def test_file_service_directory_subject_ref_rejects_missing_authority(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "user",
+                    "name": "svc-fileshare",
+                    "directory_subject_ref": ("nodes.ad.runtime.identity_authorities.missing.subjects.alice"),
+                }
+            ]
+        )
+        s = _make_scenario(
+            nodes={
+                "fs": self._node(svc),
+                "ad": self._ad_node(),
+            }
+        )
+        errors = _validate(s)
+        assert any("directory_subject_ref" in e and "missing" in e and "does not resolve" in e for e in errors)
+
+    def test_file_service_directory_subject_ref_rejects_unqualified(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "user",
+                    "name": "svc-fileshare",
+                    "directory_subject_ref": "bare-alice",
+                }
+            ]
+        )
+        s = _make_scenario(nodes={"fs": self._node(svc)})
+        errors = _validate(s)
+        assert any("directory_subject_ref" in e and "must be a qualified" in e for e in errors)
+
+    def test_file_service_directory_subject_ref_skips_variable(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "user",
+                    "name": "svc-fileshare",
+                    "directory_subject_ref": "${external_subject}",
+                }
+            ]
+        )
+        s = _make_scenario(
+            variables={"external_subject": {"type": "string", "required": True}},
+            nodes={"fs": self._node(svc)},
+        )
+        assert _validate(s) == []
+
+
 class TestVerifyRuntimeDatabaseServices:
     def _node_with_db(self, **dbsvc_overrides):
         dbsvc = {

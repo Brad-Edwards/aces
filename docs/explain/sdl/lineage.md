@@ -120,6 +120,62 @@ and Swiler plus Oberkampf/Roy/Sargent on
 should state what it can preserve and compare rather than smuggle
 backend/vendor assumptions into an ambiguous field.
 
+## File-Sharing And Resource-Access Semantics
+
+The `runtime.file_services` surface is issue #421's response to a gap
+observed while encoding the APTL TechVault fileshare container. It is not
+a clone of any one file-sharing protocol or ACL vocabulary, and the
+expected-but-absent extension to `runtime.filesystem_inventory` follows
+the same posture.
+
+ACES relies on prior work in four ways:
+
+- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and
+  CRACK model scenario topology, deployable services/features, and
+  validation/deployment concerns. None expose a portable first-class
+  share-permission/passdb inventory that ACES could reuse directly, which
+  is why ACES introduces a typed node-scoped seam rather than encoding the
+  state inside `Node.services` or `runtime.applications`.
+- **Primary protocol and filesystem-permission standards:** Microsoft's
+  [MS-SMB2](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-smb2/5606ad47-5ee0-437a-817e-70c366052962),
+  [SMB/CIFS overview](https://learn.microsoft.com/en-us/windows/win32/fileio/microsoft-smb-protocol-and-cifs-protocol-overview),
+  the Samba [`smb.conf`](https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html)
+  and [`pdbedit`](https://www.samba.org/samba/docs/current/man-html/pdbedit.8.html)
+  references, the Linux [ACL man page](https://man7.org/linux/man-pages/man5/acl.5.html),
+  POSIX.1e ACL semantics (Grünbacher,
+  [POSIX Access Control Lists on Linux](https://www.usenix.org/legacy/event/usenix03/tech/freenix03/full_papers/gruenbacher/gruenbacher.pdf),
+  USENIX ATC 2003), Microsoft's
+  [Windows ACL documentation](https://learn.microsoft.com/en-us/windows/win32/secauthz/access-control-lists)
+  and [security descriptor string format](https://learn.microsoft.com/en-us/windows/win32/secauthz/security-descriptor-string-format),
+  and [NFSv4.1 (RFC 8881)](https://www.rfc-editor.org/rfc/rfc8881) supply
+  terminology for shares/exports, share-level access modes, passdb
+  semantics, anonymous and guest subjects, POSIX vs. Windows ACL
+  families, and NFSv4 ACEs. ACES adapts their shared concepts (subject, resource,
+  action, effect, basis) rather than importing any single vendor ACL
+  algebra. The access-control literature already cited above
+  (Lampson, Saltzer/Schroeder, RBAC96, NIST ABAC) justifies that
+  subject/resource/action/policy/observation split.
+- **Resource-relation modeling:** Pang et al.'s
+  [Zanzibar: Google's Consistent, Global Authorization System](https://research.google/pubs/zanzibar-googles-consistent-global-authorization-system/)
+  (USENIX ATC 2019) is design input for portable relationship-tuple
+  authorization. ACES uses it as a cross-check that bounded
+  subject/relation/resource records are workable at scale; it is not
+  forced into the SDL as a global authorization framework, and ACES does
+  not encode share access only as relationship edges.
+- **Evidence and downstream consumers:** OCSF, UCO, CASE, STIX, and SBOM
+  standards remain evidence/event/concept influences (already discussed
+  above). Per-share probe outcomes are recorded as evidence-bearing
+  observations under the file-service inventory; they support but do not
+  silently replace authored share policy.
+
+`RuntimeFilesystemEntry.presence` is grounded in the same V&V posture as
+the identity-authority surface: an inventory model should preserve the
+distinction between present-observed state and expected-but-absent state
+rather than collapsing both into a single field. Russo/Costa/Armando,
+Oberkampf/Roy, and Sargent's V&V sources cited above are the methodological
+backing — what a model can or cannot represent must be explicit so
+downstream completeness/conformance checks can act on it.
+
 ## Participant Semantics
 
 - [OpenAI Gym](https://arxiv.org/abs/1606.01540),

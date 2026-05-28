@@ -11,10 +11,13 @@ the repo-policy line cap, mirroring ``_module_provenance.py``.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .entities import flatten_entities
 from .scenario import ModuleDescriptor, Scenario
+
+if TYPE_CHECKING:
+    from .runtime_file_service import RuntimeFileService
 
 # Canonical list of scenario top-level sections that hold user-defined
 # hashmap keys. Re-exported as both the public ``HASHMAP_SECTIONS`` name
@@ -275,6 +278,61 @@ def _nested_node_identity_authority_aliases(
     return aliases
 
 
+def _file_service_aliases(
+    *,
+    node_name: str,
+    prefixed_node: str,
+    service: RuntimeFileService,
+) -> dict[str, str]:
+    """Aliases for one file service and its stable child records (ADR-037)."""
+    service_id = getattr(service, "service_id", "")
+    if not service_id:
+        return {}
+    bare_base = f"nodes.{node_name}.runtime.file_services.{service_id}"
+    prefixed_base = f"nodes.{prefixed_node}.runtime.file_services.{service_id}"
+    aliases: dict[str, str] = {bare_base: prefixed_base}
+    for collection_name, id_field in (
+        ("shares", "share_id"),
+        ("principals", "principal_id"),
+        ("access_rules", "rule_id"),
+        ("access_observations", "observation_id"),
+    ):
+        aliases.update(
+            _identity_authority_collection_aliases(
+                bare_base=bare_base,
+                prefixed_base=prefixed_base,
+                collection=getattr(service, collection_name, []),
+                collection_name=collection_name,
+                id_field=id_field,
+            )
+        )
+    return aliases
+
+
+def _nested_node_file_service_aliases(
+    scenario: Scenario,
+    node_rename_map: Mapping[str, str],
+) -> dict[str, str]:
+    """Qualified file-service refs ``nodes.<vm>.runtime.file_services.<id>[...]``."""
+    aliases: dict[str, str] = {}
+    for node_name, node in scenario.nodes.items():
+        prefixed_node = node_rename_map.get(node_name, node_name)
+        if prefixed_node == node_name:
+            continue
+        runtime = getattr(node, "runtime", None)
+        if runtime is None:
+            continue
+        for service in getattr(runtime, "file_services", []):
+            aliases.update(
+                _file_service_aliases(
+                    node_name=node_name,
+                    prefixed_node=prefixed_node,
+                    service=service,
+                )
+            )
+    return aliases
+
+
 def _nested_content_item_aliases(
     scenario: Scenario,
     content_rename_map: Mapping[str, str],
@@ -329,6 +387,7 @@ def symbol_index(
     named.update(_nested_node_application_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_database_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_identity_authority_aliases(scenario, section_maps.get("nodes", {})))
+    named.update(_nested_node_file_service_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_content_item_aliases(scenario, section_maps.get("content", {})))
 
     return {

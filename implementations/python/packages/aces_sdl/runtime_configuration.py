@@ -53,9 +53,27 @@ from .runtime_directory_identity import (
     RuntimeIdentitySubject,
     RuntimeIdentitySubjectKind,
 )
+from .runtime_file_service import (
+    RuntimeFileService,
+    RuntimeFileServiceAccessAction,
+    RuntimeFileServiceAccessBasis,
+    RuntimeFileServiceAccessEffect,
+    RuntimeFileServiceAccessObservation,
+    RuntimeFileServiceAccessOutcome,
+    RuntimeFileServiceAccessRule,
+    RuntimeFileServiceCredentialClassification,
+    RuntimeFileServicePrincipal,
+    RuntimeFileServicePrincipalKind,
+    RuntimeFileServicePrincipalOrigin,
+    RuntimeFileServicePrincipalStatus,
+    RuntimeFileServiceProtocol,
+    RuntimeFileServiceShare,
+    RuntimeFileShareKind,
+)
 from .runtime_filesystem import (
     RuntimeFilesystemEntry,
     RuntimeFilesystemEntryType,
+    RuntimeFilesystemPresence,
     RuntimeFilesystemStability,
     RuntimeMountPropagation,
     RuntimeSensitivityClassification,
@@ -142,8 +160,24 @@ __all__ = [
     "RuntimeEnvironmentVariable",
     "RuntimeEnvironmentVariableProvenance",
     "RuntimeExtraHost",
+    "RuntimeFileService",
+    "RuntimeFileServiceAccessAction",
+    "RuntimeFileServiceAccessBasis",
+    "RuntimeFileServiceAccessEffect",
+    "RuntimeFileServiceAccessObservation",
+    "RuntimeFileServiceAccessOutcome",
+    "RuntimeFileServiceAccessRule",
+    "RuntimeFileServiceCredentialClassification",
+    "RuntimeFileServicePrincipal",
+    "RuntimeFileServicePrincipalKind",
+    "RuntimeFileServicePrincipalOrigin",
+    "RuntimeFileServicePrincipalStatus",
+    "RuntimeFileServiceProtocol",
+    "RuntimeFileServiceShare",
+    "RuntimeFileShareKind",
     "RuntimeFilesystemEntry",
     "RuntimeFilesystemEntryType",
+    "RuntimeFilesystemPresence",
     "RuntimeFilesystemStability",
     "RuntimeHealthObservation",
     "RuntimeHealthStatus",
@@ -420,6 +454,7 @@ class RuntimeConfiguration(SDLModel):
     health: RuntimeHealthObservation | None = None
     local_identity: RuntimeLocalIdentityInventory | None = None
     identity_authorities: list[RuntimeIdentityAuthority] = Field(default_factory=list)
+    file_services: list[RuntimeFileService] = Field(default_factory=list)
     network: RuntimeNetworkRealization | None = None
     applications: list[RuntimeApplicationSurface] = Field(default_factory=list)
     database_services: list[DatabaseService] = Field(default_factory=list)
@@ -451,5 +486,6 @@ class RuntimeConfiguration(SDLModel):
             label="service_manager_unit unit_name",
         )
         _reject_duplicate_keys(self.identity_authorities, attr="authority_id", label="identity authority")
+        _reject_duplicate_keys(self.file_services, attr="service_id", label="file_service service_id")
         _reject_duplicate_keys(self.software_components, attr="component_id", label="software component")
         return self

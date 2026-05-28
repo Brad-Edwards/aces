@@ -504,6 +504,7 @@ class SemanticValidator:
         self._verify_runtime_ssh_servers()
         self._verify_runtime_service_manager_units()
         self._verify_runtime_identity_authorities()
+        self._verify_runtime_file_services()
         self._verify_features()
         self._verify_conditions()
         self._verify_vulnerabilities()
@@ -1116,6 +1117,158 @@ class SemanticValidator:
             return
         if ref not in local_refs:
             self._err(f"{label} {field_name} '{ref}' does not resolve inside identity authority")
+
+    # File-service surface (ADR-037).
+
+    _FILE_SERVICE_SUBJECT_LITERALS: frozenset[str] = frozenset({"anonymous", "guest"})
+
+    def _verify_runtime_file_services(self) -> None:
+        """Validate observed runtime file services against the scenario.
+
+        Each service's owning transport service must resolve to a service on
+        the same node (mirroring ``runtime.applications``). Rule/observation
+        ``subject_ref`` resolves against service-local principal ids plus the
+        reserved literals ``anonymous`` and ``guest``. ``resource_ref``
+        resolves against service-local share ids; a ``share_id:path`` form is
+        allowed for narrowed resources. Optional ``local_user_ref`` and
+        ``directory_subject_ref`` on a principal are checked against
+        ``runtime.local_identity.users`` and the qualified identity-authority
+        ref shape, respectively, when present.
+        """
+        identity_subject_refs = self._identity_authority_subject_refs()
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.file_services:
+                continue
+            service_names = self._node_service_names(node)
+            local_user_names = self._node_local_user_names(node)
+            for service in runtime.file_services:
+                owner_label = f"Node '{node_name}' runtime file service '{service.service_id}'"
+                self._verify_owned_service_ref(
+                    node_name,
+                    getattr(service, "service", ""),
+                    service_names,
+                    owner_label=owner_label,
+                )
+                self._verify_file_service_principals(
+                    owner_label,
+                    service,
+                    local_user_names,
+                    identity_subject_refs,
+                )
+                share_ids = {share.share_id for share in service.shares}
+                subject_refs = {
+                    principal.principal_id for principal in service.principals
+                } | self._FILE_SERVICE_SUBJECT_LITERALS
+                for rule in service.access_rules:
+                    self._verify_file_service_ref(
+                        rule.subject_ref,
+                        subject_refs,
+                        label=f"{owner_label} rule '{rule.rule_id}'",
+                        field_name="subject_ref",
+                    )
+                    self._verify_file_service_resource_ref(
+                        rule.resource_ref,
+                        share_ids,
+                        label=f"{owner_label} rule '{rule.rule_id}'",
+                    )
+                for observation in service.access_observations:
+                    self._verify_file_service_ref(
+                        observation.subject_ref,
+                        subject_refs,
+                        label=f"{owner_label} observation '{observation.observation_id}'",
+                        field_name="subject_ref",
+                    )
+                    self._verify_file_service_resource_ref(
+                        observation.resource_ref,
+                        share_ids,
+                        label=f"{owner_label} observation '{observation.observation_id}'",
+                    )
+
+    @staticmethod
+    def _node_local_user_names(node: object) -> set[str]:
+        runtime = getattr(node, "runtime", None)
+        local_identity = getattr(runtime, "local_identity", None) if runtime is not None else None
+        if local_identity is None:
+            return set()
+        return {user.username for user in getattr(local_identity, "users", []) if user.username}
+
+    def _identity_authority_subject_refs(self) -> set[str]:
+        """Qualified subject refs across all node-scoped identity authorities.
+
+        Shape: ``nodes.<node>.runtime.identity_authorities.<authority>.subjects.<subject>``.
+        Used by file-service ``directory_subject_ref`` resolution so a
+        principal cannot smuggle a dangling pointer at a missing authority or
+        subject past semantic validation.
+        """
+        refs: set[str] = set()
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None:
+                continue
+            for authority in runtime.identity_authorities:
+                base = f"{_NODES_PREFIX}{node_name}.runtime.identity_authorities.{authority.authority_id}"
+                for subject in authority.subjects:
+                    refs.add(f"{base}.subjects.{subject.subject_id}")
+        return refs
+
+    def _verify_file_service_principals(
+        self,
+        owner_label: str,
+        service: object,
+        local_user_names: set[str],
+        identity_subject_refs: set[str],
+    ) -> None:
+        for principal in service.principals:
+            local_user_ref = getattr(principal, "local_user_ref", "")
+            if local_user_ref and not self._is_unresolved_var(local_user_ref):
+                if local_user_names and local_user_ref not in local_user_names:
+                    self._err(
+                        f"{owner_label} principal '{principal.principal_id}' local_user_ref "
+                        f"'{local_user_ref}' does not resolve to a runtime.local_identity user"
+                    )
+            directory_ref = getattr(principal, "directory_subject_ref", "")
+            if not directory_ref or self._is_unresolved_var(directory_ref):
+                continue
+            if not directory_ref.startswith(_NODES_PREFIX):
+                self._err(
+                    f"{owner_label} principal '{principal.principal_id}' "
+                    f"directory_subject_ref '{directory_ref}' must be a qualified "
+                    f"'nodes.<node>.runtime.identity_authorities.<id>.subjects.<id>' reference"
+                )
+                continue
+            if directory_ref not in identity_subject_refs:
+                self._err(
+                    f"{owner_label} principal '{principal.principal_id}' "
+                    f"directory_subject_ref '{directory_ref}' does not resolve to a known "
+                    "identity-authority subject"
+                )
+
+    def _verify_file_service_ref(
+        self,
+        ref: str,
+        local_refs: set[str],
+        *,
+        label: str,
+        field_name: str,
+    ) -> None:
+        if not ref or self._is_unresolved_var(ref):
+            return
+        if ref not in local_refs:
+            self._err(f"{label} {field_name} '{ref}' does not resolve inside file service")
+
+    def _verify_file_service_resource_ref(
+        self,
+        ref: str,
+        share_ids: set[str],
+        *,
+        label: str,
+    ) -> None:
+        if not ref or self._is_unresolved_var(ref):
+            return
+        share_segment = ref.split(":", 1)[0]
+        if share_segment not in share_ids:
+            self._err(f"{label} resource_ref '{ref}' does not resolve to a share in the file service")
 
     def _verify_runtime_database_services(self) -> None:
         """Validate observed database services against the scenario.

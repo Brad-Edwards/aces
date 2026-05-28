@@ -57,7 +57,18 @@ from aces.core.sdl.nodes import (
     RuntimeControlInterfaceKind,
     RuntimeEnvironmentValueClassification,
     RuntimeEnvironmentVariableProvenance,
+    RuntimeFileService,
+    RuntimeFileServiceAccessEffect,
+    RuntimeFileServiceAccessOutcome,
+    RuntimeFileServiceAccessRule,
+    RuntimeFileServiceCredentialClassification,
+    RuntimeFileServicePrincipal,
+    RuntimeFileServicePrincipalKind,
+    RuntimeFileServiceProtocol,
+    RuntimeFileServiceShare,
+    RuntimeFileShareKind,
     RuntimeFilesystemEntryType,
+    RuntimeFilesystemPresence,
     RuntimeFilesystemStability,
     RuntimeHealthStatus,
     RuntimeIdentityAttribute,
@@ -663,6 +674,208 @@ class TestNode:
         assert runtime.filesystem_inventory[1].sensitivity == RuntimeSensitivityClassification.OPERATOR_SECRET
         assert runtime.filesystem_inventory[2].stability == RuntimeFilesystemStability.RUNTIME_CREATED
         assert runtime.filesystem_inventory[2].sensitivity == RuntimeSensitivityClassification.SECRET_FIXTURE
+
+    def test_vm_runtime_filesystem_entry_presence_defaults_to_present(self):
+        n = Node(
+            type="vm",
+            runtime={
+                "filesystem_inventory": [
+                    {"path": "/etc/hosts", "entry_type": "file"},
+                ],
+            },
+        )
+
+        entry = n.runtime.filesystem_inventory[0]
+        assert entry.presence == RuntimeFilesystemPresence.PRESENT
+
+    def test_vm_runtime_filesystem_entry_expected_absent_preserves_entry_type(self):
+        n = Node(
+            type="vm",
+            runtime={
+                "filesystem_inventory": [
+                    {
+                        "path": "/root/.ssh/authorized_keys",
+                        "entry_type": "file",
+                        "presence": "expected_absent",
+                        "description": "Deploy-key path attempted by setup but not present at capture.",
+                    },
+                ],
+            },
+        )
+
+        entry = n.runtime.filesystem_inventory[0]
+        assert entry.presence == RuntimeFilesystemPresence.EXPECTED_ABSENT
+        assert entry.entry_type == RuntimeFilesystemEntryType.FILE
+
+    def test_vm_runtime_file_service_surface(self):
+        n = Node(
+            type="vm",
+            runtime={
+                "file_services": [
+                    {
+                        "service_id": "fileshare-smb",
+                        "service": "smb",
+                        "protocol": "smb",
+                        "backend": "samba-4.x",
+                        "description": "TechVault fileshare published over SMB.",
+                        "shares": [
+                            {
+                                "share_id": "public",
+                                "name": "public",
+                                "kind": "disk",
+                                "backing_path": "/srv/samba/public",
+                                "comment": "Anonymous-readable public share.",
+                                "read_only": True,
+                                "browseable": True,
+                                "guest_ok": True,
+                                "valid_users": ["guest"],
+                            },
+                            {
+                                "share_id": "deploy-keys",
+                                "name": "deploy_keys",
+                                "kind": "disk",
+                                "backing_path": "/srv/samba/deploy_keys",
+                                "read_only": False,
+                                "browseable": False,
+                                "guest_ok": False,
+                                "valid_users": ["svc-fileshare"],
+                                "write_users": ["svc-fileshare"],
+                            },
+                        ],
+                        "principals": [
+                            {
+                                "principal_id": "nobody",
+                                "kind": "guest",
+                                "name": "nobody",
+                                "external_id": "S-1-5-21-0-501",
+                                "status": "enabled",
+                                "credential_classification": "no_credential",
+                                "origin": "built_in",
+                            },
+                            {
+                                "principal_id": "svc-fileshare",
+                                "kind": "service_account",
+                                "name": "svc-fileshare",
+                                "status": "enabled",
+                                "credential_classification": "redacted",
+                                "origin": "provisioned",
+                            },
+                        ],
+                        "access_rules": [
+                            {
+                                "rule_id": "public-read",
+                                "subject_ref": "nobody",
+                                "resource_ref": "public",
+                                "action": "read",
+                                "effect": "allow",
+                                "basis": "share_config",
+                            },
+                        ],
+                        "access_observations": [
+                            {
+                                "observation_id": "anon-mount-allowed",
+                                "subject_ref": "anonymous",
+                                "resource_ref": "public",
+                                "action": "browse",
+                                "outcome": "allowed",
+                                "basis": "observed_probe",
+                            },
+                        ],
+                    },
+                ],
+            },
+        )
+
+        service = n.runtime.file_services[0]
+        assert service.service_id == "fileshare-smb"
+        assert service.protocol == RuntimeFileServiceProtocol.SMB
+        assert service.shares[0].kind == RuntimeFileShareKind.DISK
+        assert service.shares[1].read_only is False
+        assert service.principals[0].kind == RuntimeFileServicePrincipalKind.GUEST
+        assert service.principals[1].credential_classification == RuntimeFileServiceCredentialClassification.REDACTED
+        assert service.access_rules[0].effect == RuntimeFileServiceAccessEffect.ALLOW
+        assert service.access_observations[0].outcome == RuntimeFileServiceAccessOutcome.ALLOWED
+
+    def test_vm_runtime_file_service_rejects_duplicate_share_id(self):
+        with pytest.raises(ValidationError):
+            RuntimeFileService(
+                service_id="svc",
+                service="smb",
+                protocol="smb",
+                shares=[
+                    RuntimeFileServiceShare(share_id="dup", name="a"),
+                    RuntimeFileServiceShare(share_id="dup", name="b"),
+                ],
+            )
+
+    def test_vm_runtime_file_service_rejects_id_collision_across_scopes(self):
+        with pytest.raises(ValidationError):
+            RuntimeFileService(
+                service_id="svc",
+                service="smb",
+                protocol="smb",
+                shares=[RuntimeFileServiceShare(share_id="alpha", name="alpha")],
+                principals=[
+                    RuntimeFileServicePrincipal(
+                        principal_id="alpha",
+                        kind="user",
+                        name="alpha",
+                    )
+                ],
+            )
+
+    def test_vm_runtime_file_service_principal_credential_value_field_is_unrepresentable(self):
+        # Raw credential material must not be expressible on the principal
+        # record at all (ADR-036 §4, secret-handling gate). The field is
+        # absent from the model; SDLModel's ``extra='forbid'`` config rejects
+        # any attempt to set it, regardless of credential_classification.
+        for field_name in ("credential_value", "credential_hash"):
+            for classification in ("strong", "redacted", "no_credential", "${secret_class}"):
+                with pytest.raises(ValidationError):
+                    RuntimeFileServicePrincipal(
+                        principal_id="bad",
+                        kind="user",
+                        name="bad",
+                        credential_classification=classification,
+                        **{field_name: "hunter2"},
+                    )
+
+    def test_vm_runtime_file_service_rejects_unknown_action_enum(self):
+        with pytest.raises(ValidationError):
+            RuntimeFileServiceAccessRule(
+                rule_id="r",
+                subject_ref="s",
+                resource_ref="r",
+                action="not-an-action",
+                effect="allow",
+                basis="share_config",
+            )
+
+    def test_vm_runtime_filesystem_entry_expected_absent_rejects_present_only_fields(self):
+        for field_name, value in (
+            ("size", 4096),
+            ("content_digest", "deadbeef"),
+            ("uid", 0),
+            ("gid", 0),
+            ("mode", "0644"),
+            ("owner_user", "root"),
+            ("owner_group", "root"),
+            ("digest_algorithm", "sha256"),
+        ):
+            with pytest.raises(ValidationError):
+                Node(
+                    type="vm",
+                    runtime={
+                        "filesystem_inventory": [
+                            {
+                                "path": "/var/expected/missing",
+                                "entry_type": "file",
+                                "presence": "expected_absent",
+                                field_name: value,
+                            },
+                        ],
+                    },
+                )
 
     def test_vm_runtime_container_host_config_surfaces(self):
         n = Node(
