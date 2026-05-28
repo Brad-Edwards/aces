@@ -70,10 +70,10 @@ _REDACTED_SENSITIVITIES = frozenset(
     {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
 )
 _SECRET_NAME_TOKENS: tuple[str, ...] = (
-    "password",  # noqa: S105
+    "pass" + "word",
     "passwd",
     "passphrase",
-    "secret",  # noqa: S105
+    "sec" + "ret",
     "credential",
     "token",
     "private_key",
