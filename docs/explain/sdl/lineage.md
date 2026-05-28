@@ -176,6 +176,44 @@ Oberkampf/Roy, and Sargent's V&V sources cited above are the methodological
 backing — what a model can or cannot represent must be explicit so
 downstream completeness/conformance checks can act on it.
 
+## Mail-Service Logical State Semantics
+
+The `runtime.mail_services` surface is issue #420's response to a gap observed
+while encoding the APTL TechVault mailserver container. It is not a clone of
+Postfix, Dovecot, Docker Mailserver, or an RFC object tree. It is a portable
+node-scoped runtime inventory for mail-service logical facts that surrounding
+ACES surfaces cannot own.
+
+ACES relies on prior work in four ways:
+
+- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+  model topology, deployable services/features, accounts, tasks, and
+  validation/deployment concerns. None expose a portable first-class
+  mail-server logical-state inventory, which is why ACES adds a typed
+  `Node.runtime` surface rather than encoding SMTP/IMAP state inside
+  `Node.services`, `runtime.applications`, filesystem entries, content, or
+  generic accounts.
+- **Protocol and service concepts:** SMTP transport/delivery, message
+  submission, IMAP access, POP3/LMTP/Sieve extension points, TLS/STARTTLS
+  posture, mailboxes, aliases, domains, queues, and MTA/MDA configuration
+  supply terminology. ACES adapts these as provider-neutral fields for
+  listeners, capabilities, auth mechanisms, mailbox state, routing, queues, and
+  settings.
+- **Evidence and redaction lineage:** Mailserver discovery output, `postconf`
+  and `doveconf` command output, compose files, setup scripts, filesystem
+  inventory, and participant probes are evidence/provenance sources. They do
+  not become raw config dumps in SDL. Secret-bearing settings must omit values,
+  and mailbox records carry credential-strength classification rather than
+  passwords or hashes.
+- **Relationship semantics:** STIX-style typed edges remain the top-level
+  relationship surface. `RelationshipMailAccess` adds mail-specific
+  protocol/auth/TLS/mailbox/domain/listener details to those edges without
+  promoting mail relationships into a new root section.
+
+The result preserves the same V&V posture as database and file-service runtime
+surfaces: ACES states which mail concepts are stable enough to compare and
+which dynamic queue/log/config details remain evidence or bounded settings.
+
 ## Participant Semantics
 
 - [OpenAI Gym](https://arxiv.org/abs/1606.01540),
