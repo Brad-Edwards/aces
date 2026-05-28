@@ -17,6 +17,7 @@ from .entities import flatten_entities
 from .scenario import ModuleDescriptor, Scenario
 
 if TYPE_CHECKING:
+    from .runtime_dns import RuntimeDnsService
     from .runtime_file_service import RuntimeFileService
     from .runtime_mail_service import RuntimeMailService
 
@@ -191,7 +192,7 @@ def _dns_service_aliases(
     *,
     node_name: str,
     prefixed_node: str,
-    service: Any,
+    service: RuntimeDnsService,
 ) -> dict[str, str]:
     """Aliases for one DNS service, its zones, and contained RRsets."""
     service_id = getattr(service, "dns_service_id", "")

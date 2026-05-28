@@ -268,33 +268,50 @@ class SemanticValidator:
             runtime = getattr(node, "runtime", None)
             if runtime is None:
                 continue
-            for application in runtime.applications:
-                refs.add(f"nodes.{node_name}.runtime.applications.{application.application_id}")
-            for dbsvc in runtime.database_services:
-                base = f"nodes.{node_name}.runtime.database_services.{dbsvc.database_service_id}"
-                refs.add(base)
-                for database in dbsvc.databases:
-                    refs.add(f"{base}.databases.{database.database_id}")
-            for dns_service in runtime.dns_services:
-                base = f"nodes.{node_name}.runtime.dns_services.{dns_service.dns_service_id}"
-                refs.add(base)
-                for zone in dns_service.zones:
-                    zone_base = f"{base}.zones.{zone.zone_id}"
-                    refs.add(zone_base)
-                    for rrset in zone.rrsets:
-                        refs.add(f"{zone_base}.rrsets.{rrset.rrset_id}")
-            for authority in runtime.identity_authorities:
-                base = f"nodes.{node_name}.runtime.identity_authorities.{authority.authority_id}"
-                refs.add(base)
-                for service in authority.services:
-                    refs.add(f"{base}.services.{service.service_id}")
-                for subject in authority.subjects:
-                    refs.add(f"{base}.subjects.{subject.subject_id}")
-                for policy in authority.policies:
-                    refs.add(f"{base}.policies.{policy.policy_id}")
-                for relationship in authority.relationships:
-                    refs.add(f"{base}.relationships.{relationship.relationship_id}")
+            refs.update(self._qualified_application_refs(node_name))
+            refs.update(self._qualified_database_refs(node_name))
+            refs.update(self._qualified_dns_refs(node_name))
+            refs.update(self._qualified_identity_refs(node_name))
         refs.update(collect_qualified_mail_refs(self._s))
+        return refs
+
+    def _qualified_application_refs(self, node_name: str) -> set[str]:
+        runtime = self._s.nodes[node_name].runtime
+        return {f"nodes.{node_name}.runtime.applications.{app.application_id}" for app in runtime.applications}
+
+    def _qualified_database_refs(self, node_name: str) -> set[str]:
+        refs: set[str] = set()
+        runtime = self._s.nodes[node_name].runtime
+        for dbsvc in runtime.database_services:
+            base = f"nodes.{node_name}.runtime.database_services.{dbsvc.database_service_id}"
+            refs.add(base)
+            refs.update(f"{base}.databases.{database.database_id}" for database in dbsvc.databases)
+        return refs
+
+    def _qualified_dns_refs(self, node_name: str) -> set[str]:
+        refs: set[str] = set()
+        runtime = self._s.nodes[node_name].runtime
+        for dns_service in runtime.dns_services:
+            base = f"nodes.{node_name}.runtime.dns_services.{dns_service.dns_service_id}"
+            refs.add(base)
+            for zone in dns_service.zones:
+                zone_base = f"{base}.zones.{zone.zone_id}"
+                refs.add(zone_base)
+                refs.update(f"{zone_base}.rrsets.{rrset.rrset_id}" for rrset in zone.rrsets)
+        return refs
+
+    def _qualified_identity_refs(self, node_name: str) -> set[str]:
+        refs: set[str] = set()
+        runtime = self._s.nodes[node_name].runtime
+        for authority in runtime.identity_authorities:
+            base = f"nodes.{node_name}.runtime.identity_authorities.{authority.authority_id}"
+            refs.add(base)
+            refs.update(f"{base}.services.{service.service_id}" for service in authority.services)
+            refs.update(f"{base}.subjects.{subject.subject_id}" for subject in authority.subjects)
+            refs.update(f"{base}.policies.{policy.policy_id}" for policy in authority.policies)
+            refs.update(
+                f"{base}.relationships.{relationship.relationship_id}" for relationship in authority.relationships
+            )
         return refs
 
     def _qualified_acl_refs(self) -> set[str]:

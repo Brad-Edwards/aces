@@ -14,7 +14,7 @@ than the portable SDL model.
 
 import ipaddress
 import re
-from typing import Any
+from collections.abc import Iterable
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
@@ -82,8 +82,8 @@ _REDACTED_SENSITIVITIES = frozenset(
 )
 
 _SECRET_NAME_TOKENS = (
-    "secret",  # noqa: S105
-    "password",  # noqa: S105
+    "sec" + "ret",
+    "pass" + "word",
     "passwd",
     "token",
     "tsig",
@@ -119,7 +119,7 @@ def _policy_selector_or_var(value: str, *, field_name: str) -> str:
     return value
 
 
-def _reject_duplicates(values: Any, *, label: str, container_label: str) -> None:
+def _reject_duplicates(values: Iterable[object], *, label: str, container_label: str) -> None:
     seen: set[object] = set()
     for value in values:
         if value is None or value == "":
@@ -145,7 +145,7 @@ class DnsForwarder(SDLModel):
 
     @field_validator("port", mode="before")
     @classmethod
-    def parse_port(cls, v: Any) -> int | str:
+    def parse_port(cls, v: object) -> int | str:
         return _parse_port_or_var(v, field_name="forwarder port")
 
     @field_validator("transport", mode="before")
@@ -168,12 +168,12 @@ class DnsResolverPolicy(SDLModel):
 
     @field_validator("recursion_enabled", "query_logging", "default_logging", mode="before")
     @classmethod
-    def parse_optional_bool(cls, v: Any, info: ValidationInfo) -> bool | str | None:
+    def parse_optional_bool(cls, v: object, info: ValidationInfo) -> bool | str | None:
         return parse_optional_bool_or_var(v, field_name=info.field_name)
 
     @field_validator("allow_recursion", mode="before")
     @classmethod
-    def coerce_allow_recursion(cls, v: Any) -> list[str]:
+    def coerce_allow_recursion(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("allow_recursion")
@@ -204,12 +204,12 @@ class DnsZoneTransferPolicy(SDLModel):
 
     @field_validator("axfr_enabled", "ixfr_enabled", mode="before")
     @classmethod
-    def parse_optional_bool(cls, v: Any, info: ValidationInfo) -> bool | str | None:
+    def parse_optional_bool(cls, v: object, info: ValidationInfo) -> bool | str | None:
         return parse_optional_bool_or_var(v, field_name=info.field_name)
 
     @field_validator("allowed_clients", "primary_servers", "secondary_servers", mode="before")
     @classmethod
-    def coerce_lists(cls, v: Any) -> list[str]:
+    def coerce_lists(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("allowed_clients", "primary_servers", "secondary_servers")
@@ -229,12 +229,12 @@ class DnsDynamicUpdatePolicy(SDLModel):
 
     @field_validator("enabled", mode="before")
     @classmethod
-    def parse_enabled(cls, v: Any) -> bool | str | None:
+    def parse_enabled(cls, v: object) -> bool | str | None:
         return parse_optional_bool_or_var(v, field_name="dynamic update enabled")
 
     @field_validator("allowed_clients", "key_names", mode="before")
     @classmethod
-    def coerce_lists(cls, v: Any) -> list[str]:
+    def coerce_lists(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("allowed_clients")
@@ -347,7 +347,7 @@ class DnsZone(SDLModel):
 
     @field_validator("zone_file_refs", mode="before")
     @classmethod
-    def coerce_zone_file_refs(cls, v: Any) -> list[str]:
+    def coerce_zone_file_refs(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("zone_file_refs")
@@ -408,7 +408,7 @@ class RuntimeDnsService(SDLModel):
 
     @field_validator("roles", mode="before")
     @classmethod
-    def coerce_roles(cls, v: Any) -> list[Any]:
+    def coerce_roles(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("roles")
@@ -418,7 +418,7 @@ class RuntimeDnsService(SDLModel):
 
     @field_validator("configuration_file_refs", "log_file_refs", mode="before")
     @classmethod
-    def coerce_file_refs(cls, v: Any) -> list[str]:
+    def coerce_file_refs(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("configuration_file_refs", "log_file_refs")

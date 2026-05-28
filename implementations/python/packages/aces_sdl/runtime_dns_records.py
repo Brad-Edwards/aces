@@ -1,7 +1,6 @@
 """DNS RRset and common RDATA models for runtime inventory."""
 
 import ipaddress
-from typing import Any
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
@@ -40,19 +39,19 @@ def _dns_name_or_var(value: str, *, field_name: str) -> str:
     return value
 
 
-def _parse_uint16_or_var(value: Any, *, field_name: str) -> int | str:
+def _parse_uint16_or_var(value: object, *, field_name: str) -> int | str:
     return parse_int_or_var(value, minimum=0, maximum=_MAX_UINT16, field_name=field_name)
 
 
-def _parse_uint32_or_var(value: Any, *, field_name: str) -> int | str:
+def _parse_uint32_or_var(value: object, *, field_name: str) -> int | str:
     return parse_int_or_var(value, minimum=0, maximum=_MAX_UINT32, field_name=field_name)
 
 
-def _parse_port_or_var(value: Any, *, field_name: str) -> int | str:
+def _parse_port_or_var(value: object, *, field_name: str) -> int | str:
     return parse_int_or_var(value, minimum=_MIN_PORT, maximum=_MAX_PORT, field_name=field_name)
 
 
-def _is_unresolved_variable(value: Any) -> bool:
+def _is_unresolved_variable(value: object) -> bool:
     return isinstance(value, str) and is_variable_ref(value)
 
 
@@ -74,7 +73,7 @@ class DnsSoaRdata(SDLModel):
 
     @field_validator("serial", "refresh", "retry", "expire", "minimum", mode="before")
     @classmethod
-    def parse_timers(cls, v: Any, info: ValidationInfo) -> int | str:
+    def parse_timers(cls, v: object, info: ValidationInfo) -> int | str:
         return _parse_uint32_or_var(v, field_name=info.field_name)
 
 
@@ -86,7 +85,7 @@ class DnsMxRdata(SDLModel):
 
     @field_validator("preference", mode="before")
     @classmethod
-    def parse_preference(cls, v: Any) -> int | str:
+    def parse_preference(cls, v: object) -> int | str:
         return _parse_uint16_or_var(v, field_name="MX preference")
 
     @field_validator("exchange")
@@ -105,12 +104,12 @@ class DnsSrvRdata(SDLModel):
 
     @field_validator("priority", "weight", mode="before")
     @classmethod
-    def parse_uint16(cls, v: Any, info: ValidationInfo) -> int | str:
+    def parse_uint16(cls, v: object, info: ValidationInfo) -> int | str:
         return _parse_uint16_or_var(v, field_name=f"SRV {info.field_name}")
 
     @field_validator("port", mode="before")
     @classmethod
-    def parse_port(cls, v: Any) -> int | str:
+    def parse_port(cls, v: object) -> int | str:
         return _parse_port_or_var(v, field_name="SRV port")
 
     @field_validator("target")
@@ -138,7 +137,7 @@ class DnsResourceRecord(SDLModel):
 
     @field_validator("text", mode="before")
     @classmethod
-    def coerce_text(cls, v: Any) -> list[str]:
+    def coerce_text(cls, v: object) -> list[str]:
         return coerce_string_list(v)
 
     @field_validator("text")
@@ -191,12 +190,12 @@ class DnsResourceRecordSet(SDLModel):
 
     @field_validator("ttl", mode="before")
     @classmethod
-    def parse_ttl(cls, v: Any) -> int | str | None:
+    def parse_ttl(cls, v: object) -> int | str | None:
         return _parse_uint32_or_var(v, field_name="ttl") if v is not None else v
 
     @field_validator("type_code", mode="before")
     @classmethod
-    def parse_type_code(cls, v: Any) -> int | str | None:
+    def parse_type_code(cls, v: object) -> int | str | None:
         return _parse_uint16_or_var(v, field_name="type_code") if v is not None else v
 
     @field_validator("provenance", mode="before")
@@ -219,21 +218,31 @@ class DnsResourceRecordSet(SDLModel):
 
     def _validate_record_payload(self, record: DnsResourceRecord) -> None:
         if _is_unresolved_variable(self.record_type):
-            if record.address and not _is_unresolved_variable(record.address):
-                self._validate_ip_address(record.address, field_name="address")
+            self._validate_variable_record_payload(record)
             return
         if record.address:
             self._validate_address(record.address)
+        self._validate_target_payload(record)
+        self._validate_common_typed_payloads(record)
+
+    def _validate_variable_record_payload(self, record: DnsResourceRecord) -> None:
+        if record.address and not _is_unresolved_variable(record.address):
+            self._validate_ip_address(record.address, field_name="address")
+
+    def _validate_target_payload(self, record: DnsResourceRecord) -> None:
         if record.target and self.record_type not in _TARGET_RECORD_TYPES:
             raise ValueError("target typed payload is only valid on CNAME, NS, or PTR RRsets")
-        if record.soa is not None and self.record_type != DnsRecordType.SOA:
-            raise ValueError("SOA typed payload is only valid on SOA RRsets")
-        if record.mx is not None and self.record_type != DnsRecordType.MX:
-            raise ValueError("MX typed payload is only valid on MX RRsets")
-        if record.srv is not None and self.record_type != DnsRecordType.SRV:
-            raise ValueError("SRV typed payload is only valid on SRV RRsets")
-        if record.text and self.record_type != DnsRecordType.TXT:
-            raise ValueError("TXT text payload is only valid on TXT RRsets")
+
+    def _validate_common_typed_payloads(self, record: DnsResourceRecord) -> None:
+        payload_checks = (
+            (record.soa is not None, DnsRecordType.SOA, "SOA typed payload is only valid on SOA RRsets"),
+            (record.mx is not None, DnsRecordType.MX, "MX typed payload is only valid on MX RRsets"),
+            (record.srv is not None, DnsRecordType.SRV, "SRV typed payload is only valid on SRV RRsets"),
+            (bool(record.text), DnsRecordType.TXT, "TXT text payload is only valid on TXT RRsets"),
+        )
+        for is_present, expected_type, error_message in payload_checks:
+            if is_present and self.record_type != expected_type:
+                raise ValueError(error_message)
 
     def _validate_address(self, address: str) -> None:
         if self.record_type not in _ADDRESS_RECORD_TYPES:
