@@ -17,6 +17,7 @@ from .entities import flatten_entities
 from .scenario import ModuleDescriptor, Scenario
 
 if TYPE_CHECKING:
+    from .runtime_dns import RuntimeDnsService
     from .runtime_file_service import RuntimeFileService
     from .runtime_mail_service import RuntimeMailService
 
@@ -182,6 +183,57 @@ def _nested_node_database_aliases(
                     node_name=node_name,
                     prefixed_node=prefixed_node,
                     dbsvc=dbsvc,
+                )
+            )
+    return aliases
+
+
+def _dns_service_aliases(
+    *,
+    node_name: str,
+    prefixed_node: str,
+    service: RuntimeDnsService,
+) -> dict[str, str]:
+    """Aliases for one DNS service, its zones, and contained RRsets."""
+    service_id = getattr(service, "dns_service_id", "")
+    if not service_id:
+        return {}
+    bare_base = f"nodes.{node_name}.runtime.dns_services.{service_id}"
+    prefixed_base = f"nodes.{prefixed_node}.runtime.dns_services.{service_id}"
+    aliases: dict[str, str] = {bare_base: prefixed_base}
+    for zone in getattr(service, "zones", []):
+        zone_id = getattr(zone, "zone_id", "")
+        if not zone_id:
+            continue
+        bare_zone = f"{bare_base}.zones.{zone_id}"
+        prefixed_zone = f"{prefixed_base}.zones.{zone_id}"
+        aliases[bare_zone] = prefixed_zone
+        for rrset in getattr(zone, "rrsets", []):
+            rrset_id = getattr(rrset, "rrset_id", "")
+            if rrset_id:
+                aliases[f"{bare_zone}.rrsets.{rrset_id}"] = f"{prefixed_zone}.rrsets.{rrset_id}"
+    return aliases
+
+
+def _nested_node_dns_aliases(
+    scenario: Scenario,
+    node_rename_map: Mapping[str, str],
+) -> dict[str, str]:
+    """Qualified DNS refs ``nodes.<vm>.runtime.dns_services.<id>[...]``."""
+    aliases: dict[str, str] = {}
+    for node_name, node in scenario.nodes.items():
+        prefixed_node = node_rename_map.get(node_name, node_name)
+        if prefixed_node == node_name:
+            continue
+        runtime = getattr(node, "runtime", None)
+        if runtime is None:
+            continue
+        for service in getattr(runtime, "dns_services", []):
+            aliases.update(
+                _dns_service_aliases(
+                    node_name=node_name,
+                    prefixed_node=prefixed_node,
+                    service=service,
                 )
             )
     return aliases
@@ -447,6 +499,7 @@ def symbol_index(
     named.update(_nested_node_service_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_application_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_database_aliases(scenario, section_maps.get("nodes", {})))
+    named.update(_nested_node_dns_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_identity_authority_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_file_service_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_mail_service_aliases(scenario, section_maps.get("nodes", {})))

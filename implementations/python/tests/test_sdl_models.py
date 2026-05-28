@@ -24,6 +24,13 @@ from aces.core.sdl.nodes import (
     DatabaseSetting,
     DatabaseSettingProvenance,
     DatabaseTable,
+    DnsRecordClass,
+    DnsRecordType,
+    DnsResourceRecordSet,
+    DnsRuntimeSetting,
+    DnssecValidationMode,
+    DnsServerImplementation,
+    DnsServiceRole,
     DockerfileInstruction,
     DockerfileInstructionKind,
     ImageAttestation,
@@ -3173,6 +3180,307 @@ class TestRuntimeApplicationSurface:
                 path="/a",
                 methods=["GET"],
                 templates=["/app/t.html", "/app/t.html"],
+            )
+
+
+# ---------------------------------------------------------------------------
+# Runtime DNS service logical-state inventory (ADR-039)
+# ---------------------------------------------------------------------------
+
+
+class TestRuntimeDnsService:
+    def test_vm_runtime_dns_service_inventory(self):
+        n = Node(
+            type="vm",
+            services=[
+                {"port": 53, "protocol": "udp", "name": "dns-udp"},
+                {"port": 53, "protocol": "tcp", "name": "dns-tcp"},
+            ],
+            runtime={
+                "filesystem_inventory": [
+                    {"path": "/etc/bind/named.conf", "entry_type": "file"},
+                    {"path": "/etc/bind/db.techvault.local", "entry_type": "file"},
+                    {"path": "/var/log/named/query.log", "entry_type": "file"},
+                ],
+                "dns_services": [
+                    {
+                        "dns_service_id": "techvault-bind",
+                        "service": "dns-udp",
+                        "implementation": "BIND",
+                        "version": "BIND 9.18.39-0ubuntu0.22.04.3-Ubuntu",
+                        "roles": ["authoritative", "recursive-resolver"],
+                        "configuration_file_refs": ["/etc/bind/named.conf"],
+                        "log_file_refs": ["/var/log/named/query.log"],
+                        "resolver_policy": {
+                            "recursion_enabled": True,
+                            "allow_recursion": ["172.20.0.0/16"],
+                            "forwarders": [{"address": "8.8.8.8", "port": 53}],
+                            "forwarding_policy": "first",
+                            "dnssec_validation": "auto",
+                            "query_logging": True,
+                            "default_logging": True,
+                        },
+                        "dynamic_update": {"enabled": False},
+                        "zones": [
+                            {
+                                "zone_id": "techvault-local",
+                                "name": "techvault.local.",
+                                "kind": "primary",
+                                "purpose": "forward",
+                                "zone_class": "IN",
+                                "provenance": "axfr",
+                                "zone_file_refs": ["/etc/bind/db.techvault.local"],
+                                "transfer": {
+                                    "axfr_enabled": True,
+                                    "ixfr_enabled": False,
+                                    "allowed_clients": ["172.20.0.0/16"],
+                                },
+                                "rrsets": [
+                                    {
+                                        "rrset_id": "soa",
+                                        "owner": "techvault.local.",
+                                        "record_type": "SOA",
+                                        "zone_class": "IN",
+                                        "ttl": 3600,
+                                        "records": [
+                                            {
+                                                "soa": {
+                                                    "mname": "ns1.techvault.local.",
+                                                    "rname": "hostmaster.techvault.local.",
+                                                    "serial": 2026010101,
+                                                    "refresh": 3600,
+                                                    "retry": 600,
+                                                    "expire": 604800,
+                                                    "minimum": 300,
+                                                },
+                                                "rdata": (
+                                                    "ns1.techvault.local. hostmaster.techvault.local. "
+                                                    "2026010101 3600 600 604800 300"
+                                                ),
+                                            }
+                                        ],
+                                    },
+                                    {
+                                        "rrset_id": "mx",
+                                        "owner": "techvault.local.",
+                                        "record_type": "MX",
+                                        "ttl": 300,
+                                        "records": [{"mx": {"preference": 10, "exchange": "mail.techvault.local."}}],
+                                    },
+                                    {
+                                        "rrset_id": "ldap-srv",
+                                        "owner": "_ldap._tcp.techvault.local.",
+                                        "record_type": "SRV",
+                                        "ttl": 300,
+                                        "records": [
+                                            {
+                                                "srv": {
+                                                    "priority": 0,
+                                                    "weight": 100,
+                                                    "port": 389,
+                                                    "target": "ad.techvault.local.",
+                                                }
+                                            }
+                                        ],
+                                    },
+                                    {
+                                        "rrset_id": "web-a",
+                                        "owner": "web.techvault.local.",
+                                        "record_type": "A",
+                                        "ttl": 300,
+                                        "records": [{"address": "172.20.10.20"}],
+                                    },
+                                    {
+                                        "rrset_id": "root-txt",
+                                        "owner": "techvault.local.",
+                                        "record_type": "TXT",
+                                        "ttl": 300,
+                                        "records": [{"text": ["site=techvault"]}],
+                                    },
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            },
+        )
+
+        service = n.runtime.dns_services[0]
+        assert service.dns_service_id == "techvault-bind"
+        assert service.implementation == DnsServerImplementation.BIND
+        assert service.roles == [DnsServiceRole.AUTHORITATIVE, DnsServiceRole.RECURSIVE_RESOLVER]
+        assert service.resolver_policy.dnssec_validation == DnssecValidationMode.AUTO
+        assert service.resolver_policy.recursion_enabled is True
+        assert service.resolver_policy.allow_recursion == ["172.20.0.0/16"]
+        assert service.resolver_policy.forwarding_policy == "first"
+        assert service.resolver_policy.query_logging is True
+        assert service.resolver_policy.default_logging is True
+        assert len(service.resolver_policy.forwarders) == 1
+        assert service.resolver_policy.forwarders[0].address == "8.8.8.8"
+        assert service.resolver_policy.forwarders[0].port == 53
+        assert service.dynamic_update is not None
+        assert service.dynamic_update.enabled is False
+        zone = service.zones[0]
+        assert zone.zone_class == DnsRecordClass.IN
+        assert zone.transfer is not None
+        assert zone.transfer.axfr_enabled is True
+        assert zone.transfer.ixfr_enabled is False
+        assert zone.transfer.allowed_clients == ["172.20.0.0/16"]
+        assert zone.rrsets[0].record_type == DnsRecordType.SOA
+        assert zone.rrsets[0].records[0].soa.serial == 2026010101
+        assert zone.rrsets[1].records[0].mx.preference == 10
+        assert zone.rrsets[2].records[0].srv.port == 389
+        assert zone.rrsets[3].records[0].address == "172.20.10.20"
+
+    def test_dns_rrset_ttl_range_enforced(self):
+        with pytest.raises(ValidationError, match="ttl must be >= 0"):
+            DnsResourceRecordSet(
+                rrset_id="web-a",
+                owner="web.example.test.",
+                record_type="A",
+                ttl=-1,
+                records=[{"address": "192.0.2.10"}],
+            )
+
+    def test_dns_a_record_requires_ipv4_address_when_typed_address_present(self):
+        with pytest.raises(ValidationError, match="A record address must be a valid IPv4 address"):
+            DnsResourceRecordSet(
+                rrset_id="web-a",
+                owner="web.example.test.",
+                record_type="A",
+                ttl=300,
+                records=[{"address": "2001:db8::10"}],
+            )
+
+    def test_dns_a_record_accepts_unresolved_address_placeholder(self):
+        rrset = DnsResourceRecordSet(
+            rrset_id="web-a",
+            owner="web.example.test.",
+            record_type="A",
+            ttl=300,
+            records=[{"address": "${web_ip}"}],
+        )
+
+        assert rrset.records[0].address == "${web_ip}"
+
+    @pytest.mark.parametrize(
+        "record",
+        [
+            {"address": "${web_ip}"},
+            {"target": "${dns_target}"},
+            {"text": ["${txt_value}"]},
+            {
+                "soa": {
+                    "mname": "${soa_mname}",
+                    "rname": "${soa_rname}",
+                    "serial": "${soa_serial}",
+                    "refresh": "${soa_refresh}",
+                    "retry": "${soa_retry}",
+                    "expire": "${soa_expire}",
+                    "minimum": "${soa_minimum}",
+                }
+            },
+            {"mx": {"preference": "${mx_preference}", "exchange": "${mx_exchange}"}},
+            {
+                "srv": {
+                    "priority": "${srv_priority}",
+                    "weight": "${srv_weight}",
+                    "port": "${srv_port}",
+                    "target": "${srv_target}",
+                }
+            },
+        ],
+    )
+    def test_dns_variable_record_type_defers_typed_payload_matching(self, record):
+        rrset = DnsResourceRecordSet(
+            rrset_id="runtime-record",
+            owner="${dns_owner}",
+            record_type="${dns_record_type}",
+            type_code="${dns_type_code}",
+            ttl="${dns_ttl}",
+            records=[record],
+        )
+
+        assert rrset.record_type == "${dns_record_type}"
+
+    def test_dns_target_payload_accepts_target_style_records(self):
+        rrset = DnsResourceRecordSet(
+            rrset_id="ns",
+            owner="example.test.",
+            record_type="NS",
+            ttl=300,
+            records=[{"target": "ns1.example.test."}],
+        )
+
+        assert rrset.records[0].target == "ns1.example.test."
+
+    def test_dns_target_payload_rejects_unrelated_record_types(self):
+        with pytest.raises(ValidationError, match="target typed payload is only valid"):
+            DnsResourceRecordSet(
+                rrset_id="web-a",
+                owner="web.example.test.",
+                record_type="A",
+                ttl=300,
+                records=[{"target": "ns1.example.test."}],
+            )
+
+    def test_dns_unknown_record_type_preserves_type_code_and_rdata(self):
+        rrset = DnsResourceRecordSet(
+            rrset_id="https",
+            owner="web.example.test.",
+            record_type="other",
+            type_code=65,
+            ttl=300,
+            records=[{"rdata": "1 . alpn=h2,h3"}],
+        )
+
+        assert rrset.record_type == DnsRecordType.OTHER
+        assert rrset.type_code == 65
+        assert rrset.records[0].rdata == "1 . alpn=h2,h3"
+
+    @pytest.mark.parametrize("name", ["tsig_secret", "api_key", "update_key", "rndc.key", "key"])
+    def test_dns_secret_bearing_setting_must_omit_raw_value(self, name):
+        with pytest.raises(ValidationError, match="must omit its raw value"):
+            DnsRuntimeSetting(name=name, value="base64secret", value_classification="plain")
+
+    def test_dns_setting_secret_name_detection_is_boundary_aware(self):
+        setting = DnsRuntimeSetting(name="keyboard_layout", value="us", value_classification="plain")
+
+        assert setting.value == "us"
+
+    def test_duplicate_dns_rrset_binding_rejected(self):
+        with pytest.raises(ValidationError, match="Duplicate DNS RRset binding"):
+            Node(
+                type="vm",
+                runtime={
+                    "dns_services": [
+                        {
+                            "dns_service_id": "dns",
+                            "zones": [
+                                {
+                                    "zone_id": "example",
+                                    "name": "example.test.",
+                                    "rrsets": [
+                                        {
+                                            "rrset_id": "web-a",
+                                            "owner": "web.example.test.",
+                                            "record_type": "A",
+                                            "ttl": 300,
+                                            "records": [{"address": "192.0.2.10"}],
+                                        },
+                                        {
+                                            "rrset_id": "web-a-alt",
+                                            "owner": "web.example.test.",
+                                            "record_type": "A",
+                                            "ttl": 300,
+                                            "records": [{"address": "192.0.2.11"}],
+                                        },
+                                    ],
+                                }
+                            ],
+                        }
+                    ]
+                },
             )
 
 

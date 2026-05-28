@@ -120,6 +120,55 @@ and Swiler plus Oberkampf/Roy/Sargent on
 should state what it can preserve and compare rather than smuggle
 backend/vendor assumptions into an ambiguous field.
 
+## DNS Service Runtime Semantics
+
+The `runtime.dns_services` surface is issue #426's response to an observed
+gap for DNS authoritative and recursive runtime inventory. It is not a clone
+of any one DNS server configuration language, provider API, or DNS telemetry
+format.
+
+ACES relies on prior work in four ways:
+
+- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+  model scenario topology, deployable services/features, and validation or
+  deployment concerns. They do not expose a portable first-class DNS zone,
+  RRset, resolver-policy, or DNSSEC-posture inventory that ACES could reuse
+  directly, so ACES introduces a typed node-scoped runtime surface rather than
+  encoding the state inside `Node.services`, `runtime.applications`,
+  `runtime.network`, or raw content files.
+- **Primary DNS standards:** DNS concepts and record wire semantics come from
+  [RFC 1035](https://www.rfc-editor.org/rfc/rfc1035). RRset grouping follows
+  [RFC 2181](https://www.rfc-editor.org/rfc/rfc2181). Zone transfer and
+  incremental transfer posture are informed by
+  [RFC 5936](https://www.rfc-editor.org/rfc/rfc5936) and
+  [RFC 1995](https://www.rfc-editor.org/rfc/rfc1995). DNSSEC posture follows
+  [RFC 4033](https://www.rfc-editor.org/rfc/rfc4033),
+  [RFC 4034](https://www.rfc-editor.org/rfc/rfc4034), and
+  [RFC 4035](https://www.rfc-editor.org/rfc/rfc4035). SRV RDATA follows
+  [RFC 2782](https://www.rfc-editor.org/rfc/rfc2782), dynamic update posture
+  follows [RFC 2136](https://www.rfc-editor.org/rfc/rfc2136), and extension
+  types are bounded by the
+  [IANA DNS Parameters](https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml)
+  registry. ACES adapts shared protocol concepts rather than importing raw
+  zone-file syntax.
+- **Server and configuration precedents:** BIND, NSD, Knot DNS, PowerDNS,
+  CoreDNS, Terraform DNS providers, DNSControl, octoDNS, Kubernetes DNS, and
+  Consul DNS show the recurring implementation facts ACES must preserve:
+  authoritative zones, RRsets, forwarders, recursion controls, transfer policy,
+  dynamic updates, DNSSEC validation/signing posture, and evidence sources.
+  These references are implementation lineage, not schema authority.
+- **Evidence and downstream consumers:** OCSF/ECS DNS fields, Zeek DNS logs,
+  STIX domain-name objects, passive DNS, provider APIs, AXFR/IXFR captures,
+  and backend inspect payloads remain evidence or downstream translation
+  concerns. ACES records bounded runtime inventory and evidence refs; it does
+  not make query telemetry or raw server config the SDL model.
+
+Observed DNS names are preserved as data and are not case-folded. Portable
+ACES references are stable `dns_service_id`, `zone_id`, and `rrset_id` symbols.
+This follows the same validation posture used elsewhere in SDL: the model
+states which protocol facts it can preserve, and it leaves server-specific
+syntax as evidence rather than smuggling that syntax into untyped fields.
+
 ## File-Sharing And Resource-Access Semantics
 
 The `runtime.file_services` surface is issue #421's response to a gap

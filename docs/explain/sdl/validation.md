@@ -39,8 +39,9 @@ becoming a validator-only interpretation of the SDL.
 |------|----------------|
 | `verify_content` | Content targets reference existing VM nodes. |
 | `verify_accounts` | Account nodes reference existing VM nodes. |
-| `verify_relationships` | Source and target resolve to any named element in any section, including variables, relationships, content item names, named service bindings, runtime identity-authority refs, and named ACL rules. Ambiguous bare refs are rejected with qualified alternatives. |
+| `verify_relationships` | Source and target resolve to any named element in any section, including variables, relationships, content item names, named service bindings, runtime identity-authority refs, runtime DNS refs, and named ACL rules. Ambiguous bare refs are rejected with qualified alternatives. |
 | `verify_runtime_identity_authorities` | Runtime identity-authority services resolve to same-node service bindings. Local relationship and policy refs resolve within the owning authority across authority, service, subject, policy, and relationship stable ids. |
+| `verify_runtime_dns_services` | Runtime DNS services resolve to same-node service bindings. Configuration, log, and zone-file refs resolve to observed runtime filesystem entries when the node has file inventory. |
 | `verify_agents` | Entity references resolve. Starting accounts and initial-knowledge accounts exist in accounts section. Allowed subnets and initial-knowledge subnets must resolve to switch-backed infrastructure entries. Initial-knowledge hosts must resolve to VM nodes. Initial-knowledge services exist in `nodes.*.services[].name`. |
 | `verify_participant_behavior` | Agent action refs resolve to declared action contracts, observation-boundary refs resolve to declared boundaries, interaction refs resolve to declared actions or targetable state, and boundary view rules/transitions resolve to declared observable, hidden, or evidence refs. |
 | `verify_objectives` | Objective actors resolve (`agent` or `entity`). Objective actions must be declared by the referenced agent. Targets resolve to named scenario elements, including qualified service/ACL refs and section-qualified top-level refs. Ambiguous bare refs are rejected with qualified alternatives. Success criteria resolve to declared conditions/metrics/evaluations/TLOs/goals. Optional windows resolve through one shared normalized analysis over stories/scripts/events/workflows/workflow-steps, must remain internally consistent, and fail closed on dangling or out-of-window refs. Objective dependencies must resolve and stay acyclic. |
@@ -89,6 +90,20 @@ against all stable ids in the authority:
 `authority_id`, `service_id`, `subject_id`, `policy_id`, and
 `relationship_id`. Provider names and external object identifiers are data, not
 reference keys.
+
+The optional `runtime.dns_services` inventory has model-local and semantic
+rules. DNS services, zones, and RRsets use stable ids, while observed DNS names
+remain data and are not case-folded. DNS service ids are unique within a node
+runtime block; zone ids are unique within a DNS service; RRset ids and
+owner/class/type bindings are unique within a zone. RRsets must have at least
+one record, TTL and type-code fields are bounded integer-or-variable values,
+`record_type: other` requires `type_code`, and typed RDATA must match the
+owning RRset type. A/AAAA typed address payloads are validated as IPv4/IPv6
+respectively. Secret-bearing DNS settings such as TSIG, RNDC, password, token,
+or private-key settings must omit raw values and use redacted/operator-secret
+classifications. DNS services may reference only services declared on the same
+node. File refs under the DNS service and its zones are checked against
+`runtime.filesystem_inventory` when that inventory is non-empty.
 
 The optional `source.build` container image provenance block carries its own
 model-local rules. Build-argument and image-default-environment names must be
@@ -202,11 +217,13 @@ The index also includes nested entity dot-paths, named service bindings
 (`nodes.<node>.services.<service_name>`), runtime identity-authority refs
 (`nodes.<node>.runtime.identity_authorities.<authority_id>` plus nested
 service, subject, policy, and relationship refs), and named ACL rules
-(`infrastructure.<infra>.acls.<acl_name>`). This means a relationship can
-reference any node, feature, condition, vulnerability, infrastructure entry,
-metric, evaluation, TLO, goal, entity (including nested), inject, event,
-script, story, content entry, content item, account, agent, objective,
-workflow, relationship, variable, named service binding, runtime
-identity-authority object, or named ACL rule. When a bare ref maps to multiple
-elements, validation fails and asks the author to use one of the qualified
-alternatives.
+(`infrastructure.<infra>.acls.<acl_name>`). Runtime DNS refs are also indexed:
+`nodes.<node>.runtime.dns_services.<dns_service_id>`,
+`.zones.<zone_id>`, and `.zones.<zone_id>.rrsets.<rrset_id>`. This means a
+relationship can reference any node, feature, condition, vulnerability,
+infrastructure entry, metric, evaluation, TLO, goal, entity (including nested),
+inject, event, script, story, content entry, content item, account, agent,
+objective, workflow, relationship, variable, named service binding, runtime
+identity-authority object, runtime DNS object, or named ACL rule. When a bare
+ref maps to multiple elements, validation fails and asks the author to use one
+of the qualified alternatives.

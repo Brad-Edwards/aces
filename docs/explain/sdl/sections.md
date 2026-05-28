@@ -368,6 +368,47 @@ nodes:
             - name: password_encryption     # secret-bearing settings omit value
               value_classification: redacted
               provenance: operator_override
+      dns_services:                     # observed DNS authoritative/resolver state
+        - dns_service_id: techvault-bind
+          service: dns                  # owning same-node Node.services[].name
+          implementation: bind
+          roles: [authoritative, recursive_resolver]
+          configuration_file_refs: [/etc/bind/named.conf]
+          resolver_policy:
+            recursion_enabled: true
+            allow_recursion: [10.0.0.0/24]
+            dnssec_validation: auto
+            forwarders:
+              - {address: 8.8.8.8, port: 53, transport: udp}
+          zones:
+            - zone_id: techvault-local
+              name: techvault.local.
+              purpose: forward
+              zone_file_refs: [/etc/bind/db.techvault.local]
+              rrsets:
+                - rrset_id: root-soa
+                  owner: techvault.local.
+                  record_type: soa
+                  ttl: 3600
+                  records:
+                    - soa:
+                        mname: ns1.techvault.local.
+                        rname: hostmaster.techvault.local.
+                        serial: 2026052801
+                        refresh: 3600
+                        retry: 600
+                        expire: 604800
+                        minimum: 300
+                - rrset_id: web-a
+                  owner: web.techvault.local.
+                  record_type: a
+                  ttl: 300
+                  records:
+                    - {address: 10.0.0.20}
+          settings:
+            - name: tsig_secret          # secret-bearing settings omit value
+              value_classification: redacted
+              provenance: operator_override
       identity_authorities:             # observed directory/domain/IdP/IAM state
         - authority_id: techvault-domain
           kind: domain
@@ -428,7 +469,7 @@ participant-observable and analysis-relevant runtime state that is distinct
 from authored deployment intent and top-level authored declarations such as
 feature placement or service bindings; it does not exclude host-published
 bindings, application routes, daemon policy, databases, identity authorities,
-or other participant-interactable state merely because the evidence came from
+DNS service logical state, or other participant-interactable state merely because the evidence came from
 Docker, Compose, a scanner, or a backend inspector. Mounts describe realized
 filesystem attachments, including filesystem type, propagation, stability,
 whether a backend generated the source, and sensitivity classifications for
@@ -584,6 +625,24 @@ to the runtime application and the database service or logical database, and a
 typed `database_access` block keeps the access `role_ref` and `auth_method`
 structurally validated (see
 [ADR-029](../../decisions/adrs/adr-029-database-logical-state-runtime-surface.md)).
+
+`runtime.dns_services` records observed DNS logical and protocol state hosted
+by the node: authoritative zones, RRsets, typed common RDATA, resolver policy,
+forwarders, DNSSEC validation posture, dynamic-update posture, logging posture,
+bounded settings, and evidence refs. It is distinct from `Node.services`
+(transport listeners such as UDP/TCP 53), `runtime.container` resolver client
+options, `runtime.network` endpoint aliases/generated DNS names, HTTP
+applications, filesystem evidence, and generic relationships. Each service has
+a stable `dns_service_id` and optional same-node `service` ref. Zones use
+stable `zone_id` values and observed DNS names. `rrsets` group records by
+owner, class, type, and TTL; typed payloads exist for SOA, MX, SRV, TXT, A,
+and AAAA, with target/rdata fields and an `other` + `type_code` path for
+additional IANA RR types. `configuration_file_refs`, `log_file_refs`, and
+`zone_file_refs` are checked against `runtime.filesystem_inventory` when that
+inventory is non-empty. Fully qualified refs such as
+`nodes.dns.runtime.dns_services.bind.zones.corp.rrsets.web-a` participate in
+relationships, generic reference validation, and module import rewriting (see
+[ADR-039](../../decisions/adrs/adr-039-dns-service-runtime-inventory.md)).
 
 `runtime.mail_services` records the participant-observable mail-server logical
 state, distinct from transport-level `services`, host publication in
@@ -949,8 +1008,10 @@ relationships, content item `name` values, named service bindings
 (`nodes.<node>.services.<service_name>`), runtime identity-authority refs
 (`nodes.<node>.runtime.identity_authorities.<authority_id>` and nested
 `.services.<service_id>`, `.subjects.<subject_id>`, `.policies.<policy_id>`,
-or `.relationships.<relationship_id>` refs), and named ACL rules
-(`infrastructure.<infra>.acls.<acl_name>`).
+or `.relationships.<relationship_id>` refs), runtime DNS refs
+(`nodes.<node>.runtime.dns_services.<dns_service_id>` and nested
+`.zones.<zone_id>` or `.zones.<zone_id>.rrsets.<rrset_id>` refs), and named
+ACL rules (`infrastructure.<infra>.acls.<acl_name>`).
 
 Bare refs like `webapp` are valid when they are unambiguous. Any top-level section key may also be referenced explicitly as `<section>.<name>`, for example `nodes.webapp`, `features.postgres`, `accounts.db-admin`, or `infrastructure.dmz-net`. Content items may be referenced as `content.<content_name>.items.<item_name>` when a bare item `name` would collide with some other named element.
 
@@ -1210,7 +1271,7 @@ variables:
 
 Variables are referenced as `${var_name}` in other sections. They are **not resolved at parse time** — resolution happens at instantiation.
 
-Full-value placeholders are currently supported in ordinary string fields, common scalar fields (counts, booleans, scores, timings, RAM/CPU, ports), many reference values, and selected leaf enum-backed property fields such as `accounts.*.password_strength`, `entities.*.role`, `nodes.*.os`, `nodes.*.asset_value.*`, `nodes.*.runtime.identity_authorities.*.kind`, identity-authority subject/policy/relationship kinds, identity-authority ports and enabled flags, `infrastructure.*.acls[*].action`, and `objectives.*.success.mode`. The semantic validator checks that `${var_name}` refers to a declared variable, and the repo-owned instantiation phase substitutes concrete values before compilation/runtime planning. User-defined mapping keys and discriminant/schema-shaping enum fields such as section `type` tags still need concrete values, and placeholder keys are rejected at parse time.
+Full-value placeholders are currently supported in ordinary string fields, common scalar fields (counts, booleans, scores, timings, RAM/CPU, ports), many reference values, and selected leaf enum-backed property fields such as `accounts.*.password_strength`, `entities.*.role`, `nodes.*.os`, `nodes.*.asset_value.*`, `nodes.*.runtime.identity_authorities.*.kind`, identity-authority subject/policy/relationship kinds, identity-authority ports and enabled flags, `nodes.*.runtime.dns_services.*.implementation`, DNS service roles, DNS zone kinds/purposes/classes, DNS record classes/types/provenance, DNS resolver booleans and DNSSEC validation modes, `infrastructure.*.acls[*].action`, and `objectives.*.success.mode`. The semantic validator checks that `${var_name}` refers to a declared variable, and the repo-owned instantiation phase substitutes concrete values before compilation/runtime planning. User-defined mapping keys and discriminant/schema-shaping enum fields such as section `type` tags still need concrete values, and placeholder keys are rejected at parse time.
 
 Think of variables as parameterizing **properties of declared objects**, not the object graph itself. For example, a node's hostname, a content file's text, or a subnet CIDR may be variable-backed, while top-level identifiers like `nodes.web`, `features.nginx`, or `accounts.domain-admin` must remain literal.
 

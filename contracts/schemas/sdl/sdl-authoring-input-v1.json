@@ -1119,6 +1119,903 @@
       "title": "DatabaseTable",
       "type": "object"
     },
+    "DnsDynamicUpdatePolicy": {
+      "additionalProperties": false,
+      "description": "Observed dynamic-update posture without raw update credentials.",
+      "properties": {
+        "allowed_clients": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Clients",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "key_names": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Key Names",
+          "type": "array"
+        },
+        "policy": {
+          "default": "",
+          "title": "Policy",
+          "type": "string"
+        }
+      },
+      "title": "DnsDynamicUpdatePolicy",
+      "type": "object"
+    },
+    "DnsForwarder": {
+      "additionalProperties": false,
+      "description": "Recursive upstream resolver endpoint.",
+      "properties": {
+        "address": {
+          "title": "Address",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": 53,
+          "title": "Port"
+        },
+        "tls_server_name": {
+          "default": "",
+          "title": "Tls Server Name",
+          "type": "string"
+        },
+        "transport": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsForwarderTransport"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "udp",
+          "title": "Transport"
+        }
+      },
+      "required": [
+        "address"
+      ],
+      "title": "DnsForwarder",
+      "type": "object"
+    },
+    "DnsForwarderTransport": {
+      "description": "Transport used to contact a recursive upstream.",
+      "enum": [
+        "udp",
+        "tcp",
+        "tls",
+        "https",
+        "other",
+        "unknown"
+      ],
+      "title": "DnsForwarderTransport",
+      "type": "string"
+    },
+    "DnsForwardingPolicy": {
+      "description": "How upstream forwarders are used.",
+      "enum": [
+        "first",
+        "only",
+        "random",
+        "round_robin",
+        "sequential",
+        "none",
+        "other",
+        "unknown"
+      ],
+      "title": "DnsForwardingPolicy",
+      "type": "string"
+    },
+    "DnsMxRdata": {
+      "additionalProperties": false,
+      "description": "Typed MX RDATA fields.",
+      "properties": {
+        "exchange": {
+          "title": "Exchange",
+          "type": "string"
+        },
+        "preference": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Preference"
+        }
+      },
+      "required": [
+        "preference",
+        "exchange"
+      ],
+      "title": "DnsMxRdata",
+      "type": "object"
+    },
+    "DnsRecordClass": {
+      "description": "DNS RR class.",
+      "enum": [
+        "in",
+        "ch",
+        "hs",
+        "none",
+        "any",
+        "other"
+      ],
+      "title": "DnsRecordClass",
+      "type": "string"
+    },
+    "DnsRecordProvenance": {
+      "description": "Where an observed DNS record or zone fact came from.",
+      "enum": [
+        "axfr",
+        "ixfr",
+        "query",
+        "configuration_file",
+        "zone_file",
+        "provider_api",
+        "runtime_default",
+        "operator_override",
+        "unknown",
+        "other"
+      ],
+      "title": "DnsRecordProvenance",
+      "type": "string"
+    },
+    "DnsRecordType": {
+      "description": "Common DNS RR types plus an escape hatch for IANA extensions.",
+      "enum": [
+        "a",
+        "aaaa",
+        "cname",
+        "ns",
+        "mx",
+        "ptr",
+        "soa",
+        "srv",
+        "txt",
+        "caa",
+        "ds",
+        "dnskey",
+        "rrsig",
+        "nsec",
+        "nsec3",
+        "tlsa",
+        "svcb",
+        "https",
+        "other"
+      ],
+      "title": "DnsRecordType",
+      "type": "string"
+    },
+    "DnsResolverPolicy": {
+      "additionalProperties": false,
+      "description": "Recursive/forwarding resolver policy for a DNS service.",
+      "properties": {
+        "allow_recursion": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allow Recursion",
+          "type": "array"
+        },
+        "default_logging": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Logging"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "dnssec_validation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnssecValidationMode"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Dnssec Validation"
+        },
+        "forwarders": {
+          "items": {
+            "$ref": "#/$defs/DnsForwarder"
+          },
+          "title": "Forwarders",
+          "type": "array"
+        },
+        "forwarding_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsForwardingPolicy"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Forwarding Policy"
+        },
+        "query_logging": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Logging"
+        },
+        "recursion_enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recursion Enabled"
+        }
+      },
+      "title": "DnsResolverPolicy",
+      "type": "object"
+    },
+    "DnsResourceRecord": {
+      "additionalProperties": false,
+      "description": "One observed record within an RRset.",
+      "properties": {
+        "address": {
+          "default": "",
+          "title": "Address",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "mx": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsMxRdata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rdata": {
+          "default": "",
+          "title": "Rdata",
+          "type": "string"
+        },
+        "soa": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsSoaRdata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "srv": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsSrvRdata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "target": {
+          "default": "",
+          "title": "Target",
+          "type": "string"
+        },
+        "text": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Text",
+          "type": "array"
+        }
+      },
+      "title": "DnsResourceRecord",
+      "type": "object"
+    },
+    "DnsResourceRecordSet": {
+      "additionalProperties": false,
+      "description": "Records grouped by owner name, class, type, and TTL.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsRecordProvenance"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        },
+        "record_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsRecordType"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Record Type"
+        },
+        "records": {
+          "items": {
+            "$ref": "#/$defs/DnsResourceRecord"
+          },
+          "title": "Records",
+          "type": "array"
+        },
+        "rrset_id": {
+          "title": "Rrset Id",
+          "type": "string"
+        },
+        "ttl": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ttl"
+        },
+        "type_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type Code"
+        },
+        "zone_class": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsRecordClass"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "in",
+          "title": "Zone Class"
+        }
+      },
+      "required": [
+        "rrset_id",
+        "owner",
+        "record_type"
+      ],
+      "title": "DnsResourceRecordSet",
+      "type": "object"
+    },
+    "DnsRuntimeSetting": {
+      "additionalProperties": false,
+      "description": "Bounded DNS runtime setting with provenance and redaction.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsSettingProvenance"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        },
+        "value_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Value Classification"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "DnsRuntimeSetting",
+      "type": "object"
+    },
+    "DnsServerImplementation": {
+      "description": "Portable implementation family for the observed DNS service.",
+      "enum": [
+        "bind",
+        "coredns",
+        "powerdns",
+        "knot_dns",
+        "nsd",
+        "windows_dns",
+        "dnsmasq",
+        "unbound",
+        "other",
+        "unknown"
+      ],
+      "title": "DnsServerImplementation",
+      "type": "string"
+    },
+    "DnsServiceRole": {
+      "description": "Role the DNS service performs for participants or peers.",
+      "enum": [
+        "authoritative",
+        "recursive_resolver",
+        "forwarding_resolver",
+        "caching_resolver",
+        "stub_resolver",
+        "other",
+        "unknown"
+      ],
+      "title": "DnsServiceRole",
+      "type": "string"
+    },
+    "DnsSettingProvenance": {
+      "description": "Where an observed DNS setting value came from.",
+      "enum": [
+        "configuration_file",
+        "introspection",
+        "image_default",
+        "operator_override",
+        "runtime_default",
+        "unknown",
+        "other"
+      ],
+      "title": "DnsSettingProvenance",
+      "type": "string"
+    },
+    "DnsSoaRdata": {
+      "additionalProperties": false,
+      "description": "Typed SOA RDATA fields.",
+      "properties": {
+        "expire": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Expire"
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Minimum"
+        },
+        "mname": {
+          "title": "Mname",
+          "type": "string"
+        },
+        "refresh": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Refresh"
+        },
+        "retry": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Retry"
+        },
+        "rname": {
+          "title": "Rname",
+          "type": "string"
+        },
+        "serial": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Serial"
+        }
+      },
+      "required": [
+        "mname",
+        "rname",
+        "serial",
+        "refresh",
+        "retry",
+        "expire",
+        "minimum"
+      ],
+      "title": "DnsSoaRdata",
+      "type": "object"
+    },
+    "DnsSrvRdata": {
+      "additionalProperties": false,
+      "description": "Typed SRV RDATA fields.",
+      "properties": {
+        "port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Port"
+        },
+        "priority": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Priority"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "weight": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Weight"
+        }
+      },
+      "required": [
+        "priority",
+        "weight",
+        "port",
+        "target"
+      ],
+      "title": "DnsSrvRdata",
+      "type": "object"
+    },
+    "DnsZone": {
+      "additionalProperties": false,
+      "description": "An observed authoritative or forwarding DNS zone.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsZoneKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Kind"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsRecordProvenance"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        },
+        "purpose": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsZonePurpose"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Purpose"
+        },
+        "rrsets": {
+          "items": {
+            "$ref": "#/$defs/DnsResourceRecordSet"
+          },
+          "title": "Rrsets",
+          "type": "array"
+        },
+        "transfer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsZoneTransferPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "zone_class": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsRecordClass"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "in",
+          "title": "Zone Class"
+        },
+        "zone_file_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Zone File Refs",
+          "type": "array"
+        },
+        "zone_id": {
+          "title": "Zone Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "zone_id",
+        "name"
+      ],
+      "title": "DnsZone",
+      "type": "object"
+    },
+    "DnsZoneKind": {
+      "description": "Portable zone role independent of one server's configuration grammar.",
+      "enum": [
+        "primary",
+        "secondary",
+        "stub",
+        "forward",
+        "hint",
+        "catalog",
+        "other",
+        "unknown"
+      ],
+      "title": "DnsZoneKind",
+      "type": "string"
+    },
+    "DnsZonePurpose": {
+      "description": "Semantic purpose of a zone name.",
+      "enum": [
+        "forward",
+        "reverse",
+        "service_discovery",
+        "infrastructure",
+        "other",
+        "unknown"
+      ],
+      "title": "DnsZonePurpose",
+      "type": "string"
+    },
+    "DnsZoneTransferPolicy": {
+      "additionalProperties": false,
+      "description": "Observed zone-transfer posture for a DNS zone.",
+      "properties": {
+        "allowed_clients": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Clients",
+          "type": "array"
+        },
+        "axfr_enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Axfr Enabled"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "ixfr_enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ixfr Enabled"
+        },
+        "primary_servers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Primary Servers",
+          "type": "array"
+        },
+        "secondary_servers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Secondary Servers",
+          "type": "array"
+        }
+      },
+      "title": "DnsZoneTransferPolicy",
+      "type": "object"
+    },
+    "DnssecValidationMode": {
+      "description": "Recursive DNSSEC validation posture.",
+      "enum": [
+        "enabled",
+        "disabled",
+        "auto",
+        "permissive",
+        "unknown",
+        "other"
+      ],
+      "title": "DnssecValidationMode",
+      "type": "string"
+    },
     "DockerfileInstruction": {
       "additionalProperties": false,
       "description": "A structured record of one container build-recipe instruction.\n\nThe instruction is kept as a typed kind plus tokenized ``arguments``\nrather than raw recipe text: raw Dockerfile/shell syntax can contain\n``${...}`` strings that collide with ACES variable substitution.",
@@ -4355,6 +5252,13 @@
           "title": "Dependency Manifests",
           "type": "array"
         },
+        "dns_services": {
+          "items": {
+            "$ref": "#/$defs/RuntimeDnsService"
+          },
+          "title": "Dns Services",
+          "type": "array"
+        },
         "environment": {
           "items": {
             "$ref": "#/$defs/RuntimeEnvironmentVariable"
@@ -4923,6 +5827,117 @@
         "container_path"
       ],
       "title": "RuntimeDeviceMapping",
+      "type": "object"
+    },
+    "RuntimeDnsService": {
+      "additionalProperties": false,
+      "description": "An observed DNS service hosted by a node.",
+      "properties": {
+        "configuration_file_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Configuration File Refs",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "dns_service_id": {
+          "title": "Dns Service Id",
+          "type": "string"
+        },
+        "dynamic_update": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsDynamicUpdatePolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "implementation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsServerImplementation"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Implementation"
+        },
+        "log_file_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Log File Refs",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "resolver_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DnsResolverPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "roles": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/DnsServiceRole"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "title": "Roles",
+          "type": "array"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        },
+        "settings": {
+          "items": {
+            "$ref": "#/$defs/DnsRuntimeSetting"
+          },
+          "title": "Settings",
+          "type": "array"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        },
+        "zones": {
+          "items": {
+            "$ref": "#/$defs/DnsZone"
+          },
+          "title": "Zones",
+          "type": "array"
+        }
+      },
+      "required": [
+        "dns_service_id"
+      ],
+      "title": "RuntimeDnsService",
       "type": "object"
     },
     "RuntimeEnvironmentValueClassification": {

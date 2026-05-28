@@ -3332,6 +3332,101 @@ class TestVerifyRuntimeDatabaseServices:
         assert any("grant object_ref 'users' is not a database" in e for e in errors)
 
 
+class TestVerifyRuntimeDnsServices:
+    def _node_with_dns(self, **dns_overrides):
+        dns_service = {
+            "dns_service_id": "techvault-dns",
+            "service": "dns",
+            "implementation": "bind",
+            "roles": ["authoritative"],
+            "configuration_file_refs": ["/etc/bind/named.conf"],
+            "zones": [
+                {
+                    "zone_id": "techvault-local",
+                    "name": "techvault.local.",
+                    "zone_file_refs": ["/etc/bind/db.techvault.local"],
+                    "rrsets": [
+                        {
+                            "rrset_id": "web-a",
+                            "owner": "web.techvault.local.",
+                            "record_type": "a",
+                            "ttl": 300,
+                            "records": [{"address": "172.20.10.20"}],
+                        }
+                    ],
+                }
+            ],
+        }
+        dns_service.update(dns_overrides)
+        return {
+            "type": "vm",
+            "services": [{"port": 53, "protocol": "udp", "name": "dns"}],
+            "runtime": {
+                "filesystem_inventory": [
+                    {"path": "/etc/bind/named.conf", "entry_type": "file"},
+                    {"path": "/etc/bind/db.techvault.local", "entry_type": "file"},
+                ],
+                "dns_services": [dns_service],
+            },
+        }
+
+    def test_dns_service_with_same_node_service_is_valid(self):
+        s = _make_scenario(nodes={"dns": self._node_with_dns()})
+        assert _validate(s) == []
+
+    def test_dns_service_qualified_same_node_ref_is_valid(self):
+        s = _make_scenario(nodes={"dns": self._node_with_dns(service="nodes.dns.services.dns")})
+        assert _validate(s) == []
+
+    def test_dns_service_owning_service_must_be_same_node(self):
+        node = self._node_with_dns(service="nodes.other.services.dns")
+        s = _make_scenario(
+            nodes={
+                "dns": node,
+                "other": {"type": "vm", "services": [{"port": 53, "protocol": "udp", "name": "dns"}]},
+            }
+        )
+        errors = _validate(s)
+        assert any("must reference a service on the same node" in e for e in errors)
+
+    def test_dns_service_undefined_owning_service_rejected(self):
+        s = _make_scenario(nodes={"dns": self._node_with_dns(service="ghost")})
+        errors = _validate(s)
+        assert any("references undefined service 'ghost'" in e for e in errors)
+
+    def test_dns_file_refs_resolve_to_runtime_filesystem_inventory_when_present(self):
+        node = self._node_with_dns(configuration_file_refs=["/etc/bind/missing.conf"])
+        s = _make_scenario(nodes={"dns": node})
+        errors = _validate(s)
+        assert any("configuration_file_refs ref '/etc/bind/missing.conf' does not resolve" in e for e in errors)
+
+    def test_relationship_target_to_dns_service_zone_and_rrset_is_valid(self):
+        s = _make_scenario(
+            nodes={
+                "dns": self._node_with_dns(),
+                "client": {"type": "vm", "services": [{"port": 443, "name": "https"}]},
+            },
+            relationships={
+                "client-uses-dns": {
+                    "type": "connects_to",
+                    "source": "nodes.client",
+                    "target": "nodes.dns.runtime.dns_services.techvault-dns",
+                },
+                "zone-authority": {
+                    "type": "depends_on",
+                    "source": "nodes.dns.runtime.dns_services.techvault-dns",
+                    "target": "nodes.dns.runtime.dns_services.techvault-dns.zones.techvault-local",
+                },
+                "web-record": {
+                    "type": "depends_on",
+                    "source": "nodes.dns.runtime.dns_services.techvault-dns.zones.techvault-local",
+                    "target": "nodes.dns.runtime.dns_services.techvault-dns.zones.techvault-local.rrsets.web-a",
+                },
+            },
+        )
+        assert _validate(s) == []
+
+
 class TestVerifyRelationshipDatabaseAccess:
     def _scenario_with_app_and_db(self, **rel_overrides):
         rel = {
