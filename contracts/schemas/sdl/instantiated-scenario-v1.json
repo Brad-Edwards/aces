@@ -3615,7 +3615,7 @@
     },
     "Relationship": {
       "additionalProperties": false,
-      "description": "A typed directed edge between two named scenario elements.\n\nSource and target can reference any named element in the scenario:\nnodes, features, accounts, entities, or infrastructure entries.\nThe validator checks that both endpoints resolve.\n\nThe ``properties`` dict carries type-specific metadata (e.g.,\n``trust_type: parent-child`` for AD trusts, ``protocol: SAML``\nfor federation). It's a flat dict rather than typed sub-models\nbecause relationship properties vary widely and we don't want\nto gate expressiveness on pre-modeling every variant.\n\n``database_access`` is the one typed exception: when an application\nconnects to a database, the access role and auth method need\nstructural validation rather than prose, so they get a typed block\n(ADR-029 \u00a74).",
+      "description": "A typed directed edge between two named scenario elements.\n\nSource and target can reference any named element in the scenario:\nnodes, features, accounts, entities, or infrastructure entries.\nThe validator checks that both endpoints resolve.\n\nThe ``properties`` dict carries type-specific metadata (e.g.,\n``trust_type: parent-child`` for AD trusts, ``protocol: SAML``\nfor federation). It's a flat dict rather than typed sub-models\nbecause relationship properties vary widely and we don't want\nto gate expressiveness on pre-modeling every variant.\n\n``database_access`` and ``mail_access`` are typed exceptions where\nprotocol/auth details need structural validation rather than prose.",
       "properties": {
         "database_access": {
           "anyOf": [
@@ -3632,6 +3632,17 @@
           "default": "",
           "title": "Description",
           "type": "string"
+        },
+        "mail_access": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipMailAccess"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "properties": {
           "additionalProperties": {
@@ -3688,6 +3699,70 @@
         }
       },
       "title": "RelationshipDatabaseAccess",
+      "type": "object"
+    },
+    "RelationshipMailAccess": {
+      "additionalProperties": false,
+      "description": "Typed mail-access detail carried by a top-level relationship edge.",
+      "properties": {
+        "auth_mechanism": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailAuthMechanism"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Auth Mechanism"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domain_ref": {
+          "default": "",
+          "title": "Domain Ref",
+          "type": "string"
+        },
+        "listener_ref": {
+          "default": "",
+          "title": "Listener Ref",
+          "type": "string"
+        },
+        "mailbox_ref": {
+          "default": "",
+          "title": "Mailbox Ref",
+          "type": "string"
+        },
+        "protocol": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailProtocol"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Protocol"
+        },
+        "tls_mode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailTlsMode"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Tls Mode"
+        }
+      },
+      "title": "RelationshipMailAccess",
       "type": "object"
     },
     "RelationshipType": {
@@ -4347,6 +4422,13 @@
             }
           ],
           "default": null
+        },
+        "mail_services": {
+          "items": {
+            "$ref": "#/$defs/RuntimeMailService"
+          },
+          "title": "Mail Services",
+          "type": "array"
         },
         "mounts": {
           "items": {
@@ -6612,6 +6694,862 @@
       ],
       "title": "RuntimeLocalUser",
       "type": "object"
+    },
+    "RuntimeMailAlias": {
+      "additionalProperties": false,
+      "description": "A service-local mailbox alias or forwarding address.",
+      "properties": {
+        "address": {
+          "default": "",
+          "title": "Address",
+          "type": "string"
+        },
+        "alias_id": {
+          "title": "Alias Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domain_ref": {
+          "default": "",
+          "title": "Domain Ref",
+          "type": "string"
+        },
+        "external_targets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "External Targets",
+          "type": "array"
+        },
+        "target_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Target Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "alias_id"
+      ],
+      "title": "RuntimeMailAlias",
+      "type": "object"
+    },
+    "RuntimeMailAuthMechanism": {
+      "description": "Portable mail authentication mechanism vocabulary.",
+      "enum": [
+        "none",
+        "plain",
+        "login",
+        "cram_md5",
+        "digest_md5",
+        "scram_sha_1",
+        "scram_sha_256",
+        "oauthbearer",
+        "external",
+        "anonymous",
+        "other"
+      ],
+      "title": "RuntimeMailAuthMechanism",
+      "type": "string"
+    },
+    "RuntimeMailComponent": {
+      "additionalProperties": false,
+      "description": "A mail-service engine/component such as Postfix, Dovecot, or a filter.",
+      "properties": {
+        "component_id": {
+          "title": "Component Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailComponentKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Kind"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "component_id",
+        "name"
+      ],
+      "title": "RuntimeMailComponent",
+      "type": "object"
+    },
+    "RuntimeMailComponentKind": {
+      "description": "Portable component kind inside a runtime mail service.",
+      "enum": [
+        "mta",
+        "mda",
+        "imap_server",
+        "pop3_server",
+        "submission_agent",
+        "mailbox_store",
+        "spam_filter",
+        "antivirus",
+        "queue_manager",
+        "relay",
+        "policy_service",
+        "other"
+      ],
+      "title": "RuntimeMailComponentKind",
+      "type": "string"
+    },
+    "RuntimeMailCredentialClassification": {
+      "description": "Semantic classification of a mailbox credential, never its raw value.",
+      "enum": [
+        "no_credential",
+        "weak",
+        "default_or_trivial",
+        "fixture",
+        "strong",
+        "redacted",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeMailCredentialClassification",
+      "type": "string"
+    },
+    "RuntimeMailDomain": {
+      "additionalProperties": false,
+      "description": "A domain known to the runtime mail service.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domain_id": {
+          "title": "Domain Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailDomainRole"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Role"
+        }
+      },
+      "required": [
+        "domain_id",
+        "name"
+      ],
+      "title": "RuntimeMailDomain",
+      "type": "object"
+    },
+    "RuntimeMailDomainRole": {
+      "description": "Role of a domain known to the mail service.",
+      "enum": [
+        "local_delivery",
+        "virtual",
+        "relay",
+        "alias",
+        "catch_all",
+        "outbound",
+        "other"
+      ],
+      "title": "RuntimeMailDomainRole",
+      "type": "string"
+    },
+    "RuntimeMailListener": {
+      "additionalProperties": false,
+      "description": "A protocol listener bound to a same-node transport service.",
+      "properties": {
+        "advertised_identity": {
+          "default": "",
+          "title": "Advertised Identity",
+          "type": "string"
+        },
+        "auth_mechanisms": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/RuntimeMailAuthMechanism"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "title": "Auth Mechanisms",
+          "type": "array"
+        },
+        "banner": {
+          "default": "",
+          "title": "Banner",
+          "type": "string"
+        },
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "component_ref": {
+          "default": "",
+          "title": "Component Ref",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "listener_id": {
+          "title": "Listener Id",
+          "type": "string"
+        },
+        "protocol": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailProtocol"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Protocol"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailListenerRole"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Role"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        },
+        "tls_mode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailTlsMode"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Tls Mode"
+        },
+        "tls_versions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tls Versions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "listener_id"
+      ],
+      "title": "RuntimeMailListener",
+      "type": "object"
+    },
+    "RuntimeMailListenerRole": {
+      "description": "Observed role a mail listener plays for the node-scoped mail service.",
+      "enum": [
+        "inbound_mx",
+        "submission",
+        "mail_access",
+        "local_delivery",
+        "relay",
+        "lmtp",
+        "sieve",
+        "monitoring",
+        "other"
+      ],
+      "title": "RuntimeMailListenerRole",
+      "type": "string"
+    },
+    "RuntimeMailMailbox": {
+      "additionalProperties": false,
+      "description": "A service-local mailbox/account record.\n\nRaw credentials are intentionally unrepresentable. The model records only\nauthentication mechanisms and credential-strength classification.",
+      "properties": {
+        "account_ref": {
+          "default": "",
+          "title": "Account Ref",
+          "type": "string"
+        },
+        "address": {
+          "title": "Address",
+          "type": "string"
+        },
+        "auth_mechanisms": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/RuntimeMailAuthMechanism"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "title": "Auth Mechanisms",
+          "type": "array"
+        },
+        "credential_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailCredentialClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Credential Classification"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domain_ref": {
+          "default": "",
+          "title": "Domain Ref",
+          "type": "string"
+        },
+        "local_part": {
+          "default": "",
+          "title": "Local Part",
+          "type": "string"
+        },
+        "local_user_ref": {
+          "default": "",
+          "title": "Local User Ref",
+          "type": "string"
+        },
+        "mailbox_id": {
+          "title": "Mailbox Id",
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailMailboxRole"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "user",
+          "title": "Role"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailMailboxStatus"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Status"
+        },
+        "store_ref": {
+          "default": "",
+          "title": "Store Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mailbox_id",
+        "address"
+      ],
+      "title": "RuntimeMailMailbox",
+      "type": "object"
+    },
+    "RuntimeMailMailboxRole": {
+      "description": "Portable role/classification of a service-local mailbox.",
+      "enum": [
+        "user",
+        "admin",
+        "service",
+        "shared",
+        "postmaster",
+        "abuse",
+        "automated",
+        "other"
+      ],
+      "title": "RuntimeMailMailboxRole",
+      "type": "string"
+    },
+    "RuntimeMailMailboxStatus": {
+      "description": "Observed account status for a service-local mailbox.",
+      "enum": [
+        "enabled",
+        "disabled",
+        "locked",
+        "suspended",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeMailMailboxStatus",
+      "type": "string"
+    },
+    "RuntimeMailMailboxStore": {
+      "additionalProperties": false,
+      "description": "Mailbox storage backing for service-local mailboxes.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailMailboxStoreKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Kind"
+        },
+        "path": {
+          "default": "",
+          "title": "Path",
+          "type": "string"
+        },
+        "store_id": {
+          "title": "Store Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "store_id"
+      ],
+      "title": "RuntimeMailMailboxStore",
+      "type": "object"
+    },
+    "RuntimeMailMailboxStoreKind": {
+      "description": "Observed mailbox storage backing kind.",
+      "enum": [
+        "maildir",
+        "mbox",
+        "database",
+        "object_store",
+        "remote",
+        "other"
+      ],
+      "title": "RuntimeMailMailboxStoreKind",
+      "type": "string"
+    },
+    "RuntimeMailProtocol": {
+      "description": "Portable protocol family for a runtime mail listener or relationship.",
+      "enum": [
+        "smtp",
+        "esmtp",
+        "submission",
+        "smtps",
+        "imap",
+        "imaps",
+        "pop3",
+        "pop3s",
+        "lmtp",
+        "sieve",
+        "other"
+      ],
+      "title": "RuntimeMailProtocol",
+      "type": "string"
+    },
+    "RuntimeMailQueue": {
+      "additionalProperties": false,
+      "description": "Shape of a mail queue; dynamic content is explicitly classified.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailQueueKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Kind"
+        },
+        "message_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message Count"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "queue_id": {
+          "title": "Queue Id",
+          "type": "string"
+        },
+        "stability": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailQueueStability"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "dynamic",
+          "title": "Stability"
+        }
+      },
+      "required": [
+        "queue_id"
+      ],
+      "title": "RuntimeMailQueue",
+      "type": "object"
+    },
+    "RuntimeMailQueueKind": {
+      "description": "Observed mail queue kind.",
+      "enum": [
+        "incoming",
+        "active",
+        "deferred",
+        "hold",
+        "bounce",
+        "corrupt",
+        "maildrop",
+        "mailbox",
+        "other"
+      ],
+      "title": "RuntimeMailQueueKind",
+      "type": "string"
+    },
+    "RuntimeMailQueueStability": {
+      "description": "Stability class for dynamic mail queue facts.",
+      "enum": [
+        "steady_state",
+        "dynamic",
+        "volatile",
+        "log_derived",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeMailQueueStability",
+      "type": "string"
+    },
+    "RuntimeMailRoutingKind": {
+      "description": "Portable mail routing/aliasing rule kind.",
+      "enum": [
+        "alias",
+        "forward",
+        "virtual_alias",
+        "relay",
+        "local_delivery",
+        "catch_all",
+        "list",
+        "other"
+      ],
+      "title": "RuntimeMailRoutingKind",
+      "type": "string"
+    },
+    "RuntimeMailRoutingRule": {
+      "additionalProperties": false,
+      "description": "A portable routing, aliasing, local-delivery, or relay rule.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailRoutingKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Kind"
+        },
+        "relay_host": {
+          "default": "",
+          "title": "Relay Host",
+          "type": "string"
+        },
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "source_ref": {
+          "default": "",
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "target_ref": {
+          "default": "",
+          "title": "Target Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule_id"
+      ],
+      "title": "RuntimeMailRoutingRule",
+      "type": "object"
+    },
+    "RuntimeMailService": {
+      "additionalProperties": false,
+      "description": "A node-scoped runtime mail-service logical inventory.",
+      "properties": {
+        "aliases": {
+          "items": {
+            "$ref": "#/$defs/RuntimeMailAlias"
+          },
+          "title": "Aliases",
+          "type": "array"
+        },
+        "components": {
+          "items": {
+            "$ref": "#/$defs/RuntimeMailComponent"
+          },
+          "title": "Components",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "domains": {
+          "items": {
+            "$ref": "#/$defs/RuntimeMailDomain"
+          },
+          "title": "Domains",
+          "type": "array"
+        },
+        "engine": {
+          "default": "",
+          "title": "Engine",
+          "type": "string"
+        },
+        "listeners": {
+          "items": {
+            "$ref": "#/$defs/RuntimeMailListener"
+          },
+          "title": "Listeners",
+          "type": "array"
+        },
+        "mailbox_stores": {
+          "items": {
+            "$ref": "#/$defs/RuntimeMailMailboxStore"
+          },
+          "title": "Mailbox Stores",
+          "type": "array"
+        },
+        "mailboxes": {
+          "items": {
+            "$ref": "#/$defs/RuntimeMailMailbox"
+          },
+          "title": "Mailboxes",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "queues": {
+          "items": {
+            "$ref": "#/$defs/RuntimeMailQueue"
+          },
+          "title": "Queues",
+          "type": "array"
+        },
+        "routing_rules": {
+          "items": {
+            "$ref": "#/$defs/RuntimeMailRoutingRule"
+          },
+          "title": "Routing Rules",
+          "type": "array"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        },
+        "service_id": {
+          "title": "Service Id",
+          "type": "string"
+        },
+        "settings": {
+          "items": {
+            "$ref": "#/$defs/RuntimeMailSetting"
+          },
+          "title": "Settings",
+          "type": "array"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "service_id"
+      ],
+      "title": "RuntimeMailService",
+      "type": "object"
+    },
+    "RuntimeMailSetting": {
+      "additionalProperties": false,
+      "description": "A mail-service runtime setting with source/provenance and redaction.",
+      "properties": {
+        "component_ref": {
+          "default": "",
+          "title": "Component Ref",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeMailSettingProvenance"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        },
+        "setting_id": {
+          "title": "Setting Id",
+          "type": "string"
+        },
+        "source_path": {
+          "default": "",
+          "title": "Source Path",
+          "type": "string"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        },
+        "value_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Value Classification"
+        }
+      },
+      "required": [
+        "setting_id",
+        "name"
+      ],
+      "title": "RuntimeMailSetting",
+      "type": "object"
+    },
+    "RuntimeMailSettingProvenance": {
+      "description": "Origin/provenance class for a mail-service configuration setting.",
+      "enum": [
+        "configuration_file",
+        "command_output",
+        "image_default",
+        "operator_override",
+        "runtime_default",
+        "environment",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeMailSettingProvenance",
+      "type": "string"
+    },
+    "RuntimeMailTlsMode": {
+      "description": "Observed TLS/STARTTLS posture for a mail listener or relationship.",
+      "enum": [
+        "none",
+        "starttls_available",
+        "starttls_required",
+        "implicit_tls",
+        "tls_terminated_upstream",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeMailTlsMode",
+      "type": "string"
     },
     "RuntimeMount": {
       "additionalProperties": false,
