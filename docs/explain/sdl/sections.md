@@ -642,7 +642,26 @@ additional IANA RR types. `configuration_file_refs`, `log_file_refs`, and
 inventory is non-empty. Fully qualified refs such as
 `nodes.dns.runtime.dns_services.bind.zones.corp.rrsets.web-a` participate in
 relationships, generic reference validation, and module import rewriting (see
-[ADR-038](../../decisions/adrs/adr-038-dns-service-runtime-inventory.md)).
+[ADR-039](../../decisions/adrs/adr-039-dns-service-runtime-inventory.md)).
+
+`runtime.mail_services` records the participant-observable mail-server logical
+state, distinct from transport-level `services`, host publication in
+`runtime.network`, HTTP application routes, filesystem evidence, and top-level
+scenario accounts. Each entry is a `RuntimeMailService` with a stable
+`service_id`, optional same-node `Node.services[].name` reference,
+engine/version/name data, and typed child records for components, listeners,
+domains, mailbox stores, mailboxes, aliases, routing rules, queues, and
+settings. `listeners` bind SMTP/ESMTP, submission, IMAP/IMAPS, POP3, LMTP,
+Sieve, or other mail protocols to same-node transport services and carry
+advertised capabilities, banners, AUTH mechanisms, and TLS/STARTTLS posture.
+`mailboxes` are service-local runtime records with address, domain/store refs,
+role/status, authentication mechanisms, and credential-strength classification;
+raw passwords and hashes are not representable. `settings` carry provenance and
+source paths, and secret-bearing setting names must omit raw values. Mail
+client, DNS, logging/SIEM, relay, and similar edges stay in top-level
+`relationships`; a typed `mail_access` block records mail protocol/auth/TLS and
+mailbox/domain/listener refs when an edge needs mail-specific semantics (see
+[ADR-038](../../decisions/adrs/adr-038-runtime-mail-service-logical-state.md)).
 
 `runtime.identity_authorities` records observed directory, domain, realm,
 identity-provider, cloud-IAM, authorization-system, and federation state. It is

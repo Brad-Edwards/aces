@@ -111,6 +111,32 @@ from .runtime_identity import (
     RuntimeSudoPrincipalKind,
     RuntimeSudoRule,
 )
+from .runtime_mail_service import (
+    RuntimeMailAlias,
+    RuntimeMailAuthMechanism,
+    RuntimeMailComponent,
+    RuntimeMailComponentKind,
+    RuntimeMailCredentialClassification,
+    RuntimeMailDomain,
+    RuntimeMailDomainRole,
+    RuntimeMailListener,
+    RuntimeMailListenerRole,
+    RuntimeMailMailbox,
+    RuntimeMailMailboxRole,
+    RuntimeMailMailboxStatus,
+    RuntimeMailMailboxStore,
+    RuntimeMailMailboxStoreKind,
+    RuntimeMailProtocol,
+    RuntimeMailQueue,
+    RuntimeMailQueueKind,
+    RuntimeMailQueueStability,
+    RuntimeMailRoutingKind,
+    RuntimeMailRoutingRule,
+    RuntimeMailService,
+    RuntimeMailSetting,
+    RuntimeMailSettingProvenance,
+    RuntimeMailTlsMode,
+)
 from .runtime_mounts import (
     RuntimeControlInterface,
     RuntimeControlInterfaceAccess,
@@ -247,6 +273,30 @@ __all__ = [
     "RuntimeLocalGroup",
     "RuntimeLocalIdentityInventory",
     "RuntimeLocalUser",
+    "RuntimeMailAlias",
+    "RuntimeMailAuthMechanism",
+    "RuntimeMailComponent",
+    "RuntimeMailComponentKind",
+    "RuntimeMailCredentialClassification",
+    "RuntimeMailDomain",
+    "RuntimeMailDomainRole",
+    "RuntimeMailListener",
+    "RuntimeMailListenerRole",
+    "RuntimeMailMailbox",
+    "RuntimeMailMailboxRole",
+    "RuntimeMailMailboxStatus",
+    "RuntimeMailMailboxStore",
+    "RuntimeMailMailboxStoreKind",
+    "RuntimeMailProtocol",
+    "RuntimeMailQueue",
+    "RuntimeMailQueueKind",
+    "RuntimeMailQueueStability",
+    "RuntimeMailRoutingKind",
+    "RuntimeMailRoutingRule",
+    "RuntimeMailService",
+    "RuntimeMailSetting",
+    "RuntimeMailSettingProvenance",
+    "RuntimeMailTlsMode",
     "RuntimeMount",
     "RuntimeMountPropagation",
     "RuntimeMountSourceKind",
@@ -503,6 +553,7 @@ class RuntimeConfiguration(SDLModel):
     local_identity: RuntimeLocalIdentityInventory | None = None
     identity_authorities: list[RuntimeIdentityAuthority] = Field(default_factory=list)
     file_services: list[RuntimeFileService] = Field(default_factory=list)
+    mail_services: list[RuntimeMailService] = Field(default_factory=list)
     network: RuntimeNetworkRealization | None = None
     applications: list[RuntimeApplicationSurface] = Field(default_factory=list)
     database_services: list[DatabaseService] = Field(default_factory=list)
@@ -537,5 +588,6 @@ class RuntimeConfiguration(SDLModel):
         )
         _reject_duplicate_keys(self.identity_authorities, attr="authority_id", label="identity authority")
         _reject_duplicate_keys(self.file_services, attr="service_id", label="file_service service_id")
+        _reject_duplicate_keys(self.mail_services, attr="service_id", label="mail_service service_id")
         _reject_duplicate_keys(self.software_components, attr="component_id", label="software component")
         return self

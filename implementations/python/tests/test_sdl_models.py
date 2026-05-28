@@ -3184,7 +3184,7 @@ class TestRuntimeApplicationSurface:
 
 
 # ---------------------------------------------------------------------------
-# Runtime DNS service logical-state inventory (ADR-038)
+# Runtime DNS service logical-state inventory (ADR-039)
 # ---------------------------------------------------------------------------
 
 

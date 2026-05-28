@@ -13,6 +13,11 @@ from pydantic import BaseModel
 
 from ._base import extract_variable_name, is_variable_ref
 from ._errors import SDLValidationError
+from ._runtime_mail_semantics import (
+    collect_qualified_mail_refs,
+    verify_relationship_mail_access,
+    verify_runtime_mail_services,
+)
 from .entities import flatten_entities
 from .infrastructure import SimpleProperties
 from .nodes import MAX_NODE_NAME_LENGTH, NodeType
@@ -289,6 +294,7 @@ class SemanticValidator:
                     refs.add(f"{base}.policies.{policy.policy_id}")
                 for relationship in authority.relationships:
                     refs.add(f"{base}.relationships.{relationship.relationship_id}")
+        refs.update(collect_qualified_mail_refs(self._s))
         return refs
 
     def _qualified_acl_refs(self) -> set[str]:
@@ -515,6 +521,7 @@ class SemanticValidator:
         self._verify_runtime_service_manager_units()
         self._verify_runtime_identity_authorities()
         self._verify_runtime_file_services()
+        verify_runtime_mail_services(self)
         self._verify_features()
         self._verify_conditions()
         self._verify_vulnerabilities()
@@ -531,6 +538,7 @@ class SemanticValidator:
         self._verify_accounts()
         self._verify_relationships()
         self._verify_relationship_database_access()
+        verify_relationship_mail_access(self)
         self._verify_agents()
         self._verify_participant_behavior()
         self._verify_objectives()

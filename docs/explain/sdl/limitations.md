@@ -36,7 +36,7 @@ grants, listeners, settings, and database-access bindings -
 DNS service logical state (authoritative zones, RRsets, typed common RDATA,
 resolver policy, forwarders, DNSSEC posture, dynamic-update posture, logging
 posture, settings, and evidence refs -
-[ADR-038](../../decisions/adrs/adr-038-dns-service-runtime-inventory.md)),
+[ADR-039](../../decisions/adrs/adr-039-dns-service-runtime-inventory.md)),
 and directory/domain/realm/IdP/IAM/federation identity-authority state
 (authority namespaces, services, subjects, policies, and typed relationships -
 [ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).

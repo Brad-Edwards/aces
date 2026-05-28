@@ -1,4 +1,4 @@
-# ADR-038: DNS Service Runtime Inventory
+# ADR-039: DNS Service Runtime Inventory
 
 ## Status
 
