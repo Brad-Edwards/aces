@@ -16,6 +16,7 @@ from pydantic import Field, field_validator
 
 from ._base import SDLModel, normalize_enum_value
 from .runtime_database import RelationshipDatabaseAccess
+from .runtime_mail_service import RelationshipMailAccess
 
 
 class RelationshipType(str, Enum):
@@ -43,10 +44,8 @@ class Relationship(SDLModel):
     because relationship properties vary widely and we don't want
     to gate expressiveness on pre-modeling every variant.
 
-    ``database_access`` is the one typed exception: when an application
-    connects to a database, the access role and auth method need
-    structural validation rather than prose, so they get a typed block
-    (ADR-029 §4).
+    ``database_access`` and ``mail_access`` are typed exceptions where
+    protocol/auth details need structural validation rather than prose.
     """
 
     type: RelationshipType
@@ -55,6 +54,7 @@ class Relationship(SDLModel):
     description: str = ""
     properties: dict[str, str] = Field(default_factory=dict)
     database_access: RelationshipDatabaseAccess | None = None
+    mail_access: RelationshipMailAccess | None = None
 
     @field_validator("type", mode="before")
     @classmethod
