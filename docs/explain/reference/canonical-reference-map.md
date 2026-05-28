@@ -50,6 +50,7 @@ material. It is an index, not a replacement for the linked artifacts.
 | Schema inventory | [`contracts/schema-publication-manifest.json`](../../../contracts/schema-publication-manifest.json) |
 | Processor API | [`docs/api/processor.rst`](../../api/processor.rst) |
 | Processor semantics API | [`docs/api/processor-semantics.rst`](../../api/processor-semantics.rst) |
+| Runtime API | [`docs/api/runtime.rst`](../../api/runtime.rst) |
 | Runtime architecture | [`docs/explain/sdl/runtime-architecture.md`](../sdl/runtime-architecture.md) |
 | Backend conformance | [`backend-conformance.md`](backend-conformance.md) |
 
@@ -69,8 +70,8 @@ material. It is an index, not a replacement for the linked artifacts.
 ## Current Materialization Notes
 
 - SDL authoring, parsing, validation, instantiation, compilation, planning,
-  control-plane APIs, published JSON schemas, and a validated non-normative
-  template/pattern library are present in the repository.
+  runtime manager/control-plane APIs, published JSON schemas, and a validated
+  non-normative template/pattern library are present in the repository.
 - Participant-implementation manifests, evidence-capture contracts, and
   provenance contract surfaces are described at the architecture level and are
   not fully materialized as published schemas.

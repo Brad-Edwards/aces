@@ -10,10 +10,11 @@ agent entry point for the participant-discoverable asset inventory
 methodology: capture evidence first, map facts to ACES only when the mapping is
 semantically correct, and leave every omission as durable evidence.
 
-The methodology remains the authority. In an APTL checkout, read
-`docs/aces/inventory/asset-inventory-methodology.md` before capture. This
-skill operationalizes that prose; it does not define a second ledger schema or
-a second secret taxonomy.
+The ACES methodology remains the authority. Read
+`docs/aces/inventory/asset-inventory-methodology.md` from the ACES repo before
+capture; when working in a downstream checkout, use that ACES document as the
+canonical source. This skill operationalizes that prose; it does not define a
+second ledger schema or a second secret taxonomy.
 
 For Docker/Compose/container-image captures, start by copying
 `scripts/capture-container-evidence-template.sh` and
@@ -39,13 +40,13 @@ commands that may expose secrets.
 
 ## Bundle Contract
 
-Produce a bundle that validates with the APTL ledger tooling:
+Produce a bundle that validates with the current APTL reference ledger tooling:
 
 - `README.md` that states scope, target identity, verification commands, and
   known limits;
 - `capture-evidence.sh` or equivalent committed capture commands, derived from
   the template for Docker/Compose assets when applicable;
-- `mapping-ledger.yaml` using the canonical APTL schema;
+- `mapping-ledger.yaml` using the current reference ledger schema;
 - `evidence/` with raw or redacted evidence files;
 - `evidence/capture-limits.txt` with one first-class limit for every skipped
   required step, declined useful-optional step, contamination boundary, or

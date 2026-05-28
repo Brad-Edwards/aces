@@ -243,6 +243,19 @@ Reviewers should ask:
 The goal is precision, not ceremony. Use the smallest adequate formalization
 that makes the semantic behavior clear and testable.
 
+## Static Analysis Alignment
+
+The Python implementation targets Python 3.11+ and uses Ruff with pyupgrade as
+the local style contract. SonarCloud is advisory but must not contradict that
+contract. Rules that require Python 2 compatibility idioms, Python 3.12-only
+generic syntax, or mechanical docstrings on every private helper are disabled in
+`sonar-project.properties` rather than encoded as source churn.
+
+Compatibility modules that intentionally re-export symbols, such as
+`aces_processor.models`, may also receive a narrow Sonar unused-import exclusion.
+Those exclusions must stay file-specific and must not hide unused imports in
+owning implementation modules.
+
 ## Current Scope
 
 This policy does not require formalizing every change.

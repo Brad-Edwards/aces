@@ -1,19 +1,18 @@
 """Runtime execution protocols."""
 
-from typing import Any, Protocol
+from __future__ import annotations
 
-from aces_processor.models import (
-    ApplyResult,
-    Diagnostic,
-    EvaluationPlan,
-    OrchestrationPlan,
+from typing import Protocol
+
+from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.participant_episode import (
     ParticipantEpisodeInitializeRequest,
     ParticipantEpisodeResetRequest,
     ParticipantEpisodeRestartRequest,
     ParticipantEpisodeTerminateRequest,
-    ProvisioningPlan,
-    RuntimeSnapshot,
 )
+from aces_contracts.planning import EvaluationPlan, OrchestrationPlan, ProvisioningPlan
+from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 
 
 class Provisioner(Protocol):
@@ -43,15 +42,15 @@ class Orchestrator(Protocol):
         """Start or refresh orchestration state."""
         ...
 
-    def status(self) -> dict[str, Any]:
+    def status(self) -> dict[str, object]:
         """Return current orchestration status."""
         ...
 
-    def results(self) -> dict[str, dict[str, Any]]:
+    def results(self) -> dict[str, dict[str, object]]:
         """Return most recent workflow execution state envelope."""
         ...
 
-    def history(self) -> dict[str, list[dict[str, Any]]]:
+    def history(self) -> dict[str, list[dict[str, object]]]:
         """Return workflow execution history events."""
         ...
 
@@ -71,15 +70,15 @@ class Evaluator(Protocol):
         """Start or refresh evaluation state."""
         ...
 
-    def status(self) -> dict[str, Any]:
+    def status(self) -> dict[str, object]:
         """Return current evaluator status."""
         ...
 
-    def results(self) -> dict[str, dict[str, Any]]:
+    def results(self) -> dict[str, dict[str, object]]:
         """Return most recent evaluation results."""
         ...
 
-    def history(self) -> dict[str, list[dict[str, Any]]]:
+    def history(self) -> dict[str, list[dict[str, object]]]:
         """Return evaluation history events."""
         ...
 
@@ -143,14 +142,14 @@ class ParticipantRuntime(Protocol):
         """Drive the current episode to ``TERMINATED`` with the given reason."""
         ...
 
-    def status(self) -> dict[str, Any]:
+    def status(self) -> dict[str, object]:
         """Return current participant runtime status."""
         ...
 
-    def results(self) -> dict[str, dict[str, Any]]:
+    def results(self) -> dict[str, dict[str, object]]:
         """Return the most recent participant episode result envelopes."""
         ...
 
-    def history(self) -> dict[str, list[dict[str, Any]]]:
+    def history(self) -> dict[str, list[dict[str, object]]]:
         """Return participant episode history events."""
         ...

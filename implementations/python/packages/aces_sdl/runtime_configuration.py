@@ -83,6 +83,17 @@ from .runtime_network import (
     RuntimeNetworkRealization,
     RuntimePublishedPort,
 )
+from .runtime_service_units import (
+    ServiceManagerKind,
+    ServiceManagerUnit,
+    ServiceUnitActiveState,
+    ServiceUnitEnabledState,
+    ServiceUnitExecStart,
+    ServiceUnitExecStartKind,
+    ServiceUnitKind,
+    ServiceUnitLoadState,
+    ServiceUnitResult,
+)
 from .runtime_software import (
     RuntimeSoftwareComponent,
     RuntimeSoftwareComponentHash,
@@ -180,6 +191,15 @@ __all__ = [
     "RuntimeSoftwareComponentType",
     "RuntimeSudoPrincipalKind",
     "RuntimeSudoRule",
+    "ServiceManagerKind",
+    "ServiceManagerUnit",
+    "ServiceUnitActiveState",
+    "ServiceUnitEnabledState",
+    "ServiceUnitExecStart",
+    "ServiceUnitExecStartKind",
+    "ServiceUnitKind",
+    "ServiceUnitLoadState",
+    "ServiceUnitResult",
     "SshForcedCommand",
     "SshForcedCommandKind",
     "SshMatchCriterion",
@@ -404,6 +424,7 @@ class RuntimeConfiguration(SDLModel):
     applications: list[RuntimeApplicationSurface] = Field(default_factory=list)
     database_services: list[DatabaseService] = Field(default_factory=list)
     ssh_servers: list[SshServerConfig] = Field(default_factory=list)
+    service_manager_units: list[ServiceManagerUnit] = Field(default_factory=list)
     packages: list[RuntimePackage] = Field(default_factory=list)
     software_components: list[RuntimeSoftwareComponent] = Field(default_factory=list)
     dependency_manifests: list[RuntimeDependencyManifest] = Field(default_factory=list)
@@ -419,6 +440,16 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.applications, attr="application_id", label="application_id")
         _reject_duplicate_keys(self.database_services, attr="database_service_id", label="database_service_id")
         _reject_duplicate_keys(self.ssh_servers, attr="server_id", label="ssh_server server_id")
+        _reject_duplicate_keys(
+            self.service_manager_units,
+            attr="unit_id",
+            label="service_manager_unit unit_id",
+        )
+        _reject_duplicate_keys(
+            self.service_manager_units,
+            attr="unit_name",
+            label="service_manager_unit unit_name",
+        )
         _reject_duplicate_keys(self.identity_authorities, attr="authority_id", label="identity authority")
         _reject_duplicate_keys(self.software_components, attr="component_id", label="software component")
         return self

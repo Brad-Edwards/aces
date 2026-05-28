@@ -35,33 +35,32 @@ from aces_contracts.contracts import (
     WorkflowHistoryEventModel,
     schema_bundle,
 )
-from aces_processor.compiler import compile_runtime_model
-from aces_processor.control_plane import RuntimeControlPlane
-from aces_processor.manager import (
-    _evaluation_result_contract_diagnostics,
-    _workflow_result_contract_diagnostics,
-)
-from aces_processor.models import (
-    Diagnostic,
-    EvaluationExecutionState,
-    ParticipantActionContractRuntime,
-    ParticipantBehaviorHistoryEvent,
+from aces_contracts.diagnostics import Diagnostic, Severity
+from aces_contracts.evaluation import EvaluationExecutionState
+from aces_contracts.participant_episode import (
     ParticipantEpisodeExecutionState,
     ParticipantEpisodeHistoryEvent,
     ParticipantEpisodeTerminalReason,
-    ParticipantObservationBoundaryRuntime,
-    RuntimeDomain,
-    RuntimeSnapshot,
-    RuntimeSnapshotEnvelope,
-    Severity,
-    SnapshotEntry,
-    WorkflowExecutionState,
-    iter_participant_behavior_history_violations,
-    iter_participant_behavior_joint_action_violations,
     iter_participant_episode_snapshot_violations,
 )
+from aces_contracts.planning import RuntimeDomain
+from aces_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope, SnapshotEntry
+from aces_contracts.workflow import WorkflowExecutionState
+from aces_processor.compiler import compile_runtime_model
+from aces_processor.models import (
+    ParticipantActionContractRuntime,
+    ParticipantBehaviorHistoryEvent,
+    ParticipantObservationBoundaryRuntime,
+    iter_participant_behavior_history_violations,
+    iter_participant_behavior_joint_action_violations,
+)
 from aces_processor.planner import plan
-from aces_processor.registry import RuntimeTarget
+from aces_runtime.control_plane import RuntimeControlPlane
+from aces_runtime.registry import RuntimeTarget
+from aces_runtime.result_contracts import (
+    evaluation_result_contract_diagnostics,
+    workflow_result_contract_diagnostics,
+)
 from aces_sdl.parser import parse_sdl
 from pydantic import ValidationError
 
@@ -711,8 +710,8 @@ def _participant_behavior_stream_diagnostics(contract_name: str, payload: Any) -
 def _runtime_snapshot_semantic_diagnostics(payload: Any) -> list[Diagnostic]:
     snapshot = _snapshot_from_envelope(payload)
     return [
-        *_workflow_result_contract_diagnostics(snapshot),
-        *_evaluation_result_contract_diagnostics(snapshot),
+        *workflow_result_contract_diagnostics(snapshot),
+        *evaluation_result_contract_diagnostics(snapshot),
         *_participant_episode_snapshot_diagnostics(snapshot),
         *_participant_behavior_snapshot_diagnostics(snapshot),
     ]

@@ -25,37 +25,27 @@ class ControlPlaneIdentity:
 
 @dataclass(frozen=True)
 class ControlPlaneSecurityConfig:
-    """Reference security settings for the HTTP/JSON control-plane adapter."""
+    """Reference security settings for the HTTP/JSON control-plane adapter.
+
+    Header identities are only trustworthy behind an authenticated proxy that
+    strips caller-supplied identity headers before setting its own values.
+    """
 
     require_verified_identity: bool = True
     verified_header: str = "x-aces-client-verified"
     identity_header: str = "x-aces-client-identity"
+    trust_proxy_identity_headers: bool = False
     max_request_bytes: int = 1_000_000
     trusted_identities: dict[str, ControlPlaneIdentity] = field(default_factory=dict)
     bearer_tokens: dict[str, ControlPlaneIdentity] = field(default_factory=dict)
 
     @classmethod
-    def strict_defaults(
-        cls,
-        *,
-        target_name: str | None = None,
-    ) -> ControlPlaneSecurityConfig:
-        backend_identity = ControlPlaneIdentity(
-            identity="backend-service",
-            roles=frozenset({ControlPlaneRole.BACKEND}),
-            target_name=target_name,
-        )
-        operator_identity = ControlPlaneIdentity(
-            identity="operator",
-            roles=frozenset({ControlPlaneRole.OPERATOR, ControlPlaneRole.AUDITOR}),
-            target_name=target_name,
-        )
+    def strict_defaults(cls) -> ControlPlaneSecurityConfig:
+        """Return fail-closed defaults with no built-in principals or tokens."""
+
         return cls(
             require_verified_identity=True,
-            trusted_identities={
-                backend_identity.identity: backend_identity,
-            },
-            bearer_tokens={
-                "operator-token": operator_identity,
-            },
+            trust_proxy_identity_headers=False,
+            trusted_identities={},
+            bearer_tokens={},
         )

@@ -59,15 +59,41 @@ def _validate_runtime_target_shape(
         raise ValueError("RuntimeTarget requires an explicit manifest.")
     if provisioner is None:
         raise ValueError("RuntimeTarget requires a provisioner.")
+    _validate_optional_component_presence(
+        manifest,
+        orchestrator=orchestrator,
+        evaluator=evaluator,
+        participant_runtime=participant_runtime,
+    )
+    sample_plan = object()
+    sample_snapshot = object()
+    sample_request = object()
+    _validate_provisioner_methods(provisioner, sample_plan, sample_snapshot)
+    _validate_orchestrator_methods(orchestrator, sample_plan, sample_snapshot)
+    _validate_evaluator_methods(evaluator, sample_plan, sample_snapshot)
+    _validate_participant_runtime_methods(participant_runtime, sample_request, sample_snapshot)
+
+
+def _validate_optional_component_presence(
+    manifest: BackendManifest,
+    *,
+    orchestrator: Orchestrator | None,
+    evaluator: Evaluator | None,
+    participant_runtime: ParticipantRuntime | None,
+) -> None:
     if manifest.has_orchestrator != (orchestrator is not None):
         raise ValueError("registry.target-shape-mismatch: orchestrator presence does not match the manifest.")
     if manifest.has_evaluator != (evaluator is not None):
         raise ValueError("registry.target-shape-mismatch: evaluator presence does not match the manifest.")
     if manifest.has_participant_runtime != (participant_runtime is not None):
         raise ValueError("registry.target-shape-mismatch: participant_runtime presence does not match the manifest.")
-    sample_plan = object()
-    sample_snapshot = object()
-    sample_request = object()
+
+
+def _validate_provisioner_methods(
+    provisioner: Provisioner,
+    sample_plan: object,
+    sample_snapshot: object,
+) -> None:
     _require_invokable_method(
         provisioner,
         label="provisioner",
@@ -80,6 +106,13 @@ def _validate_runtime_target_shape(
         method_name="apply",
         invocation_args=(sample_plan, sample_snapshot),
     )
+
+
+def _validate_orchestrator_methods(
+    orchestrator: Orchestrator | None,
+    sample_plan: object,
+    sample_snapshot: object,
+) -> None:
     _require_invokable_method(
         orchestrator,
         label="orchestrator",
@@ -110,6 +143,13 @@ def _validate_runtime_target_shape(
         method_name="stop",
         invocation_args=(sample_snapshot,),
     )
+
+
+def _validate_evaluator_methods(
+    evaluator: Evaluator | None,
+    sample_plan: object,
+    sample_snapshot: object,
+) -> None:
     _require_invokable_method(
         evaluator,
         label="evaluator",
@@ -140,6 +180,13 @@ def _validate_runtime_target_shape(
         method_name="stop",
         invocation_args=(sample_snapshot,),
     )
+
+
+def _validate_participant_runtime_methods(
+    participant_runtime: ParticipantRuntime | None,
+    sample_request: object,
+    sample_snapshot: object,
+) -> None:
     _require_invokable_method(
         participant_runtime,
         label="participant_runtime",

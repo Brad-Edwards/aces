@@ -1,6 +1,6 @@
 """SDL-to-runtime compiler."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -2196,6 +2196,22 @@ def _node_variable_refs_by_address(
         address = _network_address(node_name) if scenario_node.type == NodeType.SWITCH else _node_address(node_name)
         refs_by_address[address] = refs
     return refs_by_address
+
+
+def compile_scenario_runtime_model(
+    scenario: Scenario | InstantiatedScenario,
+    *,
+    parameters: Mapping[str, object] | None = None,
+    profile: str | None = None,
+) -> RuntimeModel:
+    """Instantiate an SDL scenario and compile it into runtime artifacts."""
+
+    concrete_scenario = (
+        scenario
+        if isinstance(scenario, InstantiatedScenario)
+        else instantiate_scenario(scenario, parameters=parameters, profile=profile)
+    )
+    return compile_runtime_model(concrete_scenario)
 
 
 def compile_runtime_model(scenario: Scenario | InstantiatedScenario) -> RuntimeModel:

@@ -1,0 +1,154 @@
+"""Backend call adapters for runtime execution."""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Iterable
+
+from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
+
+from .diagnostics import _failure_diagnostic
+from .evaluation_result_contracts import evaluation_result_contract_diagnostics
+from .participant_result_contracts import participant_episode_contract_diagnostics
+from .workflow_result_contracts import workflow_result_contract_diagnostics
+
+_BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
+
+
+def _call_backend_diagnostics(
+    method: Callable[..., object],
+    *args: object,
+    address: str,
+) -> list[Diagnostic]:
+    try:
+        result = method(*args)
+    except Exception as exc:
+        diagnostics = [_backend_call_failed(address, exc)]
+    else:
+        invalid_message = _diagnostics_iterable_violation(result, address)
+        if invalid_message is not None:
+            diagnostics = [_backend_contract_invalid(address, invalid_message)]
+        else:
+            diagnostics = list(result)
+            invalid_message = _diagnostics_values_violation(diagnostics, address)
+            if invalid_message is not None:
+                diagnostics = [_backend_contract_invalid(address, invalid_message)]
+    return diagnostics
+
+
+def _call_backend_apply(
+    method: Callable[..., object],
+    *args: object,
+    address: str,
+    snapshot: RuntimeSnapshot,
+) -> ApplyResult:
+    try:
+        result = method(*args)
+    except Exception as exc:
+        apply_result = _failed_apply_result(snapshot, _backend_call_failed(address, exc))
+    else:
+        invalid_message = _apply_result_contract_violation(result, address)
+        if invalid_message is not None:
+            apply_result = _failed_apply_result(snapshot, _backend_contract_invalid(address, invalid_message))
+        else:
+            assert isinstance(result, ApplyResult)
+            contract_diagnostics = _snapshot_contract_diagnostics(result.snapshot)
+            apply_result = (
+                ApplyResult(success=False, snapshot=snapshot, diagnostics=contract_diagnostics)
+                if contract_diagnostics
+                else result
+            )
+    return apply_result
+
+
+def _backend_call_failed(address: str, exc: Exception) -> Diagnostic:
+    return _failure_diagnostic(
+        "runtime.backend-call-failed",
+        address,
+        f"Backend method '{address}' raised {type(exc).__name__}: {exc}.",
+    )
+
+
+def _backend_contract_invalid(address: str, message: str) -> Diagnostic:
+    return _failure_diagnostic(_BACKEND_CONTRACT_INVALID, address, message)
+
+
+def _failed_apply_result(snapshot: RuntimeSnapshot, diagnostic: Diagnostic) -> ApplyResult:
+    return ApplyResult(success=False, snapshot=snapshot, diagnostics=[diagnostic])
+
+
+def _diagnostics_iterable_violation(result: object, address: str) -> str | None:
+    message = None
+    if not isinstance(result, Iterable) or isinstance(result, (str, bytes)):
+        message = f"Backend method '{address}' returned {type(result).__name__}; expected diagnostics iterable."
+    return message
+
+
+def _diagnostics_values_violation(diagnostics: list[object], address: str) -> str | None:
+    message = None
+    if any(not isinstance(diagnostic, Diagnostic) for diagnostic in diagnostics):
+        message = f"Backend method '{address}' returned a diagnostics iterable containing non-Diagnostic values."
+    return message
+
+
+def _apply_result_contract_violation(result: object, address: str) -> str | None:
+    message = _apply_result_shape_violation(result, address)
+    if message is None and isinstance(result, ApplyResult):
+        message = _apply_result_diagnostics_violation(result, address)
+    if message is None and isinstance(result, ApplyResult):
+        message = _apply_result_changed_addresses_violation(result, address)
+    if message is None and isinstance(result, ApplyResult):
+        message = _apply_result_details_violation(result, address)
+    return message
+
+
+def _apply_result_shape_violation(result: object, address: str) -> str | None:
+    message = None
+    if not isinstance(result, ApplyResult):
+        message = f"Backend method '{address}' returned {type(result).__name__}; expected ApplyResult."
+    elif not isinstance(result.snapshot, RuntimeSnapshot):
+        message = (
+            f"Backend method '{address}' returned ApplyResult.snapshot "
+            f"as {type(result.snapshot).__name__}; expected RuntimeSnapshot."
+        )
+    return message
+
+
+def _apply_result_diagnostics_violation(result: ApplyResult, address: str) -> str | None:
+    message = None
+    if not isinstance(result.diagnostics, Iterable) or isinstance(result.diagnostics, (str, bytes)):
+        message = (
+            f"Backend method '{address}' returned ApplyResult.diagnostics "
+            f"as {type(result.diagnostics).__name__}; expected iterable."
+        )
+    elif any(not isinstance(diagnostic, Diagnostic) for diagnostic in result.diagnostics):
+        message = f"Backend method '{address}' returned ApplyResult.diagnostics containing non-Diagnostic values."
+    return message
+
+
+def _apply_result_changed_addresses_violation(result: ApplyResult, address: str) -> str | None:
+    message = None
+    if not isinstance(result.changed_addresses, list):
+        message = (
+            f"Backend method '{address}' returned ApplyResult.changed_addresses "
+            f"as {type(result.changed_addresses).__name__}; expected list."
+        )
+    elif any(not isinstance(changed_address, str) for changed_address in result.changed_addresses):
+        message = f"Backend method '{address}' returned ApplyResult.changed_addresses containing non-string values."
+    return message
+
+
+def _apply_result_details_violation(result: ApplyResult, address: str) -> str | None:
+    if isinstance(result.details, dict):
+        return None
+    return f"Backend method '{address}' returned ApplyResult.details as {type(result.details).__name__}; expected dict."
+
+
+def _snapshot_contract_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic]:
+    diagnostics = workflow_result_contract_diagnostics(snapshot)
+    if diagnostics:
+        return diagnostics
+    diagnostics = evaluation_result_contract_diagnostics(snapshot)
+    if diagnostics:
+        return diagnostics
+    return participant_episode_contract_diagnostics(snapshot)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 from .common import PolicyFailure, load_yaml, path_matches_prefix
@@ -74,6 +74,7 @@ def evaluate_repo_policy(
         # allow-listed-and-over-cap or genuinely split below it) must still
         # hold regardless, so run that portion before returning.
         failures.extend(_check_layering_and_oversized(repo_root, policy, []))
+        failures.extend(_check_module_boundaries(repo_root, policy, [], check_set=check_set))
         return failures
 
     if structural_runner is None:
@@ -93,6 +94,7 @@ def evaluate_repo_policy(
     failures.extend(_check_package_import_direction(repo_root, policy, changed))
     failures.extend(_check_compatibility_wrappers(repo_root, policy, changed))
     failures.extend(_check_layering_and_oversized(repo_root, policy, changed))
+    failures.extend(_check_module_boundaries(repo_root, policy, changed, check_set=check_set))
 
     if check_set == "full":
         failures.extend(_check_adr_index(repo_root, policy, changed))
@@ -603,6 +605,322 @@ def _is_wrapper_module(tree: ast.Module) -> bool:
             continue
         return False
     return True
+
+
+def _validate_module_boundary_config(repo_root: Path, config: object) -> tuple[list[dict], list[PolicyFailure]]:
+    """Validate the ADR-036 module-boundary policy block."""
+
+    fail = lambda msg: PolicyFailure("policy-config-malformed", msg, _POLICY_CONFIG_PATH)  # noqa: E731
+    if config is None:
+        return [], [fail("module_boundaries block is required (ADR-036 / MOD-001) but is absent")]
+    if not isinstance(config, dict):
+        return [], [fail(f"module_boundaries must be a mapping; got {type(config).__name__}")]
+    adr = config.get("adr")
+    if not _is_str(adr) or not adr:
+        return [], [fail(f"module_boundaries.adr must be a non-empty string; got {adr!r}")]
+    modules = config.get("modules")
+    if not isinstance(modules, list) or not modules:
+        return [], [fail("module_boundaries.modules must be a non-empty list")]
+    package_coverage_roots = config.get("package_coverage_roots")
+    if not _str_list_ok(package_coverage_roots, allow_empty=False):
+        return [], [fail("module_boundaries.package_coverage_roots must be a non-empty list of strings")]
+
+    failures: list[PolicyFailure] = []
+    validated: list[dict] = []
+    seen_ids: set[str] = set()
+    seen_roots: set[str] = set()
+    for index, module in enumerate(modules):
+        if not isinstance(module, dict):
+            failures.append(fail(f"module_boundaries.modules[{index}] must be a mapping"))
+            continue
+        module_id = module.get("id")
+        root = module.get("root")
+        ok = True
+        if not _is_str(module_id) or not module_id:
+            failures.append(fail(f"module_boundaries.modules[{index}].id must be a non-empty string"))
+            ok = False
+        elif module_id in seen_ids:
+            failures.append(fail(f"module_boundaries.modules[{index}].id '{module_id}' is duplicated"))
+            ok = False
+        if not _is_str(root) or not root:
+            failures.append(fail(f"module_boundaries.modules[{index}].root must be a non-empty string"))
+            ok = False
+        elif root in seen_roots:
+            failures.append(fail(f"module_boundaries.modules[{index}].root '{root}' is duplicated"))
+            ok = False
+        else:
+            safe_root = _safe_repo_path(repo_root, str(root))
+            if safe_root is None:
+                failures.append(
+                    fail(f"module_boundaries.modules[{index}].root '{root}' must be a safe repo-relative path")
+                )
+                ok = False
+            elif not safe_root.is_dir():
+                failures.append(
+                    fail(f"module_boundaries.modules[{index}].root '{root}' must resolve to an existing directory")
+                )
+                ok = False
+        allowed = module.get("allowed_top_level_imports", [])
+        forbidden = module.get("forbidden_import_prefixes", [])
+        if not _str_list_ok(allowed, allow_empty=True):
+            failures.append(
+                fail(f"module_boundaries.modules[{index}].allowed_top_level_imports must be a list of strings")
+            )
+            ok = False
+        if not _str_list_ok(forbidden, allow_empty=True):
+            failures.append(
+                fail(f"module_boundaries.modules[{index}].forbidden_import_prefixes must be a list of strings")
+            )
+            ok = False
+        public_imports = module.get("public_import_prefixes", {})
+        if public_imports is None:
+            public_imports = {}
+        if not isinstance(public_imports, dict):
+            failures.append(fail(f"module_boundaries.modules[{index}].public_import_prefixes must be a mapping"))
+            ok = False
+        elif any(
+            not _is_str(key) or not _str_list_ok(value, allow_empty=False) for key, value in public_imports.items()
+        ):
+            failures.append(
+                fail(
+                    f"module_boundaries.modules[{index}].public_import_prefixes values must be non-empty "
+                    "lists of strings"
+                )
+            )
+            ok = False
+        if not ok:
+            continue
+        seen_ids.add(str(module_id))
+        seen_roots.add(str(root))
+        validated.append(
+            {
+                "id": str(module_id),
+                "root": str(root),
+                "allowed_top_level_imports": frozenset(str(item) for item in allowed),
+                "forbidden_import_prefixes": tuple(str(item) for item in forbidden),
+                "public_import_prefixes": {
+                    str(key): tuple(str(prefix) for prefix in value) for key, value in public_imports.items()
+                },
+            }
+        )
+    if failures:
+        return validated, failures
+    for coverage_root in package_coverage_roots:
+        safe_coverage_root = _safe_repo_path(repo_root, str(coverage_root))
+        if safe_coverage_root is None:
+            failures.append(
+                fail(
+                    f"module_boundaries.package_coverage_roots entry '{coverage_root}' must be a safe repo-relative path"
+                )
+            )
+            continue
+        if not safe_coverage_root.is_dir():
+            failures.append(
+                fail(
+                    f"module_boundaries.package_coverage_roots entry '{coverage_root}' "
+                    "must resolve to an existing directory"
+                )
+            )
+            continue
+        for package_root in sorted(path for path in safe_coverage_root.iterdir() if path.is_dir()):
+            if not (package_root / "__init__.py").is_file():
+                continue
+            rel_package_root = package_root.relative_to(repo_root).as_posix()
+            if rel_package_root not in seen_roots:
+                failures.append(
+                    fail(
+                        f"package root '{rel_package_root}' is missing from module_boundaries.modules; "
+                        "every first-party package must have an ADR-backed module boundary"
+                    )
+                )
+    return validated, failures
+
+
+def _check_module_boundaries(
+    repo_root: Path,
+    policy: dict,
+    changed: list[str],
+    *,
+    check_set: str,
+) -> list[PolicyFailure]:
+    rules, config_failures = _validate_module_boundary_config(repo_root, policy.get("module_boundaries"))
+    if config_failures or not rules:
+        return config_failures
+
+    known_modules = frozenset(rule["id"] for rule in rules)
+    failures: list[PolicyFailure] = []
+    candidate_paths = _module_boundary_candidate_paths(repo_root, rules, changed, check_set=check_set)
+    for rule in rules:
+        for rel_path in candidate_paths:
+            if not rel_path.endswith(".py") or not path_matches_prefix(rel_path, rule["root"]):
+                continue
+            path = repo_root / rel_path
+            if not path.is_file():
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel_path)
+            failures.extend(_check_module_imports(rel_path, rule, known_modules, tree))
+            if rule["id"] == "aces_backend_protocols" and rel_path.endswith("protocols.py"):
+                failures.extend(_check_backend_protocol_contract_annotations(rel_path, tree))
+    return failures
+
+
+def _module_boundary_candidate_paths(
+    repo_root: Path,
+    rules: list[dict],
+    changed: list[str],
+    *,
+    check_set: str,
+) -> list[str]:
+    if check_set != "full":
+        return changed
+
+    paths: list[str] = []
+    seen: set[str] = set()
+    for rule in rules:
+        root = repo_root / rule["root"]
+        for path in sorted(root.rglob("*.py")):
+            if not path.is_file():
+                continue
+            rel_path = path.relative_to(repo_root).as_posix()
+            if rel_path in seen:
+                continue
+            seen.add(rel_path)
+            paths.append(rel_path)
+    return paths
+
+
+def _check_module_imports(
+    rel_path: str,
+    rule: dict,
+    known_modules: frozenset[str],
+    tree: ast.Module,
+) -> list[PolicyFailure]:
+    failures: list[PolicyFailure] = []
+    for imported in _imported_names(tree):
+        top_level = imported.split(".", 1)[0]
+        if top_level == rule["id"] or top_level not in known_modules:
+            continue
+        if _matches_any_import_prefix(imported, rule["forbidden_import_prefixes"]):
+            failures.append(
+                PolicyFailure(
+                    "module-boundary-import",
+                    (
+                        f"{rule['id']} must not import {imported!r}; "
+                        "module-boundary rules are defined by module_boundaries"
+                    ),
+                    rel_path,
+                )
+            )
+            continue
+        if _uses_private_module_path(imported):
+            failures.append(
+                PolicyFailure(
+                    "module-boundary-private-import",
+                    f"{rule['id']} must not import private/internal module path {imported!r}",
+                    rel_path,
+                )
+            )
+            continue
+        public_prefixes = rule["public_import_prefixes"].get(top_level)
+        if public_prefixes and not _matches_any_import_prefix(imported, public_prefixes):
+            failures.append(
+                PolicyFailure(
+                    "module-boundary-public-api",
+                    f"{rule['id']} may import {top_level} only through public prefixes {sorted(public_prefixes)!r}",
+                    rel_path,
+                )
+            )
+            continue
+        if top_level not in rule["allowed_top_level_imports"]:
+            failures.append(
+                PolicyFailure(
+                    "module-boundary-import",
+                    f"{rule['id']} may not import {top_level}; add an ADR-backed module-boundary allowance first",
+                    rel_path,
+                )
+            )
+    return failures
+
+
+def _imported_names(tree: ast.Module) -> list[str]:
+    names: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.extend(alias.name for alias in node.names)
+            continue
+        if isinstance(node, ast.ImportFrom):
+            if node.level or not node.module:
+                continue
+            for alias in node.names:
+                if alias.name == "*":
+                    names.append(node.module)
+                    continue
+                names.append(f"{node.module}.{alias.name}")
+    return names
+
+
+def _matches_any_import_prefix(imported: str, prefixes: tuple[str, ...]) -> bool:
+    return any(imported == prefix or imported.startswith(f"{prefix}.") for prefix in prefixes)
+
+
+def _uses_private_module_path(imported: str) -> bool:
+    parts = imported.split(".")
+    return any(part.startswith("_") for part in parts[1:])
+
+
+def _check_backend_protocol_contract_annotations(rel_path: str, tree: ast.Module) -> list[PolicyFailure]:
+    failures: list[PolicyFailure] = []
+    for class_node in (node for node in tree.body if isinstance(node, ast.ClassDef)):
+        if not any(_base_name(base) == "Protocol" for base in class_node.bases):
+            continue
+        for function in (item for item in class_node.body if isinstance(item, ast.FunctionDef)):
+            for annotation in _function_signature_annotations(function):
+                if _annotation_uses_any(annotation):
+                    failures.append(
+                        PolicyFailure(
+                            "backend-protocol-untyped-contract",
+                            (
+                                f"{class_node.name}.{function.name} uses Any in its public protocol signature; "
+                                "backend protocols must use neutral contract DTOs from aces_contracts"
+                            ),
+                            rel_path,
+                        )
+                    )
+                    break
+    return failures
+
+
+def _base_name(node: ast.expr) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    if isinstance(node, ast.Subscript):
+        return _base_name(node.value)
+    return ""
+
+
+def _function_signature_annotations(function: ast.FunctionDef) -> Iterator[ast.expr]:
+    for arg in [*function.args.posonlyargs, *function.args.args, *function.args.kwonlyargs]:
+        if arg.arg == "self":
+            continue
+        if arg.annotation is not None:
+            yield arg.annotation
+    if function.args.vararg is not None and function.args.vararg.annotation is not None:
+        yield function.args.vararg.annotation
+    if function.args.kwarg is not None and function.args.kwarg.annotation is not None:
+        yield function.args.kwarg.annotation
+    if function.returns is not None:
+        yield function.returns
+
+
+def _annotation_uses_any(annotation: ast.expr) -> bool:
+    for node in ast.walk(annotation):
+        if isinstance(node, ast.Name) and node.id == "Any":
+            return True
+        if isinstance(node, ast.Attribute) and node.attr == "Any":
+            return True
+    return False
 
 
 CHANGELOG_HEADING_RE = re.compile(r"^## \[(.+?)\]", re.MULTILINE)
