@@ -14,6 +14,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from ._module_runtime_aliases import (
+    nested_node_network_detection_aliases,
     nested_node_network_sensor_aliases,
     nested_node_security_monitoring_aliases,
 )
@@ -508,6 +509,7 @@ def symbol_index(
     named.update(_nested_node_file_service_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_mail_service_aliases(scenario, section_maps.get("nodes", {})))
     named.update(nested_node_network_sensor_aliases(scenario, section_maps.get("nodes", {})))
+    named.update(nested_node_network_detection_aliases(scenario, section_maps.get("nodes", {})))
     named.update(nested_node_security_monitoring_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_content_item_aliases(scenario, section_maps.get("content", {})))
 

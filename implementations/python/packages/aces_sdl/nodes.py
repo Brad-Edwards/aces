@@ -8,6 +8,7 @@ from enum import Enum
 
 from pydantic import Field, field_validator, model_validator
 
+from . import runtime_network_detection as _runtime_network_detection
 from ._base import (
     SDLModel,
     is_variable_ref,
@@ -211,6 +212,8 @@ from .runtime_security_monitoring import (
     RuntimeSecurityMonitoringSettingProvenance,
 )
 
+globals().update({name: getattr(_runtime_network_detection, name) for name in _runtime_network_detection.__all__})
+
 __all__ = [
     "AssetValue",
     "AssetValueLevel",
@@ -362,6 +365,7 @@ __all__ = [
     "RuntimeMountSourceKind",
     "RuntimeNamespaceConfiguration",
     "RuntimeNetworkBackendDetail",
+    *_runtime_network_detection.__all__,
     "RuntimeNetworkDriver",
     "RuntimeNetworkEndpoint",
     "RuntimeNetworkIdStability",

@@ -5352,6 +5352,13 @@
           ],
           "default": null
         },
+        "network_detection_engines": {
+          "items": {
+            "$ref": "#/$defs/RuntimeNetworkDetectionEngine"
+          },
+          "title": "Network Detection Engines",
+          "type": "array"
+        },
         "network_sensors": {
           "items": {
             "$ref": "#/$defs/RuntimeNetworkSensor"
@@ -8877,6 +8884,587 @@
       },
       "title": "RuntimeNetworkBackendDetail",
       "type": "object"
+    },
+    "RuntimeNetworkDetectionAppProtocol": {
+      "description": "App-layer parser family enabled in the detection engine.",
+      "enum": [
+        "http",
+        "tls",
+        "dns",
+        "ssh",
+        "smtp",
+        "ftp",
+        "smb",
+        "http2",
+        "nfs",
+        "rdp",
+        "krb5",
+        "mqtt",
+        "modbus",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkDetectionAppProtocol",
+      "type": "string"
+    },
+    "RuntimeNetworkDetectionControlCapability": {
+      "description": "Operation supported by a detection-engine control channel.",
+      "enum": [
+        "rule_reload",
+        "ruleset_update",
+        "config_reload",
+        "stats_query",
+        "pause",
+        "resume",
+        "shutdown",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkDetectionControlCapability",
+      "type": "string"
+    },
+    "RuntimeNetworkDetectionControlChannel": {
+      "additionalProperties": false,
+      "description": "A bounded detection-engine control or reload channel.",
+      "properties": {
+        "auth_required": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auth Required"
+        },
+        "capabilities": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/RuntimeNetworkDetectionControlCapability"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "channel_id": {
+          "title": "Channel Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkDetectionControlChannelKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Kind"
+        },
+        "path": {
+          "default": "",
+          "title": "Path",
+          "type": "string"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel_id"
+      ],
+      "title": "RuntimeNetworkDetectionControlChannel",
+      "type": "object"
+    },
+    "RuntimeNetworkDetectionControlChannelKind": {
+      "description": "Portable local or remote control-channel family.",
+      "enum": [
+        "unix_socket",
+        "tcp_api",
+        "http_api",
+        "cli",
+        "signal",
+        "file_drop",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkDetectionControlChannelKind",
+      "type": "string"
+    },
+    "RuntimeNetworkDetectionEngine": {
+      "additionalProperties": false,
+      "description": "Node-scoped runtime inventory for an IDS/NDR detection engine.",
+      "properties": {
+        "app_layer_protocols": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/RuntimeNetworkDetectionAppProtocol"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "title": "App Layer Protocols",
+          "type": "array"
+        },
+        "configuration_file_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Configuration File Refs",
+          "type": "array"
+        },
+        "control_channels": {
+          "items": {
+            "$ref": "#/$defs/RuntimeNetworkDetectionControlChannel"
+          },
+          "title": "Control Channels",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "engine_id": {
+          "title": "Engine Id",
+          "type": "string"
+        },
+        "engine_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkDetectionEngineKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Engine Kind"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "implementation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkDetectionEngineImplementation"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Implementation"
+        },
+        "log_file_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Log File Refs",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "network_sets": {
+          "items": {
+            "$ref": "#/$defs/RuntimeNetworkDetectionNetworkSet"
+          },
+          "title": "Network Sets",
+          "type": "array"
+        },
+        "output_streams": {
+          "items": {
+            "$ref": "#/$defs/RuntimeNetworkDetectionOutputStream"
+          },
+          "title": "Output Streams",
+          "type": "array"
+        },
+        "process_ref": {
+          "default": "",
+          "title": "Process Ref",
+          "type": "string"
+        },
+        "revision": {
+          "default": "",
+          "title": "Revision",
+          "type": "string"
+        },
+        "rule_sources": {
+          "items": {
+            "$ref": "#/$defs/RuntimeNetworkDetectionRuleSource"
+          },
+          "title": "Rule Sources",
+          "type": "array"
+        },
+        "sensor_ref": {
+          "default": "",
+          "title": "Sensor Ref",
+          "type": "string"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "engine_id"
+      ],
+      "title": "RuntimeNetworkDetectionEngine",
+      "type": "object"
+    },
+    "RuntimeNetworkDetectionEngineImplementation": {
+      "description": "Observed product family for a network detection engine.",
+      "enum": [
+        "suricata",
+        "snort",
+        "zeek",
+        "security_onion",
+        "arkime",
+        "corelight",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkDetectionEngineImplementation",
+      "type": "string"
+    },
+    "RuntimeNetworkDetectionEngineKind": {
+      "description": "Portable detection-engine role/family.",
+      "enum": [
+        "ids",
+        "ips",
+        "ndr",
+        "nsm",
+        "nta",
+        "detection_engine",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkDetectionEngineKind",
+      "type": "string"
+    },
+    "RuntimeNetworkDetectionEventType": {
+      "description": "Event family emitted by a detection output stream.",
+      "enum": [
+        "alert",
+        "http",
+        "dns",
+        "tls",
+        "ssh",
+        "smtp",
+        "ftp",
+        "smb",
+        "flow",
+        "netflow",
+        "stats",
+        "fileinfo",
+        "anomaly",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkDetectionEventType",
+      "type": "string"
+    },
+    "RuntimeNetworkDetectionNetworkSet": {
+      "additionalProperties": false,
+      "description": "A network zoning or service-group address-set variable.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkDetectionNetworkSetKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Kind"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "network_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Network Refs",
+          "type": "array"
+        },
+        "selector_values": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Selector Values",
+          "type": "array"
+        },
+        "set_id": {
+          "title": "Set Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "set_id"
+      ],
+      "title": "RuntimeNetworkDetectionNetworkSet",
+      "type": "object"
+    },
+    "RuntimeNetworkDetectionNetworkSetKind": {
+      "description": "Portable network/address-set variable role.",
+      "enum": [
+        "home_net",
+        "external_net",
+        "dmz_net",
+        "internal_net",
+        "service_group",
+        "custom",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkDetectionNetworkSetKind",
+      "type": "string"
+    },
+    "RuntimeNetworkDetectionOutputFormat": {
+      "description": "Portable detection output stream format.",
+      "enum": [
+        "eve_json",
+        "fast_log",
+        "json",
+        "pcap",
+        "netflow",
+        "syslog",
+        "text",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkDetectionOutputFormat",
+      "type": "string"
+    },
+    "RuntimeNetworkDetectionOutputStream": {
+      "additionalProperties": false,
+      "description": "A detection alert, telemetry, or summary output stream.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "event_types": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/RuntimeNetworkDetectionEventType"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "title": "Event Types",
+          "type": "array"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkDetectionOutputFormat"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Format"
+        },
+        "path": {
+          "default": "",
+          "title": "Path",
+          "type": "string"
+        },
+        "stream_id": {
+          "title": "Stream Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "stream_id"
+      ],
+      "title": "RuntimeNetworkDetectionOutputStream",
+      "type": "object"
+    },
+    "RuntimeNetworkDetectionRuleFormat": {
+      "description": "Portable rule/content syntax family.",
+      "enum": [
+        "suricata_rule",
+        "snort_rule",
+        "zeek_script",
+        "sigma",
+        "yara",
+        "stix",
+        "json",
+        "yaml",
+        "text",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkDetectionRuleFormat",
+      "type": "string"
+    },
+    "RuntimeNetworkDetectionRuleSource": {
+      "additionalProperties": false,
+      "description": "A loaded rule, IOC, script, or managed detection-content source.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "file_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "File Refs",
+          "type": "array"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkDetectionRuleFormat"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Format"
+        },
+        "generated_by": {
+          "default": "",
+          "title": "Generated By",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkDetectionRuleSourceKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Kind"
+        },
+        "loaded": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Loaded"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "rule_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule Count"
+        },
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id"
+      ],
+      "title": "RuntimeNetworkDetectionRuleSource",
+      "type": "object"
+    },
+    "RuntimeNetworkDetectionRuleSourceKind": {
+      "description": "Portable rule-source provenance/family.",
+      "enum": [
+        "built_in",
+        "community",
+        "managed",
+        "local",
+        "threat_intel",
+        "ioc",
+        "emerging_threats",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkDetectionRuleSourceKind",
+      "type": "string"
     },
     "RuntimeNetworkDriver": {
       "description": "Observed backend network driver class for a realized network.",

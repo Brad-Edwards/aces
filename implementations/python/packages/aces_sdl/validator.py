@@ -274,6 +274,7 @@ class SemanticValidator:
             refs.update(self._qualified_dns_refs(node_name))
             refs.update(self._qualified_identity_refs(node_name))
             refs.update(self._qualified_network_sensor_refs(node_name))
+            refs.update(self._qualified_network_detection_refs(node_name))
             refs.update(self._qualified_security_monitoring_refs(node_name))
         refs.update(collect_qualified_mail_refs(self._s))
         return refs
@@ -322,6 +323,23 @@ class SemanticValidator:
         runtime = self._s.nodes[node_name].runtime
         for sensor in runtime.network_sensors:
             refs.add(f"nodes.{node_name}.runtime.network_sensors.{sensor.sensor_id}")
+        return refs
+
+    def _qualified_network_detection_refs(self, node_name: str) -> set[str]:
+        refs: set[str] = set()
+        runtime = self._s.nodes[node_name].runtime
+        for engine in runtime.network_detection_engines:
+            base = f"nodes.{node_name}.runtime.network_detection_engines.{engine.engine_id}"
+            refs.add(base)
+            for collection_name, id_field in (
+                ("rule_sources", "source_id"),
+                ("network_sets", "set_id"),
+                ("output_streams", "stream_id"),
+                ("control_channels", "channel_id"),
+            ):
+                refs.update(
+                    f"{base}.{collection_name}.{getattr(item, id_field)}" for item in getattr(engine, collection_name)
+                )
         return refs
 
     def _qualified_security_monitoring_refs(self, node_name: str) -> set[str]:
@@ -560,6 +578,7 @@ class SemanticValidator:
         self._verify_infrastructure()
         self._verify_runtime_network()
         self._verify_runtime_network_sensors()
+        self._verify_runtime_network_detection_engines()
         self._verify_runtime_application()
         self._verify_runtime_capability_overrides()
         self._verify_runtime_database_services()
@@ -862,6 +881,92 @@ class SemanticValidator:
             return
         if attached_networks and network_ref not in attached_networks:
             self._err(f"{label} monitored_network_ref '{network_ref}' is not attached to node '{node_name}'")
+
+    def _verify_runtime_network_detection_engines(self) -> None:
+        """Validate observed IDS/NDR detection-engine inventories.
+
+        Detection engines may point at a same-node network sensor, filesystem
+        evidence, switch-backed network/address sets, and bounded control
+        channels. Raw rules, packet payloads, and alert telemetry stay outside
+        the SDL model.
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.network_detection_engines:
+                continue
+            service_names = self._node_service_names(node)
+            observed_paths = self._node_observed_paths(node)
+            sensor_ids = {sensor.sensor_id for sensor in runtime.network_sensors}
+            for engine in runtime.network_detection_engines:
+                self._verify_network_detection_engine(
+                    node_name=node_name,
+                    engine=engine,
+                    service_names=service_names,
+                    observed_paths=observed_paths,
+                    sensor_ids=sensor_ids,
+                )
+
+    def _verify_network_detection_engine(
+        self,
+        *,
+        node_name: str,
+        engine: object,
+        service_names: set[str],
+        observed_paths: set[str],
+        sensor_ids: set[str],
+    ) -> None:
+        owner_label = f"Node '{node_name}' runtime network detection engine '{engine.engine_id}'"
+        sensor_ref = getattr(engine, "sensor_ref", "")
+        if sensor_ref and not self._is_unresolved_var(sensor_ref) and sensor_ref not in sensor_ids:
+            self._err(f"{owner_label} sensor_ref '{sensor_ref}' does not resolve to a same-node network sensor")
+        for field_name in ("configuration_file_refs", "log_file_refs", "evidence_refs"):
+            self._verify_dns_file_refs(
+                owner_label,
+                getattr(engine, field_name, []),
+                field_name=field_name,
+                observed_paths=observed_paths,
+            )
+        for source in engine.rule_sources:
+            self._verify_dns_file_refs(
+                f"{owner_label} rule_source '{source.source_id}'",
+                getattr(source, "file_refs", []),
+                field_name="file_refs",
+                observed_paths=observed_paths,
+            )
+        for network_set in engine.network_sets:
+            set_label = f"{owner_label} network_set '{network_set.set_id}'"
+            for network_ref in network_set.network_refs:
+                self._verify_network_detection_network_ref(set_label, network_ref)
+        for stream in engine.output_streams:
+            self._verify_dns_file_refs(
+                f"{owner_label} output_stream '{stream.stream_id}'",
+                [stream.path] if stream.path else [],
+                field_name="path",
+                observed_paths=observed_paths,
+            )
+        for channel in engine.control_channels:
+            channel_label = f"{owner_label} control_channel '{channel.channel_id}'"
+            self._verify_owned_service_ref(
+                node_name,
+                getattr(channel, "service", ""),
+                service_names,
+                owner_label=channel_label,
+            )
+            self._verify_dns_file_refs(
+                channel_label,
+                [channel.path] if channel.path else [],
+                field_name="path",
+                observed_paths=observed_paths,
+            )
+
+    def _verify_network_detection_network_ref(self, owner_label: str, network_ref: str) -> None:
+        if self._is_unresolved_var(network_ref):
+            return
+        if network_ref not in self._s.infrastructure:
+            self._err(f"{owner_label} network_ref '{network_ref}' references undefined network")
+            return
+        if not self._is_switch_node(network_ref):
+            self._err(f"{owner_label} network_ref '{network_ref}' must reference a switch/network entry")
 
     def _verify_runtime_application(self) -> None:
         """Validate observed runtime application surfaces against the scenario.
