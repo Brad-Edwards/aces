@@ -19,6 +19,10 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "backend-manifest" / f"{name}.json"
     if name.startswith("processor-manifest-v"):
         return schemas_dir / "processor-manifest" / f"{name}.json"
+    if name.startswith("participant-implementation-manifest-v"):
+        return schemas_dir / "participant-implementation-manifest" / f"{name}.json"
+    if name.startswith("participant-implementation-provenance-v"):
+        return schemas_dir / "participant-implementation-provenance" / f"{name}.json"
     if name == "concept-families-v1":
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "reference-models-v1":
