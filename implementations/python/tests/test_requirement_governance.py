@@ -46,6 +46,7 @@ def make_client(*, requirement_status: str = "DRAFT", api_412_status: str = "DRA
         "RUN-300": {"id": "req-run-300", "uid": "RUN-300", "status": "ACTIVE"},
         "RUN-311": {"id": "req-run-311", "uid": "RUN-311", "status": "ACTIVE"},
         "RUN-313": {"id": "req-run-313", "uid": "RUN-313", "status": "DRAFT"},
+        "EXP-701": {"id": "req-exp-701", "uid": "EXP-701", "status": "ACTIVE"},
         "GOV-917": {"id": "req-gov-917", "uid": "GOV-917", "status": "ACTIVE"},
         "GOV-919": {"id": "req-gov-919", "uid": "GOV-919", "status": "ACTIVE"},
         "GOV-920": {"id": "req-gov-920", "uid": "GOV-920", "status": "ACTIVE"},
@@ -73,6 +74,18 @@ def make_client(*, requirement_status: str = "DRAFT", api_412_status: str = "DRA
             }
         ],
         "req-run-313": [],
+        "req-exp-701": [
+            {
+                "artifact_identifier": "implementations/python/packages/aces_contracts/contracts.py",
+                "artifact_type": "CODE_FILE",
+                "link_type": "IMPLEMENTS",
+            },
+            {
+                "artifact_identifier": "implementations/python/tests/test_runtime_contracts.py",
+                "artifact_type": "TEST",
+                "link_type": "TESTS",
+            },
+        ],
     }
     return FakeClient(requirements=requirements, traceability=traceability)
 
@@ -209,6 +222,34 @@ def test_requirement_governance_passes_for_allowed_paths_and_traceability(tmp_pa
         ],
         client=client,
         requirement_uid="GOV-918",
+    )
+
+    assert failures == []
+
+
+def test_experiment_core_requirement_maps_allowed_contract_paths(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    client = make_client()
+    write_text(
+        repo_root / "implementations" / "python" / "packages" / "aces_contracts" / "contracts.py",
+        "VALUE = 1\n",
+    )
+    write_text(
+        repo_root / "implementations" / "python" / "tests" / "test_runtime_contracts.py",
+        "def test_value():\n    assert True\n",
+    )
+
+    failures = evaluate_requirement_governance(
+        repo_root,
+        [
+            "contracts/schemas/experiment-core/experiment-task-v1.json",
+            "docs/research/experiment-core/traceability-matrix-exp-701-705.md",
+            "implementations/python/packages/aces_contracts/contracts.py",
+            "implementations/python/tests/test_runtime_contracts.py",
+            "specs/formal/experiment-core/README.md",
+        ],
+        client=client,
+        requirement_uid="EXP-701",
     )
 
     assert failures == []
