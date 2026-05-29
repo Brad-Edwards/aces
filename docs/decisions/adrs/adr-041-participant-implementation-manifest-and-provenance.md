@@ -1,4 +1,4 @@
-# ADR-040: Participant Implementation Manifest and Provenance Surface
+# ADR-041: Participant Implementation Manifest and Provenance Surface
 
 ## Status
 

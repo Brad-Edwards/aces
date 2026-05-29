@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from .runtime_dns import RuntimeDnsService
     from .runtime_file_service import RuntimeFileService
     from .runtime_mail_service import RuntimeMailService
+    from .runtime_security_monitoring import RuntimeSecurityMonitoringManager
 
 # Canonical list of scenario top-level sections that hold user-defined
 # hashmap keys. Re-exported as both the public ``HASHMAP_SECTIONS`` name
@@ -446,6 +447,63 @@ def _nested_node_mail_service_aliases(
     return aliases
 
 
+def _security_monitoring_manager_aliases(
+    *,
+    node_name: str,
+    prefixed_node: str,
+    manager: RuntimeSecurityMonitoringManager,
+) -> dict[str, str]:
+    """Aliases for one security-monitoring manager and its stable child records."""
+    manager_id = getattr(manager, "manager_id", "")
+    if not manager_id:
+        return {}
+    bare_base = f"nodes.{node_name}.runtime.security_monitoring_managers.{manager_id}"
+    prefixed_base = f"nodes.{prefixed_node}.runtime.security_monitoring_managers.{manager_id}"
+    aliases: dict[str, str] = {bare_base: prefixed_base}
+    for collection_name, id_field in (
+        ("listeners", "listener_id"),
+        ("components", "component_id"),
+        ("agents", "agent_id"),
+        ("agent_groups", "group_id"),
+        ("content_sets", "content_id"),
+        ("settings", "setting_id"),
+    ):
+        aliases.update(
+            _identity_authority_collection_aliases(
+                bare_base=bare_base,
+                prefixed_base=prefixed_base,
+                collection=getattr(manager, collection_name, []),
+                collection_name=collection_name,
+                id_field=id_field,
+            )
+        )
+    return aliases
+
+
+def _nested_node_security_monitoring_aliases(
+    scenario: Scenario,
+    node_rename_map: Mapping[str, str],
+) -> dict[str, str]:
+    """Qualified security-monitoring refs ``nodes.<vm>.runtime.security_monitoring_managers.<id>[...]``."""
+    aliases: dict[str, str] = {}
+    for node_name, node in scenario.nodes.items():
+        prefixed_node = node_rename_map.get(node_name, node_name)
+        if prefixed_node == node_name:
+            continue
+        runtime = getattr(node, "runtime", None)
+        if runtime is None:
+            continue
+        for manager in getattr(runtime, "security_monitoring_managers", []):
+            aliases.update(
+                _security_monitoring_manager_aliases(
+                    node_name=node_name,
+                    prefixed_node=prefixed_node,
+                    manager=manager,
+                )
+            )
+    return aliases
+
+
 def _nested_content_item_aliases(
     scenario: Scenario,
     content_rename_map: Mapping[str, str],
@@ -503,6 +561,7 @@ def symbol_index(
     named.update(_nested_node_identity_authority_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_file_service_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_mail_service_aliases(scenario, section_maps.get("nodes", {})))
+    named.update(_nested_node_security_monitoring_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_content_item_aliases(scenario, section_maps.get("content", {})))
 
     return {
