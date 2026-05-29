@@ -625,6 +625,20 @@ runtime, separate from the authored `services` declaration and image-default
 `source.build.config.exposed_ports`
 (see [ADR-025](../../decisions/adrs/adr-025-container-network-realization-surface.md)).
 
+`runtime.network_sensors` records observed passive or inline NSM/IDS sensor
+posture hosted by the node. Each entry has a stable `sensor_id`, bounded
+implementation/kind/posture/capture-mode fields, capture interfaces such as
+`any`, and `monitored_network_refs` naming the declared switch-backed networks
+whose traffic the sensor observes. Monitoring scope is distinct from network
+attachment: `runtime.network.endpoints` can show that a node is multi-homed,
+while `runtime.network_sensors` states that the node observes those networks.
+Configuration, log, and evidence refs are checked against
+`runtime.filesystem_inventory` when that inventory is non-empty. Fully
+qualified refs such as `nodes.suricata.runtime.network_sensors.suricata`
+participate in relationships, generic reference validation, and module import
+rewriting (see
+[ADR-042](../../decisions/adrs/adr-042-network-sensor-runtime-monitoring.md)).
+
 `runtime.applications` records the participant-observable HTTP application
 route/API/UI surface — what an adversary, defender, agent, scanner, or evaluator
 can observe of the web application itself, distinct from the transport-level
@@ -1078,7 +1092,9 @@ relationships, content item `name` values, named service bindings
 `.services.<service_id>`, `.subjects.<subject_id>`, `.policies.<policy_id>`,
 or `.relationships.<relationship_id>` refs), runtime DNS refs
 (`nodes.<node>.runtime.dns_services.<dns_service_id>` and nested
-`.zones.<zone_id>` or `.zones.<zone_id>.rrsets.<rrset_id>` refs), and named
+`.zones.<zone_id>` or `.zones.<zone_id>.rrsets.<rrset_id>` refs), named
+network sensor refs
+(`nodes.<node>.runtime.network_sensors.<sensor_id>`), named
 security-monitoring manager refs
 (`nodes.<node>.runtime.security_monitoring_managers.<manager_id>` and nested
 `.listeners.<listener_id>`, `.components.<component_id>`,

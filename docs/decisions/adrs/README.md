@@ -27,6 +27,7 @@ Each ADR includes:
 :hidden:
 
 adr-041-participant-implementation-manifest-and-provenance
+adr-042-network-sensor-runtime-monitoring
 ```
 
 | ADR | Title | Status | Date |
@@ -73,3 +74,4 @@ adr-041-participant-implementation-manifest-and-provenance
 | [039](adr-039-dns-service-runtime-inventory.md) | DNS Service Runtime Inventory | accepted | 2026-05-28 |
 | [040](adr-040-security-monitoring-manager-runtime-inventory.md) | Security-Monitoring Manager Runtime Inventory | accepted | 2026-05-29 |
 | [041](adr-041-participant-implementation-manifest-and-provenance.md) | Participant Implementation Manifest and Provenance Surface | accepted | 2026-05-29 |
+| [042](adr-042-network-sensor-runtime-monitoring.md) | Network Sensor Runtime Monitoring Posture | accepted | 2026-05-29 |

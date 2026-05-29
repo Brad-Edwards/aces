@@ -273,6 +273,7 @@ class SemanticValidator:
             refs.update(self._qualified_database_refs(node_name))
             refs.update(self._qualified_dns_refs(node_name))
             refs.update(self._qualified_identity_refs(node_name))
+            refs.update(self._qualified_network_sensor_refs(node_name))
             refs.update(self._qualified_security_monitoring_refs(node_name))
         refs.update(collect_qualified_mail_refs(self._s))
         return refs
@@ -314,6 +315,13 @@ class SemanticValidator:
             refs.update(
                 f"{base}.relationships.{relationship.relationship_id}" for relationship in authority.relationships
             )
+        return refs
+
+    def _qualified_network_sensor_refs(self, node_name: str) -> set[str]:
+        refs: set[str] = set()
+        runtime = self._s.nodes[node_name].runtime
+        for sensor in runtime.network_sensors:
+            refs.add(f"nodes.{node_name}.runtime.network_sensors.{sensor.sensor_id}")
         return refs
 
     def _qualified_security_monitoring_refs(self, node_name: str) -> set[str]:
@@ -551,6 +559,7 @@ class SemanticValidator:
         self._verify_nodes()
         self._verify_infrastructure()
         self._verify_runtime_network()
+        self._verify_runtime_network_sensors()
         self._verify_runtime_application()
         self._verify_runtime_capability_overrides()
         self._verify_runtime_database_services()
@@ -780,6 +789,79 @@ class SemanticValidator:
                     f"Node '{node_name}' runtime network endpoint {label} {value} "
                     f"is not within network '{net}' CIDR {cidr}"
                 )
+
+    def _verify_runtime_network_sensors(self) -> None:
+        """Validate observed network-sensor monitoring scope.
+
+        A network sensor explicitly states which declared network resources it
+        observes. Runtime endpoint attachment is a separate fact, so when the
+        node records endpoint inventory, the monitored networks must be among
+        those endpoint attachments.
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.network_sensors:
+                continue
+            observed_paths = self._node_observed_paths(node)
+            attached_networks = self._runtime_endpoint_networks(runtime)
+            for sensor in runtime.network_sensors:
+                self._verify_network_sensor(
+                    node_name=node_name,
+                    sensor=sensor,
+                    observed_paths=observed_paths,
+                    attached_networks=attached_networks,
+                )
+
+    @staticmethod
+    def _runtime_endpoint_networks(runtime: object) -> set[str]:
+        network = getattr(runtime, "network", None)
+        if network is None:
+            return set()
+        return {endpoint.network for endpoint in network.endpoints if endpoint.network}
+
+    def _verify_network_sensor(
+        self,
+        *,
+        node_name: str,
+        sensor: object,
+        observed_paths: set[str],
+        attached_networks: set[str],
+    ) -> None:
+        owner_label = f"Node '{node_name}' runtime network sensor '{sensor.sensor_id}'"
+        for field_name in ("configuration_file_refs", "log_file_refs", "evidence_refs"):
+            self._verify_dns_file_refs(
+                owner_label,
+                getattr(sensor, field_name, []),
+                field_name=field_name,
+                observed_paths=observed_paths,
+            )
+        for network_ref in sensor.monitored_network_refs:
+            self._verify_network_sensor_monitored_ref(
+                node_name=node_name,
+                sensor_id=sensor.sensor_id,
+                network_ref=network_ref,
+                attached_networks=attached_networks,
+            )
+
+    def _verify_network_sensor_monitored_ref(
+        self,
+        *,
+        node_name: str,
+        sensor_id: str,
+        network_ref: str,
+        attached_networks: set[str],
+    ) -> None:
+        if self._is_unresolved_var(network_ref):
+            return
+        label = f"Node '{node_name}' runtime network sensor '{sensor_id}'"
+        if network_ref not in self._s.infrastructure:
+            self._err(f"{label} monitored_network_ref '{network_ref}' references undefined network")
+            return
+        if not self._is_switch_node(network_ref):
+            self._err(f"{label} monitored_network_ref '{network_ref}' must reference a switch/network entry")
+            return
+        if attached_networks and network_ref not in attached_networks:
+            self._err(f"{label} monitored_network_ref '{network_ref}' is not attached to node '{node_name}'")
 
     def _verify_runtime_application(self) -> None:
         """Validate observed runtime application surfaces against the scenario.

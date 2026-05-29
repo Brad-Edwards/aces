@@ -5352,6 +5352,13 @@
           ],
           "default": null
         },
+        "network_sensors": {
+          "items": {
+            "$ref": "#/$defs/RuntimeNetworkSensor"
+          },
+          "title": "Network Sensors",
+          "type": "array"
+        },
         "operational_policy": {
           "anyOf": [
             {
@@ -9063,6 +9070,185 @@
       },
       "title": "RuntimeNetworkRealization",
       "type": "object"
+    },
+    "RuntimeNetworkSensor": {
+      "additionalProperties": false,
+      "description": "Node-scoped runtime inventory for a passive or inline network sensor.",
+      "properties": {
+        "capture_interfaces": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Capture Interfaces",
+          "type": "array"
+        },
+        "capture_mode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkSensorCaptureMode"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Capture Mode"
+        },
+        "configuration_file_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Configuration File Refs",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "implementation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkSensorImplementation"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Implementation"
+        },
+        "log_file_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Log File Refs",
+          "type": "array"
+        },
+        "monitored_network_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Monitored Network Refs",
+          "type": "array"
+        },
+        "monitoring_posture": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkSensorMonitoringPosture"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Monitoring Posture"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "process_ref": {
+          "default": "",
+          "title": "Process Ref",
+          "type": "string"
+        },
+        "revision": {
+          "default": "",
+          "title": "Revision",
+          "type": "string"
+        },
+        "sensor_id": {
+          "title": "Sensor Id",
+          "type": "string"
+        },
+        "sensor_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeNetworkSensorKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Sensor Kind"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sensor_id"
+      ],
+      "title": "RuntimeNetworkSensor",
+      "type": "object"
+    },
+    "RuntimeNetworkSensorCaptureMode": {
+      "description": "Portable capture mechanism family for an observed sensor.",
+      "enum": [
+        "pcap",
+        "af_packet",
+        "nfqueue",
+        "netmap",
+        "dpdk",
+        "flow",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkSensorCaptureMode",
+      "type": "string"
+    },
+    "RuntimeNetworkSensorImplementation": {
+      "description": "Observed product family for a network sensor.",
+      "enum": [
+        "suricata",
+        "snort",
+        "zeek",
+        "tcpdump",
+        "security_onion",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkSensorImplementation",
+      "type": "string"
+    },
+    "RuntimeNetworkSensorKind": {
+      "description": "Portable network-sensor function.",
+      "enum": [
+        "ids",
+        "ips",
+        "nsm",
+        "ndr",
+        "packet_capture",
+        "flow_collector",
+        "other",
+        "unknown"
+      ],
+      "title": "RuntimeNetworkSensorKind",
+      "type": "string"
+    },
+    "RuntimeNetworkSensorMonitoringPosture": {
+      "description": "Whether the sensor observes passively, inline, or locally.",
+      "enum": [
+        "passive",
+        "inline",
+        "host_local",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeNetworkSensorMonitoringPosture",
+      "type": "string"
     },
     "RuntimeOperationalPolicy": {
       "additionalProperties": false,
