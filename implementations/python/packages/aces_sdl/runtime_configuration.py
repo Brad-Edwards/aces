@@ -111,6 +111,7 @@ from .runtime_identity import (
     RuntimeSudoPrincipalKind,
     RuntimeSudoRule,
 )
+from .runtime_listeners import RuntimeServiceListener
 from .runtime_mail_service import (
     RuntimeMailAlias,
     RuntimeMailAuthMechanism,
@@ -179,15 +180,9 @@ from .runtime_ssh_server import (
     SshMatchRule,
     SshServerConfig,
 )
-from .runtime_values import (
-    absolute_path_or_var as _absolute_path_or_var,
-)
-from .runtime_values import (
-    parse_ram,
-)
-from .runtime_values import (
-    parse_runtime_enum_or_var as _parse_runtime_enum_or_var,
-)
+from .runtime_values import absolute_path_or_var as _absolute_path_or_var
+from .runtime_values import parse_ram
+from .runtime_values import parse_runtime_enum_or_var as _parse_runtime_enum_or_var
 
 __all__ = [
     "DatabaseService",
@@ -319,6 +314,7 @@ __all__ = [
     "RuntimePublishedPort",
     "RuntimeResourceLimits",
     "RuntimeRestartPolicy",
+    "RuntimeServiceListener",
     "RuntimeSecurityMonitoringManager",
     "RuntimeSensitivityClassification",
     "RuntimeSoftwareComponent",
@@ -555,6 +551,7 @@ class RuntimeConfiguration(SDLModel):
     file_services: list[RuntimeFileService] = Field(default_factory=list)
     mail_services: list[RuntimeMailService] = Field(default_factory=list)
     network: RuntimeNetworkRealization | None = None
+    service_listeners: list[RuntimeServiceListener] = Field(default_factory=list)
     applications: list[RuntimeApplicationSurface] = Field(default_factory=list)
     database_services: list[DatabaseService] = Field(default_factory=list)
     dns_services: list[RuntimeDnsService] = Field(default_factory=list)
@@ -574,6 +571,7 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.filesystem_inventory, attr="path", label="filesystem path")
         _reject_duplicate_keys(self.processes, attr="name", label="process name")
         _reject_duplicate_keys(self.processes, attr="pid", label="process pid")
+        _reject_duplicate_keys(self.service_listeners, attr="listener_id", label="service_listener listener_id")
         _reject_duplicate_keys(self.applications, attr="application_id", label="application_id")
         _reject_duplicate_keys(self.database_services, attr="database_service_id", label="database_service_id")
         _reject_duplicate_keys(self.dns_services, attr="dns_service_id", label="dns_service_id")

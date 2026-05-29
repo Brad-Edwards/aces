@@ -5409,6 +5409,13 @@
           "title": "Security Monitoring Managers",
           "type": "array"
         },
+        "service_listeners": {
+          "items": {
+            "$ref": "#/$defs/RuntimeServiceListener"
+          },
+          "title": "Service Listeners",
+          "type": "array"
+        },
         "service_manager_units": {
           "items": {
             "$ref": "#/$defs/ServiceManagerUnit"
@@ -7498,6 +7505,93 @@
       },
       "title": "RuntimeInitProcess",
       "type": "object"
+    },
+    "RuntimeListenerAddressFamily": {
+      "description": "Address family observed for a runtime listener.",
+      "enum": [
+        "ipv4",
+        "ipv6",
+        "unix",
+        "unspecified",
+        "other"
+      ],
+      "title": "RuntimeListenerAddressFamily",
+      "type": "string"
+    },
+    "RuntimeListenerProtocol": {
+      "description": "Transport or IPC family for an observed listener.",
+      "enum": [
+        "tcp",
+        "udp",
+        "sctp",
+        "unix",
+        "other"
+      ],
+      "title": "RuntimeListenerProtocol",
+      "type": "string"
+    },
+    "RuntimeListenerProvenance": {
+      "description": "Source class for an observed runtime listener fact.",
+      "enum": [
+        "osquery",
+        "ss",
+        "netstat",
+        "lsof",
+        "nmap",
+        "docker_inspect",
+        "kubernetes",
+        "systemd",
+        "operator",
+        "scanner",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeListenerProvenance",
+      "type": "string"
+    },
+    "RuntimeListenerReadiness": {
+      "additionalProperties": false,
+      "description": "Optional readiness/probe evidence for an observed listener.",
+      "properties": {
+        "criteria": {
+          "default": "",
+          "title": "Criteria",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "probe": {
+          "default": "",
+          "title": "Probe",
+          "type": "string"
+        }
+      },
+      "title": "RuntimeListenerReadiness",
+      "type": "object"
+    },
+    "RuntimeListenerScope": {
+      "description": "Reachability class of the bind endpoint in the node namespace.",
+      "enum": [
+        "wildcard",
+        "loopback_only",
+        "network_facing",
+        "node_local",
+        "local_socket",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeListenerScope",
+      "type": "string"
     },
     "RuntimeLocalGroup": {
       "additionalProperties": false,
@@ -9621,6 +9715,53 @@
       "title": "RuntimePublishedPort",
       "type": "object"
     },
+    "RuntimePublishedPortRef": {
+      "additionalProperties": false,
+      "description": "Typed reference to an observed host-published port binding.\n\n``RuntimePublishedPort`` currently has no stable id, so the tuple is the\nreference shape used by semantic validation.",
+      "properties": {
+        "container_port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Container Port"
+        },
+        "host_ip": {
+          "default": "",
+          "title": "Host Ip",
+          "type": "string"
+        },
+        "host_port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Host Port"
+        },
+        "protocol": {
+          "default": "tcp",
+          "title": "Protocol",
+          "type": "string"
+        }
+      },
+      "required": [
+        "container_port"
+      ],
+      "title": "RuntimePublishedPortRef",
+      "type": "object"
+    },
     "RuntimeResourceLimits": {
       "additionalProperties": false,
       "description": "Observed runtime/cgroup resource limits for a node.",
@@ -10403,6 +10544,144 @@
       ],
       "title": "RuntimeSensitivityClassification",
       "type": "string"
+    },
+    "RuntimeServiceListener": {
+      "additionalProperties": false,
+      "description": "Observed generic runtime listener attached to a node.",
+      "properties": {
+        "address": {
+          "default": "",
+          "title": "Address",
+          "type": "string"
+        },
+        "address_family": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeListenerAddressFamily"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unspecified",
+          "title": "Address Family"
+        },
+        "bind_interface": {
+          "default": "",
+          "title": "Bind Interface",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "listener_id": {
+          "title": "Listener Id",
+          "type": "string"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Port"
+        },
+        "process_name": {
+          "default": "",
+          "title": "Process Name",
+          "type": "string"
+        },
+        "process_ref": {
+          "default": "",
+          "title": "Process Ref",
+          "type": "string"
+        },
+        "protocol": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeListenerProtocol"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "tcp",
+          "title": "Protocol"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeListenerProvenance"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        },
+        "published_port_refs": {
+          "items": {
+            "$ref": "#/$defs/RuntimePublishedPortRef"
+          },
+          "title": "Published Port Refs",
+          "type": "array"
+        },
+        "readiness": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeListenerReadiness"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeListenerScope"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Scope"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        },
+        "socket_path": {
+          "default": "",
+          "title": "Socket Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "listener_id"
+      ],
+      "title": "RuntimeServiceListener",
+      "type": "object"
     },
     "RuntimeSoftwareComponent": {
       "additionalProperties": false,

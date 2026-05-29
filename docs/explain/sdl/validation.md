@@ -39,7 +39,8 @@ becoming a validator-only interpretation of the SDL.
 |------|----------------|
 | `verify_content` | Content targets reference existing VM nodes. |
 | `verify_accounts` | Account nodes reference existing VM nodes. |
-| `verify_relationships` | Source and target resolve to any named element in any section, including variables, relationships, content item names, named service bindings, runtime identity-authority refs, runtime DNS refs, runtime network-sensor refs, runtime security-monitoring manager refs, and named ACL rules. Ambiguous bare refs are rejected with qualified alternatives. |
+| `verify_relationships` | Source and target resolve to any named element in any section, including variables, relationships, content item names, named service bindings, runtime service listener refs, runtime identity-authority refs, runtime DNS refs, runtime network-sensor refs, runtime security-monitoring manager refs, and named ACL rules. Ambiguous bare refs are rejected with qualified alternatives. |
+| `verify_runtime_service_listeners` | Runtime service listeners resolve optional same-node service refs, process refs, and host-published port correlations. Concrete service/listener port+protocol values must match. |
 | `verify_runtime_identity_authorities` | Runtime identity-authority services resolve to same-node service bindings. Local relationship and policy refs resolve within the owning authority across authority, service, subject, policy, and relationship stable ids. |
 | `verify_runtime_dns_services` | Runtime DNS services resolve to same-node service bindings. Configuration, log, and zone-file refs resolve to observed runtime filesystem entries when the node has file inventory. |
 | `verify_runtime_network_sensors` | Runtime network sensors name monitored networks that resolve to switch-backed infrastructure entries and, when runtime endpoint inventory exists on the node, to same-node network endpoint attachments. Configuration, log, and evidence refs resolve to observed runtime filesystem entries when the node has file inventory. |
@@ -118,6 +119,21 @@ records `runtime.network.endpoints`, the monitored network must also be one of
 that node's observed endpoint attachments. Configuration, log, and evidence
 refs are absolute paths and are checked against `runtime.filesystem_inventory`
 when that inventory is non-empty.
+
+The optional `runtime.service_listeners` inventory has model-local and
+semantic rules. Listener ids are stable concrete symbols and are unique within
+a node runtime block. Network listeners require a port and a bind address or
+interface; Unix socket listeners require `socket_path` and must not set a port
+or address. Concrete address-family and scope fields must not contradict the
+bind endpoint: wildcard addresses use `scope: wildcard`, loopback addresses
+cannot be `network_facing`, non-loopback IP addresses cannot be
+`loopback_only`, and Unix socket listeners use `local_socket` or `unknown`.
+Optional same-node `service` refs must resolve to `Node.services[].name`, and
+concrete listener port/protocol values must match the service. Optional
+`process_ref` values resolve to `runtime.process` or `runtime.processes` by
+process name or PID. Optional `published_port_refs` entries resolve to
+`runtime.network.published_ports` by host IP, host port, container port, and
+protocol and must match the listener's container-side port/protocol.
 
 The optional `runtime.security_monitoring_managers` inventory has model-local
 and semantic rules. Managers, listeners, components, agents, agent groups,
@@ -246,7 +262,9 @@ Generic refs are indexed in two forms:
 - qualified names like `nodes.webapp`, `features.postgres`, `infrastructure.dmz-net`, or `content.mailbox.items.invoice.eml`
 
 The index also includes nested entity dot-paths, named service bindings
-(`nodes.<node>.services.<service_name>`), runtime identity-authority refs
+(`nodes.<node>.services.<service_name>`), runtime service listener refs
+(`nodes.<node>.runtime.service_listeners.<listener_id>`), runtime
+identity-authority refs
 (`nodes.<node>.runtime.identity_authorities.<authority_id>` plus nested
 service, subject, policy, and relationship refs), and named ACL rules
 (`infrastructure.<infra>.acls.<acl_name>`). Runtime DNS refs are also indexed:
