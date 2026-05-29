@@ -5395,6 +5395,13 @@
           "title": "Processes",
           "type": "array"
         },
+        "security_monitoring_managers": {
+          "items": {
+            "$ref": "#/$defs/RuntimeSecurityMonitoringManager"
+          },
+          "title": "Security Monitoring Managers",
+          "type": "array"
+        },
         "service_manager_units": {
           "items": {
             "$ref": "#/$defs/ServiceManagerUnit"
@@ -9527,6 +9534,676 @@
         "other"
       ],
       "title": "RuntimeRestartPolicy",
+      "type": "string"
+    },
+    "RuntimeSecurityMonitoringAgent": {
+      "additionalProperties": false,
+      "description": "An agent or sensor enrolled with the manager.",
+      "properties": {
+        "address": {
+          "default": "",
+          "title": "Address",
+          "type": "string"
+        },
+        "agent_id": {
+          "title": "Agent Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "group_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Group Refs",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "node_ref": {
+          "default": "",
+          "title": "Node Ref",
+          "type": "string"
+        },
+        "os": {
+          "default": "",
+          "title": "Os",
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSecurityMonitoringAgentStatus"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Status"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "agent_id",
+        "name"
+      ],
+      "title": "RuntimeSecurityMonitoringAgent",
+      "type": "object"
+    },
+    "RuntimeSecurityMonitoringAgentGroup": {
+      "additionalProperties": false,
+      "description": "A manager-side enrolled-agent group.",
+      "properties": {
+        "configuration_file_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Configuration File Refs",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "group_id": {
+          "title": "Group Id",
+          "type": "string"
+        },
+        "member_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Member Refs",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id"
+      ],
+      "title": "RuntimeSecurityMonitoringAgentGroup",
+      "type": "object"
+    },
+    "RuntimeSecurityMonitoringAgentStatus": {
+      "description": "Observed enrolled-agent status.",
+      "enum": [
+        "available",
+        "active",
+        "disconnected",
+        "never_connected",
+        "pending",
+        "removed",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeSecurityMonitoringAgentStatus",
+      "type": "string"
+    },
+    "RuntimeSecurityMonitoringComponent": {
+      "additionalProperties": false,
+      "description": "A manager daemon, module, or internal component.",
+      "properties": {
+        "component_id": {
+          "title": "Component Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSecurityMonitoringComponentKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Kind"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "process_ref": {
+          "default": "",
+          "title": "Process Ref",
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSecurityMonitoringComponentStatus"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Status"
+        }
+      },
+      "required": [
+        "component_id",
+        "name"
+      ],
+      "title": "RuntimeSecurityMonitoringComponent",
+      "type": "object"
+    },
+    "RuntimeSecurityMonitoringComponentKind": {
+      "description": "Portable component/module kind inside a security-monitoring manager.",
+      "enum": [
+        "analysis_engine",
+        "agent_ingestion",
+        "agent_enrollment",
+        "module_supervisor",
+        "log_collection",
+        "alerting",
+        "api",
+        "cluster",
+        "indexer_forwarder",
+        "vulnerability_detection",
+        "file_integrity_monitoring",
+        "rootkit_detection",
+        "sca",
+        "active_response",
+        "integration",
+        "database",
+        "other"
+      ],
+      "title": "RuntimeSecurityMonitoringComponentKind",
+      "type": "string"
+    },
+    "RuntimeSecurityMonitoringComponentStatus": {
+      "description": "Observed component/module status.",
+      "enum": [
+        "running",
+        "stopped",
+        "disabled",
+        "enabled",
+        "degraded",
+        "failed",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeSecurityMonitoringComponentStatus",
+      "type": "string"
+    },
+    "RuntimeSecurityMonitoringContentFormat": {
+      "description": "Portable format family for manager-owned content.",
+      "enum": [
+        "wazuh_rule_xml",
+        "wazuh_decoder_xml",
+        "sigma",
+        "yara",
+        "stix",
+        "json",
+        "yaml",
+        "xml",
+        "query",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeSecurityMonitoringContentFormat",
+      "type": "string"
+    },
+    "RuntimeSecurityMonitoringContentKind": {
+      "description": "Kind of manager-owned detection or monitoring content.",
+      "enum": [
+        "rule_corpus",
+        "decoder_corpus",
+        "correlation_rules",
+        "sca_policies",
+        "active_response",
+        "cdb_list",
+        "threat_intel",
+        "dashboard",
+        "other"
+      ],
+      "title": "RuntimeSecurityMonitoringContentKind",
+      "type": "string"
+    },
+    "RuntimeSecurityMonitoringContentSet": {
+      "additionalProperties": false,
+      "description": "A manager-owned rule, decoder, policy, list, or query corpus.",
+      "properties": {
+        "content_id": {
+          "title": "Content Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "file_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "File Count"
+        },
+        "file_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "File Refs",
+          "type": "array"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSecurityMonitoringContentFormat"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Format"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSecurityMonitoringContentKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Kind"
+        },
+        "loaded": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Loaded"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content_id"
+      ],
+      "title": "RuntimeSecurityMonitoringContentSet",
+      "type": "object"
+    },
+    "RuntimeSecurityMonitoringImplementation": {
+      "description": "Product family for an observed security-monitoring manager.",
+      "enum": [
+        "wazuh",
+        "ossec",
+        "elastic_security",
+        "splunk_enterprise_security",
+        "security_onion",
+        "microsoft_sentinel",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeSecurityMonitoringImplementation",
+      "type": "string"
+    },
+    "RuntimeSecurityMonitoringListener": {
+      "additionalProperties": false,
+      "description": "A manager listener bound to a same-node transport service.",
+      "properties": {
+        "auth_required": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auth Required"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "listener_id": {
+          "title": "Listener Id",
+          "type": "string"
+        },
+        "protocol": {
+          "default": "",
+          "title": "Protocol",
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSecurityMonitoringListenerRole"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Role"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        },
+        "tls_enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tls Enabled"
+        }
+      },
+      "required": [
+        "listener_id"
+      ],
+      "title": "RuntimeSecurityMonitoringListener",
+      "type": "object"
+    },
+    "RuntimeSecurityMonitoringListenerRole": {
+      "description": "Logical role of a manager transport listener.",
+      "enum": [
+        "agent_event_ingestion",
+        "agent_enrollment",
+        "syslog_ingestion",
+        "api",
+        "alert_forwarding",
+        "indexer_forwarding",
+        "dashboard",
+        "other"
+      ],
+      "title": "RuntimeSecurityMonitoringListenerRole",
+      "type": "string"
+    },
+    "RuntimeSecurityMonitoringManager": {
+      "additionalProperties": false,
+      "description": "Node-scoped runtime inventory for a SIEM/security-monitoring manager.",
+      "properties": {
+        "agent_groups": {
+          "items": {
+            "$ref": "#/$defs/RuntimeSecurityMonitoringAgentGroup"
+          },
+          "title": "Agent Groups",
+          "type": "array"
+        },
+        "agents": {
+          "items": {
+            "$ref": "#/$defs/RuntimeSecurityMonitoringAgent"
+          },
+          "title": "Agents",
+          "type": "array"
+        },
+        "components": {
+          "items": {
+            "$ref": "#/$defs/RuntimeSecurityMonitoringComponent"
+          },
+          "title": "Components",
+          "type": "array"
+        },
+        "configuration_file_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Configuration File Refs",
+          "type": "array"
+        },
+        "content_sets": {
+          "items": {
+            "$ref": "#/$defs/RuntimeSecurityMonitoringContentSet"
+          },
+          "title": "Content Sets",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "implementation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSecurityMonitoringImplementation"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Implementation"
+        },
+        "listeners": {
+          "items": {
+            "$ref": "#/$defs/RuntimeSecurityMonitoringListener"
+          },
+          "title": "Listeners",
+          "type": "array"
+        },
+        "log_file_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Log File Refs",
+          "type": "array"
+        },
+        "manager_id": {
+          "title": "Manager Id",
+          "type": "string"
+        },
+        "manager_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSecurityMonitoringManagerKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Manager Kind"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "revision": {
+          "default": "",
+          "title": "Revision",
+          "type": "string"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        },
+        "settings": {
+          "items": {
+            "$ref": "#/$defs/RuntimeSecurityMonitoringSetting"
+          },
+          "title": "Settings",
+          "type": "array"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "manager_id"
+      ],
+      "title": "RuntimeSecurityMonitoringManager",
+      "type": "object"
+    },
+    "RuntimeSecurityMonitoringManagerKind": {
+      "description": "Portable manager role/family.",
+      "enum": [
+        "siem",
+        "xdr",
+        "hids",
+        "ndr",
+        "log_management",
+        "detection_engine",
+        "security_monitoring",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeSecurityMonitoringManagerKind",
+      "type": "string"
+    },
+    "RuntimeSecurityMonitoringSetting": {
+      "additionalProperties": false,
+      "description": "A bounded manager setting with sensitivity classification.",
+      "properties": {
+        "component_ref": {
+          "default": "",
+          "title": "Component Ref",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSecurityMonitoringSettingProvenance"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        },
+        "setting_id": {
+          "title": "Setting Id",
+          "type": "string"
+        },
+        "source_path": {
+          "default": "",
+          "title": "Source Path",
+          "type": "string"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        },
+        "value_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Value Classification"
+        }
+      },
+      "required": [
+        "setting_id",
+        "name"
+      ],
+      "title": "RuntimeSecurityMonitoringSetting",
+      "type": "object"
+    },
+    "RuntimeSecurityMonitoringSettingProvenance": {
+      "description": "Where an observed manager setting came from.",
+      "enum": [
+        "introspection",
+        "configuration_file",
+        "api",
+        "image_default",
+        "operator_override",
+        "runtime_default",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeSecurityMonitoringSettingProvenance",
       "type": "string"
     },
     "RuntimeSensitivityClassification": {

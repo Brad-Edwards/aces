@@ -65,3 +65,4 @@ Each ADR includes:
 | [037](adr-037-runtime-file-service-and-filesystem-presence-semantics.md) | Runtime File-Service and Filesystem Presence Semantics | accepted | 2026-05-26 |
 | [038](adr-038-runtime-mail-service-logical-state.md) | Runtime Mail-Service Logical State | accepted | 2026-05-28 |
 | [039](adr-039-dns-service-runtime-inventory.md) | DNS Service Runtime Inventory | accepted | 2026-05-28 |
+| [040](adr-040-security-monitoring-manager-runtime-inventory.md) | Security-Monitoring Manager Runtime Inventory | accepted | 2026-05-29 |

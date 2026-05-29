@@ -409,6 +409,54 @@ nodes:
             - name: tsig_secret          # secret-bearing settings omit value
               value_classification: redacted
               provenance: operator_override
+      security_monitoring_managers:     # observed SIEM/security-monitoring manager state
+        - manager_id: techvault-wazuh
+          service: wazuh-api            # owning same-node Node.services[].name
+          implementation: wazuh
+          manager_kind: siem
+          version: "4.12.0"
+          configuration_file_refs: [/var/ossec/etc/ossec.conf]
+          log_file_refs: [/var/ossec/logs/ossec.log]
+          listeners:
+            - listener_id: manager-api
+              service: wazuh-api
+              role: api
+              auth_required: true
+              tls_enabled: true
+            - listener_id: agent-events
+              service: wazuh-agent-events
+              role: agent_event_ingestion
+          components:
+            - component_id: analysisd
+              kind: analysis_engine
+              name: wazuh-analysisd
+              status: running
+          agents:
+            - agent_id: "001"
+              name: aptl-web-agent
+              status: available
+              group_refs: [default]
+          agent_groups:
+            - group_id: default
+              member_refs: ["001"]
+              configuration_file_refs: [/var/ossec/etc/shared/default/agent.conf]
+          content_sets:
+            - content_id: wazuh-ruleset
+              kind: rule_corpus
+              format: wazuh_rule_xml
+              file_count: 173
+              file_refs: [/var/ossec/ruleset/rules]
+              loaded: true
+          settings:
+            - setting_id: json-output
+              name: jsonout_output
+              value: "yes"
+              provenance: configuration_file
+              source_path: /var/ossec/etc/ossec.conf
+            - setting_id: api-token       # secret-bearing settings omit value
+              name: api_token
+              value_classification: redacted
+              provenance: operator_override
       identity_authorities:             # observed directory/domain/IdP/IAM state
         - authority_id: techvault-domain
           kind: domain
@@ -469,8 +517,9 @@ participant-observable and analysis-relevant runtime state that is distinct
 from authored deployment intent and top-level authored declarations such as
 feature placement or service bindings; it does not exclude host-published
 bindings, application routes, daemon policy, databases, identity authorities,
-DNS service logical state, or other participant-interactable state merely because the evidence came from
-Docker, Compose, a scanner, or a backend inspector. Mounts describe realized
+DNS service logical state, security-monitoring manager inventory, or other
+participant-interactable state merely because the evidence came from Docker,
+Compose, a scanner, or a backend inspector. Mounts describe realized
 filesystem attachments, including filesystem type, propagation, stability,
 whether a backend generated the source, and sensitivity classifications for
 the source and option strings. Mount sources or options classified as
@@ -643,6 +692,25 @@ inventory is non-empty. Fully qualified refs such as
 `nodes.dns.runtime.dns_services.bind.zones.corp.rrsets.web-a` participate in
 relationships, generic reference validation, and module import rewriting (see
 [ADR-039](../../decisions/adrs/adr-039-dns-service-runtime-inventory.md)).
+
+`runtime.security_monitoring_managers` records observed SIEM and
+security-monitoring manager state hosted by the node: manager identity,
+same-node transport ownership, listeners, manager modules/components, enrolled
+agents, agent groups, detection or monitoring content sets, bounded settings,
+and evidence refs. It is distinct from `Node.services` transport bindings,
+`runtime.processes` process snapshots, `runtime.service_manager_units`
+lifecycle state, filesystem evidence, raw logs, alert telemetry, and detection
+rule semantics. Each manager has a stable `manager_id`; child collections use
+stable ids for listeners, components, agents, groups, content sets, and
+settings. Agent group member refs resolve to manager-local agents, agent
+`group_refs` resolve to manager-local groups, and setting `component_ref`
+values resolve to manager-local components. File refs and setting source paths
+are checked against `runtime.filesystem_inventory` when that inventory is
+non-empty. Fully qualified refs such as
+`nodes.siem.runtime.security_monitoring_managers.wazuh.agents.001` participate
+in relationships, generic reference validation, and module import rewriting
+(see
+[ADR-040](../../decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory.md)).
 
 `runtime.mail_services` records the participant-observable mail-server logical
 state, distinct from transport-level `services`, host publication in
@@ -1011,7 +1079,12 @@ relationships, content item `name` values, named service bindings
 or `.relationships.<relationship_id>` refs), runtime DNS refs
 (`nodes.<node>.runtime.dns_services.<dns_service_id>` and nested
 `.zones.<zone_id>` or `.zones.<zone_id>.rrsets.<rrset_id>` refs), and named
-ACL rules (`infrastructure.<infra>.acls.<acl_name>`).
+security-monitoring manager refs
+(`nodes.<node>.runtime.security_monitoring_managers.<manager_id>` and nested
+`.listeners.<listener_id>`, `.components.<component_id>`,
+`.agents.<agent_id>`, `.agent_groups.<group_id>`,
+`.content_sets.<content_id>`, or `.settings.<setting_id>` refs), and named ACL
+rules (`infrastructure.<infra>.acls.<acl_name>`).
 
 Bare refs like `webapp` are valid when they are unambiguous. Any top-level section key may also be referenced explicitly as `<section>.<name>`, for example `nodes.webapp`, `features.postgres`, `accounts.db-admin`, or `infrastructure.dmz-net`. Content items may be referenced as `content.<content_name>.items.<item_name>` when a bare item `name` would collide with some other named element.
 
@@ -1271,7 +1344,24 @@ variables:
 
 Variables are referenced as `${var_name}` in other sections. They are **not resolved at parse time** — resolution happens at instantiation.
 
-Full-value placeholders are currently supported in ordinary string fields, common scalar fields (counts, booleans, scores, timings, RAM/CPU, ports), many reference values, and selected leaf enum-backed property fields such as `accounts.*.password_strength`, `entities.*.role`, `nodes.*.os`, `nodes.*.asset_value.*`, `nodes.*.runtime.identity_authorities.*.kind`, identity-authority subject/policy/relationship kinds, identity-authority ports and enabled flags, `nodes.*.runtime.dns_services.*.implementation`, DNS service roles, DNS zone kinds/purposes/classes, DNS record classes/types/provenance, DNS resolver booleans and DNSSEC validation modes, `infrastructure.*.acls[*].action`, and `objectives.*.success.mode`. The semantic validator checks that `${var_name}` refers to a declared variable, and the repo-owned instantiation phase substitutes concrete values before compilation/runtime planning. User-defined mapping keys and discriminant/schema-shaping enum fields such as section `type` tags still need concrete values, and placeholder keys are rejected at parse time.
+Full-value placeholders are currently supported in ordinary string fields,
+common scalar fields (counts, booleans, scores, timings, RAM/CPU, ports), many
+reference values, and selected leaf enum-backed property fields such as
+`accounts.*.password_strength`, `entities.*.role`, `nodes.*.os`,
+`nodes.*.asset_value.*`, `nodes.*.runtime.identity_authorities.*.kind`,
+identity-authority subject/policy/relationship kinds, identity-authority ports
+and enabled flags, `nodes.*.runtime.dns_services.*.implementation`, DNS
+service roles, DNS zone kinds/purposes/classes, DNS record
+classes/types/provenance, DNS resolver booleans and DNSSEC validation modes,
+security-monitoring manager implementation/kind fields, security-monitoring
+listener/component/agent/content/setting classifications, security-monitoring
+booleans and file counts, `infrastructure.*.acls[*].action`, and
+`objectives.*.success.mode`. The semantic validator checks that `${var_name}`
+refers to a declared variable, and the repo-owned instantiation phase
+substitutes concrete values before compilation/runtime planning. User-defined
+mapping keys and discriminant/schema-shaping enum fields such as section
+`type` tags still need concrete values, and placeholder keys are rejected at
+parse time.
 
 Think of variables as parameterizing **properties of declared objects**, not the object graph itself. For example, a node's hostname, a content file's text, or a subnet CIDR may be variable-backed, while top-level identifiers like `nodes.web`, `features.nginx`, or `accounts.domain-admin` must remain literal.
 
