@@ -44,7 +44,7 @@ becoming a validator-only interpretation of the SDL.
 | `verify_runtime_identity_authorities` | Runtime identity-authority services resolve to same-node service bindings. Local relationship and policy refs resolve within the owning authority across authority, service, subject, policy, and relationship stable ids. |
 | `verify_runtime_dns_services` | Runtime DNS services resolve to same-node service bindings. Configuration, log, and zone-file refs resolve to observed runtime filesystem entries when the node has file inventory. |
 | `verify_runtime_network_sensors` | Runtime network sensors name monitored networks that resolve to switch-backed infrastructure entries and, when runtime endpoint inventory exists on the node, to same-node network endpoint attachments. Configuration, log, and evidence refs resolve to observed runtime filesystem entries when the node has file inventory. |
-| `verify_runtime_security_monitoring_managers` | Runtime security-monitoring managers and listeners resolve to same-node service bindings. Manager/group/content/setting file refs resolve to observed runtime filesystem entries when the node has file inventory. Agent group member refs, agent group refs, and setting component refs resolve inside the owning manager. |
+| `verify_runtime_security_monitoring_managers` | Runtime security-monitoring managers and listeners resolve to same-node service bindings. Manager/group/content/detection/setting file refs resolve to observed runtime filesystem entries when the node has file inventory. Agent group member refs, agent group refs, setting component refs, detection content-set refs, and detection correlation refs resolve inside the owning manager. Detection source artifact refs and target refs resolve through the generic named-ref index. |
 | `verify_agents` | Entity references resolve. Starting accounts and initial-knowledge accounts exist in accounts section. Allowed subnets and initial-knowledge subnets must resolve to switch-backed infrastructure entries. Initial-knowledge hosts must resolve to VM nodes. Initial-knowledge services exist in `nodes.*.services[].name`. |
 | `verify_participant_behavior` | Agent action refs resolve to declared action contracts, observation-boundary refs resolve to declared boundaries, interaction refs resolve to declared actions or targetable state, and boundary view rules/transitions resolve to declared observable, hidden, or evidence refs. |
 | `verify_objectives` | Objective actors resolve (`agent` or `entity`). Objective actions must be declared by the referenced agent. Targets resolve to named scenario elements, including qualified service/ACL refs and section-qualified top-level refs. Ambiguous bare refs are rejected with qualified alternatives. Success criteria resolve to declared conditions/metrics/evaluations/TLOs/goals. Optional windows resolve through one shared normalized analysis over stories/scripts/events/workflows/workflow-steps, must remain internally consistent, and fail closed on dangling or out-of-window refs. Objective dependencies must resolve and stay acyclic. |
@@ -137,21 +137,27 @@ protocol and must match the listener's container-side port/protocol.
 
 The optional `runtime.security_monitoring_managers` inventory has model-local
 and semantic rules. Managers, listeners, components, agents, agent groups,
-content sets, and settings use stable ids. Manager ids are unique within a node
-runtime block, and every manager-local stable id is unique across the manager
-itself plus its child collections. Implementations, manager kinds, listener
-roles, component kinds/statuses, agent statuses, content kinds/formats, setting
-provenance, and value classifications are normalized from bounded enums while
-allowing full-value variables where the model permits. Secret-bearing settings
-such as passwords, API tokens, credentials, shared keys, keytabs, or private
-keys must omit raw values and use redacted/operator-secret classifications.
-Managers and listeners may reference only services declared on the same node.
-Manager configuration/log/evidence refs, agent-group configuration refs,
-content-set file refs, and setting source paths are checked against
-`runtime.filesystem_inventory` when that inventory is non-empty. Group
+content sets, detection definitions, and settings use stable ids. Manager ids
+are unique within a node runtime block, and every manager-local stable id is
+unique across the manager itself plus its child collections. Implementations,
+manager kinds, listener roles, component kinds/statuses, agent statuses,
+content kinds/formats, detection engines/kinds, field-predicate operators,
+setting provenance, and value classifications are normalized from bounded
+enums while allowing full-value variables where the model permits.
+Secret-bearing settings such as passwords, API tokens, credentials, shared
+keys, keytabs, or private keys must omit raw values and use
+redacted/operator-secret classifications. Managers and listeners may reference
+only services declared on the same node. Manager configuration/log/evidence
+refs, agent-group configuration refs, content-set file refs,
+detection-definition source/evidence refs, and setting source paths are checked
+against `runtime.filesystem_inventory` when that inventory is non-empty. Group
 `member_refs` must resolve to manager-local agents, agent `group_refs` must
-resolve to manager-local groups, and setting `component_ref` values must
-resolve to manager-local components.
+resolve to manager-local groups, setting `component_ref` values must resolve to
+manager-local components, detection `content_set_ref` values must resolve to
+manager-local content sets, and detection `if_sid_refs`,
+`if_matched_sid_refs`, and `parent_definition_refs` must resolve to
+manager-local detection definitions. Detection `source_artifact_ref` and
+`target_refs` resolve through the generic named-ref index.
 
 The optional `source.build` container image provenance block carries its own
 model-local rules. Build-argument and image-default-environment names must be
@@ -282,6 +288,6 @@ security-monitoring refs are indexed
 as `nodes.<node>.runtime.security_monitoring_managers.<manager_id>` plus nested
 `.listeners.<listener_id>`, `.components.<component_id>`,
 `.agents.<agent_id>`, `.agent_groups.<group_id>`,
-`.content_sets.<content_id>`, and `.settings.<setting_id>` refs. When a bare
-ref maps to multiple elements, validation fails and asks the author to use one
-of the qualified alternatives.
+`.content_sets.<content_id>`, `.detection_definitions.<definition_id>`, and
+`.settings.<setting_id>` refs. When a bare ref maps to multiple elements,
+validation fails and asks the author to use one of the qualified alternatives.

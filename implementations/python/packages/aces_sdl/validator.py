@@ -344,6 +344,7 @@ class SemanticValidator:
                 ("agents", "agent_id"),
                 ("agent_groups", "group_id"),
                 ("content_sets", "content_id"),
+                ("detection_definitions", "definition_id"),
                 ("settings", "setting_id"),
             ):
                 refs.update(
@@ -1718,6 +1719,8 @@ class SemanticValidator:
         component_ids = {component.component_id for component in manager.components}
         agent_ids = {agent.agent_id for agent in manager.agents}
         group_ids = {group.group_id for group in manager.agent_groups}
+        content_set_ids = {content_set.content_id for content_set in manager.content_sets}
+        definition_ids = {definition.definition_id for definition in manager.detection_definitions}
         for listener in manager.listeners:
             self._verify_owned_service_ref(
                 node_name,
@@ -1758,6 +1761,56 @@ class SemanticValidator:
                 field_name="file_refs",
                 observed_paths=observed_paths,
             )
+        for definition in manager.detection_definitions:
+            definition_label = f"{owner_label} detection_definition '{definition.definition_id}'"
+            self._verify_security_monitoring_local_ref(
+                getattr(definition, "content_set_ref", ""),
+                content_set_ids,
+                owner_label=definition_label,
+                field_name="content_set_ref",
+                target_label="content set",
+            )
+            self._verify_dns_file_refs(
+                definition_label,
+                [definition.source_file_ref] if definition.source_file_ref else [],
+                field_name="source_file_ref",
+                observed_paths=observed_paths,
+            )
+            self._verify_dns_file_refs(
+                definition_label,
+                getattr(definition, "evidence_refs", []),
+                field_name="evidence_refs",
+                observed_paths=observed_paths,
+            )
+            for field_name, refs in (
+                ("if_sid_ref", getattr(definition, "if_sid_refs", [])),
+                ("if_matched_sid_ref", getattr(definition, "if_matched_sid_refs", [])),
+                ("parent_definition_ref", getattr(definition, "parent_definition_refs", [])),
+            ):
+                for ref in refs:
+                    self._verify_security_monitoring_local_ref(
+                        ref,
+                        definition_ids,
+                        owner_label=definition_label,
+                        field_name=field_name,
+                        target_label="detection definition",
+                    )
+            source_artifact_ref = getattr(definition, "source_artifact_ref", "")
+            if source_artifact_ref and not self._is_unresolved_var(source_artifact_ref):
+                self._validate_named_ref(
+                    source_artifact_ref,
+                    owner_label=definition_label,
+                    ref_label="source_artifact_ref",
+                )
+            for target_ref in getattr(definition, "target_refs", []):
+                if self._is_unresolved_var(target_ref):
+                    continue
+                self._validate_named_ref(
+                    target_ref,
+                    owner_label=definition_label,
+                    ref_label="target_ref",
+                    targetable=True,
+                )
         for setting in manager.settings:
             setting_label = f"{owner_label} setting '{setting.setting_id}'"
             self._verify_security_monitoring_local_ref(

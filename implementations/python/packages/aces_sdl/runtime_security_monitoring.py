@@ -8,6 +8,13 @@ from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from ._base import SDLModel, is_variable_ref, parse_int_or_var
 from .runtime_filesystem import RuntimeSensitivityClassification
+from .runtime_security_monitoring_definitions import (
+    RuntimeSecurityMonitoringDetectionDefinition,
+    RuntimeSecurityMonitoringDetectionDefinitionKind,
+    RuntimeSecurityMonitoringDetectionEngine,
+    RuntimeSecurityMonitoringFieldPredicate,
+    RuntimeSecurityMonitoringFieldPredicateOperator,
+)
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
@@ -26,6 +33,11 @@ __all__ = [
     "RuntimeSecurityMonitoringContentFormat",
     "RuntimeSecurityMonitoringContentKind",
     "RuntimeSecurityMonitoringContentSet",
+    "RuntimeSecurityMonitoringDetectionDefinition",
+    "RuntimeSecurityMonitoringDetectionDefinitionKind",
+    "RuntimeSecurityMonitoringDetectionEngine",
+    "RuntimeSecurityMonitoringFieldPredicate",
+    "RuntimeSecurityMonitoringFieldPredicateOperator",
     "RuntimeSecurityMonitoringImplementation",
     "RuntimeSecurityMonitoringListener",
     "RuntimeSecurityMonitoringListenerRole",
@@ -492,6 +504,7 @@ class RuntimeSecurityMonitoringManager(SDLModel):
     agents: list[RuntimeSecurityMonitoringAgent] = Field(default_factory=list)
     agent_groups: list[RuntimeSecurityMonitoringAgentGroup] = Field(default_factory=list)
     content_sets: list[RuntimeSecurityMonitoringContentSet] = Field(default_factory=list)
+    detection_definitions: list[RuntimeSecurityMonitoringDetectionDefinition] = Field(default_factory=list)
     settings: list[RuntimeSecurityMonitoringSetting] = Field(default_factory=list)
     description: str = ""
 
@@ -540,6 +553,7 @@ def _reject_duplicate_local_ref_ids(manager: RuntimeSecurityMonitoringManager) -
         ("agent_id", "agents"),
         ("group_id", "agent_groups"),
         ("content_id", "content_sets"),
+        ("definition_id", "detection_definitions"),
         ("setting_id", "settings"),
     ):
         entries.extend((label, getattr(item, label)) for item in getattr(manager, collection_name))
