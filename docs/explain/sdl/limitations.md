@@ -40,6 +40,10 @@ posture, settings, and evidence refs -
 network-sensor monitoring posture (passive or inline NSM/IDS sensor identity,
 capture mode/interfaces, monitored network refs, and evidence refs -
 [ADR-042](../../decisions/adrs/adr-042-network-sensor-runtime-monitoring.md)),
+network detection-engine runtime inventory (app-layer parsers, rule sources,
+network zoning/address-set variables, output streams, control channels, and
+evidence refs -
+[ADR-044](../../decisions/adrs/adr-044-network-detection-engine-runtime-inventory.md)),
 and directory/domain/realm/IdP/IAM/federation identity-authority state
 (authority namespaces, services, subjects, policies, and typed relationships -
 [ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).
@@ -61,7 +65,7 @@ These are current SDL expressiveness gaps:
 | **Full time and clock model** | The SDL currently exposes timelines, timeouts, and budget-like controls, but it does not provide a full authoring surface for time domains, clock authority, pacing/dilation policy, synchronization mode, or explicit ordering/deadline semantics across different realizations | Time-and-simulation primary references under `research/`, ROS 2 Clock and Time, FMI, ns-3 realtime, DEVS/time-management literature |
 | **Full solver-backed verification** | Global proof-style verification that attack paths are reachable and defenses are consistent is not implemented; the repository uses lightweight semantic modeling, invariants, typed contracts, and selective property/state-machine methods | VSDL SMT solver, CRACK Datalog |
 | **Full participant behavior surface** | The current `agents` section under-expresses richer role-neutral behavior concerns such as tool/affordance declarations, control-context assets, decision-surface exposure policies, episode structure, and benchmark-oriented participant assets | CybORG, OpenRange, Open Trajectory Gym |
-| **Scenario-native observability and authored evidence requirements** | The ecosystem treats in-world observability systems and authored “capture these data from these sources” requirements as first-class concerns. SDL now covers node-scoped network-sensor monitoring posture, but the broader authored evidence-requirements model remains incomplete | OpenRange, OCSF-informed telemetry models |
+| **Scenario-native observability and authored evidence requirements** | The ecosystem treats in-world observability systems and authored "capture these data from these sources" requirements as first-class concerns. SDL now covers node-scoped network-sensor monitoring posture and network detection-engine inventory, but the broader authored evidence-requirements model remains incomplete | OpenRange, OCSF-informed telemetry models |
 | **User behavior profiles** | Normal user activity patterns (browsing, email, file access schedules) | CybORG Green agents |
 | **Multi-tenancy** | Multiple independent exercises sharing infrastructure | Locked Shields team-per-subnet model |
 
