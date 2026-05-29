@@ -265,6 +265,7 @@ def test_experiment_core_schemas_publish_closed_world_contracts():
         "size_bytes",
         "created_at",
         "source",
+        "sensitivity",
     ]
     assert (
         artifact_schema["properties"]["satisfies_refs"]["items"]["$ref"] == "#/$defs/ExperimentEvidenceReferenceModel"
@@ -485,6 +486,10 @@ def test_experiment_core_rejects_empty_or_unsubstantiated_run_results():
     artifact_without_checksum = deepcopy(payload)
     del artifact_without_checksum["evidence_artifacts"][0]["checksum"]
     _assert_schema_and_model_reject("experiment-run-v1", artifact_without_checksum)
+
+    artifact_without_sensitivity = deepcopy(payload)
+    del artifact_without_sensitivity["evidence_artifacts"][0]["sensitivity"]
+    _assert_schema_and_model_reject("experiment-run-v1", artifact_without_sensitivity)
 
     redacted_parameter_with_value = deepcopy(payload)
     redacted_parameter_with_value["parameter_set"][0]["redaction"] = "redacted"

@@ -56,9 +56,17 @@ review rounds can distinguish true contract gaps from future work.
 
 ## Review Outcome
 
-The traceability pass found three `v1 MUST` enforcement gaps and one `v1 SHOULD`
-support gap. The enforcement gaps were artifact digest/path binding, redacted
-parameter value leakage, and mandatory validity notes for claim-bearing studies.
-The support gap was explicit artifact roles for benchmark and agent-evaluation
-evidence surfaces. All four are now represented in the contract source and
-covered by regression tests or schema assertions.
+The initial traceability pass found three `v1 MUST` enforcement gaps and one
+`v1 SHOULD` support gap. The enforcement gaps were artifact digest/path binding,
+redacted parameter value leakage, and mandatory validity notes for
+claim-bearing studies. The support gap was explicit artifact roles for
+benchmark and agent-evaluation evidence surfaces. All four are represented in
+the contract source and covered by regression tests or schema assertions.
+
+Subsequent bounded closure gates did not change the criteria matrix, but they
+found additional closure issues against the same checklist: declared run
+allocation now validates even when a collection/cohort omits an analysis plan;
+semantic-invariant annotations now resolve to callable validators; artifact
+sensitivity metadata is now an explicit schema-required field; and EXP-701
+through EXP-705 requirement governance now maps the generated schema
+publication surface.

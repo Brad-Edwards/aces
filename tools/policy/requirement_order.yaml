@@ -178,10 +178,9 @@ ownership:
     - CHANGELOG.md
   experiment-core:
     - contracts/README.md
+    - contracts/schema-publication-manifest.json
     - contracts/schemas/README.md
-    - contracts/schemas/experiment-core
-    - contracts/schemas/profiles
-    - contracts/schemas/schema-publication-manifest.json
+    - contracts/schemas
     - contracts/fixtures/experiment-core
     - specs/formal/README.md
     - specs/formal/experiment-core

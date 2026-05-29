@@ -242,6 +242,8 @@ def test_experiment_core_requirement_maps_allowed_contract_paths(tmp_path: Path)
     failures = evaluate_requirement_governance(
         repo_root,
         [
+            "contracts/schema-publication-manifest.json",
+            "contracts/schemas/backend-manifest/backend-manifest-v2.json",
             "contracts/schemas/experiment-core/experiment-task-v1.json",
             "docs/research/experiment-core/traceability-matrix-exp-701-705.md",
             "implementations/python/packages/aces_contracts/contracts.py",

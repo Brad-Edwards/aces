@@ -256,9 +256,12 @@ Studies carry accountable analysis context:
 
 ### Security And Redaction
 
-1. Experiment-core records MUST NOT contain bearer tokens, credentials, private
-   keys, environment dumps, full tracebacks, backend-private objects, raw process
-   argv, or raw backend inspect payloads.
+1. Experiment-core records are not a credential, traceback, process-argument, or
+   raw backend-inspect transport. v1 automated enforcement covers the
+   closed-world field set, checked-in artifact secret scanning, artifact
+   sensitivity metadata, and redaction-aware parameter validators; it does not
+   claim complete semantic detection of every sensitive string a producer could
+   place in free-text fields.
 2. Artifact references that point at restricted or redacted evidence MUST carry
    sensitivity metadata.
 3. Structured experiment parameters marked `redacted` or `withheld` MUST NOT

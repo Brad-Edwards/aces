@@ -352,7 +352,6 @@
           "type": "array"
         },
         "sensitivity": {
-          "default": "internal",
           "enum": [
             "public",
             "internal",
@@ -386,7 +385,8 @@
         "checksum",
         "size_bytes",
         "created_at",
-        "source"
+        "source",
+        "sensitivity"
       ],
       "title": "ExperimentArtifactRefModel",
       "type": "object"

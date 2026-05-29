@@ -1449,7 +1449,7 @@ class ExperimentArtifactRefModel(ContractModel):
     created_at: Rfc3339DateTimeString
     source: NonEmptyString
     satisfies_refs: list[ExperimentEvidenceReferenceModel] = Field(default_factory=list)
-    sensitivity: Literal["public", "internal", "restricted", "redacted"] = "internal"
+    sensitivity: Literal["public", "internal", "restricted", "redacted"]
     description: NonEmptyString | None = None
 
     @model_validator(mode="after")
