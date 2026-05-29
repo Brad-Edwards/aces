@@ -34,6 +34,10 @@ def test_load_controlled_vocabulary_catalog():
     assert catalog.schema_version == "controlled-vocabularies/v1"
     assert set(catalog.vocabularies) >= {
         "processor-features",
+        "participant-implementation-kinds",
+        "participant-decision-surface-modes",
+        "participant-tool-affordance-expectations",
+        "participant-exposure-policy-kinds",
         "workflow-features",
         "workflow-state-predicate-features",
         "provisioner-node-types",
@@ -92,6 +96,7 @@ def test_closed_enum_vocabularies_match_python_enums():
 def test_governed_extension_values_are_allowed_for_extensible_vocabularies():
     validate_controlled_vocabulary_value("provisioner-node-types", "x-acme:bare-metal")
     validate_controlled_vocabulary_value("orchestrator-supported-sections", "x-acme:custom-stage")
+    validate_controlled_vocabulary_value("participant-decision-surface-modes", "x-acme:swarm-control")
 
 
 def test_unguarded_extension_values_are_rejected():

@@ -23,6 +23,12 @@ Each ADR includes:
 
 ## Index
 
+```{toctree}
+:hidden:
+
+adr-040-participant-implementation-manifest-and-provenance
+```
+
 | ADR | Title | Status | Date |
 |-----|-------|--------|------|
 | [000](adr-000-use-adrs.md) | Use Architecture Decision Records | accepted | 2026-03-20 |
@@ -65,3 +71,4 @@ Each ADR includes:
 | [037](adr-037-runtime-file-service-and-filesystem-presence-semantics.md) | Runtime File-Service and Filesystem Presence Semantics | accepted | 2026-05-26 |
 | [038](adr-038-runtime-mail-service-logical-state.md) | Runtime Mail-Service Logical State | accepted | 2026-05-28 |
 | [039](adr-039-dns-service-runtime-inventory.md) | DNS Service Runtime Inventory | accepted | 2026-05-28 |
+| [040](adr-040-participant-implementation-manifest-and-provenance.md) | Participant Implementation Manifest and Provenance Surface | accepted | 2026-05-29 |
