@@ -54,6 +54,7 @@ def _security_monitoring_manager_aliases(
         ("agents", "agent_id"),
         ("agent_groups", "group_id"),
         ("content_sets", "content_id"),
+        ("detection_definitions", "definition_id"),
         ("settings", "setting_id"),
     ):
         aliases.update(

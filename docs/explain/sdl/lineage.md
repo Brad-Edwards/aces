@@ -199,24 +199,25 @@ ACES relies on prior work in four ways:
   These are implementation lineage and evidence sources, not schema authority.
 - **Event and detection-content precedents:** OCSF is vendor-neutral event
   schema lineage, and Sigma is portable detection-rule lineage. They justify a
-  product-neutral posture for content and telemetry vocabulary, but ACES does
-  not import OCSF events, Sigma rule semantics, Wazuh XML, SIEM queries, or
-  alert records into SDL as first-class runtime records.
+  product-neutral posture for content and telemetry vocabulary. ACES records a
+  bounded parsed detection-definition manifest for loaded definitions, but it
+  does not import OCSF events, raw Sigma rule bodies, Wazuh XML, SIEM queries,
+  or alert records into SDL as first-class runtime records.
 
 Portable ACES references are stable `manager_id`, `listener_id`,
-`component_id`, `agent_id`, `group_id`, `content_id`, and `setting_id`
-symbols. Native manager identifiers, daemon names, file names, ruleset ids,
-agent labels, and API ids are preserved as observed data or evidence when
-needed, but they are not automatically ACES reference identity. Secret-bearing
-manager settings such as passwords, enrollment secrets, API tokens, shared
-keys, keytabs, or private keys must be redacted or operator-secret classified
-and must omit raw values.
+`component_id`, `agent_id`, `group_id`, `content_id`, `definition_id`, and
+`setting_id` symbols. Native manager identifiers, daemon names, file names,
+ruleset ids, rule ids, decoder names, agent labels, and API ids are preserved
+as observed data or evidence when needed, but they are not automatically ACES
+reference identity. Secret-bearing manager settings such as passwords,
+enrollment secrets, API tokens, shared keys, keytabs, or private keys must be
+redacted or operator-secret classified and must omit raw values.
 
 The resulting model follows the same V&V posture as the DNS, mail, database,
 file-service, and identity-authority surfaces: state which manager concepts
 are stable enough to compare, target, and validate; keep vendor-specific
-configuration, telemetry, and rule semantics as evidence or downstream
-translation concerns.
+configuration, telemetry, rule-engine execution, and raw rule syntax as
+evidence or downstream translation concerns.
 
 ## Generic Runtime Service Listener Semantics
 

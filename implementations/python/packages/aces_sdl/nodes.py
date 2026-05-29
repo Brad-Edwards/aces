@@ -9,6 +9,7 @@ from enum import Enum
 from pydantic import Field, field_validator, model_validator
 
 from . import runtime_network_detection as _runtime_network_detection
+from . import runtime_security_monitoring as _runtime_security_monitoring
 from ._base import (
     SDLModel,
     is_variable_ref,
@@ -202,26 +203,9 @@ from .runtime_network_sensor import (
     RuntimeNetworkSensorKind,
     RuntimeNetworkSensorMonitoringPosture,
 )
-from .runtime_security_monitoring import (
-    RuntimeSecurityMonitoringAgent,
-    RuntimeSecurityMonitoringAgentGroup,
-    RuntimeSecurityMonitoringAgentStatus,
-    RuntimeSecurityMonitoringComponent,
-    RuntimeSecurityMonitoringComponentKind,
-    RuntimeSecurityMonitoringComponentStatus,
-    RuntimeSecurityMonitoringContentFormat,
-    RuntimeSecurityMonitoringContentKind,
-    RuntimeSecurityMonitoringContentSet,
-    RuntimeSecurityMonitoringImplementation,
-    RuntimeSecurityMonitoringListener,
-    RuntimeSecurityMonitoringListenerRole,
-    RuntimeSecurityMonitoringManager,
-    RuntimeSecurityMonitoringManagerKind,
-    RuntimeSecurityMonitoringSetting,
-    RuntimeSecurityMonitoringSettingProvenance,
-)
 
 globals().update({name: getattr(_runtime_network_detection, name) for name in _runtime_network_detection.__all__})
+globals().update({name: getattr(_runtime_security_monitoring, name) for name in _runtime_security_monitoring.__all__})
 
 __all__ = [
     "AssetValue",
@@ -377,22 +361,7 @@ __all__ = [
     "RuntimeResourceLimits",
     "RuntimeRestartPolicy",
     "RuntimeServiceListener",
-    "RuntimeSecurityMonitoringAgent",
-    "RuntimeSecurityMonitoringAgentGroup",
-    "RuntimeSecurityMonitoringAgentStatus",
-    "RuntimeSecurityMonitoringComponent",
-    "RuntimeSecurityMonitoringComponentKind",
-    "RuntimeSecurityMonitoringComponentStatus",
-    "RuntimeSecurityMonitoringContentFormat",
-    "RuntimeSecurityMonitoringContentKind",
-    "RuntimeSecurityMonitoringContentSet",
-    "RuntimeSecurityMonitoringImplementation",
-    "RuntimeSecurityMonitoringListener",
-    "RuntimeSecurityMonitoringListenerRole",
-    "RuntimeSecurityMonitoringManager",
-    "RuntimeSecurityMonitoringManagerKind",
-    "RuntimeSecurityMonitoringSetting",
-    "RuntimeSecurityMonitoringSettingProvenance",
+    *_runtime_security_monitoring.__all__,
     "RuntimeSensitivityClassification",
     "RuntimeSudoPrincipalKind",
     "RuntimeSudoRule",

@@ -10797,6 +10797,424 @@
       "title": "RuntimeSecurityMonitoringContentSet",
       "type": "object"
     },
+    "RuntimeSecurityMonitoringDetectionDefinition": {
+      "additionalProperties": false,
+      "description": "A parsed detection definition loaded by a security-monitoring manager.",
+      "properties": {
+        "canonical_digest": {
+          "default": "",
+          "title": "Canonical Digest",
+          "type": "string"
+        },
+        "compliance_tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Compliance Tags",
+          "type": "array"
+        },
+        "content_set_ref": {
+          "default": "",
+          "title": "Content Set Ref",
+          "type": "string"
+        },
+        "decoded_as": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Decoded As",
+          "type": "array"
+        },
+        "decoder_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Decoder Fields",
+          "type": "array"
+        },
+        "decoder_names": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Decoder Names",
+          "type": "array"
+        },
+        "definition_id": {
+          "title": "Definition Id",
+          "type": "string"
+        },
+        "definition_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSecurityMonitoringDetectionDefinitionKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Definition Kind"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "digest_algorithm": {
+          "default": "",
+          "title": "Digest Algorithm",
+          "type": "string"
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "engine": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSecurityMonitoringDetectionEngine"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Engine"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "field_predicates": {
+          "items": {
+            "$ref": "#/$defs/RuntimeSecurityMonitoringFieldPredicate"
+          },
+          "title": "Field Predicates",
+          "type": "array"
+        },
+        "frequency": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frequency"
+        },
+        "groups": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Groups",
+          "type": "array"
+        },
+        "if_matched_sid_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "If Matched Sid Refs",
+          "type": "array"
+        },
+        "if_sid_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "If Sid Refs",
+          "type": "array"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Level"
+        },
+        "loaded": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Loaded"
+        },
+        "match_strings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Match Strings",
+          "type": "array"
+        },
+        "mitre_attack_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mitre Attack Ids",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "native_id": {
+          "default": "",
+          "title": "Native Id",
+          "type": "string"
+        },
+        "parent_definition_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Parent Definition Refs",
+          "type": "array"
+        },
+        "parser_accepted": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parser Accepted"
+        },
+        "regex_patterns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Regex Patterns",
+          "type": "array"
+        },
+        "same_source_constraints": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Same Source Constraints",
+          "type": "array"
+        },
+        "severity": {
+          "default": "",
+          "title": "Severity",
+          "type": "string"
+        },
+        "source_artifact_ref": {
+          "default": "",
+          "title": "Source Artifact Ref",
+          "type": "string"
+        },
+        "source_end_line": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source End Line"
+        },
+        "source_file_ref": {
+          "default": "",
+          "title": "Source File Ref",
+          "type": "string"
+        },
+        "source_start_line": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Start Line"
+        },
+        "tactic_labels": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tactic Labels",
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "target_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Target Refs",
+          "type": "array"
+        },
+        "technique_labels": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Technique Labels",
+          "type": "array"
+        },
+        "timeframe_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeframe Seconds"
+        }
+      },
+      "required": [
+        "definition_id"
+      ],
+      "title": "RuntimeSecurityMonitoringDetectionDefinition",
+      "type": "object"
+    },
+    "RuntimeSecurityMonitoringDetectionDefinitionKind": {
+      "description": "Portable kind of parsed security-monitoring detection definition.",
+      "enum": [
+        "rule",
+        "correlation_rule",
+        "decoder",
+        "list_backed_rule",
+        "sca_policy_check",
+        "active_response_trigger",
+        "sigma_rule",
+        "yara_rule",
+        "suricata_rule",
+        "siem_analytic",
+        "other"
+      ],
+      "title": "RuntimeSecurityMonitoringDetectionDefinitionKind",
+      "type": "string"
+    },
+    "RuntimeSecurityMonitoringDetectionEngine": {
+      "description": "Portable detection-definition engine family.",
+      "enum": [
+        "wazuh",
+        "ossec",
+        "sigma",
+        "yara",
+        "suricata",
+        "elastic_security",
+        "splunk_enterprise_security",
+        "microsoft_sentinel",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeSecurityMonitoringDetectionEngine",
+      "type": "string"
+    },
+    "RuntimeSecurityMonitoringFieldPredicate": {
+      "additionalProperties": false,
+      "description": "A normalized field predicate extracted from a detection definition.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "operator": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSecurityMonitoringFieldPredicateOperator"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Operator"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field"
+      ],
+      "title": "RuntimeSecurityMonitoringFieldPredicate",
+      "type": "object"
+    },
+    "RuntimeSecurityMonitoringFieldPredicateOperator": {
+      "description": "Portable operator for a parsed field-level predicate.",
+      "enum": [
+        "equals",
+        "matches",
+        "contains",
+        "exists",
+        "in",
+        "regex",
+        "less_than",
+        "greater_than",
+        "other"
+      ],
+      "title": "RuntimeSecurityMonitoringFieldPredicateOperator",
+      "type": "string"
+    },
     "RuntimeSecurityMonitoringImplementation": {
       "description": "Product family for an observed security-monitoring manager.",
       "enum": [
@@ -10942,6 +11360,13 @@
           "default": "",
           "title": "Description",
           "type": "string"
+        },
+        "detection_definitions": {
+          "items": {
+            "$ref": "#/$defs/RuntimeSecurityMonitoringDetectionDefinition"
+          },
+          "title": "Detection Definitions",
+          "type": "array"
         },
         "evidence_refs": {
           "items": {

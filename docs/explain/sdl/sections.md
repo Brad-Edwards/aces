@@ -502,6 +502,30 @@ nodes:
               file_count: 173
               file_refs: [/var/ossec/ruleset/rules]
               loaded: true
+          detection_definitions:
+            - definition_id: rule-301010
+              engine: wazuh
+              definition_kind: correlation_rule
+              native_id: "301010"
+              content_set_ref: wazuh-ruleset
+              source_file_ref: /var/ossec/etc/rules/ad_rules.xml
+              source_start_line: 12
+              source_end_line: 35
+              digest_algorithm: sha256
+              canonical_digest: 1111111111111111111111111111111111111111111111111111111111111111
+              loaded: true
+              parser_accepted: true
+              level: 10
+              severity: high
+              field_predicates:
+                - field: win.system.eventID
+                  operator: equals
+                  value: "4769"
+              if_sid_refs: [rule-300000]
+              frequency: 5
+              timeframe_seconds: 60
+              groups: [windows, kerberos]
+              mitre_attack_ids: [T1558.003]
           settings:
             - setting_id: json-output
               name: jsonout_output
@@ -797,21 +821,31 @@ relationships, generic reference validation, and module import rewriting (see
 `runtime.security_monitoring_managers` records observed SIEM and
 security-monitoring manager state hosted by the node: manager identity,
 same-node transport ownership, listeners, manager modules/components, enrolled
-agents, agent groups, detection or monitoring content sets, bounded settings,
-and evidence refs. It is distinct from `Node.services` transport bindings,
-`runtime.processes` process snapshots, `runtime.service_manager_units`
-lifecycle state, filesystem evidence, raw logs, alert telemetry, and detection
-rule semantics. Each manager has a stable `manager_id`; child collections use
-stable ids for listeners, components, agents, groups, content sets, and
-settings. Agent group member refs resolve to manager-local agents, agent
-`group_refs` resolve to manager-local groups, and setting `component_ref`
-values resolve to manager-local components. File refs and setting source paths
-are checked against `runtime.filesystem_inventory` when that inventory is
-non-empty. Fully qualified refs such as
+agents, agent groups, detection or monitoring content sets, parsed detection
+definitions, bounded settings, and evidence refs. It is distinct from
+`Node.services` transport bindings, `runtime.processes` process snapshots,
+`runtime.service_manager_units` lifecycle state, filesystem evidence, raw logs,
+alert telemetry, and raw vendor rule/config payloads. Each manager has a stable
+`manager_id`; child collections use stable ids for listeners, components,
+agents, groups, content sets, detection definitions, and settings.
+`content_sets` is corpus/file inventory, while `detection_definitions` is the
+typed manifest of loaded parsed definitions from that corpus. Detection
+definitions preserve portable engine/kind, native id, source file/span,
+canonical digest, loaded/parser-accepted state, level/severity, predicates,
+decoder constraints, correlation refs, tags, MITRE/compliance mappings, and
+optional target refs. Agent group member refs resolve to manager-local agents,
+agent `group_refs` resolve to manager-local groups, setting `component_ref`
+values resolve to manager-local components, detection `content_set_ref` values
+resolve to manager-local content sets, and detection correlation refs resolve
+to manager-local definitions. File refs and setting source paths are checked
+against `runtime.filesystem_inventory` when that inventory is non-empty. Fully
+qualified refs such as
 `nodes.siem.runtime.security_monitoring_managers.wazuh.agents.001` participate
 in relationships, generic reference validation, and module import rewriting
 (see
-[ADR-040](../../decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory.md)).
+[ADR-040](../../decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory.md)
+and
+[ADR-045](../../decisions/adrs/adr-045-security-monitoring-detection-definition-semantics.md)).
 
 `runtime.mail_services` records the participant-observable mail-server logical
 state, distinct from transport-level `services`, host publication in

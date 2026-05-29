@@ -30,6 +30,7 @@ adr-041-participant-implementation-manifest-and-provenance
 adr-042-network-sensor-runtime-monitoring
 adr-043-runtime-service-listener-surface
 adr-044-network-detection-engine-runtime-inventory
+adr-045-security-monitoring-detection-definition-semantics
 ```
 
 | ADR | Title | Status | Date |
@@ -79,3 +80,4 @@ adr-044-network-detection-engine-runtime-inventory
 | [042](adr-042-network-sensor-runtime-monitoring.md) | Network Sensor Runtime Monitoring Posture | accepted | 2026-05-29 |
 | [043](adr-043-runtime-service-listener-surface.md) | Generic Runtime Service Listener Surface | accepted | 2026-05-29 |
 | [044](adr-044-network-detection-engine-runtime-inventory.md) | Network Detection Engine Runtime Inventory | accepted | 2026-05-29 |
+| [045](adr-045-security-monitoring-detection-definition-semantics.md) | Security-Monitoring Detection Definition Semantics | accepted | 2026-05-29 |
