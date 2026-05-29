@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from typing import Any
 
 from .scenario import Scenario
 
@@ -11,7 +10,7 @@ from .scenario import Scenario
 def _prefixed_runtimes(
     scenario: Scenario,
     node_rename_map: Mapping[str, str],
-) -> Iterable[tuple[str, str, Any]]:
+) -> Iterable[tuple[str, str, object]]:
     for node_name, node in scenario.nodes.items():
         prefixed_node = node_rename_map.get(node_name, node_name)
         if prefixed_node == node_name:
@@ -25,7 +24,7 @@ def _collection_aliases(
     *,
     bare_base: str,
     prefixed_base: str,
-    collection: Iterable[Any],
+    collection: Iterable[object],
     collection_name: str,
     id_field: str,
 ) -> dict[str, str]:
@@ -41,7 +40,7 @@ def _security_monitoring_manager_aliases(
     *,
     node_name: str,
     prefixed_node: str,
-    manager: Any,
+    manager: object,
 ) -> dict[str, str]:
     manager_id = getattr(manager, "manager_id", "")
     if not manager_id:

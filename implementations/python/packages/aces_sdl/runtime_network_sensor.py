@@ -1,7 +1,6 @@
 """Network-sensor runtime monitoring posture models."""
 
 from enum import Enum
-from typing import Any
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
@@ -70,11 +69,11 @@ class RuntimeNetworkSensorCaptureMode(str, Enum):
     OTHER = "other"
 
 
-def _normalize_enum(value: Any, enum_cls: type[Enum], *, field_name: str) -> Any:
+def _normalize_enum(value: object, enum_cls: type[Enum], *, field_name: str) -> object:
     return parse_runtime_enum_or_var(value, enum_cls, field_name=field_name)
 
 
-def _coerce_refs(value: Any) -> list[str]:
+def _coerce_refs(value: object) -> object:
     return coerce_string_list(value)
 
 
@@ -145,12 +144,12 @@ class RuntimeNetworkSensor(SDLModel):
 
     @field_validator("capture_interfaces", "monitored_network_refs", mode="before")
     @classmethod
-    def coerce_ref_lists(cls, v: Any) -> list[str]:
+    def coerce_ref_lists(cls, v: object) -> object:
         return _coerce_refs(v)
 
     @field_validator("configuration_file_refs", "log_file_refs", "evidence_refs", mode="before")
     @classmethod
-    def coerce_file_refs(cls, v: Any) -> list[str]:
+    def coerce_file_refs(cls, v: object) -> object:
         return _coerce_refs(v)
 
     @field_validator("configuration_file_refs", "log_file_refs", "evidence_refs")
