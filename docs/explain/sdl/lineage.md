@@ -169,6 +169,55 @@ This follows the same validation posture used elsewhere in SDL: the model
 states which protocol facts it can preserve, and it leaves server-specific
 syntax as evidence rather than smuggling that syntax into untyped fields.
 
+## Security-Monitoring Manager Runtime Semantics
+
+The `runtime.security_monitoring_managers` surface is issue #428's response to
+an observed gap for SIEM and security-monitoring manager inventory. It is not a
+clone of Wazuh, Splunk, Elastic Security, Security Onion, Microsoft Sentinel,
+or any one event schema. It is a portable node-scoped runtime inventory for the
+manager facts that surrounding ACES surfaces cannot own.
+
+ACES relies on prior work in four ways:
+
+- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+  model topology, deployable services/features, tasks, validation, and
+  deployment concerns. None expose a portable first-class security-monitoring
+  manager inventory. ACES therefore adds a typed `Node.runtime` surface rather
+  than encoding manager state inside `Node.services`, `runtime.processes`,
+  `runtime.service_manager_units`, `runtime.filesystem_inventory`, or raw
+  content files.
+- **Log-management and security-monitoring literature:** NIST SP 800-92 frames
+  computer security log management as infrastructure and processes for
+  collection, analysis, storage, maintenance, and operational use. ACES adapts
+  that infrastructure/process split by recording manager identity, listeners,
+  modules, agents, groups, content corpora, settings, and evidence refs without
+  making log telemetry itself the SDL runtime inventory.
+- **Implementation precedents:** Wazuh demonstrates the recurring manager
+  concepts ACES must preserve: a central manager/server, agent connection and
+  enrollment services, an analysis engine, manager API, agent groups and shared
+  configuration, rules, decoders, queues, integrations, and manager components.
+  These are implementation lineage and evidence sources, not schema authority.
+- **Event and detection-content precedents:** OCSF is vendor-neutral event
+  schema lineage, and Sigma is portable detection-rule lineage. They justify a
+  product-neutral posture for content and telemetry vocabulary, but ACES does
+  not import OCSF events, Sigma rule semantics, Wazuh XML, SIEM queries, or
+  alert records into SDL as first-class runtime records.
+
+Portable ACES references are stable `manager_id`, `listener_id`,
+`component_id`, `agent_id`, `group_id`, `content_id`, and `setting_id`
+symbols. Native manager identifiers, daemon names, file names, ruleset ids,
+agent labels, and API ids are preserved as observed data or evidence when
+needed, but they are not automatically ACES reference identity. Secret-bearing
+manager settings such as passwords, enrollment secrets, API tokens, shared
+keys, keytabs, or private keys must be redacted or operator-secret classified
+and must omit raw values.
+
+The resulting model follows the same V&V posture as the DNS, mail, database,
+file-service, and identity-authority surfaces: state which manager concepts
+are stable enough to compare, target, and validate; keep vendor-specific
+configuration, telemetry, and rule semantics as evidence or downstream
+translation concerns.
+
 ## File-Sharing And Resource-Access Semantics
 
 The `runtime.file_services` surface is issue #421's response to a gap

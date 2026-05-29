@@ -135,6 +135,7 @@ decisions/adrs/adr-036-sdl-processor-runtime-module-boundaries
 decisions/adrs/adr-037-runtime-file-service-and-filesystem-presence-semantics
 decisions/adrs/adr-038-runtime-mail-service-logical-state
 decisions/adrs/adr-039-dns-service-runtime-inventory
+decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory
 decisions/sem-213-temporal-participant-preflight
 ```
 

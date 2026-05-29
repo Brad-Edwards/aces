@@ -259,7 +259,8 @@ class SemanticValidator:
 
         These let a top-level relationship endpoint resolve to a runtime
         application surface, database service / logical database, DNS service
-        / zone / RRset, or identity-authority object. This keeps
+        / zone / RRset, identity-authority object, or security-monitoring
+        manager object. This keeps
         runtime-observed logical state targetable without promoting those
         records to top-level SDL sections.
         """
@@ -272,6 +273,7 @@ class SemanticValidator:
             refs.update(self._qualified_database_refs(node_name))
             refs.update(self._qualified_dns_refs(node_name))
             refs.update(self._qualified_identity_refs(node_name))
+            refs.update(self._qualified_security_monitoring_refs(node_name))
         refs.update(collect_qualified_mail_refs(self._s))
         return refs
 
@@ -312,6 +314,25 @@ class SemanticValidator:
             refs.update(
                 f"{base}.relationships.{relationship.relationship_id}" for relationship in authority.relationships
             )
+        return refs
+
+    def _qualified_security_monitoring_refs(self, node_name: str) -> set[str]:
+        refs: set[str] = set()
+        runtime = self._s.nodes[node_name].runtime
+        for manager in runtime.security_monitoring_managers:
+            base = f"nodes.{node_name}.runtime.security_monitoring_managers.{manager.manager_id}"
+            refs.add(base)
+            for collection_name, id_field in (
+                ("listeners", "listener_id"),
+                ("components", "component_id"),
+                ("agents", "agent_id"),
+                ("agent_groups", "group_id"),
+                ("content_sets", "content_id"),
+                ("settings", "setting_id"),
+            ):
+                refs.update(
+                    f"{base}.{collection_name}.{getattr(item, id_field)}" for item in getattr(manager, collection_name)
+                )
         return refs
 
     def _qualified_acl_refs(self) -> set[str]:
@@ -538,6 +559,7 @@ class SemanticValidator:
         self._verify_runtime_service_manager_units()
         self._verify_runtime_identity_authorities()
         self._verify_runtime_file_services()
+        self._verify_runtime_security_monitoring_managers()
         verify_runtime_mail_services(self)
         self._verify_features()
         self._verify_conditions()
@@ -1403,6 +1425,154 @@ class SemanticValidator:
                 continue
             if ref not in observed_paths:
                 self._err(f"{owner_label} {field_name} ref '{ref}' does not resolve to an observed file on the node")
+
+    def _verify_runtime_security_monitoring_managers(self) -> None:
+        """Validate observed SIEM/security-monitoring manager inventories.
+
+        Manager and listener service refs are node-local transport ownership
+        claims. File refs are checked only when a filesystem inventory exists,
+        matching the DNS and mail runtime surfaces' evidence-bound posture.
+        Agent/group and setting/component refs are manager-local stable ids.
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.security_monitoring_managers:
+                continue
+            service_names = self._node_service_names(node)
+            observed_paths = self._node_observed_paths(node)
+            for manager in runtime.security_monitoring_managers:
+                self._verify_security_monitoring_manager(
+                    node_name=node_name,
+                    manager=manager,
+                    service_names=service_names,
+                    observed_paths=observed_paths,
+                )
+
+    def _verify_security_monitoring_manager(
+        self,
+        *,
+        node_name: str,
+        manager: object,
+        service_names: set[str],
+        observed_paths: set[str],
+    ) -> None:
+        owner_label = f"Node '{node_name}' runtime security-monitoring manager '{manager.manager_id}'"
+        self._verify_owned_service_ref(
+            node_name,
+            getattr(manager, "service", ""),
+            service_names,
+            owner_label=owner_label,
+        )
+        self._verify_dns_file_refs(
+            owner_label,
+            getattr(manager, "configuration_file_refs", []),
+            field_name="configuration_file_refs",
+            observed_paths=observed_paths,
+        )
+        self._verify_dns_file_refs(
+            owner_label,
+            getattr(manager, "log_file_refs", []),
+            field_name="log_file_refs",
+            observed_paths=observed_paths,
+        )
+        self._verify_dns_file_refs(
+            owner_label,
+            getattr(manager, "evidence_refs", []),
+            field_name="evidence_refs",
+            observed_paths=observed_paths,
+        )
+        self._verify_security_monitoring_children(
+            node_name=node_name,
+            manager=manager,
+            owner_label=owner_label,
+            service_names=service_names,
+            observed_paths=observed_paths,
+        )
+
+    def _verify_security_monitoring_children(
+        self,
+        *,
+        node_name: str,
+        manager: object,
+        owner_label: str,
+        service_names: set[str],
+        observed_paths: set[str],
+    ) -> None:
+        component_ids = {component.component_id for component in manager.components}
+        agent_ids = {agent.agent_id for agent in manager.agents}
+        group_ids = {group.group_id for group in manager.agent_groups}
+        for listener in manager.listeners:
+            self._verify_owned_service_ref(
+                node_name,
+                getattr(listener, "service", ""),
+                service_names,
+                owner_label=f"{owner_label} listener '{listener.listener_id}'",
+            )
+        for group in manager.agent_groups:
+            group_label = f"{owner_label} agent_group '{group.group_id}'"
+            self._verify_dns_file_refs(
+                group_label,
+                getattr(group, "configuration_file_refs", []),
+                field_name="configuration_file_refs",
+                observed_paths=observed_paths,
+            )
+            for member_ref in group.member_refs:
+                self._verify_security_monitoring_local_ref(
+                    member_ref,
+                    agent_ids,
+                    owner_label=group_label,
+                    field_name="member_ref",
+                    target_label="agent",
+                )
+        for agent in manager.agents:
+            agent_label = f"{owner_label} agent '{agent.agent_id}'"
+            for group_ref in agent.group_refs:
+                self._verify_security_monitoring_local_ref(
+                    group_ref,
+                    group_ids,
+                    owner_label=agent_label,
+                    field_name="group_ref",
+                    target_label="agent group",
+                )
+        for content_set in manager.content_sets:
+            self._verify_dns_file_refs(
+                f"{owner_label} content_set '{content_set.content_id}'",
+                getattr(content_set, "file_refs", []),
+                field_name="file_refs",
+                observed_paths=observed_paths,
+            )
+        for setting in manager.settings:
+            setting_label = f"{owner_label} setting '{setting.setting_id}'"
+            self._verify_security_monitoring_local_ref(
+                getattr(setting, "component_ref", ""),
+                component_ids,
+                owner_label=setting_label,
+                field_name="component_ref",
+                target_label="component",
+            )
+            self._verify_dns_file_refs(
+                setting_label,
+                [setting.source_path] if setting.source_path else [],
+                field_name="source_path",
+                observed_paths=observed_paths,
+            )
+
+    def _verify_security_monitoring_local_ref(
+        self,
+        ref: str,
+        local_refs: set[str],
+        *,
+        owner_label: str,
+        field_name: str,
+        target_label: str,
+    ) -> None:
+        if not ref or self._is_unresolved_var(ref):
+            return
+        if ref not in local_refs:
+            self._err(
+                f"{owner_label} {field_name} '{ref}' does not resolve to a "
+                f"{target_label} in the security-monitoring manager"
+            )
 
     def _split_runtime_ref(self, ref: object, *, surface: str) -> tuple[str, str] | None:
         """Split ``nodes.<node>.runtime.<surface>.<rest>`` into (node, rest).
