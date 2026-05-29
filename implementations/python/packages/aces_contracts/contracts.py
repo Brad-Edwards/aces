@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import re
 from collections.abc import Mapping
@@ -421,6 +422,28 @@ def _iter_aces_semantic_invariant_entries(schema_node: Any) -> list[dict[str, An
     return entries
 
 
+def _resolve_semantic_validator(validator: str) -> Any:
+    parts = validator.split(".")
+    for index in range(len(parts), 0, -1):
+        module_name = ".".join(parts[:index])
+        try:
+            module_spec = importlib.util.find_spec(module_name)
+        except (ModuleNotFoundError, ValueError):
+            continue
+        if module_spec is None:
+            continue
+        target: Any = importlib.import_module(module_name)
+        try:
+            for attr in parts[index:]:
+                target = getattr(target, attr)
+        except AttributeError as exc:
+            raise ValueError(
+                f"semantic invariant validator '{validator}' does not resolve to an importable object"
+            ) from exc
+        return target
+    raise ValueError(f"semantic invariant validator '{validator}' does not resolve to an importable object")
+
+
 def _validate_aces_semantic_invariant_annotations(
     *,
     contract_id: str,
@@ -441,6 +464,8 @@ def _validate_aces_semantic_invariant_annotations(
     seen_invariant_ids: set[str] = set()
     for invariant_payload in invariant_entries:
         invariant = AcesSemanticInvariantEntryModel.model_validate(invariant_payload)
+        if not callable(_resolve_semantic_validator(invariant.validator)):
+            raise ValueError(f"semantic invariant validator '{invariant.validator}' must resolve to a callable")
         if invariant.id in seen_invariant_ids:
             raise ValueError(f"schema '{contract_id}' has duplicate semantic invariant id '{invariant.id}'")
         seen_invariant_ids.add(invariant.id)
@@ -2775,7 +2800,7 @@ def _validate_study_run_allocation_coverage(
     evaluation_run_members: list[ExperimentStudyMembershipModel],
 ) -> None:
     allocation = study.run_allocation
-    if allocation is None or study.analysis_plan is None:
+    if allocation is None:
         return
 
     if not evaluation_run_members:

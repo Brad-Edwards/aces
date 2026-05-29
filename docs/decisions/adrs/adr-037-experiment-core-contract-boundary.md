@@ -179,11 +179,11 @@ claims. The same semantic validation checks that evaluation-run membership
 groupings cover the predeclared run-allocation conditions, that one run is not
 counted in multiple conditions, that invalidated/superseded/not-evaluated runs
 do not satisfy allocation, and that every condition meets the target run count
-before analysis claims are accepted. Lighter `collection` and `cohort` records
+whenever run allocation is declared. Lighter `collection` and `cohort` records
 remain available for curated grouping, but they still carry ownership, purpose,
 membership, and inclusion criteria. If a collection or cohort carries an
-analysis plan, the same invalidated/superseded/not-evaluated evaluation-run
-exclusion applies even without run allocation.
+analysis plan without run allocation, the same
+invalidated/superseded/not-evaluated evaluation-run exclusion applies.
 
 ### 5. Keep Runtime And API Work Out Of This Issue
 

@@ -339,6 +339,11 @@ def test_aces_semantic_invariant_annotations_have_published_shape():
     with pytest.raises(ValidationError):
         validate_aces_semantic_invariant_annotations("experiment-run-v1", corrupted_schema)
 
+    unresolved_validator_schema = deepcopy(run_schema)
+    unresolved_validator_schema["x-aces-invariants"][0]["validator"] = "aces_contracts.contracts.DoesNotExist"
+    with pytest.raises(ValueError, match="does not resolve"):
+        validate_aces_semantic_invariant_annotations("experiment-run-v1", unresolved_validator_schema)
+
 
 def test_experiment_core_valid_fixtures_pass_model_validation():
     repo_root = Path(__file__).resolve().parents[3]
@@ -706,6 +711,14 @@ def test_experiment_core_validates_study_run_allocation_against_evaluation_membe
     under_target_study = ExperimentStudyModel.model_validate(under_target_payload)
     with pytest.raises(ValueError, match="target_runs_per_condition"):
         validate_experiment_study_against_tasks_and_runs(under_target_study, [task], [run])
+
+    collection_with_allocation_payload = deepcopy(study_payload)
+    collection_with_allocation_payload["study_kind"] = "collection"
+    del collection_with_allocation_payload["analysis_plan"]
+    del collection_with_allocation_payload["membership"]["run-001"]["grouping"]
+    collection_with_allocation = ExperimentStudyModel.model_validate(collection_with_allocation_payload)
+    with pytest.raises(ValueError, match="run_allocation requires evaluation-run membership groupings"):
+        validate_experiment_study_against_tasks_and_runs(collection_with_allocation, [task], [run])
 
     duplicate_condition_payload = deepcopy(study_payload)
     duplicate_condition_payload["run_allocation"]["compared_conditions"].append("baseline")

@@ -231,10 +231,11 @@ Studies carry accountable analysis context:
 14. Included evaluation-run membership groupings MUST reference declared
     `compared_conditions`, a single run MUST NOT be counted in multiple
     conditions, each included run MUST satisfy exactly one condition
-    assignment, invalidated/superseded/not-evaluated runs MUST NOT satisfy
-    analysis allocation, and every condition MUST meet the predeclared
-    `target_runs_per_condition` before the study can support analysis or
-    comparison claims. Analysis-bearing collection/cohort records without
+    assignment, invalidated/superseded/not-evaluated runs MUST NOT satisfy a
+    declared run allocation, and every condition MUST meet the predeclared
+    `target_runs_per_condition` when run allocation is declared and before the
+    study can support analysis or comparison claims. Analysis-bearing
+    collection/cohort records without
     `run_allocation` MUST still exclude invalidated, superseded, and
     not-evaluated evaluation runs.
 15. Run-allocation `blocking_factors` MUST reference declared blocking,
