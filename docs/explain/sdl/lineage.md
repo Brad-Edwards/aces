@@ -218,6 +218,57 @@ are stable enough to compare, target, and validate; keep vendor-specific
 configuration, telemetry, and rule semantics as evidence or downstream
 translation concerns.
 
+## Generic Runtime Service Listener Semantics
+
+The `runtime.service_listeners` surface is issue #431's response to an
+observed gap in APTL's MISP container inventory. It is not a replacement for
+authored services, host-published port bindings, protocol-specific runtime
+inventories, or scanner output. It is the bounded node-scoped place for generic
+observed listener facts: bind endpoint, port, transport, address family,
+listener scope, owner, readiness evidence, and provenance.
+
+ACES relies on prior work in four ways:
+
+- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+  model topology, deployable services/features, tasks, validation, and
+  deployment concerns. They do not expose a portable first-class observed
+  listener inventory with bind-address/interface semantics. ACES therefore
+  adds a typed `Node.runtime` surface instead of hiding bind state in
+  `Node.services`, `runtime.network.published_ports`, `runtime.applications`,
+  or free-text descriptions.
+- **Host and process-inventory precedents:** osquery's
+  [`listening_ports`](https://fleetdm.com/tables/listening_ports) table keeps
+  address, port, protocol, and owning PID as separate facts. systemd socket
+  units such as
+  [`ListenStream=` and `ListenDatagram=`](https://www.freedesktop.org/software/systemd/man/latest/systemd.socket.html)
+  show the operational split between a socket endpoint and the service it can
+  activate. ACES adapts that separation through `service`, `process_ref`, and
+  listener endpoint fields without importing systemd unit syntax.
+- **Container and orchestrator precedents:** Docker
+  [port publishing](https://docs.docker.com/get-started/docker-concepts/running-containers/publishing-ports/)
+  separates a container-side listener from a host-side published binding.
+  Kubernetes distinguishes container ports, Services,
+  [EndpointSlices](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/),
+  and readiness/liveness/startup
+  [probes](https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/).
+  ACES keeps in-node listener state, host publication, and readiness evidence
+  as adjacent but distinct runtime facts.
+- **Evidence and telemetry precedents:** Nmap
+  [XML output](https://nmap.org/book/output-formats-xml-output.html) can
+  report remotely observed port state and service hints, but it cannot prove a
+  local bind address or owning process by itself. OpenTelemetry server
+  [address and port attributes](https://opentelemetry.io/docs/specs/semconv/attributes-registry/server/)
+  and OCSF [network endpoint](https://schema.ocsf.io/) vocabulary are useful
+  product-neutral checks for endpoint terminology. They remain evidence and
+  downstream translation lineage rather than SDL schema authority.
+
+Portable ACES references are stable listener ids under
+`nodes.<node>.runtime.service_listeners.<listener_id>`. Native process names,
+PIDs, scanner table names, service-manager unit names, and probe strings remain
+observed data or evidence unless the author explicitly uses them in bounded ref
+fields. A wildcard bind address inside a container or node namespace is not
+automatically host-public; host exposure remains `runtime.network.published_ports`.
+
 ## File-Sharing And Resource-Access Semantics
 
 The `runtime.file_services` surface is issue #421's response to a gap

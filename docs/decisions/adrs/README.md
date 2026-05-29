@@ -28,6 +28,7 @@ Each ADR includes:
 
 adr-041-participant-implementation-manifest-and-provenance
 adr-042-network-sensor-runtime-monitoring
+adr-043-runtime-service-listener-surface
 ```
 
 | ADR | Title | Status | Date |
@@ -75,3 +76,4 @@ adr-042-network-sensor-runtime-monitoring
 | [040](adr-040-security-monitoring-manager-runtime-inventory.md) | Security-Monitoring Manager Runtime Inventory | accepted | 2026-05-29 |
 | [041](adr-041-participant-implementation-manifest-and-provenance.md) | Participant Implementation Manifest and Provenance Surface | accepted | 2026-05-29 |
 | [042](adr-042-network-sensor-runtime-monitoring.md) | Network Sensor Runtime Monitoring Posture | accepted | 2026-05-29 |
+| [043](adr-043-runtime-service-listener-surface.md) | Generic Runtime Service Listener Surface | accepted | 2026-05-29 |

@@ -283,6 +283,32 @@ nodes:
             protocol: tcp
             host_ip: 0.0.0.0
             host_port: 8080
+      service_listeners:                 # observed in-node bind endpoints
+        - listener_id: gunicorn-http-ipv4
+          service: http                  # owning same-node Node.services[].name
+          address: 0.0.0.0
+          port: 80
+          protocol: tcp
+          address_family: ipv4
+          scope: wildcard
+          process_ref: gunicorn
+          process_name: gunicorn
+          published_port_refs:
+            - container_port: 80
+              protocol: tcp
+              host_ip: 0.0.0.0
+              host_port: 80
+          readiness:
+            probe: GET /
+            criteria: HTTP 200
+          provenance: osquery
+        - listener_id: supervisord-loopback
+          address: 127.0.0.1
+          port: 9001
+          protocol: tcp
+          address_family: ipv4
+          scope: loopback_only
+          process_ref: supervisord
       applications:                     # observed HTTP route/API/UI surface
         - application_id: techvault-webapp
           service: techvault-http       # owning same-node Node.services[].name
@@ -638,6 +664,21 @@ qualified refs such as `nodes.suricata.runtime.network_sensors.suricata`
 participate in relationships, generic reference validation, and module import
 rewriting (see
 [ADR-042](../../decisions/adrs/adr-042-network-sensor-runtime-monitoring.md)).
+
+`runtime.service_listeners` records observed in-node listener bind state:
+stable listener id, transport protocol, port or Unix socket path, bind address
+or interface, address family, listener scope, optional same-node service ref,
+optional process owner ref/name, readiness evidence, provenance, evidence refs,
+and optional typed correlations to `runtime.network.published_ports`. It is
+distinct from `Node.services` (authored service identity), from
+`runtime.network.published_ports` (host publication), and from
+protocol-specific runtime inventories such as HTTP applications, DNS, mail, and
+database services. A wildcard address such as `0.0.0.0` or `::` is a wildcard
+inside the node namespace; host exposure remains a published-port fact. Fully
+qualified refs such as
+`nodes.web.runtime.service_listeners.gunicorn-http-ipv4` participate in
+relationships, generic reference validation, and module import rewriting (see
+[ADR-043](../../decisions/adrs/adr-043-runtime-service-listener-surface.md)).
 
 `runtime.applications` records the participant-observable HTTP application
 route/API/UI surface — what an adversary, defender, agent, scanner, or evaluator
@@ -1087,7 +1128,9 @@ Types: `authenticates_with`, `trusts`, `federates_with`, `connects_to`, `depends
 Relationship endpoints resolve against the scenario's named elements,
 including top-level section keys, nested entity dot-paths, variables, other
 relationships, content item `name` values, named service bindings
-(`nodes.<node>.services.<service_name>`), runtime identity-authority refs
+(`nodes.<node>.services.<service_name>`), runtime service listener refs
+(`nodes.<node>.runtime.service_listeners.<listener_id>`), runtime
+identity-authority refs
 (`nodes.<node>.runtime.identity_authorities.<authority_id>` and nested
 `.services.<service_id>`, `.subjects.<subject_id>`, `.policies.<policy_id>`,
 or `.relationships.<relationship_id>` refs), runtime DNS refs
@@ -1371,7 +1414,8 @@ service roles, DNS zone kinds/purposes/classes, DNS record
 classes/types/provenance, DNS resolver booleans and DNSSEC validation modes,
 security-monitoring manager implementation/kind fields, security-monitoring
 listener/component/agent/content/setting classifications, security-monitoring
-booleans and file counts, `infrastructure.*.acls[*].action`, and
+booleans and file counts, runtime service listener protocol, address-family,
+scope, and provenance fields, `infrastructure.*.acls[*].action`, and
 `objectives.*.success.mode`. The semantic validator checks that `${var_name}`
 refers to a declared variable, and the repo-owned instantiation phase
 substitutes concrete values before compilation/runtime planning. User-defined
