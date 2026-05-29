@@ -73,12 +73,16 @@ model should be mappable to provenance concepts:
 Design consequences:
 
 - Every task, run, study, metric definition, apparatus declaration, and result
-  artifact needs a stable identifier and version/snapshot policy.
+  artifact needs a stable identifier and explicit version/snapshot policy in
+  the serialized record, not only an implementation default.
 - Run records need `used` references for scenario snapshot, task version,
   manifests, backend profile, processor manifest, parameter set, and stochastic
   controls.
 - Result records need `was_generated_by`-style links to runs, plus evidence
   artifact references.
+- Study analysis metrics need run-level result summaries or explicit
+  missing/withheld statuses for each included evaluation run before supporting
+  comparison claims.
 - The design should distinguish archival run records from live control-plane
   lifecycle events because provenance requires durable historical facts.
 
@@ -97,6 +101,9 @@ ACES implications:
 - Records need globally stable or at least repository-stable identifiers.
 - Artifact metadata should include type, role, media type, checksum, size,
   creation time, source, and access constraints.
+- Redacted or withheld structured parameter fields should not carry concrete
+  values; the protected value belongs in controlled evidence storage, not in the
+  portable experiment record.
 - Collections should be exportable as a bundle with metadata and related
   artifacts, not only as loose database rows.
 - The design should support JSON/JSON-LD-like package mapping for future
@@ -141,6 +148,13 @@ The design should support the following export and schema needs:
   analysis artifacts.
 - OpenML-inspired indexing and comparison: tasks, runs, and evaluations must be
   queryable without reading every raw artifact.
+- Named semantic validators must cover non-portable temporal and cross-record
+  constraints, including valid RFC 3339 leap-second instants, task/run scenario
+  identity binding, run-allocation coverage by eligible evaluation-run groupings
+  and explicit condition assignments, distinct and auditable condition criteria,
+  distinct factor-level combinations, analysis-run eligibility, operational
+  blocking factors, artifact evidence digest/path binding, and manifest
+  digest/path consistency.
 - Controlled vocabularies for lifecycle status, result kind, artifact role,
   apparatus component kind, stochastic-control kind, protocol-stage kind, and
   validity-threat category.
@@ -154,6 +168,8 @@ The design should support the following export and schema needs:
 - Treating run status events as the final archival run record.
 - Storing only display names for processors, backends, tasks, or scenarios.
 - Recording metrics as name/value pairs without metric definition and unit.
+- Accepting study analysis metrics that have no result summary or explicit
+  missingness in the included evaluation runs.
 - Baking raw OpenML, MLflow, RO-Crate, or PROV payloads into ACES core schemas.
 - Allowing result records to exist without task, run, and apparatus links.
 - Allowing studies to be arbitrary folders of files with no analysis intent.

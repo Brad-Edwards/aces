@@ -93,15 +93,14 @@
           "type": "string"
         },
         "checksum": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ExperimentChecksumModel"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+          "$ref": "#/$defs/ExperimentChecksumModel"
+        },
+        "created_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Created At",
+          "type": "string"
         },
         "description": {
           "anyOf": [
@@ -117,17 +116,9 @@
           "title": "Description"
         },
         "media_type": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Media Type"
+          "minLength": 1,
+          "title": "Media Type",
+          "type": "string"
         },
         "role": {
           "enum": [
@@ -141,10 +132,26 @@
             "analysis",
             "report",
             "export",
+            "starter-file",
+            "evaluator",
+            "subtask",
+            "gold-step",
+            "milestone",
+            "human-assistance",
+            "scaffold",
+            "baseline",
+            "cost-resource-trace",
             "other"
           ],
           "title": "Role",
           "type": "string"
+        },
+        "satisfies_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentEvidenceReferenceModel"
+          },
+          "title": "Satisfies Refs",
+          "type": "array"
         },
         "sensitivity": {
           "default": "internal",
@@ -157,38 +164,130 @@
           "title": "Sensitivity",
           "type": "string"
         },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
         "uri": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Uri"
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
         }
       },
       "required": [
         "artifact_id",
-        "role"
+        "role",
+        "media_type",
+        "uri",
+        "checksum",
+        "size_bytes",
+        "created_at",
+        "source"
       ],
       "title": "ExperimentArtifactRefModel",
       "type": "object"
     },
     "ExperimentChecksumModel": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha256"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{64}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha384"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{96}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha512"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{128}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "blake3"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{64}$"
+              }
+            }
+          }
+        }
+      ],
       "description": "Checksum metadata for an experiment-core artifact reference.",
       "properties": {
         "algorithm": {
-          "minLength": 1,
+          "enum": [
+            "sha256",
+            "sha384",
+            "sha512",
+            "blake3"
+          ],
           "title": "Algorithm",
           "type": "string"
         },
         "value": {
           "minLength": 1,
+          "pattern": "^[A-Fa-f0-9]+$",
           "title": "Value",
           "type": "string"
         }
@@ -247,6 +346,68 @@
       "title": "ExperimentClockContextModel",
       "type": "object"
     },
+    "ExperimentEvidenceReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to evidence artifacts.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "evidence",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentEvidenceReferenceModel",
+      "type": "object"
+    },
     "ExperimentManifestReferenceModel": {
       "additionalProperties": false,
       "description": "Reference constrained to an apparatus or capability manifest.",
@@ -255,6 +416,7 @@
           "anyOf": [
             {
               "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
               "type": "string"
             },
             {
@@ -299,6 +461,17 @@
           ],
           "default": null,
           "title": "Ref Version"
+        },
+        "subject_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentReferenceModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -308,8 +481,94 @@
       "title": "ExperimentManifestReferenceModel",
       "type": "object"
     },
+    "ExperimentMeasurementChannelReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to a declared measurement channel.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "measurement-channel",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentMeasurementChannelReferenceModel",
+      "type": "object"
+    },
     "ExperimentParameterModel": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "redaction": {
+                "enum": [
+                  "redacted",
+                  "withheld"
+                ]
+              }
+            },
+            "required": [
+              "redaction"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
       "description": "Redaction-aware parameter captured for a task, run, or apparatus context.",
       "properties": {
         "name": {
@@ -375,6 +634,7 @@
           "anyOf": [
             {
               "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
               "type": "string"
             },
             {
@@ -391,6 +651,9 @@
         },
         "ref_kind": {
           "enum": [
+            "processor",
+            "backend",
+            "participant-implementation",
             "scenario",
             "scenario-snapshot",
             "task",
@@ -401,7 +664,9 @@
             "study",
             "manifest",
             "profile",
+            "capability",
             "evidence",
+            "measurement-channel",
             "analysis-artifact",
             "other"
           ],
@@ -545,6 +810,8 @@
       "type": "object"
     }
   },
+  "$id": "https://aces.dev/schemas/experiment-apparatus-context-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Run-scoped apparatus context for interpreting experiment evidence.",
   "properties": {
@@ -557,6 +824,7 @@
       "items": {
         "$ref": "#/$defs/ExperimentClockContextModel"
       },
+      "minItems": 1,
       "title": "Clocks",
       "type": "array"
     },
@@ -564,6 +832,7 @@
       "items": {
         "$ref": "#/$defs/ExperimentReferenceModel"
       },
+      "minItems": 1,
       "title": "Compatibility Declarations",
       "type": "array"
     },
@@ -571,10 +840,54 @@
       "additionalProperties": {
         "$ref": "#/$defs/ExperimentApparatusComponentModel"
       },
-      "minProperties": 1,
+      "allOf": [
+        {
+          "properties": {
+            "processor": {
+              "properties": {
+                "component_kind": {
+                  "const": "processor"
+                },
+                "manifest_ref": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "component_kind",
+                "identity",
+                "manifest_ref"
+              ]
+            }
+          }
+        },
+        {
+          "properties": {
+            "backend": {
+              "properties": {
+                "component_kind": {
+                  "const": "backend"
+                },
+                "manifest_ref": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "component_kind",
+                "identity",
+                "manifest_ref"
+              ]
+            }
+          }
+        }
+      ],
+      "minProperties": 2,
       "propertyNames": {
         "minLength": 1
       },
+      "required": [
+        "processor",
+        "backend"
+      ],
       "title": "Components",
       "type": "object"
     },
@@ -582,6 +895,7 @@
       "items": {
         "$ref": "#/$defs/ExperimentParameterModel"
       },
+      "minItems": 1,
       "title": "Configuration Parameters",
       "type": "array"
     },
@@ -591,29 +905,25 @@
       "type": "string"
     },
     "declared_at": {
-      "anyOf": [
-        {
-          "minLength": 1,
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Declared At"
+      "format": "date-time",
+      "minLength": 1,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+      "title": "Declared At",
+      "type": "string"
     },
     "known_limitations": {
       "items": {
         "$ref": "#/$defs/ExperimentValidityNoteModel"
       },
+      "minItems": 1,
       "title": "Known Limitations",
       "type": "array"
     },
     "measurement_channels": {
       "items": {
-        "$ref": "#/$defs/ExperimentReferenceModel"
+        "$ref": "#/$defs/ExperimentMeasurementChannelReferenceModel"
       },
+      "minItems": 1,
       "title": "Measurement Channels",
       "type": "array"
     },
@@ -621,12 +931,12 @@
       "items": {
         "$ref": "#/$defs/ExperimentArtifactRefModel"
       },
+      "minItems": 1,
       "title": "Observed Setup Evidence",
       "type": "array"
     },
     "schema_version": {
       "const": "experiment-apparatus-context/v1",
-      "default": "experiment-apparatus-context/v1",
       "title": "Schema Version",
       "type": "string"
     },
@@ -634,6 +944,7 @@
       "items": {
         "$ref": "#/$defs/ExperimentManifestReferenceModel"
       },
+      "minItems": 1,
       "title": "Selected Manifests",
       "type": "array"
     },
@@ -641,15 +952,85 @@
       "items": {
         "$ref": "#/$defs/ExperimentStochasticControlModel"
       },
+      "minItems": 1,
       "title": "Stochastic Controls",
       "type": "array"
     }
   },
   "required": [
+    "schema_version",
     "apparatus_context_id",
     "context_version",
-    "components"
+    "declared_at",
+    "components",
+    "selected_manifests",
+    "compatibility_declarations",
+    "configuration_parameters",
+    "stochastic_controls",
+    "clocks",
+    "measurement_channels",
+    "observed_setup_evidence",
+    "known_limitations"
   ],
   "title": "ExperimentApparatusContextModel",
-  "type": "object"
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "The canonical processor and backend component manifest_ref values must be present in selected_manifests.",
+      "id": "canonical-apparatus-manifest-selected",
+      "inputs": [
+        {
+          "contract_id": "experiment-apparatus-context-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ExperimentApparatusContextModel._validate_instrument_context"
+    },
+    {
+      "description": "Canonical processor and backend manifest_ref values must resolve to manifest payloads with matching identities.",
+      "id": "apparatus-manifest-payload-identity-valid",
+      "inputs": [
+        {
+          "contract_id": "experiment-apparatus-context-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "processor-manifest-v2",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "backend-manifest-v2",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.validate_experiment_apparatus_context_against_manifests"
+    },
+    {
+      "description": "Apparatus declared_at and observed_setup_evidence created_at values must be valid RFC 3339 date-times, including only known valid UTC leap-second instants.",
+      "id": "apparatus-archival-times-rfc3339-valid",
+      "inputs": [
+        {
+          "contract_id": "experiment-apparatus-context-v1",
+          "instance_path": "#/declared_at"
+        },
+        {
+          "contract_id": "experiment-apparatus-context-v1",
+          "instance_path": "#/observed_setup_evidence"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.validate_experiment_apparatus_context_archival_datetimes"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "experiment-apparatus-context-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
 }

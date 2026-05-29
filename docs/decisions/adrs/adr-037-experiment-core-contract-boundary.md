@@ -59,17 +59,32 @@ Publish an experiment-core contract family with four first-class contracts:
 
 The contracts are machine-readable ACES artifacts under `contracts/schemas/`,
 generated from closed-world `ContractModel` sources. The normative semantic
-rules live in `specs/formal/experiment-core/`.
+rules live in `specs/formal/experiment-core/`. Published JSON Schemas are the
+portable structural contract and declare draft 2020-12 schema identity. They
+also include an ACES semantic-invariant profile for constraints that require
+ACES model validation, such as task/run protocol binding, cross-object
+reference resolution, manifest identity/digest binding, study metric/result
+grounding, and temporal ordering. The annotation profile shape is published as
+`aces-semantic-invariants-v1` and checked during schema generation.
 
 Identifier-bearing repeated children are represented as keyed object maps
 rather than arrays when uniqueness is part of the contract: metric definitions
 are keyed by metric id, apparatus components by component id, run result
 summaries by result id, study membership entries by member id, and study
 factors by factor id. This keeps the published JSON Schemas authoritative for
-portable consumers instead of leaving uniqueness only to Python validators.
-Manifest-specific fields use manifest-constrained references so apparatus
-context cannot silently point to runs, studies, or other artifact kinds where a
-manifest boundary is required.
+portable structural consumers instead of leaving uniqueness only to Python
+validators. Cross-map semantic constraints that standard JSON Schema cannot
+portably enforce, including metric-key equality, result-to-evidence resolution,
+component manifest selection, task/run protocol binding, study metric/result
+grounding, manifest payload binding, and run time ordering, are declared as
+`x-aces-invariants` with validator and input metadata, and are enforced by the
+ACES contract models and semantic validator functions. Manifest-specific fields use
+manifest-constrained references so apparatus context cannot silently point to
+runs, studies, or other artifact kinds where a manifest boundary is required.
+Processor and backend constraint fields use processor- and backend-constrained
+references with manifest `subject_ref` metadata for the same reason: role names
+and manifest subject identity must be enforceable by semantic validators, not
+only by convention.
 
 ### 1. Task Is Scenario Plus Protocol Plus Intent
 
@@ -85,7 +100,8 @@ many times.
 ### 2. Apparatus Context Is Run-Scoped Instrument Context
 
 Execution apparatus context records the instrument conditions under which a run
-is executed: processor/backend/participant implementation identity, selected
+is executed: canonical processor and backend components with identity and
+manifests, participant implementation identity where relevant, selected
 manifests, compatibility declarations, setup context, configuration parameters,
 stochastic controls, clocks, measurement channels, observed setup evidence, and
 known limitations.
@@ -93,6 +109,12 @@ known limitations.
 Apparatus context is not SDL scenario meaning, task intent, runtime snapshot
 metadata, or run result value. It may be embedded in an archival run record so a
 run carries the exact context used.
+
+The v1 contract intentionally rejects apparatus records that omit the primary
+processor, primary backend, selected manifests, clocks, measurement channels, or
+observed setup evidence. That strictness follows the cyber-range and simulation
+V&V literature: apparatus conditions are part of the evidence, not optional log
+metadata.
 
 ### 3. Run Is Archival Provenance, Not Live State
 
@@ -107,16 +129,61 @@ seal point, but it must not be reconstructed lazily from mutable
 `RuntimeSnapshot`, `ControlPlaneStore`, operation-status, workflow-status, or
 participant-episode state.
 
+Archival run records require an end time, clock context, evidence artifacts,
+result summaries, and result-to-evidence links that resolve to run evidence
+artifact ids. Reported values must identify the metric they instantiate. ACES
+also publishes a cross-artifact task/run validator so a run can be checked
+against the referenced task protocol: run apparatus must satisfy the task
+apparatus constraints, result metrics must be task-declared, and run evidence
+artifacts must satisfy the task and metric observation requirements. Artifact
+references include media type, URI, checksum, byte size, creation time, source,
+`satisfies_refs`, explicit benchmark/agent-evaluation evidence roles, and
+sensitivity so FAIR, RO-Crate, and PROV-style exports do not need to infer the
+evidence surface from backend-private files. When an evidence requirement
+includes digest or path metadata, the task/run validator binds those fields to
+the concrete artifact checksum and URI/path rather than accepting an id-only
+match.
+
 ### 4. Study And Collection Share One Contract
 
 `experiment-study-v1` is the first-class analysis and grouping artifact. It
 groups typed references to tasks, runs, results, evidence, analysis artifacts,
-or reports with a purpose, inclusion criteria, factors, analysis plan, validity
-notes, and export/report artifacts.
+or reports with an owner, purpose, inclusion criteria, factors, analysis plan,
+validity notes, and export/report artifacts.
 
 If users need the word "collection", it is represented by `study_kind:
 collection` within the same contract. ACES does not create a parallel
 collection schema or service.
+
+For `study` and `benchmark` records, research questions, validity notes, a
+structured run allocation plan, and an analysis plan are mandatory. Run
+allocation conditions
+are not labels alone: each compared condition has a `condition_assignment` that
+binds it to declared study factor levels and concrete run-level criteria such
+as participant implementation, processor, backend, apparatus context, manifest,
+capability, measurement channel, task/scenario snapshot identity, or parameter
+values. Those condition criteria are restricted to auditable run-level
+references and non-opaque parameters; catch-all `other` references and `other`
+parameter kinds are not accepted as condition evidence, compared conditions
+cannot share identical factor-level combinations or concrete criteria, and an
+included run cannot satisfy more than one condition assignment. Declared
+blocking factors must resolve to declared study factors with declared levels and
+an appropriate blocking, stratification, apparatus, or control kind.
+Analysis plans must name the analyzed metrics, primary metric, estimand/unit
+assumptions, uncertainty procedure, multiple-comparison policy, and missing-data
+policy. A semantic validator
+grounds those metrics in the included task protocols and requires included
+evaluation runs to carry result summaries, including explicit missing/withheld
+statuses, for the analysis metrics before a study can support comparison
+claims. The same semantic validation checks that evaluation-run membership
+groupings cover the predeclared run-allocation conditions, that one run is not
+counted in multiple conditions, that invalidated/superseded/not-evaluated runs
+do not satisfy allocation, and that every condition meets the target run count
+before analysis claims are accepted. Lighter `collection` and `cohort` records
+remain available for curated grouping, but they still carry ownership, purpose,
+membership, and inclusion criteria. If a collection or cohort carries an
+analysis plan, the same invalidated/superseded/not-evaluated evaluation-run
+exclusion applies even without run allocation.
 
 ### 5. Keep Runtime And API Work Out Of This Issue
 
@@ -152,7 +219,7 @@ and redaction patterns.
 - Scientific claims can distinguish scenario meaning, task protocol, apparatus
   context, execution provenance, result evidence, and study analysis.
 - Future PROV/RO-Crate/OpenML-style exports have stable artifact roles and
-  lineage links to map from.
+  lineage links, checksums, timestamps, and evidence metadata to map from.
 - Later runtime/persistence/API work has a contract boundary to consume rather
   than inventing live-state payloads first.
 
@@ -172,3 +239,6 @@ and redaction patterns.
   will remain hard to interpret.
 - If studies become informal folders before analysis semantics are implemented,
   benchmark comparability will be weak.
+- If later APIs need draft or partial experiment records, they must introduce an
+  explicit draft lifecycle surface rather than weakening these archival
+  contracts.

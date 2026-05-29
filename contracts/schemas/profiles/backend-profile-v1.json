@@ -1,4 +1,6 @@
 {
+  "$id": "https://aces.dev/schemas/backend-profile-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Published backend capability profile (closed-world).",
   "properties": {

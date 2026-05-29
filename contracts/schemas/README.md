@@ -143,7 +143,7 @@ The `experiment-core` schema family publishes:
 These schemas keep SDL scenario authoring, experiment task protocol, execution
 apparatus context, archival run provenance, and study/collection analysis
 separate. The normative invariant set lives in
-`specs/formal/experiment-core/`, and ADR-036 records the architectural
+`specs/formal/experiment-core/`, and ADR-037 records the architectural
 boundary.
 
 Schema-expressible invariants are encoded in the published schemas. In
@@ -151,3 +151,10 @@ particular, task/run reference-kind constraints and invalidated-run
 requirements are part of `experiment-task-v1` and `experiment-run-v1`, while
 identifier uniqueness for metrics, apparatus components, result summaries,
 study members, and study factors is represented with keyed object maps.
+Cross-artifact or graph invariants that standard JSON Schema cannot express are
+published under the ACES semantic-invariant profile with `x-aces-invariants`
+entries that name the validator and input contract paths. The generated schemas
+declare draft 2020-12 identity, and the annotation profile shape is published as
+`aces-semantic-invariants-v1` and checked during generation. Generic JSON Schema
+validation remains structural; consumers of experiment-core records must apply
+the named semantic validators before accepting records as ACES-conformant.

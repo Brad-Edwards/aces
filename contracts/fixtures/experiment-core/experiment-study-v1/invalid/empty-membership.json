@@ -4,6 +4,7 @@
   "study_version": "1.0.0",
   "study_kind": "collection",
   "title": "Bad study",
+  "owner": "aces-experiment-core",
   "description": "Invalid because a study must contain at least one typed member.",
   "purpose": "Invalid fixture.",
   "membership": {},

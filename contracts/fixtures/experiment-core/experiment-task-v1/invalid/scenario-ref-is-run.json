@@ -15,13 +15,27 @@
     "unit_of_analysis": "run",
     "metric_definitions": {
       "metric": {
+        "metric_id": "metric",
+        "metric_version": "1.0.0",
         "name": "Metric",
         "measured_construct": "Construct",
         "unit_of_analysis": "run",
         "value_kind": "boolean",
-        "direction": "higher-is-better"
+        "direction": "higher-is-better",
+        "evidence_requirements": [
+          {
+            "ref_kind": "evidence",
+            "ref_id": "metric-evidence"
+          }
+        ]
       }
-    }
+    },
+    "observation_requirements": [
+      {
+        "ref_kind": "evidence",
+        "ref_id": "metric-evidence"
+      }
+    ]
   },
   "intended_use": "Invalid fixture.",
   "population_or_construct": "Invalid construct."

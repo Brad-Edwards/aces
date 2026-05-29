@@ -1690,6 +1690,8 @@
       "type": "object"
     }
   },
+  "$id": "https://aces.dev/schemas/runtime-snapshot-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Published envelope for a live runtime snapshot.\n\nParticipant episode surfaces (``participant_episode_results`` and\n``participant_episode_history``) are both keyed by the stable\n``participant_address`` of the participant the state/history belongs\nto. SEM-208 participant behavior history is keyed the same way and\nrecords action, observation, and state-transition events with compiled\nbehavior-contract addresses. The episode results map carries the\ncurrently-live episode state per participant; prior episodes survive only\nthrough append-only history streams and the ``previous_episode_id`` chain\non each state.",
   "properties": {

@@ -36,6 +36,17 @@ Rationale:
 - Schema generation: `tools/generate_contract_schemas.py`.
 - Fixture corpus: `contracts/fixtures/experiment-core/`.
 
+Published JSON Schemas are the portable structural contract. They declare draft
+2020-12 schema identity explicitly. Semantic graph constraints that standard
+JSON Schema cannot portably enforce are declared under the ACES semantic-
+invariant profile through `x-aces-semantic-profile` and `x-aces-invariants`
+metadata. Each invariant records a stable id, severity, validator, and input
+contract/path set; the annotation shape is published as
+`aces-semantic-invariants-v1` and is validated during schema generation.
+Examples include metric key equality, task/run protocol binding, run time
+ordering, result-evidence reference resolution, study metric grounding, and
+manifest-selection and manifest-payload consistency.
+
 ## Definitions
 
 ### Scenario
@@ -54,7 +65,8 @@ snapshot. It binds:
 - a scenario reference;
 - an evaluation protocol;
 - task intent and intended use;
-- metric definitions keyed by metric id and unit of analysis;
+- metric definitions keyed by metric id, with the same metric id and a metric
+  version embedded in each definition;
 - population or construct;
 - split/leakage controls when relevant;
 - apparatus constraints;
@@ -67,8 +79,8 @@ One scenario may be used by many tasks. One task may be executed by many runs.
 Execution apparatus context is the instrument setup for a run. It captures or
 references:
 
-- processor identity and manifest;
-- backend identity and manifest;
+- a canonical `processor` component with processor identity and manifest;
+- a canonical `backend` component with backend identity and manifest;
 - participant implementation identity where relevant;
 - compatibility declarations;
 - selected manifests and profiles;
@@ -82,8 +94,11 @@ references:
 Apparatus context belongs with run provenance. It is not authored scenario
 meaning and is not a result value.
 
-Apparatus components are keyed by component id so duplicate component identity
-cannot be represented in conforming JSON records.
+Apparatus components are keyed by component id so duplicate component keys
+cannot be represented in conforming JSON records. Component identity remains an
+explicit field. Claim-bearing apparatus records reserve the `processor` and
+`backend` component keys for the primary processor and backend used to
+interpret the run.
 
 ### Run
 
@@ -105,20 +120,34 @@ task. It binds:
 A run may reference live observation artifacts captured at a seal point. It
 must not be reconstructed from mutable live control-plane state.
 
+Archival run records require a completed time interval, clock context, at least
+one evidence artifact, and at least one result summary. Reported result
+summaries must identify the metric, carry a value, and link to evidence. Every
+result-summary evidence reference must resolve to an artifact id in the same
+run's `evidence_artifacts` set. Cross-artifact task/run validation also checks
+that run apparatus satisfies task apparatus constraints, that run result metric
+ids are declared by the task evaluation protocol, and that concrete run
+evidence artifacts satisfy the task and metric evidence requirements, either by
+artifact id or by an artifact `satisfies_refs` entry. If a task or metric
+evidence requirement carries digest or path metadata, the matching run artifact
+MUST satisfy those fields with its concrete checksum and URI/path.
+
 ### Study Or Collection
 
 A study groups tasks, runs, results, evidence, reports, and analysis artifacts
 for comparison, benchmarking, replication, or collection management. A
 collection is represented by `study_kind: collection` in the same contract.
 
-Studies carry analysis context:
+Studies carry accountable analysis context:
 
+- owner;
 - purpose and research questions;
 - inclusion criteria;
 - membership roles keyed by member id;
 - factors and treatments keyed by factor id;
-- run allocation;
-- analysis plan;
+- structured run allocation plan;
+- analysis plan with metric, primary metric, statistical-method,
+  uncertainty-method, multiple-comparison, and missing-data policy records;
 - validity notes;
 - report and export artifact refs.
 
@@ -128,7 +157,9 @@ Studies carry analysis context:
 
 1. A task reference to scenario material MUST use `scenario` or
    `scenario-snapshot` as the reference kind.
-2. A run MUST reference exactly one task and one scenario snapshot.
+2. A run MUST reference exactly one task and one scenario snapshot. If the task
+   references a generic scenario rather than a snapshot, the run snapshot MUST
+   still use the same scenario identity.
 3. A run MUST carry apparatus context; apparatus context MUST NOT be represented
    only by free-form metadata or backend-private logs.
 4. A study MUST group typed artifact references; it MUST NOT redefine the task,
@@ -137,20 +168,77 @@ Studies carry analysis context:
    as EXP task records.
 6. Metric definitions, apparatus components, run result summaries, study
    memberships, and study factors MUST use object keys as their stable local
-   identifiers when uniqueness is a contract invariant.
+   identifiers when uniqueness is a contract invariant. Metric definition keys
+   MUST match their embedded `metric_id` values.
 7. Manifest-specific fields, including required task manifests, component
    manifests, and selected apparatus manifests, MUST use `manifest` as their
    reference kind.
+8. Processor and backend constraint fields MUST use processor- and
+   backend-constrained references rather than generic artifact references.
+9. Study membership roles MUST constrain the referenced artifact kind: task
+   roles reference tasks, run roles reference runs, result roles reference
+   results, evidence roles reference evidence, and analysis roles reference
+   analysis artifacts.
+10. Processor and backend identity constraints MUST resolve to required
+    manifest references with matching identity ids and manifest schema
+    versions. Manifest references for apparatus identity MUST carry a
+    `subject_ref` that identifies the processor or backend identity and version
+    described by the manifest.
+11. Required task apparatus capabilities MUST resolve to capability references
+    in the run apparatus compatibility declarations or component compatibility
+    references.
 
 ### Provenance
 
 1. Experiment artifacts MUST have stable identifiers and schema versions.
-2. Run evidence and result summaries MUST be linkable back to the run that
+2. Evidence-bearing artifact references MUST include media type, URI, checksum,
+   byte size, creation time, source, and sensitivity metadata.
+3. RFC 3339 date-times, including the standard's lower-case `t`/`z`
+   allowance and only known valid UTC leap-second instants, MUST be used for
+   experiment-core archival times.
+4. Checksums and reference digests MUST identify their digest algorithm and use
+   algorithm-appropriate hex digest lengths.
+5. Run evidence and result summaries MUST be linkable back to the run that
    generated or recorded them.
-3. Invalidation MUST be explicit when a run is marked `invalidated`.
-4. Apparatus context SHOULD identify selected manifests, compatibility
-   declarations, stochastic controls, clocks, and observed setup evidence when
-   those factors affect interpretation.
+6. Invalidation MUST be explicit when a run is marked `invalidated`.
+7. Apparatus context MUST identify selected manifests, compatibility
+   declarations, configuration parameters, stochastic controls, clocks,
+   measurement channels, observed setup evidence, and known limitations.
+8. Completed run intervals MUST not end before they start.
+9. Canonical apparatus processor and backend component manifests MUST appear in
+   the same record's selected manifests with matching reference identity,
+   digest/path metadata, and `subject_ref` values that match the component
+   identities.
+10. Study and benchmark records MUST carry research questions, run allocation,
+    validity notes, and an analysis plan with at least one metric, a primary
+    metric, and structured statistical, uncertainty, multiple-comparison, and
+    missing-data policies.
+11. ACES semantic validation MUST be able to resolve canonical processor and
+    backend manifest references to concrete manifest payloads with matching
+    identities and schema versions.
+12. Study analysis metrics MUST be grounded in the metric definitions of the
+    included task protocols and represented by result summaries, including
+    explicit missing/withheld statuses, in included evaluation runs before the
+    study can support comparison claims.
+13. Study run-allocation `compared_conditions` MUST have matching
+    `condition_assignments` that reference declared study factor levels and
+    auditable run-level criteria such as participant implementation,
+    processor, backend, apparatus context, manifest, capability, measurement
+    channel, task/scenario snapshot identity, or non-opaque parameter values.
+    Opaque catch-all references and `other` parameter kinds MUST NOT be used as
+    condition-assignment evidence. Compared conditions MUST NOT share identical
+    factor-level combinations or identical run-level criteria.
+14. Included evaluation-run membership groupings MUST reference declared
+    `compared_conditions`, a single run MUST NOT be counted in multiple
+    conditions, each included run MUST satisfy exactly one condition
+    assignment, invalidated/superseded/not-evaluated runs MUST NOT satisfy
+    analysis allocation, and every condition MUST meet the predeclared
+    `target_runs_per_condition` before the study can support analysis or
+    comparison claims. Analysis-bearing collection/cohort records without
+    `run_allocation` MUST still exclude invalidated, superseded, and
+    not-evaluated evaluation runs.
+15. Run-allocation `blocking_factors` MUST reference declared blocking,
+    stratification, apparatus, or control study factors with declared levels.
 
 ### Closed-World Contracts
 
@@ -161,6 +249,9 @@ Studies carry analysis context:
 4. Valid fixtures MUST validate against their published schemas. Invalid
    fixtures for schema-expressible invariants MUST fail both the published JSON
    Schema and the Python contract model.
+5. Consumers that use only generic JSON Schema can validate portable structure
+   but MUST NOT claim full ACES experiment-core conformance until the ACES
+   semantic validators named by `x-aces-invariants` have been applied.
 
 ### Security And Redaction
 
@@ -169,7 +260,9 @@ Studies carry analysis context:
    argv, or raw backend inspect payloads.
 2. Artifact references that point at restricted or redacted evidence MUST carry
    sensitivity metadata.
-3. Later API exposure MUST reuse existing control-plane identity, role,
+3. Structured experiment parameters marked `redacted` or `withheld` MUST NOT
+   include concrete values.
+4. Later API exposure MUST reuse existing control-plane identity, role,
    request-size, audit, idempotency, response-model, and redacted-error
    patterns.
 

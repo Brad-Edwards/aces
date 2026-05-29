@@ -149,8 +149,20 @@ Criteria:
 
 - Publish ACES-owned schemas for task, run, apparatus context, study, and
   collection records.
+- Publish both structural JSON Schema constraints and named ACES semantic
+  invariants, with validator and input metadata, for cross-record checks that
+  standard JSON Schema cannot enforce. The semantic-invariant annotation shape
+  must be generated and checked, and ACES conformance must require the named
+  semantic validators rather than relying on generic JSON Schema consumers to
+  interpret custom annotations.
+- Require schema-version fields in serialized experiment artifacts and publish
+  named semantic validators for RFC 3339 archival timestamp semantics that
+  generic JSON Schema consumers do not portably enforce, while accepting the
+  standard's lower-case `t`/`z` date-time allowance.
 - Include artifact-reference structures with role, type, checksum, media type,
-  and access/redaction metadata.
+  byte size, creation time, source, and access/redaction metadata. Evidence
+  requirements that bind digest or path metadata must resolve against the
+  concrete artifact checksum and URI/path, not only an artifact display id.
 - Use controlled vocabularies for roles and statuses where comparison depends
   on them.
 - Keep semantic export mappings possible for PROV/RO-Crate/OpenML-like tooling,
@@ -168,10 +180,16 @@ Failure mode to avoid:
 - `scenario_ref` with identity, version/snapshot, and selection scope.
 - `evaluation_protocol` with protocol id/version, metric definitions,
   observations required, unit of analysis, and acceptance/aggregation policy.
+- metric definitions carry both map-key identity and embedded metric
+  id/version so exported records remain self-describing outside their parent
+  object.
 - `intended_use`, `non_use`, `population_or_construct`, and `validity_notes`.
 - `split_and_leakage_controls` when data, learning, replay, adaptive agents, or
   repeated exposure are relevant.
 - `apparatus_constraints` for compatible processors/backends/profiles.
+- processor and backend identity constraints must resolve to required manifest
+  references for the same identity and expected manifest schema version; those
+  manifest references carry a subject identity/version, not only a manifest id.
 - `artifact_refs` for supporting protocol docs, scoring code, and evidence
   templates.
 
@@ -180,6 +198,8 @@ Failure mode to avoid:
 - A task references but does not own scenario meaning.
 - A scenario can be reused by many tasks.
 - A task can bind a scenario snapshot to one protocol.
+- When a task references a scenario rather than a sealed snapshot, task/run
+  validation still requires the run snapshot to preserve that scenario identity.
 - Scenario realization details remain outside task except as constraints.
 - A study may include tasks derived from the same scenario to compare protocols.
 
@@ -191,12 +211,29 @@ Failure mode to avoid:
 - `started_at`, `ended_at`, `clock`, `run_status`, `outcome_status`.
 - `evidence_artifacts`, `result_summaries`, `deviations`, `invalidation`.
 - `lineage` fields for generated-by, used, derived-from, supersedes.
+- Archival run records require evidence artifacts and result summaries with
+  metric ids and evidence links; partial/draft records need a separate
+  lifecycle surface rather than weakened archival fields.
+- result-summary evidence references resolve to artifact ids in the same run
+  record, and digest/path-bearing evidence requirements must match the concrete
+  artifact checksum and URI/path.
+- task/run semantic validation checks that run result metrics are declared by
+  the task protocol, that run apparatus satisfies task apparatus constraints,
+  and that concrete run evidence satisfies task and metric evidence
+  requirements.
 
 ### EXP-704 Apparatus Context
 
 - processor identity/version/manifest.
 - backend identity/version/profile.
+- canonical processor and backend component entries that schema consumers can
+  validate without out-of-band role interpretation.
 - selected SDL/manifests/images/datasets/dependencies.
+- canonical processor and backend manifest refs must be included in selected
+  manifests, with matching digest/path metadata and subject identities, and
+  ACES semantic validation must resolve those references to concrete
+  processor/backend manifest payloads so identity and manifest evidence cannot
+  drift.
 - compatibility declarations and conformance profiles.
 - host/VM/container/device context where relevant.
 - configuration, parameters, stochastic controls, clocks, and resource limits.
@@ -211,8 +248,39 @@ Failure mode to avoid:
 - factors/treatments/comparators.
 - run allocation, blocking, randomization, replication plan.
 - metrics and statistical/estimation analysis plan.
+- analysis plans name the metrics, primary metric, estimand/unit assumptions,
+  uncertainty procedure, multiple-comparison policy, and missing-data policy
+  before claims are drawn, and those metrics must be grounded in included task
+  protocols and represented by result summaries or explicit missingness in
+  included evaluation runs before study-level comparison claims are accepted.
+- run-allocation claims are semantically checked: included evaluation-run
+  memberships must be grouped by predeclared `compared_conditions`; each
+  condition must have an explicit assignment to declared factor levels and
+  auditable run-level criteria; catch-all `other` references cannot stand in
+  for treatment, apparatus, task, scenario, measurement-channel, or parameter
+  evidence; parameter criteria must use non-opaque kinds; compared conditions
+  cannot share identical factor-level combinations or concrete criteria; one run
+  cannot be counted across multiple conditions; each included run must satisfy
+  exactly one assigned condition; invalidated/superseded/not-evaluated runs
+  cannot satisfy allocation; and the concrete run artifacts must satisfy
+  `target_runs_per_condition` for every condition before analysis or comparison
+  claims are accepted.
+- run-allocation `blocking_factors` reference declared study factors so the
+  blocking/randomization plan is reviewable as variable metadata, not prose.
+  Those factors must have declared levels and an appropriate blocking,
+  stratification, apparatus, or control kind.
 - validity threats and limitations.
 - report and export artifact references.
+- `study` and `benchmark` records require research questions, run allocation,
+  an analysis plan, and validity notes; lighter collections/cohorts still
+  require ownership, purpose, membership, and inclusion criteria. If lighter
+  records carry an analysis plan, invalidated/superseded/not-evaluated
+  evaluation runs remain ineligible for analysis.
+- benchmark and agent-evaluation lineage surfaces such as starter files,
+  evaluators, subtasks, gold steps, milestones, human-assistance records,
+  scaffold disclosure, baseline disclosure, and cost/resource traces should be
+  representable through explicit artifact roles in v1, with deeper benchmark
+  semantics reserved for future contracts.
 
 ## Questions For Architecture Pre-Flight
 

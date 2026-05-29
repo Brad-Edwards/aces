@@ -19,68 +19,54 @@
             "minLength": 1,
             "type": "string"
           },
+          "minItems": 1,
           "title": "Metrics",
           "type": "array"
         },
         "missing_data_policy": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Missing Data Policy"
+          "$ref": "#/$defs/ExperimentMissingDataPolicyModel"
         },
         "multiple_comparison_policy": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Multiple Comparison Policy"
+          "$ref": "#/$defs/ExperimentMultipleComparisonPolicyModel"
+        },
+        "primary_metric": {
+          "minLength": 1,
+          "title": "Primary Metric",
+          "type": "string"
         },
         "statistical_method": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Statistical Method"
+          "$ref": "#/$defs/ExperimentStatisticalMethodModel"
         },
         "uncertainty_method": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Uncertainty Method"
+          "$ref": "#/$defs/ExperimentUncertaintyMethodModel"
         }
       },
       "required": [
         "analysis_id",
-        "description"
+        "description",
+        "metrics",
+        "primary_metric",
+        "statistical_method",
+        "uncertainty_method",
+        "multiple_comparison_policy",
+        "missing_data_policy"
       ],
       "title": "ExperimentAnalysisPlanModel",
-      "type": "object"
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "Analysis plans must name metrics plus structured statistical, uncertainty, multiplicity, and missing-data policies.",
+          "id": "analysis-plan-substantive-methods-required",
+          "inputs": [
+            {
+              "contract_id": "experiment-study-v1",
+              "instance_path": "#/analysis_plan"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.ExperimentAnalysisPlanModel._validate_primary_metric"
+        }
+      ]
     },
     "ExperimentArtifactRefModel": {
       "additionalProperties": false,
@@ -92,15 +78,14 @@
           "type": "string"
         },
         "checksum": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ExperimentChecksumModel"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+          "$ref": "#/$defs/ExperimentChecksumModel"
+        },
+        "created_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Created At",
+          "type": "string"
         },
         "description": {
           "anyOf": [
@@ -116,17 +101,9 @@
           "title": "Description"
         },
         "media_type": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Media Type"
+          "minLength": 1,
+          "title": "Media Type",
+          "type": "string"
         },
         "role": {
           "enum": [
@@ -140,10 +117,26 @@
             "analysis",
             "report",
             "export",
+            "starter-file",
+            "evaluator",
+            "subtask",
+            "gold-step",
+            "milestone",
+            "human-assistance",
+            "scaffold",
+            "baseline",
+            "cost-resource-trace",
             "other"
           ],
           "title": "Role",
           "type": "string"
+        },
+        "satisfies_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentEvidenceReferenceModel"
+          },
+          "title": "Satisfies Refs",
+          "type": "array"
         },
         "sensitivity": {
           "default": "internal",
@@ -156,38 +149,130 @@
           "title": "Sensitivity",
           "type": "string"
         },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
         "uri": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Uri"
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
         }
       },
       "required": [
         "artifact_id",
-        "role"
+        "role",
+        "media_type",
+        "uri",
+        "checksum",
+        "size_bytes",
+        "created_at",
+        "source"
       ],
       "title": "ExperimentArtifactRefModel",
       "type": "object"
     },
     "ExperimentChecksumModel": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha256"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{64}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha384"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{96}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha512"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{128}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "blake3"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{64}$"
+              }
+            }
+          }
+        }
+      ],
       "description": "Checksum metadata for an experiment-core artifact reference.",
       "properties": {
         "algorithm": {
-          "minLength": 1,
+          "enum": [
+            "sha256",
+            "sha384",
+            "sha512",
+            "blake3"
+          ],
           "title": "Algorithm",
           "type": "string"
         },
         "value": {
           "minLength": 1,
+          "pattern": "^[A-Fa-f0-9]+$",
           "title": "Value",
           "type": "string"
         }
@@ -199,14 +284,149 @@
       "title": "ExperimentChecksumModel",
       "type": "object"
     },
-    "ExperimentReferenceModel": {
+    "ExperimentConditionAssignmentModel": {
       "additionalProperties": false,
-      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "description": "Concrete treatment-condition assignment criteria for study evaluation runs.",
+      "properties": {
+        "condition_id": {
+          "minLength": 1,
+          "title": "Condition Id",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "factor_levels": {
+          "additionalProperties": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Factor Levels",
+          "type": "object"
+        },
+        "required_parameters": {
+          "items": {
+            "$ref": "#/$defs/ExperimentConditionAssignmentParameterModel"
+          },
+          "title": "Required Parameters",
+          "type": "array"
+        },
+        "required_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentConditionAssignmentReferenceModel"
+          },
+          "title": "Required Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "condition_id",
+        "factor_levels"
+      ],
+      "title": "ExperimentConditionAssignmentModel",
+      "type": "object"
+    },
+    "ExperimentConditionAssignmentParameterModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "redaction": {
+                "enum": [
+                  "redacted",
+                  "withheld"
+                ]
+              }
+            },
+            "required": [
+              "redaction"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Auditable parameter value that can ground a study condition assignment.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "redaction": {
+          "const": "none",
+          "default": "none",
+          "title": "Redaction",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "value_kind": {
+          "enum": [
+            "configuration",
+            "protocol",
+            "apparatus",
+            "analysis"
+          ],
+          "title": "Value Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "value_kind"
+      ],
+      "title": "ExperimentConditionAssignmentParameterModel",
+      "type": "object"
+    },
+    "ExperimentConditionAssignmentReferenceModel": {
+      "additionalProperties": false,
+      "description": "Auditable run-level reference that can ground a study condition assignment.",
       "properties": {
         "ref_digest": {
           "anyOf": [
             {
               "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
               "type": "string"
             },
             {
@@ -223,6 +443,207 @@
         },
         "ref_kind": {
           "enum": [
+            "processor",
+            "backend",
+            "participant-implementation",
+            "scenario-snapshot",
+            "task",
+            "apparatus-context",
+            "manifest",
+            "profile",
+            "capability",
+            "measurement-channel"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentConditionAssignmentReferenceModel",
+      "type": "object"
+    },
+    "ExperimentEvidenceReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to evidence artifacts.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "evidence",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentEvidenceReferenceModel",
+      "type": "object"
+    },
+    "ExperimentMissingDataPolicyModel": {
+      "additionalProperties": false,
+      "description": "Missing, failed, withheld, or not-applicable result handling.",
+      "properties": {
+        "handling": {
+          "minLength": 1,
+          "title": "Handling",
+          "type": "string"
+        },
+        "missingness_assumption": {
+          "minLength": 1,
+          "title": "Missingness Assumption",
+          "type": "string"
+        },
+        "sensitivity_analysis": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sensitivity Analysis"
+        }
+      },
+      "required": [
+        "missingness_assumption",
+        "handling"
+      ],
+      "title": "ExperimentMissingDataPolicyModel",
+      "type": "object"
+    },
+    "ExperimentMultipleComparisonPolicyModel": {
+      "additionalProperties": false,
+      "description": "Multiplicity policy for study-level families of comparisons.",
+      "properties": {
+        "correction": {
+          "minLength": 1,
+          "title": "Correction",
+          "type": "string"
+        },
+        "family": {
+          "minLength": 1,
+          "title": "Family",
+          "type": "string"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        }
+      },
+      "required": [
+        "family",
+        "correction",
+        "rationale"
+      ],
+      "title": "ExperimentMultipleComparisonPolicyModel",
+      "type": "object"
+    },
+    "ExperimentReferenceModel": {
+      "additionalProperties": false,
+      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "processor",
+            "backend",
+            "participant-implementation",
             "scenario",
             "scenario-snapshot",
             "task",
@@ -233,7 +654,9 @@
             "study",
             "manifest",
             "profile",
+            "capability",
             "evidence",
+            "measurement-channel",
             "analysis-artifact",
             "other"
           ],
@@ -272,6 +695,149 @@
         "ref_id"
       ],
       "title": "ExperimentReferenceModel",
+      "type": "object"
+    },
+    "ExperimentRunAllocationPlanModel": {
+      "additionalProperties": false,
+      "description": "Structured run allocation, replication, and assignment plan.",
+      "properties": {
+        "allocation_method": {
+          "minLength": 1,
+          "title": "Allocation Method",
+          "type": "string"
+        },
+        "allocation_unit": {
+          "minLength": 1,
+          "title": "Allocation Unit",
+          "type": "string"
+        },
+        "blocking_factors": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Blocking Factors",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "compared_conditions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Compared Conditions",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "condition_assignments": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ExperimentConditionAssignmentModel"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Condition Assignments",
+          "type": "object"
+        },
+        "randomization_unit": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Randomization Unit"
+        },
+        "replication_policy": {
+          "minLength": 1,
+          "title": "Replication Policy",
+          "type": "string"
+        },
+        "stopping_rule": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stopping Rule"
+        },
+        "target_runs_per_condition": {
+          "minimum": 1,
+          "title": "Target Runs Per Condition",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "allocation_unit",
+        "allocation_method",
+        "compared_conditions",
+        "condition_assignments",
+        "target_runs_per_condition",
+        "replication_policy"
+      ],
+      "title": "ExperimentRunAllocationPlanModel",
+      "type": "object"
+    },
+    "ExperimentStatisticalMethodModel": {
+      "additionalProperties": false,
+      "description": "Statistical or estimation method declared before analysis.",
+      "properties": {
+        "assumptions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "comparison_family": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comparison Family"
+        },
+        "estimand": {
+          "minLength": 1,
+          "title": "Estimand",
+          "type": "string"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "unit_of_analysis": {
+          "minLength": 1,
+          "title": "Unit Of Analysis",
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "estimand",
+        "unit_of_analysis",
+        "assumptions"
+      ],
+      "title": "ExperimentStatisticalMethodModel",
       "type": "object"
     },
     "ExperimentStudyFactorModel": {
@@ -313,6 +879,161 @@
     },
     "ExperimentStudyMembershipModel": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "enum": [
+                  "primary-task",
+                  "comparison-task"
+                ]
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "then": {
+            "properties": {
+              "target_ref": {
+                "properties": {
+                  "ref_kind": {
+                    "enum": [
+                      "task"
+                    ]
+                  }
+                },
+                "required": [
+                  "ref_kind"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "enum": [
+                  "calibration-run",
+                  "evaluation-run"
+                ]
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "then": {
+            "properties": {
+              "target_ref": {
+                "properties": {
+                  "ref_kind": {
+                    "enum": [
+                      "run"
+                    ]
+                  }
+                },
+                "required": [
+                  "ref_kind"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "enum": [
+                  "baseline-result",
+                  "comparison-result"
+                ]
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "then": {
+            "properties": {
+              "target_ref": {
+                "properties": {
+                  "ref_kind": {
+                    "enum": [
+                      "result"
+                    ]
+                  }
+                },
+                "required": [
+                  "ref_kind"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "enum": [
+                  "evidence"
+                ]
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "then": {
+            "properties": {
+              "target_ref": {
+                "properties": {
+                  "ref_kind": {
+                    "enum": [
+                      "evidence"
+                    ]
+                  }
+                },
+                "required": [
+                  "ref_kind"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "enum": [
+                  "analysis"
+                ]
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "then": {
+            "properties": {
+              "target_ref": {
+                "properties": {
+                  "ref_kind": {
+                    "enum": [
+                      "analysis-artifact"
+                    ]
+                  }
+                },
+                "required": [
+                  "ref_kind"
+                ]
+              }
+            }
+          }
+        }
+      ],
       "description": "Typed member reference within a study or collection.",
       "properties": {
         "grouping": {
@@ -367,6 +1088,35 @@
       "title": "ExperimentStudyMembershipModel",
       "type": "object"
     },
+    "ExperimentUncertaintyMethodModel": {
+      "additionalProperties": false,
+      "description": "Uncertainty reporting plan for study estimates.",
+      "properties": {
+        "interval_level": {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Interval Level",
+          "type": "number"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "procedure": {
+          "minLength": 1,
+          "title": "Procedure",
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "interval_level",
+        "procedure"
+      ],
+      "title": "ExperimentUncertaintyMethodModel",
+      "type": "object"
+    },
     "ExperimentValidityNoteModel": {
       "additionalProperties": false,
       "description": "Validity threat, limitation, or mitigation note for experiment interpretation.",
@@ -413,7 +1163,48 @@
       "type": "object"
     }
   },
+  "$id": "https://aces.dev/schemas/experiment-study-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "study_kind": {
+            "enum": [
+              "study",
+              "benchmark"
+            ]
+          }
+        },
+        "required": [
+          "study_kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "analysis_plan": {
+            "type": "object"
+          },
+          "research_questions": {
+            "minItems": 1
+          },
+          "run_allocation": {
+            "type": "object"
+          },
+          "validity_notes": {
+            "minItems": 1
+          }
+        },
+        "required": [
+          "research_questions",
+          "run_allocation",
+          "analysis_plan",
+          "validity_notes"
+        ]
+      }
+    }
+  ],
   "description": "Study or collection contract for grouping experiment artifacts.",
   "properties": {
     "analysis_plan": {
@@ -469,6 +1260,11 @@
       "title": "Membership",
       "type": "object"
     },
+    "owner": {
+      "minLength": 1,
+      "title": "Owner",
+      "type": "string"
+    },
     "purpose": {
       "minLength": 1,
       "title": "Purpose",
@@ -492,19 +1288,16 @@
     "run_allocation": {
       "anyOf": [
         {
-          "minLength": 1,
-          "type": "string"
+          "$ref": "#/$defs/ExperimentRunAllocationPlanModel"
         },
         {
           "type": "null"
         }
       ],
-      "default": null,
-      "title": "Run Allocation"
+      "default": null
     },
     "schema_version": {
       "const": "experiment-study/v1",
-      "default": "experiment-study/v1",
       "title": "Schema Version",
       "type": "string"
     },
@@ -542,15 +1335,132 @@
     }
   },
   "required": [
+    "schema_version",
     "study_id",
     "study_version",
     "study_kind",
     "title",
+    "owner",
     "description",
     "purpose",
     "membership",
     "inclusion_criteria"
   ],
   "title": "ExperimentStudyModel",
-  "type": "object"
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Study and benchmark records must include research questions, run allocation, a substantive analysis plan, and validity notes.",
+      "id": "claim-bearing-study-analysis-plan-required",
+      "inputs": [
+        {
+          "contract_id": "experiment-study-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ExperimentStudyModel._validate_claim_bearing_study"
+    },
+    {
+      "description": "Study analysis_plan metrics must be declared by included experiment task protocols.",
+      "id": "study-analysis-metrics-grounded-in-task-protocols",
+      "inputs": [
+        {
+          "contract_id": "experiment-study-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "experiment-task-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "experiment-run-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
+    },
+    {
+      "description": "Study analysis_plan metrics must have result_summaries, including explicit missing/withheld statuses, in included evaluation runs.",
+      "id": "study-analysis-metrics-covered-by-evaluation-run-results",
+      "inputs": [
+        {
+          "contract_id": "experiment-study-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "experiment-task-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "experiment-run-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
+    },
+    {
+      "description": "Study analysis_plan evaluation-run members must resolve unambiguously and exclude invalidated, superseded, and not-evaluated runs.",
+      "id": "study-analysis-runs-eligible",
+      "inputs": [
+        {
+          "contract_id": "experiment-study-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "experiment-run-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
+    },
+    {
+      "description": "Study run_allocation compared_conditions must be represented by eligible included evaluation-run membership groupings that meet target_runs_per_condition, use operational blocking factors, and satisfy exactly one distinct factor-level combination and auditable condition assignment.",
+      "id": "study-run-allocation-covered-by-evaluation-run-members",
+      "inputs": [
+        {
+          "contract_id": "experiment-study-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "experiment-task-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "experiment-run-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.validate_experiment_study_against_tasks_and_runs"
+    },
+    {
+      "description": "Study report_artifacts and export_artifacts created_at values must be valid RFC 3339 date-times, including only known valid UTC leap-second instants.",
+      "id": "study-archival-times-rfc3339-valid",
+      "inputs": [
+        {
+          "contract_id": "experiment-study-v1",
+          "instance_path": "#/report_artifacts"
+        },
+        {
+          "contract_id": "experiment-study-v1",
+          "instance_path": "#/export_artifacts"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.validate_experiment_study_archival_datetimes"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "experiment-study-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
 }

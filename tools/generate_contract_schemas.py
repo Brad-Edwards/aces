@@ -9,6 +9,8 @@ from pathlib import Path
 
 
 def _schema_output_path(schemas_dir: Path, name: str) -> Path:
+    if name == "aces-semantic-invariants-v1":
+        return schemas_dir / "profiles" / f"{name}.json"
     if name in {
         "sdl-authoring-input-v1",
         "instantiated-scenario-v1",
