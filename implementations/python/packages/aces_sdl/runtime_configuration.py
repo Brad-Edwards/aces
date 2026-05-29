@@ -152,6 +152,7 @@ from .runtime_network import (
     RuntimeNetworkRealization,
     RuntimePublishedPort,
 )
+from .runtime_network_sensor import RuntimeNetworkSensor
 from .runtime_security_monitoring import RuntimeSecurityMonitoringManager
 from .runtime_service_units import (
     ServiceManagerKind,
@@ -307,6 +308,7 @@ __all__ = [
     "RuntimeNetworkEndpoint",
     "RuntimeNetworkIdStability",
     "RuntimeNetworkRealization",
+    "RuntimeNetworkSensor",
     "RuntimeOperationalPolicy",
     "RuntimePackage",
     "RuntimePackageVulnerabilityFinding",
@@ -524,11 +526,7 @@ class RuntimePackageVulnerabilityFinding(SDLModel):
 
 
 def _reject_duplicate_keys(items: Iterable[object], *, attr: str, label: str) -> None:
-    """Raise ``ValueError`` on the first repeated key among ``items``.
-
-    Keys read off ``attr`` that are ``None`` or empty strings are not comparable
-    identities and are skipped (e.g. an unnamed process or an absent pid).
-    """
+    """Raise on the first repeated non-empty key read from ``attr``."""
     seen: set[object] = set()
     for item in items:
         key = getattr(item, attr)
@@ -560,6 +558,7 @@ class RuntimeConfiguration(SDLModel):
     applications: list[RuntimeApplicationSurface] = Field(default_factory=list)
     database_services: list[DatabaseService] = Field(default_factory=list)
     dns_services: list[RuntimeDnsService] = Field(default_factory=list)
+    network_sensors: list[RuntimeNetworkSensor] = Field(default_factory=list)
     security_monitoring_managers: list[RuntimeSecurityMonitoringManager] = Field(default_factory=list)
     ssh_servers: list[SshServerConfig] = Field(default_factory=list)
     service_manager_units: list[ServiceManagerUnit] = Field(default_factory=list)
@@ -578,6 +577,7 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.applications, attr="application_id", label="application_id")
         _reject_duplicate_keys(self.database_services, attr="database_service_id", label="database_service_id")
         _reject_duplicate_keys(self.dns_services, attr="dns_service_id", label="dns_service_id")
+        _reject_duplicate_keys(self.network_sensors, attr="sensor_id", label="network sensor")
         _reject_duplicate_keys(self.security_monitoring_managers, attr="manager_id", label="security manager")
         _reject_duplicate_keys(self.ssh_servers, attr="server_id", label="ssh_server server_id")
         _reject_duplicate_keys(

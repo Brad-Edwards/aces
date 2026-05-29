@@ -39,9 +39,10 @@ becoming a validator-only interpretation of the SDL.
 |------|----------------|
 | `verify_content` | Content targets reference existing VM nodes. |
 | `verify_accounts` | Account nodes reference existing VM nodes. |
-| `verify_relationships` | Source and target resolve to any named element in any section, including variables, relationships, content item names, named service bindings, runtime identity-authority refs, runtime DNS refs, runtime security-monitoring manager refs, and named ACL rules. Ambiguous bare refs are rejected with qualified alternatives. |
+| `verify_relationships` | Source and target resolve to any named element in any section, including variables, relationships, content item names, named service bindings, runtime identity-authority refs, runtime DNS refs, runtime network-sensor refs, runtime security-monitoring manager refs, and named ACL rules. Ambiguous bare refs are rejected with qualified alternatives. |
 | `verify_runtime_identity_authorities` | Runtime identity-authority services resolve to same-node service bindings. Local relationship and policy refs resolve within the owning authority across authority, service, subject, policy, and relationship stable ids. |
 | `verify_runtime_dns_services` | Runtime DNS services resolve to same-node service bindings. Configuration, log, and zone-file refs resolve to observed runtime filesystem entries when the node has file inventory. |
+| `verify_runtime_network_sensors` | Runtime network sensors name monitored networks that resolve to switch-backed infrastructure entries and, when runtime endpoint inventory exists on the node, to same-node network endpoint attachments. Configuration, log, and evidence refs resolve to observed runtime filesystem entries when the node has file inventory. |
 | `verify_runtime_security_monitoring_managers` | Runtime security-monitoring managers and listeners resolve to same-node service bindings. Manager/group/content/setting file refs resolve to observed runtime filesystem entries when the node has file inventory. Agent group member refs, agent group refs, and setting component refs resolve inside the owning manager. |
 | `verify_agents` | Entity references resolve. Starting accounts and initial-knowledge accounts exist in accounts section. Allowed subnets and initial-knowledge subnets must resolve to switch-backed infrastructure entries. Initial-knowledge hosts must resolve to VM nodes. Initial-knowledge services exist in `nodes.*.services[].name`. |
 | `verify_participant_behavior` | Agent action refs resolve to declared action contracts, observation-boundary refs resolve to declared boundaries, interaction refs resolve to declared actions or targetable state, and boundary view rules/transitions resolve to declared observable, hidden, or evidence refs. |
@@ -105,6 +106,18 @@ or private-key settings must omit raw values and use redacted/operator-secret
 classifications. DNS services may reference only services declared on the same
 node. File refs under the DNS service and its zones are checked against
 `runtime.filesystem_inventory` when that inventory is non-empty.
+
+The optional `runtime.network_sensors` inventory has model-local and semantic
+rules. Network sensors use stable `sensor_id` values that are unique within the
+node runtime block. Implementations, sensor kinds, monitoring postures, and
+capture modes are normalized from bounded enums while allowing full-value
+variables where the model permits. `capture_interfaces` and
+`monitored_network_refs` reject duplicates. Each monitored network ref must
+resolve to a declared switch-backed infrastructure entry; when the same node
+records `runtime.network.endpoints`, the monitored network must also be one of
+that node's observed endpoint attachments. Configuration, log, and evidence
+refs are absolute paths and are checked against `runtime.filesystem_inventory`
+when that inventory is non-empty.
 
 The optional `runtime.security_monitoring_managers` inventory has model-local
 and semantic rules. Managers, listeners, components, agents, agent groups,
@@ -238,13 +251,16 @@ The index also includes nested entity dot-paths, named service bindings
 service, subject, policy, and relationship refs), and named ACL rules
 (`infrastructure.<infra>.acls.<acl_name>`). Runtime DNS refs are also indexed:
 `nodes.<node>.runtime.dns_services.<dns_service_id>`,
-`.zones.<zone_id>`, and `.zones.<zone_id>.rrsets.<rrset_id>`. This means a
+`.zones.<zone_id>`, and `.zones.<zone_id>.rrsets.<rrset_id>`. Runtime
+network-sensor refs are indexed as
+`nodes.<node>.runtime.network_sensors.<sensor_id>`. This means a
 relationship can reference any node, feature, condition, vulnerability,
 infrastructure entry, metric, evaluation, TLO, goal, entity (including nested),
 inject, event, script, story, content entry, content item, account, agent,
 objective, workflow, relationship, variable, named service binding, runtime
-identity-authority object, runtime DNS object, runtime security-monitoring
-manager object, or named ACL rule. Runtime security-monitoring refs are indexed
+identity-authority object, runtime DNS object, runtime network-sensor object,
+runtime security-monitoring manager object, or named ACL rule. Runtime
+security-monitoring refs are indexed
 as `nodes.<node>.runtime.security_monitoring_managers.<manager_id>` plus nested
 `.listeners.<listener_id>`, `.components.<component_id>`,
 `.agents.<agent_id>`, `.agent_groups.<group_id>`,

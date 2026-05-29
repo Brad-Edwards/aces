@@ -148,6 +148,7 @@ from .runtime_configuration import (
     RuntimeNetworkEndpoint,
     RuntimeNetworkIdStability,
     RuntimeNetworkRealization,
+    RuntimeNetworkSensor,
     RuntimeOperationalPolicy,
     RuntimePackage,
     RuntimePackageVulnerabilityFinding,
@@ -184,6 +185,12 @@ from .runtime_database import (
     DatabaseSettingProvenance,
     DatabaseTable,
     RelationshipDatabaseAccess,
+)
+from .runtime_network_sensor import (
+    RuntimeNetworkSensorCaptureMode,
+    RuntimeNetworkSensorImplementation,
+    RuntimeNetworkSensorKind,
+    RuntimeNetworkSensorMonitoringPosture,
 )
 from .runtime_security_monitoring import (
     RuntimeSecurityMonitoringAgent,
@@ -359,6 +366,11 @@ __all__ = [
     "RuntimeNetworkEndpoint",
     "RuntimeNetworkIdStability",
     "RuntimeNetworkRealization",
+    "RuntimeNetworkSensor",
+    "RuntimeNetworkSensorCaptureMode",
+    "RuntimeNetworkSensorImplementation",
+    "RuntimeNetworkSensorKind",
+    "RuntimeNetworkSensorMonitoringPosture",
     "RuntimeOperationalPolicy",
     "RuntimePackage",
     "RuntimePackageVulnerabilityFinding",
