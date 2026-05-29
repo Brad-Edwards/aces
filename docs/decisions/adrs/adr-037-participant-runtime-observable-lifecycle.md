@@ -52,6 +52,12 @@ rollback, and realization. OCSF, STIX, CACAO, OpenC2, and CALDERA show that
 portable event and command semantics need typed envelopes, identity,
 versioning, classification, normalized status, provenance, markings, and
 extension rules rather than raw backend objects.
+W3C PROV, FAIR, RO-Crate, ACM artifact review, simulation V&V, and cyber-range
+scenario-validation literature add the scientific-instrument constraint: a
+runtime record can look structurally valid while still weakening evidential
+claims if evidence digests, treatment assignment, redaction semantics,
+validity-threat disclosures, artifact roles, or testbed-correspondence evidence
+are missing or mismatched.
 
 ## Decision
 
@@ -218,6 +224,29 @@ record. A stronger information-state claim is valid only when the portable
 action-observation history, visibility rule, redaction markings, stochastic or
 noise disclosure, ordering context, and governed reconstruction algorithm or
 proof reference are sufficient to reproduce the claimed information state.
+Observation kernels may be discrete, continuous, or mixed. Finite support is not
+required for exact claims when a governed measurable observation space,
+probability measure or distribution family, reference/base measure where needed,
+parameters, and projection/redaction basis can be audited. A sampler can support
+an exact distribution claim only when it is tied to the governed distribution,
+algorithm/version, random-source or seed policy, and audit evidence; otherwise
+it supports only a bounded, lossy, unknown, or unsupported claim. Finite
+approximations must disclose their method and error bound.
+The reconstruction relation is part of the claim, not commentary: if the
+algorithm/proof reference is absent, non-executable, or unable to prove equality
+under the recorded projection and redaction policy, the claim must downgrade to
+`lossy_projection`, `unknown`, or `unsupported`.
+The action-observation history is a sequence only when the runtime records a
+participant-local delivery order. Under partial-order, simultaneous, or
+backend-serialized execution, the visible history must preserve the visible
+order relation and simultaneity groups, or the information-state claim must
+downgrade.
+Participant-visible history uses projected visible occurrence identifiers. The
+stable global `event_id` remains an audit/runtime identity; it is not exposed to
+a participant-visible history unless the visibility policy explicitly projects
+it. Otherwise the mapping from visible occurrence to global event remains
+controlled evidence. Repeated identical or redacted observations remain distinct
+visible occurrences; reusable redaction tokens are not occurrence identities.
 Global state exposed for centralized training, debugging, scoring, or backend
 operation is not participant-visible state unless an explicit visibility rule
 projects it to that participant.
@@ -249,12 +278,40 @@ space definitions, visibility policy, seed/randomization context, and run
 provenance.
 
 Sequential, AEC, simultaneous, chance, and mean-field claims are not implied by
-the presence of a step signal. A participant action is valid only when the
-participant is in the recorded active-agent set and, for sequential/AEC
-surfaces, is the current actor. Chance and mean-field nodes are environment
-updates unless a scenario explicitly models them as participants; their
-distribution, sampled outcome, or population update must be recorded or the
-claim must downgrade.
+the presence of a step signal. When a record makes one of those step/game-node
+claims, it must cite an interaction context; the participant action is valid for
+that claim only when the participant is in the recorded active-agent set and,
+for sequential/AEC surfaces, is the current actor. AEC cleanup turns for
+terminated or truncated participants may admit a governed null action; that
+null action is protocol cleanup, not an ordinary environment action or action
+space member. Ordinary lifecycle action records that make no RL/MARL/game-node
+claim do not require an interaction context. Chance and mean-field nodes are
+environment updates unless a scenario explicitly models them as participants;
+their distribution, sampled outcome, or population update must be recorded or
+the claim must downgrade. Explicit chance distributions are probability
+measures over governed chance outcomes, not over participant observations. A
+chance outcome is a transition cause that may later induce participant-visible
+observations through observation envelopes. Exact chance claims require a
+governed measurable outcome space, transition-effect schema, probability
+measure or distribution family, reference/base measure where needed, parameters
+or sampler audit basis where applicable, participant-visible
+projection/redaction basis when the outcome is disclosed, and
+finite-approximation error bound when an infinite-support distribution is
+summarized. Mean-field claims similarly
+require a governed single- or multi-population scope, governed population ids,
+population-state support, normalized distribution over that support, update
+rule, and approximation bounds when support is summarized. Parallel,
+simultaneous, and backend-serialized claims must define a stable joint-action
+tuple or participant-to-action map, including null, withheld, dropped, or
+unsupported actions where applicable.
+
+Action-space membership is a claim about RL/game validity, not the universal
+definition of a valid ACES action. Ordinary lifecycle actions, cyber commands,
+human/operator choices, LLM tool attempts, playbook steps, and externally
+supplied actions are validated through governed action contracts, command or
+source mappings, admission records, actor/capability basis, and provenance. If
+such a record does not make an RL/MARL/game-node claim, it does not need an
+action-space reference.
 
 ### 7. Shared operational state is a versioned runtime contract
 
@@ -379,6 +436,9 @@ they must carry the fields needed to make benchmark claims auditable:
   version, and adapter version;
 - seed, randomization, holdout/canary exposure labels, and run configuration
   digest;
+- treatment assignment, assignment unit, randomization/blocking or
+  nonrandom-assignment disclosure, allocation-concealment/blinding status when
+  applicable, and assignment deviations;
 - evaluator/scoring references, assistance disclosures, cost/resource traces,
   timeout/budget limits, and relevant environment build references.
 - statistical repetition plan, trial/replicate identity, baseline/evaluator
@@ -386,8 +446,9 @@ they must carry the fields needed to make benchmark claims auditable:
   policy, cost-normalization policy, exclusion/retry policy, and comparison
   cohort when records are used for comparative claims;
 - evaluator leakage model, baseline eligibility policy, paired-run group,
-  artifact immutability refs, and exclusion decision refs when records are used
-  to support an academic or engineering benchmark conclusion;
+  validity-threat refs, testbed-correspondence evidence refs, artifact
+  immutability refs, and exclusion decision refs when records are used to
+  support an academic or engineering benchmark conclusion;
 - contamination-audit evidence, holdout asset digests, canary policy, scaffold
   exposure matrix, and public/private material labels sufficient to support the
   claim that hidden benchmark material was not exposed to a participant.
@@ -395,11 +456,63 @@ they must carry the fields needed to make benchmark claims auditable:
 These fields align the runtime surface with the benchmark lineage while keeping
 the full archival study lifecycle out of scope for this ADR. ACES can preserve
 the runtime evidence needed for later statistical analysis, but run context
-alone is not a validity model. A comparative or non-contamination conclusion
-requires an explicit benchmark-validity claim that cites the metric,
-aggregation, uncertainty, baseline comparability, evaluator leakage, exposure,
-exclusion/retry, cost-normalization, and artifact-immutability procedures it
-depends on.
+alone is not a validity model. A result-analysis conclusion that asserts a
+metric, score, rate, effect, interval, test, comparative result, or
+cost-normalized result requires an explicit benchmark-validity claim that cites
+the metric, aggregation, replication, uncertainty, treatment assignment,
+validity-threat disclosure, and applicable baseline, cost, exclusion/retry,
+evaluator, exposure, testbed-correspondence, and artifact-immutability
+procedures it depends on. Descriptive-result claims, including descriptive
+cost-normalized metrics such as score per declared cost unit or success rate
+under a fixed budget, may use a descriptive-only analysis plan only when
+interval, test, effect, margin, superiority, equivalence, non-inferiority,
+cost-normalized comparative effect, and statistical non-contamination-rate
+conclusions are explicitly excluded or governed not-applicable. Audit-only
+evaluator-leakage or non-contamination conclusions may satisfy metric-analysis
+support through governed `not_applicable` records,
+but still require the evaluator-boundary, exposure, contamination-audit,
+exclusion/retry, and artifact evidence needed by the audit claim. If a
+non-contamination claim also reports a score, rate, interval, test, or effect,
+it becomes a result-analysis claim for that part of the conclusion.
+Those procedures must validate the declared run context rather than merely list
+it: scaffold/model/tool exposure, run configuration, scoring and evaluator
+versions, assistance disclosures, retry/exclusion policy, exposure labels,
+cost/resource traces, treatment assignment, validity-threat disclosures, and
+artifact immutability are support records. A governed `not_applicable` record
+may satisfy a support concern only when the conclusion scope explicitly excludes
+the stronger claim that would depend on that concern.
+Artifact immutability is graph-derived, not merely existential or a fixed
+checklist: every populated run-context or support record consumed by the claim,
+including governed not-applicable bundles, must map to a required artifact role
+and a pinned artifact. That includes scenario/task materials, starter files or
+run configuration, backend manifests and versions, environment builds,
+participant implementation/adapter/scaffold/model/tool apparatus, assistance
+disclosures, seeds and randomization policies, evaluator/scoring material,
+retry/exclusion policies and decisions, metric and measurement procedures,
+aggregation/missingness/outlier/weighting policies, replicate/randomization
+records, treatment-assignment records, statistical plans and preregistrations,
+baselines and comparison cohorts, validity-threat disclosures and mitigations,
+testbed-correspondence evidence, cost/resource/hardware/software/timeout
+records, evaluator-leakage models, public/private material labels, exposure
+matrices, holdout/canary assets and policies, contamination audits and
+procedures, dataset splits, training-data cutoffs, and participant knowledge
+cutoffs when the conclusion depends on them. The support graph must also be
+coherent: metric, aggregation, statistical-plan, replicate,
+treatment-assignment, baseline, evaluator, exposure, exclusion/retry, validity
+threat, cost, and artifact refs in a benchmark-validity claim must resolve to
+the same run context, or to a declared comparison cohort that contains that run.
+Metric denominators, aggregation grouping/blocking, weighting, randomization
+blocks, assignment mechanism, statistical test family,
+practical-effect/equivalence margins, validity-threat mitigations, and power or
+precision targets are validation obligations, not descriptive metadata.
+Comparative claims must cite a non-empty governed baseline set and a comparison
+cohort that contains those baselines; empty universal checks are not valid
+comparisons.
+
+Issue #74 does not implement RO-Crate or PROV export. It preserves the
+persistent ids, qualified refs, artifact roles, provenance refs, license/access
+policy refs, evidence manifests, and optional research-object manifest refs that
+a future exporter or artifact-review package would need.
 
 ### 11. Participant internals are apparatus, not portable semantics
 

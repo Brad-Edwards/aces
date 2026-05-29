@@ -98,6 +98,11 @@ This design is constrained by the primary sources listed in
   cost normalization, evaluator leakage controls, contamination audits,
   immutable artifact evidence, and holdout/canary exposure evidence for
   auditable comparisons.
+- W3C PROV, FAIR, RO-Crate, and ACM artifact-review practice require persistent
+  identifiers, qualified references, provenance, licensing/access metadata,
+  reusable artifact bundles, and explicit artifact availability limits. ACES
+  preserves enough runtime and support-graph information for those packages and
+  reviews without making issue #74 a full research-object archive exporter.
 
 These sources do not make ACES a compatibility layer for any one project. They
 define review constraints: the model must preserve the concepts needed to make
@@ -123,9 +128,56 @@ Required artifacts for future implementation:
   concurrency and information-state subsets.
 
 This document supplies the invariant list, abstract state-machine model,
-normalized vocabulary, conformance obligations, and concrete design examples for
-the design issue. Typed contracts, tests, and executable models belong to the
-spawned implementation issues.
+normalized vocabulary, conformance obligations, and structural examples for the
+design issue. Typed contracts, tests, evidence fixtures, and executable models
+belong to the spawned implementation issues.
+
+## V1 Traceability Criteria Matrix
+
+This matrix is the control surface for later implementation work. A row marked
+`v1 MUST` is not implementation coverage in this issue; it is a required
+enforcement trace for the per-UID implementation issues. A future implementation
+may claim v1 conformance for a row only when every enforcement column has a
+concrete artifact. If a column is intentionally absent, the row must be
+reclassified as `v1 SHOULD` or `future/non-goal`, or the prose claim that depends
+on it must be downgraded.
+
+Enforcement columns mean:
+
+- `Contract field` - the runtime/support record field that carries the claim.
+- `Schema gate` - JSON Schema or Pydantic shape constraints that can reject the
+  invalid shape without whole-trace knowledge.
+- `Semantic gate` - Python semantic validation, conformance validation, or an
+  executable abstract-model check needed when schema shape is insufficient.
+- `Probe` - a negative fixture or adversarial trace that must be rejected or
+  forced to downgrade.
+
+| ID | Criterion | Status | Contract field | Schema gate | Semantic gate | Probe |
+| --- | --- | --- | --- | --- | --- | --- |
+| PRT-01 | Base runtime records carry stable identity, schema version, event type, provenance, source refs, clocks, markings, and extension policy. | v1 MUST | `BaseEnvelope` | required fields, enums, timestamp shape, closed extra fields | `BaseOK`, `RefOK`, schema/model drift check | missing schema version; unknown required extension accepted |
+| PRT-02 | Evidence and raw-data claims are digest-bound and cannot point to mismatched bytes or placeholder hashes. | v1 MUST | `source_raw_ref`, `raw_data_integrity`, `evidence_refs`, evidence index digest fields | digest algorithm/pattern pairs, size/truncation requiredness | `RawDataIntegrityOK`, `EvidenceRefIntegrityOK` | event cites evidence A but digest belongs to evidence B |
+| PRT-03 | Field-level marking and redaction run before any public record, fixture, schema example, diagnostic, or changelog exposure. | v1 MUST | `marking_definition_refs`, `object_marking_refs`, `granular_markings`, `redaction_policy_ref`, `authorization_scope` | selector shape and marking-ref requiredness | `MarkingOK`, `NoHiddenDisclosure`, redaction publication gate | hidden answer key appears in public observation or fixture |
+| PRT-04 | OCSF/STIX-style classification is ACES-native unless an explicit source mapping proves compatibility. | v1 MUST | `event_classification`, `source_status`, `source_pipeline` | nullable only for no-claim records; closed status vocab | classification registry and source-mapping validation | OCSF-looking tuple accepted with no governed OCSF mapping |
+| PRT-05 | Observable lifecycle phases do not require participant-internal plans, prompts, chain-of-thought, policy state, or workflow steps. | v1 MUST | `LifecycleEnvelope.phase`, `phase_realization`, `admission_disposition`, `operation_ref` | closed lifecycle/realization/disposition enums | `Transition_k`, lifecycle boundary validator | opaque LLM action rejected because no proposal trace exists |
+| PRT-06 | Non-RL cyber, human, script, playbook, and external actions are valid through action contracts and provenance, not action-space membership. | v1 MUST | `action_contract_ref`, `command_ref`, `actor_provenance`, `action_validity_basis_ref` | validity-basis enum and conditional refs | `StepActionValid`, `ActionValidityBasisOK` | human action with no RL action-space ref is rejected despite action contract |
+| PRT-07 | Participant-visible observation, hidden truth, scoring state, centralized-training state, evidence, and information state remain separate. | v1 MUST | `ObservationEnvelope`, `VisibleHistory`, `information_guarantee` | required projection/history refs for stronger guarantees | `KernelOK`, `HistoryConsistent`, `PerfectRecall` | hidden state id enters visible history without projection |
+| PRT-08 | RL/MARL/game claims preserve action/observation spaces, masks, rewards, returns, termination/truncation, active agents, current actor, null cleanup, chance, and mean-field semantics. | v1 MUST when such claims are made | `ParticipantInterface`, `InteractionContextEnvelope`, `StepSignalEnvelope` | conditional refs by `interaction_mode` and `chance_mode` | `InteractionClaimOK`, `ChanceDisclosureOK`, `MeanFieldDisclosureOK` | AEC cleanup null counted as ordinary action-space member |
+| PRT-09 | Shared operational state is addressable, revisioned or digest-pinned, provenance-bearing, and separate from metadata/detail maps. | v1 MUST | `SharedStateRecord`, `SharedStateAccess` | address/kind/revision/digest conditional fields | `RevisionDiscipline`, state-ref validator | shared-state claim stored only in `RuntimeSnapshot.metadata` |
+| PRT-10 | Concurrency and time claims use explicit order, isolation, conflict, clock, lookahead, rollback, and supersession records. | v1 MUST when concurrency/time claims are made | `JointActionRecord`, `TimeManagementContext` | order/isolation/conflict/time enums and conditional refs | `OrderDiscipline`, `ConflictOK`, `TimeManagementOK` | simultaneity inferred from near-equal wall-clock timestamps |
+| PRT-11 | Capability is a component-wise vector; weak adapter, clock, observer, redaction, evidence-store, replay, or benchmark support downgrades the claim. | v1 MUST | `capability_guarantee_vector`, component capability declarations | concern/applicability/strength vocabularies | `CapabilityOK`, meet/satisfaction validator | scalar "supported=true" accepted for exact concurrency claim |
+| PRT-12 | Cyber command/action mappings preserve command, target, actuator, session, credential refs, knowledge/foothold/visibility/detection deltas, and source-tool identity. | v1 MUST when cyber action claims are made | `CyberActionEnvelope` | conditional refs for OpenC2/CACAO/CALDERA mappings | command/source mapping validator | raw credential value appears in `credential_ref` |
+| PRT-13 | Comparative, causal-treatment, superiority, equivalence, non-inferiority, or assignment-dependent benchmark claims disclose treatment assignment, assignment unit, randomization/blocking, baseline cohort, scaffold/tool/model exposure, and assistance. | v1 MUST for those claim scopes | `RunContext`, `BenchmarkValidityClaim`, `TreatmentAssignment` | required refs when conclusion scope depends on assignment | `TreatmentAssignmentOK`, `BaselineComparabilityOK`, context-linkage validator | baseline comparison with no assignment mechanism or baseline cohort |
+| PRT-14 | Metric, aggregation, denominator, missingness, replicate, unit-of-analysis, uncertainty, effect, margin, and cost-normalization claims are validated, not just listed. | v1 MUST for result-analysis claims | `MetricSpec`, `AggregationPlan`, `ReplicateSet`, `StatisticalPlan`, `CostNormalizationPolicy` | required fields and closed uncertainty/cost vocabularies | `MetricsOK`, `ReplicationOK`, `UncertaintyOK`, `CostOK` | cost-normalized superiority claim using `descriptive_only` plan |
+| PRT-15 | Validity threats and residual limits are explicit for benchmark conclusions and V&V/correspondence claims. | v1 MUST for benchmark validity claims | `validity_threat_refs`, `validity_threat_mitigation_refs`, `unsupported_or_unknown_limits` | threat category and affected-claim requiredness | `ValidityThreatsOK`, `CorrespondenceEvidenceOK` | claim omits construct/internal/external/statistical threat disclosure |
+| PRT-16 | Evaluator leakage, non-contamination, holdout/canary, public/private material labels, and participant knowledge cutoffs are governed support records. | v1 MUST for leakage or non-contamination claims | `EvaluatorLeakageModel`, `ExposureAuditProcedure`, cutoff refs | conditional refs by conclusion scope | `EvaluatorLeakageOK`, `ExposureOK` | holdout non-exposure claimed with no holdout digest or audit method |
+| PRT-17 | Artifact immutability is graph-derived from every consumed run/support record and maps each required role to a pinned artifact. | v1 MUST for benchmark claims | `ArtifactImmutabilityEvidence`, `artifact_role_assignments`, `required_role_policy_ref` | non-empty artifacts, digest refs, role assignment shape | `ArtifactImmutabilityOK`, `RequiredArtifactCoverageOK` | unrelated pinned artifact satisfies missing evaluator artifact |
+| PRT-18 | PROV/FAIR/RO-Crate alignment is preserved without requiring issue #74 to emit an archive package. | v1 SHOULD; exporter future/non-goal | persistent ids, qualified refs, artifact roles, license/access/provenance refs, optional `research_object_manifest_ref` | URI/ref shape where present | artifact graph to PROV/RO-Crate crosswalk check | RO-Crate conformance claimed with no metadata descriptor/root entity mapping |
+| PRT-19 | Schema, model, documentation, fixture, and validator surfaces cannot diverge silently. | v1 MUST for implementation issues | generated schema ids, model version, criterion id test markers | generated-schema drift checks and closed schemas | traceability audit from criterion id to tests/fixtures | docs claim a MUST with no schema/model/semantic/test/probe row |
+
+The minimum adversarial fixture/probe set for v1 is the union of the `Probe`
+column for every `v1 MUST` row. Positive fixtures are necessary but not
+sufficient: a row is not covered unless at least one invalid shape is rejected
+or downgraded by the declared enforcement point.
 
 ## Terms
 
@@ -173,8 +225,11 @@ spawned implementation issues.
   evidence.
 
 `Action-observation history`
-: The ordered participant-visible sequence of prior action attempts, emitted
-  observations, and disclosed lifecycle facts for one participant episode.
+: The participant-visible history of prior action attempts, emitted
+  observations, and disclosed lifecycle facts for one participant episode. It
+  is a sequence only when a participant-local delivery order is recorded; under
+  concurrent or simultaneous semantics it may be a visible partial order with
+  simultaneity groups.
 
 `Information state`
 : The participant information state ACES claims at an order point. It may be
@@ -193,10 +248,13 @@ spawned implementation issues.
 
 `Active agent set`
 : The participant addresses that may legally choose an action at a game or
-  environment order point. Sequential/AEC surfaces have one current actor;
-  simultaneous and parallel surfaces may have more than one; chance and
-  mean-field nodes have no participant action unless explicitly wrapped by a
-  scenario participant.
+  environment order point. This is the action-eligible set for that order point,
+  not necessarily the full live-agent or possible-agent set. Sequential/AEC
+  surfaces have one current actor; simultaneous and parallel surfaces may have
+  more than one; chance and mean-field nodes have no participant action unless
+  explicitly wrapped by a scenario participant. The full possible-agent set,
+  live-agent membership, and non-acting signal policy must use separate refs or
+  disclosures when a claim depends on them.
 
 `Chance node`
 : A runtime order point where stochastic environment/nature behavior, not a
@@ -287,8 +345,9 @@ Where:
   mean-field node semantics for game/RL/MARL surfaces.
 - `step_signals[p,e,t]` records reward, return, termination, truncation,
   action-mask, observation, and auxiliary-info signals when exposed.
-- `action_observation_histories[p,e,t]` is the prefix of visible actions and
-  observations available to participant `p` at order point `t`.
+- `action_observation_histories[p,e,t]` is the prefix or lower set of visible
+  actions and observations available to participant `p` at order point `t`,
+  depending on whether the visible delivery claim is total or partial.
 - `information_states[p,e,t]` is the information state ACES claims for
   participant `p` at order point `t`.
 - `shared_state[address]` is the version chain for a shared operational state
@@ -394,6 +453,15 @@ EventClassification =
   severity_id
   severity
 ```
+
+`EventClassification` is not an implicit OCSF event. The tuple
+`(category_uid, class_uid, activity_id, type_uid)` is governed by the ACES
+classification registry for the record's `schema_name` and `schema_version`.
+ACES-native examples may use the OCSF-style composite identifier pattern, but
+that does not assert that OCSF category, class, activity, or profile values are
+being emitted. If a record claims OCSF compatibility, it must cite a governed
+source-classification mapping and the mapped values must validate against the
+referenced OCSF schema/profile version.
 
 ```text
 SourceStatus =
@@ -529,6 +597,7 @@ LifecycleEnvelope =
   action_contract_ref
   command_ref
   actor_provenance
+  action_validity_basis_ref
   observation_refs
   shared_state_read_refs
   shared_state_write_refs
@@ -646,7 +715,9 @@ InteractionContextEnvelope =
   sampled_chance_outcome_ref
   chance_seed_ref
   chance_visibility
-  mean_field_population_ref
+  mean_field_population_scope_ref
+  mean_field_population_refs
+  mean_field_state_support_ref
   mean_field_distribution_ref
   mean_field_distribution_digest
   mean_field_update_rule_ref
@@ -998,11 +1069,19 @@ Consumer =
 
 Digest       = algorithm-tagged immutable digest values
 StateSpace   = abstract runtime states reachable by valid traces
-VisibleEvent = participant-visible projected event records
+MeasurableSpace[X] = governed value space plus measurable subsets or schema-equivalent sigma algebra
+VisibleEvent = participant-visible projected event-occurrence records
+VisibleHistory = participant-visible occurrence collection plus visible order metadata
 InformationState = governed information-state records or digests
 ObservationValue = governed observation values or references
+ActionBasisValue = governed participant action attempt values or references
+JointActionValue = governed participant-addressed joint action maps
+ChanceOutcomeValue = governed environment chance outcomes or references
+MeanFieldStateValue = governed population-state support values or references
+MeanFieldDistribution = governed probability measure over MeasurableSpace[MeanFieldStateValue]
+ObservationBasis = governed transition basis for participant observation
 Probability = real values in [0, 1]
-Distribution[X] = finite-support probability distribution over X
+ProbabilityMeasure[X] = governed probability measure over MeasurableSpace[X]
 Maybe[X] = X union {none}
 Result[X] = X union {Unknown, Unsupported, Lossy}
 ```
@@ -1021,7 +1100,7 @@ phase: Ev -> LifecyclePhase
 realization: Ev -> PhaseRealization
 admission: Ev -> AdmissionDisposition
 operation_state: Op x T -> OperationState
-visible_history: P x E x T -> Seq(VisibleEvent)
+visible_history: P x E x T -> VisibleHistory
 observation: Obs -> ObservationEnvelope
 information_claim: P x E x T -> InformationGuarantee
 state_revision: S x T -> R
@@ -1034,8 +1113,10 @@ interaction_context: K -> InteractionContextEnvelope
 interaction_context_at: T -> Maybe[K]
 active_agents: K -> Set(P)
 current_actor: K -> Maybe[P]
-chance_distribution: K -> Result[Distribution[ObservationValue]]
-mean_field_distribution: K -> Result[Digest]
+transition_basis: K -> Result[ObservationBasis]
+chance_distribution: K -> Result[ProbabilityMeasure[ChanceOutcomeValue]]
+sampled_chance_outcome: K -> Result[ChanceOutcomeValue]
+mean_field_distribution: K -> Result[MeanFieldDistribution]
 benchmark_claim: BC -> BenchmarkValidityClaim
 ```
 
@@ -1068,17 +1149,21 @@ unsupported < disclosed_weak < bounded < exact
 
 ### Valid Trace Predicate
 
-A trace `tr = <ev_1, ..., ev_n>` is valid iff all of the following hold:
+A published runtime trace `tr = <ev_1, ..., ev_n>` is valid iff all of the
+following hold. The empty sequence is admissible only as a prefix used while
+defining `prefix_state`; it is not a published trace that can support a runtime
+claim.
 
 ```text
 ValidTrace(tr) =
-  Unique(event_id, tr)
-  /\ InitOK(tr[1])
+  n >= 1
+  /\ InitOK(initial_state(tr))
+  /\ Unique(event_id, tr)
   /\ forall i in 1..n:
        BaseOK(ev_i)
        /\ MarkingOK(ev_i)
        /\ CapabilityOK(ev_i)
-       /\ RefOK(ev_i, prefix(tr, i - 1))
+       /\ RefOK(ev_i, prefix(tr, i - 1), initial_state(tr))
        /\ Apply(prefix_state(tr, i - 1), ev_i) != Reject
   /\ AppendOnly(tr)
   /\ MonotoneSequence(tr)
@@ -1088,21 +1173,69 @@ ValidTrace(tr) =
 
 Where:
 
-- `BaseOK` checks envelope identity, schema version, timestamps, source/raw
-  references, classification/status requiredness, and extension policy.
-- `MarkingOK` checks record-level and granular marking selectors before a
-  record is published to any consumer.
-- `CapabilityOK` checks every claim against the effective capability vector.
-- `RefOK` checks referenced participants, episodes, actions, operations,
-  observations, state revisions, joint actions, evidence, and source mappings.
-- `AppendOnly` forbids deletion or mutation of prior history records; rollback
-  creates superseding records.
-- `MonotoneSequence` requires participant-scoped `sequence_number` to increase
-  within each `(participant_address, episode_id)` stream.
-- `RevisionDiscipline` requires every shared-state write to cite known prior
-  revisions or disclose unknown/unsupported revision support.
-- `OrderDiscipline` requires every ordering claim to be backed by a declared
-  order basis stronger than wall-clock-only display order.
+- `InitOK(s0)` requires declared participants, admitted episode namespace,
+  run identity/provenance context, component capability declarations, marking
+  policies, redaction policies, clock authorities, and vocabulary/registry
+  versions. If any of these runtime-init records are absent, no exact runtime,
+  information-state, or concurrency claim may be made. A full `RunContext`
+  is additionally required before a benchmark, reproducibility, comparison, or
+  publication claim may be made.
+- `BaseOK(ev)` is true iff `event(ev)` has a stable `event_id`, known
+  `schema_name`/`schema_version`, permitted `event_type`, permitted
+  `extension_policy`, distinct `occurred_at`/`recorded_at`/`ingested_at`
+  meanings or an explicit clock downgrade, governed source/raw references, and:
+  `EventClassificationOK(ev)`, `SourceStatusOK(ev)`, `SourcePipelineOK(ev)`,
+  `RawDataIntegrityOK(ev)`, and `EvidenceRefIntegrityOK(ev)`.
+- `EventClassificationOK(ev)` is true when `event_classification` is null and
+  the record makes no classification/severity/security-telemetry claim, or when
+  the classification tuple is present in the ACES classification registry for
+  the record schema version. OCSF compatibility is true only with a cited OCSF
+  mapping and OCSF-schema-valid values.
+- `SourceStatusOK(ev)` is true when `source_status` is null and the record
+  makes no status claim, or when the normalized `status_id`/`status` pair is in
+  the governed status vocabulary and source labels are preserved separately.
+- `SourcePipelineOK(ev)` is true when absent source-pipeline fields are
+  semantically not applicable or explicitly unknown, and when any populated
+  source product/version, original event id, time, correlation id, or sequence
+  field maps to the cited source record.
+- `RawDataIntegrityOK(ev)` is true when raw bytes are not claimed, or when hash,
+  algorithm, size, truncation, and untruncated-size fields are either all
+  consistent with controlled evidence bytes or explicitly null/unknown. A
+  placeholder hash is never evidence for an exact provenance claim.
+- `EvidenceRefIntegrityOK(ev)` is true when every `source_raw_ref` and
+  `evidence_refs` member resolves through `evidence_index` to an immutable evidence
+  record with digest, size, storage/registry location, marking, and redaction
+  policy metadata appropriate for the claim, and when the referenced digest
+  matches the controlled evidence bytes. Reusing a ref for different bytes,
+  citing a digest from another artifact, or citing an unverified placeholder
+  ref cannot support an exact provenance or benchmark claim.
+- `MarkingOK(ev)` checks that every object marking and granular selector
+  resolves to a marking definition, selectors refer to existing fields under
+  the schema projection, no marked field is exposed to an unauthorized consumer,
+  and redaction tokens replace hidden values before publication.
+- `CapabilityOK(ev)` checks every claim in `ev` against the effective
+  component-wise capability vector. The claim must be no stronger than the meet
+  of backend, adapter, evidence-store, redaction, clock, observer, replay, and
+  benchmark-harness support for the relevant concerns.
+- `RefOK(ev, prefix, s0)` checks that every referenced participant, episode,
+  action, operation, observation, state revision, interaction context, joint
+  action, evidence item, run context, benchmark claim, source mapping, marking
+  policy, redaction policy, clock authority, and vocabulary/registry version
+  either exists in the initial declaration `s0`, exists in `prefix`, or is
+  introduced by the current transition with a stable identity and declared
+  namespace. Initial declarations are immutable inputs to the trace; later
+  transitions may supersede runtime state, but they do not mutate `s0`.
+- `AppendOnly(tr)` forbids deletion or mutation of prior history records;
+  rollback, compensation, and correction create superseding records.
+- `MonotoneSequence(tr)` requires participant-scoped `sequence_number` to
+  increase strictly within each `(participant_address, episode_id)` stream. Null
+  sequence numbers are permitted only on run-scoped records.
+- `RevisionDiscipline(tr)` requires every shared-state write to cite known
+  prior revisions or disclose unknown/unsupported revision support, and every
+  write either produces a new revision/digest or records an unsupported update.
+- `OrderDiscipline(tr)` requires every ordering claim to be backed by a
+  declared order basis. Wall-clock-only order can support display order but not
+  causality, simultaneity, serializability, or time-management claims.
 
 ### Transition Schema
 
@@ -1336,17 +1469,11 @@ or claim a capability stronger than the effective declared support.
 The runtime may emit an observation without claiming a complete information
 state. Stronger claims require stronger records.
 
-Let:
-
-- `H(p,e,t)` be the participant-visible action-observation history for
-  participant `p`, episode `e`, through order point `t`.
-- `O(p,e,t,projection)` be the observation function that maps an abstract
-  runtime state through a visibility projection to an observation envelope.
-- `I(p,e,t)` be the `InformationState` ACES claims for participant `p` at
-  order point `t`.
-- `h1 ~p h2` mean two histories are indistinguishable to participant `p` under
-  the declared visibility projection, markings, timing, noise, and redaction
-  rules.
+All information-state judgments are relative to a valid trace `tr`, an
+effective visibility/redaction policy `policy`, and the schema/projection
+version in force at order point `t`. Formulas below therefore use the qualified
+history symbol `H_{tr,policy}`. An implementation may use a shorter local name
+only after binding `tr` and `policy` explicitly.
 
 The visible-history projection is typed:
 
@@ -1355,19 +1482,33 @@ Project_p,policy : Ev x P -> Maybe[VisibleEvent]
 
 For a valid trace `tr`:
 
-H_tr(p,e,t) =
-  ordered sequence of Project_p,policy(ev, p)
-  for ev in tr whose declared order point is at or before t
-  where Project_p,policy(ev, p) != none
+H_{tr,policy}(p,e,t) =
+  VisibleHistory(
+    occurrences =
+      occurrence_collection(
+        Project_p,policy(ev, p)
+        for ev in tr whose declared order point is at or before t
+        and whose episode scope is e or run-scope-visible-to e
+        where Project_p,policy(ev, p) != none),
+    visible_order =
+      participant-visible restriction of the declared order relation,
+    simultaneity_groups =
+      participant-visible simultaneity groups,
+    delivery_linearization =
+      sequence only when a participant-local total delivery order is claimed)
 ```
 
 A `VisibleEvent` contains only:
 
 ```text
 VisibleEvent =
-  event_id
+  visible_occurrence_id
+  visible_event_token
+  visible_event_kind
   delivered_order
   visible_payload_ref_or_digest
+  visible_action_ref_or_digest
+  visible_observation_ref_or_digest
   visible_field_selectors
   marking_projection_digest
   redaction_token_refs
@@ -1379,42 +1520,145 @@ Hidden field values are never members of `VisibleEvent`; redacted values appear
 only as stable redaction tokens or omission markers governed by the referenced
 redaction policy.
 
+`visible_occurrence_id` is a participant-scoped projected occurrence identifier
+generated by `Project_p,policy`. It is unique for each visible occurrence within
+the declared participant, episode, visibility policy, and projection version,
+including repeated identical or fully redacted observations. `visible_event_token`
+is the projected source-event token, stable redaction token, or omission marker
+that the participant may see. Multiple occurrences may intentionally share the
+same `visible_event_token`; they must not share the same `visible_occurrence_id`.
+The global `BaseEnvelope.event_id` is not part of participant-visible history
+unless the visibility policy explicitly projects it; otherwise the review/audit
+mapping from `visible_occurrence_id` back to the global event is held in
+controlled evidence, not in `VisibleHistory`.
+
+`VisibleHistory.occurrences` is an occurrence-preserving finite collection, not
+a mathematical set of payloads. Equal projected payloads, equal redaction tokens,
+or repeated no-op observations remain distinct visible occurrences when they
+were distinct deliveries to the participant. `VisibleHistory` is not
+automatically a total sequence. When the runtime claims only partial order or
+simultaneity, the visible history carries the visible partial order and
+simultaneity groups. A sequence-valued history is valid only when the runtime
+records a participant-local delivery order. If a reconstruction algorithm needs
+a sequence but no delivery order is supportable, it must either prove invariance
+across all linear extensions of the visible partial order or downgrade the
+information guarantee to `LossyProjection`, `Unknown`, or `Unsupported`.
+`VisibleEvent.delivered_order` is populated only for events with a claimed
+participant-local delivery position; partial-order and simultaneity evidence
+belongs to `VisibleHistory.visible_order` and
+`VisibleHistory.simultaneity_groups`. Both relations are over
+`visible_occurrence_id` values, not global event ids or reusable redaction
+tokens.
+`visible_payload_ref_or_digest`, `visible_action_ref_or_digest`, and
+`visible_observation_ref_or_digest` are also projected identifiers. They must
+not expose hidden global record ids, storage keys, source ids, or correlation
+handles unless the visibility policy explicitly authorizes that exposure.
+
+Let:
+
+- `O_p,projection,t(s, a?)` map abstract runtime state `s` and optional action
+  `a?` to a participant-visible observation envelope, a lossy result, unknown,
+  or unsupported.
+- `ObsValue(obs)` be the governed observation value or digest carried by an
+  observation envelope after visibility projection and redaction.
+- `I_tr(p,e,t)` be the `InformationState` ACES claim for participant `p` at
+  order point `t`.
+- `h1 ~_{p,policy} h2` mean two visible histories are indistinguishable to
+  participant `p` under the declared visibility projection, markings, delivery
+  timing, stochastic disclosure, noise model, and redaction rules.
+- `C_{tr,policy}(p,e,t)` be the bound reconstruction context:
+  projection version, redaction policy, visible order relation, simultaneity
+  groups, delivery linearization if present, stochastic context, and
+  reconstruction algorithm/proof refs in force for `(tr, policy, p, e, t)`.
+
 The indistinguishability relation is defined by visible projection, not by
 backend state equality:
 
 ```text
-h1 ~p h2 iff
+h1 ~_{p,policy} h2 iff
   VisiblePayloads(p, h1) = VisiblePayloads(p, h2)
+  /\ VisibleActions(p, h1) = VisibleActions(p, h2)
+  /\ VisibleObservations(p, h1) = VisibleObservations(p, h2)
   /\ VisibleSelectors(p, h1) = VisibleSelectors(p, h2)
   /\ VisibleMarkingDigests(p, h1) = VisibleMarkingDigests(p, h2)
-  /\ VisibleDeliveredOrder(p, h1) = VisibleDeliveredOrder(p, h2)
+  /\ VisibleOrderRelation(p, h1) = VisibleOrderRelation(p, h2)
+  /\ VisibleSimultaneityGroups(p, h1) =
+     VisibleSimultaneityGroups(p, h2)
   /\ VisibleStochasticDisclosures(p, h1) =
      VisibleStochasticDisclosures(p, h2)
 ```
 
-`~p` must be reflexive, symmetric, and transitive for the recorded projection
-version. If redaction or lossy projection prevents stable equality, the claim
-must downgrade to `LossyProjection`, `Unknown`, or `Unsupported`.
+`~_{p,policy}` must be reflexive, symmetric, and transitive for the recorded
+projection version. If redaction or lossy projection prevents stable equality,
+the claim must downgrade to `LossyProjection`, `Unknown`, or `Unsupported`.
 
 The observation kernel is:
 
 ```text
-Z_p,projection,noise,t : StateSpace x Maybe[A] -> Distribution[ObservationValue]
+Z_p,C : StateSpace x ObservationBasis -> ProbabilityMeasure[ObservationValue]
 
-Z_p,projection,noise,t(s, a?)(o) =
-  probability that observation value o is emitted to p
-  from abstract runtime state s after optional action a at order point t
+Z_p,C(s, b)(B) =
+  probability assigned to measurable projected observation set B
+  from abstract runtime state s after governed transition basis b
+  under context C
 ```
 
 The kernel is valid only when:
 
 ```text
-KernelOK(p,e,t) =
-  sum({ Z_p,projection,noise,t(s, a?)(o) | o in support }) = 1
-  /\ all probabilities are in [0, 1]
-  /\ support observations satisfy ObservationEnvelope schema and markings
-  /\ stochastic context cites a seed/generator, probability model, or downgrade
+KernelOK(p,e,t,s,b,tr,policy) =
+  let C = C_{tr,policy}(p,e,t) in
+  let D = Z_p,C(s, b) in
+  ValidTrace(tr)
+  /\ VisibilityPolicyOK(policy,tr,p,e,t)
+  /\ ObservationBasisOK(b,C,tr,p,e,t)
+  /\ ObservationMeasureOK(D,p,e,t,C)
+  /\ C.stochastic_context cites a seed/generator, probability model,
+     noise model, or downgrade
 ```
+
+`ObservationValueOK(o,p,e,t)` means `o` is either the value/digest of an
+`ObservationEnvelope` satisfying `BaseOK`, `MarkingOK`, visibility projection,
+and schema constraints for `(p,e,t)`, or a governed lossy/unknown/unsupported
+sentinel allowed by the information guarantee. The kernel ranges over projected
+observation values, not over hidden world states.
+
+`ObservationBasisOK(b,C,tr,p,e,t)` validates the cause of the observation
+projection without making that cause itself a participant observation. The basis
+may be `NoAction`, a single participant action value, a governed joint-action
+map, a sampled or deterministic chance outcome, a mean-field distribution
+update, or a backend transition basis with a disclosed weaker guarantee. A
+`ChanceOutcomeValue` or `MeanFieldDistribution` may change abstract runtime
+state and later induce observations, rewards, returns, terminations, or
+auxiliary info, but it is not an `ObservationValue` unless a visibility policy
+explicitly projects a participant-visible disclosure of that outcome. If the
+runtime cannot bind the observation to one of these bases, the observation
+claim must downgrade to `LossyProjection`, `Unknown`, or `Unsupported`.
+
+`ObservationMeasureOK(D,p,e,t,C)` validates the distribution family rather than
+assuming finite support. For finite discrete observations, `D` may be a
+probability mass function with nonnegative probabilities summing to `1` over
+support values satisfying `ObservationValueOK`. For continuous or mixed
+observation spaces, `D` must cite a governed measurable
+observation-space/schema reference, measure or density family, reference/base
+measure where a density is used, parameter refs, sampler/probability-model refs,
+and projection/redaction basis; the total measure over the governed observation
+space must be `1`, and every measurable emitted value must satisfy
+`ObservationValueOK` after projection. A sampler is evidence for an exact kernel
+only when the governed distribution, sampler algorithm/version, random-source or
+seed policy, and audit evidence are all linked. If a continuous or mixed
+distribution is represented by samples, bins, quantiles, or another finite
+approximation, the approximation method and error bound must be disclosed, and
+exact kernel claims downgrade to a bounded capability claim, `LossyProjection`,
+`Unknown`, or `Unsupported` as appropriate. Infinite or continuous support is
+therefore not itself a reason to downgrade; lack of a governed measurable space,
+measure/density basis, sampler audit basis, or approximation bound is.
+
+`VisibilityPolicyOK(policy,tr,p,e,t)` means the policy resolves to governed
+visibility and redaction rules for the trace, participant, episode, and order
+point, and those rules are the same rules used by `Project_p,policy`,
+`H_{tr,policy}`, and `C_{tr,policy}`. If the policy cannot be resolved or
+audited, stronger information-state claims downgrade.
 
 Deterministic observations are the degenerate case where the support has one
 observation with probability `1`. If the distribution cannot be reconstructed
@@ -1425,45 +1669,96 @@ The reconstructed information state is:
 
 ```text
 Reconstruct_p :
-  Seq(VisibleEvent)
-  x projection_version
-  x redaction_policy
-  x order_relation
-  x stochastic_context
+  VisibleHistory
+  x ReconstructionContext
   -> Result[InformationState]
 
-Reconstruct_p(H, projection_version, redaction_policy, order_relation,
-              stochastic_context) =
-  fold_left(reconstruct_step_p, initial_information_state_p, H)
+Reconstruct_p(H, C) =
+  reconstruct_history_p(initial_information_state_p, H, C)
 ```
 
-`reconstruct_step_p` is a governed algorithm referenced by
-`reconstruction_algorithm_ref`; the algorithm version and test/proof artifact
-must be stable for the schema version making the claim. If no governed
-algorithm or proof reference exists, `Reconstruct_p` returns `Unsupported`.
-If the algorithm reaches a lossy redaction, aggregation, delayed delivery, or
-unknown stochastic branch that cannot prove equality with the claimed
-information state, it returns `Lossy` or `Unknown`.
+`reconstruct_history_p` is a governed algorithm referenced by
+`C.reconstruction_algorithm_ref`; the algorithm version and test/proof artifact
+must be stable for the schema version making the claim. If `H` has a total
+delivery order, the algorithm may fold over that order. If `H` has only a
+partial order or simultaneity groups, the algorithm must state whether it is
+order-invariant across all visible linear extensions, consumes the partial
+order directly, or downgrades. If no governed algorithm or proof reference
+exists, `Reconstruct_p` returns `Unsupported`. If the algorithm reaches a lossy
+redaction, aggregation, delayed delivery, unsupported ordering, or unknown
+stochastic branch that cannot prove equality with the claimed information
+state, it returns `Lossy` or `Unknown`.
 
 `HistoryConsistent` requires:
 
 ```text
-Reconstruct_p(H(p,e,t), projection_version, redaction_policy,
-              order_relation(t), stochastic_context) = I(p,e,t)
+HistoryConsistent_{p,tr,policy}(e,t) =
+  let H = H_{tr,policy}(p,e,t) in
+  let C = C_{tr,policy}(p,e,t) in
+  Reconstruct_p(H, C)
+    = I_tr(p,e,t)
+  /\ forall tr1,tr2:
+       ValidTrace(tr1) /\ ValidTrace(tr2)
+       /\ ReconstructionContextEquivalent(
+            C_{tr1,policy}(p,e,t),
+            C_{tr2,policy}(p,e,t))
+       /\ H_{tr1,policy}(p,e,t) ~_{p,policy} H_{tr2,policy}(p,e,t)
+       => I_tr1(p,e,t) = I_tr2(p,e,t)
 ```
 
 after applying the same redaction tokens and declared lossy transforms used in
-the observation envelope. `PerfectRecall` additionally requires that for every
-`t' < t`, the visible event prefix `H(p,e,t')` remains embedded in `H(p,e,t)`
-with stable event identity and order. Compaction is allowed only when it cites
-a `reconstruction_proof_ref` that can reproduce the earlier prefix or prove
-that the compact representation is information-state equivalent.
+the observation envelope. The second conjunct is the review obligation that
+visible-history equivalence, not backend-state equality, determines the claimed
+information state.
+
+`ReconstructionContextEquivalent(C1, C2)` requires equality or governed
+equivalence of every context dimension that can affect reconstruction:
+projection version, source projection version, redaction policy, visible order
+relation, simultaneity groups, delivery-linearization policy, stochastic/noise
+context, reconstruction algorithm ref, reconstruction proof ref, and downgrade
+rules. If any dimension is unknown, unsupported, or incomparable, a
+history-consistent or perfect-recall claim must downgrade.
+
+`PerfectRecall` additionally requires:
+
+```text
+PerfectRecall_{p,tr,policy}(e,t) =
+  HistoryConsistent_{p,tr,policy}(e,t)
+  /\ forall t' in VisiblePrefixOrderPoints_{tr,policy}(p,e,t):
+       PrefixEmbedded(H_{tr,policy}(p,e,t'), H_{tr,policy}(p,e,t))
+       /\ forall visible action or observation occurrence x in
+            occurrences(H_{tr,policy}(p,e,t')):
+            StableVisibleIdentity(x, H_{tr,policy}(p,e,t))
+            /\ StableVisibleOrderRelation(x, H_{tr,policy}(p,e,t))
+```
+
+`PrefixEmbedded(h_old, h_new)` allows governed compaction only when
+`reconstruction_proof_ref` can reproduce the earlier visible prefix or prove
+that the compact representation is information-state equivalent. Stable visible
+identity includes `visible_occurrence_id`, `visible_event_token`, visible
+action/observation reference or digest, and the participant-visible order
+relation. Occurrence identity, not token equality, is what prevents repeated
+identical or redacted events from collapsing.
+`StableVisibleOrderRelation` means that every visible predecessor, successor,
+and simultaneity relation involving `x` remains present or is reproduced by the
+cited reconstruction proof.
+`VisiblePrefixOrderPoints_{tr,policy}(p,e,t)` is the set of order points whose
+participant-visible histories are prefixes or lower sets of
+`H_{tr,policy}(p,e,t)` under the recorded visible order relation.
+Forgetting prior participant-visible actions while keeping only current
+observation is therefore not a perfect-recall claim.
 
 For belief-state consumers, ACES may record a belief support:
 
 ```text
-B_p,t = { s in StateSpace | H_s(p,e,t) ~p H_actual(p,e,t) }
+B_p,t = { s in StateSpace |
+          ModelHistory(s, policy, p, e, t)
+            ~_{p,policy} H_{tr,policy}(p,e,t) }
 ```
+
+`ModelHistory` is the visible history generated by a candidate abstract state
+trajectory under the same projection and redaction policy; it is not a backend
+dump of hidden world truth.
 
 ACES does not require a participant to maintain this belief. It only records
 enough visibility, ordering, and stochastic evidence for downstream reviewers
@@ -1472,14 +1767,9 @@ to know whether such a belief or information-state claim is supportable.
 Guarantee meanings:
 
 - `ObservationOnly`: only the emitted observation envelope is portable. ACES
-  does not claim that `I(p,e,t)` is reconstructible from history.
-- `HistoryConsistent`: `H(p,e,t)`, projection version, redaction markings, and
-  stochastic/noise disclosures are sufficient to reconstruct the information
-  state ACES claims.
-- `PerfectRecall`: `H(p,e,t)` contains every prior participant-visible action,
-  observation, and disclosed lifecycle fact needed for a perfect-recall
-  information state; no prior visible fact is forgotten, overwritten, or hidden
-  by later compaction.
+  does not claim that `I_tr(p,e,t)` is reconstructible from history.
+- `HistoryConsistent`: `HistoryConsistent_{p,tr,policy}(e,t)` holds.
+- `PerfectRecall`: `PerfectRecall_{p,tr,policy}(e,t)` holds.
 - `LossyProjection`: the observation is sampled, aggregated, delayed, noisy,
   redacted, filtered, or partially unavailable. The envelope records the loss
   descriptor and the claim cannot be stronger than that descriptor supports.
@@ -1496,7 +1786,7 @@ Rules:
   an observation only after the declared delivery point, not merely because the
   backend generated the observation.
 - Redacted fields remain part of the record shape as redacted tokens or omitted
-  marked fields; the raw hidden value is not part of `H(p,e,t)`.
+  marked fields; the raw hidden value is not part of `H_{tr,policy}(p,e,t)`.
 - Stochastic or noisy observations must either disclose a reproducible generator
   reference, seed/randomization context, or noise model reference, or downgrade
   to `LossyProjection`, `Unknown`, or `Unsupported`.
@@ -1526,7 +1816,10 @@ Rules:
 - In `SequentialTurn` and `AgentEnvironmentCycle` modes, `current_actor_ref`
   must be exactly one participant in `active_agent_set`. Non-acting
   participants may receive observations or reward updates only when the
-  interaction context records the non-acting-agent policy.
+  interaction context records the non-acting-agent policy. AEC cleanup turns
+  for terminated or truncated participants may admit only a governed null
+  action; that null action is protocol cleanup, not a member of the ordinary
+  action space.
 - In `Parallel` and `Simultaneous` modes, `active_agent_set` is the set of
   participants whose actions are admitted for that order point. A joint action
   or step signal must cite the same set or disclose the mismatch.
@@ -1536,9 +1829,10 @@ Rules:
   seed/randomization context when available, and the visibility policy that
   determines which participants can observe the chance event.
 - In `MeanField` mode, no ordinary participant action is consumed at the node.
-  The record must cite the population scope, distribution digest, update rule,
-  and affected observations/rewards or disclose unsupported mean-field
-  semantics.
+  The record must cite the population scope, governed population ids, governed
+  population-state support, mean-field distribution ref and digest, update
+  rule, update record, and affected observations/rewards or disclose
+  unsupported mean-field semantics.
 - `action_space_ref` and `observation_space_ref` identify governed space
   definitions. They are required for claims that an action, observation, or
   policy trace is valid relative to an RL/game environment space.
@@ -1565,16 +1859,70 @@ Rules:
 - Single-agent, AEC/turn-based, parallel, simultaneous, mean-field, and
   backend-serialized multi-agent surfaces are valid only when their ordering
   and participant-local signal projections are recorded.
+- Ordinary lifecycle action records that do not claim RL/MARL/game-node
+  semantics do not require an `InteractionContextEnvelope`. The context is
+  required exactly when the portable claim depends on step interaction,
+  active-agent/current-actor, chance, mean-field, simultaneous, or backend
+  serialization semantics.
+- Ordinary lifecycle, cyber-command, human, LLM-tool, playbook, and
+  externally supplied actions do not require an RL/game action space. Their
+  validity comes from a governed action contract, command/source mapping,
+  admission record, actor/capability basis, and evidence/provenance disclosure.
+  An `ActionSpace` membership check is required only when the record makes an
+  RL/game action-validity claim.
 
 Conformance obligations:
 
 ```text
-ActionValid(p,e,a,t) =>
-  a in ActionSpace(p,e,t)
-  /\ exists k = interaction_context_at(t):
-       p in active_agents(k)
-       /\ (current_actor(k) != none => current_actor(k) = p)
-  /\ (MaskPresent(p,e,t) => MaskAllows(p,e,a,t))
+StepInteractionRequired(p,e,t) iff
+  any claim at (p,e,t) cites interaction_mode, active_agent_set,
+  current_actor_ref, simultaneous_group_ref, chance fields, mean-field fields,
+  backend-serialized order, or RL/MARL/game-node validity
+
+StepActionClaim(a,p,e,t) iff
+  the action record claims validity relative to an RL/game action space,
+  action mask, legal-action surface, step signal, or game-node transition
+
+ActionAttemptRecordOK(p,e,a,t) =>
+  ActionRecordBaseOK(a,p,e,t)
+  /\ ActionValidityBasisOK(a,p,e,t)
+  /\ (StepActionClaim(a,p,e,t) => StepActionValid(p,e,a,t))
+
+PortableActionValidityClaimOK(a,p,e,t) =>
+  ActionAttemptRecordOK(p,e,a,t)
+  /\ not UnsupportedOrUnknownActionValidityDisclosed(a,p,e,t)
+
+ActionValidityBasisOK(a,p,e,t) =
+  ActionContractValid(a,p,e,t)
+  \/ CommandMappingValid(a,p,e,t)
+  \/ ExternalTriggerValid(a,p,e,t)
+  \/ HumanOrOpaqueAttemptDisclosed(a,p,e,t)
+  \/ UnsupportedOrUnknownActionValidityDisclosed(a,p,e,t)
+
+StepActionValid(p,e,a,t) =>
+  exists k = interaction_context_at(t):
+    StepActorOK(p,k)
+    /\ ActionContextLinkOK(a,k)
+    /\ StepActionKindOK(a,p,e,t)
+    /\ (NonNullStepAction(a,p,e,t) =>
+         a in ActionSpace(p,e,t)
+         /\ (MaskPresent(p,e,t) => MaskAllows(p,e,a,t)))
+    /\ (NullStepAction(a,p,e,t) =>
+         NullStepActionOK(a,p,e,t,k))
+
+StepActorOK(p,k) =
+  (interaction_context(k).interaction_mode = SingleAgent =>
+     active_agents(k) = {p}
+     /\ (current_actor(k) = none \/ current_actor(k) = p))
+  /\ (interaction_context(k).interaction_mode in
+        {SequentialTurn, AgentEnvironmentCycle} =>
+     active_agents(k) = {p}
+     /\ current_actor(k) = p)
+  /\ (interaction_context(k).interaction_mode in
+        {Parallel, Simultaneous, BackendSerialized} =>
+     p in active_agents(k))
+  /\ (interaction_context(k).interaction_mode in {Chance, MeanField} =>
+     false)
 
 RewardClaimOK(p,e,t) =>
   RewardEnvelope(p,e,t) has reward model, visibility, timing, and source basis
@@ -1584,11 +1932,15 @@ TerminationClaimOK(p,e,t) =>
   /\ terminal observation, if any, is emitted through the observation boundary
 
 InteractionClaimOK(k) =>
-  (interaction_context(k).interaction_mode in
+  (interaction_context(k).interaction_mode = SingleAgent =>
+     |active_agents(k)| = 1
+     /\ (current_actor(k) = none \/ current_actor(k) in active_agents(k)))
+  /\ (interaction_context(k).interaction_mode in
      {SequentialTurn, AgentEnvironmentCycle} =>
      current_actor(k) in active_agents(k) /\ |active_agents(k)| = 1)
-  /\ (interaction_context(k).interaction_mode in {Parallel, Simultaneous} =>
-     |active_agents(k)| >= 1 /\ joint action linkage cites active_agents(k))
+  /\ (interaction_context(k).interaction_mode in
+        {Parallel, Simultaneous, BackendSerialized} =>
+     |active_agents(k)| >= 1 /\ JointActionLinkageOK(k))
   /\ (interaction_context(k).interaction_mode = Chance =>
      active_agents(k) = {}
      /\ ChanceDisclosureOK(k))
@@ -1597,12 +1949,80 @@ InteractionClaimOK(k) =>
      /\ MeanFieldDisclosureOK(k))
 ```
 
+`ActionContextLinkOK(a,k)` requires the action attempt, action mask, reward,
+termination/truncation, and observation records that make a step claim to cite
+the same `interaction_context_ref` or to disclose the mismatch. For ordinary
+non-step lifecycle actions, `ActionContextLinkOK` is not evaluated.
+
+`StepActionKindOK(a,p,e,t)` requires exactly one of `NonNullStepAction` or
+`NullStepAction` to hold for the attempt at that order point. An omitted,
+dropped, withheld, externally supplied, unknown, or unsupported action is
+recorded through its own admission/realization/support field and must not be
+silently treated as a null action.
+
+`NullStepActionOK(a,p,e,t,k)` is true only when the action attempt is a governed
+null-action value admitted by `null_action_policy_ref` for the same order point.
+It may satisfy an AEC cleanup turn for a participant whose local
+termination/truncation record is already true, or a backend-declared no-op slot
+in a simultaneous/parallel joint action. It must cite the terminal/truncation
+or no-op basis, carry no command/effect payload, and must not be counted as
+membership in `ActionSpace(p,e,t)` or as evidence that the participant selected
+an ordinary environment action. If a runtime cannot distinguish a protocol null
+action from an omitted, dropped, withheld, or unsupported action, the step
+validity claim must downgrade.
+
+`ActionContractValid`, `CommandMappingValid`, `ExternalTriggerValid`, and
+`HumanOrOpaqueAttemptDisclosed` are mutually non-exclusive validity bases.
+They validate the governed action contract, OpenC2/CACAO/CALDERA/CybORG or
+backend source mapping, external-event authority, human/operator provenance,
+or opaque adapter disclosure for the action. They do not imply an
+`ActionSpace` unless the record also makes `StepActionClaim`.
+`UnsupportedOrUnknownActionValidityDisclosed` preserves an observed attempt but
+cannot support a stronger validity, legality, or benchmark-comparison claim.
+`ActionAttemptRecordOK` is therefore weaker than
+`PortableActionValidityClaimOK`: the former says the attempt is recorded with a
+declared support basis; the latter says ACES can make a portable validity claim
+for it.
+
+`JointActionLinkageOK(k)` requires a governed joint-action record or step-signal
+record whose member event refs define a stable map from participant address to
+action attempt, null action, withheld action, or unsupported disclosure. The
+domain of that map must equal `active_agents(k)` unless the record discloses
+added, removed, dropped, or serialized agents. The record must also define the
+joint-action tuple/map encoding used for replay and comparison.
+
 `ChanceDisclosureOK(k)` requires a chance mode and either a deterministic
-outcome, an explicit probability distribution with digest, a sampled-outcome
-record with seed/randomization context, or an `Unknown`/`Unsupported`
-downgrade. `MeanFieldDisclosureOK(k)` requires population scope, distribution
-digest, update rule, and update record, or an `Unknown`/`Unsupported`
-downgrade.
+outcome, an explicit probability measure with digest, a sampled-outcome record
+with seed/randomization context, or an `Unknown`/`Unsupported` downgrade. When
+the mode is `ExplicitStochastic`, the chance distribution must satisfy
+`ChanceMeasureOK`: finite discrete distributions must have nonnegative
+probabilities summing to one over governed chance outcomes; continuous or mixed
+distributions must cite the governed measurable chance-outcome space,
+transition-effect schema, measure or density family, reference/base measure
+where a density is used, parameter refs, sampler/probability-model refs, and any
+participant-visible projection/redaction basis needed to audit how the outcome
+is disclosed. Finite approximations to continuous or mixed chance distributions
+must disclose the approximation method, support truncation, and error bound.
+When the mode is `SampledStochastic`, the sampled outcome must cite the selected
+`ChanceOutcomeValue`, transition/effect refs, sampler algorithm/version, and
+generator/seed context when available or downgrade the reconstructability claim.
+Chance outcomes are environment transition causes; observations induced by them
+are emitted through `ObservationEnvelope` records.
+
+`MeanFieldDisclosureOK(k)` requires population scope, governed population ids,
+governed population-state support, `MeanFieldDistributionOK`, distribution
+digest, update rule, affected observation/reward refs, and update record, or an
+`Unknown`/`Unsupported` downgrade. `MeanFieldDistributionOK` validates the
+population scope, every governed population id in scope, support membership for
+each population, nonnegative weights or density, reference/base measure where a
+density is used, parameter or sampler/probability-model refs where applicable,
+normalization for the declared single-population or multi-population measure,
+approximation method and error bound when finite support is an approximation,
+and consistency with the cited update rule. The support may span multiple
+populations when rewards or dynamics depend on the whole population
+distribution. The mean-field distribution is an
+environment state over population support, not a hidden participant action
+unless the scenario explicitly models a population process as a participant.
 
 ## Concurrency And Conflict Semantics
 
@@ -1981,6 +2401,11 @@ RunContext =
   tool_version_refs
   seed_refs
   randomization_policy_ref
+  treatment_assignment_ref
+  assignment_policy_ref
+  assignment_unit_ref
+  blocking_factor_refs
+  blinding_or_masking_ref
   run_config_digest
   evaluator_refs
   evaluator_version_refs
@@ -2021,6 +2446,9 @@ RunContext =
   exclusion_policy_ref
   exclusion_decision_refs
   artifact_immutability_refs
+  evidence_manifest_ref
+  research_object_manifest_ref
+  license_or_access_policy_refs
   environment_build_refs
 ```
 
@@ -2045,6 +2473,11 @@ BenchmarkValidityClaim =
   baseline_eligibility_policy_ref
   comparison_cohort_ref
   paired_run_group_ref
+  treatment_assignment_ref
+  assignment_policy_ref
+  assignment_unit_ref
+  statistical_plan_ref
+  preregistration_ref
   evaluator_version_refs
   evaluator_leakage_model_ref
   exclusion_policy_ref
@@ -2057,20 +2490,193 @@ BenchmarkValidityClaim =
   canary_evidence_refs
   scaffold_exposure_matrix_ref
   artifact_immutability_refs
+  validity_threat_refs
+  validity_threat_mitigation_refs
+  correspondence_evidence_refs
   conclusion_scope
   unsupported_or_unknown_limits
 ```
+
+The referenced benchmark support records have minimum contents. A ref that
+points only to prose, a dashboard, or a final score is insufficient for a
+portable comparative claim:
+
+```text
+MetricSpec =
+  metric_id
+  outcome_mapping_ref
+  measurement_procedure_ref
+  unit
+  direction
+  denominator
+  missingness_policy_ref
+  evaluator_visibility_scope
+
+AggregationPlan =
+  aggregation_id
+  metric_refs
+  unit_of_analysis_ref
+  grouping_or_blocking_refs
+  weighting_policy_ref
+  missingness_policy_ref
+  outlier_policy_ref
+  summary_statistics
+
+ReplicateSet =
+  replicate_set_id
+  run_refs
+  replicate_count
+  repeat_identity_policy_ref
+  randomization_block_refs
+  paired_run_group_refs
+  exclusion_decision_refs
+
+StatisticalPlan =
+  statistical_plan_id
+  estimand
+  unit_of_analysis_ref
+  analysis_design
+  comparison_design
+  paired_or_blocked_model
+  clustering_basis_ref
+  uncertainty_method
+  interval_level
+  statistical_test_family
+  effect_size_definition
+  equivalence_or_noninferiority_margin
+  multiple_comparison_policy_ref
+  power_or_precision_target_ref
+  preregistration_ref
+
+EvaluatorLeakageModel =
+  leakage_model_id
+  evaluator_refs
+  evaluator_version_refs
+  public_material_labels
+  private_material_labels
+  allowed_evaluator_inputs
+  forbidden_evaluator_inputs
+  oracle_or_gold_access_policy_ref
+  audit_evidence_refs
+
+ExposureAuditProcedure =
+  exposure_audit_id
+  scaffold_exposure_matrix_ref
+  holdout_asset_digest_refs
+  canary_policy_ref
+  canary_evidence_refs
+  training_corpus_disclosure_refs
+  participant_knowledge_cutoff_ref
+  audit_method
+  audit_limitations
+
+CostNormalizationPolicy =
+  cost_policy_id
+  cost_dimensions
+  normalization_unit
+  included_resources
+  excluded_resources
+  hardware_profile_refs
+  software_profile_refs
+  timeout_budget_refs
+  retry_cost_policy_ref
+
+TreatmentAssignment =
+  treatment_assignment_id
+  assigned_unit_refs
+  treatment_refs
+  assignment_mechanism
+  assignment_unit_ref
+  assignment_time
+  assignment_policy_ref
+  randomization_block_refs
+  blocking_factor_refs
+  seed_or_rng_ref
+  allocation_concealment_ref
+  blinding_or_masking_ref
+  deviation_refs
+
+ValidityThreatDisclosure =
+  validity_threat_id
+  validity_dimension
+  affected_claim_refs
+  threat_statement_ref
+  evidence_refs
+  mitigation_refs
+  residual_limit_ref
+
+CorrespondenceEvidence =
+  correspondence_ref
+  conceptual_model_ref
+  realized_testbed_ref
+  requirement_refs
+  observation_or_measurement_refs
+  comparison_method_ref
+  acceptance_criterion_ref
+  residual_gap_refs
+
+ArtifactImmutabilityEvidence =
+  artifact_set_id
+  artifact_refs
+  artifact_role_assignments
+  required_role_policy_ref
+  digest_refs
+  registry_or_storage_refs
+  version_refs
+  build_environment_refs
+  retrieval_time
+```
+
+`uncertainty_method` is a governed value such as `frequentist`, `bootstrap`,
+`bayesian`, `exact`, or `descriptive_only`. `descriptive_only` cannot support a
+portable superiority, equivalence, non-inferiority, comparative score/effect,
+cost-normalized comparative score/effect, confidence/credible interval,
+statistical test, effect-size, margin, or statistical non-contamination-rate
+conclusion. A descriptive cost-normalized metric, such as a score per declared
+cost unit or success rate under a fixed budget, may use `descriptive_only` when
+the conclusion scope excludes comparative/effect claims and `CostOK` validates
+the cost/resource basis. A non-contamination or evaluator-leakage conclusion
+may be audit-only and governed by exposure and leakage evidence rather than
+metric-analysis evidence; if it also reports a score, rate, effect, interval,
+or test, the conclusion scope must include the corresponding result-analysis
+tag and satisfy the metric, replication, and uncertainty predicates for that
+result.
 
 Rules:
 
 - Repeated runs must have distinct `repeat_id` or equivalent identity.
 - Comparative claims require a statistical plan, replicate identity and count,
   baseline version, evaluator version, comparison cohort, retry/exclusion
-  policy, and cost/resource normalization policy.
+  policy, cost/resource normalization policy, and at least one governed
+  baseline member. An empty baseline set cannot support a comparative,
+  superiority, equivalence, or non-inferiority conclusion.
+- Comparative, causal-treatment, superiority, equivalence, non-inferiority, and
+  other assignment-dependent claims require a governed treatment-assignment
+  record or an explicit downgrade. The assignment record names the assignment
+  unit, treatment arms, assignment mechanism, randomization or blocking basis,
+  allocation-concealment/blinding status when applicable, seed or RNG basis when
+  randomization is claimed, and deviations from the assignment policy.
+- Benchmark-validity claims must disclose validity threats at the conclusion
+  scope they assert. At minimum the disclosure distinguishes construct,
+  internal, external, statistical-conclusion, and cyber-range/testbed
+  correspondence threats, links each threat to affected claims, cites mitigation
+  evidence when mitigation is claimed, and records residual limits.
 - Statistical plans must define the unit of analysis, metric aggregation,
   uncertainty interval, effect-size or equivalence margin when relevant, and
   how paired or clustered runs are handled. A final score without these fields
   is a descriptive result, not a portable comparative claim.
+- Benchmark validity claims are graph-scoped to one run context. For
+  result-analysis conclusions, the metrics, aggregation plan, statistical plan,
+  and replicate set cited by the claim must be scoped to that run context or to
+  an explicitly declared comparison cohort that includes it. For audit-only
+  evaluator-leakage or non-contamination conclusions, those metric-analysis
+  refs may be governed not-applicable records, but evaluator, exposure,
+  exclusion/retry, cost when applicable, and artifact refs still must be scoped
+  to the run context. Mixing support records from unrelated runs is invalid.
+- Metric and analysis support records must validate their declared denominator,
+  aggregation grouping/blocking, weighting, randomization blocks, statistical
+  test family, effect-size or equivalence margin, and power/precision target.
+  A field listed in a support record is not merely documentary.
 - Exclusions and retries must be interpreted through the preregistered or
   otherwise disclosed policy and recorded as decision refs. Dropped failed
   attempts, evaluator crashes, manual interventions, or timeout retries cannot
@@ -2103,22 +2709,749 @@ Benchmark conformance predicates:
 
 ```text
 BenchmarkClaimOK(claim) =
-  RunContextOK(claim.run_context_ref)
-  /\ MetricsOK(claim.metric_refs, claim.aggregation_plan_ref)
-  /\ ReplicationOK(claim.replicate_set_ref, claim.unit_of_analysis_ref)
-  /\ UncertaintyOK(claim.confidence_interval_ref,
+  ConclusionScopeOK(claim.conclusion_scope)
+  /\ RunContextOK(claim.run_context_ref, claim.conclusion_scope)
+  /\ BenchmarkContextLinkageOK(claim)
+  /\ MetricsOK(claim.metric_refs,
+               claim.aggregation_plan_ref,
+               claim.conclusion_scope)
+  /\ ReplicationOK(claim.replicate_set_ref,
+                   claim.unit_of_analysis_ref,
+                   claim.paired_run_group_ref,
+                   claim.conclusion_scope)
+  /\ UncertaintyOK(claim.statistical_plan_ref,
+                   claim.preregistration_ref,
+                   claim.confidence_interval_ref,
                    claim.statistical_test_ref,
-                   claim.effect_size_ref)
+                   claim.effect_size_ref,
+                   claim.minimum_effect_or_margin_ref,
+                   claim.conclusion_scope)
   /\ BaselineComparabilityOK(claim.baseline_refs,
                              claim.comparison_cohort_ref,
-                             claim.baseline_eligibility_policy_ref)
+                             claim.baseline_eligibility_policy_ref,
+                             claim.conclusion_scope)
+  /\ TreatmentAssignmentOK(claim.treatment_assignment_ref,
+                           claim.assignment_policy_ref,
+                           claim.assignment_unit_ref,
+                           claim.conclusion_scope)
+  /\ EvaluatorLeakageOK(claim.evaluator_leakage_model_ref,
+                        claim.conclusion_scope)
   /\ ExposureOK(claim.scaffold_exposure_matrix_ref,
                 claim.holdout_non_exposure_evidence_refs,
                 claim.canary_evidence_refs,
-                claim.contamination_audit_refs)
-  /\ CostOK(claim.cost_normalization_policy_ref)
-  /\ ArtifactImmutabilityOK(claim.artifact_immutability_refs)
+                claim.contamination_audit_refs,
+                claim.conclusion_scope)
+  /\ ExclusionRetryOK(claim.exclusion_policy_ref,
+                      claim.exclusion_decision_refs,
+                      claim.retry_policy_ref,
+                      claim.conclusion_scope)
+  /\ CostOK(claim.cost_normalization_policy_ref, claim.conclusion_scope)
+  /\ ValidityThreatsOK(claim.validity_threat_refs,
+                       claim.validity_threat_mitigation_refs,
+                       claim.correspondence_evidence_refs,
+                       claim.conclusion_scope)
+  /\ ArtifactImmutabilityOK(claim.artifact_immutability_refs, claim)
 ```
+
+The predicates above are defined as follows:
+
+Primitive helper predicates used below are schema validators, not informal
+placeholders. `Present(x, ...)` means each argument is non-null and resolves to
+a governed record of the expected type; `NonEmpty(x)` means a resolved sequence
+has at least one member; `DigestPinned`, `VersionPinnedOrDigestOnly`, and
+`RegistryOrStorageOK` validate the corresponding immutability evidence. Other
+`*OK` helpers resolve and validate the support-record type named in the helper.
+If a future implementation cannot provide such a validator, the parent
+predicate returns `Unknown` or `Unsupported`.
+
+```text
+RunContextOK(run_context_ref, conclusion_scope) =
+  exists ctx = RunContext(run_context_ref):
+    Present(ctx.run_id, ctx.study_id, ctx.trial_id)
+    /\ Present(ctx.scenario_ref, ctx.scenario_version)
+    /\ Present(ctx.contract_bundle_digest, ctx.backend_manifest_digest)
+    /\ Present(ctx.run_config_digest)
+    /\ Present(ctx.participant_implementation_refs)
+    /\ Present(ctx.participant_adapter_refs)
+    /\ ParticipantApparatusOK(ctx.participant_scaffold_refs,
+                              ctx.model_or_policy_version_refs,
+                              ctx.tool_version_refs)
+    /\ Present(ctx.evaluator_refs, ctx.evaluator_version_refs)
+    /\ EvaluatorAndScoringOK(ctx.evaluator_refs,
+                             ctx.evaluator_version_refs,
+                             ctx.scoring_refs)
+    /\ AssistanceDisclosureOK(ctx.assistance_disclosures)
+    /\ (Present(ctx.seed_refs)
+        \/ RandomizationPolicyDisclosesNoSeed(ctx.randomization_policy_ref))
+    /\ BenchmarkPolicyRefsOK(ctx.retry_policy_ref,
+                             ctx.exclusion_policy_ref,
+                             ctx.exclusion_decision_refs)
+    /\ (ResultAnalysisConclusion(conclusion_scope) =>
+        Present(ctx.result_metric_refs,
+                ctx.aggregation_plan_ref,
+                ctx.statistical_plan_ref,
+                ctx.replicate_policy_ref)
+        /\ ctx.replicate_count >= 1)
+    /\ (ComparativeConclusion(conclusion_scope) =>
+        Present(ctx.statistical_plan_ref,
+                ctx.baseline_refs,
+                ctx.baseline_version_refs,
+                ctx.baseline_eligibility_policy_ref,
+                ctx.comparison_cohort_ref,
+                ctx.treatment_assignment_ref,
+                ctx.assignment_policy_ref,
+                ctx.assignment_unit_ref))
+    /\ (TreatmentAssignmentConclusion(conclusion_scope) =>
+        Present(ctx.treatment_assignment_ref,
+                ctx.assignment_policy_ref,
+                ctx.assignment_unit_ref))
+    /\ (NonContaminationConclusion(conclusion_scope) =>
+        Present(ctx.scaffold_exposure_matrix_ref,
+                ctx.holdout_exposure_labels,
+                ctx.holdout_asset_digest_refs,
+                ctx.canary_exposure_labels,
+                ctx.canary_policy_ref,
+                ctx.contamination_audit_refs,
+                ctx.contamination_audit_procedure_ref,
+                ctx.training_corpus_disclosure_refs,
+                ctx.participant_knowledge_cutoff_ref))
+    /\ ((ComparativeConclusion(conclusion_scope)
+         \/ CostNormalizedConclusion(conclusion_scope)) =>
+        Present(ctx.cost_trace_refs,
+                ctx.resource_trace_refs,
+                ctx.hardware_profile_refs,
+                ctx.software_profile_refs,
+                ctx.timeout_budget_refs,
+                ctx.cost_normalization_policy_ref))
+    /\ ImmutableOrDisclosed(ctx.environment_build_refs)
+
+BenchmarkContextLinkageOK(claim) =
+  exists ctx = RunContext(claim.run_context_ref):
+    ClaimSupportRefsScopedToRunContext(claim, ctx)
+    /\ PopulationScopeMatchesContext(claim.population_scope_ref, ctx)
+    /\ ResultAnalysisSupportMatchesContext(claim, ctx)
+    /\ SameSupportSetOrScopedNotApplicable(
+         claim.baseline_refs,
+         ctx.baseline_refs,
+         claim.conclusion_scope,
+         BaselineComparability)
+    /\ SameSupportRefOrScopedNotApplicable(
+         claim.baseline_eligibility_policy_ref,
+         ctx.baseline_eligibility_policy_ref,
+         claim.conclusion_scope,
+         BaselineComparability)
+    /\ SameSupportRefOrScopedNotApplicable(
+         claim.comparison_cohort_ref,
+         ctx.comparison_cohort_ref,
+         claim.conclusion_scope,
+         BaselineComparability)
+    /\ SameSupportRefOrScopedNotApplicable(
+         claim.paired_run_group_ref,
+         ctx.paired_run_group_ref,
+         claim.conclusion_scope,
+         BaselineComparability)
+    /\ SameSupportRefOrScopedNotApplicable(
+         claim.treatment_assignment_ref,
+         ctx.treatment_assignment_ref,
+         claim.conclusion_scope,
+         TreatmentAssignment)
+    /\ SameSupportRefOrScopedNotApplicable(
+         claim.assignment_policy_ref,
+         ctx.assignment_policy_ref,
+         claim.conclusion_scope,
+         TreatmentAssignment)
+    /\ SameSupportRefOrScopedNotApplicable(
+         claim.assignment_unit_ref,
+         ctx.assignment_unit_ref,
+         claim.conclusion_scope,
+         TreatmentAssignment)
+    /\ SameSupportSet(claim.evaluator_version_refs,
+                      ctx.evaluator_version_refs)
+    /\ SameSupportRefOrScopedNotApplicable(
+         claim.evaluator_leakage_model_ref,
+         ctx.evaluator_leakage_model_ref,
+         claim.conclusion_scope,
+         EvaluatorLeakage)
+    /\ SameSupportRefOrScopedNotApplicable(
+         claim.scaffold_exposure_matrix_ref,
+         ctx.scaffold_exposure_matrix_ref,
+         claim.conclusion_scope,
+         Exposure)
+    /\ SameSupportSetOrScopedNotApplicable(
+         claim.contamination_audit_refs,
+         ctx.contamination_audit_refs,
+         claim.conclusion_scope,
+         Exposure)
+    /\ SameSupportRefOrScopedNotApplicable(
+         claim.contamination_audit_procedure_ref,
+         ctx.contamination_audit_procedure_ref,
+         claim.conclusion_scope,
+         Exposure)
+    /\ ExposureEvidenceMatchesContext(
+         claim.holdout_non_exposure_evidence_refs,
+         claim.canary_evidence_refs,
+         ctx.holdout_asset_digest_refs,
+         ctx.canary_policy_ref,
+         claim.conclusion_scope)
+    /\ SameSupportRef(claim.exclusion_policy_ref, ctx.exclusion_policy_ref)
+    /\ SameSupportSet(claim.exclusion_decision_refs,
+                      ctx.exclusion_decision_refs)
+    /\ SameSupportRef(claim.retry_policy_ref, ctx.retry_policy_ref)
+    /\ SameSupportRefOrScopedNotApplicable(
+         claim.cost_normalization_policy_ref,
+         ctx.cost_normalization_policy_ref,
+         claim.conclusion_scope,
+         CostNormalization)
+    /\ SameSupportSet(claim.artifact_immutability_refs,
+                      ctx.artifact_immutability_refs)
+
+ResultAnalysisSupportMatchesContext(claim, ctx) =
+  (not ResultAnalysisConclusion(claim.conclusion_scope)
+   /\ ResultAnalysisNotApplicableSupportOK(claim, ctx))
+  \/ (ResultAnalysisConclusion(claim.conclusion_scope)
+      /\ SameSupportSet(claim.metric_refs, ctx.result_metric_refs)
+      /\ SameSupportRef(claim.aggregation_plan_ref,
+                        ctx.aggregation_plan_ref)
+      /\ ReplicateSetMatchesContext(claim.replicate_set_ref, ctx)
+      /\ UnitOfAnalysisConsistent(claim.unit_of_analysis_ref,
+                                  claim.aggregation_plan_ref,
+                                  claim.statistical_plan_ref,
+                                  claim.replicate_set_ref)
+      /\ SameSupportRef(claim.statistical_plan_ref,
+                        ctx.statistical_plan_ref)
+      /\ SameSupportRef(claim.preregistration_ref,
+                        ctx.preregistration_ref)
+      /\ UncertaintyPoliciesMatchContext(
+           claim.confidence_interval_ref,
+           claim.statistical_test_ref,
+           claim.effect_size_ref,
+           claim.minimum_effect_or_margin_ref,
+           ctx.confidence_interval_policy_ref,
+           ctx.statistical_test_policy_ref,
+           ctx.effect_size_policy_ref,
+           ctx.power_or_precision_target_ref))
+
+ResultAnalysisNotApplicableSupportOK(claim, ctx) =
+  SameSupportSetOrScopedNotApplicable(
+    claim.metric_refs, ctx.result_metric_refs,
+    claim.conclusion_scope, ResultAnalysis)
+  /\ SameSupportRefOrScopedNotApplicable(
+       claim.aggregation_plan_ref, ctx.aggregation_plan_ref,
+       claim.conclusion_scope, ResultAnalysis)
+  /\ SameSupportRefOrScopedNotApplicable(
+       claim.statistical_plan_ref, ctx.statistical_plan_ref,
+       claim.conclusion_scope, ResultAnalysis)
+  /\ SameSupportRefOrScopedNotApplicable(
+       claim.preregistration_ref, ctx.preregistration_ref,
+       claim.conclusion_scope, ResultAnalysis)
+  /\ ReplicateSetOrScopedNotApplicable(
+       claim.replicate_set_ref, ctx,
+       claim.conclusion_scope, ResultAnalysis)
+  /\ UnitOfAnalysisOrScopedNotApplicable(
+       claim.unit_of_analysis_ref,
+       claim.conclusion_scope, ResultAnalysis)
+  /\ UncertaintyPoliciesOrScopedNotApplicable(
+       claim.confidence_interval_ref,
+       claim.statistical_test_ref,
+       claim.effect_size_ref,
+       claim.minimum_effect_or_margin_ref,
+       ctx.confidence_interval_policy_ref,
+       ctx.statistical_test_policy_ref,
+       ctx.effect_size_policy_ref,
+       ctx.power_or_precision_target_ref,
+       claim.conclusion_scope, ResultAnalysis)
+
+MetricsOK(metric_refs, aggregation_plan_ref, conclusion_scope) =
+  (NotApplicableMetricAnalysisSupport(metric_refs,
+                                      aggregation_plan_ref,
+                                      conclusion_scope)
+   /\ not ResultAnalysisConclusion(conclusion_scope))
+  \/ (ResultAnalysisConclusion(conclusion_scope)
+      /\ NonEmpty(metric_refs)
+      /\ forall m in metric_refs: MetricSpecOK(m, conclusion_scope)
+      /\ AggregationPlanOK(aggregation_plan_ref,
+                           metric_refs,
+                           conclusion_scope))
+
+MetricSpecOK(m, conclusion_scope) =
+  Present(m.outcome_mapping_ref, m.measurement_procedure_ref, m.unit)
+  /\ m.direction in {higher_is_better, lower_is_better, target_is_better,
+                    descriptive}
+  /\ DenominatorOK(m.denominator, m.unit, m.direction, conclusion_scope)
+  /\ MissingnessPolicyOK(m.missingness_policy_ref)
+  /\ EvaluatorVisibilityOK(m.evaluator_visibility_scope)
+
+AggregationPlanOK(aggregation_plan_ref, metric_refs, conclusion_scope) =
+  exists a = AggregationPlan(aggregation_plan_ref):
+    Present(a.unit_of_analysis_ref)
+    /\ NonEmpty(a.metric_refs)
+    /\ SameSupportSet(a.metric_refs, metric_refs)
+    /\ GroupingOrBlockingOK(a.grouping_or_blocking_refs,
+                            a.unit_of_analysis_ref,
+                            conclusion_scope)
+    /\ WeightingPolicyOK(a.weighting_policy_ref,
+                         a.metric_refs,
+                         conclusion_scope)
+    /\ Present(a.summary_statistics)
+    /\ SummaryStatisticsOK(a.summary_statistics,
+                           a.metric_refs,
+                           conclusion_scope)
+    /\ MissingnessPolicyOK(a.missingness_policy_ref)
+    /\ OutlierPolicyOK(a.outlier_policy_ref)
+
+ReplicationOK(replicate_set_ref,
+              unit_of_analysis_ref,
+              paired_run_group_ref,
+              conclusion_scope) =
+  (NotApplicableReplicationSupport(replicate_set_ref,
+                                   unit_of_analysis_ref,
+                                   paired_run_group_ref,
+                                   conclusion_scope)
+   /\ not ResultAnalysisConclusion(conclusion_scope))
+  \/ (ResultAnalysisConclusion(conclusion_scope)
+      /\ exists r = ReplicateSet(replicate_set_ref):
+        r.replicate_count = count(r.run_refs)
+        /\ r.replicate_count >= RequiredReplicates(unit_of_analysis_ref)
+        /\ Present(r.repeat_identity_policy_ref)
+        /\ Unique(repeat_id, r.run_refs)
+        /\ RandomizationBlocksOK(r.randomization_block_refs,
+                                 r.run_refs,
+                                 conclusion_scope)
+        /\ PairedGroupsOK(r.paired_run_group_refs, r.run_refs)
+        /\ ClaimPairedGroupOK(paired_run_group_ref,
+                              r.paired_run_group_refs,
+                              conclusion_scope)
+        /\ ExclusionsCited(r.exclusion_decision_refs))
+
+UncertaintyOK(statistical_plan_ref,
+              preregistration_ref,
+              confidence_interval_ref,
+              statistical_test_ref,
+              effect_size_ref,
+              minimum_effect_or_margin_ref,
+              conclusion_scope) =
+  (NotApplicableUncertaintySupport(statistical_plan_ref,
+                                   preregistration_ref,
+                                   confidence_interval_ref,
+                                   statistical_test_ref,
+                                   effect_size_ref,
+                                   minimum_effect_or_margin_ref,
+                                   conclusion_scope)
+   /\ not ResultAnalysisConclusion(conclusion_scope))
+  \/ (DescriptiveResultConclusion(conclusion_scope)
+      /\ not InferentialResultConclusion(conclusion_scope)
+      /\ exists plan = StatisticalPlan(statistical_plan_ref):
+        Present(plan.estimand,
+                plan.unit_of_analysis_ref,
+                plan.analysis_design)
+        /\ StatisticalPlanScopeOK(plan, conclusion_scope)
+        /\ SameSupportRef(plan.preregistration_ref, preregistration_ref)
+        /\ plan.uncertainty_method = descriptive_only
+        /\ DescriptiveSummaryPlanOK(plan, conclusion_scope)
+        /\ DescriptiveInferenceSupportNotApplicable(
+             confidence_interval_ref,
+             statistical_test_ref,
+             effect_size_ref,
+             minimum_effect_or_margin_ref,
+             conclusion_scope)
+        /\ PreregistrationOrDisclosureOK(plan.preregistration_ref,
+                                         plan.analysis_design)
+        /\ MultipleComparisonOrNotApplicableOK(
+             plan.multiple_comparison_policy_ref,
+             conclusion_scope)
+        /\ PairedOrClusteredOK(plan.paired_or_blocked_model,
+                              plan.clustering_basis_ref))
+  \/ (InferentialResultConclusion(conclusion_scope)
+      /\ exists plan = StatisticalPlan(statistical_plan_ref):
+        Present(plan.estimand, plan.unit_of_analysis_ref)
+        /\ Present(plan.comparison_design)
+        /\ StatisticalPlanScopeOK(plan, conclusion_scope)
+        /\ SameSupportRef(plan.preregistration_ref, preregistration_ref)
+        /\ plan.uncertainty_method in
+           {frequentist, bootstrap, bayesian, exact}
+        /\ Present(plan.interval_level)
+        /\ Present(plan.effect_size_definition)
+        /\ ConfidenceIntervalOK(confidence_interval_ref,
+                                plan,
+                                conclusion_scope)
+        /\ StatisticalTestOK(statistical_test_ref, plan, conclusion_scope)
+        /\ EffectSizeOK(effect_size_ref, plan, conclusion_scope)
+        /\ MinimumEffectOrMarginOK(minimum_effect_or_margin_ref,
+                                   plan,
+                                   conclusion_scope)
+        /\ StatisticalTestFamilyOK(plan.statistical_test_family,
+                                   plan.comparison_design,
+                                   conclusion_scope)
+        /\ EquivalenceOrNoninferiorityMarginOK(
+             plan.equivalence_or_noninferiority_margin,
+             conclusion_scope)
+        /\ PowerOrPrecisionTargetOK(plan.power_or_precision_target_ref,
+                                    conclusion_scope)
+        /\ PreregistrationOrDisclosureOK(plan.preregistration_ref,
+                                         plan.comparison_design)
+        /\ MultipleComparisonOK(plan.multiple_comparison_policy_ref)
+        /\ PairedOrClusteredOK(plan.paired_or_blocked_model,
+                              plan.clustering_basis_ref))
+
+ExclusionRetryOK(exclusion_policy_ref,
+                 exclusion_decision_refs,
+                 retry_policy_ref,
+                 conclusion_scope) =
+  exists policy = ExclusionPolicy(exclusion_policy_ref):
+    RetryPolicyOK(retry_policy_ref, policy, conclusion_scope)
+    /\ ExclusionPolicyOK(policy, conclusion_scope)
+    /\ forall decision in exclusion_decision_refs:
+         ExclusionDecisionOK(decision, policy, retry_policy_ref)
+    /\ ExclusionDecisionsCompleteOrDisclosed(exclusion_decision_refs,
+                                             policy,
+                                             conclusion_scope)
+
+BaselineComparabilityOK(baseline_refs, comparison_cohort_ref,
+                        baseline_eligibility_policy_ref, conclusion_scope) =
+  (NotApplicableSupport(baseline_eligibility_policy_ref,
+                        BaselineComparability)
+   /\ not ComparativeConclusion(conclusion_scope))
+  \/ (ComparativeConclusion(conclusion_scope)
+      /\ NonEmpty(baseline_refs)
+      /\ Present(comparison_cohort_ref)
+      /\ BaselineEligibilityPolicyOK(baseline_eligibility_policy_ref)
+      /\ ComparisonCohortIncludesBaselines(comparison_cohort_ref,
+                                           baseline_refs)
+      /\ forall b in baseline_refs:
+           BaselineVersionPinned(b)
+           /\ SameEligibilityOrDisclosed(b, comparison_cohort_ref,
+                                         baseline_eligibility_policy_ref))
+
+TreatmentAssignmentOK(treatment_assignment_ref,
+                      assignment_policy_ref,
+                      assignment_unit_ref,
+                      conclusion_scope) =
+  (NotApplicableSupport(treatment_assignment_ref, TreatmentAssignment)
+   /\ not ComparativeConclusion(conclusion_scope)
+   /\ not TreatmentAssignmentConclusion(conclusion_scope))
+  \/ ((ComparativeConclusion(conclusion_scope)
+       \/ TreatmentAssignmentConclusion(conclusion_scope))
+      /\ exists ta = TreatmentAssignment(treatment_assignment_ref):
+        Present(ta.assigned_unit_refs, ta.treatment_refs)
+        /\ Present(ta.assignment_mechanism,
+                   ta.assignment_policy_ref,
+                   ta.assignment_unit_ref)
+        /\ SameSupportRef(ta.assignment_policy_ref, assignment_policy_ref)
+        /\ SameSupportRef(ta.assignment_unit_ref, assignment_unit_ref)
+        /\ AssignmentUnitsMatchPopulation(ta.assigned_unit_refs,
+                                          assignment_unit_ref,
+                                          conclusion_scope)
+        /\ TreatmentArmsMatchComparison(ta.treatment_refs,
+                                        conclusion_scope)
+        /\ RandomizationOrDisclosureOK(ta.assignment_mechanism,
+                                       ta.seed_or_rng_ref,
+                                       ta.randomization_block_refs)
+        /\ BlockingFactorsOK(ta.blocking_factor_refs,
+                             conclusion_scope)
+        /\ AllocationConcealmentOrDisclosureOK(
+             ta.allocation_concealment_ref,
+             conclusion_scope)
+        /\ BlindingOrMaskingOrDisclosureOK(ta.blinding_or_masking_ref,
+                                           conclusion_scope)
+        /\ AssignmentDeviationsDisclosed(ta.deviation_refs,
+                                         conclusion_scope))
+
+ExposureOK(scaffold_exposure_matrix_ref,
+           holdout_non_exposure_evidence_refs,
+           canary_evidence_refs,
+           contamination_audit_refs,
+           conclusion_scope) =
+  (NotApplicableExposureSupport(scaffold_exposure_matrix_ref,
+                                holdout_non_exposure_evidence_refs,
+                                canary_evidence_refs,
+                                contamination_audit_refs)
+   /\ not NonContaminationConclusion(conclusion_scope))
+  \/ (NonContaminationConclusion(conclusion_scope)
+      /\ exists proc = ExposureAuditProcedureFor(contamination_audit_refs):
+        Present(proc.scaffold_exposure_matrix_ref)
+        /\ scaffold_exposure_matrix_ref = proc.scaffold_exposure_matrix_ref
+        /\ HoldoutEvidenceOK(holdout_non_exposure_evidence_refs,
+                             proc.holdout_asset_digest_refs)
+        /\ CanaryEvidenceOK(canary_evidence_refs, proc.canary_policy_ref)
+        /\ TrainingCorpusDisclosureOK(proc.training_corpus_disclosure_refs)
+        /\ KnowledgeCutoffOK(proc.participant_knowledge_cutoff_ref)
+        /\ Present(proc.audit_method)
+        /\ ContaminationAuditOK(contamination_audit_refs, proc.audit_method)
+        /\ AuditLimitationsDisclosed(proc.audit_limitations))
+
+EvaluatorLeakageOK(evaluator_leakage_model_ref, conclusion_scope) =
+  (NotApplicableSupport(evaluator_leakage_model_ref, EvaluatorLeakage)
+   /\ not EvaluatorLeakageConclusion(conclusion_scope)
+   /\ not NonContaminationConclusion(conclusion_scope))
+  \/ (exists model = EvaluatorLeakageModel(evaluator_leakage_model_ref):
+        Present(model.evaluator_refs, model.evaluator_version_refs)
+        /\ Present(model.public_material_labels,
+                   model.private_material_labels)
+        /\ PublicPrivateMaterialLabelsOK(model.public_material_labels,
+                                         model.private_material_labels)
+        /\ Present(model.allowed_evaluator_inputs)
+        /\ Present(model.forbidden_evaluator_inputs)
+        /\ EvaluatorInputBoundaryOK(model.allowed_evaluator_inputs,
+                                    model.forbidden_evaluator_inputs,
+                                    model.public_material_labels,
+                                    model.private_material_labels)
+        /\ OracleAccessOK(model.oracle_or_gold_access_policy_ref)
+        /\ AuditEvidenceOK(model.audit_evidence_refs))
+
+ValidityThreatsOK(validity_threat_refs,
+                  validity_threat_mitigation_refs,
+                  correspondence_evidence_refs,
+                  conclusion_scope) =
+  (NotApplicableSupport(validity_threat_refs, ValidityThreats)
+   /\ not BenchmarkValidityConclusion(conclusion_scope))
+  \/ (BenchmarkValidityConclusion(conclusion_scope)
+      /\ NonEmpty(validity_threat_refs)
+      /\ ThreatDimensionsCovered(validity_threat_refs,
+                                 {construct,
+                                  internal,
+                                  external,
+                                  statistical_conclusion,
+                                  cyber_range_correspondence})
+      /\ forall threat in validity_threat_refs:
+           ValidityThreatDisclosureOK(threat,
+                                      validity_threat_mitigation_refs,
+                                      conclusion_scope)
+      /\ CorrespondenceEvidenceOK(correspondence_evidence_refs,
+                                  validity_threat_refs,
+                                  conclusion_scope))
+
+CorrespondenceEvidenceOK(correspondence_evidence_refs,
+                         validity_threat_refs,
+                         conclusion_scope) =
+  (CorrespondenceThreatNotApplicable(validity_threat_refs,
+                                     conclusion_scope)
+   /\ NotApplicableSupport(correspondence_evidence_refs,
+                           CorrespondenceEvidence))
+  \/ (BenchmarkValidityConclusion(conclusion_scope)
+      /\ NonEmpty(correspondence_evidence_refs)
+      /\ forall c in correspondence_evidence_refs:
+           Present(c.conceptual_model_ref,
+                   c.realized_testbed_ref,
+                   c.requirement_refs,
+                   c.observation_or_measurement_refs,
+                   c.comparison_method_ref,
+                   c.acceptance_criterion_ref)
+           /\ ScenarioModelVersionPinned(c.conceptual_model_ref)
+           /\ RealizedTestbedBuildPinned(c.realized_testbed_ref)
+           /\ CorrespondenceRequirementsOK(c.requirement_refs,
+                                           conclusion_scope)
+           /\ MeasurementsTraceToRunContext(c.observation_or_measurement_refs)
+           /\ ComparisonMethodOK(c.comparison_method_ref,
+                                 c.requirement_refs,
+                                 conclusion_scope)
+           /\ AcceptanceCriterionOK(c.acceptance_criterion_ref,
+                                    c.comparison_method_ref)
+           /\ ResidualGapsDisclosed(c.residual_gap_refs,
+                                    validity_threat_refs,
+                                    conclusion_scope))
+
+CostOK(cost_normalization_policy_ref, conclusion_scope) =
+  (NotApplicableSupport(cost_normalization_policy_ref, CostNormalization)
+   /\ not ComparativeConclusion(conclusion_scope)
+   /\ not CostNormalizedConclusion(conclusion_scope))
+  \/ ((ComparativeConclusion(conclusion_scope)
+       \/ CostNormalizedConclusion(conclusion_scope))
+      /\ exists c = CostNormalizationPolicy(cost_normalization_policy_ref):
+        Present(c.cost_dimensions, c.normalization_unit)
+        /\ Present(c.included_resources)
+        /\ Present(c.excluded_resources)
+        /\ Present(c.timeout_budget_refs)
+        /\ IncludedExcludedResourcesOK(c.included_resources,
+                                       c.excluded_resources)
+        /\ HardwareSoftwareProfilesOK(c.hardware_profile_refs,
+                                      c.software_profile_refs)
+        /\ TimeoutBudgetsOK(c.timeout_budget_refs)
+        /\ RetryCostPolicyOK(c.retry_cost_policy_ref))
+
+ArtifactImmutabilityOK(artifact_immutability_refs, claim) =
+  exists a = ArtifactImmutabilityEvidenceSet(artifact_immutability_refs),
+         ctx = RunContext(claim.run_context_ref):
+    NonEmpty(a.artifact_refs)
+    /\ NonEmpty(artifact_immutability_refs)
+    /\ forall bundle in artifact_immutability_refs:
+         ArtifactImmutabilityEvidenceOK(bundle, ctx)
+    /\ Present(a.retrieval_time)
+    /\ ImmutableOrDisclosed(a.build_environment_refs)
+    /\ ArtifactEvidenceScopedToRunContext(a, ctx)
+    /\ RequiredRolePolicyOK(a.required_role_policy_ref,
+                            claim.conclusion_scope,
+                            ctx)
+    /\ RequiredArtifactCoverageOK(a, claim, ctx)
+    /\ forall artifact in a.artifact_refs:
+         DigestPinned(artifact, a.digest_refs)
+         /\ VersionPinnedOrDigestOnly(artifact, a.version_refs)
+         /\ RegistryOrStorageOK(artifact, a.registry_or_storage_refs)
+
+RequiredArtifactCoverageOK(a, claim, ctx) =
+  let roles = RequiredArtifactRoles(claim, ctx) in
+  let support_refs = ClaimBearingSupportRefs(claim, ctx) in
+    NonEmpty(roles)
+    /\ RoleSetGeneratedFromClaimScope(roles, claim.conclusion_scope, ctx)
+    /\ forall role in roles: RoleCoverageOK(a, ctx, role)
+    /\ forall ref in support_refs:
+         SupportRefMappedToRole(a, ref, roles)
+         /\ ArtifactForSupportRefOK(a, ref)
+```
+
+`ConclusionScopeOK(scope)` validates a governed set of conclusion tags. At
+minimum, the scope distinguishes descriptive-result, comparative, superiority,
+equivalence, non-inferiority, evaluator-leakage, non-contamination, and
+cost-normalized conclusions. `ResultAnalysisConclusion` is true when the claim
+asserts a metric, score, rate, effect, interval, test, descriptive result,
+comparative result, or cost-normalized result. It is false for audit-only
+evaluator-leakage or non-contamination claims that assert provenance,
+exposure, or boundary compliance without a score/rate/effect result.
+`DescriptiveResultConclusion` is true for a metric, summary result, or
+descriptive cost-normalized metric that does not assert a comparison, interval,
+test, effect, margin, superiority, equivalence, non-inferiority,
+cost-normalized comparative effect, or statistical non-contamination rate.
+`InferentialResultConclusion` is true for those stronger result claims and for
+any conclusion that reports a confidence or credible interval, test,
+effect-size, practical-effect margin, equivalence or non-inferiority margin,
+cost-normalized comparative effect, or statistical non-contamination rate.
+`ComparativeConclusion`, `EvaluatorLeakageConclusion`,
+`NonContaminationConclusion`, and `CostNormalizedConclusion` are true exactly
+when the conclusion scope includes the corresponding governed tag or a stronger
+tag that depends on it. `BenchmarkValidityConclusion` is true for every claim
+that asserts reproducibility, comparison, result-analysis support,
+non-contamination, evaluator-leakage, cost-normalized interpretation,
+cyber-range/testbed correspondence, or another benchmark-validity conclusion
+over runtime records. `TreatmentAssignmentConclusion` is true for comparative,
+causal-treatment-effect, superiority, equivalence, non-inferiority, or other
+conclusion tags whose interpretation depends on assignment of participants,
+runs, scenarios, scaffolds, models, tools, or assistance conditions to
+treatment arms. A one-sample descriptive or interval estimate does not become a
+treatment-assignment claim merely because it is inferential.
+
+`NotApplicableSupport(ref, concern)` resolves to a governed support record
+stating that `concern` is outside the claim's conclusion scope, why it is not
+applicable, and which stronger conclusions are excluded. It is not a missing
+value. `NotApplicableExposureSupport(...)` is the same rule for the exposure
+support bundle: every populated exposure ref must resolve to the same governed
+not-applicable bundle, and no non-contamination conclusion may be made from it.
+`NotApplicableMetricAnalysisSupport`, `NotApplicableReplicationSupport`, and
+`NotApplicableUncertaintySupport` apply the same rule to metric-analysis
+bundles: all populated metric, aggregation, replicate, unit-of-analysis,
+statistical-plan, interval, test, effect, and margin refs must resolve to a
+single governed not-applicable reason, scoped to the run context, and the
+claim must exclude result-analysis conclusions.
+
+`ClaimSupportRefsScopedToRunContext(claim, ctx)` resolves every support record
+cited by `claim` and requires the support record to carry either
+`claim.run_context_ref`, the same `(study_id, trial_id, run_id)` tuple as `ctx`,
+or a governed comparison-cohort membership that includes `ctx.run_id`. Support
+records spanning multiple runs, such as replicate sets, paired groups,
+baselines, or comparison cohorts, must list their member run refs and the
+eligibility rule that admits each member. A support record from an unrelated
+run, scenario version, backend manifest, contract bundle, evaluator version, or
+study cannot satisfy `BenchmarkContextLinkageOK`.
+
+`SameSupportRef` and `SameSupportSet` compare resolved support records after
+version and digest normalization, not raw string spelling. The
+`*OrScopedNotApplicable` variants permit a governed `NotApplicable` bundle only
+when the conclusion scope excludes that concern and both the claim and run
+context resolve to the same not-applicable reason.
+`UncertaintyPoliciesMatchContext` requires the confidence interval,
+statistical test, effect-size, and minimum effect or margin records to
+implement the policy refs declared in the run context; the
+`UncertaintyPoliciesOrScopedNotApplicable` variant permits only the governed
+not-applicable result-analysis bundle described above. `PopulationScopeMatchesContext`,
+`ReplicateSetMatchesContext`, `UnitOfAnalysisConsistent`, and
+`ExposureEvidenceMatchesContext` are graph validators: they reject support
+records whose scope, member runs, unit of analysis, holdout assets, canary
+policy, or exposure evidence cannot be traced back to the same run context and
+conclusion scope.
+
+`DenominatorOK` validates the population, attempt, task, time, cost, or resource
+denominator used by a metric and requires it to be compatible with the metric
+unit and direction. `GroupingOrBlockingOK`, `WeightingPolicyOK`, and
+`SummaryStatisticsOK` validate how per-run or per-participant measurements are
+aggregated, including empty cells, missing values, outliers, and whether
+weights are equal, design-based, cost-normalized, or explicitly disclosed.
+`RandomizationBlocksOK` validates the randomization/blocking basis for repeated
+or comparative runs. `StatisticalTestFamilyOK`,
+`EquivalenceOrNoninferiorityMarginOK`, `MinimumEffectOrMarginOK`, and
+`PowerOrPrecisionTargetOK` require statistical claims to cite the test family,
+effect definition, practical-effect or equivalence margin, and power or
+precision target needed by the conclusion scope. Descriptive-only plans are not
+an implicit escape hatch: they take the explicit
+descriptive branch of `UncertaintyOK`, where interval, test, effect, and margin
+refs must resolve through `DescriptiveInferenceSupportNotApplicable` unless the
+claim scope is upgraded to an inferential result. Audit-only non-contamination
+claims do not pass through the inferential branch of `UncertaintyOK`; they are
+validated by `ExposureOK` and `EvaluatorLeakageOK`.
+
+`ParticipantApparatusOK` validates scaffold refs, model or policy version refs,
+tool version refs, and explicit no-scaffold/no-tool declarations. `RunContextOK`
+therefore rejects a benchmark context that silently omits participant scaffold,
+model/policy, or tool exposure. `EvaluatorAndScoringOK`,
+`AssistanceDisclosureOK`, `BenchmarkPolicyRefsOK`, and the other helper
+predicates above are governed schema validators with explicit unknown,
+unsupported, or not-applicable outcomes.
+
+`TreatmentAssignmentOK` is the guard against opaque assignment. It rejects
+comparative, causal-treatment, superiority, equivalence, non-inferiority, and
+other assignment-dependent claims when the assignment unit, assignment policy,
+treatment arms, randomization or blocking basis, blinding/masking or concealment
+status, and assignment deviations cannot be traced to governed support records.
+Nonrandom assignment is allowed only when the assignment mechanism and resulting
+validity limits are disclosed; it cannot silently support a randomized-experiment
+claim.
+
+`ValidityThreatsOK` is the guard against under-specified study claims. Threat
+records must cover the conclusion's construct, internal, external,
+statistical-conclusion, and cyber-range/testbed correspondence dimensions or
+explain why a dimension is not applicable. A mitigation ref is evidence only
+when it resolves to a governed support record; otherwise the threat remains a
+residual limit. `CorrespondenceEvidenceOK` validates claims that the authored
+scenario, conceptual model, realized testbed, measurements, and acceptance
+criteria correspond closely enough for the asserted conclusion. If that evidence
+is absent, the claim may still report runtime facts, but must downgrade the
+benchmark-validity or V&V conclusion.
+
+`ArtifactImmutabilityEvidenceSet` is the normalized union of all cited
+immutability evidence bundles after each bundle passes
+`ArtifactImmutabilityEvidenceOK`. `ArtifactEvidenceScopedToRunContext`,
+`RequiredRolePolicyOK`, and `RoleCoverageOK` make artifact immutability coverage
+graph-derived rather than existential or checklist-based.
+`RequiredArtifactRoles(claim, ctx)` is generated from the conclusion scope and
+every run-context or support record that
+`BenchmarkClaimOK` consumes. `ClaimBearingSupportRefs(claim, ctx)` includes
+populated governed refs and governed not-applicable bundles for scenario,
+contract bundle, backend manifest/version, run configuration, environment
+build, participant implementation/adapter/scaffold/model/tool apparatus,
+assistance disclosures, seeds and randomization policies, evaluator/scoring,
+retry/exclusion policies and decisions, metric definitions and measurement
+procedures, aggregation and missingness/outlier/weighting policies,
+replicate/randomization-block records, statistical plans, preregistrations,
+interval/test/effect/margin policies when applicable, baselines and comparison
+cohorts, treatment-assignment and assignment-policy records,
+validity-threat disclosures and mitigations, correspondence evidence,
+cost/resource/hardware/software/timeout records, evaluator-leakage models,
+public/private material labels, exposure matrices, holdout/canary assets and
+policies, contamination audits and procedures, training-corpus disclosures,
+dataset splits, training-data cutoffs, participant knowledge cutoffs,
+evidence-manifest records, and research-object manifest records when the claim
+depends on them. Each required role must map to at least one governed artifact in
+`artifact_refs` through `artifact_role_assignments`; each consumed support ref
+must map to a role and pinned artifact. The mapped artifact must be digest
+pinned, version pinned or digest-only, and retrievable from governed storage.
+Explicit no-scaffold, no-tool, or unavailable-artifact declarations are
+accepted only through the corresponding apparatus or unsupported/downgrade
+record; they cannot be satisfied by an unrelated pinned artifact.
+
+Claims that do not make result-analysis, comparative, evaluator-leakage,
+non-contamination, or cost-normalized conclusions may satisfy the corresponding
+predicate with a governed `NotApplicable` support record. Comparative
+conclusions still require cost/resource support even when they do not use a
+separate `cost_normalized` label. If a claim omits one of those predicates
+entirely, its `conclusion_scope` must explicitly exclude that conclusion and
+any stronger conclusion that depends on it.
 
 If any predicate is `Unknown` or `Unsupported`, the claim must either downgrade
 to the supported conclusion scope or explicitly record
@@ -2163,7 +3496,8 @@ Safety properties:
   hidden objective/scorer/backend internals;
 - no deletion or mutation of prior records during rollback or compensation;
 - no benchmark comparison claim without repetition, baseline, evaluator,
-  cost-normalization, and exposure evidence required by the claim.
+  treatment-assignment, validity-threat, cost-normalization, and exposure
+  evidence required by the claim.
 
 Liveness properties are bounded and contract-specific:
 
@@ -2350,8 +3684,9 @@ references.
 
 Benchmark comparison claims require run context for scenario version, contract
 bundle, backend manifest, participant implementation, adapter/scaffold/tool
-exposure, seeds/randomization, evaluator/scoring, resource/cost traces, and
-holdout/canary exposure labels as applicable.
+exposure, seeds/randomization, treatment assignment, evaluator/scoring,
+resource/cost traces, validity-threat disclosure, and holdout/canary exposure
+labels as applicable.
 
 ### I26 - Concrete Envelope Compatibility
 
@@ -2378,8 +3713,10 @@ explicit closure record relates them.
 
 History-consistent and perfect-recall claims require a reconstructability
 procedure over visible action-observation history, projection version,
-redaction policy, delivery order, and stochastic context. If that procedure is
-missing or lossy, the claim must be downgraded.
+redaction policy, visible order relation, simultaneity groups, optional
+delivery linearization, stochastic/noise context, projected visible
+identifiers, and proof artifacts. If that procedure is missing, lossy,
+incomparable, or unsupported, the claim must be downgraded.
 
 ### I30 - Time-Management Honesty
 
@@ -2399,17 +3736,19 @@ benchmark harness.
 ### I32 - Benchmark Comparison Evidence
 
 Runtime provenance is necessary but not sufficient for benchmark comparison.
-Comparative claims require repetition, statistical plan, baseline/evaluator
-version, cost normalization, retry/exclusion policy, scaffold exposure,
-holdout/canary non-exposure evidence, and contamination-audit records as
-applicable.
+Comparative claims require repetition, statistical plan, treatment assignment,
+baseline/evaluator version, validity-threat disclosure, cost normalization,
+retry/exclusion policy, scaffold exposure, holdout/canary non-exposure evidence,
+and contamination-audit records as applicable.
 
 ### I33 - Active-Agent And Chance Discipline
 
 Sequential, AEC, simultaneous, parallel, chance, and mean-field step claims
-require an interaction context. Participant actions are valid only for the
-recorded active agent set and current actor; chance and mean-field nodes cannot
-be silently represented as participant choices.
+require an interaction context. Step participant actions are valid only for the
+recorded active agent set and current actor; ordinary lifecycle actions that do
+not make a game-node claim are outside this interaction-context requirement.
+Chance and mean-field nodes cannot be silently represented as participant
+choices.
 
 ### I34 - Benchmark Validity Procedure
 
@@ -2419,13 +3758,22 @@ aggregation, uncertainty, baseline comparability, evaluator leakage, exposure,
 exclusion, retry, cost-normalization, and artifact-immutability procedures, or
 downgrade the conclusion scope.
 
-## Canonical Design Examples
+## Canonical Structural Examples
 
-The examples use snake_case wire-style values and complete fields for the
-surface being exercised. Conditional source-alignment subobjects appear when
-relevant; concrete schemas may make non-applicable subobjects explicit nulls or
-omit them under a published extension policy. Raw payloads are represented by
-governed refs, not omitted secrets.
+The examples use snake_case wire-style values and complete structural fields
+for the surface being exercised. Conditional source-alignment subobjects appear
+when relevant; concrete schemas may make non-applicable subobjects explicit
+nulls or omit them under a published extension policy. Raw payloads are
+represented by governed refs, not omitted secrets.
+
+These examples are not evidence fixtures. Repeated-character hash values such
+as `sha256:1111...` demonstrate field placement only; they do not support exact
+raw-data integrity or provenance claims. A reviewable fixture must either cite
+an evidence fixture manifest whose bytes hash to the recorded digest, or set
+the raw-data hash fields to null/unknown and downgrade provenance accordingly.
+Likewise, event-classification tuples in these examples are ACES-native
+registry examples. They are not OCSF events unless a governed OCSF mapping ref
+and OCSF-valid class/profile values are supplied.
 
 ### Opaque LLM Agent Action
 
@@ -2682,7 +4030,9 @@ interaction_context_envelope:
   sampled_chance_outcome_ref: null
   chance_seed_ref: seeds.run-778-blue
   chance_visibility: not_applicable
-  mean_field_population_ref: null
+  mean_field_population_scope_ref: null
+  mean_field_population_refs: []
+  mean_field_state_support_ref: null
   mean_field_distribution_ref: null
   mean_field_distribution_digest: null
   mean_field_update_rule_ref: null
@@ -3553,7 +4903,8 @@ Design commitments:
 - benchmark run context is present when runtime records support comparison or
   reproducibility claims;
 - explicit benchmark validity claims are present when runtime records are used
-  for comparative, non-contamination, or cost-normalized conclusions.
+  for comparative, non-contamination, cost-normalized, or V&V/correspondence
+  conclusions.
 
 Future implementation artifacts:
 
@@ -3571,13 +4922,16 @@ Future implementation artifacts:
 - validation that rewards, returns, action masks, and terminal/truncation
   signals cannot be inferred from hidden scorer/backend state;
 - validation that comparative benchmark conclusions cite metric aggregation,
-  uncertainty, baseline comparability, evaluator leakage, exposure, exclusion,
-  retry, cost-normalization, and artifact-immutability procedures;
+  uncertainty, treatment assignment, validity threats, baseline comparability,
+  evaluator leakage, exposure, exclusion, retry, cost-normalization, and
+  artifact-immutability procedures;
 - tests proving reset/restart do not rewrite history;
 - fixtures for opaque participants that expose attempts and observations
   without internal planning traces;
 - fixtures proving marked/redacted evidence cannot leak through public runtime
-  records.
+  records;
+- fixtures proving mismatched evidence digests and unsupported validity-threat
+  omissions are rejected or downgraded.
 
 ## RUN-306 - Participant Decision And Execution Lifecycle
 
@@ -3720,13 +5074,18 @@ families:
   security benchmark-methodology work for run records, repeated trials,
   baseline/evaluator disclosure, cost normalization, scaffold exposure,
   contamination audits, and holdout/canary discipline.
+- W3C PROV, FAIR, RO-Crate, ACM artifact review, and cyber-range/simulation V&V
+  literature for provenance entities/activities/agents, persistent identifiers,
+  qualified artifact references, machine-actionable metadata, reusable research
+  packages, artifact availability limits, validity threats, and testbed
+  correspondence evidence.
 
 ## Non-Goals
 
 - Defining new SDL participant syntax.
 - Implementing participant runtime contracts or backends in this issue.
 - Requiring participants to reveal chain-of-thought, prompts, policy internals,
-  reward updates, private memory, or tool traces.
+  private/internal reward updates, private memory, or tool traces.
 - Treating backend-native stores, logs, timestamps, or scheduler order as the
   portable runtime semantics.
 - Treating hidden reward calculators, policy optimizer state,
