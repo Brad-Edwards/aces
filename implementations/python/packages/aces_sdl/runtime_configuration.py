@@ -5,7 +5,7 @@ from enum import Enum
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
-from . import runtime_network_detection as _runtime_network_detection
+from . import runtime_network_detection as _rnd
 from ._base import (
     SDLModel,
     parse_float_or_var,
@@ -112,6 +112,7 @@ from .runtime_identity import (
     RuntimeSudoPrincipalKind,
     RuntimeSudoRule,
 )
+from .runtime_listeners import RuntimeServiceListener
 from .runtime_mail_service import (
     RuntimeMailAlias,
     RuntimeMailAuthMechanism,
@@ -180,12 +181,11 @@ from .runtime_ssh_server import (
     SshMatchRule,
     SshServerConfig,
 )
-from .runtime_values import absolute_path_or_var as _absolute_path_or_var
+from .runtime_values import absolute_path_or_var as _abs_path_or_var
 from .runtime_values import parse_ram
 from .runtime_values import parse_runtime_enum_or_var as _parse_runtime_enum_or_var
 
-globals().update({name: getattr(_runtime_network_detection, name) for name in _runtime_network_detection.__all__})
-
+globals().update({name: getattr(_rnd, name) for name in _rnd.__all__})
 __all__ = [
     "DatabaseService",
     "DnsDynamicUpdatePolicy",
@@ -301,7 +301,7 @@ __all__ = [
     "RuntimeMountSourceKind",
     "RuntimeNamespaceConfiguration",
     "RuntimeNetworkBackendDetail",
-    *_runtime_network_detection.__all__,
+    *_rnd.__all__,
     "RuntimeNetworkDriver",
     "RuntimeNetworkEndpoint",
     "RuntimeNetworkIdStability",
@@ -317,6 +317,7 @@ __all__ = [
     "RuntimePublishedPort",
     "RuntimeResourceLimits",
     "RuntimeRestartPolicy",
+    "RuntimeServiceListener",
     "RuntimeSecurityMonitoringManager",
     "RuntimeSensitivityClassification",
     "RuntimeSoftwareComponent",
@@ -496,7 +497,7 @@ class RuntimeDependencyManifest(SDLModel):
     @field_validator("path")
     @classmethod
     def validate_path(cls, v: str) -> str:
-        return _absolute_path_or_var(v, field_name="path")
+        return _abs_path_or_var(v, field_name="path")
 
 
 class RuntimePackageVulnerabilityFinding(SDLModel):
@@ -553,13 +554,12 @@ class RuntimeConfiguration(SDLModel):
     file_services: list[RuntimeFileService] = Field(default_factory=list)
     mail_services: list[RuntimeMailService] = Field(default_factory=list)
     network: RuntimeNetworkRealization | None = None
+    service_listeners: list[RuntimeServiceListener] = Field(default_factory=list)
     applications: list[RuntimeApplicationSurface] = Field(default_factory=list)
     database_services: list[DatabaseService] = Field(default_factory=list)
     dns_services: list[RuntimeDnsService] = Field(default_factory=list)
     network_sensors: list[RuntimeNetworkSensor] = Field(default_factory=list)
-    network_detection_engines: list[_runtime_network_detection.RuntimeNetworkDetectionEngine] = Field(
-        default_factory=list
-    )
+    network_detection_engines: list[_rnd.RuntimeNetworkDetectionEngine] = Field(default_factory=list)
     security_monitoring_managers: list[RuntimeSecurityMonitoringManager] = Field(default_factory=list)
     ssh_servers: list[SshServerConfig] = Field(default_factory=list)
     service_manager_units: list[ServiceManagerUnit] = Field(default_factory=list)
@@ -575,6 +575,7 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.filesystem_inventory, attr="path", label="filesystem path")
         _reject_duplicate_keys(self.processes, attr="name", label="process name")
         _reject_duplicate_keys(self.processes, attr="pid", label="process pid")
+        _reject_duplicate_keys(self.service_listeners, attr="listener_id", label="service_listener listener_id")
         _reject_duplicate_keys(self.applications, attr="application_id", label="application_id")
         _reject_duplicate_keys(self.database_services, attr="database_service_id", label="database_service_id")
         _reject_duplicate_keys(self.dns_services, attr="dns_service_id", label="dns_service_id")

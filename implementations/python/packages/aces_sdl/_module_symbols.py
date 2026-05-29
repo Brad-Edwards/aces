@@ -1,30 +1,18 @@
-"""Symbol-index helpers for SDL module composition.
-
-Builds the per-section rename maps and the cross-section ``named`` alias
-table that ``composition._namespace_payload`` uses to rewrite SDL
-references when an imported module is mounted under a namespace.
-
-Lives next to ``composition.py`` (not inside it) to keep that file under
-the repo-policy line cap, mirroring ``_module_provenance.py``.
-"""
+"""Symbol-index helpers for SDL module composition."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ._module_runtime_aliases import (
     nested_node_network_detection_aliases,
     nested_node_network_sensor_aliases,
     nested_node_security_monitoring_aliases,
+    nested_node_service_listener_aliases,
 )
 from .entities import flatten_entities
 from .scenario import ModuleDescriptor, Scenario
-
-if TYPE_CHECKING:
-    from .runtime_dns import RuntimeDnsService
-    from .runtime_file_service import RuntimeFileService
-    from .runtime_mail_service import RuntimeMailService
 
 # Canonical list of scenario top-level sections that hold user-defined
 # hashmap keys. Re-exported as both the public ``HASHMAP_SECTIONS`` name
@@ -197,7 +185,7 @@ def _dns_service_aliases(
     *,
     node_name: str,
     prefixed_node: str,
-    service: RuntimeDnsService,
+    service: Any,
 ) -> dict[str, str]:
     """Aliases for one DNS service, its zones, and contained RRsets."""
     service_id = getattr(service, "dns_service_id", "")
@@ -340,7 +328,7 @@ def _file_service_aliases(
     *,
     node_name: str,
     prefixed_node: str,
-    service: RuntimeFileService,
+    service: Any,
 ) -> dict[str, str]:
     """Aliases for one file service and its stable child records (ADR-037)."""
     service_id = getattr(service, "service_id", "")
@@ -395,7 +383,7 @@ def _mail_service_aliases(
     *,
     node_name: str,
     prefixed_node: str,
-    service: RuntimeMailService,
+    service: Any,
 ) -> dict[str, str]:
     """Aliases for one mail service and its stable child records."""
     service_id = getattr(service, "service_id", "")
@@ -502,6 +490,7 @@ def symbol_index(
     named.update(_qualified_section_aliases("entities", entity_map))
 
     named.update(_nested_node_service_aliases(scenario, section_maps.get("nodes", {})))
+    named.update(nested_node_service_listener_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_application_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_database_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_node_dns_aliases(scenario, section_maps.get("nodes", {})))

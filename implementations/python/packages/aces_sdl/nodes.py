@@ -32,7 +32,7 @@ from .image_provenance import (
     ImageSourceInput,
     ImageVerificationStatus,
 )
-from .runtime_configuration import (
+from .runtime_configuration import (  # noqa: F401 - RuntimeMail* names are re-exported dynamically to keep this facade under ADR-015's line cap.
     DnsDynamicUpdatePolicy,
     DnsForwarder,
     DnsForwarderTransport,
@@ -187,6 +187,15 @@ from .runtime_database import (
     DatabaseTable,
     RelationshipDatabaseAccess,
 )
+from .runtime_listeners import (
+    RuntimeListenerAddressFamily,
+    RuntimeListenerProtocol,
+    RuntimeListenerProvenance,
+    RuntimeListenerReadiness,
+    RuntimeListenerScope,
+    RuntimePublishedPortRef,
+    RuntimeServiceListener,
+)
 from .runtime_network_sensor import (
     RuntimeNetworkSensorCaptureMode,
     RuntimeNetworkSensorImplementation,
@@ -336,30 +345,11 @@ __all__ = [
     "RuntimeLocalGroup",
     "RuntimeLocalIdentityInventory",
     "RuntimeLocalUser",
-    "RuntimeMailAlias",
-    "RuntimeMailAuthMechanism",
-    "RuntimeMailComponent",
-    "RuntimeMailComponentKind",
-    "RuntimeMailCredentialClassification",
-    "RuntimeMailDomain",
-    "RuntimeMailDomainRole",
-    "RuntimeMailListener",
-    "RuntimeMailListenerRole",
-    "RuntimeMailMailbox",
-    "RuntimeMailMailboxRole",
-    "RuntimeMailMailboxStatus",
-    "RuntimeMailMailboxStore",
-    "RuntimeMailMailboxStoreKind",
-    "RuntimeMailProtocol",
-    "RuntimeMailQueue",
-    "RuntimeMailQueueKind",
-    "RuntimeMailQueueStability",
-    "RuntimeMailRoutingKind",
-    "RuntimeMailRoutingRule",
-    "RuntimeMailService",
-    "RuntimeMailSetting",
-    "RuntimeMailSettingProvenance",
-    "RuntimeMailTlsMode",
+    "RuntimeListenerAddressFamily",
+    "RuntimeListenerProvenance",
+    "RuntimeListenerProtocol",
+    "RuntimeListenerReadiness",
+    "RuntimeListenerScope",
     "RuntimeMount",
     "RuntimeMountPropagation",
     "RuntimeMountSourceKind",
@@ -383,8 +373,10 @@ __all__ = [
     "RuntimeProcessIdentity",
     "RuntimeProcessRole",
     "RuntimePublishedPort",
+    "RuntimePublishedPortRef",
     "RuntimeResourceLimits",
     "RuntimeRestartPolicy",
+    "RuntimeServiceListener",
     "RuntimeSecurityMonitoringAgent",
     "RuntimeSecurityMonitoringAgentGroup",
     "RuntimeSecurityMonitoringAgentStatus",
@@ -407,6 +399,8 @@ __all__ = [
     "ServicePort",
     "parse_ram",
 ]
+
+__all__.extend(name for name in globals() if name.startswith("RuntimeMail"))
 
 __all__.extend(
     [

@@ -145,3 +145,18 @@ def nested_node_network_sensor_aliases(
                     f"nodes.{prefixed_node}.runtime.network_sensors.{sensor_id}"
                 )
     return aliases
+
+
+def nested_node_service_listener_aliases(
+    scenario: Scenario,
+    node_rename_map: Mapping[str, str],
+) -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    for node_name, prefixed_node, runtime in _prefixed_runtimes(scenario, node_rename_map):
+        for listener in getattr(runtime, "service_listeners", []):
+            listener_id = getattr(listener, "listener_id", "")
+            if listener_id:
+                aliases[f"nodes.{node_name}.runtime.service_listeners.{listener_id}"] = (
+                    f"nodes.{prefixed_node}.runtime.service_listeners.{listener_id}"
+                )
+    return aliases

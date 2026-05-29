@@ -43,7 +43,7 @@ capture mode/interfaces, monitored network refs, and evidence refs -
 network detection-engine runtime inventory (app-layer parsers, rule sources,
 network zoning/address-set variables, output streams, control channels, and
 evidence refs -
-[ADR-043](../../decisions/adrs/adr-043-network-detection-engine-runtime-inventory.md)),
+[ADR-044](../../decisions/adrs/adr-044-network-detection-engine-runtime-inventory.md)),
 and directory/domain/realm/IdP/IAM/federation identity-authority state
 (authority namespaces, services, subjects, policies, and typed relationships -
 [ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).
