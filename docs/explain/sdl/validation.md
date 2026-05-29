@@ -39,11 +39,12 @@ becoming a validator-only interpretation of the SDL.
 |------|----------------|
 | `verify_content` | Content targets reference existing VM nodes. |
 | `verify_accounts` | Account nodes reference existing VM nodes. |
-| `verify_relationships` | Source and target resolve to any named element in any section, including variables, relationships, content item names, named service bindings, runtime service listener refs, runtime identity-authority refs, runtime DNS refs, runtime network-sensor refs, runtime security-monitoring manager refs, and named ACL rules. Ambiguous bare refs are rejected with qualified alternatives. |
+| `verify_relationships` | Source and target resolve to any named element in any section, including variables, relationships, content item names, named service bindings, runtime service listener refs, runtime identity-authority refs, runtime DNS refs, runtime network-sensor refs, runtime network detection-engine refs, runtime security-monitoring manager refs, and named ACL rules. Ambiguous bare refs are rejected with qualified alternatives. |
 | `verify_runtime_service_listeners` | Runtime service listeners resolve optional same-node service refs, process refs, and host-published port correlations. Concrete service/listener port+protocol values must match. |
 | `verify_runtime_identity_authorities` | Runtime identity-authority services resolve to same-node service bindings. Local relationship and policy refs resolve within the owning authority across authority, service, subject, policy, and relationship stable ids. |
 | `verify_runtime_dns_services` | Runtime DNS services resolve to same-node service bindings. Configuration, log, and zone-file refs resolve to observed runtime filesystem entries when the node has file inventory. |
 | `verify_runtime_network_sensors` | Runtime network sensors name monitored networks that resolve to switch-backed infrastructure entries and, when runtime endpoint inventory exists on the node, to same-node network endpoint attachments. Configuration, log, and evidence refs resolve to observed runtime filesystem entries when the node has file inventory. |
+| `verify_runtime_network_detection_engines` | Runtime network detection engines resolve optional same-node sensor refs, network-set refs, control-channel service refs, and filesystem-backed configuration/log/evidence/rule/output/control paths. |
 | `verify_runtime_security_monitoring_managers` | Runtime security-monitoring managers and listeners resolve to same-node service bindings. Manager/group/content/detection/setting file refs resolve to observed runtime filesystem entries when the node has file inventory. Agent group member refs, agent group refs, setting component refs, detection content-set refs, and detection correlation refs resolve inside the owning manager. Detection source artifact refs and target refs resolve through the generic named-ref index. |
 | `verify_agents` | Entity references resolve. Starting accounts and initial-knowledge accounts exist in accounts section. Allowed subnets and initial-knowledge subnets must resolve to switch-backed infrastructure entries. Initial-knowledge hosts must resolve to VM nodes. Initial-knowledge services exist in `nodes.*.services[].name`. |
 | `verify_participant_behavior` | Agent action refs resolve to declared action contracts, observation-boundary refs resolve to declared boundaries, interaction refs resolve to declared actions or targetable state, and boundary view rules/transitions resolve to declared observable, hidden, or evidence refs. |
@@ -134,6 +135,17 @@ concrete listener port/protocol values must match the service. Optional
 process name or PID. Optional `published_port_refs` entries resolve to
 `runtime.network.published_ports` by host IP, host port, container port, and
 protocol and must match the listener's container-side port/protocol.
+
+The optional `runtime.network_detection_engines` inventory has model-local and
+semantic rules. Engine ids are stable concrete symbols and are unique within
+one node runtime block; engine-local rule-source, network-set, output-stream,
+and control-channel ids are unique inside the owning engine. Optional
+`sensor_ref` values resolve to same-node `runtime.network_sensors` ids.
+Network-set refs resolve to switch-backed infrastructure entries.
+Configuration, log, evidence, rule-source, output-stream, and control-channel
+paths are absolute and are checked against `runtime.filesystem_inventory` when
+that inventory is non-empty. Control-channel `service` refs resolve to
+same-node `Node.services` bindings.
 
 The optional `runtime.security_monitoring_managers` inventory has model-local
 and semantic rules. Managers, listeners, components, agents, agent groups,
@@ -277,13 +289,18 @@ service, subject, policy, and relationship refs), and named ACL rules
 `nodes.<node>.runtime.dns_services.<dns_service_id>`,
 `.zones.<zone_id>`, and `.zones.<zone_id>.rrsets.<rrset_id>`. Runtime
 network-sensor refs are indexed as
-`nodes.<node>.runtime.network_sensors.<sensor_id>`. This means a
+`nodes.<node>.runtime.network_sensors.<sensor_id>`. Runtime network
+detection-engine refs are indexed as
+`nodes.<node>.runtime.network_detection_engines.<engine_id>` plus nested
+`.rule_sources.<source_id>`, `.network_sets.<set_id>`,
+`.output_streams.<stream_id>`, and `.control_channels.<channel_id>` refs. This means a
 relationship can reference any node, feature, condition, vulnerability,
 infrastructure entry, metric, evaluation, TLO, goal, entity (including nested),
 inject, event, script, story, content entry, content item, account, agent,
 objective, workflow, relationship, variable, named service binding, runtime
 identity-authority object, runtime DNS object, runtime network-sensor object,
-runtime security-monitoring manager object, or named ACL rule. Runtime
+runtime network detection-engine object, runtime security-monitoring manager
+object, or named ACL rule. Runtime
 security-monitoring refs are indexed
 as `nodes.<node>.runtime.security_monitoring_managers.<manager_id>` plus nested
 `.listeners.<listener_id>`, `.components.<component_id>`,

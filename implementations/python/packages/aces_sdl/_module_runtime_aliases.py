@@ -86,6 +86,53 @@ def nested_node_security_monitoring_aliases(
     return aliases
 
 
+def _network_detection_engine_aliases(
+    *,
+    node_name: str,
+    prefixed_node: str,
+    engine: object,
+) -> dict[str, str]:
+    engine_id = getattr(engine, "engine_id", "")
+    if not engine_id:
+        return {}
+    bare_base = f"nodes.{node_name}.runtime.network_detection_engines.{engine_id}"
+    prefixed_base = f"nodes.{prefixed_node}.runtime.network_detection_engines.{engine_id}"
+    aliases: dict[str, str] = {bare_base: prefixed_base}
+    for collection_name, id_field in (
+        ("rule_sources", "source_id"),
+        ("network_sets", "set_id"),
+        ("output_streams", "stream_id"),
+        ("control_channels", "channel_id"),
+    ):
+        aliases.update(
+            _collection_aliases(
+                bare_base=bare_base,
+                prefixed_base=prefixed_base,
+                collection=getattr(engine, collection_name, []),
+                collection_name=collection_name,
+                id_field=id_field,
+            )
+        )
+    return aliases
+
+
+def nested_node_network_detection_aliases(
+    scenario: Scenario,
+    node_rename_map: Mapping[str, str],
+) -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    for node_name, prefixed_node, runtime in _prefixed_runtimes(scenario, node_rename_map):
+        for engine in getattr(runtime, "network_detection_engines", []):
+            aliases.update(
+                _network_detection_engine_aliases(
+                    node_name=node_name,
+                    prefixed_node=prefixed_node,
+                    engine=engine,
+                )
+            )
+    return aliases
+
+
 def nested_node_network_sensor_aliases(
     scenario: Scenario,
     node_rename_map: Mapping[str, str],

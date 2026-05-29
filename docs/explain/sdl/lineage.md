@@ -270,6 +270,36 @@ observed data or evidence unless the author explicitly uses them in bounded ref
 fields. A wildcard bind address inside a container or node namespace is not
 automatically host-public; host exposure remains `runtime.network.published_ports`.
 
+## Network Detection Engine Runtime Semantics
+
+The `runtime.network_detection_engines` surface is issue #430's response to an
+observed gap for IDS/NDR engine inventory. It is not a Suricata clone and does
+not interpret rule languages or alert telemetry. It records portable,
+node-scoped facts about a detection engine that adjacent surfaces cannot own:
+enabled app-layer parser families, loaded rule-source inventories, network
+zoning/address-set variables, bounded output streams, reload/control channels,
+and evidence refs.
+
+ACES relies on prior work in four ways:
+
+- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+  model topology, deployable services/features, tasks, validation, and
+  deployment concerns. None expose a portable first-class detection-engine
+  inventory. ACES therefore adds a typed `Node.runtime` surface rather than
+  encoding engine state inside `Node.services`, `runtime.network_sensors`,
+  `runtime.filesystem_inventory`, `runtime.software_components`, or prose
+  relationships.
+- **IDS/NDR tooling:** Suricata, Snort, Zeek, Security Onion, and NDR products
+  show recurring engine facts ACES must preserve: parser coverage, rule or IOC
+  sources, address sets, output streams, reload controls, and evidence refs.
+  These references are implementation lineage, not schema authority.
+- **Telemetry and rule-content precedents:** OCSF, ECS, STIX, Sigma, YARA, and
+  vendor rule formats inform vocabulary boundaries. ACES does not replace
+  those schemas or inline their events, rules, packets, or IOC payloads.
+- **Evidence discipline:** raw rules, alerts, packet captures, IOC exports,
+  config files, and backend inspect payloads remain evidence artifacts or
+  downstream translation inputs. The SDL stores bounded inventory and refs.
+
 ## File-Sharing And Resource-Access Semantics
 
 The `runtime.file_services` surface is issue #421's response to a gap

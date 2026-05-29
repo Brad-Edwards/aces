@@ -5,6 +5,7 @@ from enum import Enum
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
+from . import runtime_network_detection as _rnd
 from ._base import (
     SDLModel,
     parse_float_or_var,
@@ -180,10 +181,11 @@ from .runtime_ssh_server import (
     SshMatchRule,
     SshServerConfig,
 )
-from .runtime_values import absolute_path_or_var as _absolute_path_or_var
+from .runtime_values import absolute_path_or_var as _abs_path_or_var
 from .runtime_values import parse_ram
 from .runtime_values import parse_runtime_enum_or_var as _parse_runtime_enum_or_var
 
+globals().update({name: getattr(_rnd, name) for name in _rnd.__all__})
 __all__ = [
     "DatabaseService",
     "DnsDynamicUpdatePolicy",
@@ -299,6 +301,7 @@ __all__ = [
     "RuntimeMountSourceKind",
     "RuntimeNamespaceConfiguration",
     "RuntimeNetworkBackendDetail",
+    *_rnd.__all__,
     "RuntimeNetworkDriver",
     "RuntimeNetworkEndpoint",
     "RuntimeNetworkIdStability",
@@ -494,7 +497,7 @@ class RuntimeDependencyManifest(SDLModel):
     @field_validator("path")
     @classmethod
     def validate_path(cls, v: str) -> str:
-        return _absolute_path_or_var(v, field_name="path")
+        return _abs_path_or_var(v, field_name="path")
 
 
 class RuntimePackageVulnerabilityFinding(SDLModel):
@@ -556,6 +559,7 @@ class RuntimeConfiguration(SDLModel):
     database_services: list[DatabaseService] = Field(default_factory=list)
     dns_services: list[RuntimeDnsService] = Field(default_factory=list)
     network_sensors: list[RuntimeNetworkSensor] = Field(default_factory=list)
+    network_detection_engines: list[_rnd.RuntimeNetworkDetectionEngine] = Field(default_factory=list)
     security_monitoring_managers: list[RuntimeSecurityMonitoringManager] = Field(default_factory=list)
     ssh_servers: list[SshServerConfig] = Field(default_factory=list)
     service_manager_units: list[ServiceManagerUnit] = Field(default_factory=list)
@@ -576,6 +580,7 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.database_services, attr="database_service_id", label="database_service_id")
         _reject_duplicate_keys(self.dns_services, attr="dns_service_id", label="dns_service_id")
         _reject_duplicate_keys(self.network_sensors, attr="sensor_id", label="network sensor")
+        _reject_duplicate_keys(self.network_detection_engines, attr="engine_id", label="network detection engine")
         _reject_duplicate_keys(self.security_monitoring_managers, attr="manager_id", label="security manager")
         _reject_duplicate_keys(self.ssh_servers, attr="server_id", label="ssh_server server_id")
         _reject_duplicate_keys(

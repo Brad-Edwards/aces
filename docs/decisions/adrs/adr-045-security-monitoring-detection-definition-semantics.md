@@ -1,4 +1,4 @@
-# ADR-044: Security-Monitoring Detection Definition Semantics
+# ADR-045: Security-Monitoring Detection Definition Semantics
 
 ## Status
 

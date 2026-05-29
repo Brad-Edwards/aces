@@ -435,6 +435,35 @@ nodes:
             - name: tsig_secret          # secret-bearing settings omit value
               value_classification: redacted
               provenance: operator_override
+      network_detection_engines:        # observed IDS/NDR engine state
+        - engine_id: suricata-engine
+          implementation: suricata
+          engine_kind: ids
+          version: "7.0.15"
+          sensor_ref: suricata-sensor    # same-node runtime.network_sensors id
+          app_layer_protocols: [http, tls, dns, ssh, smtp, ftp, smb]
+          configuration_file_refs: [/etc/suricata/suricata.yaml]
+          rule_sources:
+            - source_id: local-rules
+              kind: local
+              format: suricata_rule
+              rule_count: 46
+              file_refs: [/etc/suricata/rules/local.rules]
+          network_sets:
+            - set_id: home-net
+              kind: home_net
+              name: HOME_NET
+              network_refs: [dmz-net, internal-net]
+          output_streams:
+            - stream_id: eve-json
+              format: eve_json
+              path: /var/log/suricata/eve.json
+              event_types: [alert, http, dns, tls, ssh, flow, netflow, stats]
+          control_channels:
+            - channel_id: command-socket
+              kind: unix_socket
+              path: /var/run/suricata-command.socket
+              capabilities: [rule_reload]
       security_monitoring_managers:     # observed SIEM/security-monitoring manager state
         - manager_id: techvault-wazuh
           service: wazuh-api            # owning same-node Node.services[].name
@@ -704,6 +733,23 @@ qualified refs such as
 relationships, generic reference validation, and module import rewriting (see
 [ADR-043](../../decisions/adrs/adr-043-runtime-service-listener-surface.md)).
 
+`runtime.network_detection_engines` records observed IDS/NDR detection-engine
+state hosted by the node: engine identity, parser families, rule-source
+inventories, network zoning/address-set variables, output streams,
+reload/control channels, and evidence refs. It is distinct from passive sensor
+posture (`runtime.network_sensors`), SIEM manager inventory
+(`runtime.security_monitoring_managers`), software component identity, raw
+filesystem evidence, HTTP applications, and transport services. Each engine
+has a stable `engine_id`; child collections use stable ids for rule sources,
+network sets, output streams, and control channels. File/path refs are checked
+against `runtime.filesystem_inventory` when that inventory is non-empty, and
+network-set refs resolve to switch-backed infrastructure entries. Fully
+qualified refs such as
+`nodes.suricata.runtime.network_detection_engines.suricata-engine.output_streams.eve-json`
+participate in relationships, generic reference validation, and module import
+rewriting (see
+[ADR-044](../../decisions/adrs/adr-044-network-detection-engine-runtime-inventory.md)).
+
 `runtime.applications` records the participant-observable HTTP application
 route/API/UI surface — what an adversary, defender, agent, scanner, or evaluator
 can observe of the web application itself, distinct from the transport-level
@@ -799,7 +845,7 @@ in relationships, generic reference validation, and module import rewriting
 (see
 [ADR-040](../../decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory.md)
 and
-[ADR-044](../../decisions/adrs/adr-044-security-monitoring-detection-definition-semantics.md)).
+[ADR-045](../../decisions/adrs/adr-045-security-monitoring-detection-definition-semantics.md)).
 
 `runtime.mail_services` records the participant-observable mail-server logical
 state, distinct from transport-level `services`, host publication in
@@ -1172,6 +1218,10 @@ or `.relationships.<relationship_id>` refs), runtime DNS refs
 `.zones.<zone_id>` or `.zones.<zone_id>.rrsets.<rrset_id>` refs), named
 network sensor refs
 (`nodes.<node>.runtime.network_sensors.<sensor_id>`), named
+network detection-engine refs
+(`nodes.<node>.runtime.network_detection_engines.<engine_id>` and nested
+`.rule_sources.<source_id>`, `.network_sets.<set_id>`,
+`.output_streams.<stream_id>`, or `.control_channels.<channel_id>` refs), named
 security-monitoring manager refs
 (`nodes.<node>.runtime.security_monitoring_managers.<manager_id>` and nested
 `.listeners.<listener_id>`, `.components.<component_id>`,
@@ -1446,6 +1496,9 @@ identity-authority subject/policy/relationship kinds, identity-authority ports
 and enabled flags, `nodes.*.runtime.dns_services.*.implementation`, DNS
 service roles, DNS zone kinds/purposes/classes, DNS record
 classes/types/provenance, DNS resolver booleans and DNSSEC validation modes,
+network detection-engine implementation/kind fields, parser, rule,
+network-set, output, and control classifications, output booleans, rule counts, and control
+capability fields,
 security-monitoring manager implementation/kind fields, security-monitoring
 listener/component/agent/content/setting classifications, security-monitoring
 booleans and file counts, runtime service listener protocol, address-family,
