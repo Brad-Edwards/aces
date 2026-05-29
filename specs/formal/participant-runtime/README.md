@@ -70,9 +70,10 @@ This design is constrained by the primary sources listed in
   access to private policy internals.
 - PettingZoo and OpenSpiel require per-agent observations, local histories,
   action masks or legal-action surfaces, rewards, termination/truncation,
-  simultaneous or sequential interaction, current-actor/active-agent semantics,
-  chance-node disclosure, mean-field update disclosure, and information-state
-  discipline. ACES therefore separates hidden state, participant-visible
+  simultaneous or sequential interaction, possible/live/active-agent and
+  current-actor semantics, chance-node disclosure, mean-field update disclosure,
+  and information-state discipline. ACES therefore separates hidden state,
+  participant-visible
   observations, action-observation histories, centralized-training state,
   reward/return signals, interaction context, and review evidence.
 - POMDP, Dec-POMDP, POSG, and Markov-game lineage means a participant's
@@ -161,7 +162,7 @@ Enforcement columns mean:
 | PRT-05 | Observable lifecycle phases do not require participant-internal plans, prompts, chain-of-thought, policy state, or workflow steps. | v1 MUST | `LifecycleEnvelope.phase`, `phase_realization`, `admission_disposition`, `operation_ref` | closed lifecycle/realization/disposition enums | `Transition_k`, lifecycle boundary validator | opaque LLM action rejected because no proposal trace exists |
 | PRT-06 | Non-RL cyber, human, script, playbook, and external actions are valid through action contracts and provenance, not action-space membership. | v1 MUST | `action_contract_ref`, `command_ref`, `actor_provenance`, `action_validity_basis_ref` | validity-basis enum and conditional refs | `StepActionValid`, `ActionValidityBasisOK` | human action with no RL action-space ref is rejected despite action contract |
 | PRT-07 | Participant-visible observation, hidden truth, scoring state, centralized-training state, evidence, and information state remain separate. | v1 MUST | `ObservationEnvelope`, `VisibleHistory`, `information_guarantee` | required projection/history refs for stronger guarantees | `KernelOK`, `HistoryConsistent`, `PerfectRecall` | hidden state id enters visible history without projection |
-| PRT-08 | RL/MARL/game claims preserve action/observation spaces, masks, rewards, returns, termination/truncation, active agents, current actor, null cleanup, chance, and mean-field semantics. | v1 MUST when such claims are made | `ParticipantInterface`, `InteractionContextEnvelope`, `StepSignalEnvelope` | conditional refs by `interaction_mode` and `chance_mode` | `InteractionClaimOK`, `ChanceDisclosureOK`, `MeanFieldDisclosureOK` | AEC cleanup null counted as ordinary action-space member |
+| PRT-08 | RL/MARL/game claims preserve action/observation spaces, masks, rewards, returns, termination/truncation, possible/live/active agents, current actor, null cleanup, chance, and mean-field semantics. | v1 MUST when such claims are made | `ParticipantInterface`, `InteractionContextEnvelope`, `StepSignalEnvelope` | conditional refs by `interaction_mode` and `chance_mode` | `InteractionClaimOK`, `AgentSetDisciplineOK`, `ChanceDisclosureOK`, `MeanFieldDisclosureOK` | AEC cleanup null counted as ordinary action-space member; non-acting live agent silently dropped from reward/observation scope |
 | PRT-09 | Shared operational state is addressable, revisioned or digest-pinned, provenance-bearing, and separate from metadata/detail maps. | v1 MUST | `SharedStateRecord`, `SharedStateAccess` | address/kind/revision/digest conditional fields | `RevisionDiscipline`, state-ref validator | shared-state claim stored only in `RuntimeSnapshot.metadata` |
 | PRT-10 | Concurrency and time claims use explicit order, isolation, conflict, clock, lookahead, rollback, and supersession records. | v1 MUST when concurrency/time claims are made | `JointActionRecord`, `TimeManagementContext` | order/isolation/conflict/time enums and conditional refs | `OrderDiscipline`, `ConflictOK`, `TimeManagementOK` | simultaneity inferred from near-equal wall-clock timestamps |
 | PRT-11 | Capability is a component-wise vector; weak adapter, clock, observer, redaction, evidence-store, replay, or benchmark support downgrades the claim. | v1 MUST | `capability_guarantee_vector`, component capability declarations | concern/applicability/strength vocabularies | `CapabilityOK`, meet/satisfaction validator | scalar "supported=true" accepted for exact concurrency claim |
@@ -246,15 +247,27 @@ or downgraded by the declared enforcement point.
   only for the declared action space, visibility projection, and state revision
   context that produced it.
 
+`Possible agent set`
+: The participant addresses that may appear in the interaction surface for the
+  environment, game, or episode scope.
+
+`Live agent set`
+: The participant addresses that are currently live for the interaction scope:
+  they have not been removed, or marked terminated/truncated for claims that
+  depend on live membership. A cleanup turn for a terminated or truncated
+  participant cites its terminal/truncation basis instead of treating the
+  participant as live.
+
 `Active agent set`
-: The participant addresses that may legally choose an action at a game or
-  environment order point. This is the action-eligible set for that order point,
-  not necessarily the full live-agent or possible-agent set. Sequential/AEC
-  surfaces have one current actor; simultaneous and parallel surfaces may have
-  more than one; chance and mean-field nodes have no participant action unless
-  explicitly wrapped by a scenario participant. The full possible-agent set,
-  live-agent membership, and non-acting signal policy must use separate refs or
-  disclosures when a claim depends on them.
+: The participant addresses with an action-admission slot at a game or
+  environment order point. Ordinary non-null action slots must be live. AEC
+  cleanup slots may contain a terminated or truncated participant only for a
+  governed null action. Sequential/AEC surfaces have one current actor;
+  simultaneous and parallel surfaces may have more than one; chance and
+  mean-field nodes have no participant action unless explicitly wrapped by a
+  scenario participant. The full possible-agent set, live-agent membership, and
+  non-acting signal policy must use separate refs or disclosures when a claim
+  depends on them.
 
 `Chance node`
 : A runtime order point where stochastic environment/nature behavior, not a
@@ -341,8 +354,8 @@ Where:
 - `observations[p,e]` is the emitted participant-visible observation stream.
 - `participant_interfaces[p,e,t]` records action/observation spaces and
   legal-action or mask surfaces visible at order point `t`.
-- `interaction_contexts[t]` records active-agent, chance, simultaneous, and
-  mean-field node semantics for game/RL/MARL surfaces.
+- `interaction_contexts[t]` records possible/live/active-agent, chance,
+  simultaneous, and mean-field node semantics for game/RL/MARL surfaces.
 - `step_signals[p,e,t]` records reward, return, termination, truncation,
   action-mask, observation, and auxiliary-info signals when exposed.
 - `action_observation_histories[p,e,t]` is the prefix or lower set of visible
@@ -681,6 +694,7 @@ ParticipantInterface =
   episode_id
   interaction_mode
   possible_agent_set_ref
+  live_agent_set_ref
   active_agent_set_ref
   current_actor_ref
   action_space_ref
@@ -704,6 +718,7 @@ InteractionContextEnvelope =
   interaction_mode
   order_point
   possible_agent_set_ref
+  live_agent_set_ref
   active_agent_set
   current_actor_ref
   simultaneous_group_ref
@@ -792,6 +807,7 @@ StepSignalEnvelope =
   participant_address
   episode_id
   interaction_context_ref
+  live_agent_set_ref
   active_agent_set_ref
   current_actor_ref
   action_ref
@@ -1111,6 +1127,8 @@ effective_capability: C -> CapabilityValue
 authorized: Consumer x BaseEnvelope -> Bool
 interaction_context: K -> InteractionContextEnvelope
 interaction_context_at: T -> Maybe[K]
+possible_agents: K -> Set(P)
+live_agents: K -> Set(P)
 active_agents: K -> Set(P)
 current_actor: K -> Maybe[P]
 transition_basis: K -> Result[ObservationBasis]
@@ -1199,16 +1217,18 @@ Where:
   source product/version, original event id, time, correlation id, or sequence
   field maps to the cited source record.
 - `RawDataIntegrityOK(ev)` is true when raw bytes are not claimed, or when hash,
-  algorithm, size, truncation, and untruncated-size fields are either all
-  consistent with controlled evidence bytes or explicitly null/unknown. A
-  placeholder hash is never evidence for an exact provenance claim.
+  algorithm, size, truncation, and untruncated-size fields are all consistent
+  with controlled evidence bytes. Explicit null or unknown integrity fields
+  can satisfy only no-raw-data, weak, unknown, or unsupported raw-evidence
+  claims; they cannot support exact provenance, replay, or benchmark-evidence
+  claims. A placeholder hash is never evidence for an exact provenance claim.
 - `EvidenceRefIntegrityOK(ev)` is true when every `source_raw_ref` and
-  `evidence_refs` member resolves through `evidence_index` to an immutable evidence
-  record with digest, size, storage/registry location, marking, and redaction
-  policy metadata appropriate for the claim, and when the referenced digest
-  matches the controlled evidence bytes. Reusing a ref for different bytes,
-  citing a digest from another artifact, or citing an unverified placeholder
-  ref cannot support an exact provenance or benchmark claim.
+  `evidence_refs` member resolves through `evidence_index` to an immutable
+  evidence record with digest, size, storage/registry location, marking, and
+  redaction policy metadata appropriate for the claim, and when the referenced
+  digest matches the controlled evidence bytes. Reusing a ref for different
+  bytes, citing a digest from another artifact, or citing an unverified
+  placeholder ref cannot support an exact provenance or benchmark claim.
 - `MarkingOK(ev)` checks that every object marking and granular selector
   resolves to a marking definition, selectors refer to existing fields under
   the schema projection, no marked field is exposed to an unauthorized consumer,
@@ -1420,12 +1440,12 @@ or claim a capability stronger than the effective declared support.
 
 `RecordInteractionContext`
 : Precondition: a step, joint action, observation, reward, terminal signal, or
-  state update makes a claim about turn order, active actors, simultaneous
-  actors, chance, mean-field, terminal-node, or backend-serialized game
-  semantics. Postcondition: an `InteractionContextEnvelope` exists for the
-  order point, `active_agents`, `current_actor`, chance disclosure, and
-  mean-field disclosure satisfy `InteractionClaimOK`, and related step-signal
-  or joint-action records cite the context.
+  state update makes a claim about turn order, possible/live/active agents,
+  simultaneous actors, chance, mean-field, terminal-node, or backend-serialized
+  game semantics. Postcondition: an `InteractionContextEnvelope` exists for the
+  order point; possible/live/active agent sets, `current_actor`, chance
+  disclosure, and mean-field disclosure satisfy `InteractionClaimOK`; and
+  related step-signal or joint-action records cite the context.
 
 `CommitStateUpdate`
 : Precondition: the update has a stable state address, declared state kind,
@@ -1810,19 +1830,24 @@ it preserves the concepts that make RL/MARL results reviewable.
 Rules:
 
 - `InteractionContextEnvelope` is required whenever a step claim depends on
-  turn order, an AEC current actor, simultaneous actors, a chance outcome, a
-  mean-field population update, or backend serialization. Without it, ACES can
-  record observations but cannot claim MARL/game-node semantics.
+  turn order, possible/live/active agent membership, an AEC current actor,
+  simultaneous actors, a chance outcome, a mean-field population update, or
+  backend serialization. Without it, ACES can record observations but cannot
+  claim MARL/game-node semantics.
 - In `SequentialTurn` and `AgentEnvironmentCycle` modes, `current_actor_ref`
-  must be exactly one participant in `active_agent_set`. Non-acting
-  participants may receive observations or reward updates only when the
-  interaction context records the non-acting-agent policy. AEC cleanup turns
-  for terminated or truncated participants may admit only a governed null
+  must be exactly one participant in `active_agent_set`. Ordinary non-null
+  action attempts require that participant to also be in `live_agent_set`.
+  Non-acting live participants may receive observations or reward updates only
+  when the interaction context records the non-acting-agent policy. AEC cleanup
+  turns for terminated or truncated participants may admit only a governed null
   action; that null action is protocol cleanup, not a member of the ordinary
-  action space.
+  action space, and the terminal/truncation record must explain why the
+  participant is not live.
 - In `Parallel` and `Simultaneous` modes, `active_agent_set` is the set of
-  participants whose actions are admitted for that order point. A joint action
-  or step signal must cite the same set or disclose the mismatch.
+  participants whose action slots are admitted for that order point. Ordinary
+  non-null action slots must be a subset of `live_agent_set`; governed cleanup
+  null slots cite their terminal/truncation basis. A joint action or step
+  signal must cite the same set or disclose the mismatch.
 - In `Chance` mode, participant `action_ref` is null unless a scenario
   explicitly models nature as a participant. The record must cite
   `chance_mode`, a distribution or sampled-outcome disclosure,
@@ -1862,8 +1887,8 @@ Rules:
 - Ordinary lifecycle action records that do not claim RL/MARL/game-node
   semantics do not require an `InteractionContextEnvelope`. The context is
   required exactly when the portable claim depends on step interaction,
-  active-agent/current-actor, chance, mean-field, simultaneous, or backend
-  serialization semantics.
+  possible/live/active-agent membership, current-actor, chance, mean-field,
+  simultaneous, or backend serialization semantics.
 - Ordinary lifecycle, cyber-command, human, LLM-tool, playbook, and
   externally supplied actions do not require an RL/game action space. Their
   validity comes from a governed action contract, command/source mapping,
@@ -1876,8 +1901,10 @@ Conformance obligations:
 ```text
 StepInteractionRequired(p,e,t) iff
   any claim at (p,e,t) cites interaction_mode, active_agent_set,
-  current_actor_ref, simultaneous_group_ref, chance fields, mean-field fields,
-  backend-serialized order, or RL/MARL/game-node validity
+  possible_agent_set, live_agent_set, current_actor_ref,
+  simultaneous_group_ref, chance fields, mean-field fields,
+  backend-serialized order, termination/truncation-dependent cleanup, or
+  RL/MARL/game-node validity
 
 StepActionClaim(a,p,e,t) iff
   the action record claims validity relative to an RL/game action space,
@@ -1902,6 +1929,7 @@ ActionValidityBasisOK(a,p,e,t) =
 StepActionValid(p,e,a,t) =>
   exists k = interaction_context_at(t):
     StepActorOK(p,k)
+    /\ AgentSetDisciplineOK(k)
     /\ ActionContextLinkOK(a,k)
     /\ StepActionKindOK(a,p,e,t)
     /\ (NonNullStepAction(a,p,e,t) =>
@@ -1932,7 +1960,8 @@ TerminationClaimOK(p,e,t) =>
   /\ terminal observation, if any, is emitted through the observation boundary
 
 InteractionClaimOK(k) =>
-  (interaction_context(k).interaction_mode = SingleAgent =>
+  AgentSetDisciplineOK(k)
+  /\ (interaction_context(k).interaction_mode = SingleAgent =>
      |active_agents(k)| = 1
      /\ (current_actor(k) = none \/ current_actor(k) in active_agents(k)))
   /\ (interaction_context(k).interaction_mode in
@@ -1948,6 +1977,19 @@ InteractionClaimOK(k) =>
      active_agents(k) = {}
      /\ MeanFieldDisclosureOK(k))
 ```
+
+`AgentSetDisciplineOK(k)` requires `possible_agents(k)`,
+`live_agents(k)`, and `active_agents(k)` to resolve to governed participant
+sets for the same interaction scope. `live_agents(k)` and `active_agents(k)`
+must be subsets of `possible_agents(k)`. An ordinary non-null action slot in
+`active_agents(k)` must also be in `live_agents(k)`. A participant outside
+`live_agents(k)` may appear in `active_agents(k)` only when the order point is
+a governed cleanup slot and `CleanupNullSlotOK(p,k)` cites a matching
+termination or truncation record. Any observation, reward, return, action mask,
+termination, truncation, or auxiliary-info signal for a live non-acting
+participant must either cite the same `live_agent_set_ref` and
+`nonacting_agent_policy_ref`, or disclose why the signal is absent,
+withheld, unknown, or unsupported.
 
 `ActionContextLinkOK(a,k)` requires the action attempt, action mask, reward,
 termination/truncation, and observation records that make a step claim to cite
@@ -1970,6 +2012,12 @@ membership in `ActionSpace(p,e,t)` or as evidence that the participant selected
 an ordinary environment action. If a runtime cannot distinguish a protocol null
 action from an omitted, dropped, withheld, or unsupported action, the step
 validity claim must downgrade.
+
+`CleanupNullSlotOK(p,k)` is true only when the interaction context, null action
+policy, and local termination/truncation record agree that `p` is being stepped
+solely to complete protocol cleanup. It does not make `p` live, does not
+authorize an ordinary action, and does not satisfy legal-action or action-mask
+claims except through the governed null-action policy.
 
 `ActionContractValid`, `CommandMappingValid`, `ExternalTriggerValid`, and
 `HumanOrOpaqueAttemptDisclosed` are mutually non-exclusive validity bases.
@@ -3741,14 +3789,14 @@ baseline/evaluator version, validity-threat disclosure, cost normalization,
 retry/exclusion policy, scaffold exposure, holdout/canary non-exposure evidence,
 and contamination-audit records as applicable.
 
-### I33 - Active-Agent And Chance Discipline
+### I33 - Agent-Set And Chance Discipline
 
 Sequential, AEC, simultaneous, parallel, chance, and mean-field step claims
 require an interaction context. Step participant actions are valid only for the
-recorded active agent set and current actor; ordinary lifecycle actions that do
-not make a game-node claim are outside this interaction-context requirement.
-Chance and mean-field nodes cannot be silently represented as participant
-choices.
+recorded possible/live/active agent sets, current actor, and cleanup-null
+policy; ordinary lifecycle actions that do not make a game-node claim are
+outside this interaction-context requirement. Chance and mean-field nodes cannot
+be silently represented as participant choices.
 
 ### I34 - Benchmark Validity Procedure
 
@@ -4017,6 +4065,7 @@ interaction_context_envelope:
   interaction_mode: agent_environment_cycle
   order_point: order.sim.42.interaction
   possible_agent_set_ref: agents.cyborg.possible
+  live_agent_set_ref: agents.cyborg.live.tick42
   active_agent_set:
     - participants.blue.rl
   current_actor_ref: participants.blue.rl
@@ -4207,6 +4256,7 @@ step_signal_envelope:
   redaction_policy_ref: redaction.blue-step-signal.v1
   authorization_scope: participant:participants.blue.rl
   interaction_context_ref: interaction.cyborg.tick42
+  live_agent_set_ref: agents.cyborg.live.tick42
   active_agent_set_ref: active-agents.cyborg.tick42
   current_actor_ref: participants.blue.rl
   action_ref: actions.blue.isolate_host
@@ -4893,9 +4943,9 @@ Design commitments:
 - RL/MARL step signals are recorded as action/observation space, action-mask,
   reward, return, termination, truncation, and auxiliary-info records when a
   backend exposes them;
-- RL/MARL/game interaction context records preserve active-agent/current-actor,
-  simultaneous, chance-node, and mean-field update semantics when claims depend
-  on them;
+- RL/MARL/game interaction context records preserve possible/live/active-agent,
+  current-actor, simultaneous, chance-node, and mean-field update semantics when
+  claims depend on them;
 - information-state claim strength is explicit for each participant-visible
   observation;
 - opaque participant phases are recorded honestly as unknown or not exposed
@@ -4952,7 +5002,7 @@ Design commitments:
 - state updates commit through participant-local and shared-state records;
 - step signals preserve RL/game-facing rewards, returns, masks,
   termination/truncation, and info without requiring participant internals;
-- AEC/current-actor, simultaneous active-agent, chance, and mean-field node
+- AEC/current-actor, possible/live/active-agent, chance, and mean-field node
   semantics are separate interaction-context records, not inferred from final
   observations or action lists;
 - the lifecycle is separate from episode lifecycle, workflow state, evaluator
@@ -5044,8 +5094,9 @@ Future implementation artifacts:
   attempts;
 - model-checkable or executable state-machine tests for ordering/isolation,
   rollback, and time-management claims;
-- model-checkable or property tests for active-agent/current-actor, chance, and
-  mean-field claim validity where those surfaces are implemented;
+- model-checkable or property tests for possible/live/active-agent,
+  current-actor, chance, and mean-field claim validity where those surfaces are
+  implemented;
 - conformance checks for missing order/revision/conflict/isolation metadata;
 - backend capability evidence for supported concurrency guarantees.
 
@@ -5057,8 +5108,9 @@ families:
 
 - Gymnasium/OpenAI Gym, PettingZoo, and OpenSpiel for action spaces,
   observation spaces, rewards, returns, termination/truncation, action masks,
-  per-agent histories, active-agent/current-actor state, chance nodes,
-  mean-field updates, simultaneous moves, and information-state discipline.
+  per-agent histories, possible/live/active-agent and current-actor state,
+  chance nodes, mean-field updates, simultaneous moves, and information-state
+  discipline.
 - POMDP, Dec-POMDP, POSG, and Markov-game literature for partial observability
   and multi-agent information boundaries.
 - CybORG, CyberBattleSim, CyGIL, CALDERA, ATT&CK, OpenC2, and CACAO for cyber

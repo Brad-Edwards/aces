@@ -42,9 +42,10 @@ The design therefore needs a runtime-observable lifecycle, not a required
 participant-internal loop. The primary lineage reinforces that boundary:
 Gymnasium, PettingZoo, OpenSpiel, CybORG, CyberBattleSim, and CyGIL expose
 actions, observations, rewards or returns, legal-action spaces or masks,
-termination/truncation, episode control, active-agent/current-actor state,
-chance nodes, mean-field updates, and multi-agent interaction without requiring
-access to private agent internals. OpenSpiel's information-state discipline
+termination/truncation, episode control, possible/live/active-agent and
+current-actor state, chance nodes, mean-field updates, and multi-agent
+interaction without requiring access to private agent internals. OpenSpiel's
+information-state discipline
 reinforces that observation, action-observation history, and perfect recall are
 separate claims. Lamport clocks, HLA time management, Time Warp, DEVS, and FMI
 separate timestamp, ordering, causality, pacing, synchronization, lookahead,
@@ -259,9 +260,10 @@ OpenSpiel as the runtime protocol. The runtime envelope may therefore carry:
 
 - action-space and observation-space references;
 - interaction-context records for the order point, including interaction mode,
-  active agent set, current actor for sequential/AEC surfaces, simultaneous
-  actor set for parallel surfaces, chance mode/distribution or sampled outcome,
-  and mean-field population/update references;
+  possible, live, and active agent sets, current actor for sequential/AEC
+  surfaces, simultaneous actor set for parallel surfaces, chance
+  mode/distribution or sampled outcome, and mean-field population/update
+  references;
 - action masks or legal-action references, including the projection and order
   point at which the mask was valid;
 - participant-visible reward and cumulative return records;
@@ -280,21 +282,23 @@ provenance.
 Sequential, AEC, simultaneous, chance, and mean-field claims are not implied by
 the presence of a step signal. When a record makes one of those step/game-node
 claims, it must cite an interaction context; the participant action is valid for
-that claim only when the participant is in the recorded active-agent set and,
-for sequential/AEC surfaces, is the current actor. AEC cleanup turns for
-terminated or truncated participants may admit a governed null action; that
-null action is protocol cleanup, not an ordinary environment action or action
-space member. Ordinary lifecycle action records that make no RL/MARL/game-node
-claim do not require an interaction context. Chance and mean-field nodes are
-environment updates unless a scenario explicitly models them as participants;
-their distribution, sampled outcome, or population update must be recorded or
-the claim must downgrade. Explicit chance distributions are probability
-measures over governed chance outcomes, not over participant observations. A
-chance outcome is a transition cause that may later induce participant-visible
-observations through observation envelopes. Exact chance claims require a
-governed measurable outcome space, transition-effect schema, probability
-measure or distribution family, reference/base measure where needed, parameters
-or sampler audit basis where applicable, participant-visible
+that claim only when the participant is in the recorded active-agent set, and
+ordinary non-null action claims additionally require the participant to be in
+the live-agent set. Sequential/AEC surfaces have one current actor. AEC cleanup
+turns for terminated or truncated participants may admit a governed null action;
+that null action is protocol cleanup, not an ordinary environment action or
+action space member, and it must cite the terminal/truncation basis that
+explains why the actor is no longer live. Ordinary lifecycle action records
+that make no RL/MARL/game-node claim do not require an interaction context.
+Chance and mean-field nodes are environment updates unless a scenario
+explicitly models them as participants; their distribution, sampled outcome, or
+population update must be recorded or the claim must downgrade. Explicit chance
+distributions are probability measures over governed chance outcomes, not over
+participant observations. A chance outcome is a transition cause that may later
+induce participant-visible observations through observation envelopes. Exact
+chance claims require a governed measurable outcome space, transition-effect
+schema, probability measure or distribution family, reference/base measure where
+needed, parameters or sampler audit basis where applicable, participant-visible
 projection/redaction basis when the outcome is disclosed, and
 finite-approximation error bound when an infinite-support distribution is
 summarized. Mean-field claims similarly
