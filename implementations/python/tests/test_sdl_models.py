@@ -82,6 +82,7 @@ from aces.core.sdl.nodes import (
     RuntimeIdentityAuthorityKind,
     RuntimeIdentityAuthorityProtocol,
     RuntimeIdentityProvenance,
+    RuntimeIdentityRecordOrigin,
     RuntimeIdentityRelationshipKind,
     RuntimeIdentitySubjectKind,
     RuntimeLocalGroup,
@@ -846,7 +847,7 @@ class TestNode:
         # any attempt to set it, regardless of credential_classification.
         for field_name in ("credential_value", "credential_hash"):
             for classification in ("strong", "redacted", "no_credential", "${secret_class}"):
-                with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+                with pytest.raises(ValidationError, match=field_name):
                     RuntimeFileServicePrincipal(
                         principal_id="bad",
                         kind="user",
@@ -877,7 +878,7 @@ class TestNode:
             ("owner_group", "root"),
             ("digest_algorithm", "sha256"),
         ):
-            with pytest.raises(ValidationError):
+            with pytest.raises(ValidationError, match=field_name):
                 Node(
                     type="vm",
                     runtime={
@@ -1734,6 +1735,16 @@ class TestRuntimeIdentityAuthorities:
                 values=["not-for-fixtures"],
                 value_classification="plain",
             )
+
+    def test_runtime_identity_attribute_accepts_observation_provenance(self):
+        attr = RuntimeIdentityAttribute(name="misp_role", values=["admin"], provenance="runtime_created")
+
+        assert attr.origin == RuntimeIdentityRecordOrigin.RUNTIME_CREATED
+        assert attr.provenance == RuntimeIdentityRecordOrigin.RUNTIME_CREATED
+
+    def test_runtime_identity_attribute_rejects_conflicting_origin_and_provenance(self):
+        with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+            RuntimeIdentityAttribute(name="misp_role", origin="provisioned", provenance="runtime_created")
 
     def test_runtime_identity_authority_inventory_is_optional(self):
         assert Node(type="vm", runtime={}).runtime.identity_authorities == []
