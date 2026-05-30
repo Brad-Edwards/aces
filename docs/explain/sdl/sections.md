@@ -144,8 +144,8 @@ nodes:
         - name: TECHVAULT_ADMIN_PASSWORD
           value_classification: redacted
           provenance: operator
-        - name: SCENARIO_FIXTURE_TOKEN
-          value: fixture-token
+        - name: SCENARIO_FIXTURE_MARKER
+          value: fixture-marker
           value_classification: secret_fixture
           provenance: compose
       linux_capabilities:
@@ -858,9 +858,10 @@ settings. `listeners` bind SMTP/ESMTP, submission, IMAP/IMAPS, POP3, LMTP,
 Sieve, or other mail protocols to same-node transport services and carry
 advertised capabilities, banners, AUTH mechanisms, and TLS/STARTTLS posture.
 `mailboxes` are service-local runtime records with address, domain/store refs,
-role/status, authentication mechanisms, and credential-strength classification;
-raw passwords and hashes are not representable. `settings` carry provenance and
-source paths, and secret-bearing setting names must omit raw values. Mail
+role/status, authentication mechanisms, and the shared runtime
+credential-strength classification; raw passwords and hashes are not
+representable. `settings` use the shared observed-setting model with provenance
+and source paths, and secret-bearing setting names must omit raw values. Mail
 client, DNS, logging/SIEM, relay, and similar edges stay in top-level
 `relationships`; a typed `mail_access` block records mail protocol/auth/TLS and
 mailbox/domain/listener refs when an edge needs mail-specific semantics (see

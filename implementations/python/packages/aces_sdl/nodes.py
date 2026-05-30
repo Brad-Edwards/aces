@@ -203,6 +203,7 @@ from .runtime_network_sensor import (
     RuntimeNetworkSensorKind,
     RuntimeNetworkSensorMonitoringPosture,
 )
+from .runtime_settings import RuntimeCredentialClassification, RuntimeObservedSetting, RuntimeSettingProvenance
 
 globals().update({name: getattr(_runtime_network_detection, name) for name in _runtime_network_detection.__all__})
 globals().update({name: getattr(_runtime_security_monitoring, name) for name in _runtime_security_monitoring.__all__})
@@ -349,6 +350,8 @@ __all__ = [
     "RuntimeNetworkSensorImplementation",
     "RuntimeNetworkSensorKind",
     "RuntimeNetworkSensorMonitoringPosture",
+    "RuntimeCredentialClassification",
+    "RuntimeObservedSetting",
     "RuntimeOperationalPolicy",
     "RuntimePackage",
     "RuntimePackageVulnerabilityFinding",
@@ -363,6 +366,7 @@ __all__ = [
     "RuntimeServiceListener",
     *_runtime_security_monitoring.__all__,
     "RuntimeSensitivityClassification",
+    "RuntimeSettingProvenance",
     "RuntimeSudoPrincipalKind",
     "RuntimeSudoRule",
     "ServicePort",

@@ -2,6 +2,8 @@
 
 from enum import Enum
 
+from .runtime_settings import RuntimeSettingProvenance
+
 __all__ = [
     "DnsForwarderTransport",
     "DnsForwardingPolicy",
@@ -153,13 +155,4 @@ class DnssecValidationMode(str, Enum):
     OTHER = "other"
 
 
-class DnsSettingProvenance(str, Enum):
-    """Where an observed DNS setting value came from."""
-
-    CONFIGURATION_FILE = "configuration_file"
-    INTROSPECTION = "introspection"
-    IMAGE_DEFAULT = "image_default"
-    OPERATOR_OVERRIDE = "operator_override"
-    RUNTIME_DEFAULT = "runtime_default"
-    UNKNOWN = "unknown"
-    OTHER = "other"
+DnsSettingProvenance = RuntimeSettingProvenance

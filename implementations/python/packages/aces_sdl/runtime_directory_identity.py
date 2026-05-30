@@ -11,8 +11,8 @@ from typing import Any
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
-from ._base import SDLModel, is_variable_ref, parse_int_or_var
-from .runtime_filesystem import RuntimeSensitivityClassification
+from ._base import SDLModel, parse_int_or_var
+from .runtime_settings import RuntimeObservedSetting
 from .runtime_values import coerce_string_list, parse_optional_bool_or_var, parse_runtime_enum_or_var, require_symbol
 
 __all__ = [
@@ -29,28 +29,6 @@ __all__ = [
     "RuntimeIdentitySubject",
     "RuntimeIdentitySubjectKind",
 ]
-
-_SECRET_NAME_TOKENS = (
-    "password",  # noqa: S105
-    "passwd",
-    "pwd",
-    "secret",  # noqa: S105
-    "credential",
-    "credentials",
-    "keytab",
-    "krbprincipalkey",
-    "supplementalcredentials",
-    "private_key",
-    "privatekey",
-    "token",
-    "client_secret",  # noqa: S105
-    "clientsecret",
-    "access_token",  # noqa: S105
-    "refresh_token",  # noqa: S105
-)
-_REDACTED_SENSITIVITIES = frozenset(
-    {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
-)
 
 
 class RuntimeIdentityAuthorityKind(str, Enum):
@@ -138,11 +116,6 @@ class RuntimeIdentityRecordOrigin(str, Enum):
     OTHER = "other"
 
 
-def _name_indicates_secret(name: str) -> bool:
-    lowered = name.lower().replace("-", "_")
-    return any(token in lowered for token in _SECRET_NAME_TOKENS)
-
-
 def _require_non_empty(value: str, *, field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} must be a non-empty string")
@@ -177,73 +150,7 @@ def _reject_duplicate_local_ref_ids(authority: "RuntimeIdentityAuthority") -> No
         seen[value] = label
 
 
-class RuntimeIdentityAttribute(SDLModel):
-    """Observed identity attribute or bounded setting.
-
-    Secret-bearing names must not carry raw values. This keeps directory
-    passwords, Kerberos keys, keytabs, tokens, and client secrets out of
-    fixtures, diagnostics, schemas, and generated runtime artifacts.
-    """
-
-    name: str
-    values: list[str] = Field(default_factory=list)
-    value_classification: RuntimeSensitivityClassification | str = RuntimeSensitivityClassification.UNKNOWN
-    origin: RuntimeIdentityRecordOrigin | str = RuntimeIdentityRecordOrigin.UNKNOWN
-    description: str = ""
-
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="identity attribute name")
-
-    @field_validator("values", mode="before")
-    @classmethod
-    def coerce_values(cls, v: Any) -> list[str]:
-        return coerce_string_list(v)
-
-    @field_validator("values")
-    @classmethod
-    def validate_values(cls, v: list[str]) -> list[str]:
-        for value in v:
-            if not isinstance(value, str) or not value.strip():
-                raise ValueError("identity attribute values must be non-empty strings")
-        if len(v) != len(set(v)):
-            raise ValueError("Duplicate runtime identity attribute value")
-        return v
-
-    @field_validator("value_classification", mode="before")
-    @classmethod
-    def normalize_value_classification(
-        cls,
-        v: RuntimeSensitivityClassification | str,
-    ) -> RuntimeSensitivityClassification | str:
-        return parse_runtime_enum_or_var(v, RuntimeSensitivityClassification, field_name="value_classification")
-
-    @field_validator("origin", mode="before")
-    @classmethod
-    def normalize_origin(cls, v: RuntimeIdentityRecordOrigin | str) -> RuntimeIdentityRecordOrigin | str:
-        return parse_runtime_enum_or_var(v, RuntimeIdentityRecordOrigin, field_name="origin")
-
-    @model_validator(mode="after")
-    def validate_redacted_values(self) -> "RuntimeIdentityAttribute":
-        if _name_indicates_secret(self.name):
-            self._enforce_secret_name_redaction()
-        elif self.values and self.value_classification in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"identity attribute '{self.name}' classified '{self.value_classification}' must omit raw values"
-            )
-        return self
-
-    def _enforce_secret_name_redaction(self) -> None:
-        if self.values:
-            raise ValueError(f"identity attribute '{self.name}' carries a secret-bearing name and must omit raw values")
-        if is_variable_ref(self.value_classification):
-            return
-        if self.value_classification not in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"identity attribute '{self.name}' carries a secret-bearing name; "
-                f"value_classification must be 'redacted' or 'operator_secret'"
-            )
+RuntimeIdentityAttribute = RuntimeObservedSetting
 
 
 class RuntimeIdentityAuthorityService(SDLModel):

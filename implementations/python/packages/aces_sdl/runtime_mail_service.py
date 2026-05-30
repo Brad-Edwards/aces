@@ -13,7 +13,6 @@ from typing import Any
 from pydantic import Field, field_validator, model_validator
 
 from ._base import SDLModel, is_variable_ref, parse_int_or_var
-from .runtime_filesystem import RuntimeSensitivityClassification
 from .runtime_mail_vocab import (
     RuntimeMailAuthMechanism,
     RuntimeMailComponentKind,
@@ -30,6 +29,7 @@ from .runtime_mail_vocab import (
     RuntimeMailSettingProvenance,
     RuntimeMailTlsMode,
 )
+from .runtime_settings import RuntimeObservedSetting
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
@@ -66,22 +66,6 @@ __all__ = [
 ]
 
 _EMAIL_ADDRESS = re.compile(r"^[^@\s]+@[^@\s]+$")
-_REDACTED_SENSITIVITIES = frozenset(
-    {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
-)
-_SECRET_NAME_TOKENS: tuple[str, ...] = (
-    "pass" + "word",
-    "passwd",
-    "passphrase",
-    "sec" + "ret",
-    "credential",
-    "token",
-    "private_key",
-    "privatekey",
-    "keytab",
-    "sasl_passwd",
-    "sasl_password",
-)
 
 
 def _require_non_empty(value: str, *, field_name: str) -> str:
@@ -106,15 +90,6 @@ def _domain_name_or_var(value: str, *, field_name: str) -> str:
     if any(ch.isspace() for ch in value):
         raise ValueError(f"{field_name} must not contain whitespace")
     return value
-
-
-def _name_indicates_secret(name: str) -> bool:
-    lowered = name.lower()
-    return any(token in lowered for token in _SECRET_NAME_TOKENS)
-
-
-def _setting_name_is_concrete_secret(name: object) -> bool:
-    return isinstance(name, str) and not is_variable_ref(name) and _name_indicates_secret(name)
 
 
 def _reject_duplicates(values: list[str], *, label: str, container_label: str) -> None:
@@ -426,69 +401,7 @@ class RuntimeMailQueue(SDLModel):
         return parse_runtime_enum_or_var(v, RuntimeMailQueueStability, field_name="stability")
 
 
-class RuntimeMailSetting(SDLModel):
-    """A mail-service runtime setting with source/provenance and redaction."""
-
-    setting_id: str
-    component_ref: str = ""
-    name: str
-    value: str = ""
-    value_classification: RuntimeSensitivityClassification | str = RuntimeSensitivityClassification.UNKNOWN
-    provenance: RuntimeMailSettingProvenance | str = RuntimeMailSettingProvenance.UNKNOWN
-    source_path: str = ""
-    description: str = ""
-
-    @field_validator("setting_id")
-    @classmethod
-    def validate_setting_id(cls, v: str) -> str:
-        return require_symbol(v, field_name="setting_id")
-
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="setting name")
-
-    @field_validator("value_classification", mode="before")
-    @classmethod
-    def normalize_value_classification(
-        cls,
-        v: RuntimeSensitivityClassification | str,
-    ) -> RuntimeSensitivityClassification | str:
-        return parse_runtime_enum_or_var(v, RuntimeSensitivityClassification, field_name="value_classification")
-
-    @field_validator("provenance", mode="before")
-    @classmethod
-    def normalize_provenance(cls, v: RuntimeMailSettingProvenance | str) -> RuntimeMailSettingProvenance | str:
-        return parse_runtime_enum_or_var(v, RuntimeMailSettingProvenance, field_name="provenance")
-
-    @field_validator("source_path")
-    @classmethod
-    def validate_source_path(cls, v: str) -> str:
-        if not v:
-            return v
-        return absolute_path_or_var(v, field_name="source_path")
-
-    @model_validator(mode="after")
-    def validate_redacted_value(self) -> "RuntimeMailSetting":
-        if _setting_name_is_concrete_secret(self.name):
-            self._enforce_secret_name_redaction()
-        elif self.value and self.value_classification in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"mail setting '{self.name}' classified '{self.value_classification}' must omit its raw value"
-            )
-        return self
-
-    def _enforce_secret_name_redaction(self) -> None:
-        if self.value:
-            raise ValueError(
-                f"mail setting '{self.name}' carries a secret-bearing name and must omit its raw value "
-                f"(value_classification must be 'redacted' or 'operator_secret')"
-            )
-        if not is_variable_ref(self.value_classification) and self.value_classification not in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"mail setting '{self.name}' carries a secret-bearing name; "
-                f"value_classification must be 'redacted' or 'operator_secret'"
-            )
+RuntimeMailSetting = RuntimeObservedSetting
 
 
 class RuntimeMailService(SDLModel):

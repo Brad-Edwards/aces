@@ -167,6 +167,7 @@ from .runtime_service_units import (
     ServiceUnitLoadState,
     ServiceUnitResult,
 )
+from .runtime_settings import RuntimeCredentialClassification, RuntimeObservedSetting, RuntimeSettingProvenance
 from .runtime_software import (
     RuntimeSoftwareComponent,
     RuntimeSoftwareComponentHash,
@@ -226,6 +227,7 @@ __all__ = [
     "RuntimeControlInterface",
     "RuntimeControlInterfaceAccess",
     "RuntimeControlInterfaceKind",
+    "RuntimeCredentialClassification",
     "RuntimeDependencyManifest",
     "RuntimeDeviceMapping",
     "RuntimeDnsService",
@@ -307,6 +309,7 @@ __all__ = [
     "RuntimeNetworkIdStability",
     "RuntimeNetworkRealization",
     "RuntimeNetworkSensor",
+    "RuntimeObservedSetting",
     "RuntimeOperationalPolicy",
     "RuntimePackage",
     "RuntimePackageVulnerabilityFinding",
@@ -320,6 +323,7 @@ __all__ = [
     "RuntimeServiceListener",
     "RuntimeSecurityMonitoringManager",
     "RuntimeSensitivityClassification",
+    "RuntimeSettingProvenance",
     "RuntimeSoftwareComponent",
     "RuntimeSoftwareComponentHash",
     "RuntimeSoftwareComponentProvenance",
@@ -355,25 +359,8 @@ class RuntimePackageVulnerabilitySeverity(str, Enum):
     CRITICAL = "critical"
 
 
-class RuntimeEnvironmentValueClassification(str, Enum):
-    """Sensitivity classification for an observed runtime environment value."""
-
-    PLAIN = "plain"
-    REDACTED = "redacted"
-    SECRET_FIXTURE = "secret_fixture"  # noqa: S105
-    UNKNOWN = "unknown"
-
-
-class RuntimeEnvironmentVariableProvenance(str, Enum):
-    """Origin class for an observed runtime environment variable."""
-
-    COMPOSE = "compose"
-    IMAGE = "image"
-    OPERATOR = "operator"
-    CONTAINER = "container"
-    RUNTIME = "runtime"
-    OTHER = "other"
-    UNKNOWN = "unknown"
+RuntimeEnvironmentValueClassification = RuntimeSensitivityClassification
+RuntimeEnvironmentVariableProvenance = RuntimeSettingProvenance
 
 
 class RuntimeRestartPolicy(str, Enum):
@@ -387,50 +374,7 @@ class RuntimeRestartPolicy(str, Enum):
     OTHER = "other"
 
 
-class RuntimeEnvironmentVariable(SDLModel):
-    """Observed runtime environment variable with provenance and sensitivity."""
-
-    name: str
-    value: str = ""
-    value_classification: RuntimeEnvironmentValueClassification | str = RuntimeEnvironmentValueClassification.UNKNOWN
-    provenance: RuntimeEnvironmentVariableProvenance | str = RuntimeEnvironmentVariableProvenance.UNKNOWN
-    source: str = ""
-    description: str = ""
-
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, v: str) -> str:
-        if not isinstance(v, str) or not v.strip():
-            raise ValueError("environment variable name must be a non-empty string")
-        if "=" in v:
-            raise ValueError("environment variable name must not contain '='")
-        return v
-
-    @field_validator("value_classification", mode="before")
-    @classmethod
-    def normalize_value_classification(
-        cls,
-        v: RuntimeEnvironmentValueClassification | str,
-    ) -> RuntimeEnvironmentValueClassification | str:
-        return _parse_runtime_enum_or_var(
-            v,
-            RuntimeEnvironmentValueClassification,
-            field_name="value_classification",
-        )
-
-    @field_validator("provenance", mode="before")
-    @classmethod
-    def normalize_provenance(
-        cls,
-        v: RuntimeEnvironmentVariableProvenance | str,
-    ) -> RuntimeEnvironmentVariableProvenance | str:
-        return _parse_runtime_enum_or_var(v, RuntimeEnvironmentVariableProvenance, field_name="provenance")
-
-    @model_validator(mode="after")
-    def validate_redacted_value(self) -> "RuntimeEnvironmentVariable":
-        if self.value_classification == RuntimeEnvironmentValueClassification.REDACTED and self.value:
-            raise ValueError("redacted runtime environment variables must omit value")
-        return self
+RuntimeEnvironmentVariable = RuntimeObservedSetting
 
 
 class RuntimeResourceLimits(SDLModel):

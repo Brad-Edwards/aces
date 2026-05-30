@@ -1,13 +1,11 @@
 """Security-monitoring manager runtime inventory models."""
 
-import re
 from enum import Enum
 from typing import Any
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
-from ._base import SDLModel, is_variable_ref, parse_int_or_var
-from .runtime_filesystem import RuntimeSensitivityClassification
+from ._base import SDLModel, parse_int_or_var
 from .runtime_security_monitoring_definitions import (
     RuntimeSecurityMonitoringDetectionDefinition,
     RuntimeSecurityMonitoringDetectionDefinitionKind,
@@ -15,6 +13,7 @@ from .runtime_security_monitoring_definitions import (
     RuntimeSecurityMonitoringFieldPredicate,
     RuntimeSecurityMonitoringFieldPredicateOperator,
 )
+from .runtime_settings import RuntimeObservedSetting, RuntimeSettingProvenance
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
@@ -46,28 +45,6 @@ __all__ = [
     "RuntimeSecurityMonitoringSetting",
     "RuntimeSecurityMonitoringSettingProvenance",
 ]
-
-_REDACTED_SENSITIVITIES = frozenset(
-    {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
-)
-_SECRET_NAME_TOKENS = (
-    "pass" + "word",
-    "passwd",
-    "passphrase",
-    "sec" + "ret",
-    "credential",
-    "token",
-    "api_key",
-    "shared_key",
-    "enrollment_key",
-    "client_key",
-    "access_key",
-    "auth_key",
-    "private_key",
-    "privatekey",
-    "keytab",
-    "authd.pass",
-)
 
 
 class RuntimeSecurityMonitoringImplementation(str, Enum):
@@ -188,17 +165,7 @@ class RuntimeSecurityMonitoringContentFormat(str, Enum):
     OTHER = "other"
 
 
-class RuntimeSecurityMonitoringSettingProvenance(str, Enum):
-    """Where an observed manager setting came from."""
-
-    INTROSPECTION = "introspection"
-    CONFIGURATION_FILE = "configuration_file"
-    API = "api"
-    IMAGE_DEFAULT = "image_default"
-    OPERATOR_OVERRIDE = "operator_override"
-    RUNTIME_DEFAULT = "runtime_default"
-    UNKNOWN = "unknown"
-    OTHER = "other"
+RuntimeSecurityMonitoringSettingProvenance = RuntimeSettingProvenance
 
 
 def _require_non_empty(value: str, *, field_name: str) -> str:
@@ -217,16 +184,6 @@ def _coerce_refs(value: Any) -> list[str]:
 
 def _absolute_refs(values: list[str], *, field_name: str) -> list[str]:
     return [absolute_path_or_var(item, field_name=field_name) for item in values]
-
-
-def _name_indicates_secret(name: str) -> bool:
-    lowered = name.lower()
-    if any(token in lowered for token in _SECRET_NAME_TOKENS):
-        return True
-    parts = frozenset(part for part in re.split(r"[^a-z0-9]+", lowered) if part)
-    if parts & {"token", "credential"}:
-        return True
-    return "key" in parts and bool(parts & {"access", "api", "auth", "client", "enrollment", "private", "shared"})
 
 
 class RuntimeSecurityMonitoringListener(SDLModel):
@@ -418,72 +375,7 @@ class RuntimeSecurityMonitoringContentSet(SDLModel):
         return parse_optional_bool_or_var(v, field_name="loaded")
 
 
-class RuntimeSecurityMonitoringSetting(SDLModel):
-    """A bounded manager setting with sensitivity classification."""
-
-    setting_id: str
-    component_ref: str = ""
-    name: str
-    value: str = ""
-    value_classification: RuntimeSensitivityClassification | str = RuntimeSensitivityClassification.UNKNOWN
-    provenance: RuntimeSecurityMonitoringSettingProvenance | str = RuntimeSecurityMonitoringSettingProvenance.UNKNOWN
-    source_path: str = ""
-    description: str = ""
-
-    @field_validator("setting_id")
-    @classmethod
-    def validate_setting_id(cls, v: str) -> str:
-        return require_symbol(v, field_name="setting_id")
-
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="setting name")
-
-    @field_validator("value_classification", mode="before")
-    @classmethod
-    def normalize_value_classification(
-        cls,
-        v: RuntimeSensitivityClassification | str,
-    ) -> RuntimeSensitivityClassification | str:
-        return _normalize_enum(v, RuntimeSensitivityClassification, field_name="value_classification")
-
-    @field_validator("provenance", mode="before")
-    @classmethod
-    def normalize_provenance(
-        cls,
-        v: RuntimeSecurityMonitoringSettingProvenance | str,
-    ) -> RuntimeSecurityMonitoringSettingProvenance | str:
-        return _normalize_enum(v, RuntimeSecurityMonitoringSettingProvenance, field_name="provenance")
-
-    @field_validator("source_path")
-    @classmethod
-    def validate_source_path(cls, v: str) -> str:
-        return absolute_path_or_var(v, field_name="source_path") if v else v
-
-    @model_validator(mode="after")
-    def validate_redacted_value(self) -> "RuntimeSecurityMonitoringSetting":
-        if _name_indicates_secret(self.name):
-            self._enforce_secret_name_redaction()
-        elif self.value and self.value_classification in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"security-monitoring setting '{self.name}' classified "
-                f"'{self.value_classification}' must omit its raw value"
-            )
-        return self
-
-    def _enforce_secret_name_redaction(self) -> None:
-        if self.value:
-            raise ValueError(
-                f"security-monitoring setting '{self.name}' carries a secret-bearing name and must omit its raw value"
-            )
-        if is_variable_ref(self.value_classification):
-            return
-        if self.value_classification not in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"security-monitoring setting '{self.name}' carries a secret-bearing name; "
-                f"value_classification must be 'redacted' or 'operator_secret'"
-            )
+RuntimeSecurityMonitoringSetting = RuntimeObservedSetting
 
 
 class RuntimeSecurityMonitoringManager(SDLModel):

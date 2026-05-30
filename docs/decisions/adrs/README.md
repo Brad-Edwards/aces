@@ -31,6 +31,7 @@ adr-042-network-sensor-runtime-monitoring
 adr-043-runtime-service-listener-surface
 adr-044-network-detection-engine-runtime-inventory
 adr-045-security-monitoring-detection-definition-semantics
+adr-046-unified-runtime-setting-vocabulary
 ```
 
 | ADR | Title | Status | Date |
@@ -81,3 +82,4 @@ adr-045-security-monitoring-detection-definition-semantics
 | [043](adr-043-runtime-service-listener-surface.md) | Generic Runtime Service Listener Surface | accepted | 2026-05-29 |
 | [044](adr-044-network-detection-engine-runtime-inventory.md) | Network Detection Engine Runtime Inventory | accepted | 2026-05-29 |
 | [045](adr-045-security-monitoring-detection-definition-semantics.md) | Security-Monitoring Detection Definition Semantics | accepted | 2026-05-29 |
+| [046](adr-046-unified-runtime-setting-vocabulary.md) | Unified Runtime Setting Vocabulary | accepted | 2026-05-30 |

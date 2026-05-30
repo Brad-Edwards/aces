@@ -13,7 +13,6 @@ than the portable SDL model.
 """
 
 import ipaddress
-import re
 from collections.abc import Iterable
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
@@ -42,7 +41,7 @@ from .runtime_dns_vocab import (
     DnsZoneKind,
     DnsZonePurpose,
 )
-from .runtime_filesystem import RuntimeSensitivityClassification
+from .runtime_settings import RuntimeObservedSetting
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
@@ -76,30 +75,6 @@ __all__ = [
     "DnsServerImplementation",
     "DnsServiceRole",
 ]
-
-_REDACTED_SENSITIVITIES = frozenset(
-    {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
-)
-
-_SECRET_NAME_TOKENS = (
-    "sec" + "ret",
-    "pass" + "word",
-    "passwd",
-    "token",
-    "tsig",
-    "hmac",
-    "privatekey",
-    "keyfile",
-)
-_SECRET_NAME_PARTS = frozenset({"key"})
-
-
-def _name_indicates_secret(name: str) -> bool:
-    lowered = name.lower()
-    if any(token in lowered for token in _SECRET_NAME_TOKENS):
-        return True
-    parts = frozenset(part for part in re.split(r"[^a-z0-9]+", lowered) if part)
-    return bool(parts & _SECRET_NAME_PARTS)
 
 
 def _policy_selector_or_var(value: str, *, field_name: str) -> str:
@@ -252,53 +227,7 @@ class DnsDynamicUpdatePolicy(SDLModel):
         return v
 
 
-class DnsRuntimeSetting(SDLModel):
-    """Bounded DNS runtime setting with provenance and redaction."""
-
-    name: str
-    value: str = ""
-    value_classification: RuntimeSensitivityClassification | str = RuntimeSensitivityClassification.UNKNOWN
-    provenance: DnsSettingProvenance | str = DnsSettingProvenance.UNKNOWN
-    description: str = ""
-
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="DNS setting name")
-
-    @field_validator("value_classification", mode="before")
-    @classmethod
-    def normalize_value_classification(
-        cls,
-        v: RuntimeSensitivityClassification | str,
-    ) -> RuntimeSensitivityClassification | str:
-        return parse_runtime_enum_or_var(v, RuntimeSensitivityClassification, field_name="value_classification")
-
-    @field_validator("provenance", mode="before")
-    @classmethod
-    def normalize_provenance(cls, v: DnsSettingProvenance | str) -> DnsSettingProvenance | str:
-        return parse_runtime_enum_or_var(v, DnsSettingProvenance, field_name="provenance")
-
-    @model_validator(mode="after")
-    def validate_redacted_value(self) -> "DnsRuntimeSetting":
-        if _name_indicates_secret(self.name):
-            self._enforce_secret_name_redaction()
-        elif self.value and self.value_classification in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"DNS setting '{self.name}' classified '{self.value_classification}' must omit its raw value"
-            )
-        return self
-
-    def _enforce_secret_name_redaction(self) -> None:
-        if self.value:
-            raise ValueError(f"DNS setting '{self.name}' carries a secret-bearing name and must omit its raw value")
-        if is_variable_ref(self.value_classification):
-            return
-        if self.value_classification not in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"DNS setting '{self.name}' carries a secret-bearing name; "
-                f"value_classification must be 'redacted' or 'operator_secret'"
-            )
+DnsRuntimeSetting = RuntimeObservedSetting
 
 
 class DnsZone(SDLModel):

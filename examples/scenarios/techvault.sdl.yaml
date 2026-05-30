@@ -316,7 +316,7 @@ nodes:
         - name: TECHVAULT_ADMIN_PASSWORD
           value_classification: redacted
           provenance: operator
-        - name: SCENARIO_FIXTURE_TOKEN
+        - name: SCENARIO_FIXTURE_MARKER
           value_classification: secret_fixture
           provenance: compose
       linux_capabilities:

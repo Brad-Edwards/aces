@@ -211,13 +211,60 @@ ruleset ids, rule ids, decoder names, agent labels, and API ids are preserved
 as observed data or evidence when needed, but they are not automatically ACES
 reference identity. Secret-bearing manager settings such as passwords,
 enrollment secrets, API tokens, shared keys, keytabs, or private keys must be
-redacted or operator-secret classified and must omit raw values.
+redacted, operator-secret, or explicit fixture classified and must omit raw
+values.
 
 The resulting model follows the same V&V posture as the DNS, mail, database,
 file-service, and identity-authority surfaces: state which manager concepts
 are stable enough to compare, target, and validate; keep vendor-specific
 configuration, telemetry, rule-engine execution, and raw rule syntax as
 evidence or downstream translation concerns.
+
+## Shared Observed Runtime Settings
+
+The observed setting vocabulary is issue #440's consolidation of a cross-cutting
+runtime concept that emerged independently in environment, database, DNS, mail,
+security-monitoring, and directory-identity inventories. It is not a new
+service-family surface. It is the common ACES model for "this runtime setting
+name had this observed value shape, provenance, and sensitivity posture".
+
+ACES relies on prior work in four ways:
+
+- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+  all keep deployment or runtime configuration facts close to the services they
+  configure, but they do not define one portable setting/provenance/redaction
+  model across service families. ACES keeps service-local ownership while using
+  one shared observed-setting type under the owning runtime inventory.
+- **Evidence and telemetry precedents:** OCSF's attribute-dictionary discipline
+  and SBOM provenance practice support keeping observed facts typed and
+  provenance-bearing without importing raw scanner output or vendor config as
+  the SDL model.
+- **Security modeling precedents:** secret-bearing identifiers, key material,
+  tokens, connection strings, and credential references are modeled as
+  redaction policy inputs. The setting name participates in validation because
+  an author's missing classification must not be enough to leak a password or
+  private key into a portable SDL artifact.
+- **V&V posture:** Russo/Costa/Armando, Swiler, Oberkampf/Roy, and Sargent all
+  reinforce that a model must state which facts are comparable. ACES therefore
+  has one setting provenance taxonomy, one value-sensitivity taxonomy, one
+  credential-strength taxonomy, and one secret-name policy rather than
+  family-specific variants that would make comparison accidental.
+
+`RuntimeObservedSetting` preserves scalar settings, multi-valued identity
+settings, optional component refs, stable setting ids, source paths, source
+labels, and descriptions. `RuntimeSettingProvenance` preserves every prior
+family distinction, including mail `command_output` and `environment`,
+security-monitoring `api`, environment `compose`/`image`/`container`/`runtime`,
+and identity `origin` values. Credential strength stays separate from value
+sensitivity through `RuntimeCredentialClassification`.
+
+Secret-bearing setting names such as passwords, passphrases, credentials,
+tokens, connection info, private-key labels, keytab labels, DNS signing labels,
+client secrets, access tokens, refresh tokens, and Kerberos key attributes must
+omit raw values under every runtime family. Fixture-only settings may use
+`secret_fixture`, but that classification does not permit raw values when the
+setting name itself is secret-bearing. See
+[ADR-046](../../decisions/adrs/adr-046-unified-runtime-setting-vocabulary.md).
 
 ## Generic Runtime Service Listener Semantics
 

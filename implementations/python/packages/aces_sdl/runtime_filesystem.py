@@ -6,6 +6,7 @@ from enum import Enum
 from pydantic import ValidationInfo, field_validator, model_validator
 
 from ._base import SDLModel, is_variable_ref, parse_int_or_var
+from .runtime_settings import RuntimeSensitivityClassification
 from .runtime_values import absolute_path_or_var, parse_runtime_enum_or_var
 
 
@@ -63,16 +64,6 @@ class RuntimeFilesystemStability(str, Enum):
     TRANSIENT = "transient"
     UNKNOWN = "unknown"
     OTHER = "other"
-
-
-class RuntimeSensitivityClassification(str, Enum):
-    """Sensitivity/redaction class for observed runtime facts."""
-
-    PLAIN = "plain"
-    REDACTED = "redacted"
-    SECRET_FIXTURE = "secret_fixture"  # noqa: S105
-    OPERATOR_SECRET = "operator_secret"  # noqa: S105
-    UNKNOWN = "unknown"
 
 
 _REDACTED_LABEL_PATTERN = r"^[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]$"

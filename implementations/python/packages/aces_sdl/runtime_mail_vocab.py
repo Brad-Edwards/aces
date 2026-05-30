@@ -2,6 +2,8 @@
 
 from enum import Enum
 
+from .runtime_settings import RuntimeCredentialClassification, RuntimeSettingProvenance
+
 __all__ = [
     "RuntimeMailAuthMechanism",
     "RuntimeMailComponentKind",
@@ -142,17 +144,7 @@ class RuntimeMailMailboxStatus(str, Enum):
     OTHER = "other"
 
 
-class RuntimeMailCredentialClassification(str, Enum):
-    """Semantic classification of a mailbox credential, never its raw value."""
-
-    NO_CREDENTIAL = "no_credential"
-    WEAK = "weak"
-    DEFAULT_OR_TRIVIAL = "default_or_trivial"
-    FIXTURE = "fixture"
-    STRONG = "strong"
-    REDACTED = "redacted"
-    UNKNOWN = "unknown"
-    OTHER = "other"
+RuntimeMailCredentialClassification = RuntimeCredentialClassification
 
 
 class RuntimeMailRoutingKind(str, Enum):
@@ -193,14 +185,4 @@ class RuntimeMailQueueStability(str, Enum):
     OTHER = "other"
 
 
-class RuntimeMailSettingProvenance(str, Enum):
-    """Origin/provenance class for a mail-service configuration setting."""
-
-    CONFIGURATION_FILE = "configuration_file"
-    COMMAND_OUTPUT = "command_output"
-    IMAGE_DEFAULT = "image_default"
-    OPERATOR_OVERRIDE = "operator_override"
-    RUNTIME_DEFAULT = "runtime_default"
-    ENVIRONMENT = "environment"
-    UNKNOWN = "unknown"
-    OTHER = "other"
+RuntimeMailSettingProvenance = RuntimeSettingProvenance

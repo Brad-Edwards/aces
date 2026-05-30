@@ -25,6 +25,7 @@ from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from ._base import SDLModel
 from .runtime_filesystem import RuntimeSensitivityClassification
+from .runtime_settings import RuntimeCredentialClassification
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
@@ -111,24 +112,7 @@ class RuntimeFileServicePrincipalOrigin(str, Enum):
     OTHER = "other"
 
 
-class RuntimeFileServiceCredentialClassification(str, Enum):
-    """Semantic classification of a service-local credential.
-
-    The raw credential value MUST NOT be recorded; the principal model
-    has no field that can hold one. This vocabulary is the only credential
-    representation in the file-service surface — it describes the
-    strength/posture of the credential as observed (or its absence) so
-    downstream consumers can reason about exposure without leaking secret
-    material into fixtures, schemas, diagnostics, or logs.
-    """
-
-    NO_CREDENTIAL = "no_credential"
-    WEAK = "weak"
-    DEFAULT_OR_TRIVIAL = "default_or_trivial"
-    STRONG = "strong"
-    REDACTED = "redacted"
-    UNKNOWN = "unknown"
-    OTHER = "other"
+RuntimeFileServiceCredentialClassification = RuntimeCredentialClassification
 
 
 class RuntimeFileServiceAccessAction(str, Enum):

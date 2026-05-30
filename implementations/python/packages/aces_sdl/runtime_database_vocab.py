@@ -8,6 +8,8 @@ that file under the repo-policy 600-line source-file cap (ADR-015), the same
 
 from enum import Enum
 
+from .runtime_settings import RuntimeSettingProvenance
+
 __all__ = [
     "DatabaseAuthMethod",
     "DatabaseEngine",
@@ -74,16 +76,7 @@ class DatabaseRoleType(str, Enum):
     OTHER = "other"
 
 
-class DatabaseSettingProvenance(str, Enum):
-    """Where an observed database runtime setting value came from."""
-
-    INTROSPECTION = "introspection"
-    CONFIGURATION_FILE = "configuration_file"
-    IMAGE_DEFAULT = "image_default"
-    OPERATOR_OVERRIDE = "operator_override"
-    RUNTIME_DEFAULT = "runtime_default"
-    UNKNOWN = "unknown"
-    OTHER = "other"
+DatabaseSettingProvenance = RuntimeSettingProvenance
 
 
 class DatabaseObjectType(str, Enum):

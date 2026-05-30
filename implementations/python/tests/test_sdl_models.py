@@ -239,6 +239,10 @@ class TestContainerImageBuildProvenance:
         with pytest.raises(ValidationError, match="redacted build arguments must omit value"):
             ImageBuildArg(name="SECRET", value="leaked", value_classification="redacted")
 
+    def test_build_arg_operator_secret_value_must_be_omitted(self):
+        with pytest.raises(ValidationError, match="redacted build arguments must omit value"):
+            ImageBuildArg(name="SECRET", value="leaked", value_classification="operator_secret")
+
     def test_build_arg_rejects_name_with_equals(self):
         with pytest.raises(ValidationError, match="must not contain '='"):
             ImageBuildArg(name="A=B")
@@ -246,6 +250,10 @@ class TestContainerImageBuildProvenance:
     def test_image_environment_default_redacted_value_must_be_omitted(self):
         with pytest.raises(ValidationError, match="redacted image environment variables must omit value"):
             ImageEnvironmentDefault(name="TOKEN", value="leaked", value_classification="redacted")
+
+    def test_image_environment_default_operator_secret_value_must_be_omitted(self):
+        with pytest.raises(ValidationError, match="redacted image environment variables must omit value"):
+            ImageEnvironmentDefault(name="TOKEN", value="leaked", value_classification="operator_secret")
 
     def test_copied_source_destination_must_be_absolute(self):
         with pytest.raises(ValidationError, match="destination_path must be an absolute path"):
@@ -585,8 +593,8 @@ class TestNode:
                         "provenance": "operator",
                     },
                     {
-                        "name": "SCENARIO_FIXTURE_TOKEN",
-                        "value": "fixture-token",
+                        "name": "SCENARIO_FIXTURE_MARKER",
+                        "value": "fixture-marker",
                         "value_classification": "secret_fixture",
                         "provenance": "compose",
                     },
@@ -804,7 +812,7 @@ class TestNode:
         assert service.access_observations[0].outcome == RuntimeFileServiceAccessOutcome.ALLOWED
 
     def test_vm_runtime_file_service_rejects_duplicate_share_id(self):
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError, match="Duplicate runtime file-service share_id 'dup'"):
             RuntimeFileService(
                 service_id="svc",
                 service="smb",
@@ -816,7 +824,7 @@ class TestNode:
             )
 
     def test_vm_runtime_file_service_rejects_id_collision_across_scopes(self):
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError, match="Duplicate runtime file-service stable id 'alpha'"):
             RuntimeFileService(
                 service_id="svc",
                 service="smb",
@@ -838,7 +846,7 @@ class TestNode:
         # any attempt to set it, regardless of credential_classification.
         for field_name in ("credential_value", "credential_hash"):
             for classification in ("strong", "redacted", "no_credential", "${secret_class}"):
-                with pytest.raises(ValidationError):
+                with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
                     RuntimeFileServicePrincipal(
                         principal_id="bad",
                         kind="user",

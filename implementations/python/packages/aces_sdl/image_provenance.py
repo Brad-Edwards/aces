@@ -176,7 +176,14 @@ class ImageBuildArg(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_value(self) -> "ImageBuildArg":
-        if self.value_classification == RuntimeEnvironmentValueClassification.REDACTED and self.value:
+        if (
+            self.value_classification
+            in {
+                RuntimeEnvironmentValueClassification.REDACTED,
+                RuntimeEnvironmentValueClassification.OPERATOR_SECRET,
+            }
+            and self.value
+        ):
             raise ValueError("redacted build arguments must omit value")
         return self
 
@@ -212,7 +219,14 @@ class ImageEnvironmentDefault(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_value(self) -> "ImageEnvironmentDefault":
-        if self.value_classification == RuntimeEnvironmentValueClassification.REDACTED and self.value:
+        if (
+            self.value_classification
+            in {
+                RuntimeEnvironmentValueClassification.REDACTED,
+                RuntimeEnvironmentValueClassification.OPERATOR_SECRET,
+            }
+            and self.value
+        ):
             raise ValueError("redacted image environment variables must omit value")
         return self
 

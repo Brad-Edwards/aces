@@ -86,11 +86,13 @@ The optional `runtime.identity_authorities` inventory also has model-local and
 semantic rules. Authorities, services, subjects, policies, relationships,
 attributes, and settings use stable non-empty ids or names. Stable ids must be
 unique across the authority-local reference namespace, not just within each
-child collection. The model also rejects duplicate attribute and setting names,
-normalizes bounded kind/protocol/provenance/value classifications, and keeps
-raw values out of secret-bearing attributes or settings. Authority services may
-reference only services declared on the same node. Authority-local refs resolve
-against all stable ids in the authority:
+child collection. Attribute and policy-setting entries use the shared observed
+runtime setting model; `origin` maps to unified setting provenance. The model
+also rejects duplicate attribute and setting names, normalizes bounded
+kind/protocol/provenance/value classifications, and keeps raw values out of
+secret-bearing attributes or settings. Authority services may reference only
+services declared on the same node. Authority-local refs resolve against all
+stable ids in the authority:
 `authority_id`, `service_id`, `subject_id`, `policy_id`, and
 `relationship_id`. Provider names and external object identifiers are data, not
 reference keys.
@@ -103,10 +105,12 @@ owner/class/type bindings are unique within a zone. RRsets must have at least
 one record, TTL and type-code fields are bounded integer-or-variable values,
 `record_type: other` requires `type_code`, and typed RDATA must match the
 owning RRset type. A/AAAA typed address payloads are validated as IPv4/IPv6
-respectively. Secret-bearing DNS settings such as TSIG, RNDC, password, token,
-or private-key settings must omit raw values and use redacted/operator-secret
-classifications. DNS services may reference only services declared on the same
-node. File refs under the DNS service and its zones are checked against
+respectively. DNS settings use the shared observed runtime setting model.
+Secret-bearing DNS settings such as TSIG, RNDC, password, token, or private-key
+settings must omit raw values and use redacted, operator-secret, or explicit
+fixture classification. DNS services may reference only services declared on
+the same node. File refs under the DNS service and its zones are checked
+against
 `runtime.filesystem_inventory` when that inventory is non-empty.
 
 The optional `runtime.network_sensors` inventory has model-local and semantic
@@ -156,9 +160,10 @@ manager kinds, listener roles, component kinds/statuses, agent statuses,
 content kinds/formats, detection engines/kinds, field-predicate operators,
 setting provenance, and value classifications are normalized from bounded
 enums while allowing full-value variables where the model permits.
-Secret-bearing settings such as passwords, API tokens, credentials, shared
-keys, keytabs, or private keys must omit raw values and use
-redacted/operator-secret classifications. Managers and listeners may reference
+Settings use the shared observed runtime setting model. Secret-bearing settings
+such as passwords, API tokens, credentials, shared keys, keytabs, or private
+keys must omit raw values and use redacted, operator-secret, or explicit
+fixture classification. Managers and listeners may reference
 only services declared on the same node. Manager configuration/log/evidence
 refs, agent-group configuration refs, content-set file refs,
 detection-definition source/evidence refs, and setting source paths are checked
