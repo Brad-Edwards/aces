@@ -1,6 +1,5 @@
 """Security-monitoring manager runtime inventory models."""
 
-import re
 from enum import Enum
 from typing import Any
 
@@ -18,6 +17,7 @@ from .runtime_security_monitoring_definitions import (
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
+    name_indicates_secret,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
     require_symbol,
@@ -49,24 +49,6 @@ __all__ = [
 
 _REDACTED_SENSITIVITIES = frozenset(
     {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
-)
-_SECRET_NAME_TOKENS = (
-    "pass" + "word",
-    "passwd",
-    "passphrase",
-    "sec" + "ret",
-    "credential",
-    "token",
-    "api_key",
-    "shared_key",
-    "enrollment_key",
-    "client_key",
-    "access_key",
-    "auth_key",
-    "private_key",
-    "privatekey",
-    "keytab",
-    "authd.pass",
 )
 
 
@@ -217,16 +199,6 @@ def _coerce_refs(value: Any) -> list[str]:
 
 def _absolute_refs(values: list[str], *, field_name: str) -> list[str]:
     return [absolute_path_or_var(item, field_name=field_name) for item in values]
-
-
-def _name_indicates_secret(name: str) -> bool:
-    lowered = name.lower()
-    if any(token in lowered for token in _SECRET_NAME_TOKENS):
-        return True
-    parts = frozenset(part for part in re.split(r"[^a-z0-9]+", lowered) if part)
-    if parts & {"token", "credential"}:
-        return True
-    return "key" in parts and bool(parts & {"access", "api", "auth", "client", "enrollment", "private", "shared"})
 
 
 class RuntimeSecurityMonitoringListener(SDLModel):
@@ -463,7 +435,7 @@ class RuntimeSecurityMonitoringSetting(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_value(self) -> "RuntimeSecurityMonitoringSetting":
-        if _name_indicates_secret(self.name):
+        if name_indicates_secret(self.name):
             self._enforce_secret_name_redaction()
         elif self.value and self.value_classification in _REDACTED_SENSITIVITIES:
             raise ValueError(

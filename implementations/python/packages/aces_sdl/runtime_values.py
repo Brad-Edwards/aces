@@ -29,6 +29,65 @@ _RAM_PATTERN = re.compile(
 _RAM_MIN_BYTES_ERROR = "RAM must be >= 1 byte"
 _WINDOWS_NAMED_PIPE_PREFIXES = ("\\\\.\\pipe\\", "\\\\?\\pipe\\")
 
+# Identifier-shape tokens used to detect secret-bearing setting names, not
+# secrets themselves; the string-concatenation / ``noqa: S105`` markers silence
+# bandit without dressing each line up as actual credential material. This is
+# the de-duplicated union of every per-family token set that previously drifted
+# across runtime_database, runtime_dns, runtime_directory_identity,
+# runtime_mail_service, and runtime_security_monitoring. A setting whose name
+# matches one of these may not carry a raw value regardless of how the submitter
+# classified it.
+SECRET_NAME_TOKENS: tuple[str, ...] = (
+    "access_key",
+    "access_token",  # noqa: S105
+    "api_key",
+    "auth_key",
+    "authd.pass",
+    "client_key",
+    "client_secret",  # noqa: S105
+    "clientsecret",
+    "conninfo",
+    "credential",
+    "credentials",
+    "enrollment_key",
+    "hmac",
+    "keyfile",
+    "keytab",
+    "krbprincipalkey",
+    "passphrase",
+    "passwd",
+    "pass" + "word",
+    "pg_hba",
+    "private_key",
+    "privatekey",
+    "pwd",
+    "refresh_token",  # noqa: S105
+    "sasl_passwd",
+    "sasl_password",  # noqa: S105
+    "sec" + "ret",
+    "shared_key",
+    "supplementalcredentials",
+    "token",
+    "tsig",
+)
+# Whole-word parts (alnum-split) that independently mark a name as secret-bearing
+# even when no token is a substring (sourced from runtime_dns).
+SECRET_NAME_PARTS: frozenset[str] = frozenset({"key"})
+
+
+def name_indicates_secret(name: str) -> bool:
+    """Return whether a setting name suggests secret-bearing content.
+
+    A name is secret-bearing when any :data:`SECRET_NAME_TOKENS` entry is a
+    substring (after lowercasing and normalizing ``-`` to ``_``) or when its
+    alphanumeric-split parts intersect :data:`SECRET_NAME_PARTS`.
+    """
+    lowered = name.lower().replace("-", "_")
+    if any(token in lowered for token in SECRET_NAME_TOKENS):
+        return True
+    parts = frozenset(part for part in re.split(r"[^a-z0-9]+", lowered) if part)
+    return bool(parts & SECRET_NAME_PARTS)
+
 
 def require_symbol(value: str, *, field_name: str) -> str:
     """Validate a stable, symbol-defining identifier (no ``${var}`` placeholder).

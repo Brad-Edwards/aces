@@ -13,7 +13,13 @@ from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from ._base import SDLModel, is_variable_ref, parse_int_or_var
 from .runtime_filesystem import RuntimeSensitivityClassification
-from .runtime_values import coerce_string_list, parse_optional_bool_or_var, parse_runtime_enum_or_var, require_symbol
+from .runtime_values import (
+    coerce_string_list,
+    name_indicates_secret,
+    parse_optional_bool_or_var,
+    parse_runtime_enum_or_var,
+    require_symbol,
+)
 
 __all__ = [
     "RuntimeIdentityAttribute",
@@ -30,24 +36,6 @@ __all__ = [
     "RuntimeIdentitySubjectKind",
 ]
 
-_SECRET_NAME_TOKENS = (
-    "password",  # noqa: S105
-    "passwd",
-    "pwd",
-    "secret",  # noqa: S105
-    "credential",
-    "credentials",
-    "keytab",
-    "krbprincipalkey",
-    "supplementalcredentials",
-    "private_key",
-    "privatekey",
-    "token",
-    "client_secret",  # noqa: S105
-    "clientsecret",
-    "access_token",  # noqa: S105
-    "refresh_token",  # noqa: S105
-)
 _REDACTED_SENSITIVITIES = frozenset(
     {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
 )
@@ -136,11 +124,6 @@ class RuntimeIdentityRecordOrigin(str, Enum):
     OPERATOR = "operator"
     UNKNOWN = "unknown"
     OTHER = "other"
-
-
-def _name_indicates_secret(name: str) -> bool:
-    lowered = name.lower().replace("-", "_")
-    return any(token in lowered for token in _SECRET_NAME_TOKENS)
 
 
 def _require_non_empty(value: str, *, field_name: str) -> str:
@@ -247,7 +230,7 @@ class RuntimeIdentityAttribute(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_values(self) -> "RuntimeIdentityAttribute":
-        if _name_indicates_secret(self.name):
+        if name_indicates_secret(self.name):
             self._enforce_secret_name_redaction()
         elif self.values and self.value_classification in _REDACTED_SENSITIVITIES:
             raise ValueError(

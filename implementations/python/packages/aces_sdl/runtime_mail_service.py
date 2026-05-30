@@ -33,6 +33,7 @@ from .runtime_mail_vocab import (
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
+    name_indicates_secret,
     parse_runtime_enum_or_var,
     require_symbol,
 )
@@ -69,19 +70,6 @@ _EMAIL_ADDRESS = re.compile(r"^[^@\s]+@[^@\s]+$")
 _REDACTED_SENSITIVITIES = frozenset(
     {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
 )
-_SECRET_NAME_TOKENS: tuple[str, ...] = (
-    "pass" + "word",
-    "passwd",
-    "passphrase",
-    "sec" + "ret",
-    "credential",
-    "token",
-    "private_key",
-    "privatekey",
-    "keytab",
-    "sasl_passwd",
-    "sasl_password",
-)
 
 
 def _require_non_empty(value: str, *, field_name: str) -> str:
@@ -108,13 +96,8 @@ def _domain_name_or_var(value: str, *, field_name: str) -> str:
     return value
 
 
-def _name_indicates_secret(name: str) -> bool:
-    lowered = name.lower()
-    return any(token in lowered for token in _SECRET_NAME_TOKENS)
-
-
 def _setting_name_is_concrete_secret(name: object) -> bool:
-    return isinstance(name, str) and not is_variable_ref(name) and _name_indicates_secret(name)
+    return isinstance(name, str) and not is_variable_ref(name) and name_indicates_secret(name)
 
 
 def _reject_duplicates(values: list[str], *, label: str, container_label: str) -> None:

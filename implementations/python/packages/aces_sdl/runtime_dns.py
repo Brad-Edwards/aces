@@ -13,7 +13,6 @@ than the portable SDL model.
 """
 
 import ipaddress
-import re
 from collections.abc import Iterable
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
@@ -46,6 +45,7 @@ from .runtime_filesystem import RuntimeSensitivityClassification
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
+    name_indicates_secret,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
     require_symbol,
@@ -80,26 +80,6 @@ __all__ = [
 _REDACTED_SENSITIVITIES = frozenset(
     {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
 )
-
-_SECRET_NAME_TOKENS = (
-    "sec" + "ret",
-    "pass" + "word",
-    "passwd",
-    "token",
-    "tsig",
-    "hmac",
-    "privatekey",
-    "keyfile",
-)
-_SECRET_NAME_PARTS = frozenset({"key"})
-
-
-def _name_indicates_secret(name: str) -> bool:
-    lowered = name.lower()
-    if any(token in lowered for token in _SECRET_NAME_TOKENS):
-        return True
-    parts = frozenset(part for part in re.split(r"[^a-z0-9]+", lowered) if part)
-    return bool(parts & _SECRET_NAME_PARTS)
 
 
 def _policy_selector_or_var(value: str, *, field_name: str) -> str:
@@ -281,7 +261,7 @@ class DnsRuntimeSetting(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_value(self) -> "DnsRuntimeSetting":
-        if _name_indicates_secret(self.name):
+        if name_indicates_secret(self.name):
             self._enforce_secret_name_redaction()
         elif self.value and self.value_classification in _REDACTED_SENSITIVITIES:
             raise ValueError(
