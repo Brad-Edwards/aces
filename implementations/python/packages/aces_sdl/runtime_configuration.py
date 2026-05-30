@@ -369,7 +369,7 @@ class RuntimeConfiguration(SDLModel):
     network: RuntimeNetworkRealization | None = None
     service_listeners: list[_runtime_listeners.RuntimeServiceListener] = Field(default_factory=list)
     applications: list[_runtime_application.RuntimeApplicationSurface] = Field(default_factory=list)
-    database_services: list[_runtime_database.DatabaseService] = Field(default_factory=list)
+    database_services: list[_runtime_database.RuntimeDatabaseService] = Field(default_factory=list)
     dns_services: list[_runtime_dns.RuntimeDnsService] = Field(default_factory=list)
     network_sensors: list[_runtime_network_sensor.RuntimeNetworkSensor] = Field(default_factory=list)
     network_detection_engines: list[_runtime_network_detection.RuntimeNetworkDetectionEngine] = Field(

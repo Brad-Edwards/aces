@@ -20,7 +20,7 @@ from aces.core.sdl.nodes import (
     DatabaseProtocol,
     DatabaseRoleType,
     DatabaseSchema,
-    DatabaseService,
+    RuntimeDatabaseService,
     DatabaseSetting,
     DatabaseSettingProvenance,
     DatabaseTable,
@@ -3607,7 +3607,7 @@ class TestRuntimeDatabaseService:
 
     def test_database_service_id_rejects_variable_placeholder(self):
         with pytest.raises(ValidationError, match="database_service_id must be a stable identifier"):
-            DatabaseService(database_service_id="${svc}")
+            RuntimeDatabaseService(database_service_id="${svc}")
 
     def test_table_id_rejects_variable_placeholder(self):
         with pytest.raises(ValidationError, match="table_id must be a stable identifier"):
@@ -3623,7 +3623,7 @@ class TestRuntimeDatabaseService:
 
     def test_duplicate_database_id_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate database database_id 'dup'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 databases=[
                     {"database_id": "dup", "name": "a"},
@@ -3633,7 +3633,7 @@ class TestRuntimeDatabaseService:
 
     def test_duplicate_role_id_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate role role_id 'dup'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 roles=[
                     {"role_id": "dup", "name": "a"},
@@ -3651,7 +3651,7 @@ class TestRuntimeDatabaseService:
 
     def test_duplicate_setting_name_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate database setting 'port'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 settings=[
                     {"name": "port", "value": "5432"},
@@ -3716,15 +3716,15 @@ class TestRuntimeDatabaseService:
             )
 
     def test_engine_normalizes_case_and_hyphens(self):
-        svc = DatabaseService(database_service_id="svc", engine="PostgreSQL", protocol="postgresql")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="PostgreSQL", protocol="postgresql")
         assert svc.engine == DatabaseEngine.POSTGRESQL
 
     def test_unknown_engine_rejected(self):
         with pytest.raises(ValidationError, match="engine must be one of"):
-            DatabaseService(database_service_id="svc", engine="cobol-db")
+            RuntimeDatabaseService(database_service_id="svc", engine="cobol-db")
 
     def test_engine_protocol_accept_variable_placeholder(self):
-        svc = DatabaseService(database_service_id="svc", engine="${ENGINE}", protocol="${PROTO}")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="${ENGINE}", protocol="${PROTO}")
         assert svc.engine == "${ENGINE}"
         assert svc.protocol == "${PROTO}"
 
@@ -3741,32 +3741,32 @@ class TestRuntimeDatabaseService:
     )
     def test_known_engine_rejects_wrong_or_other_protocol(self, engine, bad_protocol, expected_protocol):
         with pytest.raises(ValidationError, match=f"requires protocol to be one of: {expected_protocol}"):
-            DatabaseService(database_service_id="svc", engine=engine, protocol=bad_protocol)
+            RuntimeDatabaseService(database_service_id="svc", engine=engine, protocol=bad_protocol)
 
     def test_postgresql_engine_default_protocol_other_is_rejected(self):
         # Without a cross-field check, defaulting protocol leaves PostgreSQL
         # at protocol=other — the exact ADR-027 §3 anti-pattern.
         with pytest.raises(ValidationError, match="requires protocol to be one of: postgresql"):
-            DatabaseService(database_service_id="svc", engine="postgresql")
+            RuntimeDatabaseService(database_service_id="svc", engine="postgresql")
 
     def test_engine_with_variable_protocol_is_skipped(self):
-        svc = DatabaseService(database_service_id="svc", engine="postgresql", protocol="${PROTO}")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="postgresql", protocol="${PROTO}")
         assert svc.protocol == "${PROTO}"
 
     def test_mariadb_engine_accepts_mysql_protocol(self):
-        svc = DatabaseService(database_service_id="svc", engine="mariadb", protocol="mysql")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="mariadb", protocol="mysql")
         assert svc.engine == DatabaseEngine.MARIADB
         assert svc.protocol == DatabaseProtocol.MYSQL
 
     def test_sqlite_engine_unconstrained_protocol(self):
         # SQLite has no wire protocol; default ``other`` is acceptable.
-        svc = DatabaseService(database_service_id="svc", engine="sqlite")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="sqlite")
         assert svc.engine == DatabaseEngine.SQLITE
 
     def test_duplicate_schema_id_across_databases_is_rejected(self):
         # Service-wide uniqueness for grant target resolution.
         with pytest.raises(ValidationError, match="Duplicate schema schema_id 'public' in database service 'svc'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 databases=[
                     {"database_id": "a", "name": "a", "schemas": [{"schema_id": "public", "name": "public"}]},
@@ -3776,7 +3776,7 @@ class TestRuntimeDatabaseService:
 
     def test_duplicate_table_id_across_schemas_is_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate table table_id 'users' in database service 'svc'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 databases=[
                     {

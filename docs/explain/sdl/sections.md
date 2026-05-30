@@ -776,7 +776,7 @@ value (see
 logical state — what an adversary, defender, agent, scanner, or evaluator can
 observe of a database itself, distinct from the transport-level `services`
 binding, the host exposure in `runtime.network`, and the HTTP surface in
-`runtime.applications`. Each entry is a `DatabaseService` with a stable
+`runtime.applications`. Each entry is a `RuntimeDatabaseService` with a stable
 `database_service_id`, an optional `service` referencing the owning same-node
 `Node.services[].name`, and distinct `engine`/`protocol`/`version` facts — a
 PostgreSQL service is never modelled as `protocol: other`. `listeners` record

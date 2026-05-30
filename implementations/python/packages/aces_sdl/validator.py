@@ -1863,7 +1863,7 @@ class SemanticValidator:
         """Resolve a qualified ``nodes.<node>.runtime.database_services.<id>`` ref.
 
         Accepts the database-service form and the ``.databases.<id>`` form; both
-        resolve to the owning :class:`DatabaseService` so a relationship's
+        resolve to the owning :class:`RuntimeDatabaseService` so a relationship's
         ``database_access`` can be checked against it.
         """
         split = self._split_runtime_ref(ref, surface="database_services")

@@ -64,11 +64,11 @@ __all__ = [
     "DatabaseRole",
     "DatabaseRoleType",
     "DatabaseSchema",
-    "DatabaseService",
     "DatabaseSetting",
     "DatabaseSettingProvenance",
     "DatabaseTable",
     "RelationshipDatabaseAccess",
+    "RuntimeDatabaseService",
 ]
 
 _MIN_PORT = 1
@@ -436,7 +436,7 @@ class DatabaseSetting(SDLModel):
             )
 
 
-class DatabaseService(SDLModel):
+class RuntimeDatabaseService(SDLModel):
     """An observed database service hosted by a transport service on a node.
 
     ``service`` references the owning same-node ``Node.services[].name`` (bare
@@ -473,7 +473,7 @@ class DatabaseService(SDLModel):
         return parse_runtime_enum_or_var(v, DatabaseProtocol, field_name="protocol")
 
     @model_validator(mode="after")
-    def validate_service(self) -> "DatabaseService":
+    def validate_service(self) -> "RuntimeDatabaseService":
         self._reject_duplicate_top_level_ids()
         self._reject_duplicate_nested_object_ids()
         self._reject_duplicate_setting_names()

@@ -64,7 +64,6 @@ def _current_violations() -> set[str]:
 # entry is removed in the same commit that resolves it; an empty set means the
 # whole surface satisfies the invariant set.
 KNOWN_VIOLATIONS: set[str] = {
-    "class-name:database-services",
     "primary-id:service-listeners",
     "primary-id:identity-authorities",
     "primary-id:file-services",

@@ -937,100 +937,6 @@
       "title": "DatabaseSchema",
       "type": "object"
     },
-    "DatabaseService": {
-      "additionalProperties": false,
-      "description": "An observed database service hosted by a transport service on a node.\n\n``service`` references the owning same-node ``Node.services[].name`` (bare\nname or the qualified ``nodes.<node>.services.<name>`` form). The inventory\nis observation metadata; it never mutates ``Node.services``.",
-      "properties": {
-        "database_service_id": {
-          "title": "Database Service Id",
-          "type": "string"
-        },
-        "databases": {
-          "items": {
-            "$ref": "#/$defs/Database"
-          },
-          "title": "Databases",
-          "type": "array"
-        },
-        "description": {
-          "default": "",
-          "title": "Description",
-          "type": "string"
-        },
-        "engine": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/DatabaseEngine"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "other",
-          "title": "Engine"
-        },
-        "grants": {
-          "items": {
-            "$ref": "#/$defs/DatabaseGrant"
-          },
-          "title": "Grants",
-          "type": "array"
-        },
-        "listeners": {
-          "items": {
-            "$ref": "#/$defs/DatabaseListener"
-          },
-          "title": "Listeners",
-          "type": "array"
-        },
-        "name": {
-          "default": "",
-          "title": "Name",
-          "type": "string"
-        },
-        "protocol": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/DatabaseProtocol"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "other",
-          "title": "Protocol"
-        },
-        "roles": {
-          "items": {
-            "$ref": "#/$defs/DatabaseRole"
-          },
-          "title": "Roles",
-          "type": "array"
-        },
-        "service": {
-          "default": "",
-          "title": "Service",
-          "type": "string"
-        },
-        "settings": {
-          "items": {
-            "$ref": "#/$defs/DatabaseSetting"
-          },
-          "title": "Settings",
-          "type": "array"
-        },
-        "version": {
-          "default": "",
-          "title": "Version",
-          "type": "string"
-        }
-      },
-      "required": [
-        "database_service_id"
-      ],
-      "title": "DatabaseService",
-      "type": "object"
-    },
     "DatabaseSetting": {
       "additionalProperties": false,
       "description": "An observed database runtime setting with provenance and sensitivity.\n\nSettings that may carry credentials, hashes, connection strings, or\noperator-only values must omit their raw ``value`` and classify it as\n``redacted``/``operator_secret`` (ADR-029 \u00a75).",
@@ -5240,7 +5146,7 @@
         },
         "database_services": {
           "items": {
-            "$ref": "#/$defs/DatabaseService"
+            "$ref": "#/$defs/RuntimeDatabaseService"
           },
           "title": "Database Services",
           "type": "array"
@@ -5791,6 +5697,100 @@
       ],
       "title": "RuntimeControlInterfaceKind",
       "type": "string"
+    },
+    "RuntimeDatabaseService": {
+      "additionalProperties": false,
+      "description": "An observed database service hosted by a transport service on a node.\n\n``service`` references the owning same-node ``Node.services[].name`` (bare\nname or the qualified ``nodes.<node>.services.<name>`` form). The inventory\nis observation metadata; it never mutates ``Node.services``.",
+      "properties": {
+        "database_service_id": {
+          "title": "Database Service Id",
+          "type": "string"
+        },
+        "databases": {
+          "items": {
+            "$ref": "#/$defs/Database"
+          },
+          "title": "Databases",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "engine": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabaseEngine"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Engine"
+        },
+        "grants": {
+          "items": {
+            "$ref": "#/$defs/DatabaseGrant"
+          },
+          "title": "Grants",
+          "type": "array"
+        },
+        "listeners": {
+          "items": {
+            "$ref": "#/$defs/DatabaseListener"
+          },
+          "title": "Listeners",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "protocol": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DatabaseProtocol"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Protocol"
+        },
+        "roles": {
+          "items": {
+            "$ref": "#/$defs/DatabaseRole"
+          },
+          "title": "Roles",
+          "type": "array"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        },
+        "settings": {
+          "items": {
+            "$ref": "#/$defs/DatabaseSetting"
+          },
+          "title": "Settings",
+          "type": "array"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "database_service_id"
+      ],
+      "title": "RuntimeDatabaseService",
+      "type": "object"
     },
     "RuntimeDependencyManifest": {
       "additionalProperties": false,
