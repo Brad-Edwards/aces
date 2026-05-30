@@ -122,6 +122,17 @@ def test_identity_origin_alias_maps_to_unified_provenance() -> None:
     assert setting.origin == RuntimeSettingProvenance.DIRECTORY
 
 
+def test_origin_alias_is_shared_schema_compatibility_for_runtime_settings() -> None:
+    setting = RuntimeMailSetting(setting_id="hostname", name="myhostname", origin="configuration_file")
+
+    assert setting.provenance == RuntimeSettingProvenance.CONFIGURATION_FILE
+
+
+def test_runtime_setting_rejects_ambiguous_origin_and_provenance() -> None:
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        RuntimeObservedSetting(name="max_connections", provenance="configuration_file", origin="directory")
+
+
 def test_runtime_setting_schema_publishes_origin_compatibility_alias() -> None:
     schema = RuntimeObservedSetting.model_json_schema()
 
@@ -129,6 +140,7 @@ def test_runtime_setting_schema_publishes_origin_compatibility_alias() -> None:
     assert schema["properties"]["origin"]["description"] == (
         "Compatibility alias for provenance on identity-authority settings."
     )
+    assert {"not": {"required": ["origin", "provenance"]}} in schema["allOf"]
 
 
 def test_runtime_credential_classifications_share_fixture_aware_enum() -> None:

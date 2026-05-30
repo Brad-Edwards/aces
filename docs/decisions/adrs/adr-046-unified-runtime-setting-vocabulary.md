@@ -44,6 +44,12 @@ variables are aliases of this model. The old public names stay importable for
 source compatibility, but they no longer define independent schemas or
 validators.
 
+Families that expose settings as targetable child records still enforce their
+stable-id contracts at the owning collection boundary. Mail-service settings
+and security-monitoring settings require `setting_id`; environment, database,
+DNS, and identity settings may remain name-keyed or anonymous where their
+surface already uses names rather than setting child refs.
+
 ### 2. Unify setting provenance without erasing distinctions
 
 `RuntimeSettingProvenance` is the setting provenance taxonomy. It preserves all
@@ -55,7 +61,11 @@ previous family-specific values, including `compose`, `image`, `operator`,
 
 Identity settings may still be authored with `origin`; that key maps to
 `provenance` so existing captures can migrate losslessly while the schema
-surface exposes the unified concept.
+surface exposes the unified concept. Because there is intentionally one shared
+published `RuntimeObservedSetting` definition, the compatibility alias is
+accepted anywhere that shared definition is referenced. `provenance` remains the
+canonical field, and authors must not provide both `origin` and `provenance` on
+the same setting.
 
 ### 3. Unify sensitivity and credential classification separately
 

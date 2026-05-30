@@ -226,6 +226,14 @@ def test_runtime_mail_setting_rejects_redacted_raw_value() -> None:
         )
 
 
+def test_runtime_mail_service_requires_setting_ids_for_targetable_settings() -> None:
+    with pytest.raises(ValidationError, match="requires setting_id"):
+        RuntimeMailService(
+            service_id="mail",
+            settings=[RuntimeMailSetting(name="myhostname", value="mail.local")],
+        )
+
+
 class TestRuntimeMailSemanticValidation:
     def test_mail_service_validates_same_node_transport_refs_and_local_refs(self) -> None:
         assert _validate(Scenario(name="mail", nodes={"mail": _mail_node()})) == []

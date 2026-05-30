@@ -397,6 +397,14 @@ def test_security_monitoring_setting_rejects_secret_bearing_raw_value(setting_na
         )
 
 
+def test_security_monitoring_manager_requires_setting_ids_for_targetable_settings() -> None:
+    with pytest.raises(ValidationError, match="requires setting_id"):
+        RuntimeSecurityMonitoringManager(
+            manager_id="wazuh",
+            settings=[RuntimeSecurityMonitoringSetting(name="jsonout_output", value="yes")],
+        )
+
+
 class TestRuntimeSecurityMonitoringSemanticValidation:
     def test_manager_with_same_node_service_refs_is_valid(self) -> None:
         assert _validate(Scenario(name="security-monitoring", nodes={"siem": _manager_node()})) == []

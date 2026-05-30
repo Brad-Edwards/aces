@@ -126,6 +126,14 @@ def _reject_duplicate_local_ref_ids(service: "RuntimeMailService") -> None:
         seen[value] = label
 
 
+def _require_setting_ids(service: "RuntimeMailService") -> None:
+    for setting in service.settings:
+        if not setting.setting_id:
+            raise ValueError(
+                f"runtime mail-service setting '{setting.name}' in service '{service.service_id}' requires setting_id"
+            )
+
+
 class RuntimeMailComponent(SDLModel):
     """A mail-service engine/component such as Postfix, Dovecot, or a filter."""
 
@@ -430,6 +438,7 @@ class RuntimeMailService(SDLModel):
 
     @model_validator(mode="after")
     def validate_service(self) -> "RuntimeMailService":
+        _require_setting_ids(self)
         for label, attr in (
             ("component_id", "components"),
             ("listener_id", "listeners"),

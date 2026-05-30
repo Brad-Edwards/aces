@@ -433,8 +433,18 @@ class RuntimeSecurityMonitoringManager(SDLModel):
 
     @model_validator(mode="after")
     def validate_manager(self) -> "RuntimeSecurityMonitoringManager":
+        _require_setting_ids(self)
         _reject_duplicate_local_ref_ids(self)
         return self
+
+
+def _require_setting_ids(manager: RuntimeSecurityMonitoringManager) -> None:
+    for setting in manager.settings:
+        if not setting.setting_id:
+            raise ValueError(
+                f"runtime security-monitoring setting '{setting.name}' in manager "
+                f"'{manager.manager_id}' requires setting_id"
+            )
 
 
 def _reject_duplicate_local_ref_ids(manager: RuntimeSecurityMonitoringManager) -> None:

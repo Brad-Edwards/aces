@@ -9585,6 +9585,16 @@
     },
     "RuntimeObservedSetting": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "not": {
+            "required": [
+              "origin",
+              "provenance"
+            ]
+          }
+        }
+      ],
       "description": "Observed runtime setting with unified provenance, sensitivity, and redaction.",
       "properties": {
         "component_ref": {

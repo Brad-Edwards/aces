@@ -860,8 +860,9 @@ advertised capabilities, banners, AUTH mechanisms, and TLS/STARTTLS posture.
 `mailboxes` are service-local runtime records with address, domain/store refs,
 role/status, authentication mechanisms, and the shared runtime
 credential-strength classification; raw passwords and hashes are not
-representable. `settings` use the shared observed-setting model with provenance
-and source paths, and secret-bearing setting names must omit raw values. Mail
+representable. `settings` use the shared observed-setting model with stable
+`setting_id` values, provenance, and source paths, and secret-bearing setting
+names must omit raw values. Mail
 client, DNS, logging/SIEM, relay, and similar edges stay in top-level
 `relationships`; a typed `mail_access` block records mail protocol/auth/TLS and
 mailbox/domain/listener refs when an edge needs mail-specific semantics (see

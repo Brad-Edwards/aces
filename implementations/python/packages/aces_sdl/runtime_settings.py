@@ -208,6 +208,7 @@ class RuntimeObservedSetting(SDLModel):
             origin_schema["title"] = "Origin"
             origin_schema["description"] = "Compatibility alias for provenance on identity-authority settings."
             json_schema.setdefault("properties", {}).setdefault("origin", origin_schema)
+            json_schema.setdefault("allOf", []).append({"not": {"required": ["origin", "provenance"]}})
         return json_schema
 
     @property

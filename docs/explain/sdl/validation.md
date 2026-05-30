@@ -87,8 +87,9 @@ semantic rules. Authorities, services, subjects, policies, relationships,
 attributes, and settings use stable non-empty ids or names. Stable ids must be
 unique across the authority-local reference namespace, not just within each
 child collection. Attribute and policy-setting entries use the shared observed
-runtime setting model; `origin` maps to unified setting provenance. The model
-also rejects duplicate attribute and setting names, normalizes bounded
+runtime setting model; `origin` maps to unified setting provenance, but
+`provenance` is the canonical field. The model also rejects duplicate attribute
+and setting names, normalizes bounded
 kind/protocol/provenance/value classifications, and keeps raw values out of
 secret-bearing attributes or settings. Authority services may reference only
 services declared on the same node. Authority-local refs resolve against all
@@ -160,9 +161,10 @@ manager kinds, listener roles, component kinds/statuses, agent statuses,
 content kinds/formats, detection engines/kinds, field-predicate operators,
 setting provenance, and value classifications are normalized from bounded
 enums while allowing full-value variables where the model permits.
-Settings use the shared observed runtime setting model. Secret-bearing settings
-such as passwords, API tokens, credentials, shared keys, keytabs, or private
-keys must omit raw values and use redacted, operator-secret, or explicit
+Settings use the shared observed runtime setting model and require `setting_id`
+because settings are targetable manager-local child records. Secret-bearing
+settings such as passwords, API tokens, credentials, shared keys, keytabs, or
+private keys must omit raw values and use redacted, operator-secret, or explicit
 fixture classification. Managers and listeners may reference
 only services declared on the same node. Manager configuration/log/evidence
 refs, agent-group configuration refs, content-set file refs,
