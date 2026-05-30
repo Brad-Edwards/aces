@@ -60,6 +60,16 @@ case-management/dashboard kinds, bounded parsed content-object manifests,
 releasability markings, upstream bindings, connectors, and settings, with an
 executable required-profile guard -
 [ADR-049](../../decisions/adrs/adr-049-platform-application-runtime-inventory.md)),
+forwarding / intel-sync agent runtime inventory (sources, transforms, ship
+targets, buffer policy, reload channels, and settings for log forwarders and
+intel-sync co-processes, with an executable required-profile guard and
+ship-target node/service refs that resolve at scenario scope -
+[ADR-050](../../decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md)),
+container-spawn orchestration-authority runtime inventory (engine, scope, spawn
+templates, lifecycle policy, realized children, and a privilege class that
+references a same-node control-interface shell, with an executable
+required-profile guard -
+[ADR-051](../../decisions/adrs/adr-051-orchestration-authority-runtime-inventory.md)),
 and directory/domain/realm/IdP/IAM/federation identity-authority state
 (authority namespaces, services, subjects, policies, and typed relationships -
 [ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).

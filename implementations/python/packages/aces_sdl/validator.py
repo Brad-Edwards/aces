@@ -23,6 +23,8 @@ from .infrastructure import SimpleProperties
 from .nodes import MAX_NODE_NAME_LENGTH, NodeType
 from .orchestration import Workflow, WorkflowPredicate, WorkflowStep, WorkflowStepType
 from .runtime_database import DatabaseObjectType
+from .runtime_mounts import RuntimeControlInterfaceAccess, RuntimeControlInterfaceKind
+from .runtime_orchestration import RuntimeOrchestrationPrivilegeClass
 from .runtime_ssh_server import SshMatchCriterionKind
 from .scenario import Scenario
 from .semantics.assessment import AssessmentIssue, analyze_assessment_pipeline
@@ -495,6 +497,8 @@ class SemanticValidator:
         self._verify_runtime_security_monitoring_managers()
         self._verify_runtime_datastore_services()
         self._verify_runtime_platform_applications()
+        self._verify_runtime_forwarding_agents()
+        self._verify_runtime_orchestration_authorities()
         verify_runtime_mail_services(self)
         self._verify_features()
         self._verify_conditions()
@@ -2000,6 +2004,148 @@ class SemanticValidator:
             self._err(
                 f"{owner_label} authorization_ref '{authorization_ref}' does not resolve to an "
                 f"app_authorization on the same node"
+            )
+
+    def _verify_runtime_forwarding_agents(self) -> None:
+        """Validate observed forwarding / intel-sync agent inventories.
+
+        A ship target's ``target_node_ref``, when present and concrete, must
+        resolve to a defined node; a present, concrete ``target_service_ref``
+        must resolve to a service on that referenced node (or, when no node ref
+        is given, to a service on the owning node). The agent-internal
+        ``require_profile_for_agent_kind`` guard (model-local) has already
+        enforced the per-``agent_kind`` profile shape.
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.forwarding_agents:
+                continue
+            local_service_names = self._node_service_names(node)
+            for agent in runtime.forwarding_agents:
+                owner_label = f"Node '{node_name}' runtime forwarding agent '{agent.forwarding_agent_id}'"
+                for target in agent.ship_targets:
+                    self._verify_forwarding_ship_target(
+                        node_name=node_name,
+                        local_service_names=local_service_names,
+                        target=target,
+                        owner_label=f"{owner_label} ship_target '{target.target_id}'",
+                    )
+
+    def _verify_forwarding_ship_target(
+        self,
+        *,
+        node_name: str,
+        local_service_names: set[str],
+        target: object,
+        owner_label: str,
+    ) -> None:
+        node_ref = getattr(target, "target_node_ref", "")
+        service_ref = getattr(target, "target_service_ref", "")
+        resolved_node_name = node_name
+        resolved_node = self._s.nodes.get(node_name)
+        if node_ref and not self._is_unresolved_var(node_ref):
+            resolved_node = self._s.nodes.get(node_ref)
+            if resolved_node is None:
+                self._err(f"{owner_label} target_node_ref '{node_ref}' does not resolve to a defined node")
+                return
+            resolved_node_name = node_ref
+        if service_ref and not self._is_unresolved_var(service_ref):
+            if resolved_node is None:
+                return
+            target_service_names = (
+                local_service_names if resolved_node_name == node_name else self._node_service_names(resolved_node)
+            )
+            if service_ref not in target_service_names:
+                self._err(
+                    f"{owner_label} target_service_ref '{service_ref}' does not resolve to a service "
+                    f"on node '{resolved_node_name}'"
+                )
+
+    def _verify_runtime_orchestration_authorities(self) -> None:
+        """Validate observed container-spawn orchestration-authority inventories.
+
+        Each authority's ``control_interface_ref``, when present and concrete,
+        must resolve to a :class:`RuntimeControlInterface` declared in the same
+        node's ``runtime.local_control_interfaces`` (by ``control_interface_id``).
+        For a ``host_root_equivalent`` privilege class, the referenced control
+        interface must additionally be a read-write docker socket (a read-write
+        unix socket whose path is a ``docker.sock``), making the host-root
+        privilege-escalation fact resolvable at scenario scope. The
+        model-local ``require_profile_for_privilege_class`` guard has already
+        rejected a host-root-equivalent authority that carries no concrete
+        ``control_interface_ref``.
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.orchestration_authorities:
+                continue
+            interfaces_by_id = {
+                interface.control_interface_id: interface
+                for interface in getattr(runtime, "local_control_interfaces", [])
+                if interface.control_interface_id
+            }
+            for authority in runtime.orchestration_authorities:
+                self._verify_orchestration_authority(
+                    node_name=node_name,
+                    authority=authority,
+                    interfaces_by_id=interfaces_by_id,
+                )
+
+    def _verify_orchestration_authority(
+        self,
+        *,
+        node_name: str,
+        authority: object,
+        interfaces_by_id: dict[str, object],
+    ) -> None:
+        owner_label = f"Node '{node_name}' runtime orchestration authority '{authority.orchestration_authority_id}'"
+        ref = getattr(authority, "control_interface_ref", "")
+        if not ref or self._is_unresolved_var(ref):
+            return
+        interface = interfaces_by_id.get(ref)
+        if interface is None:
+            self._err(
+                f"{owner_label} control_interface_ref '{ref}' does not resolve to a "
+                f"control interface in the same node's runtime.local_control_interfaces"
+            )
+            return
+        privilege = getattr(authority, "privilege_class", None)
+        if (
+            isinstance(privilege, RuntimeOrchestrationPrivilegeClass)
+            and privilege is RuntimeOrchestrationPrivilegeClass.HOST_ROOT_EQUIVALENT
+        ):
+            self._verify_host_root_control_interface(owner_label=owner_label, ref=ref, interface=interface)
+
+    @staticmethod
+    def _control_interface_is_docker_socket(interface: object) -> bool:
+        """Return whether a control interface is a read-write docker unix socket."""
+        access = getattr(interface, "access", None)
+        kind = getattr(interface, "kind", None)
+        path = getattr(interface, "path", "") or ""
+        is_read_write = access is RuntimeControlInterfaceAccess.READ_WRITE
+        is_unix_socket = kind is RuntimeControlInterfaceKind.UNIX_SOCKET
+        is_docker_sock = isinstance(path, str) and path.endswith("docker.sock")
+        return is_read_write and is_unix_socket and is_docker_sock
+
+    def _verify_host_root_control_interface(
+        self,
+        *,
+        owner_label: str,
+        ref: str,
+        interface: object,
+    ) -> None:
+        # ``${var}`` placeholders on the interface's access/kind/path are
+        # permissive: a deferred discriminator cannot be proven non-conformant.
+        access = getattr(interface, "access", None)
+        kind = getattr(interface, "kind", None)
+        path = getattr(interface, "path", "") or ""
+        if is_variable_ref(access) or is_variable_ref(kind) or is_variable_ref(path):
+            return
+        if not self._control_interface_is_docker_socket(interface):
+            self._err(
+                f"{owner_label} privilege_class 'host_root_equivalent' control_interface_ref '{ref}' "
+                f"must resolve to a read-write docker socket "
+                f"(access 'read_write', kind 'unix_socket', path ending in 'docker.sock')"
             )
 
     def _split_runtime_ref(self, ref: object, *, surface: str) -> tuple[str, str] | None:

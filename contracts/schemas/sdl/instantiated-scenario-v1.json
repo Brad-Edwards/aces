@@ -5577,6 +5577,13 @@
           "title": "Filesystem Inventory",
           "type": "array"
         },
+        "forwarding_agents": {
+          "items": {
+            "$ref": "#/$defs/RuntimeForwardingAgent"
+          },
+          "title": "Forwarding Agents",
+          "type": "array"
+        },
         "health": {
           "anyOf": [
             {
@@ -5673,6 +5680,13 @@
             }
           ],
           "default": null
+        },
+        "orchestration_authorities": {
+          "items": {
+            "$ref": "#/$defs/RuntimeOrchestrationAuthority"
+          },
+          "title": "Orchestration Authorities",
+          "type": "array"
         },
         "package_vulnerabilities": {
           "items": {
@@ -6049,6 +6063,10 @@
           "default": "unknown",
           "title": "Bind Source Sensitivity"
         },
+        "control_interface_id": {
+          "title": "Control Interface Id",
+          "type": "string"
+        },
         "description": {
           "default": "",
           "title": "Description",
@@ -6077,6 +6095,7 @@
         }
       },
       "required": [
+        "control_interface_id",
         "path"
       ],
       "title": "RuntimeControlInterface",
@@ -7965,6 +7984,598 @@
         "other"
       ],
       "title": "RuntimeFilesystemStability",
+      "type": "string"
+    },
+    "RuntimeForwardingAgent": {
+      "additionalProperties": false,
+      "description": "Node-scoped runtime inventory for a forwarding / intel-sync agent.\n\nThe single forwarder spine. The ``agent_kind`` discriminator selects the\nrequired profile the ``require_profile_for_agent_kind`` guard enforces.\nCadence composes a ``runtime.scheduled_jobs`` entry; the inter-node trust\nedge composes a ``RelationshipForwardingEdge`` \u2014 neither is re-typed here.",
+      "properties": {
+        "agent_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingAgentKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Agent Kind"
+        },
+        "buffer_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingBufferPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "forwarding_agent_id": {
+          "title": "Forwarding Agent Id",
+          "type": "string"
+        },
+        "implementation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingAgentImplementation"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Implementation"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "reload_channels": {
+          "items": {
+            "$ref": "#/$defs/RuntimeForwardingReloadChannel"
+          },
+          "title": "Reload Channels",
+          "type": "array"
+        },
+        "settings": {
+          "items": {
+            "$ref": "#/$defs/RuntimeForwardingSetting"
+          },
+          "title": "Settings",
+          "type": "array"
+        },
+        "ship_targets": {
+          "items": {
+            "$ref": "#/$defs/RuntimeForwardingShipTarget"
+          },
+          "title": "Ship Targets",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/RuntimeForwardingSource"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "transforms": {
+          "items": {
+            "$ref": "#/$defs/RuntimeForwardingTransform"
+          },
+          "title": "Transforms",
+          "type": "array"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "forwarding_agent_id"
+      ],
+      "title": "RuntimeForwardingAgent",
+      "type": "object"
+    },
+    "RuntimeForwardingAgentImplementation": {
+      "description": "Observed product family for a forwarding / intel-sync agent (OPEN).",
+      "enum": [
+        "filebeat",
+        "wazuh_agent",
+        "fluent_bit",
+        "fluentd",
+        "logstash",
+        "vector",
+        "rsyslog",
+        "nxlog",
+        "otel_collector",
+        "misp_suricata_sync",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeForwardingAgentImplementation",
+      "type": "string"
+    },
+    "RuntimeForwardingAgentKind": {
+      "description": "Portable forwarding-agent role discriminator (OPEN per the verdict).",
+      "enum": [
+        "log_forwarder",
+        "content_sync",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeForwardingAgentKind",
+      "type": "string"
+    },
+    "RuntimeForwardingBufferCrypto": {
+      "description": "Portable at-rest / in-transit crypto of a buffer policy (OPEN).",
+      "enum": [
+        "none",
+        "aes",
+        "tls",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeForwardingBufferCrypto",
+      "type": "string"
+    },
+    "RuntimeForwardingBufferPolicy": {
+      "additionalProperties": false,
+      "description": "The single observed buffer / back-pressure posture of a forwarder.\n\nCaptures the ``client_buffer`` shape: queue capacity, events-per-second\nceiling, at-rest/in-transit crypto, and reconnect interval. Its presence is\nthe defining profile a ``log_forwarder`` must carry.",
+      "properties": {
+        "buffer_policy_id": {
+          "title": "Buffer Policy Id",
+          "type": "string"
+        },
+        "crypto": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingBufferCrypto"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Crypto"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "eps": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eps"
+        },
+        "queue_capacity": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Queue Capacity"
+        },
+        "reconnect_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reconnect Seconds"
+        }
+      },
+      "required": [
+        "buffer_policy_id"
+      ],
+      "title": "RuntimeForwardingBufferPolicy",
+      "type": "object"
+    },
+    "RuntimeForwardingEnrollmentClassification": {
+      "description": "Redaction class for a ship-target enrollment identity (CLOSED).\n\nA fixed structural lattice \u2014 an enrollment credential is either absent\n(``none``) or present-but-not-recorded (``redacted`` / ``operator_secret``).\nRaw enrollment-key material is never carried; per the enum-sentinel\ndiscipline this closed set carries no ``unknown`` / ``other`` tail.",
+      "enum": [
+        "none",
+        "redacted",
+        "operator_secret"
+      ],
+      "title": "RuntimeForwardingEnrollmentClassification",
+      "type": "string"
+    },
+    "RuntimeForwardingParseFormat": {
+      "description": "Portable on-the-wire / on-disk parse format of a source (OPEN).",
+      "enum": [
+        "json",
+        "syslog",
+        "eve_json",
+        "cef",
+        "leef",
+        "csv",
+        "text",
+        "stix",
+        "misp_json",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeForwardingParseFormat",
+      "type": "string"
+    },
+    "RuntimeForwardingProtocol": {
+      "description": "Portable wire protocol of a ship target (OPEN).",
+      "enum": [
+        "syslog",
+        "syslog_tls",
+        "syslog_tcp",
+        "beats",
+        "http",
+        "https",
+        "tcp",
+        "udp",
+        "kafka",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeForwardingProtocol",
+      "type": "string"
+    },
+    "RuntimeForwardingReloadChannel": {
+      "additionalProperties": false,
+      "description": "An observed downstream reload channel a content-sync agent drives.\n\nReferences the downstream consumer's control channel (e.g. the Suricata\nrule-reload socket) rather than inventing a parallel socket model; the\ninter-node trust edge is carried by ``RelationshipForwardingEdge``.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingReloadChannelKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Kind"
+        },
+        "reload_channel_id": {
+          "title": "Reload Channel Id",
+          "type": "string"
+        },
+        "target_ref": {
+          "default": "",
+          "title": "Target Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reload_channel_id"
+      ],
+      "title": "RuntimeForwardingReloadChannel",
+      "type": "object"
+    },
+    "RuntimeForwardingReloadChannelKind": {
+      "description": "Portable control / reload channel family for a downstream consumer (OPEN).",
+      "enum": [
+        "unix_socket",
+        "signal",
+        "http_api",
+        "cli",
+        "file_drop",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeForwardingReloadChannelKind",
+      "type": "string"
+    },
+    "RuntimeForwardingSetting": {
+      "additionalProperties": false,
+      "description": "An observed forwarding-agent runtime setting with provenance and class.\n\nSettings that may carry credentials or operator-only values must omit their\nraw ``value`` and classify it ``redacted`` / ``operator_secret`` \u2014 enforced\nvia the shared ``name_indicates_secret`` helper even when the submitter left\n``classification`` at its default.",
+      "properties": {
+        "classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingSettingClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "plain",
+          "title": "Classification"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingSettingProvenance"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        },
+        "setting_id": {
+          "title": "Setting Id",
+          "type": "string"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "setting_id"
+      ],
+      "title": "RuntimeForwardingSetting",
+      "type": "object"
+    },
+    "RuntimeForwardingSettingClassification": {
+      "description": "Redaction class for an observed forwarding setting value (CLOSED).\n\nThe fixed structural redaction lattice for a setting: a plain value, a\npresent-but-not-recorded secret, or an operator-only secret. Carries no\nopen tail by the enum-sentinel discipline.",
+      "enum": [
+        "plain",
+        "redacted",
+        "operator_secret"
+      ],
+      "title": "RuntimeForwardingSettingClassification",
+      "type": "string"
+    },
+    "RuntimeForwardingSettingProvenance": {
+      "description": "Portable provenance of an observed forwarding setting (OPEN).",
+      "enum": [
+        "configuration_file",
+        "environment",
+        "command_line",
+        "default",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeForwardingSettingProvenance",
+      "type": "string"
+    },
+    "RuntimeForwardingShipTarget": {
+      "additionalProperties": false,
+      "description": "An observed downstream ship target (event ingest and/or enrollment).\n\n``ingestion_port`` is the event-ingest endpoint (e.g. ``wazuh.manager:1514``);\n``enrollment_port`` is the enrollment endpoint (e.g. ``:1515``). The\nenrollment identity itself is never recorded \u2014 only the closed\n``enrollment_identity_classification`` lattice (``none`` / ``redacted`` /\n``operator_secret``).",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "enrollment_identity_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingEnrollmentClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "none",
+          "title": "Enrollment Identity Classification"
+        },
+        "enrollment_port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enrollment Port"
+        },
+        "ingestion_port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ingestion Port"
+        },
+        "protocol": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingProtocol"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Protocol"
+        },
+        "target_id": {
+          "title": "Target Id",
+          "type": "string"
+        },
+        "target_node_ref": {
+          "default": "",
+          "title": "Target Node Ref",
+          "type": "string"
+        },
+        "target_service_ref": {
+          "default": "",
+          "title": "Target Service Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_id"
+      ],
+      "title": "RuntimeForwardingShipTarget",
+      "type": "object"
+    },
+    "RuntimeForwardingSource": {
+      "additionalProperties": false,
+      "description": "An observed forwarder input source (tailed path, API pull, or queue).",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingSourceKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Kind"
+        },
+        "location": {
+          "default": "",
+          "title": "Location",
+          "type": "string"
+        },
+        "parse_format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingParseFormat"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Parse Format"
+        },
+        "selector": {
+          "default": "",
+          "title": "Selector",
+          "type": "string"
+        },
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id"
+      ],
+      "title": "RuntimeForwardingSource",
+      "type": "object"
+    },
+    "RuntimeForwardingSourceKind": {
+      "description": "Portable provenance family for a forwarder input source (OPEN).",
+      "enum": [
+        "tailed_path",
+        "api_pull",
+        "queue",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeForwardingSourceKind",
+      "type": "string"
+    },
+    "RuntimeForwardingTransform": {
+      "additionalProperties": false,
+      "description": "An observed transform applied between a source and a ship target.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingTransformKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Kind"
+        },
+        "sid_namespace": {
+          "default": "",
+          "title": "Sid Namespace",
+          "type": "string"
+        },
+        "transform_id": {
+          "title": "Transform Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "transform_id"
+      ],
+      "title": "RuntimeForwardingTransform",
+      "type": "object"
+    },
+    "RuntimeForwardingTransformKind": {
+      "description": "Portable transform family applied between source and ship target (OPEN).",
+      "enum": [
+        "passthrough",
+        "parse",
+        "ioc_to_rule",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeForwardingTransformKind",
       "type": "string"
     },
     "RuntimeHealthObservation": {
@@ -11123,6 +11734,252 @@
         }
       },
       "title": "RuntimeOperationalPolicy",
+      "type": "object"
+    },
+    "RuntimeOrchestrationAuthority": {
+      "additionalProperties": false,
+      "description": "Node-scoped runtime inventory for a container-spawn control authority.\n\n``control_interface_ref`` is the ``control_interface_id`` of a same-node\n``RuntimeControlInterface`` (the docker.sock shell), resolved by\n``validator.py`` \u2014 referenced, never duplicated. The\n``privilege_class`` discriminator selects the required profile the\n``require_profile_for_privilege_class`` guard enforces.",
+      "properties": {
+        "control_interface_ref": {
+          "default": "",
+          "title": "Control Interface Ref",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "engine": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeOrchestrationEngine"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Engine"
+        },
+        "engine_api_version": {
+          "default": "",
+          "title": "Engine Api Version",
+          "type": "string"
+        },
+        "lifecycle_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeOrchestrationLifecyclePolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "orchestration_authority_id": {
+          "title": "Orchestration Authority Id",
+          "type": "string"
+        },
+        "privilege_class": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeOrchestrationPrivilegeClass"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Privilege Class"
+        },
+        "realized_children": {
+          "items": {
+            "$ref": "#/$defs/RuntimeOrchestrationRealizedChild"
+          },
+          "title": "Realized Children",
+          "type": "array"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeOrchestrationScope"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "spawn_templates": {
+          "items": {
+            "$ref": "#/$defs/RuntimeOrchestrationSpawnTemplate"
+          },
+          "title": "Spawn Templates",
+          "type": "array"
+        }
+      },
+      "required": [
+        "orchestration_authority_id"
+      ],
+      "title": "RuntimeOrchestrationAuthority",
+      "type": "object"
+    },
+    "RuntimeOrchestrationEngine": {
+      "description": "Open taxonomy for the orchestration engine/runtime family.\n\nOpen taxonomy: carries both ``unknown`` and ``other`` per the DSL-139\nenum-sentinel rule.",
+      "enum": [
+        "docker",
+        "containerd",
+        "podman",
+        "kubernetes",
+        "cri_o",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeOrchestrationEngine",
+      "type": "string"
+    },
+    "RuntimeOrchestrationLifecyclePolicy": {
+      "additionalProperties": false,
+      "description": "The lifecycle posture applied to children the authority spawns.",
+      "properties": {
+        "cleanup": {
+          "default": "",
+          "title": "Cleanup",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "execution_timeout": {
+          "default": "",
+          "title": "Execution Timeout",
+          "type": "string"
+        },
+        "timeout": {
+          "default": "",
+          "title": "Timeout",
+          "type": "string"
+        }
+      },
+      "title": "RuntimeOrchestrationLifecyclePolicy",
+      "type": "object"
+    },
+    "RuntimeOrchestrationPrivilegeClass": {
+      "description": "Open taxonomy for the privilege an orchestration authority commands.\n\n``host_root_equivalent`` denotes an authority whose spawn surface is\nequivalent to host root (e.g. a read-write ``docker.sock`` holder);\n``namespaced`` denotes a privilege-scoped/rootless authority. Open\ntaxonomy: carries both ``unknown`` and ``other``.",
+      "enum": [
+        "host_root_equivalent",
+        "namespaced",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeOrchestrationPrivilegeClass",
+      "type": "string"
+    },
+    "RuntimeOrchestrationRealizedChild": {
+      "additionalProperties": false,
+      "description": "An observed, realized child workload spawned by the authority.",
+      "properties": {
+        "count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Count"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_ref": {
+          "default": "",
+          "title": "Evidence Ref",
+          "type": "string"
+        },
+        "image_ref": {
+          "default": "",
+          "title": "Image Ref",
+          "type": "string"
+        },
+        "workload_id": {
+          "title": "Workload Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "workload_id"
+      ],
+      "title": "RuntimeOrchestrationRealizedChild",
+      "type": "object"
+    },
+    "RuntimeOrchestrationScope": {
+      "additionalProperties": false,
+      "description": "The organizational/environment scope an orchestration authority governs.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "environment_name": {
+          "default": "",
+          "title": "Environment Name",
+          "type": "string"
+        },
+        "organization_ref": {
+          "default": "",
+          "title": "Organization Ref",
+          "type": "string"
+        }
+      },
+      "title": "RuntimeOrchestrationScope",
+      "type": "object"
+    },
+    "RuntimeOrchestrationSpawnTemplate": {
+      "additionalProperties": false,
+      "description": "A template the authority is authorized to instantiate (image + purpose).",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "image_ref": {
+          "default": "",
+          "title": "Image Ref",
+          "type": "string"
+        },
+        "purpose": {
+          "default": "",
+          "title": "Purpose",
+          "type": "string"
+        },
+        "template_id": {
+          "title": "Template Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "template_id"
+      ],
+      "title": "RuntimeOrchestrationSpawnTemplate",
       "type": "object"
     },
     "RuntimePackage": {

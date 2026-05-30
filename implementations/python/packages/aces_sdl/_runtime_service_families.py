@@ -14,10 +14,12 @@ from . import runtime_datastore as _runtime_datastore
 from . import runtime_directory_identity as _runtime_directory_identity
 from . import runtime_dns as _runtime_dns
 from . import runtime_file_service as _runtime_file_service
+from . import runtime_forwarding_agent as _runtime_forwarding_agent
 from . import runtime_listeners as _runtime_listeners
 from . import runtime_mail_service as _runtime_mail_service
 from . import runtime_network_detection as _runtime_network_detection
 from . import runtime_network_sensor as _runtime_network_sensor
+from . import runtime_orchestration as _runtime_orchestration
 from . import runtime_platform_application as _runtime_platform_application
 from . import runtime_scheduled_job as _runtime_scheduled_job
 from . import runtime_security_monitoring as _runtime_security_monitoring
@@ -205,6 +207,29 @@ RUNTIME_SERVICE_FAMILIES: tuple[RuntimeServiceFamily, ...] = (
             RuntimeReferenceChild("upstream_bindings", "binding_id"),
             RuntimeReferenceChild("connectors", "connector_id"),
             RuntimeReferenceChild("settings", "setting_id"),
+        ),
+    ),
+    RuntimeServiceFamily(
+        key="forwarding-agents",
+        module=_runtime_forwarding_agent,
+        collection_name="forwarding_agents",
+        id_field="forwarding_agent_id",
+        child_refs=(
+            RuntimeReferenceChild("sources", "source_id"),
+            RuntimeReferenceChild("transforms", "transform_id"),
+            RuntimeReferenceChild("ship_targets", "target_id"),
+            RuntimeReferenceChild("reload_channels", "reload_channel_id"),
+            RuntimeReferenceChild("settings", "setting_id"),
+        ),
+    ),
+    RuntimeServiceFamily(
+        key="orchestration-authorities",
+        module=_runtime_orchestration,
+        collection_name="orchestration_authorities",
+        id_field="orchestration_authority_id",
+        child_refs=(
+            RuntimeReferenceChild("spawn_templates", "template_id"),
+            RuntimeReferenceChild("realized_children", "workload_id"),
         ),
     ),
 )

@@ -89,3 +89,5 @@ adr-049-platform-application-runtime-inventory
 | [047](adr-047-scheduled-job-runtime-inventory.md) | Scheduled-Job Runtime Inventory | accepted | 2026-05-30 |
 | [048](adr-048-datastore-service-runtime-inventory.md) | Datastore Service Runtime Inventory | accepted | 2026-05-30 |
 | [049](adr-049-platform-application-runtime-inventory.md) | Platform Application Runtime Inventory | accepted | 2026-05-30 |
+| [050](adr-050-forwarding-agent-runtime-inventory.md) | Forwarding Agent Runtime Inventory | accepted | 2026-05-30 |
+| [051](adr-051-orchestration-authority-runtime-inventory.md) | Orchestration Authority Runtime Inventory | accepted | 2026-05-30 |

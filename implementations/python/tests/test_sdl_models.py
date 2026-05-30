@@ -415,6 +415,7 @@ class TestNode:
                 ],
                 "local_control_interfaces": [
                     {
+                        "control_interface_id": "docker-sock",
                         "path": "/run/docker.sock",
                         "kind": "unix_socket",
                         "protocol": "docker",
@@ -1018,7 +1019,10 @@ class TestNode:
                 {"filesystem_inventory": [{"path": "/app/app.py"}, {"path": "/app/app.py"}]},
                 "Duplicate runtime filesystem path",
             ),
-            ({"local_control_interfaces": [{"path": "run/docker.sock"}]}, "path"),
+            (
+                {"local_control_interfaces": [{"control_interface_id": "docker-sock", "path": "run/docker.sock"}]},
+                "path",
+            ),
             ({"process": {"pid": 0, "command": "./shufflebackend"}}, "pid"),
             ({"process": {"working_directory": "app"}}, "working_directory"),
             ({"dependency_manifests": [{"ecosystem": "go", "path": "go.mod"}]}, "path"),
@@ -1387,6 +1391,7 @@ class TestNode:
 
     def test_runtime_control_interface_accepts_windows_named_pipe_path(self):
         interface = RuntimeControlInterface(
+            control_interface_id="docker-engine-pipe",
             path=r"\\.\pipe\docker_engine",
             kind="named-pipe",
             bind_source=r"\\.\pipe\docker_engine",
@@ -1398,7 +1403,11 @@ class TestNode:
 
     def test_runtime_control_interface_named_pipe_path_requires_named_pipe_kind(self):
         with pytest.raises(ValidationError, match="named_pipe"):
-            RuntimeControlInterface(path=r"\\.\pipe\docker_engine", kind="unix-socket")
+            RuntimeControlInterface(
+                control_interface_id="docker-engine-pipe",
+                path=r"\\.\pipe\docker_engine",
+                kind="unix-socket",
+            )
 
     def test_runtime_mount_redacted_source_must_be_omitted(self):
         with pytest.raises(ValidationError, match="redacted runtime mount source"):
@@ -1438,12 +1447,14 @@ class TestNode:
     def test_runtime_control_interface_redacted_bind_source_must_be_omitted(self):
         with pytest.raises(ValidationError, match="redacted runtime control interface bind_source"):
             RuntimeControlInterface(
+                control_interface_id="docker-sock",
                 path="/run/docker.sock",
                 bind_source="/var/run/docker.sock",
                 bind_source_sensitivity="operator-secret",
             )
 
         interface = RuntimeControlInterface(
+            control_interface_id="docker-sock",
             path="/run/docker.sock",
             protocol="docker",
             bind_source_sensitivity="operator-secret",
@@ -1485,6 +1496,7 @@ class TestNode:
 
         validator.validate(
             {
+                "control_interface_id": "docker-sock",
                 "path": "/run/docker.sock",
                 "protocol": "docker",
                 "bind_source_sensitivity": "operator_secret",
@@ -1493,6 +1505,7 @@ class TestNode:
         with pytest.raises(JsonSchemaValidationError):
             validator.validate(
                 {
+                    "control_interface_id": "docker-sock",
                     "path": "/run/docker.sock",
                     "bind_source": "/var/run/docker.sock",
                     "bind_source_sensitivity": "OPERATOR_SECRET",

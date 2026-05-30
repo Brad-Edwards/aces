@@ -590,6 +590,54 @@ nodes:
             - content_object_id: misp-sharing
               kind: sharing_group
           authorization_ref: misp-rbac  # same-node runtime.app_authorizations id
+      forwarding_agents:                # observed log-shipping / intel-sync state
+        - forwarding_agent_id: wazuh-sidecar-suricata
+          implementation: wazuh_agent
+          agent_kind: log_forwarder     # OPEN discriminator selects the profile
+          version: "4.7.0"
+          sources:
+            - source_id: eve
+              kind: tailed_path
+              location: /logs/eve.json
+              parse_format: json
+          transforms:
+            - transform_id: passthrough
+              kind: passthrough
+          ship_targets:                 # log_forwarder requires an ingestion endpoint
+            - target_id: manager
+              target_node_ref: wazuh.manager   # cross-node target resolves to a node
+              ingestion_port: 1514
+              enrollment_port: 1515
+              protocol: syslog
+              enrollment_identity_classification: redacted  # identity never recorded
+          buffer_policy:                # log_forwarder requires a buffer_policy
+            buffer_policy_id: client-buffer
+            queue_capacity: 5000
+            eps: 500
+            crypto: aes
+          settings:
+            - setting_id: authd-pass    # secret-bearing settings omit value
+              name: authd.pass
+              classification: redacted
+      orchestration_authorities:        # observed container-spawn authority state
+        - orchestration_authority_id: shuffle-orborus
+          control_interface_ref: docker-sock   # same-node local_control_interfaces id
+          engine: docker
+          privilege_class: host_root_equivalent  # OPEN discriminator selects the profile
+          scope:
+            organization_ref: org-aptl
+            environment_name: shuffle
+          spawn_templates:
+            - template_id: worker
+              image_ref: ghcr.io/shuffle/shuffle-worker:1.4.0
+              purpose: workflow
+          lifecycle_policy:
+            timeout: 300s
+            cleanup: on_exit
+          realized_children:
+            - workload_id: worker-pool
+              image_ref: shuffle-worker:1.4.0
+              count: 12
       identity_authorities:             # observed directory/domain/IdP/IAM state
         - authority_id: techvault-domain
           kind: domain
@@ -1053,6 +1101,59 @@ Fully qualified refs such as
 participate in relationships, generic reference validation, and module import
 rewriting (see
 [ADR-049](../../decisions/adrs/adr-049-platform-application-runtime-inventory.md)).
+
+`runtime.forwarding_agents` records observed forwarding / intel-sync agent state
+hosted by the node: the agent-side `(source, transform, ship-target, buffer)`
+shipping spine that the SIEM/security-monitoring *manager* half
+(`runtime.security_monitoring_managers`) and the detection-engine *consumer*
+(`runtime.network_detection_engines`) cannot shape. Each entry is a
+`RuntimeForwardingAgent` with a stable `forwarding_agent_id`, an open
+`agent_kind` spine discriminator (`log_forwarder`, `content_sync`, `unknown`,
+`other`), and typed children: `sources` (tailed path, API pull, or queue inputs),
+`transforms` (`passthrough`/`parse`/`ioc_to_rule`), `ship_targets` (downstream
+event-ingest and/or enrollment endpoints), an optional `buffer_policy`
+(queue/back-pressure posture), `reload_channels` (downstream rule-reload sockets),
+and bounded `settings`. The discriminator drives a required-profile guard:
+`log_forwarder` requires a `buffer_policy` and at least one `ship_target` carrying
+an ingestion endpoint and rejects any `ioc_to_rule` transform; `content_sync`
+requires at least one `api_pull` source, one `ioc_to_rule` transform, and one
+`reload_channel`, and rejects a `buffer_policy` and any `ship_target` enrollment
+endpoint. A ship target's `target_node_ref`, when concrete, resolves to a defined
+node, and a `target_service_ref` resolves to a service on the referenced node
+(or, absent a node ref, on the owning node). Ship-target enrollment identities and
+secret-bearing settings never carry raw values: they classify
+`redacted`/`operator_secret` through the shared `name_indicates_secret` helper and
+the closed enrollment lattice. Cadence composes a `runtime.scheduled_jobs` entry
+and the inter-node trust edge composes a relationship forwarding edge — neither is
+re-typed here. Fully qualified refs such as
+`nodes.sensor.runtime.forwarding_agents.wazuh-sidecar.ship_targets.manager`
+participate in relationships, generic reference validation, and module import
+rewriting (see
+[ADR-050](../../decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md)).
+
+`runtime.orchestration_authorities` records observed container-spawn
+orchestration-authority state hosted by the node: the authority to *spawn*
+containers/workloads through a control interface — a SOAR orchestrator or an
+analyzer engine holding `docker.sock` read-write. `RuntimeControlInterface`
+(`runtime.local_control_interfaces`) types the docker.sock *shell* — a present
+read-write Unix socket — but carries no field for what the holder is authorized to
+*do*; this family carries the spawn contract. Each entry is a
+`RuntimeOrchestrationAuthority` with a stable `orchestration_authority_id`, an open
+`engine` taxonomy (`docker`/`containerd`/`podman`/`kubernetes`/`cri_o`), an optional
+`scope`, typed `spawn_templates` (image + purpose), an optional `lifecycle_policy`,
+typed `realized_children` (observed spawned workloads), and an open
+`privilege_class` discriminator (`host_root_equivalent`, `namespaced`, `unknown`,
+`other`). The `control_interface_ref` is the `control_interface_id` of a same-node
+`RuntimeControlInterface` — referenced, never duplicated — and resolves at scenario
+scope. The discriminator drives a required-profile guard: a `host_root_equivalent`
+authority requires a concrete `control_interface_ref` (model-local), and at
+scenario scope that interface must resolve to a read-write docker socket (a
+read-write `unix_socket` whose path ends in `docker.sock`). Fully qualified refs
+such as
+`nodes.soar.runtime.orchestration_authorities.shuffle-orborus.spawn_templates.worker`
+participate in relationships, generic reference validation, and module import
+rewriting (see
+[ADR-051](../../decisions/adrs/adr-051-orchestration-authority-runtime-inventory.md)).
 
 `source` identifies the node's artifact by provider-neutral `name` and
 `version`. When that artifact is a custom-built container image, the optional

@@ -262,7 +262,8 @@ nodes:
           stability: log
           sensitivity: operator-secret
       local-control-interfaces:
-        - path: /run/docker.sock
+        - control-interface-id: docker-sock
+          path: /run/docker.sock
           kind: unix-socket
           protocol: docker
           bind-source-sensitivity: operator-secret

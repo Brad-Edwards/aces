@@ -49,6 +49,8 @@ becoming a validator-only interpretation of the SDL.
 | `verify_runtime_app_authorizations` | Runtime application-internal RBAC stores resolve `permission_grants` and `role_mappings` `role_ref` values to roles declared within the same authorization (authorization-local role-permission and user-role assignment integrity). |
 | `verify_runtime_datastore_services` | Runtime datastore services resolve their owning transport `service` to a same-node service binding, and a non-empty, non-variable `authorization_ref` to an `app_authorization` declared on the same node. The model-local `require_profile_for_data_model` guard fails an under-populated `search_index`/`wide_column`/`key_value` instance. |
 | `verify_runtime_platform_applications` | Runtime platform applications resolve their owning transport `service` to a same-node service binding, a non-empty, non-variable `authorization_ref` to a same-node `app_authorization`, content-object `references` to sibling `content_object_id` values, and `marking_refs` to sibling `marking_id` values. The model-local `require_profile_for_platform_kind` guard fails an under-populated `threat_intel`/`soar`/`analyzer_engine`/`case_management`/`analytics_dashboard` instance. |
+| `verify_runtime_forwarding_agents` | Runtime forwarding agents resolve each `ship_target`'s `target_node_ref`, when concrete, to a defined node, and a concrete `target_service_ref` to a service on the referenced node (or, absent a node ref, on the owning node). The model-local `require_profile_for_agent_kind` guard fails an under-populated `log_forwarder` (requires a `buffer_policy` plus an ingestion `ship_target`, rejects `ioc_to_rule` transforms) or `content_sync` (requires an `api_pull` source, an `ioc_to_rule` transform, and a `reload_channel`, rejects a `buffer_policy` and `ship_target` enrollment endpoints) instance. |
+| `verify_runtime_orchestration_authorities` | Runtime orchestration authorities resolve a non-empty, non-variable `control_interface_ref` to a `RuntimeControlInterface` declared in the same node's `runtime.local_control_interfaces` (by `control_interface_id`); for a `host_root_equivalent` privilege class the referenced interface must additionally be a read-write docker socket (access `read_write`, kind `unix_socket`, path ending in `docker.sock`), with `${var}` interface access/kind/path permissive. The model-local `require_profile_for_privilege_class` guard fails a `host_root_equivalent` authority that carries no concrete `control_interface_ref`. |
 | `verify_agents` | Entity references resolve. Starting accounts and initial-knowledge accounts exist in accounts section. Allowed subnets and initial-knowledge subnets must resolve to switch-backed infrastructure entries. Initial-knowledge hosts must resolve to VM nodes. Initial-knowledge services exist in `nodes.*.services[].name`. |
 | `verify_participant_behavior` | Agent action refs resolve to declared action contracts, observation-boundary refs resolve to declared boundaries, interaction refs resolve to declared actions or targetable state, and boundary view rules/transitions resolve to declared observable, hidden, or evidence refs. |
 | `verify_objectives` | Objective actors resolve (`agent` or `entity`). Objective actions must be declared by the referenced agent. Targets resolve to named scenario elements, including qualified service/ACL refs and section-qualified top-level refs. Ambiguous bare refs are rejected with qualified alternatives. Success criteria resolve to declared conditions/metrics/evaluations/TLOs/goals. Optional windows resolve through one shared normalized analysis over stories/scripts/events/workflows/workflow-steps, must remain internally consistent, and fail closed on dangling or out-of-window refs. Objective dependencies must resolve and stay acyclic. |
@@ -250,6 +252,54 @@ with references plus an index-backend/data-source upstream binding). The owning
 transport `service` and a non-empty, non-variable `authorization_ref` resolve on
 the same node, content-object `references` resolve to sibling content objects, and
 `marking_refs` resolve to sibling markings.
+
+The optional `runtime.forwarding_agents` inventory has model-local and semantic
+rules. Forwarding-agent ids are stable concrete symbols and unique within a node
+runtime block; the agent-local source, transform, ship-target, buffer-policy,
+reload-channel, and setting ids are unique across the agent. Agent
+implementations, kinds, source kinds, parse formats, transform kinds, protocols,
+buffer crypto, reload-channel kinds, enrollment classifications, and setting
+provenance/classification are normalized from bounded enums while allowing
+full-value variables. A ship-target enrollment identity is never recorded — only
+the closed `none`/`redacted`/`operator_secret` lattice — and a setting whose name
+matches the shared secret-name vocabulary must omit its raw value and declare a
+redacted/operator-secret classification. The `require_profile_for_agent_kind`
+guard makes the `agent_kind` discriminator executable: a `${var}` placeholder is
+exempt and the open `unknown`/`other` tail is permissive, but a concrete
+`log_forwarder` requires a `buffer_policy` and at least one `ship_target` carrying
+an ingestion endpoint and rejects any `ioc_to_rule` transform, while a concrete
+`content_sync` requires at least one `api_pull` source, one `ioc_to_rule`
+transform, and one `reload_channel`, and rejects a `buffer_policy` and any
+`ship_target` enrollment endpoint. At scenario scope, a ship-target
+`target_node_ref` resolves to a defined node and a `target_service_ref` resolves
+to a service on the referenced node (or, absent a node ref, on the owning node).
+The `scheduled_jobs` / `service_units` / `forwarding_agents` boundary is the same
+one described above: a recurring forwarder's cadence belongs to a
+`runtime.scheduled_jobs` entry and its systemd lifecycle to
+`runtime.service_manager_units`, while what it ships — sources, transforms, and
+ship targets — belongs only to the forwarding agent; the inter-node trust edge is
+a relationship forwarding edge, not a re-typed ship target.
+
+The optional `runtime.orchestration_authorities` inventory has model-local and
+semantic rules. Orchestration-authority ids are stable concrete symbols and unique
+within a node runtime block; spawn-template and realized-child ids are unique
+across the authority. Engines and privilege classes are normalized from open
+taxonomies (both carry `unknown` and `other`) while allowing full-value variables,
+and realized-child `count` accepts a non-negative integer, a `${var}`, or none.
+The `require_profile_for_privilege_class` guard makes the `privilege_class`
+discriminator executable: a `${var}` placeholder is exempt and `namespaced`/
+`unknown`/`other` are permissive, but a concrete `host_root_equivalent` authority
+requires a non-empty, non-variable `control_interface_ref`. At scenario scope a
+non-empty, non-variable `control_interface_ref` resolves to a
+`RuntimeControlInterface` declared in the same node's
+`runtime.local_control_interfaces` (by `control_interface_id`); for a
+`host_root_equivalent` privilege class the referenced interface must additionally
+be a read-write docker socket (access `read_write`, kind `unix_socket`, path
+ending in `docker.sock`), with `${var}` interface access/kind/path treated as
+deferred and therefore permissive. The `RuntimeControlInterface` shell is
+referenced, never duplicated: this surface carries the spawn contract (engine,
+scope, spawn templates, lifecycle policy, realized children) that the control
+interface model has no field for.
 
 The optional `source.build` container image provenance block carries its own
 model-local rules. Build-argument and image-default-environment names must be

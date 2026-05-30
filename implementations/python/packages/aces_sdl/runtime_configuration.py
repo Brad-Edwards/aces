@@ -12,10 +12,12 @@ from . import runtime_datastore as _runtime_datastore
 from . import runtime_directory_identity as _runtime_directory_identity
 from . import runtime_dns as _runtime_dns
 from . import runtime_file_service as _runtime_file_service
+from . import runtime_forwarding_agent as _runtime_forwarding_agent
 from . import runtime_listeners as _runtime_listeners
 from . import runtime_mail_service as _runtime_mail_service
 from . import runtime_network_detection as _runtime_network_detection
 from . import runtime_network_sensor as _runtime_network_sensor
+from . import runtime_orchestration as _runtime_orchestration
 from . import runtime_platform_application as _runtime_platform_application
 from . import runtime_scheduled_job as _runtime_scheduled_job
 from . import runtime_security_monitoring as _runtime_security_monitoring
@@ -385,6 +387,8 @@ class RuntimeConfiguration(SDLModel):
     ssh_servers: list[_runtime_ssh_server.RuntimeSshServer] = Field(default_factory=list)
     datastore_services: list[_runtime_datastore.RuntimeDatastoreService] = Field(default_factory=list)
     platform_applications: list[_runtime_platform_application.RuntimePlatformApplication] = Field(default_factory=list)
+    forwarding_agents: list[_runtime_forwarding_agent.RuntimeForwardingAgent] = Field(default_factory=list)
+    orchestration_authorities: list[_runtime_orchestration.RuntimeOrchestrationAuthority] = Field(default_factory=list)
     app_authorizations: list[_runtime_app_authorization.RuntimeAppAuthorization] = Field(default_factory=list)
     scheduled_jobs: list[_runtime_scheduled_job.RuntimeScheduledJob] = Field(default_factory=list)
     service_manager_units: list[ServiceManagerUnit] = Field(default_factory=list)
@@ -397,6 +401,11 @@ class RuntimeConfiguration(SDLModel):
     def validate_unique_runtime_entries(self) -> "RuntimeConfiguration":
         _reject_duplicate_keys(self.environment, attr="name", label="environment variable")
         _reject_duplicate_keys(self.mounts, attr="target", label="mount target")
+        _reject_duplicate_keys(
+            self.local_control_interfaces,
+            attr="control_interface_id",
+            label="control_interface_id",
+        )
         _reject_duplicate_keys(self.filesystem_inventory, attr="path", label="filesystem path")
         _reject_duplicate_keys(self.processes, attr="name", label="process name")
         _reject_duplicate_keys(self.processes, attr="pid", label="process pid")
@@ -417,6 +426,16 @@ class RuntimeConfiguration(SDLModel):
             self.platform_applications,
             attr="platform_application_id",
             label="platform_application_id",
+        )
+        _reject_duplicate_keys(
+            self.forwarding_agents,
+            attr="forwarding_agent_id",
+            label="forwarding_agent_id",
+        )
+        _reject_duplicate_keys(
+            self.orchestration_authorities,
+            attr="orchestration_authority_id",
+            label="orchestration_authority_id",
         )
         _reject_duplicate_keys(
             self.app_authorizations,

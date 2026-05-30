@@ -474,6 +474,93 @@ ACES relies on prior work in four ways:
   bound the connector/binding posture; raw bodies, credentials, and key material
   are never stored — the surface records bounded manifests and classifications.
 
+## Forwarding And Intel-Sync Agent Semantics
+
+The `runtime.forwarding_agents` surface is the SCN-010 (DSL-136) response to a
+gap for the participant-observable agent-side shipping state — the
+`(source, transform, ship-target, buffer)` spine of a log-forwarding sidecar and
+the intel-sync co-process — that the SIEM/security-monitoring *manager*
+(`runtime.security_monitoring_managers`) and the detection-engine *consumer*
+(`runtime.network_detection_engines`) provably cannot shape. Its defining
+addition is the open `agent_kind` discriminator paired with a
+`require_profile_for_agent_kind` guard that makes each member's defining shipping
+profile executable rather than optional.
+
+ACES relies on prior work in four ways:
+
+- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+  model topology, deployable services/features, and validation/deployment
+  concerns. None expose a portable first-class forwarding-agent shipping
+  inventory, so ACES adds a typed node-scoped seam rather than overloading the
+  manager surface, the detection-engine surface, or `runtime.scheduled_jobs`
+  (cadence-only).
+- **Primary log-transport standards:** The syslog family —
+  [RFC 5424](https://www.rfc-editor.org/rfc/rfc5424) (syslog protocol),
+  [RFC 5425](https://www.rfc-editor.org/rfc/rfc5425) (TLS transport),
+  [RFC 6587](https://www.rfc-editor.org/rfc/rfc6587) (TCP framing), and
+  [RFC 3164](https://www.rfc-editor.org/rfc/rfc3164) (BSD syslog) — bound the
+  ship-target protocol/endpoint posture, while NIST
+  [SP 800-92](https://csrc.nist.gov/publications/detail/sp/800-92/final) anchors
+  the source → collector → aggregator pipeline shape and NIST
+  [SP 800-137](https://csrc.nist.gov/publications/detail/sp/800-137/final) (ISCM)
+  frames continuous-monitoring collection as a defining concern.
+- **Intel-to-content precedents:**
+  [STIX 2.1](https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html) /
+  [TAXII 2.1](https://docs.oasis-open.org/cti/taxii/v2.1/taxii-v2.1.html), NIST
+  [SP 800-150](https://csrc.nist.gov/publications/detail/sp/800-150/final), Bianco's
+  [Pyramid of Pain](https://detect-respond.blogspot.com/2013/03/the-pyramid-of-pain.html),
+  and MITRE [ATT&CK](https://attack.mitre.org/) frame the `ioc_to_rule`
+  intel-sync transform — the API-pull-to-rule-reload shape — that the
+  `content_sync` profile makes executable.
+- **Forwarder implementation lineage:** Elastic
+  [Beats](https://www.elastic.co/beats/) and the
+  [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) show the
+  recurring source/transform/ship/buffer facts ACES preserves (tailed inputs,
+  pipelines, exporters, back-pressure queues). These are implementation lineage,
+  not schema authority; enrollment identities and secret-bearing settings are
+  never stored as raw values.
+
+## Container-Spawn Orchestration-Authority Semantics
+
+The `runtime.orchestration_authorities` surface is the SCN-010 (DSL-137) response
+to a gap for the participant-observable authority to *spawn* containers/workloads
+through a control interface — a SOAR orchestrator or analyzer engine holding
+`docker.sock` read-write. `RuntimeControlInterface` types the docker.sock *shell*
+but carries no field for what the holder is authorized to *do*; this surface adds
+the spawn contract (engine, scope, spawn templates, lifecycle policy, realized
+children) referencing that shell, paired with a `require_profile_for_privilege_class`
+guard that makes the host-root privilege-escalation fact executable.
+
+ACES relies on prior work in four ways:
+
+- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+  model topology, deployable services/features, and validation/deployment
+  concerns. None expose a portable first-class container-spawn authority
+  inventory, so ACES adds a typed node-scoped seam referencing the existing
+  `runtime.local_control_interfaces` shell rather than duplicating it.
+- **Primary runtime and orchestration standards:** The OCI
+  [Runtime Spec](https://github.com/opencontainers/runtime-spec) and
+  [Image Spec](https://github.com/opencontainers/image-spec) bound the engine /
+  spawn-template posture, and the Kubernetes
+  [controller pattern](https://kubernetes.io/docs/concepts/architecture/controller/)
+  anchors the desired-state spawn-template / realized-children reconciliation
+  shape this surface records as observed state.
+- **Privilege and hardening precedents:** NIST
+  [SP 800-190](https://csrc.nist.gov/publications/detail/sp/800-190/final)
+  (container security) and the
+  [CIS Docker Benchmark](https://www.cisecurity.org/benchmark/docker) 5.x control
+  family frame the read-write `docker.sock` exposure as a host-root-equivalent
+  privilege escalation, and MITRE ATT&CK
+  [T1610](https://attack.mitre.org/techniques/T1610/) (Deploy Container) and
+  [T1611](https://attack.mitre.org/techniques/T1611/) (Escape to Host) anchor the
+  adversary relevance the `host_root_equivalent` profile makes executable.
+- **Engine API lineage:** The
+  [Docker Engine API](https://docs.docker.com/engine/api/) shows the spawn /
+  lifecycle surface (container create/start/stop, image references) ACES records
+  as inventory. This is implementation lineage, not schema authority; the spawn
+  contract is referenced through `control_interface_ref`, never duplicating the
+  control-interface shell.
+
 ## File-Sharing And Resource-Access Semantics
 
 The `runtime.file_services` surface is issue #421's response to a gap
