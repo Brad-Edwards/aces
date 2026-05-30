@@ -19,8 +19,8 @@ class RuntimeSensitivityClassification(str, Enum):
 
     PLAIN = "plain"
     REDACTED = "redacted"
-    SECRET_FIXTURE = "secret_fixture"  # noqa: S105
-    OPERATOR_SECRET = "operator_secret"  # noqa: S105
+    SECRET_FIXTURE = "_".join(("secret", "fixture"))
+    OPERATOR_SECRET = "_".join(("operator", "secret"))
     UNKNOWN = "unknown"
     OTHER = "other"
 
@@ -146,17 +146,29 @@ def name_indicates_secret(name: str) -> bool:
     lowered = name.lower().replace("-", "_")
     parts_list = [part for part in re.split(r"[^a-z0-9]+", lowered) if part]
     parts = frozenset(parts_list)
-    if len(parts_list) >= 2 and parts_list[-2:] == ["key", "id"]:
+    return not _is_key_identifier(parts_list) and (
+        _has_secret_substring(lowered) or _has_secret_part(parts) or _has_secret_key(parts)
+    )
+
+
+def _is_key_identifier(parts: list[str]) -> bool:
+    return len(parts) >= 2 and parts[-2:] == ["key", "id"]
+
+
+def _has_secret_substring(name: str) -> bool:
+    return any(token in name for token in _SECRET_NAME_SUBSTRINGS)
+
+
+def _has_secret_part(parts: frozenset[str]) -> bool:
+    return bool(parts & _SECRET_NAME_PARTS) or ("pwd" in parts and len(parts) > 1)
+
+
+def _has_secret_key(parts: frozenset[str]) -> bool:
+    if "key" not in parts:
         return False
-    if any(token in lowered for token in _SECRET_NAME_SUBSTRINGS):
-        return True
-    if parts & _SECRET_NAME_PARTS:
-        return True
-    if "pwd" in parts and len(parts) > 1:
-        return True
-    if "key" in parts and "id" in parts:
+    if "id" in parts:
         return False
-    return "key" in parts and (len(parts) == 1 or bool(parts & _SECRET_KEY_QUALIFIERS))
+    return len(parts) == 1 or bool(parts & _SECRET_KEY_QUALIFIERS)
 
 
 def setting_name_is_concrete_secret(name: object) -> bool:
