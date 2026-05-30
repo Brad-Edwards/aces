@@ -488,6 +488,7 @@ class SemanticValidator:
         self._verify_runtime_database_services()
         self._verify_runtime_dns_services()
         self._verify_runtime_ssh_servers()
+        self._verify_runtime_app_authorizations()
         self._verify_runtime_service_manager_units()
         self._verify_runtime_identity_authorities()
         self._verify_runtime_file_services()
@@ -1227,6 +1228,43 @@ class SemanticValidator:
                     f"match rule '{rule.match_id}' references local user '{pattern}' "
                     f"not present in runtime.local_identity.users"
                 )
+
+    def _verify_runtime_app_authorizations(self) -> None:
+        """Validate observed application-internal RBAC stores.
+
+        Permission-grant and role-mapping ``role_ref`` values are
+        authorization-local role references: each must resolve to a role
+        declared within the same ``app_authorization`` store (RBAC96 /
+        ANSI INCITS 359 role-permission and user-role assignment integrity).
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.app_authorizations:
+                continue
+            for authorization in runtime.app_authorizations:
+                self._verify_app_authorization_role_refs(node_name, authorization)
+
+    def _verify_app_authorization_role_refs(self, node_name: str, authorization: object) -> None:
+        role_ids = {role.role_id for role in authorization.roles}
+        label = f"Node '{node_name}' runtime app_authorization '{authorization.app_authorization_id}'"
+        for grant in authorization.permission_grants:
+            self._verify_app_authorization_role_ref(
+                f"{label} permission_grant '{grant.grant_id}'",
+                getattr(grant, "role_ref", ""),
+                role_ids,
+            )
+        for mapping in authorization.role_mappings:
+            self._verify_app_authorization_role_ref(
+                f"{label} role_mapping '{mapping.mapping_id}'",
+                getattr(mapping, "role_ref", ""),
+                role_ids,
+            )
+
+    def _verify_app_authorization_role_ref(self, owner_label: str, role_ref: str, role_ids: set[str]) -> None:
+        if not role_ref or self._is_unresolved_var(role_ref):
+            return
+        if role_ref not in role_ids:
+            self._err(f"{owner_label} role_ref '{role_ref}' is not a role in the authorization")
 
     def _verify_runtime_capability_overrides(self) -> None:
         """Cross-check ``linux_capabilities.process_overrides`` selectors.

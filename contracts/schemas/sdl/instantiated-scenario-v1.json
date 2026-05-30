@@ -4640,6 +4640,383 @@
       "title": "Role",
       "type": "object"
     },
+    "RuntimeAppAuthorization": {
+      "additionalProperties": false,
+      "description": "Application-internal RBAC store inventory for a single owning spine.",
+      "properties": {
+        "app_authorization_id": {
+          "title": "App Authorization Id",
+          "type": "string"
+        },
+        "auth_enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Auth Enabled"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "permission_grants": {
+          "items": {
+            "$ref": "#/$defs/RuntimeAppAuthorizationGrant"
+          },
+          "title": "Permission Grants",
+          "type": "array"
+        },
+        "principals": {
+          "items": {
+            "$ref": "#/$defs/RuntimeAppAuthorizationPrincipal"
+          },
+          "title": "Principals",
+          "type": "array"
+        },
+        "resource_vocabulary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeAppAuthorizationResourceVocabulary"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Resource Vocabulary"
+        },
+        "role_mappings": {
+          "items": {
+            "$ref": "#/$defs/RuntimeAppAuthorizationRoleMapping"
+          },
+          "title": "Role Mappings",
+          "type": "array"
+        },
+        "roles": {
+          "items": {
+            "$ref": "#/$defs/RuntimeAppAuthorizationRole"
+          },
+          "title": "Roles",
+          "type": "array"
+        },
+        "tenants": {
+          "items": {
+            "$ref": "#/$defs/RuntimeAppAuthorizationTenant"
+          },
+          "title": "Tenants",
+          "type": "array"
+        }
+      },
+      "required": [
+        "app_authorization_id"
+      ],
+      "title": "RuntimeAppAuthorization",
+      "type": "object"
+    },
+    "RuntimeAppAuthorizationCredentialClassification": {
+      "description": "Closed posture vocabulary for a principal credential.\n\nThe raw credential value MUST NOT be recorded; the principal model has no\nfield that can hold one. This vocabulary is the only credential\nrepresentation in the surface. Closed structural vocab: no ``unknown`` /\n``other``.",
+      "enum": [
+        "none",
+        "redacted",
+        "operator_secret"
+      ],
+      "title": "RuntimeAppAuthorizationCredentialClassification",
+      "type": "string"
+    },
+    "RuntimeAppAuthorizationGrant": {
+      "additionalProperties": false,
+      "description": "A resource-scoped permission grant (role -> actions -> resource pattern).\n\n``resource_kind`` is the single author-settable source of truth for the\nresource vocabulary; the owning authorization's ``resource_vocabulary`` is\nthe declared set validated against these grants.",
+      "properties": {
+        "actions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "effect": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeAppAuthorizationGrantEffect"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "allow",
+          "title": "Effect"
+        },
+        "grant_id": {
+          "title": "Grant Id",
+          "type": "string"
+        },
+        "resource_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeAppAuthorizationResourceVocabulary"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Resource Kind"
+        },
+        "resource_patterns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Resource Patterns",
+          "type": "array"
+        },
+        "role_ref": {
+          "default": "",
+          "title": "Role Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "grant_id"
+      ],
+      "title": "RuntimeAppAuthorizationGrant",
+      "type": "object"
+    },
+    "RuntimeAppAuthorizationGrantEffect": {
+      "description": "Closed allow/deny effect for a permission grant.\n\nClosed structural vocab: no ``unknown`` / ``other``.",
+      "enum": [
+        "allow",
+        "deny"
+      ],
+      "title": "RuntimeAppAuthorizationGrantEffect",
+      "type": "string"
+    },
+    "RuntimeAppAuthorizationPrincipal": {
+      "additionalProperties": false,
+      "description": "A user, service account, API key, or backend role known to the store.\n\nNo raw secret is ever carried: the credential posture is recorded purely\nvia :attr:`credential_classification`.",
+      "properties": {
+        "backend_roles": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Backend Roles",
+          "type": "array"
+        },
+        "credential_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeAppAuthorizationCredentialClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "none",
+          "title": "Credential Classification"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "hidden": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hidden"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeAppAuthorizationPrincipalKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Kind"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "principal_id": {
+          "title": "Principal Id",
+          "type": "string"
+        },
+        "reserved": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reserved"
+        }
+      },
+      "required": [
+        "principal_id"
+      ],
+      "title": "RuntimeAppAuthorizationPrincipal",
+      "type": "object"
+    },
+    "RuntimeAppAuthorizationPrincipalKind": {
+      "description": "Open taxonomy of authorization principal kinds.\n\nCarries both ``unknown`` and ``other`` (extensible real-world vocab).",
+      "enum": [
+        "user",
+        "service_account",
+        "api_key",
+        "backend_role",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeAppAuthorizationPrincipalKind",
+      "type": "string"
+    },
+    "RuntimeAppAuthorizationResourceVocabulary": {
+      "description": "Open spine discriminator for the resource space an RBAC store governs.\n\nTier placement (storage RBAC vs presentation RBAC) is derived from which\nspine references the authorization, not declared here. Open taxonomy:\ncarries both ``unknown`` and ``other``.",
+      "enum": [
+        "index_pattern",
+        "cql_resource",
+        "redis_acl",
+        "app_resource",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeAppAuthorizationResourceVocabulary",
+      "type": "string"
+    },
+    "RuntimeAppAuthorizationRole": {
+      "additionalProperties": false,
+      "description": "A named role defined within the application authorization store.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "role_id": {
+          "title": "Role Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role_id"
+      ],
+      "title": "RuntimeAppAuthorizationRole",
+      "type": "object"
+    },
+    "RuntimeAppAuthorizationRoleMapping": {
+      "additionalProperties": false,
+      "description": "A mapping that binds backend roles, users, or hosts onto a local role.",
+      "properties": {
+        "backend_roles": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Backend Roles",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "hosts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hosts",
+          "type": "array"
+        },
+        "mapping_id": {
+          "title": "Mapping Id",
+          "type": "string"
+        },
+        "role_ref": {
+          "default": "",
+          "title": "Role Ref",
+          "type": "string"
+        },
+        "users": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Users",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mapping_id"
+      ],
+      "title": "RuntimeAppAuthorizationRoleMapping",
+      "type": "object"
+    },
+    "RuntimeAppAuthorizationTenant": {
+      "additionalProperties": false,
+      "description": "A tenant/namespace scope within the application authorization store.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "tenant_id": {
+          "title": "Tenant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tenant_id"
+      ],
+      "title": "RuntimeAppAuthorizationTenant",
+      "type": "object"
+    },
     "RuntimeApplicationDisclosure": {
       "additionalProperties": false,
       "description": "Observable error or information-disclosure behavior of a route.\n\n``disclosure`` is a classified description of what the application exposes\n(a stack trace, an internal path, a backend version), never the raw payload,\ntoken, password, or cookie itself.",
@@ -5126,6 +5503,13 @@
       "additionalProperties": false,
       "description": "Observed runtime configuration facts attached to a VM node.",
       "properties": {
+        "app_authorizations": {
+          "items": {
+            "$ref": "#/$defs/RuntimeAppAuthorization"
+          },
+          "title": "App Authorizations",
+          "type": "array"
+        },
         "applications": {
           "items": {
             "$ref": "#/$defs/RuntimeApplicationSurface"
@@ -5313,6 +5697,13 @@
             "$ref": "#/$defs/RuntimeProcessIdentity"
           },
           "title": "Processes",
+          "type": "array"
+        },
+        "scheduled_jobs": {
+          "items": {
+            "$ref": "#/$defs/RuntimeScheduledJob"
+          },
+          "title": "Scheduled Jobs",
           "type": "array"
         },
         "security_monitoring_managers": {
@@ -10461,6 +10852,165 @@
         "other"
       ],
       "title": "RuntimeRestartPolicy",
+      "type": "string"
+    },
+    "RuntimeScheduledJob": {
+      "additionalProperties": false,
+      "description": "Node-scoped runtime inventory for a recurring scheduled job (cadence + run-state).",
+      "properties": {
+        "command_ref": {
+          "default": "",
+          "title": "Command Ref",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "run_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeScheduledJobRunState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schedule": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeScheduledJobSchedule"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "scheduled_job_id": {
+          "title": "Scheduled Job Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scheduled_job_id"
+      ],
+      "title": "RuntimeScheduledJob",
+      "type": "object"
+    },
+    "RuntimeScheduledJobLastResult": {
+      "description": "Open run-outcome taxonomy for the most recent scheduled-job execution.",
+      "enum": [
+        "success",
+        "failure",
+        "pending",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeScheduledJobLastResult",
+      "type": "string"
+    },
+    "RuntimeScheduledJobRunState": {
+      "additionalProperties": false,
+      "description": "Observed run-state for a scheduled job.",
+      "properties": {
+        "last_result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeScheduledJobLastResult"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Last Result"
+        },
+        "last_run": {
+          "default": "",
+          "title": "Last Run",
+          "type": "string"
+        },
+        "next_run": {
+          "default": "",
+          "title": "Next Run",
+          "type": "string"
+        }
+      },
+      "title": "RuntimeScheduledJobRunState",
+      "type": "object"
+    },
+    "RuntimeScheduledJobSchedule": {
+      "additionalProperties": false,
+      "description": "The recurrence cadence for a scheduled job.",
+      "properties": {
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeScheduledJobScheduleKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "interval",
+          "title": "Kind"
+        },
+        "spec": {
+          "default": "",
+          "title": "Spec",
+          "type": "string"
+        }
+      },
+      "title": "RuntimeScheduledJobSchedule",
+      "type": "object"
+    },
+    "RuntimeScheduledJobScheduleKind": {
+      "description": "Closed structural recurrence vocabulary for a scheduled-job schedule.\n\nThis is a fixed structural vocabulary (POSIX crontab / RFC 5545 RRULE /\nfixed-interval), so per the DSL-139 enum-sentinel rule it carries neither\n``unknown`` nor ``other``.",
+      "enum": [
+        "interval",
+        "cron",
+        "calendar"
+      ],
+      "title": "RuntimeScheduledJobScheduleKind",
       "type": "string"
     },
     "RuntimeSecurityMonitoringAgent": {

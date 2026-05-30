@@ -18,12 +18,12 @@ from aces_sdl._runtime_service_families import (
 )
 from aces_sdl.runtime_configuration import RuntimeConfiguration
 from aces_sdl.runtime_ssh_server import (
+    RuntimeSshServer,
     SshForcedCommand,
     SshForcedCommandKind,
     SshMatchCriterion,
     SshMatchCriterionKind,
     SshMatchRule,
-    RuntimeSshServer,
 )
 from pydantic import ValidationError
 
@@ -537,6 +537,8 @@ class TestRuntimeFamilyRegistrySshCoverage:
             "network_detection_engines",
             "security_monitoring_managers",
             "ssh_servers",
+            "app_authorizations",
+            "scheduled_jobs",
         )
         assert all(field in RuntimeConfiguration.model_fields for field in registered_fields)
 
@@ -558,9 +560,10 @@ class TestRuntimeFamilyRegistrySshCoverage:
         assert compat_nodes.RuntimeSshServer is RuntimeSshServer
 
     def test_runtime_family_exports_reject_duplicate_public_symbols(self, monkeypatch):
+        ssh_family = next(family for family in RUNTIME_SERVICE_FAMILIES if family.collection_name == "ssh_servers")
         duplicate_family = RuntimeServiceFamily(
             key="duplicate-ssh-servers",
-            module=RUNTIME_SERVICE_FAMILIES[-1].module,
+            module=ssh_family.module,
             collection_name="duplicate_ssh_servers",
             id_field="server_id",
         )

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from types import ModuleType
 from typing import Any
 
+from . import runtime_app_authorization as _runtime_app_authorization
 from . import runtime_application as _runtime_application
 from . import runtime_database as _runtime_database
 from . import runtime_directory_identity as _runtime_directory_identity
@@ -16,6 +17,7 @@ from . import runtime_listeners as _runtime_listeners
 from . import runtime_mail_service as _runtime_mail_service
 from . import runtime_network_detection as _runtime_network_detection
 from . import runtime_network_sensor as _runtime_network_sensor
+from . import runtime_scheduled_job as _runtime_scheduled_job
 from . import runtime_security_monitoring as _runtime_security_monitoring
 from . import runtime_ssh_server as _runtime_ssh_server
 
@@ -157,6 +159,25 @@ RUNTIME_SERVICE_FAMILIES: tuple[RuntimeServiceFamily, ...] = (
         collection_name="ssh_servers",
         id_field="server_id",
         child_refs=(RuntimeReferenceChild("match_rules", "match_id"),),
+    ),
+    RuntimeServiceFamily(
+        key="app-authorizations",
+        module=_runtime_app_authorization,
+        collection_name="app_authorizations",
+        id_field="app_authorization_id",
+        child_refs=(
+            RuntimeReferenceChild("principals", "principal_id"),
+            RuntimeReferenceChild("roles", "role_id"),
+            RuntimeReferenceChild("permission_grants", "grant_id"),
+            RuntimeReferenceChild("role_mappings", "mapping_id"),
+            RuntimeReferenceChild("tenants", "tenant_id"),
+        ),
+    ),
+    RuntimeServiceFamily(
+        key="scheduled-jobs",
+        module=_runtime_scheduled_job,
+        collection_name="scheduled_jobs",
+        id_field="scheduled_job_id",
     ),
 )
 

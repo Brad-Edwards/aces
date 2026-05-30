@@ -5,6 +5,7 @@ from enum import Enum
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
+from . import runtime_app_authorization as _runtime_app_authorization
 from . import runtime_application as _runtime_application
 from . import runtime_database as _runtime_database
 from . import runtime_directory_identity as _runtime_directory_identity
@@ -14,6 +15,7 @@ from . import runtime_listeners as _runtime_listeners
 from . import runtime_mail_service as _runtime_mail_service
 from . import runtime_network_detection as _runtime_network_detection
 from . import runtime_network_sensor as _runtime_network_sensor
+from . import runtime_scheduled_job as _runtime_scheduled_job
 from . import runtime_security_monitoring as _runtime_security_monitoring
 from . import runtime_ssh_server as _runtime_ssh_server
 from ._base import (
@@ -379,6 +381,8 @@ class RuntimeConfiguration(SDLModel):
         default_factory=list
     )
     ssh_servers: list[_runtime_ssh_server.RuntimeSshServer] = Field(default_factory=list)
+    app_authorizations: list[_runtime_app_authorization.RuntimeAppAuthorization] = Field(default_factory=list)
+    scheduled_jobs: list[_runtime_scheduled_job.RuntimeScheduledJob] = Field(default_factory=list)
     service_manager_units: list[ServiceManagerUnit] = Field(default_factory=list)
     packages: list[RuntimePackage] = Field(default_factory=list)
     software_components: list[RuntimeSoftwareComponent] = Field(default_factory=list)
@@ -400,6 +404,12 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.network_detection_engines, attr="engine_id", label="network detection engine")
         _reject_duplicate_keys(self.security_monitoring_managers, attr="manager_id", label="security manager")
         _reject_duplicate_keys(self.ssh_servers, attr="server_id", label="ssh_server server_id")
+        _reject_duplicate_keys(
+            self.app_authorizations,
+            attr="app_authorization_id",
+            label="app_authorization_id",
+        )
+        _reject_duplicate_keys(self.scheduled_jobs, attr="scheduled_job_id", label="scheduled_job_id")
         _reject_duplicate_keys(
             self.service_manager_units,
             attr="unit_id",

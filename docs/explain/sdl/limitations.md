@@ -44,6 +44,12 @@ network detection-engine runtime inventory (app-layer parsers, rule sources,
 network zoning/address-set variables, output streams, control channels, and
 evidence refs -
 [ADR-044](../../decisions/adrs/adr-044-network-detection-engine-runtime-inventory.md)),
+application-internal RBAC stores (principals with credential classification,
+roles, resource-scoped permission grants, role mappings, and tenants -
+[ADR-046](../../decisions/adrs/adr-046-app-authorization-runtime-inventory.md)),
+recurring scheduled-job cadence and run-state (closed interval/cron/calendar
+recurrence plus observed last/next run and last result, cadence-only -
+[ADR-047](../../decisions/adrs/adr-047-scheduled-job-runtime-inventory.md)),
 and directory/domain/realm/IdP/IAM/federation identity-authority state
 (authority namespaces, services, subjects, policies, and typed relationships -
 [ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).

@@ -46,6 +46,7 @@ becoming a validator-only interpretation of the SDL.
 | `verify_runtime_network_sensors` | Runtime network sensors name monitored networks that resolve to switch-backed infrastructure entries and, when runtime endpoint inventory exists on the node, to same-node network endpoint attachments. Configuration, log, and evidence refs resolve to observed runtime filesystem entries when the node has file inventory. |
 | `verify_runtime_network_detection_engines` | Runtime network detection engines resolve optional same-node sensor refs, network-set refs, control-channel service refs, and filesystem-backed configuration/log/evidence/rule/output/control paths. |
 | `verify_runtime_security_monitoring_managers` | Runtime security-monitoring managers and listeners resolve to same-node service bindings. Manager/group/content/detection/setting file refs resolve to observed runtime filesystem entries when the node has file inventory. Agent group member refs, agent group refs, setting component refs, detection content-set refs, and detection correlation refs resolve inside the owning manager. Detection source artifact refs and target refs resolve through the generic named-ref index. |
+| `verify_runtime_app_authorizations` | Runtime application-internal RBAC stores resolve `permission_grants` and `role_mappings` `role_ref` values to roles declared within the same authorization (authorization-local role-permission and user-role assignment integrity). |
 | `verify_agents` | Entity references resolve. Starting accounts and initial-knowledge accounts exist in accounts section. Allowed subnets and initial-knowledge subnets must resolve to switch-backed infrastructure entries. Initial-knowledge hosts must resolve to VM nodes. Initial-knowledge services exist in `nodes.*.services[].name`. |
 | `verify_participant_behavior` | Agent action refs resolve to declared action contracts, observation-boundary refs resolve to declared boundaries, interaction refs resolve to declared actions or targetable state, and boundary view rules/transitions resolve to declared observable, hidden, or evidence refs. |
 | `verify_objectives` | Objective actors resolve (`agent` or `entity`). Objective actions must be declared by the referenced agent. Targets resolve to named scenario elements, including qualified service/ACL refs and section-qualified top-level refs. Ambiguous bare refs are rejected with qualified alternatives. Success criteria resolve to declared conditions/metrics/evaluations/TLOs/goals. Optional windows resolve through one shared normalized analysis over stories/scripts/events/workflows/workflow-steps, must remain internally consistent, and fail closed on dangling or out-of-window refs. Objective dependencies must resolve and stay acyclic. |
@@ -170,6 +171,44 @@ manager-local content sets, and detection `if_sid_refs`,
 `if_matched_sid_refs`, and `parent_definition_refs` must resolve to
 manager-local detection definitions. Detection `source_artifact_ref` and
 `target_refs` resolve through the generic named-ref index.
+
+The optional `runtime.app_authorizations` inventory has model-local and
+semantic rules. Application authorizations, principals, roles, permission
+grants, role mappings, and tenants use stable concrete ids; the
+`app_authorization_id` is unique within a node runtime block, and every
+authorization-local stable id is unique across the authorization itself plus
+its principal, role, permission-grant, role-mapping, and tenant collections.
+Resource vocabularies, principal kinds, grant effects, and credential
+classifications are normalized from bounded enums while allowing full-value
+variables where the model permits. A principal never carries a raw credential
+value: its posture is the `credential_classification`, and a principal whose
+`name` matches the shared secret-name vocabulary must declare a `redacted` or
+`operator_secret` classification rather than `none`. An authorization that
+declares a concrete (non-`unknown`) `resource_vocabulary` must carry at least
+one permission grant whose `resource_kind` matches that vocabulary; a declared
+but unused vocabulary is rejected, while a `${var}` placeholder or the open
+`unknown` sentinel is exempt. Permission-grant and role-mapping `role_ref`
+values resolve to roles declared within the same authorization. This is
+application-internal RBAC: it is distinct from `runtime.identity_authorities`
+(wire-protocol directory subjects and trust edges) and from
+`runtime.database_services` engine GRANTs.
+
+The optional `runtime.scheduled_jobs` inventory has model-local and semantic
+rules. Scheduled-job ids are stable concrete symbols and are unique within a
+node runtime block. The `schedule.kind` is a closed structural recurrence
+vocabulary (`interval`, `cron`, `calendar`) carrying no `unknown`/`other`
+sentinel, while `run_state.last_result` is an open outcome vocabulary. Boolean
+`enabled` flags accept booleans or full-value variables. This surface models
+recurrence cadence and observed run-state only; it does not carry job inputs,
+outputs, or trigger targets. The `scheduled_jobs` / `service_units` /
+`forwarding_agents` boundary is deliberate: `runtime.service_manager_units`
+carries systemd-scoped unit lifecycle (including the `timer` unit kind), a
+`scheduled_jobs` entry carries product-neutral cadence and run-state for a
+recurring job (such as a bare-container ENTRYPOINT loop a systemd unit cannot
+express), and what a recurring forwarder ships — its inputs, transforms, and
+ship targets — belongs to the referencing forwarding agent, never re-encoded on
+the job. An event-triggered task is a trigger relationship, not a recurrence,
+and is therefore not a scheduled job.
 
 The optional `source.build` container image provenance block carries its own
 model-local rules. Build-argument and image-default-environment names must be
@@ -305,6 +344,9 @@ from the SDL runtime-family registry. Registered runtime refs include:
   and setting refs
 - `nodes.<node>.runtime.ssh_servers.<server_id>` plus
   `.match_rules.<match_id>`
+- `nodes.<node>.runtime.app_authorizations.<app_authorization_id>` plus nested
+  principal, role, permission-grant, role-mapping, and tenant refs
+- `nodes.<node>.runtime.scheduled_jobs.<scheduled_job_id>`
 
 This means a relationship can reference any node, feature, condition,
 vulnerability, infrastructure entry, metric, evaluation, TLO, goal, entity

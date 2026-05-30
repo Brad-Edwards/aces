@@ -891,6 +891,59 @@ in top-level relationships, objectives, module import rewriting, and generic
 reference validation (see
 [ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).
 
+`runtime.app_authorizations` records observed application-internal
+role-based access control stores — the in-app RBAC of a search cluster,
+key-value store, dashboard, threat-intel platform, or case-management
+application, distinct from the wire-protocol directory state in
+`runtime.identity_authorities` and from database engine GRANTs in
+`runtime.database_services`. Each entry is a `RuntimeAppAuthorization` with a
+stable `app_authorization_id`, an open `resource_vocabulary` spine
+discriminator (`index_pattern`, `cql_resource`, `redis_acl`, `app_resource`,
+`unknown`, `other`) that names the resource space the store governs, and an
+`auth_enabled` flag. Tier placement (storage RBAC for OpenSearch/Cassandra/Redis
+versus presentation RBAC for dashboards, Cortex, Shuffle, and TheHive) is
+derived from which spine references the authorization, never declared on the
+model. `principals` are users, service accounts, API keys, or backend roles
+with `reserved`/`hidden` flags; a principal never stores a raw bcrypt hash,
+API key, or password — its credential posture is recorded purely via a
+`credential_classification` (`none`, `redacted`, `operator_secret`), and a
+secret-bearing principal name must declare `redacted` or `operator_secret`.
+`roles` are named local roles. The defining addition over a directory is the
+resource-scoped `permission_grants` entry (role reference → `actions` →
+`resource_patterns`) with an `allow`/`deny` effect and a `resource_kind`; the
+grant's `resource_kind` is the single author-settable source of truth for the
+resource vocabulary, while the authorization's `resource_vocabulary` is the
+declared set validated against the grants. `role_mappings` bind backend roles,
+users, or hosts onto a local role, and `tenants` model namespace scopes. An
+authorization that declares a concrete (non-`unknown`) `resource_vocabulary`
+must carry at least one permission grant with a matching `resource_kind`, and
+`permission_grants`/`role_mappings` `role_ref` values resolve to roles declared
+within the same authorization. Fully qualified refs such as
+`nodes.indexer.runtime.app_authorizations.opensearch-security.roles.admin`
+participate in relationships, generic reference validation, and module import
+rewriting (see
+[ADR-046](../../decisions/adrs/adr-046-app-authorization-runtime-inventory.md)).
+
+`runtime.scheduled_jobs` records observed recurring scheduled jobs hosted by
+the node as a cadence-plus-run-state primitive only, distinct from
+`runtime.service_manager_units` (systemd-scoped lifecycle, including the
+`timer` unit kind) and from the forwarding/sync inputs and outputs that belong
+to the referencing forwarding agent. Each entry is a `RuntimeScheduledJob` with
+a stable `scheduled_job_id`, an `enabled` flag, an optional `command_ref`, an
+optional `schedule`, and an optional `run_state`. The `schedule` carries a
+closed structural `kind` (`interval`, `cron`, `calendar`) and an opaque `spec`
+string; the recurrence vocabulary is fixed (POSIX crontab / RFC 5545 RRULE /
+fixed interval) and therefore carries neither `unknown` nor `other`. The
+`run_state` records observed `last_run`/`next_run` timestamps and an open
+`last_result` outcome (`success`, `failure`, `pending`, `unknown`, `other`).
+Inputs, outputs, and trigger targets are intentionally absent — a bare-container
+ENTRYPOINT cadence loop is encoded here, while what the loop ships is the
+referencing forwarding agent's concern and an event trigger is a relationship,
+not a recurrence. Fully qualified refs such as
+`nodes.sync.runtime.scheduled_jobs.misp-pull` participate in relationships,
+generic reference validation, and module import rewriting (see
+[ADR-047](../../decisions/adrs/adr-047-scheduled-job-runtime-inventory.md)).
+
 `source` identifies the node's artifact by provider-neutral `name` and
 `version`. When that artifact is a custom-built container image, the optional
 `source.build` block records its observable build/provenance facts without

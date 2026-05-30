@@ -31,6 +31,8 @@ adr-042-network-sensor-runtime-monitoring
 adr-043-runtime-service-listener-surface
 adr-044-network-detection-engine-runtime-inventory
 adr-045-security-monitoring-detection-definition-semantics
+adr-046-app-authorization-runtime-inventory
+adr-047-scheduled-job-runtime-inventory
 ```
 
 | ADR | Title | Status | Date |
@@ -81,3 +83,5 @@ adr-045-security-monitoring-detection-definition-semantics
 | [043](adr-043-runtime-service-listener-surface.md) | Generic Runtime Service Listener Surface | accepted | 2026-05-29 |
 | [044](adr-044-network-detection-engine-runtime-inventory.md) | Network Detection Engine Runtime Inventory | accepted | 2026-05-29 |
 | [045](adr-045-security-monitoring-detection-definition-semantics.md) | Security-Monitoring Detection Definition Semantics | accepted | 2026-05-29 |
+| [046](adr-046-app-authorization-runtime-inventory.md) | Application-Internal Authorization Runtime Inventory | accepted | 2026-05-30 |
+| [047](adr-047-scheduled-job-runtime-inventory.md) | Scheduled-Job Runtime Inventory | accepted | 2026-05-30 |

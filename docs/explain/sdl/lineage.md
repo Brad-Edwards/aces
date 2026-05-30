@@ -300,6 +300,84 @@ ACES relies on prior work in four ways:
   config files, and backend inspect payloads remain evidence artifacts or
   downstream translation inputs. The SDL stores bounded inventory and refs.
 
+## Application-Internal Authorization Semantics
+
+The `runtime.app_authorizations` surface is the SCN-010 response to the
+most-replicated expressivity gap in the corpus: application-internal RBAC that
+recurs across search clusters, key-value stores, dashboards, threat-intel
+platforms, and case-management systems. It is deliberately not a wire-protocol
+directory (that stays `runtime.identity_authorities`) and not a database engine
+GRANT surface (that stays `runtime.database_services`). Its defining addition is
+the resource-scoped permission grant — role → actions → resource pattern — that
+neither adjacent surface can own.
+
+ACES relies on prior work in four ways:
+
+- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+  model topology, deployable services/features, and validation/deployment
+  concerns. None expose a portable first-class application-internal RBAC store,
+  so ACES adds a typed node-scoped seam rather than overloading
+  `runtime.identity_authorities`, `runtime.database_services`, or
+  `runtime.applications`.
+- **Primary RBAC and ABAC standards:** Ferraiolo and Kuhn's
+  [Role-Based Access Controls](https://www.nist.gov/publications/role-based-access-controls),
+  Sandhu et al.'s [RBAC96 model](https://doi.org/10.1109/2.485845),
+  [ANSI INCITS 359](https://webstore.ansi.org/standards/incits/ansiincits3592004)
+  (the RBAC standard), and NIST
+  [SP 800-162](https://csrc.nist.gov/publications/detail/sp/800-162/final) ABAC
+  supply the model's spine: principals, roles, role-permission assignment,
+  user-role assignment, and resource-scoping. The resource-scoped
+  `permission_grant` is anchored by RBAC96 / ANSI INCITS 359
+  permission-assignment and SP 800-162 resource-scoping; tier placement
+  (storage RBAC versus presentation RBAC) is derived from which spine references
+  the authorization, not declared on the model.
+- **Product RBAC precedents:** OpenSearch Security, Elasticsearch security,
+  Cassandra `system_auth`, Redis ACLs, Kibana/OpenSearch Dashboards roles,
+  MISP/TheHive/Cortex role catalogs, and Shuffle RBAC show recurring facts ACES
+  must preserve: principals with reserved/hidden flags, named roles,
+  resource-scoped grants, role mappings, and tenants. These are implementation
+  lineage, not schema authority.
+- **Credential discipline:** raw bcrypt hashes, API keys, and passwords are
+  never stored. A principal records only a `credential_classification`
+  (`none` / `redacted` / `operator_secret`), and the model has no field that can
+  hold a raw secret.
+
+## Scheduled-Job Cadence Semantics
+
+The `runtime.scheduled_jobs` surface is the SCN-010 response to the gap for
+recurring node-scoped work (gap IDs MISP-DSS-02 / TIP-004) that
+`runtime.service_manager_units` cannot express: a bare-container ENTRYPOINT
+cadence loop has no systemd unit. The surface is deliberately hollowed to
+cadence plus run-state only; inputs, outputs, and trigger targets belong to the
+referencing forwarding agent, and an event-triggered task is a trigger
+relationship rather than a recurrence.
+
+ACES relies on prior work in four ways:
+
+- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+  model topology, deployable services/features, and validation/deployment
+  concerns. None expose a portable first-class product-neutral scheduled-job
+  cadence, so ACES adds a typed node-scoped seam rather than overloading
+  `runtime.service_manager_units` (systemd-scoped) or the forwarding agent.
+- **Primary recurrence standards:** POSIX.1-2017
+  [crontab](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/crontab.html)
+  and RFC 5545 [iCalendar RRULE](https://www.rfc-editor.org/rfc/rfc5545) supply
+  the product-neutral recurrence vocabulary that the closed `schedule.kind`
+  (`interval` / `cron` / `calendar`) abstracts.
+- **Scheduler precedents:** systemd
+  [`systemd.timer`](https://www.freedesktop.org/software/systemd/man/systemd.timer.html)
+  and Kubernetes
+  [CronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/)
+  show recurring scheduler facts ACES must preserve as cadence and run-state.
+  These are implementation lineage, not schema authority.
+- **Run-state observability:** NIST
+  [SP 800-92](https://csrc.nist.gov/publications/detail/sp/800-92/final)
+  (log management) and
+  [SP 800-137](https://csrc.nist.gov/publications/detail/sp/800-137/final)
+  (continuous monitoring) frame the observed `run_state`
+  (`last_run` / `next_run` / `last_result`) as monitoring evidence rather than
+  control intent.
+
 ## File-Sharing And Resource-Access Semantics
 
 The `runtime.file_services` surface is issue #421's response to a gap
