@@ -49,6 +49,7 @@ class RuntimeMountSourceKind(str, Enum):
     TMPFS = "tmpfs"
     IMAGE = "image"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeControlInterfaceKind(str, Enum):
@@ -58,6 +59,7 @@ class RuntimeControlInterfaceKind(str, Enum):
     NAMED_PIPE = "named_pipe"
     FILE = "file"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeControlInterfaceAccess(str, Enum):
@@ -66,6 +68,7 @@ class RuntimeControlInterfaceAccess(str, Enum):
     READ_ONLY = "read_only"
     READ_WRITE = "read_write"
     UNKNOWN = "unknown"
+    OTHER = "other"
 
 
 class RuntimeMount(SDLModel):

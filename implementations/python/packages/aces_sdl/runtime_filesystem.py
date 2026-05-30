@@ -32,6 +32,7 @@ class RuntimeFilesystemEntryType(str, Enum):
     SOCKET = "socket"
     FIFO = "fifo"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeFilesystemPresence(str, Enum):
@@ -73,6 +74,7 @@ class RuntimeSensitivityClassification(str, Enum):
     SECRET_FIXTURE = "secret_fixture"  # noqa: S105
     OPERATOR_SECRET = "operator_secret"  # noqa: S105
     UNKNOWN = "unknown"
+    OTHER = "other"
 
 
 _REDACTED_LABEL_PATTERN = r"^[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]$"

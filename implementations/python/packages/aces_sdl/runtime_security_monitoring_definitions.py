@@ -52,6 +52,7 @@ class RuntimeSecurityMonitoringDetectionDefinitionKind(str, Enum):
     SURICATA_RULE = "suricata_rule"
     SIEM_ANALYTIC = "siem_analytic"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeSecurityMonitoringFieldPredicateOperator(str, Enum):
@@ -66,6 +67,7 @@ class RuntimeSecurityMonitoringFieldPredicateOperator(str, Enum):
     LESS_THAN = "less_than"
     GREATER_THAN = "greater_than"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 def _require_non_empty(value: str, *, field_name: str) -> str:

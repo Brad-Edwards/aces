@@ -51,6 +51,7 @@ class RuntimeIdentityAuthorityKind(str, Enum):
     CLOUD_IAM = "cloud_iam"
     AUTHORIZATION_SYSTEM = "authorization_system"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeIdentityAuthorityProtocol(str, Enum):
@@ -66,6 +67,7 @@ class RuntimeIdentityAuthorityProtocol(str, Enum):
     AD_DS_RPC = "ad_ds_rpc"
     GRAPH_API = "graph_api"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeIdentitySubjectKind(str, Enum):
@@ -81,6 +83,7 @@ class RuntimeIdentitySubjectKind(str, Enum):
     APPLICATION = "application"
     ORGANIZATIONAL_UNIT = "organizational_unit"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeIdentityRelationshipKind(str, Enum):
@@ -96,6 +99,7 @@ class RuntimeIdentityRelationshipKind(str, Enum):
     SYNCS_FROM = "syncs_from"
     ASSOCIATED = "associated"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeIdentityPolicyKind(str, Enum):
@@ -110,6 +114,7 @@ class RuntimeIdentityPolicyKind(str, Enum):
     GROUP_POLICY = "group_policy"
     TRUST = "trust"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeIdentityRecordOrigin(str, Enum):

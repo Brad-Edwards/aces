@@ -77,6 +77,7 @@ class DnsRecordClass(str, Enum):
     NONE = "none"
     ANY = "any"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class DnsRecordType(str, Enum):
@@ -101,6 +102,7 @@ class DnsRecordType(str, Enum):
     SVCB = "svcb"
     HTTPS = "https"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class DnsRecordProvenance(str, Enum):

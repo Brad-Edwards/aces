@@ -72,6 +72,7 @@ class RuntimeApplicationProtocol(str, Enum):
     WS = "ws"
     WSS = "wss"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeApplicationParameterLocation(str, Enum):
@@ -85,6 +86,7 @@ class RuntimeApplicationParameterLocation(str, Enum):
     JSON_BODY = "json_body"
     UPLOADED_FILE = "uploaded_file"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeApplicationRouteUpstreamScheme(str, Enum):

@@ -64,6 +64,7 @@ class RuntimeFileServiceProtocol(str, Enum):
     WEBDAV = "webdav"
     OBJECT_STORE = "object_store"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeFileShareKind(str, Enum):
@@ -73,6 +74,7 @@ class RuntimeFileShareKind(str, Enum):
     IPC = "ipc"
     PRINTER = "printer"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeFileServicePrincipalKind(str, Enum):
@@ -86,6 +88,7 @@ class RuntimeFileServicePrincipalKind(str, Enum):
     ANONYMOUS = "anonymous"
     SERVICE_ACCOUNT = "service_account"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeFileServicePrincipalStatus(str, Enum):
@@ -143,6 +146,7 @@ class RuntimeFileServiceAccessAction(str, Enum):
     EXECUTE = "execute"
     ADMINISTER = "administer"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeFileServiceAccessEffect(str, Enum):

@@ -47,6 +47,7 @@ class RuntimeListenerProtocol(str, Enum):
     SCTP = "sctp"
     UNIX = "unix"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeListenerAddressFamily(str, Enum):
@@ -57,6 +58,7 @@ class RuntimeListenerAddressFamily(str, Enum):
     UNIX = "unix"
     UNSPECIFIED = "unspecified"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeListenerScope(str, Enum):

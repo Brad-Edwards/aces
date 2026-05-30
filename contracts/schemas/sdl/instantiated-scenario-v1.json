@@ -669,7 +669,8 @@
         "sspi",
         "ldap",
         "radius",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "DatabaseAuthMethod",
       "type": "string"
@@ -685,7 +686,8 @@
         "mssql",
         "oracle",
         "redis",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "DatabaseEngine",
       "type": "string"
@@ -787,7 +789,8 @@
         "scenario",
         "built_in",
         "system",
-        "unknown"
+        "unknown",
+        "other"
       ],
       "title": "DatabaseObjectOrigin",
       "type": "string"
@@ -810,7 +813,8 @@
         "tds",
         "mongodb",
         "redis",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "DatabaseProtocol",
       "type": "string"
@@ -888,7 +892,8 @@
         "service",
         "admin",
         "system",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "DatabaseRoleType",
       "type": "string"
@@ -1184,7 +1189,8 @@
         "hs",
         "none",
         "any",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "DnsRecordClass",
       "type": "string"
@@ -1227,7 +1233,8 @@
         "tlsa",
         "svcb",
         "https",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "DnsRecordType",
       "type": "string"
@@ -5426,7 +5433,8 @@
         "form",
         "json_body",
         "uploaded_file",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeApplicationParameterLocation",
       "type": "string"
@@ -5438,7 +5446,8 @@
         "https",
         "ws",
         "wss",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeApplicationProtocol",
       "type": "string"
@@ -6420,7 +6429,8 @@
       "enum": [
         "read_only",
         "read_write",
-        "unknown"
+        "unknown",
+        "other"
       ],
       "title": "RuntimeControlInterfaceAccess",
       "type": "string"
@@ -6431,7 +6441,8 @@
         "unix_socket",
         "named_pipe",
         "file",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeControlInterfaceKind",
       "type": "string"
@@ -7452,7 +7463,8 @@
         "plain",
         "redacted",
         "secret_fixture",
-        "unknown"
+        "unknown",
+        "other"
       ],
       "title": "RuntimeEnvironmentValueClassification",
       "type": "string"
@@ -7631,7 +7643,8 @@
         "delete",
         "execute",
         "administer",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeFileServiceAccessAction",
       "type": "string"
@@ -7932,7 +7945,8 @@
         "guest",
         "anonymous",
         "service_account",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeFileServicePrincipalKind",
       "type": "string"
@@ -7975,7 +7989,8 @@
         "sftp",
         "webdav",
         "object_store",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeFileServiceProtocol",
       "type": "string"
@@ -8106,7 +8121,8 @@
         "disk",
         "ipc",
         "printer",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeFileShareKind",
       "type": "string"
@@ -8268,7 +8284,8 @@
         "device",
         "socket",
         "fifo",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeFilesystemEntryType",
       "type": "string"
@@ -9169,7 +9186,8 @@
         "identity_provider",
         "cloud_iam",
         "authorization_system",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeIdentityAuthorityKind",
       "type": "string"
@@ -9186,7 +9204,8 @@
         "scim",
         "ad_ds_rpc",
         "graph_api",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeIdentityAuthorityProtocol",
       "type": "string"
@@ -9310,7 +9329,8 @@
         "mfa",
         "group_policy",
         "trust",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeIdentityPolicyKind",
       "type": "string"
@@ -9403,7 +9423,8 @@
         "delegated_admin",
         "syncs_from",
         "associated",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeIdentityRelationshipKind",
       "type": "string"
@@ -9518,7 +9539,8 @@
         "role",
         "application",
         "organizational_unit",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeIdentitySubjectKind",
       "type": "string"
@@ -9602,7 +9624,8 @@
         "ipv6",
         "unix",
         "unspecified",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeListenerAddressFamily",
       "type": "string"
@@ -9614,7 +9637,8 @@
         "udp",
         "sctp",
         "unix",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeListenerProtocol",
       "type": "string"
@@ -9964,7 +9988,8 @@
         "oauthbearer",
         "external",
         "anonymous",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeMailAuthMechanism",
       "type": "string"
@@ -10025,7 +10050,8 @@
         "queue_manager",
         "relay",
         "policy_service",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeMailComponentKind",
       "type": "string"
@@ -10091,7 +10117,8 @@
         "alias",
         "catch_all",
         "outbound",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeMailDomainRole",
       "type": "string"
@@ -10211,7 +10238,8 @@
         "lmtp",
         "sieve",
         "monitoring",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeMailListenerRole",
       "type": "string"
@@ -10326,7 +10354,8 @@
         "postmaster",
         "abuse",
         "automated",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeMailMailboxRole",
       "type": "string"
@@ -10389,7 +10418,8 @@
         "database",
         "object_store",
         "remote",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeMailMailboxStoreKind",
       "type": "string"
@@ -10407,7 +10437,8 @@
         "pop3s",
         "lmtp",
         "sieve",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeMailProtocol",
       "type": "string"
@@ -10487,7 +10518,8 @@
         "corrupt",
         "maildrop",
         "mailbox",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeMailQueueKind",
       "type": "string"
@@ -10515,7 +10547,8 @@
         "local_delivery",
         "catch_all",
         "list",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeMailRoutingKind",
       "type": "string"
@@ -10979,7 +11012,8 @@
         "bind",
         "tmpfs",
         "image",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeMountSourceKind",
       "type": "string"
@@ -11651,7 +11685,8 @@
         "ipvlan",
         "macvlan",
         "none",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeNetworkDriver",
       "type": "string"
@@ -12415,7 +12450,8 @@
         "low",
         "medium",
         "high",
-        "critical"
+        "critical",
+        "other"
       ],
       "title": "RuntimePackageVulnerabilitySeverity",
       "type": "string"
@@ -13160,7 +13196,8 @@
         "worker",
         "sidecar",
         "agent",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeProcessRole",
       "type": "string"
@@ -13730,7 +13767,8 @@
         "active_response",
         "integration",
         "database",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeSecurityMonitoringComponentKind",
       "type": "string"
@@ -13779,7 +13817,8 @@
         "cdb_list",
         "threat_intel",
         "dashboard",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeSecurityMonitoringContentKind",
       "type": "string"
@@ -14213,7 +14252,8 @@
         "yara_rule",
         "suricata_rule",
         "siem_analytic",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeSecurityMonitoringDetectionDefinitionKind",
       "type": "string"
@@ -14283,7 +14323,8 @@
         "regex",
         "less_than",
         "greater_than",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeSecurityMonitoringFieldPredicateOperator",
       "type": "string"
@@ -14385,7 +14426,8 @@
         "alert_forwarding",
         "indexer_forwarding",
         "dashboard",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeSecurityMonitoringListenerRole",
       "type": "string"
@@ -14626,7 +14668,8 @@
         "redacted",
         "secret_fixture",
         "operator_secret",
-        "unknown"
+        "unknown",
+        "other"
       ],
       "title": "RuntimeSensitivityClassification",
       "type": "string"
@@ -15075,7 +15118,8 @@
       "enum": [
         "user",
         "group",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "RuntimeSudoPrincipalKind",
       "type": "string"
@@ -15243,7 +15287,8 @@
       "description": "Kind of service manager whose unit inventory is being recorded.\n\nInitially scoped to ``systemd``; ``other`` is the escape hatch for managers\nthat have not yet been promoted to their own typed enum value (per\nADR-035 \u00a7 5).",
       "enum": [
         "systemd",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "ServiceManagerKind",
       "type": "string"
@@ -15452,7 +15497,8 @@
         "failed",
         "activating",
         "deactivating",
-        "unknown"
+        "unknown",
+        "other"
       ],
       "title": "ServiceUnitActiveState",
       "type": "string"
@@ -15469,7 +15515,8 @@
         "generated",
         "indirect",
         "transient",
-        "unknown"
+        "unknown",
+        "other"
       ],
       "title": "ServiceUnitEnabledState",
       "type": "string"
@@ -15539,7 +15586,8 @@
         "device",
         "slice",
         "scope",
-        "other"
+        "other",
+        "unknown"
       ],
       "title": "ServiceUnitKind",
       "type": "string"
@@ -15554,7 +15602,8 @@
         "merged",
         "stub",
         "bad_setting",
-        "unknown"
+        "unknown",
+        "other"
       ],
       "title": "ServiceUnitLoadState",
       "type": "string"

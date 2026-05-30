@@ -90,6 +90,7 @@ class RuntimeSecurityMonitoringListenerRole(str, Enum):
     INDEXER_FORWARDING = "indexer_forwarding"
     DASHBOARD = "dashboard"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeSecurityMonitoringComponentKind(str, Enum):
@@ -112,6 +113,7 @@ class RuntimeSecurityMonitoringComponentKind(str, Enum):
     INTEGRATION = "integration"
     DATABASE = "database"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeSecurityMonitoringComponentStatus(str, Enum):
@@ -152,6 +154,7 @@ class RuntimeSecurityMonitoringContentKind(str, Enum):
     THREAT_INTEL = "threat_intel"
     DASHBOARD = "dashboard"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeSecurityMonitoringContentFormat(str, Enum):

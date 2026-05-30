@@ -172,6 +172,7 @@ class RuntimePackageVulnerabilitySeverity(str, Enum):
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
+    OTHER = "other"
 
 
 class RuntimeEnvironmentValueClassification(str, Enum):
@@ -181,6 +182,7 @@ class RuntimeEnvironmentValueClassification(str, Enum):
     REDACTED = "redacted"
     SECRET_FIXTURE = "secret_fixture"  # noqa: S105
     UNKNOWN = "unknown"
+    OTHER = "other"
 
 
 class RuntimeEnvironmentVariableProvenance(str, Enum):

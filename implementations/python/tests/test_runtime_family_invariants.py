@@ -17,8 +17,12 @@ surface, old and new.
 
 from __future__ import annotations
 
+import enum
+import importlib
+import pkgutil
 import typing
 
+import aces_sdl
 from aces_sdl import _runtime_service_families as rsf
 from aces_sdl.runtime_configuration import RuntimeConfiguration
 
@@ -88,6 +92,63 @@ def test_primary_id_field_exists_on_model() -> None:
         assert family.id_field in model.model_fields, (
             f"{family.key}: registry id_field '{family.id_field}' is not a field on {model.__name__}"
         )
+
+
+def _runtime_family_enums() -> dict[str, type[enum.Enum]]:
+    """Collect every Enum subclass *defined in* a runtime-family module.
+
+    A runtime-family module is any ``aces_sdl`` submodule whose name starts
+    with ``runtime_`` (this includes the ``*_vocab`` and ``*_definitions``
+    modules). Only enums whose ``__module__`` is that module are returned, so
+    enums merely re-exported or imported from another module are not
+    double-counted against the wrong module.
+    """
+
+    found: dict[str, type[enum.Enum]] = {}
+    for module_info in pkgutil.iter_modules(aces_sdl.__path__):
+        name = module_info.name
+        if not name.startswith("runtime_"):
+            continue
+        qualified = f"aces_sdl.{name}"
+        module = importlib.import_module(qualified)
+        for value in vars(module).values():
+            if (
+                isinstance(value, type)
+                and issubclass(value, enum.Enum)
+                and value is not enum.Enum
+                and value.__module__ == qualified
+            ):
+                found[f"{name}.{value.__name__}"] = value
+    return found
+
+
+def test_runtime_enums_open_or_closed_not_single_sentinel() -> None:
+    """Runtime-family enums must be open (both sentinels) or closed (neither).
+
+    The enum-sentinel convention (DSL-139, Brad-Edwards/aces#443) is: an OPEN
+    observed-value taxonomy carries BOTH ``unknown`` and ``other``; a CLOSED
+    structural/protocol/redaction-lattice vocabulary carries NEITHER. The
+    single-sentinel state -- exactly one of ``{unknown, other}`` -- is the
+    inconsistency this lint forbids. Any future runtime enum introduced in a
+    single-sentinel state fails here, which is the drift guard.
+    """
+
+    enums = _runtime_family_enums()
+    assert enums, "no runtime-family enums discovered; module iteration is broken"
+
+    offenders: list[str] = []
+    for qualified_name, enum_cls in sorted(enums.items()):
+        values = {member.value for member in enum_cls}
+        has_unknown = "unknown" in values
+        has_other = "other" in values
+        if has_unknown != has_other:
+            present = "unknown" if has_unknown else "other"
+            offenders.append(f"{qualified_name} (single-sentinel: only '{present}')")
+
+    assert not offenders, (
+        "Runtime-family enums must carry BOTH 'unknown' and 'other' (open) or "
+        "NEITHER (closed), never exactly one. Single-sentinel enums:\n  " + "\n  ".join(offenders)
+    )
 
 
 def test_registered_child_refs_exist_on_models() -> None:

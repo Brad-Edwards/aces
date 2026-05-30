@@ -346,6 +346,38 @@ evidence-capture contract surfaces are separate validation domains.
 They should not be retrofitted into validator-only behavior before the authored
 surface or external contracts exist.
 
+## Runtime enum sentinel convention
+
+Runtime service-family enums (every `Enum` defined in an `aces_sdl` module whose
+name starts with `runtime_`, including the `*_vocab` and `*_definitions`
+modules) follow a single, executable sentinel convention:
+
+- An **open** observed-value taxonomy carries **both** `unknown` and `other`.
+  `unknown` is the "not yet classified / not captured" value (and is typically
+  the field default), and `other` is the escape hatch for an observed value that
+  does not match a named member. Most runtime inventory enums are open, because
+  capture is best-effort and the named member list is never closed against the
+  real world.
+- A **closed** structural, protocol, or redaction-lattice vocabulary carries
+  **neither** `unknown` nor `other`. A value outside the fixed set is not a
+  member of the concept at all (for example
+  `RuntimeApplicationRouteUpstreamScheme`, which is exactly `http`/`https`: a
+  proxy-to-origin hop that is neither is not an application route upstream).
+
+The single-sentinel state — exactly one of `{unknown, other}` — is forbidden.
+It is ambiguous: it neither commits to a closed set nor offers the full
+open-taxonomy pair, so consumers cannot tell whether an unmatched observed value
+should round-trip as `other` or be treated as `unknown`.
+
+This convention is enforced as an executable drift guard by
+`test_runtime_enums_open_or_closed_not_single_sentinel` in
+`tests/test_runtime_family_invariants.py`. The test introspects every enum
+defined in a runtime-family module and asserts
+`("unknown" in values) == ("other" in values)` for each, so any future runtime
+enum introduced in a single-sentinel state fails the suite immediately. When a
+new enum is genuinely closed, it must carry neither sentinel; otherwise it must
+carry both.
+
 ## Static Semantic Invariants
 
 The validator is the main enforcement point for static SDL semantics, but not

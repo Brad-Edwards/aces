@@ -32,6 +32,7 @@ class DatabaseEngine(str, Enum):
     ORACLE = "oracle"
     REDIS = "redis"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class DatabaseProtocol(str, Enum):
@@ -47,6 +48,7 @@ class DatabaseProtocol(str, Enum):
     MONGODB = "mongodb"
     REDIS = "redis"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class DatabaseObjectOrigin(str, Enum):
@@ -60,6 +62,7 @@ class DatabaseObjectOrigin(str, Enum):
     BUILT_IN = "built_in"
     SYSTEM = "system"
     UNKNOWN = "unknown"
+    OTHER = "other"
 
 
 class DatabaseRoleType(str, Enum):
@@ -72,6 +75,7 @@ class DatabaseRoleType(str, Enum):
     ADMIN = "admin"
     SYSTEM = "system"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class DatabaseSettingProvenance(str, Enum):
@@ -109,6 +113,7 @@ class DatabaseAuthMethod(str, Enum):
     LDAP = "ldap"
     RADIUS = "radius"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 # Engines that speak a well-known wire protocol. A scenario authored with one
