@@ -189,6 +189,7 @@ class RuntimeIdentityAttribute(SDLModel):
     values: list[str] = Field(default_factory=list)
     value_classification: RuntimeSensitivityClassification | str = RuntimeSensitivityClassification.UNKNOWN
     origin: RuntimeIdentityRecordOrigin | str = RuntimeIdentityRecordOrigin.UNKNOWN
+    provenance: RuntimeIdentityRecordOrigin | str = RuntimeIdentityRecordOrigin.UNKNOWN
     description: str = ""
 
     @field_validator("name")
@@ -223,6 +224,26 @@ class RuntimeIdentityAttribute(SDLModel):
     @classmethod
     def normalize_origin(cls, v: RuntimeIdentityRecordOrigin | str) -> RuntimeIdentityRecordOrigin | str:
         return parse_runtime_enum_or_var(v, RuntimeIdentityRecordOrigin, field_name="origin")
+
+    @field_validator("provenance", mode="before")
+    @classmethod
+    def normalize_provenance(cls, v: RuntimeIdentityRecordOrigin | str) -> RuntimeIdentityRecordOrigin | str:
+        return parse_runtime_enum_or_var(v, RuntimeIdentityRecordOrigin, field_name="provenance")
+
+    @model_validator(mode="after")
+    def align_origin_and_provenance(self) -> "RuntimeIdentityAttribute":
+        if (
+            self.origin == RuntimeIdentityRecordOrigin.UNKNOWN
+            and self.provenance != RuntimeIdentityRecordOrigin.UNKNOWN
+        ):
+            self.origin = self.provenance
+        elif (
+            self.provenance != RuntimeIdentityRecordOrigin.UNKNOWN
+            and self.origin != RuntimeIdentityRecordOrigin.UNKNOWN
+            and self.provenance != self.origin
+        ):
+            raise ValueError("origin and provenance must describe the same runtime identity record origin")
+        return self
 
     @model_validator(mode="after")
     def validate_redacted_values(self) -> "RuntimeIdentityAttribute":
