@@ -144,7 +144,7 @@ def _reject_duplicates(values: Any, *, label: str, container_label: str) -> None
 
 def _reject_duplicate_local_ref_ids(authority: "RuntimeIdentityAuthority") -> None:
     seen: dict[str, str] = {}
-    entries: list[tuple[str, str]] = [("authority_id", authority.authority_id)]
+    entries: list[tuple[str, str]] = [("identity_authority_id", authority.identity_authority_id)]
     entries.extend(("service_id", service.service_id) for service in authority.services)
     entries.extend(("subject_id", subject.subject_id) for subject in authority.subjects)
     entries.extend(("policy_id", policy.policy_id) for policy in authority.policies)
@@ -155,7 +155,7 @@ def _reject_duplicate_local_ref_ids(authority: "RuntimeIdentityAuthority") -> No
         if prior is not None:
             raise ValueError(
                 f"Duplicate runtime identity stable id '{value}' in identity authority "
-                f"'{authority.authority_id}' across {prior} and {label}"
+                f"'{authority.identity_authority_id}' across {prior} and {label}"
             )
         seen[value] = label
 
@@ -423,7 +423,7 @@ class RuntimeIdentityRelationship(SDLModel):
 class RuntimeIdentityAuthority(SDLModel):
     """A node-scoped identity authority inventory."""
 
-    authority_id: str
+    identity_authority_id: str
     kind: RuntimeIdentityAuthorityKind | str = RuntimeIdentityAuthorityKind.OTHER
     name: str = ""
     namespace: str = ""
@@ -438,10 +438,10 @@ class RuntimeIdentityAuthority(SDLModel):
     policies: list[RuntimeIdentityPolicy] = Field(default_factory=list)
     relationships: list[RuntimeIdentityRelationship] = Field(default_factory=list)
 
-    @field_validator("authority_id")
+    @field_validator("identity_authority_id")
     @classmethod
-    def validate_authority_id(cls, v: str) -> str:
-        return require_symbol(v, field_name="authority_id")
+    def validate_identity_authority_id(cls, v: str) -> str:
+        return require_symbol(v, field_name="identity_authority_id")
 
     @field_validator("kind", mode="before")
     @classmethod
@@ -450,7 +450,7 @@ class RuntimeIdentityAuthority(SDLModel):
 
     @model_validator(mode="after")
     def validate_authority(self) -> "RuntimeIdentityAuthority":
-        container = f"identity authority '{self.authority_id}'"
+        container = f"identity authority '{self.identity_authority_id}'"
         _reject_duplicates(
             (service.service_id for service in self.services), label="service_id", container_label=container
         )

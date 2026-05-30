@@ -38,7 +38,7 @@ def _validate(scenario: Scenario) -> list[str]:
 
 def _mail_service(**overrides) -> dict:
     service = {
-        "service_id": "techvault-mail",
+        "mail_service_id": "techvault-mail",
         "service": "smtp",
         "engine": "docker-mailserver",
         "version": "latest",
@@ -145,7 +145,7 @@ def test_vm_runtime_mail_service_surface() -> None:
     node = Node(type="vm", runtime={"mail_services": [_mail_service()]})
 
     service = node.runtime.mail_services[0]
-    assert service.service_id == "techvault-mail"
+    assert service.mail_service_id == "techvault-mail"
     assert service.listeners[0].protocol == RuntimeMailProtocol.SMTP
     assert service.listeners[0].auth_mechanisms == [
         RuntimeMailAuthMechanism.PLAIN,
@@ -171,7 +171,7 @@ def test_parser_accepts_kebab_case_runtime_mail_services() -> None:
               - {port: 25, name: smtp}
             runtime:
               mail-services:
-                - service-id: techvault-mail
+                - mail-service-id: techvault-mail
                   service: smtp
                   listeners:
                     - listener-id: smtp-listener

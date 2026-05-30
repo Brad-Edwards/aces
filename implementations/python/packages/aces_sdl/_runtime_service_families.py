@@ -55,7 +55,7 @@ RUNTIME_SERVICE_FAMILIES: tuple[RuntimeServiceFamily, ...] = (
         key="service-listeners",
         module=_runtime_listeners,
         collection_name="service_listeners",
-        id_field="listener_id",
+        id_field="service_listener_id",
     ),
     RuntimeServiceFamily(
         key="applications",
@@ -87,7 +87,7 @@ RUNTIME_SERVICE_FAMILIES: tuple[RuntimeServiceFamily, ...] = (
         key="identity-authorities",
         module=_runtime_directory_identity,
         collection_name="identity_authorities",
-        id_field="authority_id",
+        id_field="identity_authority_id",
         child_refs=(
             RuntimeReferenceChild("services", "service_id"),
             RuntimeReferenceChild("subjects", "subject_id"),
@@ -99,7 +99,7 @@ RUNTIME_SERVICE_FAMILIES: tuple[RuntimeServiceFamily, ...] = (
         key="file-services",
         module=_runtime_file_service,
         collection_name="file_services",
-        id_field="service_id",
+        id_field="file_service_id",
         child_refs=(
             RuntimeReferenceChild("shares", "share_id"),
             RuntimeReferenceChild("principals", "principal_id"),
@@ -111,7 +111,7 @@ RUNTIME_SERVICE_FAMILIES: tuple[RuntimeServiceFamily, ...] = (
         key="mail-services",
         module=_runtime_mail_service,
         collection_name="mail_services",
-        id_field="service_id",
+        id_field="mail_service_id",
         child_refs=(
             RuntimeReferenceChild("components", "component_id"),
             RuntimeReferenceChild("listeners", "listener_id"),
@@ -128,13 +128,13 @@ RUNTIME_SERVICE_FAMILIES: tuple[RuntimeServiceFamily, ...] = (
         key="network-sensors",
         module=_runtime_network_sensor,
         collection_name="network_sensors",
-        id_field="sensor_id",
+        id_field="network_sensor_id",
     ),
     RuntimeServiceFamily(
         key="network-detection-engines",
         module=_runtime_network_detection,
         collection_name="network_detection_engines",
-        id_field="engine_id",
+        id_field="network_detection_engine_id",
         child_refs=(
             RuntimeReferenceChild("rule_sources", "source_id"),
             RuntimeReferenceChild("network_sets", "set_id"),
@@ -146,7 +146,7 @@ RUNTIME_SERVICE_FAMILIES: tuple[RuntimeServiceFamily, ...] = (
         key="security-monitoring-managers",
         module=_runtime_security_monitoring,
         collection_name="security_monitoring_managers",
-        id_field="manager_id",
+        id_field="security_monitoring_manager_id",
         child_refs=(
             RuntimeReferenceChild("listeners", "listener_id"),
             RuntimeReferenceChild("components", "component_id"),
@@ -161,7 +161,7 @@ RUNTIME_SERVICE_FAMILIES: tuple[RuntimeServiceFamily, ...] = (
         key="ssh-servers",
         module=_runtime_ssh_server,
         collection_name="ssh_servers",
-        id_field="server_id",
+        id_field="ssh_server_id",
         child_refs=(RuntimeReferenceChild("match_rules", "match_id"),),
     ),
     RuntimeServiceFamily(

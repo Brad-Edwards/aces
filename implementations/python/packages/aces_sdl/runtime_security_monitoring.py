@@ -461,7 +461,7 @@ class RuntimeSecurityMonitoringSetting(SDLModel):
 class RuntimeSecurityMonitoringManager(SDLModel):
     """Node-scoped runtime inventory for a SIEM/security-monitoring manager."""
 
-    manager_id: str
+    security_monitoring_manager_id: str
     service: str = ""
     implementation: RuntimeSecurityMonitoringImplementation | str = RuntimeSecurityMonitoringImplementation.UNKNOWN
     manager_kind: RuntimeSecurityMonitoringManagerKind | str = RuntimeSecurityMonitoringManagerKind.UNKNOWN
@@ -480,10 +480,10 @@ class RuntimeSecurityMonitoringManager(SDLModel):
     settings: list[RuntimeSecurityMonitoringSetting] = Field(default_factory=list)
     description: str = ""
 
-    @field_validator("manager_id")
+    @field_validator("security_monitoring_manager_id")
     @classmethod
-    def validate_manager_id(cls, v: str) -> str:
-        return require_symbol(v, field_name="manager_id")
+    def validate_security_monitoring_manager_id(cls, v: str) -> str:
+        return require_symbol(v, field_name="security_monitoring_manager_id")
 
     @field_validator("implementation", mode="before")
     @classmethod
@@ -518,7 +518,7 @@ class RuntimeSecurityMonitoringManager(SDLModel):
 
 
 def _reject_duplicate_local_ref_ids(manager: RuntimeSecurityMonitoringManager) -> None:
-    entries: list[tuple[str, str]] = [("manager_id", manager.manager_id)]
+    entries: list[tuple[str, str]] = [("security_monitoring_manager_id", manager.security_monitoring_manager_id)]
     for label, collection_name in (
         ("listener_id", "listeners"),
         ("component_id", "components"),
@@ -536,6 +536,6 @@ def _reject_duplicate_local_ref_ids(manager: RuntimeSecurityMonitoringManager) -
         if prior is not None:
             raise ValueError(
                 f"Duplicate runtime security-monitoring stable id '{value}' in manager "
-                f"'{manager.manager_id}' across {prior} and {label}"
+                f"'{manager.security_monitoring_manager_id}' across {prior} and {label}"
             )
         seen[value] = label

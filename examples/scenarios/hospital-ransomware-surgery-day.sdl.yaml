@@ -90,7 +90,7 @@ nodes:
         username: adfs_svc
     runtime:
       identity_authorities:
-        - authority_id: hospital-domain
+        - identity_authority_id: hospital-domain
           kind: domain
           name: Hospital Active Directory Domain
           namespace: hospital.local
@@ -158,7 +158,7 @@ nodes:
                 - name: history_count
                   values: ["24"]
                   origin: directory
-        - authority_id: hospital-adfs
+        - identity_authority_id: hospital-adfs
           kind: identity_provider
           name: Hospital ADFS
           namespace: https://adfs.hospital.local

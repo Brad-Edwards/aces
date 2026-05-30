@@ -381,7 +381,7 @@ class RuntimeNetworkDetectionControlChannel(SDLModel):
 class RuntimeNetworkDetectionEngine(SDLModel):
     """Node-scoped runtime inventory for an IDS/NDR detection engine."""
 
-    engine_id: str
+    network_detection_engine_id: str
     implementation: RuntimeNetworkDetectionEngineImplementation | str = (
         RuntimeNetworkDetectionEngineImplementation.UNKNOWN
     )
@@ -401,10 +401,10 @@ class RuntimeNetworkDetectionEngine(SDLModel):
     control_channels: list[RuntimeNetworkDetectionControlChannel] = Field(default_factory=list)
     description: str = ""
 
-    @field_validator("engine_id")
+    @field_validator("network_detection_engine_id")
     @classmethod
-    def validate_engine_id(cls, v: str) -> str:
-        return require_symbol(v, field_name="engine_id")
+    def validate_network_detection_engine_id(cls, v: str) -> str:
+        return require_symbol(v, field_name="network_detection_engine_id")
 
     @field_validator("implementation", mode="before")
     @classmethod
@@ -439,13 +439,15 @@ class RuntimeNetworkDetectionEngine(SDLModel):
 
     @model_validator(mode="after")
     def validate_engine(self) -> "RuntimeNetworkDetectionEngine":
-        _reject_duplicate_values(self.app_layer_protocols, field_name="app_layer_protocols", owner=self.engine_id)
+        _reject_duplicate_values(
+            self.app_layer_protocols, field_name="app_layer_protocols", owner=self.network_detection_engine_id
+        )
         _reject_duplicate_local_ref_ids(self)
         return self
 
 
 def _reject_duplicate_local_ref_ids(engine: RuntimeNetworkDetectionEngine) -> None:
-    entries: list[tuple[str, str]] = [("engine_id", engine.engine_id)]
+    entries: list[tuple[str, str]] = [("network_detection_engine_id", engine.network_detection_engine_id)]
     for label, collection_name in (
         ("source_id", "rule_sources"),
         ("set_id", "network_sets"),
@@ -460,6 +462,6 @@ def _reject_duplicate_local_ref_ids(engine: RuntimeNetworkDetectionEngine) -> No
         if prior is not None:
             raise ValueError(
                 f"Duplicate runtime network detection stable id '{value}' in engine "
-                f"'{engine.engine_id}' across {prior} and {label}"
+                f"'{engine.network_detection_engine_id}' across {prior} and {label}"
             )
         seen[value] = label

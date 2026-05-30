@@ -40,7 +40,7 @@ def _validate(scenario: Scenario) -> list[str]:
 
 def _security_manager(**overrides) -> dict:
     manager = {
-        "manager_id": "techvault-wazuh",
+        "security_monitoring_manager_id": "techvault-wazuh",
         "service": "wazuh-api",
         "implementation": "wazuh",
         "manager_kind": "siem",
@@ -242,7 +242,7 @@ def test_vm_runtime_security_monitoring_manager_inventory() -> None:
     node = Node(type="vm", runtime={"security_monitoring_managers": [_security_manager()]})
 
     manager = node.runtime.security_monitoring_managers[0]
-    assert manager.manager_id == "techvault-wazuh"
+    assert manager.security_monitoring_manager_id == "techvault-wazuh"
     assert manager.implementation == RuntimeSecurityMonitoringImplementation.WAZUH
     assert manager.listeners[0].role == RuntimeSecurityMonitoringListenerRole.AGENT_EVENT_INGESTION
     assert manager.listeners[0].auth_required is True
@@ -304,7 +304,7 @@ def test_parser_accepts_kebab_case_runtime_security_monitoring_managers() -> Non
               - {port: 55000, name: wazuh-api}
             runtime:
               security-monitoring-managers:
-                - manager-id: techvault-wazuh
+                - security-monitoring-manager-id: techvault-wazuh
                   service: wazuh-api
                   implementation: WAZUH
                   manager-kind: siem
@@ -341,7 +341,7 @@ def test_parser_accepts_kebab_case_runtime_security_monitoring_managers() -> Non
     )
 
     manager = scenario.nodes["siem"].runtime.security_monitoring_managers[0]
-    assert manager.manager_id == "techvault-wazuh"
+    assert manager.security_monitoring_manager_id == "techvault-wazuh"
     assert manager.listeners[0].role == RuntimeSecurityMonitoringListenerRole.API
     assert manager.content_sets[0].format == RuntimeSecurityMonitoringContentFormat.WAZUH_RULE_XML
     assert manager.detection_definitions[0].definition_id == "rule-301010"

@@ -126,12 +126,11 @@ nodes:
           protocol: docker
           bind_source_sensitivity: operator_secret
           access: read_write
-      process:
-        pid: 1
-        command: ./shufflebackend
-        user: root
-        working_directory: /app
       processes:
+        - name: shufflebackend
+          command: ./shufflebackend
+          user: root
+          working_directory: /app
         - name: supervisord
           pid: 1
           command: supervisord -n
@@ -712,9 +711,9 @@ UID/GID, mode, size, digest algorithm/value pairs, source-package path,
 provenance, stability, and sensitivity classification.
 `local_control_interfaces` describe path-local control APIs such as Unix
 sockets; host-side bind sources use `bind_source_sensitivity` and must omit
-`bind_source` when classified as `redacted` or `operator_secret`; `process`
-records primary execution identity; `processes` records a supervised or
-load-bearing process set; `environment` records observed runtime environment
+`bind_source` when classified as `redacted` or `operator_secret`; `processes`
+records the supervised or load-bearing process set, including the primary
+execution identity; `environment` records observed runtime environment
 variables with provenance and redaction classification; `linux_capabilities`
 records container/Linux
 capability policy; `operational_policy` records restart policy and observed

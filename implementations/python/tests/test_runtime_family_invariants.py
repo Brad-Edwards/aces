@@ -63,17 +63,7 @@ def _current_violations() -> set[str]:
 # Pre-existing violations as of the start of the DSL-139 reconciliation. Each
 # entry is removed in the same commit that resolves it; an empty set means the
 # whole surface satisfies the invariant set.
-KNOWN_VIOLATIONS: set[str] = {
-    "primary-id:service-listeners",
-    "primary-id:identity-authorities",
-    "primary-id:file-services",
-    "primary-id:mail-services",
-    "primary-id:network-sensors",
-    "primary-id:network-detection-engines",
-    "primary-id:security-monitoring-managers",
-    "primary-id:ssh-servers",
-    "scalar-twin:runtime_configuration.process",
-}
+KNOWN_VIOLATIONS: set[str] = set()
 
 
 def test_runtime_family_invariants_no_new_drift() -> None:

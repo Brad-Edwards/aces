@@ -7,16 +7,14 @@ the first one.
 """
 
 from collections import defaultdict, deque
+from collections.abc import Callable, Iterable, Sequence
+from dataclasses import dataclass
 from ipaddress import ip_address, ip_network
 
 from pydantic import BaseModel
 
 from ._base import extract_variable_name, is_variable_ref
 from ._errors import SDLValidationError
-from ._runtime_mail_semantics import (
-    verify_relationship_mail_access,
-    verify_runtime_mail_services,
-)
 from ._runtime_service_families import collect_qualified_runtime_family_refs
 from .entities import flatten_entities
 from .infrastructure import SimpleProperties
@@ -49,6 +47,96 @@ from .semantics.workflow import branch_closure, workflow_step_semantic_contract
 # Common ref-path prefix used by qualified runtime/service refs (e.g.
 # ``nodes.vm.services.http``, ``nodes.vm.runtime.applications.webapp``).
 _NODES_PREFIX = "nodes."
+
+
+@dataclass(frozen=True)
+class _MailServiceLocalIds:
+    components: set[str]
+    domains: set[str]
+    stores: set[str]
+    mailboxes: set[str]
+    aliases: set[str]
+    routing_refs: set[str]
+
+
+@dataclass(frozen=True)
+class _MailRefTail:
+    service_id: str
+    collection_name: str
+    child_id: str
+
+
+_MailChildIdReader = Callable[[object], Iterable[str]]
+_MAIL_CHILD_ID_READERS: dict[str, _MailChildIdReader] = {
+    "components": lambda service: (component.component_id for component in service.components),
+    "listeners": lambda service: (listener.listener_id for listener in service.listeners),
+    "domains": lambda service: (domain.domain_id for domain in service.domains),
+    "mailbox_stores": lambda service: (store.store_id for store in service.mailbox_stores),
+    "mailboxes": lambda service: (mailbox.mailbox_id for mailbox in service.mailboxes),
+    "aliases": lambda service: (alias.alias_id for alias in service.aliases),
+    "routing_rules": lambda service: (rule.rule_id for rule in service.routing_rules),
+    "queues": lambda service: (queue.queue_id for queue in service.queues),
+    "settings": lambda service: (setting.setting_id for setting in service.settings),
+}
+
+
+def _mail_services_for_node(node: object) -> Sequence[object]:
+    runtime = getattr(node, "runtime", None)
+    return () if runtime is None else runtime.mail_services
+
+
+def _mail_services_for_node_name(scenario: object, node_name: str) -> Sequence[object]:
+    node = scenario.nodes.get(node_name)
+    return () if node is None else _mail_services_for_node(node)
+
+
+def _collect_mail_service_local_ids(service: object) -> _MailServiceLocalIds:
+    mailbox_ids = {mailbox.mailbox_id for mailbox in service.mailboxes}
+    alias_ids = {alias.alias_id for alias in service.aliases}
+    domain_ids = {domain.domain_id for domain in service.domains}
+    return _MailServiceLocalIds(
+        components={component.component_id for component in service.components},
+        domains=domain_ids,
+        stores={store.store_id for store in service.mailbox_stores},
+        mailboxes=mailbox_ids,
+        aliases=alias_ids,
+        routing_refs=mailbox_ids | alias_ids | domain_ids,
+    )
+
+
+def _parse_mail_ref_tail(tail: str) -> _MailRefTail | None:
+    tail_parts = tail.split(".")
+    if len(tail_parts) == 1:
+        return _MailRefTail(tail_parts[0], "", "")
+    if len(tail_parts) == 3:
+        return _MailRefTail(*tail_parts)
+    return None
+
+
+def _resolve_mail_service_tail(
+    mail_services: Sequence[object],
+    parsed_tail: _MailRefTail,
+) -> object | None:
+    for service in mail_services:
+        if service.mail_service_id != parsed_tail.service_id:
+            continue
+        return _matched_service_for_tail(service, parsed_tail)
+    return None
+
+
+def _matched_service_for_tail(service: object, parsed_tail: _MailRefTail) -> object | None:
+    matches_service = not parsed_tail.collection_name
+    matches_child = bool(
+        parsed_tail.collection_name
+        and _mail_child_ref_exists(service, parsed_tail.collection_name, parsed_tail.child_id)
+    )
+    return service if matches_service or matches_child else None
+
+
+def _mail_child_ref_exists(service: object, collection_name: str, child_id: str) -> bool:
+    read_child_ids = _MAIL_CHILD_ID_READERS.get(collection_name)
+    return read_child_ids is not None and child_id in read_child_ids(service)
+
 
 # Renders an objective-semantics issue (machine-readable code from
 # ``aces_sdl.semantics.objective_semantics``) into the authoring-error string
@@ -501,7 +589,7 @@ class SemanticValidator:
         self._verify_runtime_platform_applications()
         self._verify_runtime_forwarding_agents()
         self._verify_runtime_orchestration_authorities()
-        verify_runtime_mail_services(self)
+        self._verify_runtime_mail_services()
         self._verify_features()
         self._verify_conditions()
         self._verify_vulnerabilities()
@@ -518,7 +606,7 @@ class SemanticValidator:
         self._verify_accounts()
         self._verify_relationships()
         self._verify_relationship_database_access()
-        verify_relationship_mail_access(self)
+        self._verify_relationship_mail_access()
         self._verify_relationship_forwarding_edges()
         self._verify_relationship_service_integrations()
         self._verify_relationship_proxy_upstreams()
@@ -762,7 +850,7 @@ class SemanticValidator:
         observed_paths: set[str],
         attached_networks: set[str],
     ) -> None:
-        owner_label = f"Node '{node_name}' runtime network sensor '{sensor.sensor_id}'"
+        owner_label = f"Node '{node_name}' runtime network sensor '{sensor.network_sensor_id}'"
         for field_name in ("configuration_file_refs", "log_file_refs", "evidence_refs"):
             self._verify_dns_file_refs(
                 owner_label,
@@ -773,7 +861,7 @@ class SemanticValidator:
         for network_ref in sensor.monitored_network_refs:
             self._verify_network_sensor_monitored_ref(
                 node_name=node_name,
-                sensor_id=sensor.sensor_id,
+                sensor_id=sensor.network_sensor_id,
                 network_ref=network_ref,
                 attached_networks=attached_networks,
             )
@@ -812,7 +900,7 @@ class SemanticValidator:
                 continue
             service_names = self._node_service_names(node)
             observed_paths = self._node_observed_paths(node)
-            sensor_ids = {sensor.sensor_id for sensor in runtime.network_sensors}
+            sensor_ids = {sensor.network_sensor_id for sensor in runtime.network_sensors}
             for engine in runtime.network_detection_engines:
                 self._verify_network_detection_engine(
                     node_name=node_name,
@@ -831,7 +919,7 @@ class SemanticValidator:
         observed_paths: set[str],
         sensor_ids: set[str],
     ) -> None:
-        owner_label = f"Node '{node_name}' runtime network detection engine '{engine.engine_id}'"
+        owner_label = f"Node '{node_name}' runtime network detection engine '{engine.network_detection_engine_id}'"
         sensor_ref = getattr(engine, "sensor_ref", "")
         if sensor_ref and not self._is_unresolved_var(sensor_ref) and sensor_ref not in sensor_ids:
             self._err(f"{owner_label} sensor_ref '{sensor_ref}' does not resolve to a same-node network sensor")
@@ -1002,7 +1090,7 @@ class SemanticValidator:
             process_refs = self._node_runtime_process_refs(node)
             published_ports = self._node_published_port_keys(node)
             for listener in runtime.service_listeners:
-                label = f"Node '{node_name}' runtime service listener '{listener.listener_id}'"
+                label = f"Node '{node_name}' runtime service listener '{listener.service_listener_id}'"
                 service = self._resolve_owned_service_ref(
                     node_name,
                     getattr(listener, "service", ""),
@@ -1193,7 +1281,7 @@ class SemanticValidator:
         ref = getattr(server, "service", "")
         if not ref or self._is_unresolved_var(ref):
             return
-        server_id = server.server_id
+        server_id = server.ssh_server_id
         service_name = ref
         if ref.startswith("nodes."):
             parts = ref.split(".")
@@ -1235,7 +1323,7 @@ class SemanticValidator:
                 continue
             if pattern not in local_usernames:
                 self._err(
-                    f"Node '{node_name}' runtime ssh_server '{server.server_id}' "
+                    f"Node '{node_name}' runtime ssh_server '{server.ssh_server_id}' "
                     f"match rule '{rule.match_id}' references local user '{pattern}' "
                     f"not present in runtime.local_identity.users"
                 )
@@ -1315,15 +1403,11 @@ class SemanticValidator:
         runtime = getattr(node, "runtime", None)
         if runtime is None:
             return set()
-        names = {
+        return {
             process.name
             for process in (runtime.processes or [])
             if process.name and not self._is_unresolved_var(process.name)
         }
-        primary = getattr(runtime, "process", None)
-        if primary is not None and primary.name and not self._is_unresolved_var(primary.name):
-            names.add(primary.name)
-        return names
 
     def _check_override_subject_names(
         self,
@@ -1339,7 +1423,7 @@ class SemanticValidator:
                 self._err(
                     f"Node '{node_name}' runtime capability override subject "
                     f"'{subject_name}' does not match any process declared in "
-                    "'runtime.processes' or 'runtime.process'"
+                    "'runtime.processes'"
                 )
 
     def _verify_runtime_identity_authorities(self) -> None:
@@ -1374,14 +1458,14 @@ class SemanticValidator:
                 getattr(service, "service", ""),
                 service_names,
                 owner_label=(
-                    f"Node '{node_name}' runtime identity authority '{authority.authority_id}' "
+                    f"Node '{node_name}' runtime identity authority '{authority.identity_authority_id}' "
                     f"service '{service.service_id}'"
                 ),
             )
 
     @staticmethod
     def _identity_authority_local_refs(authority: object) -> set[str]:
-        refs = {authority.authority_id}
+        refs = {authority.identity_authority_id}
         refs.update(service.service_id for service in authority.services)
         refs.update(subject.subject_id for subject in authority.subjects)
         refs.update(policy.policy_id for policy in authority.policies)
@@ -1394,7 +1478,7 @@ class SemanticValidator:
         authority: object,
         local_refs: set[str],
     ) -> None:
-        label = f"Node '{node_name}' runtime identity authority '{authority.authority_id}'"
+        label = f"Node '{node_name}' runtime identity authority '{authority.identity_authority_id}'"
         for relationship in authority.relationships:
             rel_label = f"{label} relationship '{relationship.relationship_id}'"
             self._verify_identity_ref(
@@ -1417,7 +1501,7 @@ class SemanticValidator:
         authority: object,
         local_refs: set[str],
     ) -> None:
-        label = f"Node '{node_name}' runtime identity authority '{authority.authority_id}'"
+        label = f"Node '{node_name}' runtime identity authority '{authority.identity_authority_id}'"
         for policy in authority.policies:
             policy_label = f"{label} policy '{policy.policy_id}'"
             for ref in policy.applies_to_refs:
@@ -1466,7 +1550,7 @@ class SemanticValidator:
             service_names = self._node_service_names(node)
             local_user_names = self._node_local_user_names(node)
             for service in runtime.file_services:
-                owner_label = f"Node '{node_name}' runtime file service '{service.service_id}'"
+                owner_label = f"Node '{node_name}' runtime file service '{service.file_service_id}'"
                 self._verify_owned_service_ref(
                     node_name,
                     getattr(service, "service", ""),
@@ -1530,7 +1614,7 @@ class SemanticValidator:
             if runtime is None:
                 continue
             for authority in runtime.identity_authorities:
-                base = f"{_NODES_PREFIX}{node_name}.runtime.identity_authorities.{authority.authority_id}"
+                base = f"{_NODES_PREFIX}{node_name}.runtime.identity_authorities.{authority.identity_authority_id}"
                 for subject in authority.subjects:
                     refs.add(f"{base}.subjects.{subject.subject_id}")
         return refs
@@ -1722,7 +1806,9 @@ class SemanticValidator:
         service_names: set[str],
         observed_paths: set[str],
     ) -> None:
-        owner_label = f"Node '{node_name}' runtime security-monitoring manager '{manager.manager_id}'"
+        owner_label = (
+            f"Node '{node_name}' runtime security-monitoring manager '{manager.security_monitoring_manager_id}'"
+        )
         self._verify_owned_service_ref(
             node_name,
             getattr(manager, "service", ""),
@@ -2216,6 +2302,215 @@ class SemanticValidator:
             if application.application_id == tail:
                 return application
         return None
+
+    def _verify_runtime_mail_services(self) -> None:
+        """Validate runtime mail-service inventories against the scenario graph."""
+        for node_name, node in self._s.nodes.items():
+            mail_services = _mail_services_for_node(node)
+            if not mail_services:
+                continue
+            service_names = self._node_service_names(node)
+            observed_paths = self._node_observed_paths(node)
+            local_user_names = self._node_local_user_names(node)
+            for service in mail_services:
+                label = f"Node '{node_name}' runtime mail service '{service.mail_service_id}'"
+                self._verify_owned_service_ref(
+                    node_name,
+                    service.service,
+                    service_names,
+                    owner_label=label,
+                )
+                self._verify_mail_service_children(
+                    node_name=node_name,
+                    label=label,
+                    service=service,
+                    service_names=service_names,
+                    observed_paths=observed_paths,
+                    local_user_names=local_user_names,
+                )
+
+    def _verify_mail_service_children(
+        self,
+        *,
+        node_name: str,
+        label: str,
+        service: object,
+        service_names: set[str],
+        observed_paths: set[str],
+        local_user_names: set[str],
+    ) -> None:
+        local_ids = _collect_mail_service_local_ids(service)
+        self._verify_mail_listeners(node_name, label, service, service_names, local_ids)
+        self._verify_mailboxes(label, service, local_user_names, local_ids)
+        self._verify_mail_aliases(label, service, local_ids)
+        self._verify_mail_routing_rules(label, service, local_ids)
+        self._verify_mail_settings(label, service, observed_paths, local_ids)
+
+    def _verify_mail_listeners(
+        self,
+        node_name: str,
+        label: str,
+        service: object,
+        service_names: set[str],
+        local_ids: "_MailServiceLocalIds",
+    ) -> None:
+        for listener in service.listeners:
+            listener_label = f"{label} listener '{listener.listener_id}'"
+            self._verify_owned_service_ref(
+                node_name,
+                listener.service,
+                service_names,
+                owner_label=listener_label,
+            )
+            self._verify_mail_ref(
+                listener.component_ref,
+                local_ids.components,
+                label=listener_label,
+                field_name="component_ref",
+            )
+
+    def _verify_mailboxes(
+        self,
+        label: str,
+        service: object,
+        local_user_names: set[str],
+        local_ids: "_MailServiceLocalIds",
+    ) -> None:
+        for mailbox in service.mailboxes:
+            mailbox_label = f"{label} mailbox '{mailbox.mailbox_id}'"
+            self._verify_mail_ref(mailbox.domain_ref, local_ids.domains, label=mailbox_label, field_name="domain_ref")
+            self._verify_mail_ref(mailbox.store_ref, local_ids.stores, label=mailbox_label, field_name="store_ref")
+            self._verify_mail_account_ref(mailbox.account_ref, mailbox_label)
+            self._verify_mail_local_user_ref(mailbox.local_user_ref, local_user_names, mailbox_label)
+
+    def _verify_mail_aliases(
+        self,
+        label: str,
+        service: object,
+        local_ids: "_MailServiceLocalIds",
+    ) -> None:
+        for alias in service.aliases:
+            alias_label = f"{label} alias '{alias.alias_id}'"
+            self._verify_mail_ref(alias.domain_ref, local_ids.domains, label=alias_label, field_name="domain_ref")
+            for target_ref in alias.target_refs:
+                self._verify_mail_ref(
+                    target_ref,
+                    local_ids.mailboxes | local_ids.aliases,
+                    label=alias_label,
+                    field_name="target_ref",
+                )
+
+    def _verify_mail_routing_rules(
+        self,
+        label: str,
+        service: object,
+        local_ids: "_MailServiceLocalIds",
+    ) -> None:
+        for rule in service.routing_rules:
+            rule_label = f"{label} routing rule '{rule.rule_id}'"
+            self._verify_mail_ref(rule.source_ref, local_ids.routing_refs, label=rule_label, field_name="source_ref")
+            self._verify_mail_ref(rule.target_ref, local_ids.routing_refs, label=rule_label, field_name="target_ref")
+
+    def _verify_mail_settings(
+        self,
+        label: str,
+        service: object,
+        observed_paths: set[str],
+        local_ids: "_MailServiceLocalIds",
+    ) -> None:
+        for setting in service.settings:
+            setting_label = f"{label} setting '{setting.setting_id}'"
+            self._verify_mail_ref(
+                setting.component_ref,
+                local_ids.components,
+                label=setting_label,
+                field_name="component_ref",
+            )
+            if self._source_path_misses_observed_inventory(setting.source_path, observed_paths):
+                self._err(f"{setting_label} source_path '{setting.source_path}' does not resolve to an observed file")
+
+    def _source_path_misses_observed_inventory(self, source_path: str, observed_paths: set[str]) -> bool:
+        return bool(
+            source_path
+            and observed_paths
+            and not self._is_unresolved_var(source_path)
+            and source_path not in observed_paths
+        )
+
+    def _verify_mail_ref(
+        self,
+        ref: str,
+        local_refs: set[str],
+        *,
+        label: str,
+        field_name: str,
+    ) -> None:
+        if not ref or self._is_unresolved_var(ref):
+            return
+        if ref not in local_refs:
+            self._err(f"{label} {field_name} '{ref}' does not resolve inside mail service")
+
+    def _verify_mail_account_ref(self, ref: str, label: str) -> None:
+        if not ref or self._is_unresolved_var(ref):
+            return
+        if ref not in self._s.accounts:
+            self._err(f"{label} account_ref '{ref}' does not resolve to a top-level account")
+
+    def _verify_mail_local_user_ref(self, ref: str, local_user_names: set[str], label: str) -> None:
+        if not ref or self._is_unresolved_var(ref):
+            return
+        if local_user_names and ref not in local_user_names:
+            self._err(f"{label} local_user_ref '{ref}' does not resolve to a runtime.local_identity user")
+
+    def _verify_relationship_mail_access(self) -> None:
+        """Validate typed ``mail_access`` blocks on top-level relationship edges."""
+        for name, relationship in self._s.relationships.items():
+            access = relationship.mail_access
+            if access is None:
+                continue
+            label = f"Relationship '{name}'"
+            mail_service = self._check_mail_access_target(relationship.target, label)
+            if mail_service is None:
+                continue
+            self._verify_mail_ref(
+                access.listener_ref,
+                {listener.listener_id for listener in mail_service.listeners},
+                label=f"{label} mail_access",
+                field_name="listener_ref",
+            )
+            self._verify_mail_ref(
+                access.mailbox_ref,
+                {mailbox.mailbox_id for mailbox in mail_service.mailboxes},
+                label=f"{label} mail_access",
+                field_name="mailbox_ref",
+            )
+            self._verify_mail_ref(
+                access.domain_ref,
+                {domain.domain_id for domain in mail_service.domains},
+                label=f"{label} mail_access",
+                field_name="domain_ref",
+            )
+
+    def _check_mail_access_target(self, target: str, label: str) -> object | None:
+        mail_service = self._resolve_mail_service_ref(target)
+        if mail_service is not None or self._is_unresolved_var(target):
+            return mail_service
+        self._err(f"{label} has mail_access but target '{target}' does not resolve to a mail service")
+        return None
+
+    def _resolve_mail_service_ref(self, ref: object) -> object | None:
+        """Resolve a qualified runtime mail-service or child ref to the service."""
+        split = self._split_runtime_ref(ref, surface="mail_services")
+        if split is None:
+            return None
+        node_name, tail = split
+        parsed_tail = _parse_mail_ref_tail(tail)
+        if parsed_tail is None:
+            return None
+        return _resolve_mail_service_tail(
+            _mail_services_for_node_name(self._s, node_name),
+            parsed_tail,
+        )
 
     def _verify_relationship_database_access(self) -> None:
         """Validate typed ``database_access`` blocks on relationship edges.

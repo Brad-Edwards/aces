@@ -287,12 +287,6 @@ nodes:
           provenance: runtime
           stability: log
           sensitivity: operator_secret
-      process:
-        pid: 1
-        command: supervisord -n -c /etc/supervisor/supervisord.conf
-        user: root
-        group: root
-        working_directory: /
       processes:
         - name: supervisord
           pid: 1
@@ -300,6 +294,7 @@ nodes:
           role: supervisor
           user: root
           group: root
+          working_directory: /
         - name: gunicorn
           parent_pid: 1
           command: [gunicorn, app:app, --bind, 0.0.0.0:8080]

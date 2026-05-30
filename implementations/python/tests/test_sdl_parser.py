@@ -268,12 +268,11 @@ nodes:
           protocol: docker
           bind-source-sensitivity: operator-secret
           access: read-write
-      process:
-        pid: 1
-        command: ./shufflebackend
-        user: root
-        working-directory: /app
       processes:
+        - name: shufflebackend
+          command: ./shufflebackend
+          user: root
+          working-directory: /app
         - name: supervisord
           pid: 1
           command: supervisord -n
@@ -416,10 +415,9 @@ nodes:
         assert node.runtime.filesystem_inventory[1].sensitivity == "operator_secret"
         assert node.runtime.local_control_interfaces[0].path == "/run/docker.sock"
         assert node.runtime.local_control_interfaces[0].bind_source_sensitivity == "operator_secret"
-        assert node.runtime.process is not None
-        assert node.runtime.process.command == ["./shufflebackend"]
-        assert node.runtime.processes[0].name == "supervisord"
-        assert node.runtime.processes[1].parent_pid == 1
+        assert node.runtime.processes[0].command == ["./shufflebackend"]
+        assert node.runtime.processes[1].name == "supervisord"
+        assert node.runtime.processes[2].parent_pid == 1
         assert node.runtime.environment[0].name == "TECHVAULT_ADMIN_PASSWORD"
         assert node.runtime.environment[0].value_classification == "redacted"
         assert node.runtime.environment[1].value_classification == "secret_fixture"
@@ -1672,7 +1670,7 @@ nodes:
         name: ssh
     runtime:
       ssh-servers:
-        - server-id: sshd-default
+        - ssh-server-id: sshd-default
           service: ssh
           accept-env: [APTL_SESSION_ID, APTL_RUN_ID, APTL_TRACE_ID]
           password-authentication: false
@@ -1696,7 +1694,7 @@ nodes:
         ssh_servers = scenario.nodes["techvault-kali"].runtime.ssh_servers
         assert len(ssh_servers) == 1
         server = ssh_servers[0]
-        assert server.server_id == "sshd-default"
+        assert server.ssh_server_id == "sshd-default"
         assert server.service == "ssh"
         assert server.accept_env == ["APTL_SESSION_ID", "APTL_RUN_ID", "APTL_TRACE_ID"]
         assert server.password_authentication is False
@@ -1726,7 +1724,7 @@ nodes:
         name: ssh
     runtime:
       ssh-servers:
-        - server-id: sshd-default
+        - ssh-server-id: sshd-default
           service: ssh
           accept-env: APTL_SESSION_ID
 """
@@ -1750,7 +1748,7 @@ nodes:
         name: ssh
     runtime:
       ssh-servers:
-        - server-id: sshd-default
+        - ssh-server-id: sshd-default
           service: ssh
           chroot-directory: ${chroot_path}
 """
@@ -1779,11 +1777,11 @@ nodes:
         name: ssh
     runtime:
       ssh-servers:
-        - server-id: ${server_id}
+        - ssh-server-id: ${server_id}
           service: ssh
 """
         # The parse step itself should reject a variable-ref symbol-defining identifier
-        # because RuntimeSshServer.server_id rejects variable refs at model validation time.
+        # because RuntimeSshServer.ssh_server_id rejects variable refs at model validation time.
         with pytest.raises((SDLParseError, SDLInstantiationError)):
             parse_sdl(sdl)
 
@@ -1801,7 +1799,7 @@ nodes:
       - {port: 88, name: kerberos}
     runtime:
       identity-authorities:
-        - authority-id: techvault-domain
+        - identity-authority-id: techvault-domain
           kind: domain
           name: TechVault Domain
           namespace: techvault.local
@@ -1847,7 +1845,7 @@ nodes:
 """
         scenario = parse_sdl(sdl)
         authority = scenario.nodes["ad"].runtime.identity_authorities[0]
-        assert authority.authority_id == "techvault-domain"
+        assert authority.identity_authority_id == "techvault-domain"
         assert authority.domain_name == "TECHVAULT"
         assert authority.services[0].service_id == "ldap-endpoint"
         assert authority.services[0].port == 389
@@ -1870,7 +1868,7 @@ nodes:
     os: linux
     runtime:
       identity-authorities:
-        - authority-id: techvault-idp
+        - identity-authority-id: techvault-idp
           kind: identity-provider
           namespace: https://idp.techvault.local
           tenant-id: ${tenant_id}
@@ -1893,7 +1891,7 @@ nodes:
       - {port: 389, name: ldap}
     runtime:
       identity-authorities:
-        - authority-id: techvault-domain
+        - identity-authority-id: techvault-domain
           services:
             - service-id: ldap-endpoint
               service: missing-ldap
@@ -1911,7 +1909,7 @@ nodes:
     os: windows
     runtime:
       identity-authorities:
-        - authority-id: techvault-domain
+        - identity-authority-id: techvault-domain
           subjects:
             - {subject-id: domain-admins, kind: group, name: Domain Admins}
           relationships:
@@ -1932,7 +1930,7 @@ nodes:
     os: windows
     runtime:
       identity-authorities:
-        - authority-id: techvault-domain
+        - identity-authority-id: techvault-domain
           policies:
             - policy-id: default-policy
               applies-to-refs: [missing-subject]
@@ -1951,7 +1949,7 @@ nodes:
       - {port: 389, name: ldap}
     runtime:
       identity-authorities:
-        - authority-id: techvault-domain
+        - identity-authority-id: techvault-domain
           services:
             - service-id: ldap-endpoint
               service: ldap
@@ -2008,7 +2006,7 @@ nodes:
     os: windows
     runtime:
       identity-authorities:
-        - authority-id: {authority_id}
+        - identity-authority-id: {authority_id}
           services:
             - service-id: {service_id}
               protocol: ldap
@@ -2040,7 +2038,7 @@ nodes:
     os: windows
     runtime:
       identity-authorities:
-        - authority-id: techvault-domain
+        - identity-authority-id: techvault-domain
           services:
             - {service-id: ldap-endpoint, protocol: ldap}
           subjects:

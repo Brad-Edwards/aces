@@ -361,7 +361,6 @@ class RuntimeConfiguration(SDLModel):
     mounts: list[RuntimeMount] = Field(default_factory=list)
     filesystem_inventory: list[RuntimeFilesystemEntry] = Field(default_factory=list)
     local_control_interfaces: list[RuntimeControlInterface] = Field(default_factory=list)
-    process: RuntimeProcessIdentity | None = None
     processes: list[RuntimeProcessIdentity] = Field(default_factory=list)
     environment: list[RuntimeEnvironmentVariable] = Field(default_factory=list)
     linux_capabilities: RuntimeCapabilityPolicy | None = None
@@ -409,14 +408,20 @@ class RuntimeConfiguration(SDLModel):
         _reject_duplicate_keys(self.filesystem_inventory, attr="path", label="filesystem path")
         _reject_duplicate_keys(self.processes, attr="name", label="process name")
         _reject_duplicate_keys(self.processes, attr="pid", label="process pid")
-        _reject_duplicate_keys(self.service_listeners, attr="listener_id", label="service_listener listener_id")
+        _reject_duplicate_keys(
+            self.service_listeners, attr="service_listener_id", label="service_listener service_listener_id"
+        )
         _reject_duplicate_keys(self.applications, attr="application_id", label="application_id")
         _reject_duplicate_keys(self.database_services, attr="database_service_id", label="database_service_id")
         _reject_duplicate_keys(self.dns_services, attr="dns_service_id", label="dns_service_id")
-        _reject_duplicate_keys(self.network_sensors, attr="sensor_id", label="network sensor")
-        _reject_duplicate_keys(self.network_detection_engines, attr="engine_id", label="network detection engine")
-        _reject_duplicate_keys(self.security_monitoring_managers, attr="manager_id", label="security manager")
-        _reject_duplicate_keys(self.ssh_servers, attr="server_id", label="ssh_server server_id")
+        _reject_duplicate_keys(self.network_sensors, attr="network_sensor_id", label="network sensor")
+        _reject_duplicate_keys(
+            self.network_detection_engines, attr="network_detection_engine_id", label="network detection engine"
+        )
+        _reject_duplicate_keys(
+            self.security_monitoring_managers, attr="security_monitoring_manager_id", label="security manager"
+        )
+        _reject_duplicate_keys(self.ssh_servers, attr="ssh_server_id", label="ssh_server ssh_server_id")
         _reject_duplicate_keys(
             self.datastore_services,
             attr="datastore_service_id",
@@ -453,8 +458,8 @@ class RuntimeConfiguration(SDLModel):
             attr="unit_name",
             label="service_manager_unit unit_name",
         )
-        _reject_duplicate_keys(self.identity_authorities, attr="authority_id", label="identity authority")
-        _reject_duplicate_keys(self.file_services, attr="service_id", label="file_service service_id")
-        _reject_duplicate_keys(self.mail_services, attr="service_id", label="mail_service service_id")
+        _reject_duplicate_keys(self.identity_authorities, attr="identity_authority_id", label="identity authority")
+        _reject_duplicate_keys(self.file_services, attr="file_service_id", label="file_service file_service_id")
+        _reject_duplicate_keys(self.mail_services, attr="mail_service_id", label="mail_service mail_service_id")
         _reject_duplicate_keys(self.software_components, attr="component_id", label="software component")
         return self

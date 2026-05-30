@@ -6034,17 +6034,6 @@
           "title": "Platform Applications",
           "type": "array"
         },
-        "process": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RuntimeProcessIdentity"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
         "processes": {
           "items": {
             "$ref": "#/$defs/RuntimeProcessIdentity"
@@ -7589,6 +7578,10 @@
           "title": "Description",
           "type": "string"
         },
+        "file_service_id": {
+          "title": "File Service Id",
+          "type": "string"
+        },
         "principals": {
           "items": {
             "$ref": "#/$defs/RuntimeFileServicePrincipal"
@@ -7613,10 +7606,6 @@
           "title": "Service",
           "type": "string"
         },
-        "service_id": {
-          "title": "Service Id",
-          "type": "string"
-        },
         "shares": {
           "items": {
             "$ref": "#/$defs/RuntimeFileServiceShare"
@@ -7626,7 +7615,7 @@
         }
       },
       "required": [
-        "service_id"
+        "file_service_id"
       ],
       "title": "RuntimeFileService",
       "type": "object"
@@ -9080,10 +9069,6 @@
       "additionalProperties": false,
       "description": "A node-scoped identity authority inventory.",
       "properties": {
-        "authority_id": {
-          "title": "Authority Id",
-          "type": "string"
-        },
         "base_dn": {
           "default": "",
           "title": "Base Dn",
@@ -9097,6 +9082,10 @@
         "domain_name": {
           "default": "",
           "title": "Domain Name",
+          "type": "string"
+        },
+        "identity_authority_id": {
+          "title": "Identity Authority Id",
           "type": "string"
         },
         "issuer": {
@@ -9166,7 +9155,7 @@
         }
       },
       "required": [
-        "authority_id"
+        "identity_authority_id"
       ],
       "title": "RuntimeIdentityAuthority",
       "type": "object"
@@ -9536,7 +9525,7 @@
     },
     "RuntimeInitProcess": {
       "additionalProperties": false,
-      "description": "Observed backend-injected container init / PID-1 reaper configuration.\n\nModels authored container runtime intent \u2014 for example Docker Compose\n``init: true`` causing PID 1 to be ``/sbin/docker-init`` (tini). This is\ndistinct from the observed PID-1 process recorded in ``runtime.process`` /\n``runtime.processes``; see ADR-027.",
+      "description": "Observed backend-injected container init / PID-1 reaper configuration.\n\nModels authored container runtime intent \u2014 for example Docker Compose\n``init: true`` causing PID 1 to be ``/sbin/docker-init`` (tini). This is\ndistinct from the observed PID-1 process recorded in\n``runtime.processes``; see ADR-027.",
       "properties": {
         "argv": {
           "items": {
@@ -10620,6 +10609,10 @@
           "title": "Listeners",
           "type": "array"
         },
+        "mail_service_id": {
+          "title": "Mail Service Id",
+          "type": "string"
+        },
         "mailbox_stores": {
           "items": {
             "$ref": "#/$defs/RuntimeMailMailboxStore"
@@ -10658,10 +10651,6 @@
           "title": "Service",
           "type": "string"
         },
-        "service_id": {
-          "title": "Service Id",
-          "type": "string"
-        },
         "settings": {
           "items": {
             "$ref": "#/$defs/RuntimeMailSetting"
@@ -10676,7 +10665,7 @@
         }
       },
       "required": [
-        "service_id"
+        "mail_service_id"
       ],
       "title": "RuntimeMailService",
       "type": "object"
@@ -11233,10 +11222,6 @@
           "title": "Description",
           "type": "string"
         },
-        "engine_id": {
-          "title": "Engine Id",
-          "type": "string"
-        },
         "engine_kind": {
           "anyOf": [
             {
@@ -11278,6 +11263,10 @@
         "name": {
           "default": "",
           "title": "Name",
+          "type": "string"
+        },
+        "network_detection_engine_id": {
+          "title": "Network Detection Engine Id",
           "type": "string"
         },
         "network_sets": {
@@ -11323,7 +11312,7 @@
         }
       },
       "required": [
-        "engine_id"
+        "network_detection_engine_id"
       ],
       "title": "RuntimeNetworkDetectionEngine",
       "type": "object"
@@ -11931,6 +11920,10 @@
           "title": "Name",
           "type": "string"
         },
+        "network_sensor_id": {
+          "title": "Network Sensor Id",
+          "type": "string"
+        },
         "process_ref": {
           "default": "",
           "title": "Process Ref",
@@ -11939,10 +11932,6 @@
         "revision": {
           "default": "",
           "title": "Revision",
-          "type": "string"
-        },
-        "sensor_id": {
-          "title": "Sensor Id",
           "type": "string"
         },
         "sensor_kind": {
@@ -11964,7 +11953,7 @@
         }
       },
       "required": [
-        "sensor_id"
+        "network_sensor_id"
       ],
       "title": "RuntimeNetworkSensor",
       "type": "object"
@@ -14485,10 +14474,6 @@
           "title": "Log File Refs",
           "type": "array"
         },
-        "manager_id": {
-          "title": "Manager Id",
-          "type": "string"
-        },
         "manager_kind": {
           "anyOf": [
             {
@@ -14511,6 +14496,10 @@
           "title": "Revision",
           "type": "string"
         },
+        "security_monitoring_manager_id": {
+          "title": "Security Monitoring Manager Id",
+          "type": "string"
+        },
         "service": {
           "default": "",
           "title": "Service",
@@ -14530,7 +14519,7 @@
         }
       },
       "required": [
-        "manager_id"
+        "security_monitoring_manager_id"
       ],
       "title": "RuntimeSecurityMonitoringManager",
       "type": "object"
@@ -14680,10 +14669,6 @@
           "title": "Evidence Refs",
           "type": "array"
         },
-        "listener_id": {
-          "title": "Listener Id",
-          "type": "string"
-        },
         "port": {
           "anyOf": [
             {
@@ -14768,6 +14753,10 @@
           "title": "Service",
           "type": "string"
         },
+        "service_listener_id": {
+          "title": "Service Listener Id",
+          "type": "string"
+        },
         "socket_path": {
           "default": "",
           "title": "Socket Path",
@@ -14775,7 +14764,7 @@
         }
       },
       "required": [
-        "listener_id"
+        "service_listener_id"
       ],
       "title": "RuntimeServiceListener",
       "type": "object"
@@ -14943,7 +14932,7 @@
     },
     "RuntimeSshServer": {
       "additionalProperties": false,
-      "description": "A scoped sshd server configuration observed on a node.\n\nEach configuration carries a stable ``server_id`` and an explicit\n``service`` reference pointing at the owning same-node service (bare\nname or ``nodes.<node>.services.<name>`` form). Global sshd directives\nsit at the top level; scoped overrides live in ``match_rules``.\n\nThe configuration is the SDL surface for participant-observable sshd\npolicy. It is not a backend sshd-payload dump and must not embed raw\n``sshd_config`` text, raw ``sshd -T`` output, container inspect\npayloads, session transcripts, or environment values.",
+      "description": "A scoped sshd server configuration observed on a node.\n\nEach configuration carries a stable ``ssh_server_id`` and an explicit\n``service`` reference pointing at the owning same-node service (bare\nname or ``nodes.<node>.services.<name>`` form). Global sshd directives\nsit at the top level; scoped overrides live in ``match_rules``.\n\nThe configuration is the SDL surface for participant-observable sshd\npolicy. It is not a backend sshd-payload dump and must not embed raw\n``sshd_config`` text, raw ``sshd -T`` output, container inspect\npayloads, session transcripts, or environment values.",
       "properties": {
         "accept_env": {
           "items": {
@@ -15065,17 +15054,17 @@
           "default": null,
           "title": "Pubkey Authentication"
         },
-        "server_id": {
-          "title": "Server Id",
-          "type": "string"
-        },
         "service": {
           "title": "Service",
+          "type": "string"
+        },
+        "ssh_server_id": {
+          "title": "Ssh Server Id",
           "type": "string"
         }
       },
       "required": [
-        "server_id",
+        "ssh_server_id",
         "service"
       ],
       "title": "RuntimeSshServer",

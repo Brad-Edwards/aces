@@ -28,7 +28,7 @@ itself:
 - `Node.runtime.local_identity` records OS-local user/group/sudo facts.
 - top-level `accounts` records scenario/provisioning account resources.
 - top-level `relationships` records typed edges between scenario elements.
-- `runtime.environment`, `runtime.process`, and runtime filesystem inventory
+- `runtime.environment`, `runtime.processes`, and runtime filesystem inventory
   record surrounding runtime facts, not database object catalogs.
 
 The design risk is to overload one of those surfaces and make transport

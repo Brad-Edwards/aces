@@ -50,7 +50,7 @@ def _ssh_node() -> dict:
         "runtime": {
             "ssh_servers": [
                 {
-                    "server_id": "sshd-default",
+                    "ssh_server_id": "sshd-default",
                     "service": "ssh",
                     "match_rules": [
                         {
@@ -327,30 +327,30 @@ class TestSshMatchRule:
 
 class TestRuntimeSshServer:
     def test_minimal_accepted(self):
-        cfg = RuntimeSshServer(server_id="sshd-default", service="ssh")
-        assert cfg.server_id == "sshd-default"
+        cfg = RuntimeSshServer(ssh_server_id="sshd-default", service="ssh")
+        assert cfg.ssh_server_id == "sshd-default"
         assert cfg.service == "ssh"
 
     def test_empty_server_id_rejected(self):
-        with pytest.raises(ValidationError, match="server_id"):
-            RuntimeSshServer(server_id="", service="ssh")
+        with pytest.raises(ValidationError, match="ssh_server_id"):
+            RuntimeSshServer(ssh_server_id="", service="ssh")
 
     def test_whitespace_server_id_rejected(self):
-        with pytest.raises(ValidationError, match="server_id"):
-            RuntimeSshServer(server_id="   ", service="ssh")
+        with pytest.raises(ValidationError, match="ssh_server_id"):
+            RuntimeSshServer(ssh_server_id="   ", service="ssh")
 
     def test_variable_ref_server_id_rejected(self):
         with pytest.raises(ValidationError) as exc:
-            RuntimeSshServer(server_id="${SERVER_ID}", service="ssh")
-        assert "server_id" in str(exc.value)
+            RuntimeSshServer(ssh_server_id="${SERVER_ID}", service="ssh")
+        assert "ssh_server_id" in str(exc.value)
 
     def test_service_required(self):
         with pytest.raises(ValidationError, match="service"):
-            RuntimeSshServer(server_id="sshd-default", service="")
+            RuntimeSshServer(ssh_server_id="sshd-default", service="")
 
     def test_accept_env_scalar_string_coerced_to_list(self):
         cfg = RuntimeSshServer(
-            server_id="sshd-default",
+            ssh_server_id="sshd-default",
             service="ssh",
             accept_env="APTL_SESSION_ID",
         )
@@ -358,7 +358,7 @@ class TestRuntimeSshServer:
 
     def test_accept_env_motivating_fact_accepted(self):
         cfg = RuntimeSshServer(
-            server_id="sshd-default",
+            ssh_server_id="sshd-default",
             service="ssh",
             accept_env=["APTL_SESSION_ID", "APTL_RUN_ID", "APTL_TRACE_ID"],
         )
@@ -371,7 +371,7 @@ class TestRuntimeSshServer:
     def test_accept_env_rejects_invalid_entry(self, bad_entry):
         with pytest.raises(ValidationError) as exc:
             RuntimeSshServer(
-                server_id="sshd-default",
+                ssh_server_id="sshd-default",
                 service="ssh",
                 accept_env=["GOOD", bad_entry],
             )
@@ -381,7 +381,7 @@ class TestRuntimeSshServer:
     def test_accept_env_duplicate_rejected(self):
         with pytest.raises(ValidationError) as exc:
             RuntimeSshServer(
-                server_id="sshd-default",
+                ssh_server_id="sshd-default",
                 service="ssh",
                 accept_env=["APTL_SESSION_ID", "APTL_SESSION_ID"],
             )
@@ -389,7 +389,7 @@ class TestRuntimeSshServer:
 
     def test_accept_env_case_sensitive(self):
         cfg = RuntimeSshServer(
-            server_id="sshd-default",
+            ssh_server_id="sshd-default",
             service="ssh",
             accept_env=["foo", "FOO"],
         )
@@ -398,7 +398,7 @@ class TestRuntimeSshServer:
     def test_duplicate_match_id_rejected(self):
         with pytest.raises(ValidationError) as exc:
             RuntimeSshServer(
-                server_id="sshd-default",
+                ssh_server_id="sshd-default",
                 service="ssh",
                 match_rules=[
                     SshMatchRule(
@@ -417,7 +417,7 @@ class TestRuntimeSshServer:
     def test_duplicate_match_criteria_tuple_rejected(self):
         with pytest.raises(ValidationError) as exc:
             RuntimeSshServer(
-                server_id="sshd-default",
+                ssh_server_id="sshd-default",
                 service="ssh",
                 match_rules=[
                     SshMatchRule(
@@ -434,7 +434,7 @@ class TestRuntimeSshServer:
 
     def test_chroot_directory_variable_ref_accepted(self):
         cfg = RuntimeSshServer(
-            server_id="sshd-default",
+            ssh_server_id="sshd-default",
             service="ssh",
             chroot_directory="${chroot}",
         )
@@ -443,7 +443,7 @@ class TestRuntimeSshServer:
     def test_chroot_directory_concrete_must_be_absolute(self):
         with pytest.raises(ValidationError, match="absolute"):
             RuntimeSshServer(
-                server_id="sshd-default",
+                ssh_server_id="sshd-default",
                 service="ssh",
                 chroot_directory="rel/chroot",
             )
@@ -451,7 +451,7 @@ class TestRuntimeSshServer:
     def test_authorized_keys_file_concrete_must_be_absolute(self):
         with pytest.raises(ValidationError, match="absolute"):
             RuntimeSshServer(
-                server_id="sshd-default",
+                ssh_server_id="sshd-default",
                 service="ssh",
                 authorized_keys_file="rel/keys",
             )
@@ -459,18 +459,18 @@ class TestRuntimeSshServer:
     @pytest.mark.parametrize("field", ["password_authentication", "pubkey_authentication", "permit_tty"])
     @pytest.mark.parametrize("value, expected", [(True, True), (False, False), ("yes", True), ("no", False)])
     def test_optional_bool_fields_parse(self, field, value, expected):
-        cfg = RuntimeSshServer(server_id="sshd-default", service="ssh", **{field: value})
+        cfg = RuntimeSshServer(ssh_server_id="sshd-default", service="ssh", **{field: value})
         assert getattr(cfg, field) is expected
 
     @pytest.mark.parametrize("field", ["password_authentication", "pubkey_authentication", "permit_tty"])
     def test_optional_bool_fields_accept_variable_ref(self, field):
-        cfg = RuntimeSshServer(server_id="sshd-default", service="ssh", **{field: "${flag}"})
+        cfg = RuntimeSshServer(ssh_server_id="sshd-default", service="ssh", **{field: "${flag}"})
         assert getattr(cfg, field) == "${flag}"
 
     def test_full_motivating_fact_parses(self):
         """The APTL TechVault kali fact end-to-end at the model level."""
         cfg = RuntimeSshServer(
-            server_id="sshd-default",
+            ssh_server_id="sshd-default",
             service="ssh",
             accept_env=["APTL_SESSION_ID", "APTL_RUN_ID", "APTL_TRACE_ID"],
             match_rules=[
@@ -488,7 +488,7 @@ class TestRuntimeSshServer:
 
     def test_extra_fields_forbidden(self):
         with pytest.raises(ValidationError, match="unknown_field"):
-            RuntimeSshServer(server_id="sshd-default", service="ssh", unknown_field=True)
+            RuntimeSshServer(ssh_server_id="sshd-default", service="ssh", unknown_field=True)
 
 
 # ---------------------------------------------------------------------------
@@ -503,17 +503,17 @@ class TestRuntimeConfigurationSshServers:
 
     def test_ssh_servers_accepts_list(self):
         cfg = RuntimeConfiguration(
-            ssh_servers=[RuntimeSshServer(server_id="sshd-default", service="ssh")],
+            ssh_servers=[RuntimeSshServer(ssh_server_id="sshd-default", service="ssh")],
         )
         assert len(cfg.ssh_servers) == 1
-        assert cfg.ssh_servers[0].server_id == "sshd-default"
+        assert cfg.ssh_servers[0].ssh_server_id == "sshd-default"
 
     def test_duplicate_server_id_rejected(self):
         with pytest.raises(ValidationError) as exc:
             RuntimeConfiguration(
                 ssh_servers=[
-                    RuntimeSshServer(server_id="dup", service="ssh"),
-                    RuntimeSshServer(server_id="dup", service="ssh-alt"),
+                    RuntimeSshServer(ssh_server_id="dup", service="ssh"),
+                    RuntimeSshServer(ssh_server_id="dup", service="ssh-alt"),
                 ],
             )
         msg = str(exc.value).lower()
@@ -569,7 +569,7 @@ class TestRuntimeFamilyRegistrySshCoverage:
             key="duplicate-ssh-servers",
             module=ssh_family.module,
             collection_name="duplicate_ssh_servers",
-            id_field="server_id",
+            id_field="ssh_server_id",
         )
         monkeypatch.setattr(
             runtime_family_registry,
@@ -628,7 +628,7 @@ nodes:
       - {port: 22, name: ssh}
     runtime:
       ssh-servers:
-        - server-id: sshd-default
+        - ssh-server-id: sshd-default
           service: ssh
           match-rules:
             - match-id: m-kali

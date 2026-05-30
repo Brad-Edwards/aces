@@ -2976,7 +2976,7 @@ class TestVerifyRuntimeApplication:
 class TestVerifyRuntimeFileService:
     def _service(self, **overrides) -> dict:
         service = {
-            "service_id": "fileshare-smb",
+            "file_service_id": "fileshare-smb",
             "service": "smb",
             "protocol": "smb",
             "shares": [{"share_id": "public", "name": "public"}],
@@ -3119,7 +3119,7 @@ class TestVerifyRuntimeFileService:
             "runtime": {
                 "identity_authorities": [
                     {
-                        "authority_id": "techvault-domain",
+                        "identity_authority_id": "techvault-domain",
                         "kind": "domain",
                         "name": "TechVault Domain",
                         "services": [
@@ -3515,7 +3515,7 @@ class TestVerifyRuntimeSshServer:
         s = _make_scenario(
             nodes={
                 "vm": self._node_with_ssh_server(
-                    {"server_id": "sshd-default", "service": "ssh"},
+                    {"ssh_server_id": "sshd-default", "service": "ssh"},
                     services=[{"port": 22, "name": "ssh"}],
                 ),
             },
@@ -3526,7 +3526,7 @@ class TestVerifyRuntimeSshServer:
         s = _make_scenario(
             nodes={
                 "vm": self._node_with_ssh_server(
-                    {"server_id": "sshd-default", "service": "ghost"},
+                    {"ssh_server_id": "sshd-default", "service": "ghost"},
                 ),
             },
         )
@@ -3537,7 +3537,7 @@ class TestVerifyRuntimeSshServer:
         s = _make_scenario(
             nodes={
                 "vm": self._node_with_ssh_server(
-                    {"server_id": "sshd-default", "service": "nodes.vm.services.ssh"},
+                    {"ssh_server_id": "sshd-default", "service": "nodes.vm.services.ssh"},
                     services=[{"port": 22, "name": "ssh"}],
                 ),
             },
@@ -3549,7 +3549,7 @@ class TestVerifyRuntimeSshServer:
             nodes={
                 "other": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
                 "vm": self._node_with_ssh_server(
-                    {"server_id": "sshd-default", "service": "nodes.other.services.ssh"},
+                    {"ssh_server_id": "sshd-default", "service": "nodes.other.services.ssh"},
                     services=[{"port": 22, "name": "ssh"}],
                 ),
             },
@@ -3561,7 +3561,7 @@ class TestVerifyRuntimeSshServer:
         s = _make_scenario(
             nodes={
                 "vm": self._node_with_ssh_server(
-                    {"server_id": "sshd-default", "service": "nodes.vm.svc.ssh"},
+                    {"ssh_server_id": "sshd-default", "service": "nodes.vm.svc.ssh"},
                 ),
             },
         )
@@ -3573,7 +3573,7 @@ class TestVerifyRuntimeSshServer:
             variables={"SVC": {"type": "string", "required": True}},
             nodes={
                 "vm": self._node_with_ssh_server(
-                    {"server_id": "sshd-default", "service": "${SVC}"},
+                    {"ssh_server_id": "sshd-default", "service": "${SVC}"},
                 ),
             },
         )
@@ -3590,7 +3590,7 @@ class TestVerifyRuntimeSshServer:
                 },
                 "ssh_servers": [
                     {
-                        "server_id": "sshd-default",
+                        "ssh_server_id": "sshd-default",
                         "service": "ssh",
                         "match_rules": [
                             {
@@ -3616,7 +3616,7 @@ class TestVerifyRuntimeSshServer:
                 },
                 "ssh_servers": [
                     {
-                        "server_id": "sshd-default",
+                        "ssh_server_id": "sshd-default",
                         "service": "ssh",
                         "match_rules": [
                             {
@@ -3640,7 +3640,7 @@ class TestVerifyRuntimeSshServer:
             "runtime": {
                 "ssh_servers": [
                     {
-                        "server_id": "sshd-default",
+                        "ssh_server_id": "sshd-default",
                         "service": "ssh",
                         "match_rules": [
                             {
@@ -3665,7 +3665,7 @@ class TestVerifyRuntimeSshServer:
                 "local_identity": {"users": [{"username": "kali", "uid": 1000}]},
                 "ssh_servers": [
                     {
-                        "server_id": "sshd-default",
+                        "ssh_server_id": "sshd-default",
                         "service": "ssh",
                         "match_rules": [
                             {
@@ -3689,7 +3689,7 @@ class TestVerifyRuntimeSshServer:
                 "local_identity": {"users": [{"username": "kali", "uid": 1000}]},
                 "ssh_servers": [
                     {
-                        "server_id": "sshd-default",
+                        "ssh_server_id": "sshd-default",
                         "service": "ssh",
                         "match_rules": [
                             {
@@ -3713,7 +3713,7 @@ class TestVerifyRuntimeSshServer:
                 "local_identity": {"users": [{"username": "kali", "uid": 1000}]},
                 "ssh_servers": [
                     {
-                        "server_id": "sshd-default",
+                        "ssh_server_id": "sshd-default",
                         "service": "ssh",
                         "match_rules": [
                             {

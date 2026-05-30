@@ -397,7 +397,7 @@ class TestNode:
             ("roles", {"admin": {"username": "root"}}),
             ("services", [{"port": 80, "name": "http"}]),
             ("asset_value", {"confidentiality": "high"}),
-            ("runtime", {"process": {"pid": 1, "command": "./shufflebackend"}}),
+            ("runtime", {"processes": [{"pid": 1, "command": "./shufflebackend"}]}),
         ],
     )
     def test_switch_rejects_other_vm_only_fields(self, field_name, value):
@@ -426,12 +426,14 @@ class TestNode:
                         "access": "read_write",
                     }
                 ],
-                "process": {
-                    "pid": 1,
-                    "command": "./shufflebackend",
-                    "user": "root",
-                    "working_directory": "/app",
-                },
+                "processes": [
+                    {
+                        "pid": 1,
+                        "command": "./shufflebackend",
+                        "user": "root",
+                        "working_directory": "/app",
+                    }
+                ],
                 "packages": [
                     {
                         "manager": "apk",
@@ -491,11 +493,11 @@ class TestNode:
             == RuntimeSensitivityClassification.OPERATOR_SECRET
         )
         assert runtime.local_control_interfaces[0].access == RuntimeControlInterfaceAccess.READ_WRITE
-        assert runtime.process is not None
-        assert runtime.process.pid == 1
-        assert runtime.process.command == ["./shufflebackend"]
-        assert runtime.process.user == "root"
-        assert runtime.process.working_directory == "/app"
+        assert len(runtime.processes) == 1
+        assert runtime.processes[0].pid == 1
+        assert runtime.processes[0].command == ["./shufflebackend"]
+        assert runtime.processes[0].user == "root"
+        assert runtime.processes[0].working_directory == "/app"
         assert runtime.packages[0].manager == "apk"
         assert runtime.packages[0].name == "musl"
         assert runtime.packages[0].version == "1.2.4-r2"
@@ -725,7 +727,7 @@ class TestNode:
             runtime={
                 "file_services": [
                     {
-                        "service_id": "fileshare-smb",
+                        "file_service_id": "fileshare-smb",
                         "service": "smb",
                         "protocol": "smb",
                         "backend": "samba-4.x",
@@ -799,7 +801,7 @@ class TestNode:
         )
 
         service = n.runtime.file_services[0]
-        assert service.service_id == "fileshare-smb"
+        assert service.file_service_id == "fileshare-smb"
         assert service.protocol == RuntimeFileServiceProtocol.SMB
         assert service.shares[0].kind == RuntimeFileShareKind.DISK
         assert service.shares[1].read_only is False
@@ -811,7 +813,7 @@ class TestNode:
     def test_vm_runtime_file_service_rejects_duplicate_share_id(self):
         with pytest.raises(ValidationError):
             RuntimeFileService(
-                service_id="svc",
+                file_service_id="svc",
                 service="smb",
                 protocol="smb",
                 shares=[
@@ -823,7 +825,7 @@ class TestNode:
     def test_vm_runtime_file_service_rejects_id_collision_across_scopes(self):
         with pytest.raises(ValidationError):
             RuntimeFileService(
-                service_id="svc",
+                file_service_id="svc",
                 service="smb",
                 protocol="smb",
                 shares=[RuntimeFileServiceShare(share_id="alpha", name="alpha")],
@@ -1026,8 +1028,8 @@ class TestNode:
                 {"local_control_interfaces": [{"control_interface_id": "docker-sock", "path": "run/docker.sock"}]},
                 "path",
             ),
-            ({"process": {"pid": 0, "command": "./shufflebackend"}}, "pid"),
-            ({"process": {"working_directory": "app"}}, "working_directory"),
+            ({"processes": [{"pid": 0, "command": "./shufflebackend"}]}, "pid"),
+            ({"processes": [{"working_directory": "app"}]}, "working_directory"),
             ({"dependency_manifests": [{"ecosystem": "go", "path": "go.mod"}]}, "path"),
             ({"container": {"masked_paths": ["proc/acpi"]}}, "masked_paths"),
             ({"container": {"devices": [{"host_path": "dev/null", "container_path": "/dev/null"}]}}, "host_path"),
@@ -1154,8 +1156,8 @@ class TestNode:
             (
                 {
                     "identity_authorities": [
-                        {"authority_id": "techvault-domain"},
-                        {"authority_id": "techvault-domain"},
+                        {"identity_authority_id": "techvault-domain"},
+                        {"identity_authority_id": "techvault-domain"},
                     ]
                 },
                 "Duplicate runtime identity authority",
@@ -1164,7 +1166,7 @@ class TestNode:
                 {
                     "identity_authorities": [
                         {
-                            "authority_id": "techvault-domain",
+                            "identity_authority_id": "techvault-domain",
                             "subjects": [
                                 {"subject_id": "alice", "kind": "user", "name": "alice"},
                                 {"subject_id": "alice", "kind": "user", "name": "alice"},
@@ -1178,7 +1180,7 @@ class TestNode:
                 {
                     "identity_authorities": [
                         {
-                            "authority_id": "techvault-domain",
+                            "identity_authority_id": "techvault-domain",
                             "relationships": [
                                 {
                                     "relationship_id": "alice-admin",
@@ -1651,7 +1653,7 @@ class TestRuntimeIdentityAuthorities:
             runtime={
                 "identity_authorities": [
                     {
-                        "authority_id": "techvault-domain",
+                        "identity_authority_id": "techvault-domain",
                         "kind": "domain",
                         "name": "TechVault Domain",
                         "namespace": "techvault.local",
@@ -1719,7 +1721,7 @@ class TestRuntimeIdentityAuthorities:
         )
 
         authority = n.runtime.identity_authorities[0]
-        assert authority.authority_id == "techvault-domain"
+        assert authority.identity_authority_id == "techvault-domain"
         assert authority.kind == RuntimeIdentityAuthorityKind.DOMAIN
         assert authority.namespace == "techvault.local"
         assert authority.domain_name == "TECHVAULT"
