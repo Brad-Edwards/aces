@@ -539,6 +539,8 @@ class TestRuntimeFamilyRegistrySshCoverage:
             "ssh_servers",
             "app_authorizations",
             "scheduled_jobs",
+            "datastore_services",
+            "platform_applications",
         )
         assert all(field in RuntimeConfiguration.model_fields for field in registered_fields)
 

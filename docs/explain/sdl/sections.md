@@ -536,6 +536,60 @@ nodes:
               name: api_token
               value_classification: redacted
               provenance: operator_override
+      datastore_services:               # observed non-relational datastore state
+        - datastore_service_id: opensearch-store
+          service: opensearch           # owning same-node Node.services[].name
+          engine: opensearch
+          data_model: search_index      # OPEN discriminator selects the profile
+          version: "2.13"
+          cluster:
+            cluster_id: os-cluster
+            health: green
+            discovery_mode: zen
+          nodes:
+            - node_id: os-node-1
+              roles: [data, master]
+          partitions:                   # search_index requires shard/replica geometry
+            - partition_id: alerts-index
+              kind: index
+              shard_count: 3
+              replica_count: 1
+          transport_security:
+            transport_security_id: os-transport
+            mode: tls
+            node_verification: true
+          authorization_ref: opensearch-rbac   # same-node runtime.app_authorizations id
+          settings:
+            - setting_id: keystore-pw   # secret-bearing settings omit value
+              name: bootstrap.password
+              classification: redacted
+      platform_applications:            # observed security platform application state
+        - platform_application_id: misp-tip
+          service: misp                 # owning same-node Node.services[].name
+          platform_kind: threat_intel   # OPEN discriminator selects the profile
+          product: MISP
+          version: "2.4"
+          organizations:
+            - organization_id: home-org
+              name: TechVault CTI
+          markings:
+            - marking_id: tlp-amber
+              scheme: tlp
+              level: amber
+          content_objects:              # bounded parsed manifests, never raw bodies
+            - content_object_id: misp-taxonomy
+              kind: taxonomy
+              name: tlp
+              marking_refs: [tlp-amber]
+            - content_object_id: misp-galaxy
+              kind: galaxy_cluster
+            - content_object_id: misp-warninglist
+              kind: warninglist
+            - content_object_id: misp-feed
+              kind: feed
+            - content_object_id: misp-sharing
+              kind: sharing_group
+          authorization_ref: misp-rbac  # same-node runtime.app_authorizations id
       identity_authorities:             # observed directory/domain/IdP/IAM state
         - authority_id: techvault-domain
           kind: domain
@@ -944,6 +998,62 @@ not a recurrence. Fully qualified refs such as
 generic reference validation, and module import rewriting (see
 [ADR-047](../../decisions/adrs/adr-047-scheduled-job-runtime-inventory.md)).
 
+`runtime.datastore_services` records the participant-observable logical state of
+a node's *non-relational* datastore — the OpenSearch/Elasticsearch search
+cluster, the Cassandra wide-column store, and the Redis key-value store that the
+irreducibly-relational `runtime.database_services` cannot shape. Each entry is a
+`RuntimeDatastoreService` with a stable `datastore_service_id`, an optional
+`service` referencing the owning same-node `Node.services[].name`, an open
+`engine` fact, and an open `data_model` spine discriminator (`search_index`,
+`wide_column`, `key_value`, `relational`, `unknown`, `other`). The discriminator
+drives a required-profile guard so an under-populated instance fails validation:
+a `search_index` requires at least one `partition` with `kind: index` carrying
+shard/replica geometry; a `wide_column` store requires at least one `keyspace`
+partition with a `replication_strategy` and `replication_factor`; and a
+`key_value` store requires a `persistence` profile and rejects relational
+object-tree (`keyspace`/`column_family`) partitions. `cluster`, `persistence`,
+and `transport_security` are single nested postures, while `nodes`,
+`partitions`, and `settings` are id-bearing child collections; `templates`,
+`aliases`, `mappings`, `lifecycle_policies`, `ingest_pipelines`,
+`pubsub_channels`, `queues_streams`, `engine_plugins`, and `backup_targets` are
+bare reference-name lists. `settings` reuse the shared runtime sensitivity
+vocabulary so secret-bearing names omit their raw value and classify
+`redacted`/`operator_secret`. Application-internal RBAC is delegated to
+`runtime.app_authorizations` via the string `authorization_ref` (resolved to a
+same-node `app_authorization_id`), so the surface carries no embedded
+principal/role/grant. Fully qualified refs such as
+`nodes.indexer.runtime.datastore_services.opensearch-store.partitions.alerts-index`
+participate in relationships, generic reference validation, and module import
+rewriting (see
+[ADR-048](../../decisions/adrs/adr-048-datastore-service-runtime-inventory.md)).
+
+`runtime.platform_applications` records the participant-observable runtime state
+of a node's security platform application — the threat-intelligence platform,
+SOAR, analyzer engine, case-management application, and analytics dashboard.
+Each entry is a `RuntimePlatformApplication` with a stable
+`platform_application_id`, an optional same-node `service` ref, and an open
+`platform_kind` spine discriminator (`threat_intel`, `soar`, `analyzer_engine`,
+`case_management`, `analytics_dashboard`, `unknown`, `other`). The discriminator
+drives a required-profile guard: `threat_intel` requires taxonomy, galaxy
+cluster, warninglist, feed, and sharing-group content objects; `soar` requires a
+workflow content object; `analyzer_engine` requires analyzer/responder content
+objects plus an `execution_policy`; `case_management` requires case-template and
+custom-field content objects; and `analytics_dashboard` requires at least one
+saved-object content object (`index_pattern`/`visualization`/`dashboard`/`search`)
+carrying references plus at least one `upstream_binding` with role
+`index_backend`/`data_source`. `content_objects` are bounded parsed manifests —
+typed `kind` (open enum), bounded typed `attributes`, typed `references`,
+`marking_refs`, and `evidence_refs` — structurally never a raw object body.
+`markings` carry a closed releasability `scheme` (`tlp`/`pap`/`distribution`).
+Within an application, content-object `references` resolve to sibling
+`content_object_id` values and `marking_refs` to sibling `marking_id` values, and
+the string `authorization_ref` resolves to a same-node `app_authorization_id`.
+Fully qualified refs such as
+`nodes.tip.runtime.platform_applications.misp-tip.content_objects.misp-feed`
+participate in relationships, generic reference validation, and module import
+rewriting (see
+[ADR-049](../../decisions/adrs/adr-049-platform-application-runtime-inventory.md)).
+
 `source` identifies the node's artifact by provider-neutral `name` and
 `version`. When that artifact is a custom-built container image, the optional
 `source.build` block records its observable build/provenance facts without
@@ -1279,7 +1389,16 @@ security-monitoring manager refs
 (`nodes.<node>.runtime.security_monitoring_managers.<manager_id>` and nested
 `.listeners.<listener_id>`, `.components.<component_id>`,
 `.agents.<agent_id>`, `.agent_groups.<group_id>`,
-`.content_sets.<content_id>`, or `.settings.<setting_id>` refs), and named ACL
+`.content_sets.<content_id>`, or `.settings.<setting_id>` refs), named datastore
+service refs
+(`nodes.<node>.runtime.datastore_services.<datastore_service_id>` and nested
+`.nodes.<node_id>`, `.partitions.<partition_id>`, or `.settings.<setting_id>`
+refs), named platform application refs
+(`nodes.<node>.runtime.platform_applications.<platform_application_id>` and
+nested `.organizations.<organization_id>`, `.tenants.<tenant_id>`,
+`.content_objects.<content_object_id>`, `.markings.<marking_id>`,
+`.upstream_bindings.<binding_id>`, `.connectors.<connector_id>`, or
+`.settings.<setting_id>` refs), and named ACL
 rules (`infrastructure.<infra>.acls.<acl_name>`).
 
 Bare refs like `webapp` are valid when they are unambiguous. Any top-level section key may also be referenced explicitly as `<section>.<name>`, for example `nodes.webapp`, `features.postgres`, `accounts.db-admin`, or `infrastructure.dmz-net`. Content items may be referenced as `content.<content_name>.items.<item_name>` when a bare item `name` would collide with some other named element.

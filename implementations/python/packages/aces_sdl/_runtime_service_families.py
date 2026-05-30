@@ -10,6 +10,7 @@ from typing import Any
 from . import runtime_app_authorization as _runtime_app_authorization
 from . import runtime_application as _runtime_application
 from . import runtime_database as _runtime_database
+from . import runtime_datastore as _runtime_datastore
 from . import runtime_directory_identity as _runtime_directory_identity
 from . import runtime_dns as _runtime_dns
 from . import runtime_file_service as _runtime_file_service
@@ -17,6 +18,7 @@ from . import runtime_listeners as _runtime_listeners
 from . import runtime_mail_service as _runtime_mail_service
 from . import runtime_network_detection as _runtime_network_detection
 from . import runtime_network_sensor as _runtime_network_sensor
+from . import runtime_platform_application as _runtime_platform_application
 from . import runtime_scheduled_job as _runtime_scheduled_job
 from . import runtime_security_monitoring as _runtime_security_monitoring
 from . import runtime_ssh_server as _runtime_ssh_server
@@ -178,6 +180,32 @@ RUNTIME_SERVICE_FAMILIES: tuple[RuntimeServiceFamily, ...] = (
         module=_runtime_scheduled_job,
         collection_name="scheduled_jobs",
         id_field="scheduled_job_id",
+    ),
+    RuntimeServiceFamily(
+        key="datastore-services",
+        module=_runtime_datastore,
+        collection_name="datastore_services",
+        id_field="datastore_service_id",
+        child_refs=(
+            RuntimeReferenceChild("nodes", "node_id"),
+            RuntimeReferenceChild("partitions", "partition_id"),
+            RuntimeReferenceChild("settings", "setting_id"),
+        ),
+    ),
+    RuntimeServiceFamily(
+        key="platform-applications",
+        module=_runtime_platform_application,
+        collection_name="platform_applications",
+        id_field="platform_application_id",
+        child_refs=(
+            RuntimeReferenceChild("organizations", "organization_id"),
+            RuntimeReferenceChild("tenants", "tenant_id"),
+            RuntimeReferenceChild("content_objects", "content_object_id"),
+            RuntimeReferenceChild("markings", "marking_id"),
+            RuntimeReferenceChild("upstream_bindings", "binding_id"),
+            RuntimeReferenceChild("connectors", "connector_id"),
+            RuntimeReferenceChild("settings", "setting_id"),
+        ),
     ),
 )
 

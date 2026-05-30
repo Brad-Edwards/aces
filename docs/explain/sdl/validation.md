@@ -47,6 +47,8 @@ becoming a validator-only interpretation of the SDL.
 | `verify_runtime_network_detection_engines` | Runtime network detection engines resolve optional same-node sensor refs, network-set refs, control-channel service refs, and filesystem-backed configuration/log/evidence/rule/output/control paths. |
 | `verify_runtime_security_monitoring_managers` | Runtime security-monitoring managers and listeners resolve to same-node service bindings. Manager/group/content/detection/setting file refs resolve to observed runtime filesystem entries when the node has file inventory. Agent group member refs, agent group refs, setting component refs, detection content-set refs, and detection correlation refs resolve inside the owning manager. Detection source artifact refs and target refs resolve through the generic named-ref index. |
 | `verify_runtime_app_authorizations` | Runtime application-internal RBAC stores resolve `permission_grants` and `role_mappings` `role_ref` values to roles declared within the same authorization (authorization-local role-permission and user-role assignment integrity). |
+| `verify_runtime_datastore_services` | Runtime datastore services resolve their owning transport `service` to a same-node service binding, and a non-empty, non-variable `authorization_ref` to an `app_authorization` declared on the same node. The model-local `require_profile_for_data_model` guard fails an under-populated `search_index`/`wide_column`/`key_value` instance. |
+| `verify_runtime_platform_applications` | Runtime platform applications resolve their owning transport `service` to a same-node service binding, a non-empty, non-variable `authorization_ref` to a same-node `app_authorization`, content-object `references` to sibling `content_object_id` values, and `marking_refs` to sibling `marking_id` values. The model-local `require_profile_for_platform_kind` guard fails an under-populated `threat_intel`/`soar`/`analyzer_engine`/`case_management`/`analytics_dashboard` instance. |
 | `verify_agents` | Entity references resolve. Starting accounts and initial-knowledge accounts exist in accounts section. Allowed subnets and initial-knowledge subnets must resolve to switch-backed infrastructure entries. Initial-knowledge hosts must resolve to VM nodes. Initial-knowledge services exist in `nodes.*.services[].name`. |
 | `verify_participant_behavior` | Agent action refs resolve to declared action contracts, observation-boundary refs resolve to declared boundaries, interaction refs resolve to declared actions or targetable state, and boundary view rules/transitions resolve to declared observable, hidden, or evidence refs. |
 | `verify_objectives` | Objective actors resolve (`agent` or `entity`). Objective actions must be declared by the referenced agent. Targets resolve to named scenario elements, including qualified service/ACL refs and section-qualified top-level refs. Ambiguous bare refs are rejected with qualified alternatives. Success criteria resolve to declared conditions/metrics/evaluations/TLOs/goals. Optional windows resolve through one shared normalized analysis over stories/scripts/events/workflows/workflow-steps, must remain internally consistent, and fail closed on dangling or out-of-window refs. Objective dependencies must resolve and stay acyclic. |
@@ -210,6 +212,45 @@ ship targets — belongs to the referencing forwarding agent, never re-encoded o
 the job. An event-triggered task is a trigger relationship, not a recurrence,
 and is therefore not a scheduled job.
 
+The optional `runtime.datastore_services` inventory has model-local and semantic
+rules. Datastore-service ids are stable concrete symbols and are unique within a
+node runtime block; the service-local cluster, persistence, transport-security,
+node, partition, and setting ids are unique across the service. Engines, data
+models, partition kinds, node roles, persistence eviction policies, replication
+strategies, transport-security modes, and setting scope/provenance/classification
+are normalized from bounded enums while allowing full-value variables.
+Secret-bearing settings must omit raw values and use redacted/operator-secret
+classifications. The `require_profile_for_data_model` guard makes the
+discriminator executable: a `${var}` placeholder is exempt and the open
+`unknown`/`other`/`relational` tail is permissive, but a concrete `search_index`
+requires at least one `index` partition carrying shard/replica geometry, a
+`wide_column` store requires at least one `keyspace` partition with a replication
+strategy and factor, and a `key_value` store requires a `persistence` profile and
+rejects relational/wide-column partitions. The owning transport `service`
+resolves to a same-node binding, and a non-empty, non-variable `authorization_ref`
+resolves to a same-node `app_authorization` (the delegated internal RBAC store).
+
+The optional `runtime.platform_applications` inventory has model-local and
+semantic rules. Platform-application ids are stable concrete symbols and unique
+within a node runtime block; organization, tenant, content-object, marking,
+upstream-binding, connector, and setting ids are unique across the application.
+Platform kinds, content-object kinds, connector kinds, upstream-binding roles,
+and setting provenance/classification are normalized from bounded enums (the
+marking `scheme` is a closed `tlp`/`pap`/`distribution` vocabulary) while
+allowing full-value variables. Content objects are bounded parsed manifests —
+typed kind, bounded attributes, typed references, marking refs, and evidence refs
+— never raw bodies; secret-bearing settings and connector names must use
+redacted/operator-secret classifications. The `require_profile_for_platform_kind`
+guard makes the discriminator executable: a `${var}` placeholder is exempt and
+`unknown`/`other` are permissive, but each concrete kind requires its defining
+content/binding profile (threat-intel taxonomy/galaxy/warninglist/feed/sharing
+group; SOAR workflow; analyzer-engine analyzer/responder plus execution policy;
+case-management case-template plus custom-field; analytics-dashboard saved object
+with references plus an index-backend/data-source upstream binding). The owning
+transport `service` and a non-empty, non-variable `authorization_ref` resolve on
+the same node, content-object `references` resolve to sibling content objects, and
+`marking_refs` resolve to sibling markings.
+
 The optional `source.build` container image provenance block carries its own
 model-local rules. Build-argument and image-default-environment names must be
 non-empty and free of `=`, and values classified as redacted must omit the raw
@@ -347,6 +388,11 @@ from the SDL runtime-family registry. Registered runtime refs include:
 - `nodes.<node>.runtime.app_authorizations.<app_authorization_id>` plus nested
   principal, role, permission-grant, role-mapping, and tenant refs
 - `nodes.<node>.runtime.scheduled_jobs.<scheduled_job_id>`
+- `nodes.<node>.runtime.datastore_services.<datastore_service_id>` plus nested
+  node, partition, and setting refs
+- `nodes.<node>.runtime.platform_applications.<platform_application_id>` plus
+  nested organization, tenant, content-object, marking, upstream-binding,
+  connector, and setting refs
 
 This means a relationship can reference any node, feature, condition,
 vulnerability, infrastructure entry, metric, evaluation, TLO, goal, entity

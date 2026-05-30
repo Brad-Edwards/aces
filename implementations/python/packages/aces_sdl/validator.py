@@ -493,6 +493,8 @@ class SemanticValidator:
         self._verify_runtime_identity_authorities()
         self._verify_runtime_file_services()
         self._verify_runtime_security_monitoring_managers()
+        self._verify_runtime_datastore_services()
+        self._verify_runtime_platform_applications()
         verify_runtime_mail_services(self)
         self._verify_features()
         self._verify_conditions()
@@ -1879,6 +1881,125 @@ class SemanticValidator:
             self._err(
                 f"{owner_label} {field_name} '{ref}' does not resolve to a "
                 f"{target_label} in the security-monitoring manager"
+            )
+
+    def _verify_runtime_datastore_services(self) -> None:
+        """Validate observed datastore services against the scenario.
+
+        Each service's owning transport service must resolve to a service on
+        the same node (mirroring ``runtime.applications`` and
+        ``runtime.database_services``); a non-empty, non-variable
+        ``authorization_ref`` must resolve to an ``app_authorization`` declared
+        on the same node's runtime (the delegated internal RBAC store).
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.datastore_services:
+                continue
+            service_names = self._node_service_names(node)
+            authorization_ids = self._node_app_authorization_ids(runtime)
+            for datastore in runtime.datastore_services:
+                owner_label = f"Node '{node_name}' runtime datastore service '{datastore.datastore_service_id}'"
+                self._verify_owned_service_ref(
+                    node_name,
+                    getattr(datastore, "service", ""),
+                    service_names,
+                    owner_label=owner_label,
+                )
+                self._verify_runtime_authorization_ref(
+                    getattr(datastore, "authorization_ref", ""),
+                    authorization_ids,
+                    owner_label=owner_label,
+                )
+
+    def _verify_runtime_platform_applications(self) -> None:
+        """Validate observed platform-application inventories against the scenario.
+
+        Each application's owning transport service must resolve to a service on
+        the same node; a non-empty, non-variable ``authorization_ref`` must
+        resolve to a same-node ``app_authorization``; content-object
+        ``references`` must resolve to sibling ``content_object_id`` values and
+        ``marking_refs`` to sibling ``marking_id`` values within the same
+        application (intra-application referential integrity).
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.platform_applications:
+                continue
+            service_names = self._node_service_names(node)
+            authorization_ids = self._node_app_authorization_ids(runtime)
+            for application in runtime.platform_applications:
+                self._verify_platform_application(
+                    node_name=node_name,
+                    application=application,
+                    service_names=service_names,
+                    authorization_ids=authorization_ids,
+                )
+
+    def _verify_platform_application(
+        self,
+        *,
+        node_name: str,
+        application: object,
+        service_names: set[str],
+        authorization_ids: set[str],
+    ) -> None:
+        owner_label = f"Node '{node_name}' runtime platform application '{application.platform_application_id}'"
+        self._verify_owned_service_ref(
+            node_name,
+            getattr(application, "service", ""),
+            service_names,
+            owner_label=owner_label,
+        )
+        self._verify_runtime_authorization_ref(
+            getattr(application, "authorization_ref", ""),
+            authorization_ids,
+            owner_label=owner_label,
+        )
+        content_object_ids = {obj.content_object_id for obj in application.content_objects}
+        marking_ids = {marking.marking_id for marking in application.markings}
+        for content_object in application.content_objects:
+            object_label = f"{owner_label} content_object '{content_object.content_object_id}'"
+            for reference in content_object.references:
+                if self._is_unresolved_var(reference):
+                    continue
+                if reference not in content_object_ids:
+                    self._err(
+                        f"{object_label} reference '{reference}' does not resolve to a "
+                        f"content_object in the platform application"
+                    )
+            for marking_ref in content_object.marking_refs:
+                if self._is_unresolved_var(marking_ref):
+                    continue
+                if marking_ref not in marking_ids:
+                    self._err(
+                        f"{object_label} marking_ref '{marking_ref}' does not resolve to a "
+                        f"marking in the platform application"
+                    )
+
+    @staticmethod
+    def _node_app_authorization_ids(runtime: object) -> set[str]:
+        """Collect ``app_authorization_id`` values declared on a node's runtime."""
+        return {
+            authorization.app_authorization_id
+            for authorization in getattr(runtime, "app_authorizations", [])
+            if authorization.app_authorization_id
+        }
+
+    def _verify_runtime_authorization_ref(
+        self,
+        authorization_ref: str,
+        authorization_ids: set[str],
+        *,
+        owner_label: str,
+    ) -> None:
+        """Resolve a delegated ``authorization_ref`` to a same-node app_authorization."""
+        if not authorization_ref or self._is_unresolved_var(authorization_ref):
+            return
+        if authorization_ref not in authorization_ids:
+            self._err(
+                f"{owner_label} authorization_ref '{authorization_ref}' does not resolve to an "
+                f"app_authorization on the same node"
             )
 
     def _split_runtime_ref(self, ref: object, *, surface: str) -> tuple[str, str] | None:

@@ -378,6 +378,102 @@ ACES relies on prior work in four ways:
   (`last_run` / `next_run` / `last_result`) as monitoring evidence rather than
   control intent.
 
+## Non-Relational Datastore Semantics
+
+The `runtime.datastore_services` surface is the SCN-010 (DSL-132) response to a
+gap for the participant-observable logical state of *non-relational* datastores
+— the search cluster, wide-column store, and key-value store that the
+irreducibly-relational `runtime.database_services` cannot shape. Its defining
+addition is the open `data_model` discriminator paired with a
+`require_profile_for_data_model` guard that makes each data model's defining
+geometry (search shard/replica counts, wide-column replication, key-value
+persistence) executable rather than optional.
+
+ACES relies on prior work in four ways:
+
+- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+  model topology, deployable services/features, and validation/deployment
+  concerns. None expose a portable first-class non-relational datastore logical
+  state, so ACES adds a typed node-scoped seam rather than overloading
+  `runtime.database_services` (irreducibly relational), `Node.services`
+  (transport), or `runtime.software_components` (component identity).
+- **Primary data-model and consensus standards:** Codd's relational model
+  ([CACM 13(6)](https://doi.org/10.1145/362384.362685)) and
+  [ISO/IEC 9075](https://www.iso.org/standard/76583.html) (SQL) bound what stays
+  relational; Zobel and Moffat's
+  [inverted-index survey](https://doi.org/10.1145/1132956.1132959) anchors the
+  search-index shard/replica geometry; Ongaro and Ousterhout's
+  [Raft](https://raft.github.io/raft.pdf) and Gilbert and Lynch's
+  [CAP proof](https://doi.org/10.1145/564585.564601) anchor cluster/replication
+  posture.
+- **Engine precedents:** Lakshman and Malik's
+  [Cassandra](https://doi.org/10.1145/1773912.1773922), DeCandia et al.'s
+  [Dynamo](https://doi.org/10.1145/1323293.1294281), Chang et al.'s
+  [Bigtable](https://research.google/pubs/pub27898/), and Redis
+  [RESP3](https://github.com/redis/redis-specifications/blob/master/protocol/RESP3.md)
+  / [ACL](https://redis.io/docs/management/security/acl/) /
+  [persistence](https://redis.io/docs/management/persistence/) show recurring
+  facts ACES must preserve: keyspaces with replication strategy/factor, search
+  shard/replica geometry, and RDB/AOF/eviction persistence. These are
+  implementation lineage, not schema authority.
+- **Hardening and transport discipline:** NIST
+  [SP 800-92](https://csrc.nist.gov/publications/detail/sp/800-92/final),
+  [SP 800-53](https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final),
+  and [SP 800-209](https://csrc.nist.gov/publications/detail/sp/800-209/final)
+  (storage security), with [RFC 8446](https://www.rfc-editor.org/rfc/rfc8446)
+  (TLS 1.3) and [RFC 5280](https://www.rfc-editor.org/rfc/rfc5280) (PKIX), frame
+  the transport-security posture and secret-bearing setting redaction; raw key
+  material and credentials are never stored.
+
+## Security-Platform Application Semantics
+
+The `runtime.platform_applications` surface is the SCN-010 (DSL-133) response to
+a gap for the participant-observable runtime state of security platform
+applications — threat-intelligence platforms, SOAR, analyzer engines, case
+management, and analytics dashboards. Its defining addition is the open
+`platform_kind` discriminator paired with a `require_profile_for_platform_kind`
+guard, plus content objects modeled as bounded parsed manifests (typed kind +
+bounded attributes + typed references) rather than raw object bodies.
+
+ACES relies on prior work in four ways:
+
+- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+  model topology, deployable services/features, and validation/deployment
+  concerns. None expose a portable first-class security-platform application
+  inventory, so ACES adds a typed node-scoped seam rather than overloading
+  `runtime.applications` (HTTP routes) or `runtime.software_components`
+  (component identity).
+- **Primary content and intelligence-sharing standards:** RDF 1.1
+  ([concepts](https://www.w3.org/TR/rdf11-concepts/)) with Angles and Gutierrez's
+  [graph-database survey](https://doi.org/10.1145/1322432.1322433) frame typed
+  references over raw bodies;
+  [STIX 2.1](https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html) /
+  [TAXII 2.1](https://docs.oasis-open.org/cti/taxii/v2.1/taxii-v2.1.html), the
+  [MISP data model](https://www.misp-project.org/datamodels/), FIRST
+  [TLP 2.0](https://www.first.org/tlp/), MITRE
+  [ATT&CK](https://attack.mitre.org/), NIST
+  [SP 800-150](https://csrc.nist.gov/publications/detail/sp/800-150/final), and
+  [ISO/IEC 27010](https://www.iso.org/standard/68427.html) anchor the
+  threat-intel content profile and releasability markings; NIST
+  [SP 800-61r2](https://csrc.nist.gov/publications/detail/sp/800-61/rev-2/final)
+  / [r3](https://csrc.nist.gov/publications/detail/sp/800-61/rev-3/ipd) anchors
+  the case-management incident-handling profile.
+- **Automation and observability precedents:** OASIS
+  [CACAO v2.0](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.html)
+  and [OpenC2](https://docs.oasis-open.org/openc2/oc2ls/v1.0/oc2ls-v1.0.html)
+  frame the SOAR/analyzer execution profile with the boundary stated explicitly:
+  ACES records the workflow/analyzer *inventory* and execution policy, not
+  playbook execution semantics. NIST
+  [SP 800-92](https://csrc.nist.gov/publications/detail/sp/800-92/final) and
+  [ISO/IEC/IEEE 42010](https://www.iso.org/standard/74393.html) frame the
+  dashboard saved-object and upstream-binding posture as architecture/monitoring
+  evidence. These are implementation lineage, not schema authority.
+- **Transport and federation discipline:** [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110)
+  (HTTP semantics), [RFC 7239](https://www.rfc-editor.org/rfc/rfc7239)
+  (forwarded), and [RFC 6749](https://www.rfc-editor.org/rfc/rfc6749) (OAuth 2.0)
+  bound the connector/binding posture; raw bodies, credentials, and key material
+  are never stored — the surface records bounded manifests and classifications.
+
 ## File-Sharing And Resource-Access Semantics
 
 The `runtime.file_services` surface is issue #421's response to a gap

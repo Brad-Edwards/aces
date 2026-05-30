@@ -50,6 +50,16 @@ roles, resource-scoped permission grants, role mappings, and tenants -
 recurring scheduled-job cadence and run-state (closed interval/cron/calendar
 recurrence plus observed last/next run and last result, cadence-only -
 [ADR-047](../../decisions/adrs/adr-047-scheduled-job-runtime-inventory.md)),
+non-relational datastore logical state (search/wide-column/key-value clusters,
+partitions with shard/replica or replication geometry, key-value persistence
+posture, transport security, and settings, with an executable required-profile
+guard and internal RBAC delegated via `authorization_ref` -
+[ADR-048](../../decisions/adrs/adr-048-datastore-service-runtime-inventory.md)),
+security-platform application runtime inventory (threat-intel/SOAR/analyzer/
+case-management/dashboard kinds, bounded parsed content-object manifests,
+releasability markings, upstream bindings, connectors, and settings, with an
+executable required-profile guard -
+[ADR-049](../../decisions/adrs/adr-049-platform-application-runtime-inventory.md)),
 and directory/domain/realm/IdP/IAM/federation identity-authority state
 (authority namespaces, services, subjects, policies, and typed relationships -
 [ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).

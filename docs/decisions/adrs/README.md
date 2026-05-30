@@ -33,6 +33,8 @@ adr-044-network-detection-engine-runtime-inventory
 adr-045-security-monitoring-detection-definition-semantics
 adr-046-app-authorization-runtime-inventory
 adr-047-scheduled-job-runtime-inventory
+adr-048-datastore-service-runtime-inventory
+adr-049-platform-application-runtime-inventory
 ```
 
 | ADR | Title | Status | Date |
@@ -85,3 +87,5 @@ adr-047-scheduled-job-runtime-inventory
 | [045](adr-045-security-monitoring-detection-definition-semantics.md) | Security-Monitoring Detection Definition Semantics | accepted | 2026-05-29 |
 | [046](adr-046-app-authorization-runtime-inventory.md) | Application-Internal Authorization Runtime Inventory | accepted | 2026-05-30 |
 | [047](adr-047-scheduled-job-runtime-inventory.md) | Scheduled-Job Runtime Inventory | accepted | 2026-05-30 |
+| [048](adr-048-datastore-service-runtime-inventory.md) | Datastore Service Runtime Inventory | accepted | 2026-05-30 |
+| [049](adr-049-platform-application-runtime-inventory.md) | Platform Application Runtime Inventory | accepted | 2026-05-30 |

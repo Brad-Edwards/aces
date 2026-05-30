@@ -5535,6 +5535,13 @@
           "title": "Database Services",
           "type": "array"
         },
+        "datastore_services": {
+          "items": {
+            "$ref": "#/$defs/RuntimeDatastoreService"
+          },
+          "title": "Datastore Services",
+          "type": "array"
+        },
         "dependency_manifests": {
           "items": {
             "$ref": "#/$defs/RuntimeDependencyManifest"
@@ -5679,6 +5686,13 @@
             "$ref": "#/$defs/RuntimePackage"
           },
           "title": "Packages",
+          "type": "array"
+        },
+        "platform_applications": {
+          "items": {
+            "$ref": "#/$defs/RuntimePlatformApplication"
+          },
+          "title": "Platform Applications",
           "type": "array"
         },
         "process": {
@@ -6182,6 +6196,746 @@
       ],
       "title": "RuntimeDatabaseService",
       "type": "object"
+    },
+    "RuntimeDatastoreCluster": {
+      "additionalProperties": false,
+      "description": "The single observed cluster posture of a datastore service.\n\nCaptures the cluster-identity facts a search/wide-column cluster exposes:\nhealth, discovery mode, partitioner, and native protocol version.",
+      "properties": {
+        "cluster_id": {
+          "title": "Cluster Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "discovery_mode": {
+          "default": "",
+          "title": "Discovery Mode",
+          "type": "string"
+        },
+        "health": {
+          "default": "",
+          "title": "Health",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "native_protocol_version": {
+          "default": "",
+          "title": "Native Protocol Version",
+          "type": "string"
+        },
+        "partitioner": {
+          "default": "",
+          "title": "Partitioner",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cluster_id"
+      ],
+      "title": "RuntimeDatastoreCluster",
+      "type": "object"
+    },
+    "RuntimeDatastoreDataModel": {
+      "description": "The logical data model of a datastore \u2014 the spine discriminator.\n\nOPEN taxonomy (per the SCN-010 adversarial verdict): carries both\n``unknown`` and ``other`` so an unrecognized model is permissive rather than\nforcing a shallow relational encoding. ``document`` is intentionally absent \u2014\nno observed container realizes it (forbidden-completion discipline).",
+      "enum": [
+        "search_index",
+        "wide_column",
+        "key_value",
+        "relational",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeDatastoreDataModel",
+      "type": "string"
+    },
+    "RuntimeDatastoreEngine": {
+      "description": "Observed product family for a datastore service.\n\nOPEN taxonomy: real-world datastore engines are unbounded, so both\n``unknown`` and ``other`` are carried.",
+      "enum": [
+        "opensearch",
+        "elasticsearch",
+        "cassandra",
+        "scylladb",
+        "redis",
+        "valkey",
+        "memcached",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeDatastoreEngine",
+      "type": "string"
+    },
+    "RuntimeDatastoreEvictionPolicy": {
+      "description": "A key-value eviction policy.\n\nOPEN taxonomy: carries both ``unknown`` and ``other``. Covers Redis\n``maxmemory-policy`` values.",
+      "enum": [
+        "noeviction",
+        "allkeys_lru",
+        "allkeys_lfu",
+        "allkeys_random",
+        "volatile_lru",
+        "volatile_lfu",
+        "volatile_random",
+        "volatile_ttl",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeDatastoreEvictionPolicy",
+      "type": "string"
+    },
+    "RuntimeDatastoreNode": {
+      "additionalProperties": false,
+      "description": "An observed node participating in a datastore cluster.",
+      "properties": {
+        "address": {
+          "default": "",
+          "title": "Address",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "is_coordinator": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Is Coordinator"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "node_id": {
+          "title": "Node Id",
+          "type": "string"
+        },
+        "roles": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/RuntimeDatastoreNodeRole"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "title": "Roles",
+          "type": "array"
+        }
+      },
+      "required": [
+        "node_id"
+      ],
+      "title": "RuntimeDatastoreNode",
+      "type": "object"
+    },
+    "RuntimeDatastoreNodeRole": {
+      "description": "A role a cluster node fulfils.\n\nOPEN taxonomy: carries both ``unknown`` and ``other``. Covers OpenSearch\n``cluster_manager``/``data``/``ingest``/``ml`` roles and Cassandra\n``coordinator``/``seed`` roles uniformly.",
+      "enum": [
+        "cluster_manager",
+        "data",
+        "ingest",
+        "coordinating",
+        "ml",
+        "seed",
+        "coordinator",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeDatastoreNodeRole",
+      "type": "string"
+    },
+    "RuntimeDatastorePartition": {
+      "additionalProperties": false,
+      "description": "An observed partition primitive (index / keyspace / logical_db / family).\n\nCarries the geometry that differentiates one datastore data model from\nanother: shard/replica counts for a search index, replication strategy +\nfactor + per-DC factor map for a wide-column keyspace, and a datatype census\nfor a key-value logical database.",
+      "properties": {
+        "datatype_census": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "title": "Datatype Census",
+          "type": "object"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "durable_writes": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Durable Writes"
+        },
+        "health": {
+          "default": "",
+          "title": "Health",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDatastorePartitionKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Kind"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "partition_id": {
+          "title": "Partition Id",
+          "type": "string"
+        },
+        "per_dc_factor_map": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "title": "Per Dc Factor Map",
+          "type": "object"
+        },
+        "replica_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Replica Count"
+        },
+        "replication_factor": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Replication Factor"
+        },
+        "replication_strategy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDatastoreReplicationStrategy"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Replication Strategy"
+        },
+        "shard_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shard Count"
+        }
+      },
+      "required": [
+        "partition_id"
+      ],
+      "title": "RuntimeDatastorePartition",
+      "type": "object"
+    },
+    "RuntimeDatastorePartitionKind": {
+      "description": "The kind of a datastore partition/namespace primitive.\n\nOPEN taxonomy: carries both ``unknown`` and ``other``. An ``index`` is the\nsearch-cluster primary object, a ``keyspace`` the wide-column one, a\n``logical_db`` a numbered key-value database, and a ``column_family`` a\nwide-column table.",
+      "enum": [
+        "index",
+        "keyspace",
+        "logical_db",
+        "column_family",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeDatastorePartitionKind",
+      "type": "string"
+    },
+    "RuntimeDatastorePersistence": {
+      "additionalProperties": false,
+      "description": "The single observed persistence posture of a key-value datastore.\n\nCaptures Redis-style persistence: RDB save points, AOF on/off, the eviction\npolicy, and the maxmemory ceiling. Its presence is the defining profile a\n``key_value`` data model must carry.",
+      "properties": {
+        "aof": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Aof"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "eviction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDatastoreEvictionPolicy"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Eviction"
+        },
+        "maxmemory": {
+          "default": "",
+          "title": "Maxmemory",
+          "type": "string"
+        },
+        "persistence_id": {
+          "title": "Persistence Id",
+          "type": "string"
+        },
+        "rdb_save_points": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Rdb Save Points",
+          "type": "array"
+        }
+      },
+      "required": [
+        "persistence_id"
+      ],
+      "title": "RuntimeDatastorePersistence",
+      "type": "object"
+    },
+    "RuntimeDatastoreReplicationStrategy": {
+      "description": "A wide-column replication strategy \u2014 the spine discriminator's geometry.\n\nOPEN taxonomy (per the SCN-010 verdict): carries both ``unknown`` and\n``other``. Covers Cassandra ``SimpleStrategy``/``NetworkTopologyStrategy``.",
+      "enum": [
+        "simple_strategy",
+        "network_topology_strategy",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeDatastoreReplicationStrategy",
+      "type": "string"
+    },
+    "RuntimeDatastoreService": {
+      "additionalProperties": false,
+      "description": "An observed datastore service hosted by a transport service on a node.\n\nThe single non-relational datastore spine. ``service`` references the owning\nsame-node ``Node.services[].name`` (bare name or the qualified\n``nodes.<node>.services.<name>`` form). The ``data_model`` discriminator\nselects the required profile the ``require_profile_for_data_model`` guard\nenforces.",
+      "properties": {
+        "aliases": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        },
+        "authorization_ref": {
+          "default": "",
+          "title": "Authorization Ref",
+          "type": "string"
+        },
+        "backup_targets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Backup Targets",
+          "type": "array"
+        },
+        "cluster": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDatastoreCluster"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "data_model": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDatastoreDataModel"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Data Model"
+        },
+        "datastore_service_id": {
+          "title": "Datastore Service Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "engine": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDatastoreEngine"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Engine"
+        },
+        "engine_plugins": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Engine Plugins",
+          "type": "array"
+        },
+        "ingest_pipelines": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ingest Pipelines",
+          "type": "array"
+        },
+        "lifecycle_policies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Lifecycle Policies",
+          "type": "array"
+        },
+        "mappings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mappings",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "nodes": {
+          "items": {
+            "$ref": "#/$defs/RuntimeDatastoreNode"
+          },
+          "title": "Nodes",
+          "type": "array"
+        },
+        "partitions": {
+          "items": {
+            "$ref": "#/$defs/RuntimeDatastorePartition"
+          },
+          "title": "Partitions",
+          "type": "array"
+        },
+        "persistence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDatastorePersistence"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "protocol": {
+          "default": "",
+          "title": "Protocol",
+          "type": "string"
+        },
+        "pubsub_channels": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Pubsub Channels",
+          "type": "array"
+        },
+        "queues_streams": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Queues Streams",
+          "type": "array"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        },
+        "settings": {
+          "items": {
+            "$ref": "#/$defs/RuntimeDatastoreSetting"
+          },
+          "title": "Settings",
+          "type": "array"
+        },
+        "templates": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Templates",
+          "type": "array"
+        },
+        "transport_security": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDatastoreTransportSecurity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "datastore_service_id"
+      ],
+      "title": "RuntimeDatastoreService",
+      "type": "object"
+    },
+    "RuntimeDatastoreSetting": {
+      "additionalProperties": false,
+      "description": "An observed datastore runtime setting with scope, provenance, and class.\n\nSettings that may carry credentials, hashes, or operator-only values must\nomit their raw ``value`` and classify it as ``redacted`` / ``operator_secret``\n\u2014 enforced via the shared ``name_indicates_secret`` helper even when the\nsubmitter left ``classification`` at its default.",
+      "properties": {
+        "classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Classification"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDatastoreSettingProvenance"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDatastoreSettingScope"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "engine",
+          "title": "Scope"
+        },
+        "setting_id": {
+          "title": "Setting Id",
+          "type": "string"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "setting_id"
+      ],
+      "title": "RuntimeDatastoreSetting",
+      "type": "object"
+    },
+    "RuntimeDatastoreSettingProvenance": {
+      "description": "Where an observed datastore runtime setting value came from.\n\nOPEN taxonomy: provenance sources are extensible, so both ``unknown`` and\n``other`` are carried (mirrors ``DatabaseSettingProvenance``).",
+      "enum": [
+        "introspection",
+        "configuration_file",
+        "image_default",
+        "operator_override",
+        "runtime_default",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeDatastoreSettingProvenance",
+      "type": "string"
+    },
+    "RuntimeDatastoreSettingScope": {
+      "description": "The scope a datastore runtime setting applies at.\n\nCLOSED structural vocab: the scope lattice (cluster / node / partition /\nengine) is fixed by the spine's own topology, so no ``unknown`` / ``other``.",
+      "enum": [
+        "cluster",
+        "node",
+        "partition",
+        "engine"
+      ],
+      "title": "RuntimeDatastoreSettingScope",
+      "type": "string"
+    },
+    "RuntimeDatastoreTransportSecurity": {
+      "additionalProperties": false,
+      "description": "The single observed transport-security posture of a datastore service.\n\nRecords the intra-cluster transport TLS mode and whether client/node\ncertificate verification is enforced \u2014 the observable ``xpack.security`` /\n``SKIPSSL_VERIFY`` posture, never the certificate material itself.",
+      "properties": {
+        "client_verification": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Client Verification"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDatastoreTransportSecurityMode"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "none",
+          "title": "Mode"
+        },
+        "node_verification": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Node Verification"
+        },
+        "transport_security_id": {
+          "title": "Transport Security Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "transport_security_id"
+      ],
+      "title": "RuntimeDatastoreTransportSecurity",
+      "type": "object"
+    },
+    "RuntimeDatastoreTransportSecurityMode": {
+      "description": "The transport-security posture of a datastore service.\n\nCLOSED structural vocab: the observable TLS posture is a fixed three-way\ndistinction (none / one-way TLS / mutual TLS), so no ``unknown`` / ``other``.\nA ``${var}`` placeholder remains expressible at the field level.",
+      "enum": [
+        "none",
+        "tls",
+        "mutual_tls"
+      ],
+      "title": "RuntimeDatastoreTransportSecurityMode",
+      "type": "string"
     },
     "RuntimeDependencyManifest": {
       "additionalProperties": false,
@@ -10493,6 +11247,592 @@
         "critical"
       ],
       "title": "RuntimePackageVulnerabilitySeverity",
+      "type": "string"
+    },
+    "RuntimePlatformApplication": {
+      "additionalProperties": false,
+      "description": "Node-scoped runtime inventory for a security platform application.\n\n``service`` references the owning same-node ``Node.services[].name``. The\ninventory is observation metadata above transport; it never duplicates the\ninbound HTTP route surface (``runtime.applications``) or mutates\n``Node.services``. ``authorization_ref`` is the ``app_authorization_id`` of\nthe platform's internal RBAC store (resolved by the semantic validator).",
+      "properties": {
+        "authorization_ref": {
+          "default": "",
+          "title": "Authorization Ref",
+          "type": "string"
+        },
+        "connectors": {
+          "items": {
+            "$ref": "#/$defs/RuntimePlatformApplicationConnector"
+          },
+          "title": "Connectors",
+          "type": "array"
+        },
+        "content_objects": {
+          "items": {
+            "$ref": "#/$defs/RuntimePlatformApplicationContentObject"
+          },
+          "title": "Content Objects",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "execution_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimePlatformApplicationExecutionPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "markings": {
+          "items": {
+            "$ref": "#/$defs/RuntimePlatformApplicationMarking"
+          },
+          "title": "Markings",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "organizations": {
+          "items": {
+            "$ref": "#/$defs/RuntimePlatformApplicationOrganization"
+          },
+          "title": "Organizations",
+          "type": "array"
+        },
+        "platform_application_id": {
+          "title": "Platform Application Id",
+          "type": "string"
+        },
+        "platform_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimePlatformApplicationKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Platform Kind"
+        },
+        "product": {
+          "default": "",
+          "title": "Product",
+          "type": "string"
+        },
+        "service": {
+          "default": "",
+          "title": "Service",
+          "type": "string"
+        },
+        "settings": {
+          "items": {
+            "$ref": "#/$defs/RuntimePlatformApplicationSetting"
+          },
+          "title": "Settings",
+          "type": "array"
+        },
+        "tenants": {
+          "items": {
+            "$ref": "#/$defs/RuntimePlatformApplicationTenant"
+          },
+          "title": "Tenants",
+          "type": "array"
+        },
+        "upstream_bindings": {
+          "items": {
+            "$ref": "#/$defs/RuntimePlatformApplicationUpstreamBinding"
+          },
+          "title": "Upstream Bindings",
+          "type": "array"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "platform_application_id"
+      ],
+      "title": "RuntimePlatformApplication",
+      "type": "object"
+    },
+    "RuntimePlatformApplicationConnector": {
+      "additionalProperties": false,
+      "description": "A connector/integration wired into the platform.\n\nA connector never carries a raw credential value; its credential posture is\nrecorded purely via :attr:`credential_classification`.",
+      "properties": {
+        "connector_id": {
+          "title": "Connector Id",
+          "type": "string"
+        },
+        "credential_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimePlatformApplicationSettingClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "plain",
+          "title": "Credential Classification"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimePlatformApplicationConnectorKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Kind"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connector_id"
+      ],
+      "title": "RuntimePlatformApplicationConnector",
+      "type": "object"
+    },
+    "RuntimePlatformApplicationConnectorKind": {
+      "description": "Open taxonomy of platform connector/integration kinds.\n\nOpen taxonomy: carries both ``unknown`` and ``other``.",
+      "enum": [
+        "analyzer_engine",
+        "responder",
+        "webhook",
+        "notification",
+        "sync",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimePlatformApplicationConnectorKind",
+      "type": "string"
+    },
+    "RuntimePlatformApplicationContentObject": {
+      "additionalProperties": false,
+      "description": "A typed platform content object as a bounded parsed manifest entry.\n\nThe object carries a typed ``kind``, bounded typed ``attributes``, typed\n``references`` (to other ``content_object_id`` values), ``marking_refs``,\nand ``evidence_refs`` \u2014 structurally **never** a raw object body.",
+      "properties": {
+        "attributes": {
+          "additionalProperties": true,
+          "title": "Attributes",
+          "type": "object"
+        },
+        "content_object_id": {
+          "title": "Content Object Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimePlatformApplicationContentObjectKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Kind"
+        },
+        "marking_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Marking Refs",
+          "type": "array"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "references": {
+          "items": {
+            "type": "string"
+          },
+          "title": "References",
+          "type": "array"
+        }
+      },
+      "required": [
+        "content_object_id"
+      ],
+      "title": "RuntimePlatformApplicationContentObject",
+      "type": "object"
+    },
+    "RuntimePlatformApplicationContentObjectKind": {
+      "description": "Open taxonomy of typed platform content objects.\n\nA content object is a bounded parsed manifest entry (typed kind + bounded\nattributes + typed references) \u2014 never a raw object body. Open taxonomy:\ncarries both ``unknown`` and ``other``.",
+      "enum": [
+        "index_pattern",
+        "visualization",
+        "dashboard",
+        "search",
+        "feed",
+        "taxonomy",
+        "galaxy_cluster",
+        "warninglist",
+        "object_template",
+        "sharing_group",
+        "case_template",
+        "custom_field",
+        "analyzer",
+        "responder",
+        "workflow",
+        "app",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimePlatformApplicationContentObjectKind",
+      "type": "string"
+    },
+    "RuntimePlatformApplicationExecutionPolicy": {
+      "additionalProperties": false,
+      "description": "The platform's job/analyzer execution model (rate limits, runner).",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "job_timeout": {
+          "default": "",
+          "title": "Job Timeout",
+          "type": "string"
+        },
+        "max_concurrent_jobs": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Concurrent Jobs"
+        },
+        "policy_id": {
+          "default": "",
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "rate_limit": {
+          "default": "",
+          "title": "Rate Limit",
+          "type": "string"
+        },
+        "runner": {
+          "default": "",
+          "title": "Runner",
+          "type": "string"
+        }
+      },
+      "title": "RuntimePlatformApplicationExecutionPolicy",
+      "type": "object"
+    },
+    "RuntimePlatformApplicationKind": {
+      "description": "Open discriminator for the platform-application product family.\n\nThe ``require_profile_for_platform_kind`` guard ties each concrete member\nto a required content/binding profile. Open taxonomy: carries both\n``unknown`` and ``other``.",
+      "enum": [
+        "analytics_dashboard",
+        "threat_intel",
+        "case_management",
+        "analyzer_engine",
+        "soar",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimePlatformApplicationKind",
+      "type": "string"
+    },
+    "RuntimePlatformApplicationMarking": {
+      "additionalProperties": false,
+      "description": "A releasability marking (TLP/PAP/distribution) defined by the platform.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "level": {
+          "default": "",
+          "title": "Level",
+          "type": "string"
+        },
+        "marking_id": {
+          "title": "Marking Id",
+          "type": "string"
+        },
+        "scheme": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimePlatformApplicationMarkingScheme"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "tlp",
+          "title": "Scheme"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "marking_id"
+      ],
+      "title": "RuntimePlatformApplicationMarking",
+      "type": "object"
+    },
+    "RuntimePlatformApplicationMarkingScheme": {
+      "description": "Closed releasability-marking scheme vocabulary.\n\nStandard-fixed (FIRST TLP 2.0 / PAP / MISP distribution lattice), so per\nthe enum-sentinel rule it carries neither ``unknown`` nor ``other``.",
+      "enum": [
+        "tlp",
+        "pap",
+        "distribution"
+      ],
+      "title": "RuntimePlatformApplicationMarkingScheme",
+      "type": "string"
+    },
+    "RuntimePlatformApplicationOrganization": {
+      "additionalProperties": false,
+      "description": "An organization/owner tenant known to the platform application.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "organization_id": {
+          "title": "Organization Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "organization_id"
+      ],
+      "title": "RuntimePlatformApplicationOrganization",
+      "type": "object"
+    },
+    "RuntimePlatformApplicationSetting": {
+      "additionalProperties": false,
+      "description": "An observed platform setting with provenance and sensitivity.\n\nSettings whose name signals secret content must omit their raw ``value``\nand classify it as ``redacted`` / ``operator_secret``.",
+      "properties": {
+        "classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimePlatformApplicationSettingClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "plain",
+          "title": "Classification"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimePlatformApplicationSettingProvenance"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        },
+        "redaction": {
+          "default": "",
+          "title": "Redaction",
+          "type": "string"
+        },
+        "setting_id": {
+          "title": "Setting Id",
+          "type": "string"
+        },
+        "value": {
+          "default": "",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "setting_id"
+      ],
+      "title": "RuntimePlatformApplicationSetting",
+      "type": "object"
+    },
+    "RuntimePlatformApplicationSettingClassification": {
+      "description": "Closed sensitivity classification for a platform setting value.\n\nClosed structural redaction vocabulary: carries neither ``unknown`` nor\n``other`` (an unclassified value is ``plain``).",
+      "enum": [
+        "plain",
+        "redacted",
+        "operator_secret"
+      ],
+      "title": "RuntimePlatformApplicationSettingClassification",
+      "type": "string"
+    },
+    "RuntimePlatformApplicationSettingProvenance": {
+      "description": "Open taxonomy of where an observed platform setting originated.\n\nOpen taxonomy: carries both ``unknown`` and ``other``.",
+      "enum": [
+        "default",
+        "environment",
+        "config_file",
+        "database",
+        "runtime",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimePlatformApplicationSettingProvenance",
+      "type": "string"
+    },
+    "RuntimePlatformApplicationTenant": {
+      "additionalProperties": false,
+      "description": "A tenant/namespace scope within the platform application.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "tenant_id": {
+          "title": "Tenant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tenant_id"
+      ],
+      "title": "RuntimePlatformApplicationTenant",
+      "type": "object"
+    },
+    "RuntimePlatformApplicationUpstreamBinding": {
+      "additionalProperties": false,
+      "description": "An outbound binding to an upstream node/service (data source, backend).",
+      "properties": {
+        "binding_id": {
+          "title": "Binding Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimePlatformApplicationUpstreamBindingRole"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Role"
+        },
+        "target_node_ref": {
+          "default": "",
+          "title": "Target Node Ref",
+          "type": "string"
+        },
+        "target_service_ref": {
+          "default": "",
+          "title": "Target Service Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "binding_id"
+      ],
+      "title": "RuntimePlatformApplicationUpstreamBinding",
+      "type": "object"
+    },
+    "RuntimePlatformApplicationUpstreamBindingRole": {
+      "description": "Open taxonomy for the role an outbound upstream binding plays.\n\nOpen taxonomy: carries both ``unknown`` and ``other``.",
+      "enum": [
+        "data_source",
+        "backend_api",
+        "sync_peer",
+        "index_backend",
+        "cql_backend",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimePlatformApplicationUpstreamBindingRole",
       "type": "string"
     },
     "RuntimeProcessCapabilityOverride": {
