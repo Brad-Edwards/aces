@@ -14,10 +14,10 @@ from pydantic import BaseModel
 from ._base import extract_variable_name, is_variable_ref
 from ._errors import SDLValidationError
 from ._runtime_mail_semantics import (
-    collect_qualified_mail_refs,
     verify_relationship_mail_access,
     verify_runtime_mail_services,
 )
+from ._runtime_service_families import collect_qualified_runtime_family_refs
 from .entities import flatten_entities
 from .infrastructure import SimpleProperties
 from .nodes import MAX_NODE_NAME_LENGTH, NodeType
@@ -258,117 +258,11 @@ class SemanticValidator:
         """Qualified refs for node-scoped runtime inventories.
 
         These let a top-level relationship endpoint resolve to a runtime
-        application surface, database service / logical database, DNS service
-        / zone / RRset, identity-authority object, or security-monitoring
-        manager object. This keeps
-        runtime-observed logical state targetable without promoting those
-        records to top-level SDL sections.
+        service family or stable child record. This keeps runtime-observed
+        logical state targetable without promoting those records to top-level
+        SDL sections.
         """
-        refs: set[str] = set()
-        for node_name, node in self._s.nodes.items():
-            runtime = getattr(node, "runtime", None)
-            if runtime is None:
-                continue
-            refs.update(self._qualified_service_listener_refs(node_name))
-            refs.update(self._qualified_application_refs(node_name))
-            refs.update(self._qualified_database_refs(node_name))
-            refs.update(self._qualified_dns_refs(node_name))
-            refs.update(self._qualified_identity_refs(node_name))
-            refs.update(self._qualified_network_sensor_refs(node_name))
-            refs.update(self._qualified_network_detection_refs(node_name))
-            refs.update(self._qualified_security_monitoring_refs(node_name))
-        refs.update(collect_qualified_mail_refs(self._s))
-        return refs
-
-    def _qualified_application_refs(self, node_name: str) -> set[str]:
-        runtime = self._s.nodes[node_name].runtime
-        return {f"nodes.{node_name}.runtime.applications.{app.application_id}" for app in runtime.applications}
-
-    def _qualified_service_listener_refs(self, node_name: str) -> set[str]:
-        runtime = self._s.nodes[node_name].runtime
-        return {
-            f"nodes.{node_name}.runtime.service_listeners.{listener.listener_id}"
-            for listener in runtime.service_listeners
-        }
-
-    def _qualified_database_refs(self, node_name: str) -> set[str]:
-        refs: set[str] = set()
-        runtime = self._s.nodes[node_name].runtime
-        for dbsvc in runtime.database_services:
-            base = f"nodes.{node_name}.runtime.database_services.{dbsvc.database_service_id}"
-            refs.add(base)
-            refs.update(f"{base}.databases.{database.database_id}" for database in dbsvc.databases)
-        return refs
-
-    def _qualified_dns_refs(self, node_name: str) -> set[str]:
-        refs: set[str] = set()
-        runtime = self._s.nodes[node_name].runtime
-        for dns_service in runtime.dns_services:
-            base = f"nodes.{node_name}.runtime.dns_services.{dns_service.dns_service_id}"
-            refs.add(base)
-            for zone in dns_service.zones:
-                zone_base = f"{base}.zones.{zone.zone_id}"
-                refs.add(zone_base)
-                refs.update(f"{zone_base}.rrsets.{rrset.rrset_id}" for rrset in zone.rrsets)
-        return refs
-
-    def _qualified_identity_refs(self, node_name: str) -> set[str]:
-        refs: set[str] = set()
-        runtime = self._s.nodes[node_name].runtime
-        for authority in runtime.identity_authorities:
-            base = f"nodes.{node_name}.runtime.identity_authorities.{authority.authority_id}"
-            refs.add(base)
-            refs.update(f"{base}.services.{service.service_id}" for service in authority.services)
-            refs.update(f"{base}.subjects.{subject.subject_id}" for subject in authority.subjects)
-            refs.update(f"{base}.policies.{policy.policy_id}" for policy in authority.policies)
-            refs.update(
-                f"{base}.relationships.{relationship.relationship_id}" for relationship in authority.relationships
-            )
-        return refs
-
-    def _qualified_network_sensor_refs(self, node_name: str) -> set[str]:
-        refs: set[str] = set()
-        runtime = self._s.nodes[node_name].runtime
-        for sensor in runtime.network_sensors:
-            refs.add(f"nodes.{node_name}.runtime.network_sensors.{sensor.sensor_id}")
-        return refs
-
-    def _qualified_network_detection_refs(self, node_name: str) -> set[str]:
-        refs: set[str] = set()
-        runtime = self._s.nodes[node_name].runtime
-        for engine in runtime.network_detection_engines:
-            base = f"nodes.{node_name}.runtime.network_detection_engines.{engine.engine_id}"
-            refs.add(base)
-            for collection_name, id_field in (
-                ("rule_sources", "source_id"),
-                ("network_sets", "set_id"),
-                ("output_streams", "stream_id"),
-                ("control_channels", "channel_id"),
-            ):
-                refs.update(
-                    f"{base}.{collection_name}.{getattr(item, id_field)}" for item in getattr(engine, collection_name)
-                )
-        return refs
-
-    def _qualified_security_monitoring_refs(self, node_name: str) -> set[str]:
-        refs: set[str] = set()
-        runtime = self._s.nodes[node_name].runtime
-        for manager in runtime.security_monitoring_managers:
-            base = f"nodes.{node_name}.runtime.security_monitoring_managers.{manager.manager_id}"
-            refs.add(base)
-            for collection_name, id_field in (
-                ("listeners", "listener_id"),
-                ("components", "component_id"),
-                ("agents", "agent_id"),
-                ("agent_groups", "group_id"),
-                ("content_sets", "content_id"),
-                ("detection_definitions", "definition_id"),
-                ("settings", "setting_id"),
-            ):
-                refs.update(
-                    f"{base}.{collection_name}.{getattr(item, id_field)}" for item in getattr(manager, collection_name)
-                )
-        return refs
+        return collect_qualified_runtime_family_refs(self._s)
 
     def _qualified_acl_refs(self) -> set[str]:
         refs: set[str] = set()
