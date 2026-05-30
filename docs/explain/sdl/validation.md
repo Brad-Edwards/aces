@@ -280,31 +280,36 @@ Generic refs are indexed in two forms:
 - qualified names like `nodes.webapp`, `features.postgres`, `infrastructure.dmz-net`, or `content.mailbox.items.invoice.eml`
 
 The index also includes nested entity dot-paths, named service bindings
-(`nodes.<node>.services.<service_name>`), runtime service listener refs
-(`nodes.<node>.runtime.service_listeners.<listener_id>`), runtime
-identity-authority refs
-(`nodes.<node>.runtime.identity_authorities.<authority_id>` plus nested
-service, subject, policy, and relationship refs), and named ACL rules
-(`infrastructure.<infra>.acls.<acl_name>`). Runtime DNS refs are also indexed:
-`nodes.<node>.runtime.dns_services.<dns_service_id>`,
-`.zones.<zone_id>`, and `.zones.<zone_id>.rrsets.<rrset_id>`. Runtime
-network-sensor refs are indexed as
-`nodes.<node>.runtime.network_sensors.<sensor_id>`. Runtime network
-detection-engine refs are indexed as
-`nodes.<node>.runtime.network_detection_engines.<engine_id>` plus nested
-`.rule_sources.<source_id>`, `.network_sets.<set_id>`,
-`.output_streams.<stream_id>`, and `.control_channels.<channel_id>` refs. This means a
-relationship can reference any node, feature, condition, vulnerability,
-infrastructure entry, metric, evaluation, TLO, goal, entity (including nested),
-inject, event, script, story, content entry, content item, account, agent,
-objective, workflow, relationship, variable, named service binding, runtime
-identity-authority object, runtime DNS object, runtime network-sensor object,
-runtime network detection-engine object, runtime security-monitoring manager
-object, or named ACL rule. Runtime
-security-monitoring refs are indexed
-as `nodes.<node>.runtime.security_monitoring_managers.<manager_id>` plus nested
-`.listeners.<listener_id>`, `.components.<component_id>`,
-`.agents.<agent_id>`, `.agent_groups.<group_id>`,
-`.content_sets.<content_id>`, `.detection_definitions.<definition_id>`, and
-`.settings.<setting_id>` refs. When a bare ref maps to multiple elements,
+(`nodes.<node>.services.<service_name>`), named ACL rules
+(`infrastructure.<infra>.acls.<acl_name>`), and runtime-family refs generated
+from the SDL runtime-family registry. Registered runtime refs include:
+
+- `nodes.<node>.runtime.service_listeners.<listener_id>`
+- `nodes.<node>.runtime.applications.<application_id>`
+- `nodes.<node>.runtime.database_services.<database_service_id>` plus
+  `.databases.<database_id>`
+- `nodes.<node>.runtime.dns_services.<dns_service_id>` plus `.zones.<zone_id>`
+  and `.zones.<zone_id>.rrsets.<rrset_id>`
+- `nodes.<node>.runtime.identity_authorities.<authority_id>` plus nested
+  service, subject, policy, and relationship refs
+- `nodes.<node>.runtime.file_services.<service_id>` plus nested share,
+  principal, access-rule, and access-observation refs
+- `nodes.<node>.runtime.mail_services.<service_id>` plus nested component,
+  listener, domain, mailbox-store, mailbox, alias, routing-rule, queue, and
+  setting refs
+- `nodes.<node>.runtime.network_sensors.<sensor_id>`
+- `nodes.<node>.runtime.network_detection_engines.<engine_id>` plus nested
+  rule-source, network-set, output-stream, and control-channel refs
+- `nodes.<node>.runtime.security_monitoring_managers.<manager_id>` plus nested
+  listener, component, agent, agent-group, content-set, detection-definition,
+  and setting refs
+- `nodes.<node>.runtime.ssh_servers.<server_id>` plus
+  `.match_rules.<match_id>`
+
+This means a relationship can reference any node, feature, condition,
+vulnerability, infrastructure entry, metric, evaluation, TLO, goal, entity
+(including nested), inject, event, script, story, content entry, content item,
+account, agent, objective, workflow, relationship, variable, named service
+binding, registered runtime-family object, registered runtime-family child
+object, or named ACL rule. When a bare ref maps to multiple elements,
 validation fails and asks the author to use one of the qualified alternatives.

@@ -6957,6 +6957,18 @@
           "default": "unknown",
           "title": "Origin"
         },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeIdentityRecordOrigin"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Provenance"
+        },
         "value_classification": {
           "anyOf": [
             {
