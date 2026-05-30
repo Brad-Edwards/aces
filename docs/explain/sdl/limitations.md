@@ -70,6 +70,20 @@ templates, lifecycle policy, realized children, and a privilege class that
 references a same-node control-interface shell, with an executable
 required-profile guard -
 [ADR-051](../../decisions/adrs/adr-051-orchestration-authority-runtime-inventory.md)),
+SIEM/security-monitoring manager runtime inventory (manager identity, listeners,
+components, enrolled agents, agent groups, detection-content sets, parsed
+detection definitions, and settings -
+[ADR-040](../../decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory.md),
+[ADR-045](../../decisions/adrs/adr-045-security-monitoring-detection-definition-semantics.md)),
+mail-service logical state (listeners, domains, mailbox stores, mailboxes,
+aliases, routing rules, queues, and settings -
+[ADR-038](../../decisions/adrs/adr-038-runtime-mail-service-logical-state.md)),
+file-sharing and resource-access state (shares, principals, access rules, and
+access observations -
+[ADR-037](../../decisions/adrs/adr-037-runtime-file-service-and-filesystem-presence-semantics.md)),
+generic observed service listeners (bind endpoint, transport, address family,
+scope, owner, and readiness evidence -
+[ADR-043](../../decisions/adrs/adr-043-runtime-service-listener-surface.md)),
 and directory/domain/realm/IdP/IAM/federation identity-authority state
 (authority namespaces, services, subjects, policies, and typed relationships -
 [ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).
@@ -78,6 +92,15 @@ top-level edge - database, mail, forwarding, service-integration, and
 reverse-proxy-upstream access
 ([ADR-052](../../decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md)) -
 rather than as untyped relationship properties.
+Deliberate non-gaps are recorded as confirmation-folds rather than new surfaces:
+a standalone Suricata IDS node is the existing `network_detection_engines` +
+`network_sensors` surfaces, a relational database is `database_services`,
+OS-local users/groups/sudo are `runtime.local_identity`, and transport/TLS
+exposure is `service_listeners` + `applications` + `runtime.network`. The
+SCN-010 expressivity gap analysis
+([scn010-expressivity-gap-analysis](../../aces/inventory/scn010-expressivity-gap-analysis.md))
+records each fold field-for-field, so the observable-parity gate is shown to cut
+against over-building as well as under-coverage.
 Container image build
 provenance is a separate source-artifact expressivity surface tracked by issue
 #364 and [ADR-023](../../decisions/adrs/adr-023-container-image-build-provenance-surface.md);
