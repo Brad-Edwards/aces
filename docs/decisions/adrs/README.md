@@ -91,3 +91,4 @@ adr-049-platform-application-runtime-inventory
 | [049](adr-049-platform-application-runtime-inventory.md) | Platform Application Runtime Inventory | accepted | 2026-05-30 |
 | [050](adr-050-forwarding-agent-runtime-inventory.md) | Forwarding Agent Runtime Inventory | accepted | 2026-05-30 |
 | [051](adr-051-orchestration-authority-runtime-inventory.md) | Orchestration Authority Runtime Inventory | accepted | 2026-05-30 |
+| [052](adr-052-typed-runtime-relationship-subtypes.md) | Typed Runtime Relationship Subtypes | accepted | 2026-05-30 |

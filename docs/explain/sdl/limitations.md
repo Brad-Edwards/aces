@@ -73,6 +73,11 @@ required-profile guard -
 and directory/domain/realm/IdP/IAM/federation identity-authority state
 (authority namespaces, services, subjects, policies, and typed relationships -
 [ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).
+Inter-element access detail is carried by typed relationship subtypes on the
+top-level edge - database, mail, forwarding, service-integration, and
+reverse-proxy-upstream access
+([ADR-052](../../decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md)) -
+rather than as untyped relationship properties.
 Container image build
 provenance is a separate source-artifact expressivity surface tracked by issue
 #364 and [ADR-023](../../decisions/adrs/adr-023-container-image-build-provenance-surface.md);

@@ -902,6 +902,16 @@ typed `database_access` block keeps the access `role_ref` and `auth_method`
 structurally validated (see
 [ADR-029](../../decisions/adrs/adr-029-database-logical-state-runtime-surface.md)).
 
+Three further typed relationship subtypes attach domain-specific access detail
+to a top-level edge without re-typing the families they reference:
+`forwarding_edge` (a forwarding agent's target listener role, redacted
+enrollment identity, protocol, and parse format), `service_integration` (a
+platform-to-engine integration's kind, direction, and API auth principal), and
+`proxy_upstream` (a reverse-proxy route's upstream node/service and
+TLS-termination posture, which must agree with the route's own
+`upstream_target`). See
+[ADR-052](../../decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md).
+
 `runtime.dns_services` records observed DNS logical and protocol state hosted
 by the node: authoritative zones, RRsets, typed common RDATA, resolver policy,
 forwarders, DNSSEC validation posture, dynamic-update posture, logging posture,

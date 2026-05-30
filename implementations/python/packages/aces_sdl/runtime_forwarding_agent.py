@@ -41,6 +41,7 @@ from .runtime_forwarding_agent_vocab import (
     RuntimeForwardingSourceKind,
     RuntimeForwardingTransformKind,
 )
+from .runtime_security_monitoring import RuntimeSecurityMonitoringListenerRole
 from .runtime_values import (
     name_indicates_secret,
     parse_runtime_enum_or_var,
@@ -48,6 +49,7 @@ from .runtime_values import (
 )
 
 __all__ = [
+    "RelationshipForwardingEdge",
     "RuntimeForwardingAgent",
     "RuntimeForwardingAgentImplementation",
     "RuntimeForwardingAgentKind",
@@ -440,3 +442,75 @@ class RuntimeForwardingAgent(SDLModel):
                 f"forwarding agent '{self.forwarding_agent_id}' agent_kind 'content_sync' must not carry "
                 f"a ship_target enrollment endpoint (ship_target '{offending.target_id}')"
             )
+
+
+class RelationshipForwardingEdge(SDLModel):
+    """Typed forwarding-trust detail carried by a top-level relationship edge.
+
+    The inter-node trust edge between a forwarding / intel-sync agent
+    (``forwarder_ref``, a ``forwarding_agent_id``) and the downstream consumer
+    it ships to. The consumer's transport listener is named by
+    ``target_listener_role`` — REUSING the manager-side
+    ``RuntimeSecurityMonitoringListenerRole`` lattice rather than forking a
+    parallel enum (SCN-010 §5.7).
+
+    The agent enrollment identity itself is never recorded: only the closed
+    ``RuntimeForwardingEnrollmentClassification`` lattice (``none`` /
+    ``redacted`` / ``operator_secret``). A present enrollment-identity ref must
+    classify ``redacted`` / ``operator_secret`` — a raw identity is never the
+    portable model.
+    """
+
+    forwarder_ref: str
+    target_listener_role: RuntimeSecurityMonitoringListenerRole | str = RuntimeSecurityMonitoringListenerRole.OTHER
+    enrollment_identity_ref: str = ""
+    enrollment_identity_classification: RuntimeForwardingEnrollmentClassification | str = (
+        RuntimeForwardingEnrollmentClassification.NONE
+    )
+    protocol: str = ""
+    crypto_method: str = ""
+    parse_format: RuntimeForwardingParseFormat | str = RuntimeForwardingParseFormat.UNKNOWN
+    description: str = ""
+
+    @field_validator("forwarder_ref")
+    @classmethod
+    def validate_forwarder_ref(cls, v: str) -> str:
+        # A ref may carry a ``${var}`` placeholder; only emptiness is rejected.
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("forwarder_ref must be a non-empty string")
+        return v
+
+    @field_validator("target_listener_role", mode="before")
+    @classmethod
+    def normalize_target_listener_role(cls, v: RuntimeSecurityMonitoringListenerRole | str) -> object:
+        return _normalize_enum(v, RuntimeSecurityMonitoringListenerRole, field_name="target_listener_role")
+
+    @field_validator("enrollment_identity_classification", mode="before")
+    @classmethod
+    def normalize_enrollment_classification(cls, v: RuntimeForwardingEnrollmentClassification | str) -> object:
+        return _normalize_enum(
+            v, RuntimeForwardingEnrollmentClassification, field_name="enrollment_identity_classification"
+        )
+
+    @field_validator("parse_format", mode="before")
+    @classmethod
+    def normalize_parse_format(cls, v: RuntimeForwardingParseFormat | str) -> object:
+        return _normalize_enum(v, RuntimeForwardingParseFormat, field_name="parse_format")
+
+    @model_validator(mode="after")
+    def validate_enrollment_identity(self) -> "RelationshipForwardingEdge":
+        # The enrollment identity is secret-bearing by construction: a present
+        # ref must be classified ``redacted`` / ``operator_secret`` so a raw
+        # credential never lands in the model. A ``${var}`` classification is
+        # deferred to instantiation revalidation.
+        if not self.enrollment_identity_ref:
+            return self
+        classification = self.enrollment_identity_classification
+        if is_variable_ref(classification):
+            return self
+        if classification not in _PRESENT_ENROLLMENT_CLASSIFICATIONS:
+            raise ValueError(
+                "forwarding edge enrollment_identity_ref is present; enrollment_identity_classification "
+                "must be 'redacted' or 'operator_secret'"
+            )
+        return self

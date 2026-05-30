@@ -44,6 +44,7 @@ from aces.core.sdl.nodes import (
     ImageVerificationStatus,
     Node,
     NodeType,
+    RelationshipProxyUpstream,
     Resources,
     Role,
     RuntimeApplicationDisclosure,
@@ -54,6 +55,8 @@ from aces.core.sdl.nodes import (
     RuntimeApplicationRedirect,
     RuntimeApplicationResponse,
     RuntimeApplicationRoute,
+    RuntimeApplicationRouteUpstreamScheme,
+    RuntimeApplicationRouteUpstreamTarget,
     RuntimeApplicationSurface,
     RuntimeCapabilityOverrideScope,
     RuntimeCapabilityPolicy,
@@ -3205,6 +3208,76 @@ class TestRuntimeApplicationSurface:
                 methods=["GET"],
                 templates=["/app/t.html", "/app/t.html"],
             )
+
+    def test_route_upstream_target_normalized(self):
+        route = RuntimeApplicationRoute(
+            route_id="proxy-root",
+            path="/",
+            methods=["GET"],
+            upstream_target={
+                "target_node_ref": "app-backend",
+                "target_service": "nodes.app-backend.services.gunicorn",
+                "scheme": "HTTPS",
+                "tls_terminated_here": True,
+            },
+        )
+        assert route.upstream_target is not None
+        assert route.upstream_target.target_node_ref == "app-backend"
+        assert route.upstream_target.scheme == RuntimeApplicationRouteUpstreamScheme.HTTPS
+        assert route.upstream_target.tls_terminated_here is True
+
+    def test_route_upstream_target_defaults(self):
+        target = RuntimeApplicationRouteUpstreamTarget()
+        assert target.scheme == RuntimeApplicationRouteUpstreamScheme.HTTP
+        assert target.target_node_ref == ""
+        assert target.tls_terminated_here is None
+
+    def test_route_upstream_scheme_is_closed(self):
+        # The CLOSED scheme taxonomy carries neither ``other`` nor ``unknown``.
+        with pytest.raises(ValidationError, match="scheme must be one of: http, https"):
+            RuntimeApplicationRouteUpstreamTarget(scheme="ftp")
+
+    def test_route_upstream_scheme_variable_placeholder_allowed(self):
+        target = RuntimeApplicationRouteUpstreamTarget(scheme="${proxy_scheme}")
+        assert target.scheme == "${proxy_scheme}"
+
+
+class TestRelationshipProxyUpstream:
+    def test_full_proxy_upstream(self):
+        access = RelationshipProxyUpstream(
+            route_ref="proxy-root",
+            upstream_node_ref="app-backend",
+            upstream_service_ref="gunicorn",
+            client_tls_terminated=True,
+            origin_plaintext=True,
+            body_limit="10 MiB",
+            description="nginx reverse proxy to gunicorn origin",
+        )
+        assert access.route_ref == "proxy-root"
+        assert access.client_tls_terminated is True
+        assert access.origin_plaintext is True
+        assert access.body_limit == "10 MiB"
+
+    def test_route_ref_required(self):
+        with pytest.raises(ValidationError, match="route_ref must be a non-empty route_id"):
+            RelationshipProxyUpstream(route_ref="  ")
+
+    def test_route_ref_allows_variable_placeholder(self):
+        access = RelationshipProxyUpstream(route_ref="${route_id}")
+        assert access.route_ref == "${route_id}"
+
+    def test_flags_accept_variable_placeholders(self):
+        access = RelationshipProxyUpstream(
+            route_ref="proxy-root",
+            client_tls_terminated="${tls_terminated}",
+            origin_plaintext="${plaintext}",
+        )
+        assert access.client_tls_terminated == "${tls_terminated}"
+        assert access.origin_plaintext == "${plaintext}"
+
+    def test_flag_rejects_non_bool(self):
+        with pytest.raises(ValidationError):
+            RelationshipProxyUpstream(route_ref="proxy-root", origin_plaintext="maybe")
 
 
 # ---------------------------------------------------------------------------

@@ -23,8 +23,10 @@ from .infrastructure import SimpleProperties
 from .nodes import MAX_NODE_NAME_LENGTH, NodeType
 from .orchestration import Workflow, WorkflowPredicate, WorkflowStep, WorkflowStepType
 from .runtime_database import DatabaseObjectType
+from .runtime_forwarding_agent_vocab import RuntimeForwardingProtocol
 from .runtime_mounts import RuntimeControlInterfaceAccess, RuntimeControlInterfaceKind
 from .runtime_orchestration import RuntimeOrchestrationPrivilegeClass
+from .runtime_security_monitoring import RuntimeSecurityMonitoringListenerRole
 from .runtime_ssh_server import SshMatchCriterionKind
 from .scenario import Scenario
 from .semantics.assessment import AssessmentIssue, analyze_assessment_pipeline
@@ -517,6 +519,9 @@ class SemanticValidator:
         self._verify_relationships()
         self._verify_relationship_database_access()
         verify_relationship_mail_access(self)
+        self._verify_relationship_forwarding_edges()
+        self._verify_relationship_service_integrations()
+        self._verify_relationship_proxy_upstreams()
         self._verify_agents()
         self._verify_participant_behavior()
         self._verify_objectives()
@@ -2251,6 +2256,277 @@ class SemanticValidator:
             self._err(
                 f"{label} database_access role_ref '{role_ref}' "
                 f"is not a role in database service '{dbsvc.database_service_id}'"
+            )
+
+    # ------------------------------------------------------------------ #
+    # Typed relationship subtypes (SCN-010 §5.7)
+    # ------------------------------------------------------------------ #
+
+    def _verify_relationship_forwarding_edges(self) -> None:
+        """Validate typed ``forwarding_edge`` blocks on relationship edges.
+
+        ``forwarder_ref`` must resolve to a ``RuntimeForwardingAgent`` (by
+        ``forwarding_agent_id``) on some node. AGREEMENT GUARD: when that agent
+        carries ``ship_targets``, the edge's ``target_listener_role`` and
+        ``protocol`` — where both sides are concrete — must be consistent with
+        at least one ship_target, so the inter-node trust edge and the
+        agent-side shipping state cannot disagree (SCN-010 §5.7).
+        """
+        for name, rel in self._s.relationships.items():
+            edge = rel.forwarding_edge
+            if edge is None:
+                continue
+            label = f"Relationship '{name}'"
+            ref = edge.forwarder_ref
+            if not ref or self._is_unresolved_var(ref):
+                continue
+            agent = self._resolve_forwarding_agent_ref(ref)
+            if agent is None:
+                self._err(
+                    f"{label} forwarding_edge forwarder_ref '{ref}' does not resolve to a forwarding agent on any node"
+                )
+                continue
+            self._check_forwarding_edge_agreement(edge, agent, label)
+
+    def _resolve_forwarding_agent_ref(self, ref: str) -> object | None:
+        """Resolve a ``forwarding_agent_id`` to its agent on any node."""
+        for node in self._s.nodes.values():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None:
+                continue
+            for agent in getattr(runtime, "forwarding_agents", []):
+                if agent.forwarding_agent_id == ref:
+                    return agent
+        return None
+
+    def _check_forwarding_edge_agreement(self, edge: object, agent: object, label: str) -> None:
+        ship_targets = list(getattr(agent, "ship_targets", []))
+        if not ship_targets:
+            return
+        agent_id = agent.forwarding_agent_id
+        self._check_forwarding_edge_protocol_agreement(edge, ship_targets, agent_id, label)
+        self._check_forwarding_edge_role_agreement(edge, ship_targets, agent_id, label)
+
+    def _check_forwarding_edge_protocol_agreement(
+        self, edge: object, ship_targets: list, agent_id: str, label: str
+    ) -> None:
+        # The edge ``protocol`` is a free string; agreement is asserted only
+        # against ship_target protocols that are concrete enum members. If no
+        # ship_target carries a concrete protocol, nothing concrete to compare.
+        edge_protocol = getattr(edge, "protocol", "")
+        if not edge_protocol or self._is_unresolved_var(edge_protocol):
+            return
+        target_protocols = [t.protocol.value for t in ship_targets if isinstance(t.protocol, RuntimeForwardingProtocol)]
+        if not target_protocols:
+            return
+        if edge_protocol not in target_protocols:
+            self._err(
+                f"{label} forwarding_edge protocol '{edge_protocol}' does not match any ship_target "
+                f"protocol on forwarding agent '{agent_id}' (one of: {', '.join(sorted(set(target_protocols)))})"
+            )
+
+    def _check_forwarding_edge_role_agreement(
+        self, edge: object, ship_targets: list, agent_id: str, label: str
+    ) -> None:
+        # An ``agent_event_ingestion`` listener role requires a ship_target with
+        # an ingestion endpoint; an ``agent_enrollment`` role requires one with
+        # an enrollment endpoint. Other roles impose no ship_target shape.
+        role = getattr(edge, "target_listener_role", None)
+        if not isinstance(role, RuntimeSecurityMonitoringListenerRole):
+            return
+        if role is RuntimeSecurityMonitoringListenerRole.AGENT_EVENT_INGESTION:
+            if not any(t.has_ingestion_endpoint() for t in ship_targets):
+                self._err(
+                    f"{label} forwarding_edge target_listener_role 'agent_event_ingestion' has no agreeing "
+                    f"ship_target carrying an ingestion endpoint on forwarding agent '{agent_id}'"
+                )
+        elif role is RuntimeSecurityMonitoringListenerRole.AGENT_ENROLLMENT:
+            if not any(t.has_enrollment_endpoint() for t in ship_targets):
+                self._err(
+                    f"{label} forwarding_edge target_listener_role 'agent_enrollment' has no agreeing "
+                    f"ship_target carrying an enrollment endpoint on forwarding agent '{agent_id}'"
+                )
+
+    def _verify_relationship_service_integrations(self) -> None:
+        """Validate typed ``service_integration`` blocks on relationship edges.
+
+        ``consumer_ref``/``engine_ref`` (when concrete) must resolve to platform
+        applications by ``platform_application_id``; a concrete
+        ``auth_principal_ref`` must resolve to an ``app_authorization`` principal
+        on the engine application's node (the integration authenticates into the
+        engine's internal RBAC store).
+        """
+        for name, rel in self._s.relationships.items():
+            integration = rel.service_integration
+            if integration is None:
+                continue
+            label = f"Relationship '{name}'"
+            self._check_service_integration_endpoint(integration.consumer_ref, "consumer_ref", label)
+            engine = self._check_service_integration_endpoint(integration.engine_ref, "engine_ref", label)
+            self._check_service_integration_auth_principal(integration.auth_principal_ref, engine, label)
+
+    def _check_service_integration_endpoint(self, ref: str, field_name: str, label: str) -> object | None:
+        if not ref or self._is_unresolved_var(ref):
+            return None
+        resolved = self._resolve_platform_application_ref(ref)
+        if resolved is None:
+            self._err(
+                f"{label} service_integration {field_name} '{ref}' does not resolve to a "
+                f"platform application on any node"
+            )
+            return None
+        return resolved[1]
+
+    def _resolve_platform_application_ref(self, ref: str) -> tuple[str, object] | None:
+        """Resolve a ``platform_application_id`` to (node_name, application)."""
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None:
+                continue
+            for application in getattr(runtime, "platform_applications", []):
+                if application.platform_application_id == ref:
+                    return node_name, application
+        return None
+
+    def _check_service_integration_auth_principal(self, ref: str, engine: object | None, label: str) -> None:
+        if not ref or self._is_unresolved_var(ref) or engine is None:
+            return
+        node_name = self._node_name_of_platform_application(engine)
+        if node_name is None:
+            return
+        node = self._s.nodes.get(node_name)
+        runtime = getattr(node, "runtime", None) if node is not None else None
+        principal_ids = {
+            principal.principal_id
+            for authorization in getattr(runtime, "app_authorizations", [])
+            for principal in authorization.principals
+            if principal.principal_id
+        }
+        if ref not in principal_ids:
+            self._err(
+                f"{label} service_integration auth_principal_ref '{ref}' does not resolve to an "
+                f"app_authorization principal on the engine application's node '{node_name}'"
+            )
+
+    def _node_name_of_platform_application(self, application: object) -> str | None:
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None:
+                continue
+            if application in getattr(runtime, "platform_applications", []):
+                return node_name
+        return None
+
+    def _verify_relationship_proxy_upstreams(self) -> None:
+        """Validate typed ``proxy_upstream`` blocks on relationship edges.
+
+        ``route_ref`` must resolve to an application route (by ``route_id``) on
+        the relationship's ``source`` proxy; ``upstream_node_ref`` /
+        ``upstream_service_ref`` (when concrete) must resolve. AGREEMENT GUARD:
+        when the referenced route ALSO carries an ``upstream_target``, the shared
+        facts (target node, target service, and the TLS-termination boolean) MUST
+        agree between ``route.upstream_target`` and the ``RelationshipProxyUpstream``
+        so the same fact recorded at two scopes is never silently duplicated and
+        contradictory (SCN-010 §5.7).
+        """
+        for name, rel in self._s.relationships.items():
+            upstream = rel.proxy_upstream
+            if upstream is None:
+                continue
+            label = f"Relationship '{name}'"
+            self._check_proxy_upstream_node_ref(upstream.upstream_node_ref, label)
+            route = self._check_proxy_upstream_route_ref(upstream.route_ref, rel.source, label)
+            if route is not None:
+                self._check_proxy_upstream_agreement(upstream, route, label)
+
+    def _check_proxy_upstream_node_ref(self, node_ref: str, label: str) -> None:
+        if not node_ref or self._is_unresolved_var(node_ref):
+            return
+        if node_ref not in self._s.nodes:
+            self._err(f"{label} proxy_upstream upstream_node_ref '{node_ref}' does not resolve to a defined node")
+
+    def _check_proxy_upstream_route_ref(self, route_ref: str, source: str, label: str) -> object | None:
+        if not route_ref or self._is_unresolved_var(route_ref):
+            return None
+        routes = self._source_application_routes(source)
+        if routes is None:
+            # The source does not resolve to a runtime application surface; the
+            # generic relationship endpoint check already reports an unresolved
+            # source, so the route_ref check is deferred rather than duplicated.
+            return None
+        route = routes.get(route_ref)
+        if route is None:
+            self._err(
+                f"{label} proxy_upstream route_ref '{route_ref}' does not resolve to an "
+                f"application route on source '{source}'"
+            )
+        return route
+
+    def _source_application_routes(self, source: str) -> dict[str, object] | None:
+        """Collect ``route_id``->route for every application surface on ``source``.
+
+        ``source`` may be a qualified ``nodes.<node>.runtime.applications.<id>``
+        ref or a bare node name; either way the proxy route lives on that node's
+        application surface(s).
+        """
+        application = self._resolve_application_ref(source)
+        if application is not None:
+            return {route.route_id: route for route in application.routes}
+        node = self._s.nodes.get(source)
+        runtime = getattr(node, "runtime", None) if node is not None else None
+        if runtime is None:
+            return None
+        routes: dict[str, object] = {}
+        for application in getattr(runtime, "applications", []):
+            for route in application.routes:
+                routes[route.route_id] = route
+        return routes
+
+    def _check_proxy_upstream_agreement(self, upstream: object, route: object, label: str) -> None:
+        target = getattr(route, "upstream_target", None)
+        if target is None:
+            return
+        self._assert_shared_field_agreement(
+            label,
+            field_label="upstream node",
+            relationship_value=getattr(upstream, "upstream_node_ref", ""),
+            route_value=getattr(target, "target_node_ref", ""),
+        )
+        self._assert_shared_field_agreement(
+            label,
+            field_label="upstream service",
+            relationship_value=getattr(upstream, "upstream_service_ref", ""),
+            route_value=getattr(target, "target_service", ""),
+        )
+        self._assert_shared_bool_agreement(
+            label,
+            field_label="TLS-termination",
+            relationship_value=getattr(upstream, "client_tls_terminated", None),
+            route_value=getattr(target, "tls_terminated_here", None),
+        )
+
+    def _assert_shared_field_agreement(
+        self, label: str, *, field_label: str, relationship_value: str, route_value: str
+    ) -> None:
+        if not relationship_value or self._is_unresolved_var(relationship_value):
+            return
+        if not route_value or self._is_unresolved_var(route_value):
+            return
+        if relationship_value != route_value:
+            self._err(
+                f"{label} proxy_upstream {field_label} '{relationship_value}' disagrees with the "
+                f"route's upstream_target value '{route_value}'"
+            )
+
+    def _assert_shared_bool_agreement(
+        self, label: str, *, field_label: str, relationship_value: object, route_value: object
+    ) -> None:
+        if not isinstance(relationship_value, bool) or not isinstance(route_value, bool):
+            return
+        if relationship_value != route_value:
+            self._err(
+                f"{label} proxy_upstream {field_label} '{relationship_value}' disagrees with the "
+                f"route's upstream_target value '{route_value}'"
             )
 
     def _verify_content(self) -> None:

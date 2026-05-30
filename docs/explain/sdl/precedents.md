@@ -153,6 +153,7 @@ any one product's security configuration as the canonical authored SDL shape.
 | -------------------------- | --------------------------------------- | ------------------------------------------ |
 | `Relationship`             | Relationship SRO (typed directed edges) | Simplified to 7 relationship types         |
 | Cross-reference validation | STIX object referencing model           | Source/target resolve to any named element |
+| `RelationshipForwardingEdge` / `RelationshipServiceIntegration` / `RelationshipProxyUpstream` | Relationship SRO typed-detail pattern | Domain access detail on an edge (syslog enrollment per RFC 5424/5425, API auth per RFC 6749, reverse-proxy upstream per RFC 9110/7239) without re-typing referenced families |
 
 
 ### From CACAO v2.0

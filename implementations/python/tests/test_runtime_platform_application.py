@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import pytest
 from aces_sdl.runtime_platform_application import (
+    RelationshipServiceIntegration,
+    RelationshipServiceIntegrationDirection,
+    RelationshipServiceIntegrationKind,
     RuntimePlatformApplication,
     RuntimePlatformApplicationConnector,
     RuntimePlatformApplicationConnectorKind,
@@ -506,3 +509,80 @@ def test_analytics_dashboard_with_data_source_binding_is_valid() -> None:
 def test_execution_policy_parses_nested_fields() -> None:
     policy = RuntimePlatformApplicationExecutionPolicy(policy_id="p", runner="docker", max_concurrent_jobs="8")
     assert policy.max_concurrent_jobs == 8
+
+
+# --------------------------------------------------------------------------- #
+# RelationshipServiceIntegration
+# --------------------------------------------------------------------------- #
+
+
+def test_service_integration_full_edge_is_valid() -> None:
+    integration = RelationshipServiceIntegration(
+        consumer_ref="thehive",
+        engine_ref="cortex",
+        integration_kind="analyzer",
+        auth_principal_ref="cortex-api-user",
+        enabled=True,
+        direction="outbound",
+        description="TheHive calls Cortex analyzers",
+    )
+    assert integration.consumer_ref == "thehive"
+    assert integration.engine_ref == "cortex"
+    assert integration.integration_kind == RelationshipServiceIntegrationKind.ANALYZER
+    assert integration.auth_principal_ref == "cortex-api-user"
+    assert integration.enabled is True
+    assert integration.direction == RelationshipServiceIntegrationDirection.OUTBOUND
+
+
+def test_service_integration_defaults() -> None:
+    integration = RelationshipServiceIntegration()
+    assert integration.integration_kind == RelationshipServiceIntegrationKind.UNKNOWN
+    assert integration.direction == RelationshipServiceIntegrationDirection.BIDIRECTIONAL
+    assert integration.enabled is None
+
+
+def test_service_integration_open_kind_normalizes() -> None:
+    integration = RelationshipServiceIntegration(integration_kind="WEBHOOK")
+    assert integration.integration_kind == RelationshipServiceIntegrationKind.WEBHOOK
+    integration = RelationshipServiceIntegration(integration_kind="ENRICHMENT")
+    assert integration.integration_kind == RelationshipServiceIntegrationKind.ENRICHMENT
+
+
+def test_service_integration_open_kind_carries_unknown_and_other() -> None:
+    members = {m.value for m in RelationshipServiceIntegrationKind}
+    assert {"unknown", "other"} <= members
+
+
+def test_service_integration_open_kind_accepts_unknown_member() -> None:
+    integration = RelationshipServiceIntegration(integration_kind="unknown")
+    assert integration.integration_kind == RelationshipServiceIntegrationKind.UNKNOWN
+
+
+def test_service_integration_closed_direction_normalizes() -> None:
+    integration = RelationshipServiceIntegration(direction="INBOUND")
+    assert integration.direction == RelationshipServiceIntegrationDirection.INBOUND
+    integration = RelationshipServiceIntegration(direction="bidirectional")
+    assert integration.direction == RelationshipServiceIntegrationDirection.BIDIRECTIONAL
+
+
+def test_service_integration_closed_direction_rejects_unknown_value() -> None:
+    with pytest.raises(ValidationError, match="direction must be one of"):
+        RelationshipServiceIntegration(direction="sideways")
+
+
+def test_service_integration_closed_direction_carries_no_sentinels() -> None:
+    members = {m.value for m in RelationshipServiceIntegrationDirection}
+    assert members == {"inbound", "outbound", "bidirectional"}
+
+
+def test_service_integration_variable_placeholder_enums_pass_through() -> None:
+    integration = RelationshipServiceIntegration(integration_kind="${kind}", direction="${dir}")
+    assert integration.integration_kind == "${kind}"
+    assert integration.direction == "${dir}"
+
+
+def test_service_integration_enabled_parses_string_bool() -> None:
+    integration = RelationshipServiceIntegration(enabled="false")
+    assert integration.enabled is False
+    integration = RelationshipServiceIntegration(enabled="${flag}")
+    assert integration.enabled == "${flag}"

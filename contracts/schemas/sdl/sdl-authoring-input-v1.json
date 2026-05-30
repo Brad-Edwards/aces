@@ -4418,7 +4418,7 @@
     },
     "Relationship": {
       "additionalProperties": false,
-      "description": "A typed directed edge between two named scenario elements.\n\nSource and target can reference any named element in the scenario:\nnodes, features, accounts, entities, or infrastructure entries.\nThe validator checks that both endpoints resolve.\n\nThe ``properties`` dict carries type-specific metadata (e.g.,\n``trust_type: parent-child`` for AD trusts, ``protocol: SAML``\nfor federation). It's a flat dict rather than typed sub-models\nbecause relationship properties vary widely and we don't want\nto gate expressiveness on pre-modeling every variant.\n\n``database_access`` and ``mail_access`` are typed exceptions where\nprotocol/auth details need structural validation rather than prose.",
+      "description": "A typed directed edge between two named scenario elements.\n\nSource and target can reference any named element in the scenario:\nnodes, features, accounts, entities, or infrastructure entries.\nThe validator checks that both endpoints resolve.\n\nThe ``properties`` dict carries type-specific metadata (e.g.,\n``trust_type: parent-child`` for AD trusts, ``protocol: SAML``\nfor federation). It's a flat dict rather than typed sub-models\nbecause relationship properties vary widely and we don't want\nto gate expressiveness on pre-modeling every variant.\n\n``database_access`` and ``mail_access`` are typed exceptions where\nprotocol/auth details need structural validation rather than prose.\n``forwarding_edge``, ``service_integration``, and ``proxy_upstream`` are\nthe same kind of typed exception for, respectively, a forwarding /\nintel-sync agent's inter-node trust edge (SCN-010 \u00a75.7), a platform\nconsumer-to-engine service integration, and a reverse-proxy/gateway\nroute-to-origin upstream hop. Each keeps protocol/auth/topology facts\nstructurally validated and cross-referable rather than buried in prose.",
       "properties": {
         "database_access": {
           "anyOf": [
@@ -4435,6 +4435,17 @@
           "default": "",
           "title": "Description",
           "type": "string"
+        },
+        "forwarding_edge": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipForwardingEdge"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "mail_access": {
           "anyOf": [
@@ -4453,6 +4464,28 @@
           },
           "title": "Properties",
           "type": "object"
+        },
+        "proxy_upstream": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipProxyUpstream"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "service_integration": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipServiceIntegration"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "source": {
           "title": "Source",
@@ -4502,6 +4535,77 @@
         }
       },
       "title": "RelationshipDatabaseAccess",
+      "type": "object"
+    },
+    "RelationshipForwardingEdge": {
+      "additionalProperties": false,
+      "description": "Typed forwarding-trust detail carried by a top-level relationship edge.\n\nThe inter-node trust edge between a forwarding / intel-sync agent\n(``forwarder_ref``, a ``forwarding_agent_id``) and the downstream consumer\nit ships to. The consumer's transport listener is named by\n``target_listener_role`` \u2014 REUSING the manager-side\n``RuntimeSecurityMonitoringListenerRole`` lattice rather than forking a\nparallel enum (SCN-010 \u00a75.7).\n\nThe agent enrollment identity itself is never recorded: only the closed\n``RuntimeForwardingEnrollmentClassification`` lattice (``none`` /\n``redacted`` / ``operator_secret``). A present enrollment-identity ref must\nclassify ``redacted`` / ``operator_secret`` \u2014 a raw identity is never the\nportable model.",
+      "properties": {
+        "crypto_method": {
+          "default": "",
+          "title": "Crypto Method",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "enrollment_identity_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingEnrollmentClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "none",
+          "title": "Enrollment Identity Classification"
+        },
+        "enrollment_identity_ref": {
+          "default": "",
+          "title": "Enrollment Identity Ref",
+          "type": "string"
+        },
+        "forwarder_ref": {
+          "title": "Forwarder Ref",
+          "type": "string"
+        },
+        "parse_format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeForwardingParseFormat"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Parse Format"
+        },
+        "protocol": {
+          "default": "",
+          "title": "Protocol",
+          "type": "string"
+        },
+        "target_listener_role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSecurityMonitoringListenerRole"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "other",
+          "title": "Target Listener Role"
+        }
+      },
+      "required": [
+        "forwarder_ref"
+      ],
+      "title": "RelationshipForwardingEdge",
       "type": "object"
     },
     "RelationshipMailAccess": {
@@ -4567,6 +4671,162 @@
       },
       "title": "RelationshipMailAccess",
       "type": "object"
+    },
+    "RelationshipProxyUpstream": {
+      "additionalProperties": false,
+      "description": "Typed proxy-upstream detail carried by a top-level relationship edge.\n\nWhen a reverse proxy / gateway forwards a route to an upstream origin, the\nrelationship's ``target`` resolves to that origin and this block keeps the\nforwarding facts structurally validated rather than recorded as prose:\n``route_ref`` (a ``route_id`` on the proxy's application surface), the\nresolved upstream node/service, whether the client-facing TLS is terminated\nat the proxy, whether the proxy-to-origin hop is plaintext, and any request\n``body_limit`` the proxy enforces.",
+      "properties": {
+        "body_limit": {
+          "default": "",
+          "title": "Body Limit",
+          "type": "string"
+        },
+        "client_tls_terminated": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Client Tls Terminated"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "origin_plaintext": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Origin Plaintext"
+        },
+        "route_ref": {
+          "title": "Route Ref",
+          "type": "string"
+        },
+        "upstream_node_ref": {
+          "default": "",
+          "title": "Upstream Node Ref",
+          "type": "string"
+        },
+        "upstream_service_ref": {
+          "default": "",
+          "title": "Upstream Service Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "route_ref"
+      ],
+      "title": "RelationshipProxyUpstream",
+      "type": "object"
+    },
+    "RelationshipServiceIntegration": {
+      "additionalProperties": false,
+      "description": "Typed service-integration detail carried by a top-level relationship edge.\n\nWhen a consumer application integrates with a platform engine (analyzer,\nresponder, webhook, notification, or enrichment), the relationship's\nendpoints resolve to the two platform applications and this block keeps the\n``integration_kind``, ``auth_principal_ref`` (an ``app_authorization``\n``principal_id`` in the target), and ``direction`` structurally validated\nrather than recorded as prose. ``consumer_ref``/``engine_ref`` are the\n``platform_application_id`` symbols of the two endpoints; a ``${var}``\nplaceholder is permitted in those refs.",
+      "properties": {
+        "auth_principal_ref": {
+          "default": "",
+          "title": "Auth Principal Ref",
+          "type": "string"
+        },
+        "consumer_ref": {
+          "default": "",
+          "title": "Consumer Ref",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "direction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipServiceIntegrationDirection"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "bidirectional",
+          "title": "Direction"
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enabled"
+        },
+        "engine_ref": {
+          "default": "",
+          "title": "Engine Ref",
+          "type": "string"
+        },
+        "integration_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipServiceIntegrationKind"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Integration Kind"
+        }
+      },
+      "title": "RelationshipServiceIntegration",
+      "type": "object"
+    },
+    "RelationshipServiceIntegrationDirection": {
+      "description": "Closed structural vocabulary for an integration edge's data direction.\n\nClosed structural vocabulary: carries neither ``unknown`` nor ``other``.",
+      "enum": [
+        "inbound",
+        "outbound",
+        "bidirectional"
+      ],
+      "title": "RelationshipServiceIntegrationDirection",
+      "type": "string"
+    },
+    "RelationshipServiceIntegrationKind": {
+      "description": "Open taxonomy of how a consumer integrates with a platform engine.\n\nOpen taxonomy: carries both ``unknown`` and ``other``.",
+      "enum": [
+        "analyzer",
+        "responder",
+        "webhook",
+        "notification",
+        "enrichment",
+        "unknown",
+        "other"
+      ],
+      "title": "RelationshipServiceIntegrationKind",
+      "type": "string"
     },
     "RelationshipType": {
       "description": "How two scenario elements relate to each other.",
@@ -5368,6 +5628,17 @@
           "title": "Templates",
           "type": "array"
         },
+        "upstream_target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeApplicationRouteUpstreamTarget"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "vulnerability_refs": {
           "items": {
             "type": "string"
@@ -5381,6 +5652,60 @@
         "path"
       ],
       "title": "RuntimeApplicationRoute",
+      "type": "object"
+    },
+    "RuntimeApplicationRouteUpstreamScheme": {
+      "description": "Wire scheme a reverse proxy uses to reach a route's upstream origin.\n\nThis is a CLOSED taxonomy: an upstream is reached over either cleartext\nHTTP or TLS-wrapped HTTPS. Unlike the open ``RuntimeApplicationProtocol``,\nit carries neither ``other`` nor ``unknown`` \u2014 a proxy-to-origin hop that is\nneither HTTP nor HTTPS is not an application route upstream.",
+      "enum": [
+        "http",
+        "https"
+      ],
+      "title": "RuntimeApplicationRouteUpstreamScheme",
+      "type": "string"
+    },
+    "RuntimeApplicationRouteUpstreamTarget": {
+      "additionalProperties": false,
+      "description": "The origin a reverse-proxied route forwards to.\n\nA proxy/gateway route does not itself serve content; it relays to an\nupstream origin on this or another node. ``target_node_ref`` /\n``target_service`` name that origin (the service-name forms mirror\n``RuntimeApplicationSurface.service``), ``scheme`` is the CLOSED\nproxy-to-origin wire scheme, and ``tls_terminated_here`` records whether\nTLS is terminated at the proxy (re-encrypted or plaintext to the origin).\nAll fields are observation metadata; nothing is resolved.",
+      "properties": {
+        "scheme": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeApplicationRouteUpstreamScheme"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "http",
+          "title": "Scheme"
+        },
+        "target_node_ref": {
+          "default": "",
+          "title": "Target Node Ref",
+          "type": "string"
+        },
+        "target_service": {
+          "default": "",
+          "title": "Target Service",
+          "type": "string"
+        },
+        "tls_terminated_here": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tls Terminated Here"
+        }
+      },
+      "title": "RuntimeApplicationRouteUpstreamTarget",
       "type": "object"
     },
     "RuntimeApplicationSurface": {

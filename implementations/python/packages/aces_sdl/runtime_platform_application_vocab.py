@@ -9,6 +9,8 @@ carry neither.
 from enum import Enum
 
 __all__ = [
+    "RelationshipServiceIntegrationDirection",
+    "RelationshipServiceIntegrationKind",
     "RuntimePlatformApplicationConnectorKind",
     "RuntimePlatformApplicationContentObjectKind",
     "RuntimePlatformApplicationKind",
@@ -17,6 +19,32 @@ __all__ = [
     "RuntimePlatformApplicationSettingProvenance",
     "RuntimePlatformApplicationUpstreamBindingRole",
 ]
+
+
+class RelationshipServiceIntegrationKind(str, Enum):
+    """Open taxonomy of how a consumer integrates with a platform engine.
+
+    Open taxonomy: carries both ``unknown`` and ``other``.
+    """
+
+    ANALYZER = "analyzer"
+    RESPONDER = "responder"
+    WEBHOOK = "webhook"
+    NOTIFICATION = "notification"
+    ENRICHMENT = "enrichment"
+    UNKNOWN = "unknown"
+    OTHER = "other"
+
+
+class RelationshipServiceIntegrationDirection(str, Enum):
+    """Closed structural vocabulary for an integration edge's data direction.
+
+    Closed structural vocabulary: carries neither ``unknown`` nor ``other``.
+    """
+
+    INBOUND = "inbound"
+    OUTBOUND = "outbound"
+    BIDIRECTIONAL = "bidirectional"
 
 
 class RuntimePlatformApplicationKind(str, Enum):

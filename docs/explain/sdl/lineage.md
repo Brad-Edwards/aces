@@ -646,10 +646,24 @@ ACES relies on prior work in four ways:
   not become raw config dumps in SDL. Secret-bearing settings must omit values,
   and mailbox records carry credential-strength classification rather than
   passwords or hashes.
-- **Relationship semantics:** STIX-style typed edges remain the top-level
-  relationship surface. `RelationshipMailAccess` adds mail-specific
-  protocol/auth/TLS/mailbox/domain/listener details to those edges without
-  promoting mail relationships into a new root section.
+- **Relationship semantics:** STIX-style typed edges
+  ([OASIS STIX 2.1](https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html)
+  SRO) remain the top-level relationship surface. `RelationshipMailAccess` adds
+  mail-specific protocol/auth/TLS/mailbox/domain/listener details to those edges
+  without promoting mail relationships into a new root section. Three further
+  typed subtypes follow the same discipline (SCN-010 §5.7, ADR-052):
+  `RelationshipForwardingEdge` carries a forwarding / intel-sync agent's
+  inter-node trust edge (anchored in RFC 5424 / 5425 / 6587 / 3164 syslog
+  transport and NIST SP 800-92 source -> collector tiering, reusing the
+  manager-side `RuntimeSecurityMonitoringListenerRole` lattice rather than
+  forking one); `RelationshipServiceIntegration` carries a platform
+  consumer-to-engine integration (anchored in NIST SP 800-92 and RFC 6749
+  OAuth 2.0 for the API-key auth principal); and `RelationshipProxyUpstream`
+  carries a reverse-proxy / gateway route-to-origin hop (anchored in RFC 9110 /
+  RFC 7239, NIST SP 800-44, and the Kubernetes Ingress / Gateway API origin
+  model). None of the three promotes its edge into a new root section; cross-ref
+  resolution and the two cross-scope agreement guards live in the semantic
+  validator (see validation.md).
 
 The result preserves the same V&V posture as database and file-service runtime
 surfaces: ACES states which mail concepts are stable enough to compare and

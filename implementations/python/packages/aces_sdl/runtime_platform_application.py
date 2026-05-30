@@ -27,6 +27,8 @@ from .runtime_platform_application_content import (
     RuntimePlatformApplicationUpstreamBinding,
 )
 from .runtime_platform_application_vocab import (
+    RelationshipServiceIntegrationDirection,
+    RelationshipServiceIntegrationKind,
     RuntimePlatformApplicationConnectorKind,
     RuntimePlatformApplicationContentObjectKind,
     RuntimePlatformApplicationKind,
@@ -35,9 +37,12 @@ from .runtime_platform_application_vocab import (
     RuntimePlatformApplicationSettingProvenance,
     RuntimePlatformApplicationUpstreamBindingRole,
 )
-from .runtime_values import parse_runtime_enum_or_var, require_symbol
+from .runtime_values import parse_optional_bool_or_var, parse_runtime_enum_or_var, require_symbol
 
 __all__ = [
+    "RelationshipServiceIntegration",
+    "RelationshipServiceIntegrationDirection",
+    "RelationshipServiceIntegrationKind",
     "RuntimePlatformApplication",
     "RuntimePlatformApplicationConnector",
     "RuntimePlatformApplicationConnectorKind",
@@ -227,3 +232,44 @@ _PROFILE_DISPATCH = {
     _Kind.CASE_MANAGEMENT: RuntimePlatformApplication._require_case_management_profile,
     _Kind.ANALYTICS_DASHBOARD: RuntimePlatformApplication._require_analytics_dashboard_profile,
 }
+
+
+class RelationshipServiceIntegration(SDLModel):
+    """Typed service-integration detail carried by a top-level relationship edge.
+
+    When a consumer application integrates with a platform engine (analyzer,
+    responder, webhook, notification, or enrichment), the relationship's
+    endpoints resolve to the two platform applications and this block keeps the
+    ``integration_kind``, ``auth_principal_ref`` (an ``app_authorization``
+    ``principal_id`` in the target), and ``direction`` structurally validated
+    rather than recorded as prose. ``consumer_ref``/``engine_ref`` are the
+    ``platform_application_id`` symbols of the two endpoints; a ``${var}``
+    placeholder is permitted in those refs.
+    """
+
+    consumer_ref: str = ""
+    engine_ref: str = ""
+    integration_kind: RelationshipServiceIntegrationKind | str = RelationshipServiceIntegrationKind.UNKNOWN
+    auth_principal_ref: str = ""
+    enabled: bool | str | None = None
+    direction: RelationshipServiceIntegrationDirection | str = RelationshipServiceIntegrationDirection.BIDIRECTIONAL
+    description: str = ""
+
+    @field_validator("integration_kind", mode="before")
+    @classmethod
+    def normalize_integration_kind(
+        cls, v: RelationshipServiceIntegrationKind | str
+    ) -> RelationshipServiceIntegrationKind | str:
+        return parse_runtime_enum_or_var(v, RelationshipServiceIntegrationKind, field_name="integration_kind")
+
+    @field_validator("direction", mode="before")
+    @classmethod
+    def normalize_direction(
+        cls, v: RelationshipServiceIntegrationDirection | str
+    ) -> RelationshipServiceIntegrationDirection | str:
+        return parse_runtime_enum_or_var(v, RelationshipServiceIntegrationDirection, field_name="direction")
+
+    @field_validator("enabled", mode="before")
+    @classmethod
+    def parse_enabled(cls, v: bool | str | None) -> bool | str | None:
+        return parse_optional_bool_or_var(v, field_name="enabled")

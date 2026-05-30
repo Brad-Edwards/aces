@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import pytest
 from aces_sdl.runtime_forwarding_agent import (
+    RelationshipForwardingEdge,
     RuntimeForwardingAgent,
     RuntimeForwardingAgentImplementation,
     RuntimeForwardingAgentKind,
@@ -28,6 +29,7 @@ from aces_sdl.runtime_forwarding_agent import (
     RuntimeForwardingTransform,
     RuntimeForwardingTransformKind,
 )
+from aces_sdl.runtime_security_monitoring import RuntimeSecurityMonitoringListenerRole
 from pydantic import ValidationError
 
 from aces.core.sdl._errors import SDLValidationError
@@ -428,3 +430,103 @@ def test_content_sync_target_service_ref_resolves_on_owning_node() -> None:
     # No target_node_ref -> the service ref must resolve on the forwarder's own node.
     scenario = Scenario(name="forwarding", nodes={"sensor": _sensor_node(_content_sync())})
     assert _validate(scenario) == []
+
+
+# --------------------------------------------------------------------------- #
+# RelationshipForwardingEdge (SCN-010 §5.7)                                    #
+# --------------------------------------------------------------------------- #
+
+
+def test_forwarding_edge_typed_fields() -> None:
+    edge = RelationshipForwardingEdge(
+        forwarder_ref="wazuh-sidecar-suricata",
+        target_listener_role="agent_event_ingestion",
+        protocol="tls",
+        crypto_method="aes-256-gcm",
+        parse_format="eve_json",
+        description="agent ships eve.json to the manager",
+    )
+    assert edge.forwarder_ref == "wazuh-sidecar-suricata"
+    assert edge.target_listener_role is RuntimeSecurityMonitoringListenerRole.AGENT_EVENT_INGESTION
+    assert edge.parse_format is RuntimeForwardingParseFormat.EVE_JSON
+    assert edge.enrollment_identity_classification is RuntimeForwardingEnrollmentClassification.NONE
+
+
+def test_forwarding_edge_normalizes_kebab_case_enums() -> None:
+    edge = RelationshipForwardingEdge(
+        forwarder_ref="agent-1",
+        target_listener_role="Agent-Enrollment",
+        parse_format="MISP-JSON",
+    )
+    assert edge.target_listener_role is RuntimeSecurityMonitoringListenerRole.AGENT_ENROLLMENT
+    assert edge.parse_format is RuntimeForwardingParseFormat.MISP_JSON
+
+
+def test_forwarding_edge_reuses_listener_role_enum() -> None:
+    # The target_listener_role REUSES the manager-side enum, not a fork.
+    edge = RelationshipForwardingEdge(forwarder_ref="agent-1", target_listener_role="syslog_ingestion")
+    assert isinstance(edge.target_listener_role, RuntimeSecurityMonitoringListenerRole)
+    assert edge.target_listener_role is RuntimeSecurityMonitoringListenerRole.SYSLOG_INGESTION
+
+
+def test_forwarding_edge_rejects_unknown_listener_role() -> None:
+    with pytest.raises(ValidationError, match="target_listener_role must be one of"):
+        RelationshipForwardingEdge(forwarder_ref="agent-1", target_listener_role="totally_invalid")
+
+
+def test_forwarding_edge_rejects_invalid_parse_format() -> None:
+    with pytest.raises(ValidationError, match="parse_format must be one of"):
+        RelationshipForwardingEdge(forwarder_ref="agent-1", parse_format="totally_invalid")
+
+
+def test_forwarding_edge_forwarder_ref_required() -> None:
+    with pytest.raises(ValidationError, match="forwarder_ref must be a non-empty string"):
+        RelationshipForwardingEdge(forwarder_ref="")
+
+
+def test_forwarding_edge_forwarder_ref_allows_variable_placeholder() -> None:
+    edge = RelationshipForwardingEdge(forwarder_ref="${FORWARDER}")
+    assert edge.forwarder_ref == "${FORWARDER}"
+
+
+def test_forwarding_edge_present_enrollment_identity_must_be_redacted() -> None:
+    with pytest.raises(ValidationError, match="must be 'redacted' or 'operator_secret'"):
+        RelationshipForwardingEdge(
+            forwarder_ref="agent-1",
+            enrollment_identity_ref="agent-key-001",
+            enrollment_identity_classification="none",
+        )
+
+
+def test_forwarding_edge_redacted_enrollment_identity_accepted() -> None:
+    edge = RelationshipForwardingEdge(
+        forwarder_ref="agent-1",
+        enrollment_identity_ref="agent-key-001",
+        enrollment_identity_classification="redacted",
+    )
+    assert edge.enrollment_identity_classification is RuntimeForwardingEnrollmentClassification.REDACTED
+
+
+def test_forwarding_edge_operator_secret_enrollment_identity_accepted() -> None:
+    edge = RelationshipForwardingEdge(
+        forwarder_ref="agent-1",
+        enrollment_identity_ref="agent-key-001",
+        enrollment_identity_classification="operator_secret",
+    )
+    assert edge.enrollment_identity_classification is RuntimeForwardingEnrollmentClassification.OPERATOR_SECRET
+
+
+def test_forwarding_edge_no_enrollment_identity_defaults_clean() -> None:
+    # Absent enrollment_identity_ref imposes no classification requirement.
+    edge = RelationshipForwardingEdge(forwarder_ref="agent-1")
+    assert edge.enrollment_identity_ref == ""
+    assert edge.enrollment_identity_classification is RuntimeForwardingEnrollmentClassification.NONE
+
+
+def test_forwarding_edge_variable_classification_defers_check() -> None:
+    edge = RelationshipForwardingEdge(
+        forwarder_ref="agent-1",
+        enrollment_identity_ref="agent-key-001",
+        enrollment_identity_classification="${CLASS}",
+    )
+    assert edge.enrollment_identity_classification == "${CLASS}"
