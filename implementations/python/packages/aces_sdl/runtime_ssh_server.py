@@ -31,12 +31,12 @@ from .runtime_values import (
 )
 
 __all__ = [
+    "RuntimeSshServer",
     "SshForcedCommand",
     "SshForcedCommandKind",
     "SshMatchCriterion",
     "SshMatchCriterionKind",
     "SshMatchRule",
-    "SshServerConfig",
 ]
 
 
@@ -208,7 +208,7 @@ class _SshDirectiveBundle(SDLModel):
     ``AuthenticationMethods``, ``PasswordAuthentication`` /
     ``PubkeyAuthentication`` / ``PermitTTY``, ``ChrootDirectory``, and
     ``AuthorizedKeysFile`` — apply identically at the global scope
-    (``SshServerConfig``) and inside a ``Match`` rule
+    (``RuntimeSshServer``) and inside a ``Match`` rule
     (``SshMatchRule``). Centralising the field declarations and their
     validators here keeps the two surfaces in lockstep and removes the
     structural duplication SonarCloud flags when the same block is
@@ -300,7 +300,7 @@ def _criteria_fingerprint(rule: SshMatchRule) -> tuple[tuple[object, str], ...]:
     return tuple((crit.kind, crit.pattern) for crit in rule.criteria)
 
 
-class SshServerConfig(_SshDirectiveBundle):
+class RuntimeSshServer(_SshDirectiveBundle):
     """A scoped sshd server configuration observed on a node.
 
     Each configuration carries a stable ``server_id`` and an explicit
@@ -331,7 +331,7 @@ class SshServerConfig(_SshDirectiveBundle):
         return v
 
     @model_validator(mode="after")
-    def validate_match_rules_unique(self) -> "SshServerConfig":
+    def validate_match_rules_unique(self) -> "RuntimeSshServer":
         seen_ids: set[str] = set()
         seen_fingerprints: set[tuple[tuple[object, str], ...]] = set()
         for rule in self.match_rules:

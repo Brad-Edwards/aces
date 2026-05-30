@@ -1782,7 +1782,7 @@ nodes:
           service: ssh
 """
         # The parse step itself should reject a variable-ref symbol-defining identifier
-        # because SshServerConfig.server_id rejects variable refs at model validation time.
+        # because RuntimeSshServer.server_id rejects variable refs at model validation time.
         with pytest.raises((SDLParseError, SDLInstantiationError)):
             parse_sdl(sdl)
 

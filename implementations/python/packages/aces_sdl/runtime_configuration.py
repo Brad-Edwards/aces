@@ -378,7 +378,7 @@ class RuntimeConfiguration(SDLModel):
     security_monitoring_managers: list[_runtime_security_monitoring.RuntimeSecurityMonitoringManager] = Field(
         default_factory=list
     )
-    ssh_servers: list[_runtime_ssh_server.SshServerConfig] = Field(default_factory=list)
+    ssh_servers: list[_runtime_ssh_server.RuntimeSshServer] = Field(default_factory=list)
     service_manager_units: list[ServiceManagerUnit] = Field(default_factory=list)
     packages: list[RuntimePackage] = Field(default_factory=list)
     software_components: list[RuntimeSoftwareComponent] = Field(default_factory=list)

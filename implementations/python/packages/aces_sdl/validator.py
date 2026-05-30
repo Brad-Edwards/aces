@@ -1144,7 +1144,7 @@ class SemanticValidator:
     def _verify_runtime_ssh_servers(self) -> None:
         """Validate observed SSH server configurations against the scenario.
 
-        Each ``SshServerConfig.service`` must resolve to a service on the
+        Each ``RuntimeSshServer.service`` must resolve to a service on the
         same node (bare name OR ``nodes.<this-node>.services.<name>``).
         Each ``Match`` rule's ``LOCAL_USER`` criterion whose pattern is a
         concrete (non-wildcard, non-variable) literal MAY be cross-checked
