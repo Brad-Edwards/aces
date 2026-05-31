@@ -346,6 +346,20 @@ class SemanticValidator:
                     refs.add(f"nodes.{node_name}.services.{service.name}")
         return refs
 
+    def _split_node_service_ref(self, ref: object) -> tuple[str, str] | None:
+        """Split ``nodes.<node>.services.<service>`` into node/service parts.
+
+        Node names may contain dots (for example ``wazuh.manager``), so service
+        refs must be partitioned on the ``.services.`` marker instead of split
+        by position.
+        """
+        if not isinstance(ref, str) or not ref.startswith(_NODES_PREFIX):
+            return None
+        node_name, sep, service_name = ref[len(_NODES_PREFIX) :].partition(".services.")
+        if not sep or not node_name or not service_name:
+            return None
+        return node_name, service_name
+
     def _qualified_runtime_refs(self) -> set[str]:
         """Qualified refs for node-scoped runtime inventories.
 
@@ -990,6 +1004,7 @@ class SemanticValidator:
                 self._verify_application_service(name, application, service_names)
                 for route in application.routes:
                     self._verify_route_refs(name, application, route, observed_paths)
+                    self._verify_route_upstream_target(name, application, route)
 
     @staticmethod
     def _node_service_names(node: object) -> set[str]:
@@ -1040,16 +1055,16 @@ class SemanticValidator:
             return
         service_name = ref
         if ref.startswith(_NODES_PREFIX):
-            parts = ref.split(".")
-            if len(parts) != 4 or parts[2] != "services":
+            split = self._split_node_service_ref(ref)
+            if split is None:
                 self._err(
                     f"{owner_label} service ref '{ref}' must be a bare service name or 'nodes.<node>.services.<name>'"
                 )
                 return
-            if parts[1] != node_name:
+            ref_node_name, service_name = split
+            if ref_node_name != node_name:
                 self._err(f"{owner_label} service ref '{ref}' must reference a service on the same node")
                 return
-            service_name = parts[3]
         if service_name not in service_names:
             self._err(f"{owner_label} references undefined service '{service_name}'")
 
@@ -1065,20 +1080,43 @@ class SemanticValidator:
             return None
         service_name = ref
         if ref.startswith(_NODES_PREFIX):
-            parts = ref.split(".")
-            if len(parts) != 4 or parts[2] != "services":
+            split = self._split_node_service_ref(ref)
+            if split is None:
                 self._err(
                     f"{owner_label} service ref '{ref}' must be a bare service name or 'nodes.<node>.services.<name>'"
                 )
                 return None
-            if parts[1] != node_name:
+            ref_node_name, service_name = split
+            if ref_node_name != node_name:
                 self._err(f"{owner_label} service ref '{ref}' must reference a service on the same node")
                 return None
-            service_name = parts[3]
         service = services_by_name.get(service_name)
         if service is None:
             self._err(f"{owner_label} references undefined service '{service_name}'")
         return service
+
+    def _verify_route_upstream_target(self, node_name: str, application: object, route: object) -> None:
+        target = getattr(route, "upstream_target", None)
+        if target is None:
+            return
+        label = (
+            f"Node '{node_name}' runtime application '{application.application_id}' "
+            f"route '{route.route_id}' upstream_target"
+        )
+        target_node_name = self._check_proxy_upstream_node_ref(
+            getattr(target, "target_node_ref", ""),
+            label,
+            context="upstream_target",
+            field_name="target_node_ref",
+        )
+        self._check_proxy_upstream_service_ref(
+            getattr(target, "target_service", ""),
+            upstream_node_ref=target_node_name or "",
+            relationship_target="",
+            label=label,
+            context="upstream_target",
+            field_name="target_service",
+        )
 
     def _verify_runtime_service_listeners(self) -> None:
         """Validate observed service listeners against same-node runtime facts."""
@@ -2647,9 +2685,9 @@ class SemanticValidator:
 
         ``consumer_ref``/``engine_ref`` (when concrete) must resolve to platform
         applications by ``platform_application_id``; a concrete
-        ``auth_principal_ref`` must resolve to an ``app_authorization`` principal
-        on the engine application's node (the integration authenticates into the
-        engine's internal RBAC store).
+        ``auth_principal_ref`` must resolve to the engine application's
+        referenced ``app_authorization`` store when ``authorization_ref`` is set
+        (the integration authenticates into the engine's internal RBAC store).
         """
         for name, rel in self._s.relationships.items():
             integration = rel.service_integration
@@ -2691,16 +2729,31 @@ class SemanticValidator:
             return
         node = self._s.nodes.get(node_name)
         runtime = getattr(node, "runtime", None) if node is not None else None
+        authorizations = list(getattr(runtime, "app_authorizations", []))
+        authorization_ref = getattr(engine, "authorization_ref", "")
+        if authorization_ref and not self._is_unresolved_var(authorization_ref):
+            authorizations = [
+                authorization
+                for authorization in authorizations
+                if getattr(authorization, "app_authorization_id", "") == authorization_ref
+            ]
+            if not authorizations:
+                # The runtime platform application validator reports the bad
+                # authorization_ref; avoid emitting a misleading principal-scope
+                # error from this relationship pass as well.
+                return
         principal_ids = {
-            principal.principal_id
-            for authorization in getattr(runtime, "app_authorizations", [])
-            for principal in authorization.principals
-            if principal.principal_id
+            principal.principal_id for authorization in authorizations for principal in authorization.principals
         }
         if ref not in principal_ids:
+            scope = (
+                f"authorization '{authorization_ref}'"
+                if authorization_ref and not self._is_unresolved_var(authorization_ref)
+                else "an app_authorization principal"
+            )
             self._err(
-                f"{label} service_integration auth_principal_ref '{ref}' does not resolve to an "
-                f"app_authorization principal on the engine application's node '{node_name}'"
+                f"{label} service_integration auth_principal_ref '{ref}' does not resolve to "
+                f"{scope} on the engine application's node '{node_name}'"
             )
 
     def _node_name_of_platform_application(self, application: object) -> str | None:
@@ -2729,16 +2782,113 @@ class SemanticValidator:
             if upstream is None:
                 continue
             label = f"Relationship '{name}'"
-            self._check_proxy_upstream_node_ref(upstream.upstream_node_ref, label)
+            target_node_name = self._check_proxy_upstream_node_ref(
+                upstream.upstream_node_ref,
+                label,
+                context="proxy_upstream",
+                field_name="upstream_node_ref",
+            )
+            self._check_proxy_upstream_service_ref(
+                upstream.upstream_service_ref,
+                upstream_node_ref=target_node_name or "",
+                relationship_target=rel.target,
+                label=label,
+                context="proxy_upstream",
+                field_name="upstream_service_ref",
+            )
             route = self._check_proxy_upstream_route_ref(upstream.route_ref, rel.source, label)
             if route is not None:
-                self._check_proxy_upstream_agreement(upstream, route, label)
+                self._check_proxy_upstream_agreement(upstream, route, label, relationship_target=rel.target)
 
-    def _check_proxy_upstream_node_ref(self, node_ref: str, label: str) -> None:
+    def _check_proxy_upstream_node_ref(
+        self,
+        node_ref: str,
+        label: str,
+        *,
+        context: str,
+        field_name: str,
+    ) -> str | None:
         if not node_ref or self._is_unresolved_var(node_ref):
-            return
+            return None
         if node_ref not in self._s.nodes:
-            self._err(f"{label} proxy_upstream upstream_node_ref '{node_ref}' does not resolve to a defined node")
+            self._err(f"{label} {context} {field_name} '{node_ref}' does not resolve to a defined node")
+            return None
+        return node_ref
+
+    def _check_proxy_upstream_service_ref(
+        self,
+        service_ref: str,
+        *,
+        upstream_node_ref: str,
+        relationship_target: str,
+        label: str,
+        context: str,
+        field_name: str,
+    ) -> None:
+        if not service_ref or self._is_unresolved_var(service_ref):
+            return
+        resolved = self._resolve_upstream_service_ref(
+            service_ref,
+            upstream_node_ref=upstream_node_ref,
+            relationship_target=relationship_target,
+        )
+        if resolved is None:
+            self._err(
+                f"{label} {context} {field_name} '{service_ref}' cannot be resolved without a concrete upstream node"
+            )
+            return
+        node_name, service_name = resolved
+        expected_node_name = upstream_node_ref or self._node_name_from_relationship_target(relationship_target)
+        if expected_node_name and node_name != expected_node_name:
+            self._err(
+                f"{label} {context} {field_name} '{service_ref}' must reference a service "
+                f"on upstream node '{expected_node_name}'"
+            )
+            return
+        node = self._s.nodes.get(node_name)
+        if node is None:
+            self._err(f"{label} {context} upstream service node '{node_name}' does not resolve to a defined node")
+            return
+        if service_name not in self._node_service_names(node):
+            self._err(
+                f"{label} {context} {field_name} '{service_ref}' does not resolve to a service on node '{node_name}'"
+            )
+
+    def _resolve_upstream_service_ref(
+        self,
+        service_ref: str,
+        *,
+        upstream_node_ref: str,
+        relationship_target: str,
+    ) -> tuple[str, str] | None:
+        split = self._split_node_service_ref(service_ref)
+        if split is not None:
+            return split
+        node_name = ""
+        if upstream_node_ref and not self._is_unresolved_var(upstream_node_ref):
+            node_name = upstream_node_ref
+        else:
+            target_node_name = self._node_name_from_relationship_target(relationship_target)
+            if target_node_name is not None:
+                node_name = target_node_name
+        if not node_name:
+            return None
+        return node_name, service_ref
+
+    def _node_name_from_relationship_target(self, target: object) -> str | None:
+        if not isinstance(target, str) or self._is_unresolved_var(target):
+            return None
+        if target in self._s.nodes:
+            return target
+        service_split = self._split_node_service_ref(target)
+        if service_split is not None:
+            node_name, _service_name = service_split
+            return node_name if node_name in self._s.nodes else None
+        if target.startswith(_NODES_PREFIX):
+            node_name, sep, _tail = target[len(_NODES_PREFIX) :].partition(".runtime.")
+            if sep and node_name in self._s.nodes:
+                return node_name
+        return None
 
     def _check_proxy_upstream_route_ref(self, route_ref: str, source: str, label: str) -> object | None:
         if not route_ref or self._is_unresolved_var(route_ref):
@@ -2777,7 +2927,14 @@ class SemanticValidator:
                 routes[route.route_id] = route
         return routes
 
-    def _check_proxy_upstream_agreement(self, upstream: object, route: object, label: str) -> None:
+    def _check_proxy_upstream_agreement(
+        self,
+        upstream: object,
+        route: object,
+        label: str,
+        *,
+        relationship_target: str,
+    ) -> None:
         target = getattr(route, "upstream_target", None)
         if target is None:
             return
@@ -2792,6 +2949,8 @@ class SemanticValidator:
             field_label="upstream service",
             relationship_value=getattr(upstream, "upstream_service_ref", ""),
             route_value=getattr(target, "target_service", ""),
+            upstream_node_ref=getattr(upstream, "upstream_node_ref", "") or getattr(target, "target_node_ref", ""),
+            relationship_target=relationship_target,
         )
         self._assert_shared_bool_agreement(
             label,
@@ -2801,17 +2960,57 @@ class SemanticValidator:
         )
 
     def _assert_shared_field_agreement(
-        self, label: str, *, field_label: str, relationship_value: str, route_value: str
+        self,
+        label: str,
+        *,
+        field_label: str,
+        relationship_value: str,
+        route_value: str,
+        upstream_node_ref: str = "",
+        relationship_target: str = "",
     ) -> None:
         if not relationship_value or self._is_unresolved_var(relationship_value):
             return
         if not route_value or self._is_unresolved_var(route_value):
             return
-        if relationship_value != route_value:
+        if self._shared_field_values_agree(
+            field_label=field_label,
+            relationship_value=relationship_value,
+            route_value=route_value,
+            upstream_node_ref=upstream_node_ref,
+            relationship_target=relationship_target,
+        ):
+            return
+        else:
             self._err(
                 f"{label} proxy_upstream {field_label} '{relationship_value}' disagrees with the "
                 f"route's upstream_target value '{route_value}'"
             )
+
+    def _shared_field_values_agree(
+        self,
+        *,
+        field_label: str,
+        relationship_value: str,
+        route_value: str,
+        upstream_node_ref: str,
+        relationship_target: str,
+    ) -> bool:
+        if field_label != "upstream service":
+            return relationship_value == route_value
+        relationship_ref = self._resolve_upstream_service_ref(
+            relationship_value,
+            upstream_node_ref=upstream_node_ref,
+            relationship_target=relationship_target,
+        )
+        route_ref = self._resolve_upstream_service_ref(
+            route_value,
+            upstream_node_ref=upstream_node_ref,
+            relationship_target=relationship_target,
+        )
+        if relationship_ref is None or route_ref is None:
+            return relationship_value == route_value
+        return relationship_ref == route_ref
 
     def _assert_shared_bool_agreement(
         self, label: str, *, field_label: str, relationship_value: object, route_value: object

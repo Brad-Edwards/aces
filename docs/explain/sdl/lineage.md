@@ -204,7 +204,7 @@ ACES relies on prior work in four ways:
   does not import OCSF events, raw Sigma rule bodies, Wazuh XML, SIEM queries,
   or alert records into SDL as first-class runtime records.
 
-Portable ACES references are stable `manager_id`, `listener_id`,
+Portable ACES references are stable `security_monitoring_manager_id`, `listener_id`,
 `component_id`, `agent_id`, `group_id`, `content_id`, `definition_id`, and
 `setting_id` symbols. Native manager identifiers, daemon names, file names,
 ruleset ids, rule ids, decoder names, agent labels, and API ids are preserved

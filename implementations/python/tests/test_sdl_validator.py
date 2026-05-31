@@ -3496,6 +3496,242 @@ class TestVerifyRelationshipDatabaseAccess:
         assert not any("does not resolve to a runtime application" in e for e in _validate(s))
 
 
+class TestVerifyRelationshipServiceIntegration:
+    def _scenario_with_platforms(
+        self,
+        auth_principal_ref: str = "cortex-api-user",
+        *,
+        engine_authorization_ref: str | None = "cortex-auth",
+    ) -> Scenario:
+        engine_application = {
+            "platform_application_id": "cortex",
+            "service": "api",
+            "platform_kind": "analyzer_engine",
+            "execution_policy": {"policy_id": "exec"},
+            "content_objects": [{"content_object_id": "analyzer", "kind": "analyzer"}],
+        }
+        if engine_authorization_ref is not None:
+            engine_application["authorization_ref"] = engine_authorization_ref
+        return _make_scenario(
+            nodes={
+                "thehive": {
+                    "type": "vm",
+                    "services": [{"port": 9000, "name": "api"}],
+                    "runtime": {
+                        "platform_applications": [
+                            {
+                                "platform_application_id": "thehive",
+                                "service": "api",
+                                "platform_kind": "case_management",
+                                "content_objects": [
+                                    {"content_object_id": "case-template", "kind": "case_template"},
+                                    {"content_object_id": "custom-field", "kind": "custom_field"},
+                                ],
+                            }
+                        ]
+                    },
+                },
+                "cortex": {
+                    "type": "vm",
+                    "services": [{"port": 9001, "name": "api"}],
+                    "runtime": {
+                        "app_authorizations": [
+                            {
+                                "app_authorization_id": "cortex-auth",
+                                "resource_vocabulary": "app_resource",
+                                "principals": [{"principal_id": "cortex-api-user"}],
+                                "roles": [{"role_id": "api-role"}],
+                                "permission_grants": [
+                                    {
+                                        "grant_id": "api-grant",
+                                        "role_ref": "api-role",
+                                        "resource_kind": "app_resource",
+                                    }
+                                ],
+                            },
+                            {
+                                "app_authorization_id": "unrelated-auth",
+                                "resource_vocabulary": "app_resource",
+                                "principals": [{"principal_id": "wrong-store-principal"}],
+                                "roles": [{"role_id": "other-role"}],
+                                "permission_grants": [
+                                    {
+                                        "grant_id": "other-grant",
+                                        "role_ref": "other-role",
+                                        "resource_kind": "app_resource",
+                                    }
+                                ],
+                            },
+                        ],
+                        "platform_applications": [engine_application],
+                    },
+                },
+            },
+            relationships={
+                "thehive-to-cortex": {
+                    "type": "connects_to",
+                    "source": "nodes.thehive.runtime.platform_applications.thehive",
+                    "target": "nodes.cortex.runtime.platform_applications.cortex",
+                    "service_integration": {
+                        "consumer_ref": "thehive",
+                        "engine_ref": "cortex",
+                        "integration_kind": "analyzer",
+                        "auth_principal_ref": auth_principal_ref,
+                    },
+                }
+            },
+        )
+
+    def test_service_integration_auth_principal_resolves_in_engine_authorization(self):
+        assert _validate(self._scenario_with_platforms()) == []
+
+    def test_service_integration_auth_principal_must_be_in_engine_authorization(self):
+        errors = _validate(self._scenario_with_platforms(auth_principal_ref="wrong-store-principal"))
+        assert any("authorization 'cortex-auth'" in error and "wrong-store-principal" in error for error in errors)
+
+    def test_service_integration_auth_principal_uses_any_engine_authorization_when_unset(self):
+        s = self._scenario_with_platforms(
+            auth_principal_ref="wrong-store-principal",
+            engine_authorization_ref=None,
+        )
+        assert _validate(s) == []
+
+
+class TestVerifyRelationshipProxyUpstream:
+    def _scenario_with_proxy(
+        self,
+        *,
+        route_upstream: dict | None = None,
+        proxy_upstream: dict | None = None,
+        proxy_node_name: str = "proxy",
+        backend_node_name: str = "backend",
+        relationship_target: str = "backend",
+    ) -> Scenario:
+        route = {"route_id": "root", "path": "/", "methods": ["GET"]}
+        if route_upstream is not None:
+            route["upstream_target"] = route_upstream
+        upstream = {"route_ref": "root", "upstream_node_ref": backend_node_name, "upstream_service_ref": "app"}
+        if proxy_upstream is not None:
+            upstream.update(proxy_upstream)
+        return _make_scenario(
+            nodes={
+                proxy_node_name: {
+                    "type": "vm",
+                    "services": [{"port": 443, "name": "https"}],
+                    "runtime": {
+                        "applications": [
+                            {
+                                "application_id": "nginx",
+                                "service": "https",
+                                "routes": [route],
+                            }
+                        ]
+                    },
+                },
+                backend_node_name: {
+                    "type": "vm",
+                    "services": [{"port": 8080, "name": "app"}],
+                },
+            },
+            relationships={
+                "proxy-to-backend": {
+                    "type": "connects_to",
+                    "source": f"nodes.{proxy_node_name}.runtime.applications.nginx",
+                    "target": relationship_target,
+                    "proxy_upstream": upstream,
+                }
+            },
+        )
+
+    def test_proxy_upstream_service_ref_must_resolve_on_upstream_node(self):
+        errors = _validate(self._scenario_with_proxy(proxy_upstream={"upstream_service_ref": "ghost"}))
+        assert any("upstream_service_ref 'ghost'" in error and "backend" in error for error in errors)
+
+    def test_route_upstream_target_service_ref_must_resolve(self):
+        errors = _validate(
+            self._scenario_with_proxy(
+                route_upstream={"target_node_ref": "backend", "target_service": "ghost"},
+            )
+        )
+        assert any("target_service 'ghost'" in error and "backend" in error for error in errors)
+
+    def test_route_upstream_target_service_ref_must_match_target_node_ref(self):
+        errors = _validate(
+            self._scenario_with_proxy(
+                route_upstream={
+                    "target_node_ref": "backend",
+                    "target_service": "nodes.proxy.services.https",
+                },
+            )
+        )
+        assert any("target_service 'nodes.proxy.services.https'" in error and "backend" in error for error in errors)
+
+    def test_proxy_upstream_service_ref_uses_qualified_relationship_target_node(self):
+        s = self._scenario_with_proxy(
+            relationship_target="nodes.backend.services.app",
+            proxy_upstream={"upstream_node_ref": ""},
+        )
+        assert _validate(s) == []
+
+    def test_proxy_upstream_service_ref_must_match_upstream_node_ref(self):
+        errors = _validate(
+            self._scenario_with_proxy(
+                proxy_upstream={"upstream_service_ref": "nodes.proxy.services.https"},
+            )
+        )
+        assert any(
+            "upstream_service_ref 'nodes.proxy.services.https'" in error and "backend" in error for error in errors
+        )
+
+    def test_proxy_upstream_invalid_upstream_node_ref_is_reported(self):
+        errors = _validate(
+            self._scenario_with_proxy(
+                proxy_upstream={"upstream_node_ref": "ghost"},
+            )
+        )
+        assert any("upstream_node_ref 'ghost'" in error and "defined node" in error for error in errors)
+
+    def test_proxy_upstream_agreement_uses_relationship_target_for_service_refs(self):
+        s = self._scenario_with_proxy(
+            route_upstream={
+                "target_service": "nodes.backend.services.app",
+                "tls_terminated_here": True,
+            },
+            proxy_upstream={
+                "upstream_node_ref": "",
+                "upstream_service_ref": "app",
+                "client_tls_terminated": True,
+            },
+            relationship_target="nodes.backend.services.app",
+        )
+        assert _validate(s) == []
+
+    def test_proxy_upstream_agreement_accepts_bare_and_qualified_service_refs(self):
+        s = self._scenario_with_proxy(
+            route_upstream={
+                "target_node_ref": "backend",
+                "target_service": "nodes.backend.services.app",
+                "tls_terminated_here": True,
+            },
+            proxy_upstream={"upstream_service_ref": "app", "client_tls_terminated": True},
+        )
+        assert _validate(s) == []
+
+    def test_proxy_upstream_accepts_dotted_node_names_in_qualified_service_refs(self):
+        s = self._scenario_with_proxy(
+            route_upstream={
+                "target_node_ref": "app.backend",
+                "target_service": "nodes.app.backend.services.app",
+                "tls_terminated_here": True,
+            },
+            proxy_upstream={"client_tls_terminated": True},
+            proxy_node_name="front.proxy",
+            backend_node_name="app.backend",
+            relationship_target="nodes.app.backend.services.app",
+        )
+        assert _validate(s) == []
+
+
 # ---------------------------------------------------------------------------
 # Runtime SSH server configuration semantics (ADR-031)
 # ---------------------------------------------------------------------------

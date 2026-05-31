@@ -41,8 +41,8 @@ becoming a validator-only interpretation of the SDL.
 | `verify_accounts` | Account nodes reference existing VM nodes. |
 | `verify_relationships` | Source and target resolve to any named element in any section, including variables, relationships, content item names, named service bindings, runtime service listener refs, runtime identity-authority refs, runtime DNS refs, runtime network-sensor refs, runtime network detection-engine refs, runtime security-monitoring manager refs, and named ACL rules. Ambiguous bare refs are rejected with qualified alternatives. |
 | `verify_relationship_forwarding_edges` | A relationship `forwarding_edge` resolves `forwarder_ref` to a runtime forwarding agent; the edge `target_listener_role`/`protocol` must agree with at least one of that agent's ship targets. |
-| `verify_relationship_service_integrations` | A relationship `service_integration` resolves `consumer_ref`/`engine_ref` to nodes/services and `auth_principal_ref` to a principal in the engine node's application-authorization store. |
-| `verify_relationship_proxy_upstreams` | A relationship `proxy_upstream` resolves `route_ref` to an application route and the upstream node/service refs; when the route carries an `upstream_target`, the shared target node, target service, and TLS-termination facts must agree. |
+| `verify_relationship_service_integrations` | A relationship `service_integration` resolves `consumer_ref`/`engine_ref` to platform applications and `auth_principal_ref` to a principal in the engine application's referenced authorization store when `authorization_ref` is set. |
+| `verify_relationship_proxy_upstreams` | A relationship `proxy_upstream` resolves `route_ref` to an application route and the upstream node/service refs; route-level `upstream_target` refs resolve the same way, and when both scopes carry shared target node, target service, and TLS-termination facts they must agree. |
 | `verify_runtime_service_listeners` | Runtime service listeners resolve optional same-node service refs, process refs, and host-published port correlations. Concrete service/listener port+protocol values must match. |
 | `verify_runtime_identity_authorities` | Runtime identity-authority services resolve to same-node service bindings. Local relationship and policy refs resolve within the owning authority across authority, service, subject, policy, and relationship stable ids. |
 | `verify_runtime_dns_services` | Runtime DNS services resolve to same-node service bindings. Configuration, log, and zone-file refs resolve to observed runtime filesystem entries when the node has file inventory. |
@@ -99,7 +99,7 @@ normalizes bounded kind/protocol/provenance/value classifications, and keeps
 raw values out of secret-bearing attributes or settings. Authority services may
 reference only services declared on the same node. Authority-local refs resolve
 against all stable ids in the authority:
-`authority_id`, `service_id`, `subject_id`, `policy_id`, and
+`identity_authority_id`, `service_id`, `subject_id`, `policy_id`, and
 `relationship_id`. Provider names and external object identifiers are data, not
 reference keys.
 
@@ -118,7 +118,7 @@ node. File refs under the DNS service and its zones are checked against
 `runtime.filesystem_inventory` when that inventory is non-empty.
 
 The optional `runtime.network_sensors` inventory has model-local and semantic
-rules. Network sensors use stable `sensor_id` values that are unique within the
+rules. Network sensors use stable `network_sensor_id` values that are unique within the
 node runtime block. Implementations, sensor kinds, monitoring postures, and
 capture modes are normalized from bounded enums while allowing full-value
 variables where the model permits. `capture_interfaces` and
@@ -455,20 +455,20 @@ from the SDL runtime-family registry. Registered runtime refs include:
   `.databases.<database_id>`
 - `nodes.<node>.runtime.dns_services.<dns_service_id>` plus `.zones.<zone_id>`
   and `.zones.<zone_id>.rrsets.<rrset_id>`
-- `nodes.<node>.runtime.identity_authorities.<authority_id>` plus nested
+- `nodes.<node>.runtime.identity_authorities.<identity_authority_id>` plus nested
   service, subject, policy, and relationship refs
-- `nodes.<node>.runtime.file_services.<service_id>` plus nested share,
+- `nodes.<node>.runtime.file_services.<file_service_id>` plus nested share,
   principal, access-rule, and access-observation refs
-- `nodes.<node>.runtime.mail_services.<service_id>` plus nested component,
+- `nodes.<node>.runtime.mail_services.<mail_service_id>` plus nested component,
   listener, domain, mailbox-store, mailbox, alias, routing-rule, queue, and
   setting refs
-- `nodes.<node>.runtime.network_sensors.<sensor_id>`
-- `nodes.<node>.runtime.network_detection_engines.<engine_id>` plus nested
+- `nodes.<node>.runtime.network_sensors.<network_sensor_id>`
+- `nodes.<node>.runtime.network_detection_engines.<network_detection_engine_id>` plus nested
   rule-source, network-set, output-stream, and control-channel refs
-- `nodes.<node>.runtime.security_monitoring_managers.<manager_id>` plus nested
+- `nodes.<node>.runtime.security_monitoring_managers.<security_monitoring_manager_id>` plus nested
   listener, component, agent, agent-group, content-set, detection-definition,
   and setting refs
-- `nodes.<node>.runtime.ssh_servers.<server_id>` plus
+- `nodes.<node>.runtime.ssh_servers.<ssh_server_id>` plus
   `.match_rules.<match_id>`
 - `nodes.<node>.runtime.app_authorizations.<app_authorization_id>` plus nested
   principal, role, permission-grant, role-mapping, and tenant refs

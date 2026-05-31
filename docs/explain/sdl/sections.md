@@ -435,7 +435,7 @@ nodes:
               value_classification: redacted
               provenance: operator_override
       network_detection_engines:        # observed IDS/NDR engine state
-        - engine_id: suricata-engine
+        - network_detection_engine_id: suricata-engine
           implementation: suricata
           engine_kind: ids
           version: "7.0.15"
@@ -464,7 +464,7 @@ nodes:
               path: /var/run/suricata-command.socket
               capabilities: [rule_reload]
       security_monitoring_managers:     # observed SIEM/security-monitoring manager state
-        - manager_id: techvault-wazuh
+        - security_monitoring_manager_id: techvault-wazuh
           service: wazuh-api            # owning same-node Node.services[].name
           implementation: wazuh
           manager_kind: siem
@@ -638,7 +638,7 @@ nodes:
               image_ref: shuffle-worker:1.4.0
               count: 12
       identity_authorities:             # observed directory/domain/IdP/IAM state
-        - authority_id: techvault-domain
+        - identity_authority_id: techvault-domain
           kind: domain
           namespace: techvault.local
           domain_name: TECHVAULT
@@ -806,7 +806,7 @@ runtime, separate from the authored `services` declaration and image-default
 (see [ADR-025](../../decisions/adrs/adr-025-container-network-realization-surface.md)).
 
 `runtime.network_sensors` records observed passive or inline NSM/IDS sensor
-posture hosted by the node. Each entry has a stable `sensor_id`, bounded
+posture hosted by the node. Each entry has a stable `network_sensor_id`, bounded
 implementation/kind/posture/capture-mode fields, capture interfaces such as
 `any`, and `monitored_network_refs` naming the declared switch-backed networks
 whose traffic the sensor observes. Monitoring scope is distinct from network
@@ -841,7 +841,7 @@ reload/control channels, and evidence refs. It is distinct from passive sensor
 posture (`runtime.network_sensors`), SIEM manager inventory
 (`runtime.security_monitoring_managers`), software component identity, raw
 filesystem evidence, HTTP applications, and transport services. Each engine
-has a stable `engine_id`; child collections use stable ids for rule sources,
+has a stable `network_detection_engine_id`; child collections use stable ids for rule sources,
 network sets, output streams, and control channels. File/path refs are checked
 against `runtime.filesystem_inventory` when that inventory is non-empty, and
 network-set refs resolve to switch-backed infrastructure entries. Fully
@@ -937,7 +937,7 @@ definitions, bounded settings, and evidence refs. It is distinct from
 `Node.services` transport bindings, `runtime.processes` process snapshots,
 `runtime.service_manager_units` lifecycle state, filesystem evidence, raw logs,
 alert telemetry, and raw vendor rule/config payloads. Each manager has a stable
-`manager_id`; child collections use stable ids for listeners, components,
+`security_monitoring_manager_id`; child collections use stable ids for listeners, components,
 agents, groups, content sets, detection definitions, and settings.
 `content_sets` is corpus/file inventory, while `detection_definitions` is the
 typed manifest of loaded parsed definitions from that corpus. Detection
@@ -962,7 +962,7 @@ and
 state, distinct from transport-level `services`, host publication in
 `runtime.network`, HTTP application routes, filesystem evidence, and top-level
 scenario accounts. Each entry is a `RuntimeMailService` with a stable
-`service_id`, optional same-node `Node.services[].name` reference,
+`mail_service_id`, optional same-node `Node.services[].name` reference,
 engine/version/name data, and typed child records for components, listeners,
 domains, mailbox stores, mailboxes, aliases, routing rules, queues, and
 settings. `listeners` bind SMTP/ESMTP, submission, IMAP/IMAPS, POP3, LMTP,
@@ -981,12 +981,12 @@ mailbox/domain/listener refs when an edge needs mail-specific semantics (see
 identity-provider, cloud-IAM, authorization-system, and federation state. It is
 not a provisioning command surface and it is not an Active Directory, LDAP,
 SCIM, SAML, OIDC, or IAM schema clone. Each authority has a stable
-`authority_id`; optional namespace facts such as `domain_name`, `realm`,
+`identity_authority_id`; optional namespace facts such as `domain_name`, `realm`,
 `issuer`, `tenant_id`, and `base_dn`; protocol/API services that may reference
 same-node `Node.services[].name` transport bindings; identity-bearing
 subjects; policies; and typed relationships for membership, trust,
 federation, delegation, ownership, synchronization, and association. Stable
-ACES ids (`authority_id`, `service_id`, `subject_id`, `policy_id`, and
+ACES ids (`identity_authority_id`, `service_id`, `subject_id`, `policy_id`, and
 `relationship_id`) are the portable reference surface and must be unique across
 the owning authority's local namespace. Provider-stable object identifiers
 remain observed data: use the specific field when one exists
@@ -1484,19 +1484,19 @@ relationships, content item `name` values, named service bindings
 (`nodes.<node>.services.<service_name>`), runtime service listener refs
 (`nodes.<node>.runtime.service_listeners.<listener_id>`), runtime
 identity-authority refs
-(`nodes.<node>.runtime.identity_authorities.<authority_id>` and nested
+(`nodes.<node>.runtime.identity_authorities.<identity_authority_id>` and nested
 `.services.<service_id>`, `.subjects.<subject_id>`, `.policies.<policy_id>`,
 or `.relationships.<relationship_id>` refs), runtime DNS refs
 (`nodes.<node>.runtime.dns_services.<dns_service_id>` and nested
 `.zones.<zone_id>` or `.zones.<zone_id>.rrsets.<rrset_id>` refs), named
 network sensor refs
-(`nodes.<node>.runtime.network_sensors.<sensor_id>`), named
+(`nodes.<node>.runtime.network_sensors.<network_sensor_id>`), named
 network detection-engine refs
-(`nodes.<node>.runtime.network_detection_engines.<engine_id>` and nested
+(`nodes.<node>.runtime.network_detection_engines.<network_detection_engine_id>` and nested
 `.rule_sources.<source_id>`, `.network_sets.<set_id>`,
 `.output_streams.<stream_id>`, or `.control_channels.<channel_id>` refs), named
 security-monitoring manager refs
-(`nodes.<node>.runtime.security_monitoring_managers.<manager_id>` and nested
+(`nodes.<node>.runtime.security_monitoring_managers.<security_monitoring_manager_id>` and nested
 `.listeners.<listener_id>`, `.components.<component_id>`,
 `.agents.<agent_id>`, `.agent_groups.<group_id>`,
 `.content_sets.<content_id>`, or `.settings.<setting_id>` refs), named datastore

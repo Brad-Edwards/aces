@@ -38,8 +38,13 @@ from .runtime_datastore_partitions import (
 from .runtime_datastore_vocab import (
     RuntimeDatastoreDataModel,
     RuntimeDatastoreEngine,
+    RuntimeDatastoreEvictionPolicy,
+    RuntimeDatastoreNodeRole,
     RuntimeDatastorePartitionKind,
     RuntimeDatastoreReplicationStrategy,
+    RuntimeDatastoreSettingProvenance,
+    RuntimeDatastoreSettingScope,
+    RuntimeDatastoreTransportSecurityMode,
 )
 from .runtime_values import (
     coerce_string_list,
@@ -51,13 +56,19 @@ __all__ = [
     "RuntimeDatastoreCluster",
     "RuntimeDatastoreDataModel",
     "RuntimeDatastoreEngine",
+    "RuntimeDatastoreEvictionPolicy",
     "RuntimeDatastoreNode",
+    "RuntimeDatastoreNodeRole",
     "RuntimeDatastorePartition",
     "RuntimeDatastorePartitionKind",
     "RuntimeDatastorePersistence",
+    "RuntimeDatastoreReplicationStrategy",
     "RuntimeDatastoreService",
     "RuntimeDatastoreSetting",
+    "RuntimeDatastoreSettingProvenance",
+    "RuntimeDatastoreSettingScope",
     "RuntimeDatastoreTransportSecurity",
+    "RuntimeDatastoreTransportSecurityMode",
 ]
 
 

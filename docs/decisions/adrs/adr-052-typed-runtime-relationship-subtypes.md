@@ -67,10 +67,11 @@ relationship-verification entrypoint, mirroring
   `forwarding_agent_id` on some node.
 - `_verify_relationship_service_integrations`: `consumer_ref` / `engine_ref`
   resolve to `platform_application_id` values; a concrete `auth_principal_ref`
-  resolves to an `app_authorization` principal on the engine application's node.
+  resolves to a principal in the engine application's referenced
+  `app_authorization` store when `authorization_ref` is set.
 - `_verify_relationship_proxy_upstreams`: `route_ref` resolves to an
   application `route_id` on the relationship source; `upstream_node_ref`
-  resolves to a defined node.
+  and `upstream_service_ref` resolve to defined upstream node/service targets.
 
 ### 3. Make "same fact, two scopes, not duplicated" executable
 
