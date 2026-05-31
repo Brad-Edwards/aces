@@ -37,13 +37,21 @@ properties.
 
 ## Decision
 
-### 1. Add node-scoped forwarding agents under runtime
+### 1. Add node-scoped and scenario-level forwarding agents
 
 Add `Node.runtime.forwarding_agents` as an observed runtime inventory surface.
 Each entry is a `RuntimeForwardingAgent` with a stable `forwarding_agent_id`,
 product-neutral implementation and version fields, and an OPEN `agent_kind`
 discriminator (`log_forwarder`, `content_sync`, plus the permissive
 `unknown`/`other` tail) that selects the family member.
+
+Also add top-level `Scenario.forwarding_agents` for off-node infrastructure
+forwarders that are part of the scenario's runtime realization but are not
+inventoried scenario nodes. These records reuse the same
+`RuntimeForwardingAgent` model; there is no sidecar-specific or edge-inline
+schema. This covers, for example, a Compose service that tails a database log
+volume and ships to a manager while the database node itself hosts no forwarding
+daemon.
 
 ### 2. Preserve typed child inventories
 
@@ -67,8 +75,8 @@ transform, and one `reload_channel`, and rejects a `buffer_policy` and any
 
 ### 4. Keep forwarding inventory targetable but not executable
 
-Agents and child records may be referenced from relationships using qualified
-refs such as
+Node-hosted agents and child records may be referenced from relationships using
+qualified refs such as
 `nodes.<node>.runtime.forwarding_agents.<forwarding_agent_id>.ship_targets.<target_id>`.
 A ship-target `target_node_ref` resolves to a defined node and a
 `target_service_ref` to a service on that node (or, absent a node ref, on the
@@ -77,15 +85,23 @@ they do not imply shipping execution. Cadence composes a
 `runtime.scheduled_jobs` entry and the inter-node trust edge composes a
 relationship forwarding edge — neither is re-typed here.
 
+Scenario-level forwarding agents have no owning node, so a concrete
+`target_service_ref` must be paired with a concrete `target_node_ref`; the
+service is then resolved on that node. `RelationshipForwardingEdge.forwarder_ref`
+resolves across both node-hosted and scenario-level forwarding-agent registries.
+`forwarding_agent_id` values must be unique across both registries.
+
 ## Security and Validation Gates
 
 - Parser/model gate: stable agent and child ids are concrete symbols, not
-  variables; duplicate agent ids and duplicate agent-local child ids fail
-  early.
+  variables; duplicate agent-local child ids fail early and semantic validation
+  rejects duplicate `forwarding_agent_id` values across node-hosted and
+  scenario-level registries.
 - Profile gate: the `require_profile_for_agent_kind` guard rejects an
   under-populated `log_forwarder`/`content_sync` instance.
 - Semantic validation gate: ship-target `target_node_ref`/`target_service_ref`
-  resolve at scenario scope.
+  resolve at scenario scope, and scenario-level agents cannot use an implicit
+  owning node for service refs.
 - Secret/payload gate: ship-target enrollment identities (closed
   `none`/`redacted`/`operator_secret` lattice) and secret-bearing settings
   never carry raw values; the shared `name_indicates_secret` helper enforces
@@ -98,6 +114,8 @@ relationship forwarding edge — neither is re-typed here.
 - Do not model forwarders as manager content sets, fake scheduled-job
   payloads, fake listeners, generic software components, or prose-only
   relationships.
+- Do not add an infrastructure-only sidecar as a scenario node merely to host a
+  forwarding agent.
 - Do not re-encode what a forwarder ships onto a scheduled job or service unit.
 - Do not store raw events, rule bodies, MISP/API tokens, or enrollment keys.
 - Do not make Wazuh, Filebeat, or MISP the schema authority; they motivate the

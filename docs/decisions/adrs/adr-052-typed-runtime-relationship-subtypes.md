@@ -64,7 +64,9 @@ relationship-verification entrypoint, mirroring
 `_verify_relationship_database_access`:
 
 - `_verify_relationship_forwarding_edges`: `forwarder_ref` resolves to a
-  `forwarding_agent_id` on some node.
+  unique `forwarding_agent_id` either on a node's `runtime.forwarding_agents`
+  list or in the scenario-level `forwarding_agents` registry for off-node
+  infrastructure forwarders.
 - `_verify_relationship_service_integrations`: `consumer_ref` / `engine_ref`
   resolve to `platform_application_id` values; a concrete `auth_principal_ref`
   resolves to a principal in the engine application's referenced
@@ -95,7 +97,9 @@ silently contradict:
   `redacted` / `operator_secret`; a raw enrollment identity is never recorded.
 - Semantic validation gate: forwarder/consumer/engine/route/node refs resolve;
   the two agreement guards reject contradictory cross-scope facts where both
-  sides are concrete. `${var}` placeholders defer to instantiation revalidation.
+  sides are concrete. Forwarding-agent IDs are unique across node-hosted and
+  scenario-level registries. `${var}` placeholders defer to instantiation
+  revalidation.
 - Secret gate: enrollment identities and API-key principals are referenced by
   classification or stable id, never by raw value.
 - Contract/schema gate: published schemas are regenerated from the Python model

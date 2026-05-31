@@ -1140,6 +1140,13 @@ participate in relationships, generic reference validation, and module import
 rewriting (see
 [ADR-050](../../decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md)).
 
+Top-level `forwarding_agents` uses the same `RuntimeForwardingAgent` model for
+off-node infrastructure forwarders that are not inventoried scenario nodes. A
+relationship `forwarding_edge.forwarder_ref` may resolve to either registry, and
+`forwarding_agent_id` values are unique across both. Because a scenario-level
+agent has no owning node, any concrete `target_service_ref` on its ship target
+must also name a concrete `target_node_ref`.
+
 `runtime.orchestration_authorities` records observed container-spawn
 orchestration-authority state hosted by the node: the authority to *spawn*
 containers/workloads through a control interface — a SOAR orchestrator or an
