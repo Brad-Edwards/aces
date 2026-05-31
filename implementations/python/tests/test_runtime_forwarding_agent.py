@@ -255,7 +255,11 @@ def test_ship_target_port_range_enforced() -> None:
 
 def test_log_forwarder_positive_profile() -> None:
     # The full fixture already satisfies the profile.
-    RuntimeForwardingAgent(**_log_forwarder())
+    agent = RuntimeForwardingAgent(**_log_forwarder())
+
+    assert agent.agent_kind is RuntimeForwardingAgentKind.LOG_FORWARDER
+    assert agent.buffer_policy is not None
+    assert any(target.has_ingestion_endpoint() for target in agent.ship_targets)
 
 
 def test_log_forwarder_requires_buffer_policy() -> None:
@@ -289,7 +293,12 @@ def test_log_forwarder_rejects_ioc_to_rule_transform() -> None:
 
 
 def test_content_sync_positive_profile() -> None:
-    RuntimeForwardingAgent(**_content_sync())
+    agent = RuntimeForwardingAgent(**_content_sync())
+
+    assert agent.agent_kind is RuntimeForwardingAgentKind.CONTENT_SYNC
+    assert any(source.kind is RuntimeForwardingSourceKind.API_PULL for source in agent.sources)
+    assert any(transform.kind is RuntimeForwardingTransformKind.IOC_TO_RULE for transform in agent.transforms)
+    assert agent.reload_channels
 
 
 def test_content_sync_requires_api_pull_source() -> None:
@@ -385,8 +394,11 @@ def _sensor_node(agent: dict) -> dict:
     }
 
 
-def test_surface_is_node_scoped_not_top_level() -> None:
-    assert "forwarding_agents" not in Scenario.model_fields
+def test_scenario_level_surface_reuses_runtime_forwarding_agent() -> None:
+    scenario = Scenario(name="forwarding", forwarding_agents=[_log_forwarder()])
+
+    assert "forwarding_agents" in Scenario.model_fields
+    assert isinstance(scenario.forwarding_agents[0], RuntimeForwardingAgent)
 
 
 def test_log_forwarder_target_node_ref_resolves_to_defined_node() -> None:
@@ -430,6 +442,114 @@ def test_content_sync_target_service_ref_resolves_on_owning_node() -> None:
     # No target_node_ref -> the service ref must resolve on the forwarder's own node.
     scenario = Scenario(name="forwarding", nodes={"sensor": _sensor_node(_content_sync())})
     assert _validate(scenario) == []
+
+
+def test_scenario_level_ship_target_service_ref_requires_target_node_ref() -> None:
+    agent = _log_forwarder(
+        forwarding_agent_id="db-wazuh-agent",
+        ship_targets=[
+            {
+                "target_id": "manager",
+                "target_service_ref": "wazuh-agent-events",
+                "ingestion_port": 1514,
+                "protocol": "syslog",
+            }
+        ],
+    )
+    scenario = Scenario(
+        name="forwarding",
+        nodes={"wazuh.manager": _manager_node()},
+        forwarding_agents=[agent],
+    )
+
+    errors = _validate(scenario)
+
+    assert any("target_service_ref 'wazuh-agent-events' requires target_node_ref" in error for error in errors)
+
+
+def test_forwarding_agent_ids_are_unique_across_scenario_and_nodes() -> None:
+    scenario = Scenario(
+        name="forwarding",
+        nodes={"sensor": _sensor_node(_log_forwarder())},
+        forwarding_agents=[_log_forwarder()],
+    )
+
+    errors = _validate(scenario)
+
+    assert any("Duplicate forwarding_agent_id 'wazuh-sidecar-suricata'" in error for error in errors)
+
+
+def test_forwarding_edge_resolves_scenario_level_forwarder() -> None:
+    agent = _log_forwarder(
+        forwarding_agent_id="db-wazuh-agent",
+        ship_targets=[
+            {
+                "target_id": "manager",
+                "target_node_ref": "wazuh.manager",
+                "target_service_ref": "wazuh-agent-events",
+                "ingestion_port": 1514,
+                "protocol": "syslog",
+                "enrollment_port": 1515,
+                "enrollment_identity_classification": "redacted",
+            }
+        ],
+    )
+    scenario = Scenario(
+        name="forwarding",
+        nodes={
+            "db": {
+                "type": "vm",
+                "resources": {"ram": "1 gib", "cpu": 1},
+                "services": [{"port": 5432, "protocol": "tcp", "name": "postgres"}],
+            },
+            "wazuh.manager": _manager_node(),
+        },
+        forwarding_agents=[agent],
+        relationships={
+            "db-logs-forwarded-wazuh": {
+                "type": "connects_to",
+                "source": "db",
+                "target": "wazuh.manager",
+                "forwarding_edge": {
+                    "forwarder_ref": "db-wazuh-agent",
+                    "target_listener_role": "agent_event_ingestion",
+                    "protocol": "syslog",
+                },
+            }
+        },
+    )
+
+    assert _validate(scenario) == []
+
+
+def test_forwarding_edge_missing_forwarder_reports_combined_resolution_scope() -> None:
+    scenario = Scenario(
+        name="forwarding",
+        nodes={
+            "db": {
+                "type": "vm",
+                "resources": {"ram": "1 gib", "cpu": 1},
+                "services": [{"port": 5432, "protocol": "tcp", "name": "postgres"}],
+            },
+            "wazuh.manager": _manager_node(),
+        },
+        relationships={
+            "db-logs-forwarded-wazuh": {
+                "type": "connects_to",
+                "source": "db",
+                "target": "wazuh.manager",
+                "forwarding_edge": {"forwarder_ref": "missing-agent"},
+            }
+        },
+    )
+
+    errors = _validate(scenario)
+
+    assert any(
+        "forwarder_ref 'missing-agent' does not resolve to a forwarding agent "
+        "on any node or in scenario forwarding_agents" in error
+        for error in errors
+    )
 
 
 # --------------------------------------------------------------------------- #

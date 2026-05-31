@@ -40,7 +40,7 @@ becoming a validator-only interpretation of the SDL.
 | `verify_content` | Content targets reference existing VM nodes. |
 | `verify_accounts` | Account nodes reference existing VM nodes. |
 | `verify_relationships` | Source and target resolve to any named element in any section, including variables, relationships, content item names, named service bindings, runtime service listener refs, runtime identity-authority refs, runtime DNS refs, runtime network-sensor refs, runtime network detection-engine refs, runtime security-monitoring manager refs, and named ACL rules. Ambiguous bare refs are rejected with qualified alternatives. |
-| `verify_relationship_forwarding_edges` | A relationship `forwarding_edge` resolves `forwarder_ref` to a runtime forwarding agent; the edge `target_listener_role`/`protocol` must agree with at least one of that agent's ship targets. |
+| `verify_relationship_forwarding_edges` | A relationship `forwarding_edge` resolves `forwarder_ref` to a unique node-hosted or scenario-level runtime forwarding agent; the edge `target_listener_role`/`protocol` must agree with at least one of that agent's ship targets. |
 | `verify_relationship_service_integrations` | A relationship `service_integration` resolves `consumer_ref`/`engine_ref` to platform applications and `auth_principal_ref` to a principal in the engine application's referenced authorization store when `authorization_ref` is set. |
 | `verify_relationship_proxy_upstreams` | A relationship `proxy_upstream` resolves `route_ref` to an application route and the upstream node/service refs; route-level `upstream_target` refs resolve the same way, and when both scopes carry shared target node, target service, and TLS-termination facts they must agree. |
 | `verify_runtime_service_listeners` | Runtime service listeners resolve optional same-node service refs, process refs, and host-published port correlations. Concrete service/listener port+protocol values must match. |
@@ -52,7 +52,7 @@ becoming a validator-only interpretation of the SDL.
 | `verify_runtime_app_authorizations` | Runtime application-internal RBAC stores resolve `permission_grants` and `role_mappings` `role_ref` values to roles declared within the same authorization (authorization-local role-permission and user-role assignment integrity). |
 | `verify_runtime_datastore_services` | Runtime datastore services resolve their owning transport `service` to a same-node service binding, and a non-empty, non-variable `authorization_ref` to an `app_authorization` declared on the same node. The model-local `require_profile_for_data_model` guard fails an under-populated `search_index`/`wide_column`/`key_value` instance. |
 | `verify_runtime_platform_applications` | Runtime platform applications resolve their owning transport `service` to a same-node service binding, a non-empty, non-variable `authorization_ref` to a same-node `app_authorization`, content-object `references` to sibling `content_object_id` values, and `marking_refs` to sibling `marking_id` values. The model-local `require_profile_for_platform_kind` guard fails an under-populated `threat_intel`/`soar`/`analyzer_engine`/`case_management`/`analytics_dashboard` instance. |
-| `verify_runtime_forwarding_agents` | Runtime forwarding agents resolve each `ship_target`'s `target_node_ref`, when concrete, to a defined node, and a concrete `target_service_ref` to a service on the referenced node (or, absent a node ref, on the owning node). The model-local `require_profile_for_agent_kind` guard fails an under-populated `log_forwarder` (requires a `buffer_policy` plus an ingestion `ship_target`, rejects `ioc_to_rule` transforms) or `content_sync` (requires an `api_pull` source, an `ioc_to_rule` transform, and a `reload_channel`, rejects a `buffer_policy` and `ship_target` enrollment endpoints) instance. |
+| `verify_runtime_forwarding_agents` | Runtime forwarding agents resolve each `ship_target`'s `target_node_ref`, when concrete, to a defined node, and a concrete `target_service_ref` to a service on the referenced node (or, for node-hosted agents only, on the owning node). Scenario-level forwarding agents require `target_node_ref` when `target_service_ref` is concrete, and `forwarding_agent_id` values are unique across node-hosted and scenario-level registries. The model-local `require_profile_for_agent_kind` guard fails an under-populated `log_forwarder` (requires a `buffer_policy` plus an ingestion `ship_target`, rejects `ioc_to_rule` transforms) or `content_sync` (requires an `api_pull` source, an `ioc_to_rule` transform, and a `reload_channel`, rejects a `buffer_policy` and `ship_target` enrollment endpoints) instance. |
 | `verify_runtime_orchestration_authorities` | Runtime orchestration authorities resolve a non-empty, non-variable `control_interface_ref` to a `RuntimeControlInterface` declared in the same node's `runtime.local_control_interfaces` (by `control_interface_id`); for a `host_root_equivalent` privilege class the referenced interface must additionally be a read-write docker socket (access `read_write`, kind `unix_socket`, path ending in `docker.sock`), with `${var}` interface access/kind/path permissive. The model-local `require_profile_for_privilege_class` guard fails a `host_root_equivalent` authority that carries no concrete `control_interface_ref`. |
 | `verify_agents` | Entity references resolve. Starting accounts and initial-knowledge accounts exist in accounts section. Allowed subnets and initial-knowledge subnets must resolve to switch-backed infrastructure entries. Initial-knowledge hosts must resolve to VM nodes. Initial-knowledge services exist in `nodes.*.services[].name`. |
 | `verify_participant_behavior` | Agent action refs resolve to declared action contracts, observation-boundary refs resolve to declared boundaries, interaction refs resolve to declared actions or targetable state, and boundary view rules/transitions resolve to declared observable, hidden, or evidence refs. |
@@ -256,10 +256,11 @@ transport `service` and a non-empty, non-variable `authorization_ref` resolve on
 the same node, content-object `references` resolve to sibling content objects, and
 `marking_refs` resolve to sibling markings.
 
-The optional `runtime.forwarding_agents` inventory has model-local and semantic
-rules. Forwarding-agent ids are stable concrete symbols and unique within a node
-runtime block; the agent-local source, transform, ship-target, buffer-policy,
-reload-channel, and setting ids are unique across the agent. Agent
+The optional `runtime.forwarding_agents` inventory and top-level
+`forwarding_agents` registry have model-local and semantic rules.
+Forwarding-agent ids are stable concrete symbols and unique across node-hosted
+and scenario-level registries; the agent-local source, transform, ship-target,
+buffer-policy, reload-channel, and setting ids are unique across the agent. Agent
 implementations, kinds, source kinds, parse formats, transform kinds, protocols,
 buffer crypto, reload-channel kinds, enrollment classifications, and setting
 provenance/classification are normalized from bounded enums while allowing
@@ -275,7 +276,9 @@ an ingestion endpoint and rejects any `ioc_to_rule` transform, while a concrete
 transform, and one `reload_channel`, and rejects a `buffer_policy` and any
 `ship_target` enrollment endpoint. At scenario scope, a ship-target
 `target_node_ref` resolves to a defined node and a `target_service_ref` resolves
-to a service on the referenced node (or, absent a node ref, on the owning node).
+to a service on the referenced node (or, for node-hosted agents only, on the
+owning node). Scenario-level agents have no owning node, so a concrete service
+ref must be paired with a concrete target node.
 The `scheduled_jobs` / `service_units` / `forwarding_agents` boundary is the same
 one described above: a recurring forwarder's cadence belongs to a
 `runtime.scheduled_jobs` entry and its systemd lifecycle to

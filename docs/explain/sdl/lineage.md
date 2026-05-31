@@ -491,9 +491,9 @@ ACES relies on prior work in four ways:
 - **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, and validation/deployment
   concerns. None expose a portable first-class forwarding-agent shipping
-  inventory, so ACES adds a typed node-scoped seam rather than overloading the
-  manager surface, the detection-engine surface, or `runtime.scheduled_jobs`
-  (cadence-only).
+  inventory, so ACES adds typed node-scoped and scenario-level seams rather than
+  overloading the manager surface, the detection-engine surface, or
+  `runtime.scheduled_jobs` (cadence-only).
 - **Primary log-transport standards:** The syslog family —
   [RFC 5424](https://www.rfc-editor.org/rfc/rfc5424) (syslog protocol),
   [RFC 5425](https://www.rfc-editor.org/rfc/rfc5425) (TLS transport),

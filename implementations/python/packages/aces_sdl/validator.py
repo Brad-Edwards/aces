@@ -2145,6 +2145,14 @@ class SemanticValidator:
         ``require_profile_for_agent_kind`` guard (model-local) has already
         enforced the per-``agent_kind`` profile shape.
         """
+        self._verify_forwarding_agent_id_uniqueness()
+        for agent in self._s.forwarding_agents:
+            owner_label = f"Scenario forwarding agent '{agent.forwarding_agent_id}'"
+            for target in agent.ship_targets:
+                self._verify_scenario_forwarding_ship_target(
+                    target=target,
+                    owner_label=f"{owner_label} ship_target '{target.target_id}'",
+                )
         for node_name, node in self._s.nodes.items():
             runtime = getattr(node, "runtime", None)
             if runtime is None or not runtime.forwarding_agents:
@@ -2159,6 +2167,50 @@ class SemanticValidator:
                         target=target,
                         owner_label=f"{owner_label} ship_target '{target.target_id}'",
                     )
+
+    def _verify_forwarding_agent_id_uniqueness(self) -> None:
+        locations: dict[str, list[str]] = defaultdict(list)
+        for agent in self._s.forwarding_agents:
+            if agent.forwarding_agent_id:
+                locations[agent.forwarding_agent_id].append("scenario forwarding_agents")
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None:
+                continue
+            for agent in getattr(runtime, "forwarding_agents", []):
+                if agent.forwarding_agent_id:
+                    locations[agent.forwarding_agent_id].append(f"node '{node_name}' runtime.forwarding_agents")
+
+        for agent_id, agent_locations in locations.items():
+            if len(agent_locations) > 1:
+                self._err(f"Duplicate forwarding_agent_id '{agent_id}' across {', '.join(agent_locations)}")
+
+    def _verify_scenario_forwarding_ship_target(self, *, target: object, owner_label: str) -> None:
+        node_ref = getattr(target, "target_node_ref", "")
+        service_ref = getattr(target, "target_service_ref", "")
+        resolved_node = None
+        if node_ref and not self._is_unresolved_var(node_ref):
+            resolved_node = self._s.nodes.get(node_ref)
+            if resolved_node is None:
+                self._err(f"{owner_label} target_node_ref '{node_ref}' does not resolve to a defined node")
+                return
+
+        if service_ref and not self._is_unresolved_var(service_ref):
+            if not node_ref:
+                self._err(
+                    f"{owner_label} target_service_ref '{service_ref}' requires target_node_ref because "
+                    "scenario-level forwarding agents have no owning node"
+                )
+                return
+            if self._is_unresolved_var(node_ref):
+                return
+            if resolved_node is None:
+                return
+            if service_ref not in self._node_service_names(resolved_node):
+                self._err(
+                    f"{owner_label} target_service_ref '{service_ref}' does not resolve to a service "
+                    f"on node '{node_ref}'"
+                )
 
     def _verify_forwarding_ship_target(
         self,
@@ -2613,24 +2665,32 @@ class SemanticValidator:
             ref = edge.forwarder_ref
             if not ref or self._is_unresolved_var(ref):
                 continue
-            agent = self._resolve_forwarding_agent_ref(ref)
-            if agent is None:
+            agents = self._resolve_forwarding_agent_refs(ref)
+            if not agents:
                 self._err(
-                    f"{label} forwarding_edge forwarder_ref '{ref}' does not resolve to a forwarding agent on any node"
+                    f"{label} forwarding_edge forwarder_ref '{ref}' does not resolve to a forwarding agent "
+                    "on any node or in scenario forwarding_agents"
                 )
                 continue
-            self._check_forwarding_edge_agreement(edge, agent, label)
+            if len(agents) > 1:
+                self._err(
+                    f"{label} forwarding_edge forwarder_ref '{ref}' resolves to multiple forwarding agents; "
+                    "forwarding_agent_id values must be unique across scenario forwarding_agents and node runtimes"
+                )
+                continue
+            self._check_forwarding_edge_agreement(edge, agents[0], label)
 
-    def _resolve_forwarding_agent_ref(self, ref: str) -> object | None:
-        """Resolve a ``forwarding_agent_id`` to its agent on any node."""
+    def _resolve_forwarding_agent_refs(self, ref: str) -> list[object]:
+        """Resolve a ``forwarding_agent_id`` across node and scenario registries."""
+        matches: list[object] = [agent for agent in self._s.forwarding_agents if agent.forwarding_agent_id == ref]
         for node in self._s.nodes.values():
             runtime = getattr(node, "runtime", None)
             if runtime is None:
                 continue
             for agent in getattr(runtime, "forwarding_agents", []):
                 if agent.forwarding_agent_id == ref:
-                    return agent
-        return None
+                    matches.append(agent)
+        return matches
 
     def _check_forwarding_edge_agreement(self, edge: object, agent: object, label: str) -> None:
         ship_targets = list(getattr(agent, "ship_targets", []))

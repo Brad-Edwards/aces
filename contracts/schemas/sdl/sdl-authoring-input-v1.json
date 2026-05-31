@@ -16567,6 +16567,13 @@
       "title": "Features",
       "type": "object"
     },
+    "forwarding_agents": {
+      "items": {
+        "$ref": "#/$defs/RuntimeForwardingAgent"
+      },
+      "title": "Forwarding Agents",
+      "type": "array"
+    },
     "goals": {
       "additionalProperties": {
         "$ref": "#/$defs/Goal"
