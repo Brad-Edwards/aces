@@ -1,6 +1,5 @@
 """Security-monitoring manager runtime inventory models."""
 
-import re
 from enum import Enum
 from typing import Any
 
@@ -18,6 +17,7 @@ from .runtime_security_monitoring_definitions import (
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
+    name_indicates_secret,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
     require_symbol,
@@ -49,24 +49,6 @@ __all__ = [
 
 _REDACTED_SENSITIVITIES = frozenset(
     {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
-)
-_SECRET_NAME_TOKENS = (
-    "pass" + "word",
-    "passwd",
-    "passphrase",
-    "sec" + "ret",
-    "credential",
-    "token",
-    "api_key",
-    "shared_key",
-    "enrollment_key",
-    "client_key",
-    "access_key",
-    "auth_key",
-    "private_key",
-    "privatekey",
-    "keytab",
-    "authd.pass",
 )
 
 
@@ -108,6 +90,7 @@ class RuntimeSecurityMonitoringListenerRole(str, Enum):
     INDEXER_FORWARDING = "indexer_forwarding"
     DASHBOARD = "dashboard"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeSecurityMonitoringComponentKind(str, Enum):
@@ -130,6 +113,7 @@ class RuntimeSecurityMonitoringComponentKind(str, Enum):
     INTEGRATION = "integration"
     DATABASE = "database"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeSecurityMonitoringComponentStatus(str, Enum):
@@ -170,6 +154,7 @@ class RuntimeSecurityMonitoringContentKind(str, Enum):
     THREAT_INTEL = "threat_intel"
     DASHBOARD = "dashboard"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeSecurityMonitoringContentFormat(str, Enum):
@@ -217,16 +202,6 @@ def _coerce_refs(value: Any) -> list[str]:
 
 def _absolute_refs(values: list[str], *, field_name: str) -> list[str]:
     return [absolute_path_or_var(item, field_name=field_name) for item in values]
-
-
-def _name_indicates_secret(name: str) -> bool:
-    lowered = name.lower()
-    if any(token in lowered for token in _SECRET_NAME_TOKENS):
-        return True
-    parts = frozenset(part for part in re.split(r"[^a-z0-9]+", lowered) if part)
-    if parts & {"token", "credential"}:
-        return True
-    return "key" in parts and bool(parts & {"access", "api", "auth", "client", "enrollment", "private", "shared"})
 
 
 class RuntimeSecurityMonitoringListener(SDLModel):
@@ -463,7 +438,7 @@ class RuntimeSecurityMonitoringSetting(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_value(self) -> "RuntimeSecurityMonitoringSetting":
-        if _name_indicates_secret(self.name):
+        if name_indicates_secret(self.name):
             self._enforce_secret_name_redaction()
         elif self.value and self.value_classification in _REDACTED_SENSITIVITIES:
             raise ValueError(
@@ -489,7 +464,7 @@ class RuntimeSecurityMonitoringSetting(SDLModel):
 class RuntimeSecurityMonitoringManager(SDLModel):
     """Node-scoped runtime inventory for a SIEM/security-monitoring manager."""
 
-    manager_id: str
+    security_monitoring_manager_id: str
     service: str = ""
     implementation: RuntimeSecurityMonitoringImplementation | str = RuntimeSecurityMonitoringImplementation.UNKNOWN
     manager_kind: RuntimeSecurityMonitoringManagerKind | str = RuntimeSecurityMonitoringManagerKind.UNKNOWN
@@ -508,10 +483,10 @@ class RuntimeSecurityMonitoringManager(SDLModel):
     settings: list[RuntimeSecurityMonitoringSetting] = Field(default_factory=list)
     description: str = ""
 
-    @field_validator("manager_id")
+    @field_validator("security_monitoring_manager_id")
     @classmethod
-    def validate_manager_id(cls, v: str) -> str:
-        return require_symbol(v, field_name="manager_id")
+    def validate_security_monitoring_manager_id(cls, v: str) -> str:
+        return require_symbol(v, field_name="security_monitoring_manager_id")
 
     @field_validator("implementation", mode="before")
     @classmethod
@@ -546,7 +521,7 @@ class RuntimeSecurityMonitoringManager(SDLModel):
 
 
 def _reject_duplicate_local_ref_ids(manager: RuntimeSecurityMonitoringManager) -> None:
-    entries: list[tuple[str, str]] = [("manager_id", manager.manager_id)]
+    entries: list[tuple[str, str]] = [("security_monitoring_manager_id", manager.security_monitoring_manager_id)]
     for label, collection_name in (
         ("listener_id", "listeners"),
         ("component_id", "components"),
@@ -564,6 +539,6 @@ def _reject_duplicate_local_ref_ids(manager: RuntimeSecurityMonitoringManager) -
         if prior is not None:
             raise ValueError(
                 f"Duplicate runtime security-monitoring stable id '{value}' in manager "
-                f"'{manager.manager_id}' across {prior} and {label}"
+                f"'{manager.security_monitoring_manager_id}' across {prior} and {label}"
             )
         seen[value] = label

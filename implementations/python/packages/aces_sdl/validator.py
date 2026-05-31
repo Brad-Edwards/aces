@@ -7,22 +7,24 @@ the first one.
 """
 
 from collections import defaultdict, deque
+from collections.abc import Callable, Iterable, Sequence
+from dataclasses import dataclass
 from ipaddress import ip_address, ip_network
 
 from pydantic import BaseModel
 
 from ._base import extract_variable_name, is_variable_ref
 from ._errors import SDLValidationError
-from ._runtime_mail_semantics import (
-    verify_relationship_mail_access,
-    verify_runtime_mail_services,
-)
 from ._runtime_service_families import collect_qualified_runtime_family_refs
 from .entities import flatten_entities
 from .infrastructure import SimpleProperties
 from .nodes import MAX_NODE_NAME_LENGTH, NodeType
 from .orchestration import Workflow, WorkflowPredicate, WorkflowStep, WorkflowStepType
 from .runtime_database import DatabaseObjectType
+from .runtime_forwarding_agent_vocab import RuntimeForwardingProtocol
+from .runtime_mounts import RuntimeControlInterfaceAccess, RuntimeControlInterfaceKind
+from .runtime_orchestration import RuntimeOrchestrationPrivilegeClass
+from .runtime_security_monitoring import RuntimeSecurityMonitoringListenerRole
 from .runtime_ssh_server import SshMatchCriterionKind
 from .scenario import Scenario
 from .semantics.assessment import AssessmentIssue, analyze_assessment_pipeline
@@ -45,6 +47,96 @@ from .semantics.workflow import branch_closure, workflow_step_semantic_contract
 # Common ref-path prefix used by qualified runtime/service refs (e.g.
 # ``nodes.vm.services.http``, ``nodes.vm.runtime.applications.webapp``).
 _NODES_PREFIX = "nodes."
+
+
+@dataclass(frozen=True)
+class _MailServiceLocalIds:
+    components: set[str]
+    domains: set[str]
+    stores: set[str]
+    mailboxes: set[str]
+    aliases: set[str]
+    routing_refs: set[str]
+
+
+@dataclass(frozen=True)
+class _MailRefTail:
+    service_id: str
+    collection_name: str
+    child_id: str
+
+
+_MailChildIdReader = Callable[[object], Iterable[str]]
+_MAIL_CHILD_ID_READERS: dict[str, _MailChildIdReader] = {
+    "components": lambda service: (component.component_id for component in service.components),
+    "listeners": lambda service: (listener.listener_id for listener in service.listeners),
+    "domains": lambda service: (domain.domain_id for domain in service.domains),
+    "mailbox_stores": lambda service: (store.store_id for store in service.mailbox_stores),
+    "mailboxes": lambda service: (mailbox.mailbox_id for mailbox in service.mailboxes),
+    "aliases": lambda service: (alias.alias_id for alias in service.aliases),
+    "routing_rules": lambda service: (rule.rule_id for rule in service.routing_rules),
+    "queues": lambda service: (queue.queue_id for queue in service.queues),
+    "settings": lambda service: (setting.setting_id for setting in service.settings),
+}
+
+
+def _mail_services_for_node(node: object) -> Sequence[object]:
+    runtime = getattr(node, "runtime", None)
+    return () if runtime is None else runtime.mail_services
+
+
+def _mail_services_for_node_name(scenario: object, node_name: str) -> Sequence[object]:
+    node = scenario.nodes.get(node_name)
+    return () if node is None else _mail_services_for_node(node)
+
+
+def _collect_mail_service_local_ids(service: object) -> _MailServiceLocalIds:
+    mailbox_ids = {mailbox.mailbox_id for mailbox in service.mailboxes}
+    alias_ids = {alias.alias_id for alias in service.aliases}
+    domain_ids = {domain.domain_id for domain in service.domains}
+    return _MailServiceLocalIds(
+        components={component.component_id for component in service.components},
+        domains=domain_ids,
+        stores={store.store_id for store in service.mailbox_stores},
+        mailboxes=mailbox_ids,
+        aliases=alias_ids,
+        routing_refs=mailbox_ids | alias_ids | domain_ids,
+    )
+
+
+def _parse_mail_ref_tail(tail: str) -> _MailRefTail | None:
+    tail_parts = tail.split(".")
+    if len(tail_parts) == 1:
+        return _MailRefTail(tail_parts[0], "", "")
+    if len(tail_parts) == 3:
+        return _MailRefTail(*tail_parts)
+    return None
+
+
+def _resolve_mail_service_tail(
+    mail_services: Sequence[object],
+    parsed_tail: _MailRefTail,
+) -> object | None:
+    for service in mail_services:
+        if service.mail_service_id != parsed_tail.service_id:
+            continue
+        return _matched_service_for_tail(service, parsed_tail)
+    return None
+
+
+def _matched_service_for_tail(service: object, parsed_tail: _MailRefTail) -> object | None:
+    matches_service = not parsed_tail.collection_name
+    matches_child = bool(
+        parsed_tail.collection_name
+        and _mail_child_ref_exists(service, parsed_tail.collection_name, parsed_tail.child_id)
+    )
+    return service if matches_service or matches_child else None
+
+
+def _mail_child_ref_exists(service: object, collection_name: str, child_id: str) -> bool:
+    read_child_ids = _MAIL_CHILD_ID_READERS.get(collection_name)
+    return read_child_ids is not None and child_id in read_child_ids(service)
+
 
 # Renders an objective-semantics issue (machine-readable code from
 # ``aces_sdl.semantics.objective_semantics``) into the authoring-error string
@@ -253,6 +345,20 @@ class SemanticValidator:
                 if service.name:
                     refs.add(f"nodes.{node_name}.services.{service.name}")
         return refs
+
+    def _split_node_service_ref(self, ref: object) -> tuple[str, str] | None:
+        """Split ``nodes.<node>.services.<service>`` into node/service parts.
+
+        Node names may contain dots (for example ``wazuh.manager``), so service
+        refs must be partitioned on the ``.services.`` marker instead of split
+        by position.
+        """
+        if not isinstance(ref, str) or not ref.startswith(_NODES_PREFIX):
+            return None
+        node_name, sep, service_name = ref[len(_NODES_PREFIX) :].partition(".services.")
+        if not sep or not node_name or not service_name:
+            return None
+        return node_name, service_name
 
     def _qualified_runtime_refs(self) -> set[str]:
         """Qualified refs for node-scoped runtime inventories.
@@ -488,11 +594,16 @@ class SemanticValidator:
         self._verify_runtime_database_services()
         self._verify_runtime_dns_services()
         self._verify_runtime_ssh_servers()
+        self._verify_runtime_app_authorizations()
         self._verify_runtime_service_manager_units()
         self._verify_runtime_identity_authorities()
         self._verify_runtime_file_services()
         self._verify_runtime_security_monitoring_managers()
-        verify_runtime_mail_services(self)
+        self._verify_runtime_datastore_services()
+        self._verify_runtime_platform_applications()
+        self._verify_runtime_forwarding_agents()
+        self._verify_runtime_orchestration_authorities()
+        self._verify_runtime_mail_services()
         self._verify_features()
         self._verify_conditions()
         self._verify_vulnerabilities()
@@ -509,7 +620,10 @@ class SemanticValidator:
         self._verify_accounts()
         self._verify_relationships()
         self._verify_relationship_database_access()
-        verify_relationship_mail_access(self)
+        self._verify_relationship_mail_access()
+        self._verify_relationship_forwarding_edges()
+        self._verify_relationship_service_integrations()
+        self._verify_relationship_proxy_upstreams()
         self._verify_agents()
         self._verify_participant_behavior()
         self._verify_objectives()
@@ -750,7 +864,7 @@ class SemanticValidator:
         observed_paths: set[str],
         attached_networks: set[str],
     ) -> None:
-        owner_label = f"Node '{node_name}' runtime network sensor '{sensor.sensor_id}'"
+        owner_label = f"Node '{node_name}' runtime network sensor '{sensor.network_sensor_id}'"
         for field_name in ("configuration_file_refs", "log_file_refs", "evidence_refs"):
             self._verify_dns_file_refs(
                 owner_label,
@@ -761,7 +875,7 @@ class SemanticValidator:
         for network_ref in sensor.monitored_network_refs:
             self._verify_network_sensor_monitored_ref(
                 node_name=node_name,
-                sensor_id=sensor.sensor_id,
+                sensor_id=sensor.network_sensor_id,
                 network_ref=network_ref,
                 attached_networks=attached_networks,
             )
@@ -800,7 +914,7 @@ class SemanticValidator:
                 continue
             service_names = self._node_service_names(node)
             observed_paths = self._node_observed_paths(node)
-            sensor_ids = {sensor.sensor_id for sensor in runtime.network_sensors}
+            sensor_ids = {sensor.network_sensor_id for sensor in runtime.network_sensors}
             for engine in runtime.network_detection_engines:
                 self._verify_network_detection_engine(
                     node_name=node_name,
@@ -819,7 +933,7 @@ class SemanticValidator:
         observed_paths: set[str],
         sensor_ids: set[str],
     ) -> None:
-        owner_label = f"Node '{node_name}' runtime network detection engine '{engine.engine_id}'"
+        owner_label = f"Node '{node_name}' runtime network detection engine '{engine.network_detection_engine_id}'"
         sensor_ref = getattr(engine, "sensor_ref", "")
         if sensor_ref and not self._is_unresolved_var(sensor_ref) and sensor_ref not in sensor_ids:
             self._err(f"{owner_label} sensor_ref '{sensor_ref}' does not resolve to a same-node network sensor")
@@ -890,6 +1004,7 @@ class SemanticValidator:
                 self._verify_application_service(name, application, service_names)
                 for route in application.routes:
                     self._verify_route_refs(name, application, route, observed_paths)
+                    self._verify_route_upstream_target(name, application, route)
 
     @staticmethod
     def _node_service_names(node: object) -> set[str]:
@@ -940,16 +1055,16 @@ class SemanticValidator:
             return
         service_name = ref
         if ref.startswith(_NODES_PREFIX):
-            parts = ref.split(".")
-            if len(parts) != 4 or parts[2] != "services":
+            split = self._split_node_service_ref(ref)
+            if split is None:
                 self._err(
                     f"{owner_label} service ref '{ref}' must be a bare service name or 'nodes.<node>.services.<name>'"
                 )
                 return
-            if parts[1] != node_name:
+            ref_node_name, service_name = split
+            if ref_node_name != node_name:
                 self._err(f"{owner_label} service ref '{ref}' must reference a service on the same node")
                 return
-            service_name = parts[3]
         if service_name not in service_names:
             self._err(f"{owner_label} references undefined service '{service_name}'")
 
@@ -965,20 +1080,43 @@ class SemanticValidator:
             return None
         service_name = ref
         if ref.startswith(_NODES_PREFIX):
-            parts = ref.split(".")
-            if len(parts) != 4 or parts[2] != "services":
+            split = self._split_node_service_ref(ref)
+            if split is None:
                 self._err(
                     f"{owner_label} service ref '{ref}' must be a bare service name or 'nodes.<node>.services.<name>'"
                 )
                 return None
-            if parts[1] != node_name:
+            ref_node_name, service_name = split
+            if ref_node_name != node_name:
                 self._err(f"{owner_label} service ref '{ref}' must reference a service on the same node")
                 return None
-            service_name = parts[3]
         service = services_by_name.get(service_name)
         if service is None:
             self._err(f"{owner_label} references undefined service '{service_name}'")
         return service
+
+    def _verify_route_upstream_target(self, node_name: str, application: object, route: object) -> None:
+        target = getattr(route, "upstream_target", None)
+        if target is None:
+            return
+        label = (
+            f"Node '{node_name}' runtime application '{application.application_id}' "
+            f"route '{route.route_id}' upstream_target"
+        )
+        target_node_name = self._check_proxy_upstream_node_ref(
+            getattr(target, "target_node_ref", ""),
+            label,
+            context="upstream_target",
+            field_name="target_node_ref",
+        )
+        self._check_proxy_upstream_service_ref(
+            getattr(target, "target_service", ""),
+            upstream_node_ref=target_node_name or "",
+            relationship_target="",
+            label=label,
+            context="upstream_target",
+            field_name="target_service",
+        )
 
     def _verify_runtime_service_listeners(self) -> None:
         """Validate observed service listeners against same-node runtime facts."""
@@ -990,7 +1128,7 @@ class SemanticValidator:
             process_refs = self._node_runtime_process_refs(node)
             published_ports = self._node_published_port_keys(node)
             for listener in runtime.service_listeners:
-                label = f"Node '{node_name}' runtime service listener '{listener.listener_id}'"
+                label = f"Node '{node_name}' runtime service listener '{listener.service_listener_id}'"
                 service = self._resolve_owned_service_ref(
                     node_name,
                     getattr(listener, "service", ""),
@@ -1144,7 +1282,7 @@ class SemanticValidator:
     def _verify_runtime_ssh_servers(self) -> None:
         """Validate observed SSH server configurations against the scenario.
 
-        Each ``SshServerConfig.service`` must resolve to a service on the
+        Each ``RuntimeSshServer.service`` must resolve to a service on the
         same node (bare name OR ``nodes.<this-node>.services.<name>``).
         Each ``Match`` rule's ``LOCAL_USER`` criterion whose pattern is a
         concrete (non-wildcard, non-variable) literal MAY be cross-checked
@@ -1181,7 +1319,7 @@ class SemanticValidator:
         ref = getattr(server, "service", "")
         if not ref or self._is_unresolved_var(ref):
             return
-        server_id = server.server_id
+        server_id = server.ssh_server_id
         service_name = ref
         if ref.startswith("nodes."):
             parts = ref.split(".")
@@ -1223,10 +1361,47 @@ class SemanticValidator:
                 continue
             if pattern not in local_usernames:
                 self._err(
-                    f"Node '{node_name}' runtime ssh_server '{server.server_id}' "
+                    f"Node '{node_name}' runtime ssh_server '{server.ssh_server_id}' "
                     f"match rule '{rule.match_id}' references local user '{pattern}' "
                     f"not present in runtime.local_identity.users"
                 )
+
+    def _verify_runtime_app_authorizations(self) -> None:
+        """Validate observed application-internal RBAC stores.
+
+        Permission-grant and role-mapping ``role_ref`` values are
+        authorization-local role references: each must resolve to a role
+        declared within the same ``app_authorization`` store (RBAC96 /
+        ANSI INCITS 359 role-permission and user-role assignment integrity).
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.app_authorizations:
+                continue
+            for authorization in runtime.app_authorizations:
+                self._verify_app_authorization_role_refs(node_name, authorization)
+
+    def _verify_app_authorization_role_refs(self, node_name: str, authorization: object) -> None:
+        role_ids = {role.role_id for role in authorization.roles}
+        label = f"Node '{node_name}' runtime app_authorization '{authorization.app_authorization_id}'"
+        for grant in authorization.permission_grants:
+            self._verify_app_authorization_role_ref(
+                f"{label} permission_grant '{grant.grant_id}'",
+                getattr(grant, "role_ref", ""),
+                role_ids,
+            )
+        for mapping in authorization.role_mappings:
+            self._verify_app_authorization_role_ref(
+                f"{label} role_mapping '{mapping.mapping_id}'",
+                getattr(mapping, "role_ref", ""),
+                role_ids,
+            )
+
+    def _verify_app_authorization_role_ref(self, owner_label: str, role_ref: str, role_ids: set[str]) -> None:
+        if not role_ref or self._is_unresolved_var(role_ref):
+            return
+        if role_ref not in role_ids:
+            self._err(f"{owner_label} role_ref '{role_ref}' is not a role in the authorization")
 
     def _verify_runtime_capability_overrides(self) -> None:
         """Cross-check ``linux_capabilities.process_overrides`` selectors.
@@ -1266,15 +1441,11 @@ class SemanticValidator:
         runtime = getattr(node, "runtime", None)
         if runtime is None:
             return set()
-        names = {
+        return {
             process.name
             for process in (runtime.processes or [])
             if process.name and not self._is_unresolved_var(process.name)
         }
-        primary = getattr(runtime, "process", None)
-        if primary is not None and primary.name and not self._is_unresolved_var(primary.name):
-            names.add(primary.name)
-        return names
 
     def _check_override_subject_names(
         self,
@@ -1290,7 +1461,7 @@ class SemanticValidator:
                 self._err(
                     f"Node '{node_name}' runtime capability override subject "
                     f"'{subject_name}' does not match any process declared in "
-                    "'runtime.processes' or 'runtime.process'"
+                    "'runtime.processes'"
                 )
 
     def _verify_runtime_identity_authorities(self) -> None:
@@ -1325,14 +1496,14 @@ class SemanticValidator:
                 getattr(service, "service", ""),
                 service_names,
                 owner_label=(
-                    f"Node '{node_name}' runtime identity authority '{authority.authority_id}' "
+                    f"Node '{node_name}' runtime identity authority '{authority.identity_authority_id}' "
                     f"service '{service.service_id}'"
                 ),
             )
 
     @staticmethod
     def _identity_authority_local_refs(authority: object) -> set[str]:
-        refs = {authority.authority_id}
+        refs = {authority.identity_authority_id}
         refs.update(service.service_id for service in authority.services)
         refs.update(subject.subject_id for subject in authority.subjects)
         refs.update(policy.policy_id for policy in authority.policies)
@@ -1345,7 +1516,7 @@ class SemanticValidator:
         authority: object,
         local_refs: set[str],
     ) -> None:
-        label = f"Node '{node_name}' runtime identity authority '{authority.authority_id}'"
+        label = f"Node '{node_name}' runtime identity authority '{authority.identity_authority_id}'"
         for relationship in authority.relationships:
             rel_label = f"{label} relationship '{relationship.relationship_id}'"
             self._verify_identity_ref(
@@ -1368,7 +1539,7 @@ class SemanticValidator:
         authority: object,
         local_refs: set[str],
     ) -> None:
-        label = f"Node '{node_name}' runtime identity authority '{authority.authority_id}'"
+        label = f"Node '{node_name}' runtime identity authority '{authority.identity_authority_id}'"
         for policy in authority.policies:
             policy_label = f"{label} policy '{policy.policy_id}'"
             for ref in policy.applies_to_refs:
@@ -1417,7 +1588,7 @@ class SemanticValidator:
             service_names = self._node_service_names(node)
             local_user_names = self._node_local_user_names(node)
             for service in runtime.file_services:
-                owner_label = f"Node '{node_name}' runtime file service '{service.service_id}'"
+                owner_label = f"Node '{node_name}' runtime file service '{service.file_service_id}'"
                 self._verify_owned_service_ref(
                     node_name,
                     getattr(service, "service", ""),
@@ -1481,7 +1652,7 @@ class SemanticValidator:
             if runtime is None:
                 continue
             for authority in runtime.identity_authorities:
-                base = f"{_NODES_PREFIX}{node_name}.runtime.identity_authorities.{authority.authority_id}"
+                base = f"{_NODES_PREFIX}{node_name}.runtime.identity_authorities.{authority.identity_authority_id}"
                 for subject in authority.subjects:
                     refs.add(f"{base}.subjects.{subject.subject_id}")
         return refs
@@ -1673,7 +1844,9 @@ class SemanticValidator:
         service_names: set[str],
         observed_paths: set[str],
     ) -> None:
-        owner_label = f"Node '{node_name}' runtime security-monitoring manager '{manager.manager_id}'"
+        owner_label = (
+            f"Node '{node_name}' runtime security-monitoring manager '{manager.security_monitoring_manager_id}'"
+        )
         self._verify_owned_service_ref(
             node_name,
             getattr(manager, "service", ""),
@@ -1843,6 +2016,267 @@ class SemanticValidator:
                 f"{target_label} in the security-monitoring manager"
             )
 
+    def _verify_runtime_datastore_services(self) -> None:
+        """Validate observed datastore services against the scenario.
+
+        Each service's owning transport service must resolve to a service on
+        the same node (mirroring ``runtime.applications`` and
+        ``runtime.database_services``); a non-empty, non-variable
+        ``authorization_ref`` must resolve to an ``app_authorization`` declared
+        on the same node's runtime (the delegated internal RBAC store).
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.datastore_services:
+                continue
+            service_names = self._node_service_names(node)
+            authorization_ids = self._node_app_authorization_ids(runtime)
+            for datastore in runtime.datastore_services:
+                owner_label = f"Node '{node_name}' runtime datastore service '{datastore.datastore_service_id}'"
+                self._verify_owned_service_ref(
+                    node_name,
+                    getattr(datastore, "service", ""),
+                    service_names,
+                    owner_label=owner_label,
+                )
+                self._verify_runtime_authorization_ref(
+                    getattr(datastore, "authorization_ref", ""),
+                    authorization_ids,
+                    owner_label=owner_label,
+                )
+
+    def _verify_runtime_platform_applications(self) -> None:
+        """Validate observed platform-application inventories against the scenario.
+
+        Each application's owning transport service must resolve to a service on
+        the same node; a non-empty, non-variable ``authorization_ref`` must
+        resolve to a same-node ``app_authorization``; content-object
+        ``references`` must resolve to sibling ``content_object_id`` values and
+        ``marking_refs`` to sibling ``marking_id`` values within the same
+        application (intra-application referential integrity).
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.platform_applications:
+                continue
+            service_names = self._node_service_names(node)
+            authorization_ids = self._node_app_authorization_ids(runtime)
+            for application in runtime.platform_applications:
+                self._verify_platform_application(
+                    node_name=node_name,
+                    application=application,
+                    service_names=service_names,
+                    authorization_ids=authorization_ids,
+                )
+
+    def _verify_platform_application(
+        self,
+        *,
+        node_name: str,
+        application: object,
+        service_names: set[str],
+        authorization_ids: set[str],
+    ) -> None:
+        owner_label = f"Node '{node_name}' runtime platform application '{application.platform_application_id}'"
+        self._verify_owned_service_ref(
+            node_name,
+            getattr(application, "service", ""),
+            service_names,
+            owner_label=owner_label,
+        )
+        self._verify_runtime_authorization_ref(
+            getattr(application, "authorization_ref", ""),
+            authorization_ids,
+            owner_label=owner_label,
+        )
+        content_object_ids = {obj.content_object_id for obj in application.content_objects}
+        marking_ids = {marking.marking_id for marking in application.markings}
+        for content_object in application.content_objects:
+            object_label = f"{owner_label} content_object '{content_object.content_object_id}'"
+            for reference in content_object.references:
+                if self._is_unresolved_var(reference):
+                    continue
+                if reference not in content_object_ids:
+                    self._err(
+                        f"{object_label} reference '{reference}' does not resolve to a "
+                        f"content_object in the platform application"
+                    )
+            for marking_ref in content_object.marking_refs:
+                if self._is_unresolved_var(marking_ref):
+                    continue
+                if marking_ref not in marking_ids:
+                    self._err(
+                        f"{object_label} marking_ref '{marking_ref}' does not resolve to a "
+                        f"marking in the platform application"
+                    )
+
+    @staticmethod
+    def _node_app_authorization_ids(runtime: object) -> set[str]:
+        """Collect ``app_authorization_id`` values declared on a node's runtime."""
+        return {
+            authorization.app_authorization_id
+            for authorization in getattr(runtime, "app_authorizations", [])
+            if authorization.app_authorization_id
+        }
+
+    def _verify_runtime_authorization_ref(
+        self,
+        authorization_ref: str,
+        authorization_ids: set[str],
+        *,
+        owner_label: str,
+    ) -> None:
+        """Resolve a delegated ``authorization_ref`` to a same-node app_authorization."""
+        if not authorization_ref or self._is_unresolved_var(authorization_ref):
+            return
+        if authorization_ref not in authorization_ids:
+            self._err(
+                f"{owner_label} authorization_ref '{authorization_ref}' does not resolve to an "
+                f"app_authorization on the same node"
+            )
+
+    def _verify_runtime_forwarding_agents(self) -> None:
+        """Validate observed forwarding / intel-sync agent inventories.
+
+        A ship target's ``target_node_ref``, when present and concrete, must
+        resolve to a defined node; a present, concrete ``target_service_ref``
+        must resolve to a service on that referenced node (or, when no node ref
+        is given, to a service on the owning node). The agent-internal
+        ``require_profile_for_agent_kind`` guard (model-local) has already
+        enforced the per-``agent_kind`` profile shape.
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.forwarding_agents:
+                continue
+            local_service_names = self._node_service_names(node)
+            for agent in runtime.forwarding_agents:
+                owner_label = f"Node '{node_name}' runtime forwarding agent '{agent.forwarding_agent_id}'"
+                for target in agent.ship_targets:
+                    self._verify_forwarding_ship_target(
+                        node_name=node_name,
+                        local_service_names=local_service_names,
+                        target=target,
+                        owner_label=f"{owner_label} ship_target '{target.target_id}'",
+                    )
+
+    def _verify_forwarding_ship_target(
+        self,
+        *,
+        node_name: str,
+        local_service_names: set[str],
+        target: object,
+        owner_label: str,
+    ) -> None:
+        node_ref = getattr(target, "target_node_ref", "")
+        service_ref = getattr(target, "target_service_ref", "")
+        resolved_node_name = node_name
+        resolved_node = self._s.nodes.get(node_name)
+        if node_ref and not self._is_unresolved_var(node_ref):
+            resolved_node = self._s.nodes.get(node_ref)
+            if resolved_node is None:
+                self._err(f"{owner_label} target_node_ref '{node_ref}' does not resolve to a defined node")
+                return
+            resolved_node_name = node_ref
+        if service_ref and not self._is_unresolved_var(service_ref):
+            if resolved_node is None:
+                return
+            target_service_names = (
+                local_service_names if resolved_node_name == node_name else self._node_service_names(resolved_node)
+            )
+            if service_ref not in target_service_names:
+                self._err(
+                    f"{owner_label} target_service_ref '{service_ref}' does not resolve to a service "
+                    f"on node '{resolved_node_name}'"
+                )
+
+    def _verify_runtime_orchestration_authorities(self) -> None:
+        """Validate observed container-spawn orchestration-authority inventories.
+
+        Each authority's ``control_interface_ref``, when present and concrete,
+        must resolve to a :class:`RuntimeControlInterface` declared in the same
+        node's ``runtime.local_control_interfaces`` (by ``control_interface_id``).
+        For a ``host_root_equivalent`` privilege class, the referenced control
+        interface must additionally be a read-write docker socket (a read-write
+        unix socket whose path is a ``docker.sock``), making the host-root
+        privilege-escalation fact resolvable at scenario scope. The
+        model-local ``require_profile_for_privilege_class`` guard has already
+        rejected a host-root-equivalent authority that carries no concrete
+        ``control_interface_ref``.
+        """
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None or not runtime.orchestration_authorities:
+                continue
+            interfaces_by_id = {
+                interface.control_interface_id: interface
+                for interface in getattr(runtime, "local_control_interfaces", [])
+                if interface.control_interface_id
+            }
+            for authority in runtime.orchestration_authorities:
+                self._verify_orchestration_authority(
+                    node_name=node_name,
+                    authority=authority,
+                    interfaces_by_id=interfaces_by_id,
+                )
+
+    def _verify_orchestration_authority(
+        self,
+        *,
+        node_name: str,
+        authority: object,
+        interfaces_by_id: dict[str, object],
+    ) -> None:
+        owner_label = f"Node '{node_name}' runtime orchestration authority '{authority.orchestration_authority_id}'"
+        ref = getattr(authority, "control_interface_ref", "")
+        if not ref or self._is_unresolved_var(ref):
+            return
+        interface = interfaces_by_id.get(ref)
+        if interface is None:
+            self._err(
+                f"{owner_label} control_interface_ref '{ref}' does not resolve to a "
+                f"control interface in the same node's runtime.local_control_interfaces"
+            )
+            return
+        privilege = getattr(authority, "privilege_class", None)
+        if (
+            isinstance(privilege, RuntimeOrchestrationPrivilegeClass)
+            and privilege is RuntimeOrchestrationPrivilegeClass.HOST_ROOT_EQUIVALENT
+        ):
+            self._verify_host_root_control_interface(owner_label=owner_label, ref=ref, interface=interface)
+
+    @staticmethod
+    def _control_interface_is_docker_socket(interface: object) -> bool:
+        """Return whether a control interface is a read-write docker unix socket."""
+        access = getattr(interface, "access", None)
+        kind = getattr(interface, "kind", None)
+        path = getattr(interface, "path", "") or ""
+        is_read_write = access is RuntimeControlInterfaceAccess.READ_WRITE
+        is_unix_socket = kind is RuntimeControlInterfaceKind.UNIX_SOCKET
+        is_docker_sock = isinstance(path, str) and path.endswith("docker.sock")
+        return is_read_write and is_unix_socket and is_docker_sock
+
+    def _verify_host_root_control_interface(
+        self,
+        *,
+        owner_label: str,
+        ref: str,
+        interface: object,
+    ) -> None:
+        # ``${var}`` placeholders on the interface's access/kind/path are
+        # permissive: a deferred discriminator cannot be proven non-conformant.
+        access = getattr(interface, "access", None)
+        kind = getattr(interface, "kind", None)
+        path = getattr(interface, "path", "") or ""
+        if is_variable_ref(access) or is_variable_ref(kind) or is_variable_ref(path):
+            return
+        if not self._control_interface_is_docker_socket(interface):
+            self._err(
+                f"{owner_label} privilege_class 'host_root_equivalent' control_interface_ref '{ref}' "
+                f"must resolve to a read-write docker socket "
+                f"(access 'read_write', kind 'unix_socket', path ending in 'docker.sock')"
+            )
+
     def _split_runtime_ref(self, ref: object, *, surface: str) -> tuple[str, str] | None:
         """Split ``nodes.<node>.runtime.<surface>.<rest>`` into (node, rest).
 
@@ -1863,7 +2297,7 @@ class SemanticValidator:
         """Resolve a qualified ``nodes.<node>.runtime.database_services.<id>`` ref.
 
         Accepts the database-service form and the ``.databases.<id>`` form; both
-        resolve to the owning :class:`DatabaseService` so a relationship's
+        resolve to the owning :class:`RuntimeDatabaseService` so a relationship's
         ``database_access`` can be checked against it.
         """
         split = self._split_runtime_ref(ref, surface="database_services")
@@ -1907,6 +2341,215 @@ class SemanticValidator:
                 return application
         return None
 
+    def _verify_runtime_mail_services(self) -> None:
+        """Validate runtime mail-service inventories against the scenario graph."""
+        for node_name, node in self._s.nodes.items():
+            mail_services = _mail_services_for_node(node)
+            if not mail_services:
+                continue
+            service_names = self._node_service_names(node)
+            observed_paths = self._node_observed_paths(node)
+            local_user_names = self._node_local_user_names(node)
+            for service in mail_services:
+                label = f"Node '{node_name}' runtime mail service '{service.mail_service_id}'"
+                self._verify_owned_service_ref(
+                    node_name,
+                    service.service,
+                    service_names,
+                    owner_label=label,
+                )
+                self._verify_mail_service_children(
+                    node_name=node_name,
+                    label=label,
+                    service=service,
+                    service_names=service_names,
+                    observed_paths=observed_paths,
+                    local_user_names=local_user_names,
+                )
+
+    def _verify_mail_service_children(
+        self,
+        *,
+        node_name: str,
+        label: str,
+        service: object,
+        service_names: set[str],
+        observed_paths: set[str],
+        local_user_names: set[str],
+    ) -> None:
+        local_ids = _collect_mail_service_local_ids(service)
+        self._verify_mail_listeners(node_name, label, service, service_names, local_ids)
+        self._verify_mailboxes(label, service, local_user_names, local_ids)
+        self._verify_mail_aliases(label, service, local_ids)
+        self._verify_mail_routing_rules(label, service, local_ids)
+        self._verify_mail_settings(label, service, observed_paths, local_ids)
+
+    def _verify_mail_listeners(
+        self,
+        node_name: str,
+        label: str,
+        service: object,
+        service_names: set[str],
+        local_ids: "_MailServiceLocalIds",
+    ) -> None:
+        for listener in service.listeners:
+            listener_label = f"{label} listener '{listener.listener_id}'"
+            self._verify_owned_service_ref(
+                node_name,
+                listener.service,
+                service_names,
+                owner_label=listener_label,
+            )
+            self._verify_mail_ref(
+                listener.component_ref,
+                local_ids.components,
+                label=listener_label,
+                field_name="component_ref",
+            )
+
+    def _verify_mailboxes(
+        self,
+        label: str,
+        service: object,
+        local_user_names: set[str],
+        local_ids: "_MailServiceLocalIds",
+    ) -> None:
+        for mailbox in service.mailboxes:
+            mailbox_label = f"{label} mailbox '{mailbox.mailbox_id}'"
+            self._verify_mail_ref(mailbox.domain_ref, local_ids.domains, label=mailbox_label, field_name="domain_ref")
+            self._verify_mail_ref(mailbox.store_ref, local_ids.stores, label=mailbox_label, field_name="store_ref")
+            self._verify_mail_account_ref(mailbox.account_ref, mailbox_label)
+            self._verify_mail_local_user_ref(mailbox.local_user_ref, local_user_names, mailbox_label)
+
+    def _verify_mail_aliases(
+        self,
+        label: str,
+        service: object,
+        local_ids: "_MailServiceLocalIds",
+    ) -> None:
+        for alias in service.aliases:
+            alias_label = f"{label} alias '{alias.alias_id}'"
+            self._verify_mail_ref(alias.domain_ref, local_ids.domains, label=alias_label, field_name="domain_ref")
+            for target_ref in alias.target_refs:
+                self._verify_mail_ref(
+                    target_ref,
+                    local_ids.mailboxes | local_ids.aliases,
+                    label=alias_label,
+                    field_name="target_ref",
+                )
+
+    def _verify_mail_routing_rules(
+        self,
+        label: str,
+        service: object,
+        local_ids: "_MailServiceLocalIds",
+    ) -> None:
+        for rule in service.routing_rules:
+            rule_label = f"{label} routing rule '{rule.rule_id}'"
+            self._verify_mail_ref(rule.source_ref, local_ids.routing_refs, label=rule_label, field_name="source_ref")
+            self._verify_mail_ref(rule.target_ref, local_ids.routing_refs, label=rule_label, field_name="target_ref")
+
+    def _verify_mail_settings(
+        self,
+        label: str,
+        service: object,
+        observed_paths: set[str],
+        local_ids: "_MailServiceLocalIds",
+    ) -> None:
+        for setting in service.settings:
+            setting_label = f"{label} setting '{setting.setting_id}'"
+            self._verify_mail_ref(
+                setting.component_ref,
+                local_ids.components,
+                label=setting_label,
+                field_name="component_ref",
+            )
+            if self._source_path_misses_observed_inventory(setting.source_path, observed_paths):
+                self._err(f"{setting_label} source_path '{setting.source_path}' does not resolve to an observed file")
+
+    def _source_path_misses_observed_inventory(self, source_path: str, observed_paths: set[str]) -> bool:
+        return bool(
+            source_path
+            and observed_paths
+            and not self._is_unresolved_var(source_path)
+            and source_path not in observed_paths
+        )
+
+    def _verify_mail_ref(
+        self,
+        ref: str,
+        local_refs: set[str],
+        *,
+        label: str,
+        field_name: str,
+    ) -> None:
+        if not ref or self._is_unresolved_var(ref):
+            return
+        if ref not in local_refs:
+            self._err(f"{label} {field_name} '{ref}' does not resolve inside mail service")
+
+    def _verify_mail_account_ref(self, ref: str, label: str) -> None:
+        if not ref or self._is_unresolved_var(ref):
+            return
+        if ref not in self._s.accounts:
+            self._err(f"{label} account_ref '{ref}' does not resolve to a top-level account")
+
+    def _verify_mail_local_user_ref(self, ref: str, local_user_names: set[str], label: str) -> None:
+        if not ref or self._is_unresolved_var(ref):
+            return
+        if local_user_names and ref not in local_user_names:
+            self._err(f"{label} local_user_ref '{ref}' does not resolve to a runtime.local_identity user")
+
+    def _verify_relationship_mail_access(self) -> None:
+        """Validate typed ``mail_access`` blocks on top-level relationship edges."""
+        for name, relationship in self._s.relationships.items():
+            access = relationship.mail_access
+            if access is None:
+                continue
+            label = f"Relationship '{name}'"
+            mail_service = self._check_mail_access_target(relationship.target, label)
+            if mail_service is None:
+                continue
+            self._verify_mail_ref(
+                access.listener_ref,
+                {listener.listener_id for listener in mail_service.listeners},
+                label=f"{label} mail_access",
+                field_name="listener_ref",
+            )
+            self._verify_mail_ref(
+                access.mailbox_ref,
+                {mailbox.mailbox_id for mailbox in mail_service.mailboxes},
+                label=f"{label} mail_access",
+                field_name="mailbox_ref",
+            )
+            self._verify_mail_ref(
+                access.domain_ref,
+                {domain.domain_id for domain in mail_service.domains},
+                label=f"{label} mail_access",
+                field_name="domain_ref",
+            )
+
+    def _check_mail_access_target(self, target: str, label: str) -> object | None:
+        mail_service = self._resolve_mail_service_ref(target)
+        if mail_service is not None or self._is_unresolved_var(target):
+            return mail_service
+        self._err(f"{label} has mail_access but target '{target}' does not resolve to a mail service")
+        return None
+
+    def _resolve_mail_service_ref(self, ref: object) -> object | None:
+        """Resolve a qualified runtime mail-service or child ref to the service."""
+        split = self._split_runtime_ref(ref, surface="mail_services")
+        if split is None:
+            return None
+        node_name, tail = split
+        parsed_tail = _parse_mail_ref_tail(tail)
+        if parsed_tail is None:
+            return None
+        return _resolve_mail_service_tail(
+            _mail_services_for_node_name(self._s, node_name),
+            parsed_tail,
+        )
+
     def _verify_relationship_database_access(self) -> None:
         """Validate typed ``database_access`` blocks on relationship edges.
 
@@ -1946,6 +2589,438 @@ class SemanticValidator:
             self._err(
                 f"{label} database_access role_ref '{role_ref}' "
                 f"is not a role in database service '{dbsvc.database_service_id}'"
+            )
+
+    # ------------------------------------------------------------------ #
+    # Typed relationship subtypes (SCN-010 §5.7)
+    # ------------------------------------------------------------------ #
+
+    def _verify_relationship_forwarding_edges(self) -> None:
+        """Validate typed ``forwarding_edge`` blocks on relationship edges.
+
+        ``forwarder_ref`` must resolve to a ``RuntimeForwardingAgent`` (by
+        ``forwarding_agent_id``) on some node. AGREEMENT GUARD: when that agent
+        carries ``ship_targets``, the edge's ``target_listener_role`` and
+        ``protocol`` — where both sides are concrete — must be consistent with
+        at least one ship_target, so the inter-node trust edge and the
+        agent-side shipping state cannot disagree (SCN-010 §5.7).
+        """
+        for name, rel in self._s.relationships.items():
+            edge = rel.forwarding_edge
+            if edge is None:
+                continue
+            label = f"Relationship '{name}'"
+            ref = edge.forwarder_ref
+            if not ref or self._is_unresolved_var(ref):
+                continue
+            agent = self._resolve_forwarding_agent_ref(ref)
+            if agent is None:
+                self._err(
+                    f"{label} forwarding_edge forwarder_ref '{ref}' does not resolve to a forwarding agent on any node"
+                )
+                continue
+            self._check_forwarding_edge_agreement(edge, agent, label)
+
+    def _resolve_forwarding_agent_ref(self, ref: str) -> object | None:
+        """Resolve a ``forwarding_agent_id`` to its agent on any node."""
+        for node in self._s.nodes.values():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None:
+                continue
+            for agent in getattr(runtime, "forwarding_agents", []):
+                if agent.forwarding_agent_id == ref:
+                    return agent
+        return None
+
+    def _check_forwarding_edge_agreement(self, edge: object, agent: object, label: str) -> None:
+        ship_targets = list(getattr(agent, "ship_targets", []))
+        if not ship_targets:
+            return
+        agent_id = agent.forwarding_agent_id
+        self._check_forwarding_edge_protocol_agreement(edge, ship_targets, agent_id, label)
+        self._check_forwarding_edge_role_agreement(edge, ship_targets, agent_id, label)
+
+    def _check_forwarding_edge_protocol_agreement(
+        self, edge: object, ship_targets: list, agent_id: str, label: str
+    ) -> None:
+        # The edge ``protocol`` is a free string; agreement is asserted only
+        # against ship_target protocols that are concrete enum members. If no
+        # ship_target carries a concrete protocol, nothing concrete to compare.
+        edge_protocol = getattr(edge, "protocol", "")
+        if not edge_protocol or self._is_unresolved_var(edge_protocol):
+            return
+        target_protocols = [t.protocol.value for t in ship_targets if isinstance(t.protocol, RuntimeForwardingProtocol)]
+        if not target_protocols:
+            return
+        if edge_protocol not in target_protocols:
+            self._err(
+                f"{label} forwarding_edge protocol '{edge_protocol}' does not match any ship_target "
+                f"protocol on forwarding agent '{agent_id}' (one of: {', '.join(sorted(set(target_protocols)))})"
+            )
+
+    def _check_forwarding_edge_role_agreement(
+        self, edge: object, ship_targets: list, agent_id: str, label: str
+    ) -> None:
+        # An ``agent_event_ingestion`` listener role requires a ship_target with
+        # an ingestion endpoint; an ``agent_enrollment`` role requires one with
+        # an enrollment endpoint. Other roles impose no ship_target shape.
+        role = getattr(edge, "target_listener_role", None)
+        if not isinstance(role, RuntimeSecurityMonitoringListenerRole):
+            return
+        if role is RuntimeSecurityMonitoringListenerRole.AGENT_EVENT_INGESTION:
+            if not any(t.has_ingestion_endpoint() for t in ship_targets):
+                self._err(
+                    f"{label} forwarding_edge target_listener_role 'agent_event_ingestion' has no agreeing "
+                    f"ship_target carrying an ingestion endpoint on forwarding agent '{agent_id}'"
+                )
+        elif role is RuntimeSecurityMonitoringListenerRole.AGENT_ENROLLMENT:
+            if not any(t.has_enrollment_endpoint() for t in ship_targets):
+                self._err(
+                    f"{label} forwarding_edge target_listener_role 'agent_enrollment' has no agreeing "
+                    f"ship_target carrying an enrollment endpoint on forwarding agent '{agent_id}'"
+                )
+
+    def _verify_relationship_service_integrations(self) -> None:
+        """Validate typed ``service_integration`` blocks on relationship edges.
+
+        ``consumer_ref``/``engine_ref`` (when concrete) must resolve to platform
+        applications by ``platform_application_id``; a concrete
+        ``auth_principal_ref`` must resolve to the engine application's
+        referenced ``app_authorization`` store when ``authorization_ref`` is set
+        (the integration authenticates into the engine's internal RBAC store).
+        """
+        for name, rel in self._s.relationships.items():
+            integration = rel.service_integration
+            if integration is None:
+                continue
+            label = f"Relationship '{name}'"
+            self._check_service_integration_endpoint(integration.consumer_ref, "consumer_ref", label)
+            engine = self._check_service_integration_endpoint(integration.engine_ref, "engine_ref", label)
+            self._check_service_integration_auth_principal(integration.auth_principal_ref, engine, label)
+
+    def _check_service_integration_endpoint(self, ref: str, field_name: str, label: str) -> object | None:
+        if not ref or self._is_unresolved_var(ref):
+            return None
+        resolved = self._resolve_platform_application_ref(ref)
+        if resolved is None:
+            self._err(
+                f"{label} service_integration {field_name} '{ref}' does not resolve to a "
+                f"platform application on any node"
+            )
+            return None
+        return resolved[1]
+
+    def _resolve_platform_application_ref(self, ref: str) -> tuple[str, object] | None:
+        """Resolve a ``platform_application_id`` to (node_name, application)."""
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None:
+                continue
+            for application in getattr(runtime, "platform_applications", []):
+                if application.platform_application_id == ref:
+                    return node_name, application
+        return None
+
+    def _check_service_integration_auth_principal(self, ref: str, engine: object | None, label: str) -> None:
+        if not ref or self._is_unresolved_var(ref) or engine is None:
+            return
+        node_name = self._node_name_of_platform_application(engine)
+        if node_name is None:
+            return
+        node = self._s.nodes.get(node_name)
+        runtime = getattr(node, "runtime", None) if node is not None else None
+        authorizations = list(getattr(runtime, "app_authorizations", []))
+        authorization_ref = getattr(engine, "authorization_ref", "")
+        if authorization_ref and not self._is_unresolved_var(authorization_ref):
+            authorizations = [
+                authorization
+                for authorization in authorizations
+                if getattr(authorization, "app_authorization_id", "") == authorization_ref
+            ]
+            if not authorizations:
+                # The runtime platform application validator reports the bad
+                # authorization_ref; avoid emitting a misleading principal-scope
+                # error from this relationship pass as well.
+                return
+        principal_ids = {
+            principal.principal_id for authorization in authorizations for principal in authorization.principals
+        }
+        if ref not in principal_ids:
+            scope = (
+                f"authorization '{authorization_ref}'"
+                if authorization_ref and not self._is_unresolved_var(authorization_ref)
+                else "an app_authorization principal"
+            )
+            self._err(
+                f"{label} service_integration auth_principal_ref '{ref}' does not resolve to "
+                f"{scope} on the engine application's node '{node_name}'"
+            )
+
+    def _node_name_of_platform_application(self, application: object) -> str | None:
+        for node_name, node in self._s.nodes.items():
+            runtime = getattr(node, "runtime", None)
+            if runtime is None:
+                continue
+            if application in getattr(runtime, "platform_applications", []):
+                return node_name
+        return None
+
+    def _verify_relationship_proxy_upstreams(self) -> None:
+        """Validate typed ``proxy_upstream`` blocks on relationship edges.
+
+        ``route_ref`` must resolve to an application route (by ``route_id``) on
+        the relationship's ``source`` proxy; ``upstream_node_ref`` /
+        ``upstream_service_ref`` (when concrete) must resolve. AGREEMENT GUARD:
+        when the referenced route ALSO carries an ``upstream_target``, the shared
+        facts (target node, target service, and the TLS-termination boolean) MUST
+        agree between ``route.upstream_target`` and the ``RelationshipProxyUpstream``
+        so the same fact recorded at two scopes is never silently duplicated and
+        contradictory (SCN-010 §5.7).
+        """
+        for name, rel in self._s.relationships.items():
+            upstream = rel.proxy_upstream
+            if upstream is None:
+                continue
+            label = f"Relationship '{name}'"
+            target_node_name = self._check_proxy_upstream_node_ref(
+                upstream.upstream_node_ref,
+                label,
+                context="proxy_upstream",
+                field_name="upstream_node_ref",
+            )
+            self._check_proxy_upstream_service_ref(
+                upstream.upstream_service_ref,
+                upstream_node_ref=target_node_name or "",
+                relationship_target=rel.target,
+                label=label,
+                context="proxy_upstream",
+                field_name="upstream_service_ref",
+            )
+            route = self._check_proxy_upstream_route_ref(upstream.route_ref, rel.source, label)
+            if route is not None:
+                self._check_proxy_upstream_agreement(upstream, route, label, relationship_target=rel.target)
+
+    def _check_proxy_upstream_node_ref(
+        self,
+        node_ref: str,
+        label: str,
+        *,
+        context: str,
+        field_name: str,
+    ) -> str | None:
+        if not node_ref or self._is_unresolved_var(node_ref):
+            return None
+        if node_ref not in self._s.nodes:
+            self._err(f"{label} {context} {field_name} '{node_ref}' does not resolve to a defined node")
+            return None
+        return node_ref
+
+    def _check_proxy_upstream_service_ref(
+        self,
+        service_ref: str,
+        *,
+        upstream_node_ref: str,
+        relationship_target: str,
+        label: str,
+        context: str,
+        field_name: str,
+    ) -> None:
+        if not service_ref or self._is_unresolved_var(service_ref):
+            return
+        resolved = self._resolve_upstream_service_ref(
+            service_ref,
+            upstream_node_ref=upstream_node_ref,
+            relationship_target=relationship_target,
+        )
+        if resolved is None:
+            self._err(
+                f"{label} {context} {field_name} '{service_ref}' cannot be resolved without a concrete upstream node"
+            )
+            return
+        node_name, service_name = resolved
+        expected_node_name = upstream_node_ref or self._node_name_from_relationship_target(relationship_target)
+        if expected_node_name and node_name != expected_node_name:
+            self._err(
+                f"{label} {context} {field_name} '{service_ref}' must reference a service "
+                f"on upstream node '{expected_node_name}'"
+            )
+            return
+        node = self._s.nodes.get(node_name)
+        if node is None:
+            self._err(f"{label} {context} upstream service node '{node_name}' does not resolve to a defined node")
+            return
+        if service_name not in self._node_service_names(node):
+            self._err(
+                f"{label} {context} {field_name} '{service_ref}' does not resolve to a service on node '{node_name}'"
+            )
+
+    def _resolve_upstream_service_ref(
+        self,
+        service_ref: str,
+        *,
+        upstream_node_ref: str,
+        relationship_target: str,
+    ) -> tuple[str, str] | None:
+        split = self._split_node_service_ref(service_ref)
+        if split is not None:
+            return split
+        node_name = ""
+        if upstream_node_ref and not self._is_unresolved_var(upstream_node_ref):
+            node_name = upstream_node_ref
+        else:
+            target_node_name = self._node_name_from_relationship_target(relationship_target)
+            if target_node_name is not None:
+                node_name = target_node_name
+        if not node_name:
+            return None
+        return node_name, service_ref
+
+    def _node_name_from_relationship_target(self, target: object) -> str | None:
+        if not isinstance(target, str) or self._is_unresolved_var(target):
+            return None
+        if target in self._s.nodes:
+            return target
+        service_split = self._split_node_service_ref(target)
+        if service_split is not None:
+            node_name, _service_name = service_split
+            return node_name if node_name in self._s.nodes else None
+        if target.startswith(_NODES_PREFIX):
+            node_name, sep, _tail = target[len(_NODES_PREFIX) :].partition(".runtime.")
+            if sep and node_name in self._s.nodes:
+                return node_name
+        return None
+
+    def _check_proxy_upstream_route_ref(self, route_ref: str, source: str, label: str) -> object | None:
+        if not route_ref or self._is_unresolved_var(route_ref):
+            return None
+        routes = self._source_application_routes(source)
+        if routes is None:
+            # The source does not resolve to a runtime application surface; the
+            # generic relationship endpoint check already reports an unresolved
+            # source, so the route_ref check is deferred rather than duplicated.
+            return None
+        route = routes.get(route_ref)
+        if route is None:
+            self._err(
+                f"{label} proxy_upstream route_ref '{route_ref}' does not resolve to an "
+                f"application route on source '{source}'"
+            )
+        return route
+
+    def _source_application_routes(self, source: str) -> dict[str, object] | None:
+        """Collect ``route_id``->route for every application surface on ``source``.
+
+        ``source`` may be a qualified ``nodes.<node>.runtime.applications.<id>``
+        ref or a bare node name; either way the proxy route lives on that node's
+        application surface(s).
+        """
+        application = self._resolve_application_ref(source)
+        if application is not None:
+            return {route.route_id: route for route in application.routes}
+        node = self._s.nodes.get(source)
+        runtime = getattr(node, "runtime", None) if node is not None else None
+        if runtime is None:
+            return None
+        routes: dict[str, object] = {}
+        for application in getattr(runtime, "applications", []):
+            for route in application.routes:
+                routes[route.route_id] = route
+        return routes
+
+    def _check_proxy_upstream_agreement(
+        self,
+        upstream: object,
+        route: object,
+        label: str,
+        *,
+        relationship_target: str,
+    ) -> None:
+        target = getattr(route, "upstream_target", None)
+        if target is None:
+            return
+        self._assert_shared_field_agreement(
+            label,
+            field_label="upstream node",
+            relationship_value=getattr(upstream, "upstream_node_ref", ""),
+            route_value=getattr(target, "target_node_ref", ""),
+        )
+        self._assert_shared_field_agreement(
+            label,
+            field_label="upstream service",
+            relationship_value=getattr(upstream, "upstream_service_ref", ""),
+            route_value=getattr(target, "target_service", ""),
+            upstream_node_ref=getattr(upstream, "upstream_node_ref", "") or getattr(target, "target_node_ref", ""),
+            relationship_target=relationship_target,
+        )
+        self._assert_shared_bool_agreement(
+            label,
+            field_label="TLS-termination",
+            relationship_value=getattr(upstream, "client_tls_terminated", None),
+            route_value=getattr(target, "tls_terminated_here", None),
+        )
+
+    def _assert_shared_field_agreement(
+        self,
+        label: str,
+        *,
+        field_label: str,
+        relationship_value: str,
+        route_value: str,
+        upstream_node_ref: str = "",
+        relationship_target: str = "",
+    ) -> None:
+        if not relationship_value or self._is_unresolved_var(relationship_value):
+            return
+        if not route_value or self._is_unresolved_var(route_value):
+            return
+        if self._shared_field_values_agree(
+            field_label=field_label,
+            relationship_value=relationship_value,
+            route_value=route_value,
+            upstream_node_ref=upstream_node_ref,
+            relationship_target=relationship_target,
+        ):
+            return
+        else:
+            self._err(
+                f"{label} proxy_upstream {field_label} '{relationship_value}' disagrees with the "
+                f"route's upstream_target value '{route_value}'"
+            )
+
+    def _shared_field_values_agree(
+        self,
+        *,
+        field_label: str,
+        relationship_value: str,
+        route_value: str,
+        upstream_node_ref: str,
+        relationship_target: str,
+    ) -> bool:
+        if field_label != "upstream service":
+            return relationship_value == route_value
+        relationship_ref = self._resolve_upstream_service_ref(
+            relationship_value,
+            upstream_node_ref=upstream_node_ref,
+            relationship_target=relationship_target,
+        )
+        route_ref = self._resolve_upstream_service_ref(
+            route_value,
+            upstream_node_ref=upstream_node_ref,
+            relationship_target=relationship_target,
+        )
+        if relationship_ref is None or route_ref is None:
+            return relationship_value == route_value
+        return relationship_ref == route_ref
+
+    def _assert_shared_bool_agreement(
+        self, label: str, *, field_label: str, relationship_value: object, route_value: object
+    ) -> None:
+        if not isinstance(relationship_value, bool) or not isinstance(route_value, bool):
+            return
+        if relationship_value != route_value:
+            self._err(
+                f"{label} proxy_upstream {field_label} '{relationship_value}' disagrees with the "
+                f"route's upstream_target value '{route_value}'"
             )
 
     def _verify_content(self) -> None:

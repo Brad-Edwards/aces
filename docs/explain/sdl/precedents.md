@@ -128,6 +128,23 @@ BloodHound/OpenGraph, OCSF, UCO, CASE, LDAP dumps, Graph API payloads, and
 backend inspect output are treated as downstream/evidence sources, not as the
 canonical authored SDL shape.
 
+The `runtime.app_authorizations` surface is the application-internal RBAC
+counterpart: it models the in-app authorization store of search clusters,
+key-value stores, dashboards, and platforms, distinct from the wire-protocol
+directory above and from database engine GRANTs.
+
+| SDL Element | Source Class | What We Adapted |
+| ----------- | ------------ | --------------- |
+| `RuntimeAppAuthorization` | Ferraiolo/Kuhn RBAC, Sandhu et al. RBAC96, ANSI INCITS 359 | An application-internal authorization store with a stable ACES id and an open `resource_vocabulary` spine discriminator; tier placement is derived from the referencing spine, not declared |
+| `RuntimeAppAuthorizationPrincipal` | OpenSearch/Elasticsearch security users, Cassandra `system_auth`, Redis ACL users, dashboard/platform accounts | Users, service accounts, API keys, and backend roles with reserved/hidden flags and a `credential_classification` only — no raw bcrypt hash, API key, or password |
+| `RuntimeAppAuthorizationGrant` | RBAC96 / ANSI INCITS 359 permission-assignment, NIST SP 800-162 ABAC resource-scoping | The defining resource-scoped grant: role reference → actions → resource patterns with an allow/deny effect and a `resource_kind` that is the single author-settable resource vocabulary |
+| `RuntimeAppAuthorizationRoleMapping` | OpenSearch backend-role mappings, directory-to-local role bindings | Bindings of backend roles, users, or hosts onto a local role |
+| `RuntimeAppAuthorizationTenant` | OpenSearch/Kibana tenants, platform namespace scopes | Namespace/tenancy scopes within the authorization store |
+
+This surface depends on the RBAC/ABAC standards for the role-permission-subject
+spine and on product RBAC implementations for recurring facts; it does not adopt
+any one product's security configuration as the canonical authored SDL shape.
+
 
 ### From STIX 2.1
 
@@ -136,6 +153,7 @@ canonical authored SDL shape.
 | -------------------------- | --------------------------------------- | ------------------------------------------ |
 | `Relationship`             | Relationship SRO (typed directed edges) | Simplified to 7 relationship types         |
 | Cross-reference validation | STIX object referencing model           | Source/target resolve to any named element |
+| `RelationshipForwardingEdge` / `RelationshipServiceIntegration` / `RelationshipProxyUpstream` | Relationship SRO typed-detail pattern | Domain access detail on an edge (syslog enrollment per RFC 5424/5425, API auth per RFC 6749, reverse-proxy upstream per RFC 9110/7239) without re-typing referenced families |
 
 
 ### From CACAO v2.0
@@ -254,6 +272,12 @@ taxonomy of container, orchestrator, or host-security concerns.
 | Mail service logical state (SMTP/submission/IMAP listeners, capabilities, mailboxes, aliases, routing, queues, settings) | Participant-observable mail-service state, not HTTP routes, filesystem evidence, or generic account authoring | `Node.runtime.mail_services` when observed; same-node transport refs remain in `Node.services`; see ADR-038 |
 | DNS authoritative/recursive service logical state (zones, RRsets, resolver policy, DNSSEC posture, dynamic-update posture, settings, evidence refs) | Protocol runtime inventory, not transport bindings, container resolver options, raw zone files, or HTTP application state | `Node.runtime.dns_services` when observed; service/zone/RRset refs may be targeted through qualified runtime refs; see ADR-039 |
 | SIEM/security-monitoring manager runtime inventory (manager modules, listeners, enrolled agents/groups, detection content sets, parsed detection definitions, bounded settings, API/control-plane posture) | Log-management/security-monitoring runtime inventory and loaded-definition manifests, not transport bindings, process/unit state, raw config, raw events, alert telemetry, or rule-engine execution | `Node.runtime.security_monitoring_managers` when observed; manager, content-set, and detection-definition refs may be targeted through qualified runtime refs; see ADR-040 and ADR-045 |
+| Application-internal RBAC store (principals, roles, resource-scoped permission grants, role mappings, tenants) | Application-internal authorization runtime state, not a wire-protocol directory or database engine GRANT surface | `Node.runtime.app_authorizations` when observed; the resource-scoped `permission_grant` is the defining addition; raw credentials are never stored; see ADR-046 |
+| Recurring scheduled-job cadence and run-state | Product-neutral cadence runtime state, not systemd unit lifecycle or forwarder input/output authoring | `Node.runtime.scheduled_jobs` when observed; cadence + run-state only; systemd lifecycle remains `runtime.service_manager_units`; see ADR-047 |
+| Non-relational datastore logical state (search clusters, wide-column stores, key-value stores, partitions, replication geometry, persistence posture, transport security, settings) | Participant-observable non-relational datastore runtime state, not the relational engine/GRANT surface, transport bindings, or software component identity | `Node.runtime.datastore_services` when observed; the open `data_model` discriminator drives a required-profile guard; service and child refs may be targeted through qualified runtime refs; internal RBAC is delegated via `authorization_ref`; raw key material is never stored; see ADR-048 |
+| Security-platform application runtime inventory (threat-intel platform, SOAR, analyzer engine, case management, analytics dashboard — bounded content-object manifests, markings, upstream bindings, connectors, settings) | Participant-observable platform-application runtime state and bounded parsed manifests, not HTTP route surface, software component identity, raw object bodies, or playbook execution semantics | `Node.runtime.platform_applications` when observed; the open `platform_kind` discriminator drives a required-profile guard; content objects carry typed references not raw bodies; refs may be targeted through qualified runtime refs; internal RBAC is delegated via `authorization_ref`; see ADR-049 |
+| Forwarding / intel-sync agent runtime inventory (sources, transforms, ship targets, buffer policy, reload channels, settings for log forwarders and intel-sync co-processes) | Participant-observable agent-side shipping state, not SIEM manager inventory, detection-engine consumer state, scheduled-job cadence, or systemd lifecycle | `Node.runtime.forwarding_agents` when observed; the open `agent_kind` discriminator drives a required-profile guard; ship-target node/service refs resolve at scenario scope; enrollment identities and secret-bearing settings are never stored as raw values; the inter-node trust edge is a relationship forwarding edge; see ADR-050 |
+| Container-spawn orchestration-authority runtime inventory (engine, scope, spawn templates, lifecycle policy, realized children, privilege class referencing a control-interface shell) | Participant-observable container-spawn authority state, not the control-interface shell itself, software component identity, or workflow execution semantics | `Node.runtime.orchestration_authorities` when observed; the open `privilege_class` discriminator drives a required-profile guard; `control_interface_ref` resolves to a same-node `RuntimeControlInterface` (host-root-equivalent requires a read-write docker socket); the control-interface shell is referenced, never duplicated; see ADR-051 |
 | Vendor-specific AD DS/LDAP/SCIM/IAM/SAML/OIDC schema clone | Provider coupling and false portability | Neutral `Node.runtime.identity_authorities` inventory when observed; provider identifiers remain data; see ADR-032 |
 | Service-manager unit state (systemd unit load/enable/active/sub/result) | Realized lifecycle state, distinct from installed software, transport services, live processes, container init, restart policy, and authored conditions | `Node.runtime.service_manager_units` when observed; raw `systemctl`/`journalctl`/unit-file output remains evidence rather than schema; see ADR-035 |
 | Framework-specific participant APIs | Framework coupling | Integration adapters outside the core SDL/runtime |

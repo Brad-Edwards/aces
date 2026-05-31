@@ -126,12 +126,11 @@ nodes:
           protocol: docker
           bind_source_sensitivity: operator_secret
           access: read_write
-      process:
-        pid: 1
-        command: ./shufflebackend
-        user: root
-        working_directory: /app
       processes:
+        - name: shufflebackend
+          command: ./shufflebackend
+          user: root
+          working_directory: /app
         - name: supervisord
           pid: 1
           command: supervisord -n
@@ -436,7 +435,7 @@ nodes:
               value_classification: redacted
               provenance: operator_override
       network_detection_engines:        # observed IDS/NDR engine state
-        - engine_id: suricata-engine
+        - network_detection_engine_id: suricata-engine
           implementation: suricata
           engine_kind: ids
           version: "7.0.15"
@@ -465,7 +464,7 @@ nodes:
               path: /var/run/suricata-command.socket
               capabilities: [rule_reload]
       security_monitoring_managers:     # observed SIEM/security-monitoring manager state
-        - manager_id: techvault-wazuh
+        - security_monitoring_manager_id: techvault-wazuh
           service: wazuh-api            # owning same-node Node.services[].name
           implementation: wazuh
           manager_kind: siem
@@ -536,8 +535,110 @@ nodes:
               name: api_token
               value_classification: redacted
               provenance: operator_override
+      datastore_services:               # observed non-relational datastore state
+        - datastore_service_id: opensearch-store
+          service: opensearch           # owning same-node Node.services[].name
+          engine: opensearch
+          data_model: search_index      # OPEN discriminator selects the profile
+          version: "2.13"
+          cluster:
+            cluster_id: os-cluster
+            health: green
+            discovery_mode: zen
+          nodes:
+            - node_id: os-node-1
+              roles: [data, master]
+          partitions:                   # search_index requires shard/replica geometry
+            - partition_id: alerts-index
+              kind: index
+              shard_count: 3
+              replica_count: 1
+          transport_security:
+            transport_security_id: os-transport
+            mode: tls
+            node_verification: true
+          authorization_ref: opensearch-rbac   # same-node runtime.app_authorizations id
+          settings:
+            - setting_id: keystore-pw   # secret-bearing settings omit value
+              name: bootstrap.password
+              classification: redacted
+      platform_applications:            # observed security platform application state
+        - platform_application_id: misp-tip
+          service: misp                 # owning same-node Node.services[].name
+          platform_kind: threat_intel   # OPEN discriminator selects the profile
+          product: MISP
+          version: "2.4"
+          organizations:
+            - organization_id: home-org
+              name: TechVault CTI
+          markings:
+            - marking_id: tlp-amber
+              scheme: tlp
+              level: amber
+          content_objects:              # bounded parsed manifests, never raw bodies
+            - content_object_id: misp-taxonomy
+              kind: taxonomy
+              name: tlp
+              marking_refs: [tlp-amber]
+            - content_object_id: misp-galaxy
+              kind: galaxy_cluster
+            - content_object_id: misp-warninglist
+              kind: warninglist
+            - content_object_id: misp-feed
+              kind: feed
+            - content_object_id: misp-sharing
+              kind: sharing_group
+          authorization_ref: misp-rbac  # same-node runtime.app_authorizations id
+      forwarding_agents:                # observed log-shipping / intel-sync state
+        - forwarding_agent_id: wazuh-sidecar-suricata
+          implementation: wazuh_agent
+          agent_kind: log_forwarder     # OPEN discriminator selects the profile
+          version: "4.7.0"
+          sources:
+            - source_id: eve
+              kind: tailed_path
+              location: /logs/eve.json
+              parse_format: json
+          transforms:
+            - transform_id: passthrough
+              kind: passthrough
+          ship_targets:                 # log_forwarder requires an ingestion endpoint
+            - target_id: manager
+              target_node_ref: wazuh.manager   # cross-node target resolves to a node
+              ingestion_port: 1514
+              enrollment_port: 1515
+              protocol: syslog
+              enrollment_identity_classification: redacted  # identity never recorded
+          buffer_policy:                # log_forwarder requires a buffer_policy
+            buffer_policy_id: client-buffer
+            queue_capacity: 5000
+            eps: 500
+            crypto: aes
+          settings:
+            - setting_id: authd-pass    # secret-bearing settings omit value
+              name: authd.pass
+              classification: redacted
+      orchestration_authorities:        # observed container-spawn authority state
+        - orchestration_authority_id: shuffle-orborus
+          control_interface_ref: docker-sock   # same-node local_control_interfaces id
+          engine: docker
+          privilege_class: host_root_equivalent  # OPEN discriminator selects the profile
+          scope:
+            organization_ref: org-aptl
+            environment_name: shuffle
+          spawn_templates:
+            - template_id: worker
+              image_ref: ghcr.io/shuffle/shuffle-worker:1.4.0
+              purpose: workflow
+          lifecycle_policy:
+            timeout: 300s
+            cleanup: on_exit
+          realized_children:
+            - workload_id: worker-pool
+              image_ref: shuffle-worker:1.4.0
+              count: 12
       identity_authorities:             # observed directory/domain/IdP/IAM state
-        - authority_id: techvault-domain
+        - identity_authority_id: techvault-domain
           kind: domain
           namespace: techvault.local
           domain_name: TECHVAULT
@@ -610,9 +711,9 @@ UID/GID, mode, size, digest algorithm/value pairs, source-package path,
 provenance, stability, and sensitivity classification.
 `local_control_interfaces` describe path-local control APIs such as Unix
 sockets; host-side bind sources use `bind_source_sensitivity` and must omit
-`bind_source` when classified as `redacted` or `operator_secret`; `process`
-records primary execution identity; `processes` records a supervised or
-load-bearing process set; `environment` records observed runtime environment
+`bind_source` when classified as `redacted` or `operator_secret`; `processes`
+records the supervised or load-bearing process set, including the primary
+execution identity; `environment` records observed runtime environment
 variables with provenance and redaction classification; `linux_capabilities`
 records container/Linux
 capability policy; `operational_policy` records restart policy and observed
@@ -705,7 +806,7 @@ runtime, separate from the authored `services` declaration and image-default
 (see [ADR-025](../../decisions/adrs/adr-025-container-network-realization-surface.md)).
 
 `runtime.network_sensors` records observed passive or inline NSM/IDS sensor
-posture hosted by the node. Each entry has a stable `sensor_id`, bounded
+posture hosted by the node. Each entry has a stable `network_sensor_id`, bounded
 implementation/kind/posture/capture-mode fields, capture interfaces such as
 `any`, and `monitored_network_refs` naming the declared switch-backed networks
 whose traffic the sensor observes. Monitoring scope is distinct from network
@@ -740,7 +841,7 @@ reload/control channels, and evidence refs. It is distinct from passive sensor
 posture (`runtime.network_sensors`), SIEM manager inventory
 (`runtime.security_monitoring_managers`), software component identity, raw
 filesystem evidence, HTTP applications, and transport services. Each engine
-has a stable `engine_id`; child collections use stable ids for rule sources,
+has a stable `network_detection_engine_id`; child collections use stable ids for rule sources,
 network sets, output streams, and control channels. File/path refs are checked
 against `runtime.filesystem_inventory` when that inventory is non-empty, and
 network-set refs resolve to switch-backed infrastructure entries. Fully
@@ -776,7 +877,7 @@ value (see
 logical state — what an adversary, defender, agent, scanner, or evaluator can
 observe of a database itself, distinct from the transport-level `services`
 binding, the host exposure in `runtime.network`, and the HTTP surface in
-`runtime.applications`. Each entry is a `DatabaseService` with a stable
+`runtime.applications`. Each entry is a `RuntimeDatabaseService` with a stable
 `database_service_id`, an optional `service` referencing the owning same-node
 `Node.services[].name`, and distinct `engine`/`protocol`/`version` facts — a
 PostgreSQL service is never modelled as `protocol: other`. `listeners` record
@@ -799,6 +900,16 @@ to the runtime application and the database service or logical database, and a
 typed `database_access` block keeps the access `role_ref` and `auth_method`
 structurally validated (see
 [ADR-029](../../decisions/adrs/adr-029-database-logical-state-runtime-surface.md)).
+
+Three further typed relationship subtypes attach domain-specific access detail
+to a top-level edge without re-typing the families they reference:
+`forwarding_edge` (a forwarding agent's target listener role, redacted
+enrollment identity, protocol, and parse format), `service_integration` (a
+platform-to-engine integration's kind, direction, and API auth principal), and
+`proxy_upstream` (a reverse-proxy route's upstream node/service and
+TLS-termination posture, which must agree with the route's own
+`upstream_target`). See
+[ADR-052](../../decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md).
 
 `runtime.dns_services` records observed DNS logical and protocol state hosted
 by the node: authoritative zones, RRsets, typed common RDATA, resolver policy,
@@ -826,7 +937,7 @@ definitions, bounded settings, and evidence refs. It is distinct from
 `Node.services` transport bindings, `runtime.processes` process snapshots,
 `runtime.service_manager_units` lifecycle state, filesystem evidence, raw logs,
 alert telemetry, and raw vendor rule/config payloads. Each manager has a stable
-`manager_id`; child collections use stable ids for listeners, components,
+`security_monitoring_manager_id`; child collections use stable ids for listeners, components,
 agents, groups, content sets, detection definitions, and settings.
 `content_sets` is corpus/file inventory, while `detection_definitions` is the
 typed manifest of loaded parsed definitions from that corpus. Detection
@@ -851,7 +962,7 @@ and
 state, distinct from transport-level `services`, host publication in
 `runtime.network`, HTTP application routes, filesystem evidence, and top-level
 scenario accounts. Each entry is a `RuntimeMailService` with a stable
-`service_id`, optional same-node `Node.services[].name` reference,
+`mail_service_id`, optional same-node `Node.services[].name` reference,
 engine/version/name data, and typed child records for components, listeners,
 domains, mailbox stores, mailboxes, aliases, routing rules, queues, and
 settings. `listeners` bind SMTP/ESMTP, submission, IMAP/IMAPS, POP3, LMTP,
@@ -870,12 +981,12 @@ mailbox/domain/listener refs when an edge needs mail-specific semantics (see
 identity-provider, cloud-IAM, authorization-system, and federation state. It is
 not a provisioning command surface and it is not an Active Directory, LDAP,
 SCIM, SAML, OIDC, or IAM schema clone. Each authority has a stable
-`authority_id`; optional namespace facts such as `domain_name`, `realm`,
+`identity_authority_id`; optional namespace facts such as `domain_name`, `realm`,
 `issuer`, `tenant_id`, and `base_dn`; protocol/API services that may reference
 same-node `Node.services[].name` transport bindings; identity-bearing
 subjects; policies; and typed relationships for membership, trust,
 federation, delegation, ownership, synchronization, and association. Stable
-ACES ids (`authority_id`, `service_id`, `subject_id`, `policy_id`, and
+ACES ids (`identity_authority_id`, `service_id`, `subject_id`, `policy_id`, and
 `relationship_id`) are the portable reference surface and must be unique across
 the owning authority's local namespace. Provider-stable object identifiers
 remain observed data: use the specific field when one exists
@@ -890,6 +1001,168 @@ authority; fully qualified references such as
 in top-level relationships, objectives, module import rewriting, and generic
 reference validation (see
 [ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).
+
+`runtime.app_authorizations` records observed application-internal
+role-based access control stores — the in-app RBAC of a search cluster,
+key-value store, dashboard, threat-intel platform, or case-management
+application, distinct from the wire-protocol directory state in
+`runtime.identity_authorities` and from database engine GRANTs in
+`runtime.database_services`. Each entry is a `RuntimeAppAuthorization` with a
+stable `app_authorization_id`, an open `resource_vocabulary` spine
+discriminator (`index_pattern`, `cql_resource`, `redis_acl`, `app_resource`,
+`unknown`, `other`) that names the resource space the store governs, and an
+`auth_enabled` flag. Tier placement (storage RBAC for OpenSearch/Cassandra/Redis
+versus presentation RBAC for dashboards, Cortex, Shuffle, and TheHive) is
+derived from which spine references the authorization, never declared on the
+model. `principals` are users, service accounts, API keys, or backend roles
+with `reserved`/`hidden` flags; a principal never stores a raw bcrypt hash,
+API key, or password — its credential posture is recorded purely via a
+`credential_classification` (`none`, `redacted`, `operator_secret`), and a
+secret-bearing principal name must declare `redacted` or `operator_secret`.
+`roles` are named local roles. The defining addition over a directory is the
+resource-scoped `permission_grants` entry (role reference → `actions` →
+`resource_patterns`) with an `allow`/`deny` effect and a `resource_kind`; the
+grant's `resource_kind` is the single author-settable source of truth for the
+resource vocabulary, while the authorization's `resource_vocabulary` is the
+declared set validated against the grants. `role_mappings` bind backend roles,
+users, or hosts onto a local role, and `tenants` model namespace scopes. An
+authorization that declares a concrete (non-`unknown`) `resource_vocabulary`
+must carry at least one permission grant with a matching `resource_kind`, and
+`permission_grants`/`role_mappings` `role_ref` values resolve to roles declared
+within the same authorization. Fully qualified refs such as
+`nodes.indexer.runtime.app_authorizations.opensearch-security.roles.admin`
+participate in relationships, generic reference validation, and module import
+rewriting (see
+[ADR-046](../../decisions/adrs/adr-046-app-authorization-runtime-inventory.md)).
+
+`runtime.scheduled_jobs` records observed recurring scheduled jobs hosted by
+the node as a cadence-plus-run-state primitive only, distinct from
+`runtime.service_manager_units` (systemd-scoped lifecycle, including the
+`timer` unit kind) and from the forwarding/sync inputs and outputs that belong
+to the referencing forwarding agent. Each entry is a `RuntimeScheduledJob` with
+a stable `scheduled_job_id`, an `enabled` flag, an optional `command_ref`, an
+optional `schedule`, and an optional `run_state`. The `schedule` carries a
+closed structural `kind` (`interval`, `cron`, `calendar`) and an opaque `spec`
+string; the recurrence vocabulary is fixed (POSIX crontab / RFC 5545 RRULE /
+fixed interval) and therefore carries neither `unknown` nor `other`. The
+`run_state` records observed `last_run`/`next_run` timestamps and an open
+`last_result` outcome (`success`, `failure`, `pending`, `unknown`, `other`).
+Inputs, outputs, and trigger targets are intentionally absent — a bare-container
+ENTRYPOINT cadence loop is encoded here, while what the loop ships is the
+referencing forwarding agent's concern and an event trigger is a relationship,
+not a recurrence. Fully qualified refs such as
+`nodes.sync.runtime.scheduled_jobs.misp-pull` participate in relationships,
+generic reference validation, and module import rewriting (see
+[ADR-047](../../decisions/adrs/adr-047-scheduled-job-runtime-inventory.md)).
+
+`runtime.datastore_services` records the participant-observable logical state of
+a node's *non-relational* datastore — the OpenSearch/Elasticsearch search
+cluster, the Cassandra wide-column store, and the Redis key-value store that the
+irreducibly-relational `runtime.database_services` cannot shape. Each entry is a
+`RuntimeDatastoreService` with a stable `datastore_service_id`, an optional
+`service` referencing the owning same-node `Node.services[].name`, an open
+`engine` fact, and an open `data_model` spine discriminator (`search_index`,
+`wide_column`, `key_value`, `relational`, `unknown`, `other`). The discriminator
+drives a required-profile guard so an under-populated instance fails validation:
+a `search_index` requires at least one `partition` with `kind: index` carrying
+shard/replica geometry; a `wide_column` store requires at least one `keyspace`
+partition with a `replication_strategy` and `replication_factor`; and a
+`key_value` store requires a `persistence` profile and rejects relational
+object-tree (`keyspace`/`column_family`) partitions. `cluster`, `persistence`,
+and `transport_security` are single nested postures, while `nodes`,
+`partitions`, and `settings` are id-bearing child collections; `templates`,
+`aliases`, `mappings`, `lifecycle_policies`, `ingest_pipelines`,
+`pubsub_channels`, `queues_streams`, `engine_plugins`, and `backup_targets` are
+bare reference-name lists. `settings` reuse the shared runtime sensitivity
+vocabulary so secret-bearing names omit their raw value and classify
+`redacted`/`operator_secret`. Application-internal RBAC is delegated to
+`runtime.app_authorizations` via the string `authorization_ref` (resolved to a
+same-node `app_authorization_id`), so the surface carries no embedded
+principal/role/grant. Fully qualified refs such as
+`nodes.indexer.runtime.datastore_services.opensearch-store.partitions.alerts-index`
+participate in relationships, generic reference validation, and module import
+rewriting (see
+[ADR-048](../../decisions/adrs/adr-048-datastore-service-runtime-inventory.md)).
+
+`runtime.platform_applications` records the participant-observable runtime state
+of a node's security platform application — the threat-intelligence platform,
+SOAR, analyzer engine, case-management application, and analytics dashboard.
+Each entry is a `RuntimePlatformApplication` with a stable
+`platform_application_id`, an optional same-node `service` ref, and an open
+`platform_kind` spine discriminator (`threat_intel`, `soar`, `analyzer_engine`,
+`case_management`, `analytics_dashboard`, `unknown`, `other`). The discriminator
+drives a required-profile guard: `threat_intel` requires taxonomy, galaxy
+cluster, warninglist, feed, and sharing-group content objects; `soar` requires a
+workflow content object; `analyzer_engine` requires analyzer/responder content
+objects plus an `execution_policy`; `case_management` requires case-template and
+custom-field content objects; and `analytics_dashboard` requires at least one
+saved-object content object (`index_pattern`/`visualization`/`dashboard`/`search`)
+carrying references plus at least one `upstream_binding` with role
+`index_backend`/`data_source`. `content_objects` are bounded parsed manifests —
+typed `kind` (open enum), bounded typed `attributes`, typed `references`,
+`marking_refs`, and `evidence_refs` — structurally never a raw object body.
+`markings` carry a closed releasability `scheme` (`tlp`/`pap`/`distribution`).
+Within an application, content-object `references` resolve to sibling
+`content_object_id` values and `marking_refs` to sibling `marking_id` values, and
+the string `authorization_ref` resolves to a same-node `app_authorization_id`.
+Fully qualified refs such as
+`nodes.tip.runtime.platform_applications.misp-tip.content_objects.misp-feed`
+participate in relationships, generic reference validation, and module import
+rewriting (see
+[ADR-049](../../decisions/adrs/adr-049-platform-application-runtime-inventory.md)).
+
+`runtime.forwarding_agents` records observed forwarding / intel-sync agent state
+hosted by the node: the agent-side `(source, transform, ship-target, buffer)`
+shipping spine that the SIEM/security-monitoring *manager* half
+(`runtime.security_monitoring_managers`) and the detection-engine *consumer*
+(`runtime.network_detection_engines`) cannot shape. Each entry is a
+`RuntimeForwardingAgent` with a stable `forwarding_agent_id`, an open
+`agent_kind` spine discriminator (`log_forwarder`, `content_sync`, `unknown`,
+`other`), and typed children: `sources` (tailed path, API pull, or queue inputs),
+`transforms` (`passthrough`/`parse`/`ioc_to_rule`), `ship_targets` (downstream
+event-ingest and/or enrollment endpoints), an optional `buffer_policy`
+(queue/back-pressure posture), `reload_channels` (downstream rule-reload sockets),
+and bounded `settings`. The discriminator drives a required-profile guard:
+`log_forwarder` requires a `buffer_policy` and at least one `ship_target` carrying
+an ingestion endpoint and rejects any `ioc_to_rule` transform; `content_sync`
+requires at least one `api_pull` source, one `ioc_to_rule` transform, and one
+`reload_channel`, and rejects a `buffer_policy` and any `ship_target` enrollment
+endpoint. A ship target's `target_node_ref`, when concrete, resolves to a defined
+node, and a `target_service_ref` resolves to a service on the referenced node
+(or, absent a node ref, on the owning node). Ship-target enrollment identities and
+secret-bearing settings never carry raw values: they classify
+`redacted`/`operator_secret` through the shared `name_indicates_secret` helper and
+the closed enrollment lattice. Cadence composes a `runtime.scheduled_jobs` entry
+and the inter-node trust edge composes a relationship forwarding edge — neither is
+re-typed here. Fully qualified refs such as
+`nodes.sensor.runtime.forwarding_agents.wazuh-sidecar.ship_targets.manager`
+participate in relationships, generic reference validation, and module import
+rewriting (see
+[ADR-050](../../decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md)).
+
+`runtime.orchestration_authorities` records observed container-spawn
+orchestration-authority state hosted by the node: the authority to *spawn*
+containers/workloads through a control interface — a SOAR orchestrator or an
+analyzer engine holding `docker.sock` read-write. `RuntimeControlInterface`
+(`runtime.local_control_interfaces`) types the docker.sock *shell* — a present
+read-write Unix socket — but carries no field for what the holder is authorized to
+*do*; this family carries the spawn contract. Each entry is a
+`RuntimeOrchestrationAuthority` with a stable `orchestration_authority_id`, an open
+`engine` taxonomy (`docker`/`containerd`/`podman`/`kubernetes`/`cri_o`), an optional
+`scope`, typed `spawn_templates` (image + purpose), an optional `lifecycle_policy`,
+typed `realized_children` (observed spawned workloads), and an open
+`privilege_class` discriminator (`host_root_equivalent`, `namespaced`, `unknown`,
+`other`). The `control_interface_ref` is the `control_interface_id` of a same-node
+`RuntimeControlInterface` — referenced, never duplicated — and resolves at scenario
+scope. The discriminator drives a required-profile guard: a `host_root_equivalent`
+authority requires a concrete `control_interface_ref` (model-local), and at
+scenario scope that interface must resolve to a read-write docker socket (a
+read-write `unix_socket` whose path ends in `docker.sock`). Fully qualified refs
+such as
+`nodes.soar.runtime.orchestration_authorities.shuffle-orborus.spawn_templates.worker`
+participate in relationships, generic reference validation, and module import
+rewriting (see
+[ADR-051](../../decisions/adrs/adr-051-orchestration-authority-runtime-inventory.md)).
 
 `source` identifies the node's artifact by provider-neutral `name` and
 `version`. When that artifact is a custom-built container image, the optional
@@ -1211,22 +1484,31 @@ relationships, content item `name` values, named service bindings
 (`nodes.<node>.services.<service_name>`), runtime service listener refs
 (`nodes.<node>.runtime.service_listeners.<listener_id>`), runtime
 identity-authority refs
-(`nodes.<node>.runtime.identity_authorities.<authority_id>` and nested
+(`nodes.<node>.runtime.identity_authorities.<identity_authority_id>` and nested
 `.services.<service_id>`, `.subjects.<subject_id>`, `.policies.<policy_id>`,
 or `.relationships.<relationship_id>` refs), runtime DNS refs
 (`nodes.<node>.runtime.dns_services.<dns_service_id>` and nested
 `.zones.<zone_id>` or `.zones.<zone_id>.rrsets.<rrset_id>` refs), named
 network sensor refs
-(`nodes.<node>.runtime.network_sensors.<sensor_id>`), named
+(`nodes.<node>.runtime.network_sensors.<network_sensor_id>`), named
 network detection-engine refs
-(`nodes.<node>.runtime.network_detection_engines.<engine_id>` and nested
+(`nodes.<node>.runtime.network_detection_engines.<network_detection_engine_id>` and nested
 `.rule_sources.<source_id>`, `.network_sets.<set_id>`,
 `.output_streams.<stream_id>`, or `.control_channels.<channel_id>` refs), named
 security-monitoring manager refs
-(`nodes.<node>.runtime.security_monitoring_managers.<manager_id>` and nested
+(`nodes.<node>.runtime.security_monitoring_managers.<security_monitoring_manager_id>` and nested
 `.listeners.<listener_id>`, `.components.<component_id>`,
 `.agents.<agent_id>`, `.agent_groups.<group_id>`,
-`.content_sets.<content_id>`, or `.settings.<setting_id>` refs), and named ACL
+`.content_sets.<content_id>`, or `.settings.<setting_id>` refs), named datastore
+service refs
+(`nodes.<node>.runtime.datastore_services.<datastore_service_id>` and nested
+`.nodes.<node_id>`, `.partitions.<partition_id>`, or `.settings.<setting_id>`
+refs), named platform application refs
+(`nodes.<node>.runtime.platform_applications.<platform_application_id>` and
+nested `.organizations.<organization_id>`, `.tenants.<tenant_id>`,
+`.content_objects.<content_object_id>`, `.markings.<marking_id>`,
+`.upstream_bindings.<binding_id>`, `.connectors.<connector_id>`, or
+`.settings.<setting_id>` refs), and named ACL
 rules (`infrastructure.<infra>.acls.<acl_name>`).
 
 Bare refs like `webapp` are valid when they are unambiguous. Any top-level section key may also be referenced explicitly as `<section>.<name>`, for example `nodes.webapp`, `features.postgres`, `accounts.db-admin`, or `infrastructure.dmz-net`. Content items may be referenced as `content.<content_name>.items.<item_name>` when a bare item `name` would collide with some other named element.

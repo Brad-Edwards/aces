@@ -33,6 +33,7 @@ from .runtime_mail_vocab import (
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
+    name_indicates_secret,
     parse_runtime_enum_or_var,
     require_symbol,
 )
@@ -69,19 +70,6 @@ _EMAIL_ADDRESS = re.compile(r"^[^@\s]+@[^@\s]+$")
 _REDACTED_SENSITIVITIES = frozenset(
     {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
 )
-_SECRET_NAME_TOKENS: tuple[str, ...] = (
-    "pass" + "word",
-    "passwd",
-    "passphrase",
-    "sec" + "ret",
-    "credential",
-    "token",
-    "private_key",
-    "privatekey",
-    "keytab",
-    "sasl_passwd",
-    "sasl_password",
-)
 
 
 def _require_non_empty(value: str, *, field_name: str) -> str:
@@ -108,13 +96,8 @@ def _domain_name_or_var(value: str, *, field_name: str) -> str:
     return value
 
 
-def _name_indicates_secret(name: str) -> bool:
-    lowered = name.lower()
-    return any(token in lowered for token in _SECRET_NAME_TOKENS)
-
-
 def _setting_name_is_concrete_secret(name: object) -> bool:
-    return isinstance(name, str) and not is_variable_ref(name) and _name_indicates_secret(name)
+    return isinstance(name, str) and not is_variable_ref(name) and name_indicates_secret(name)
 
 
 def _reject_duplicates(values: list[str], *, label: str, container_label: str) -> None:
@@ -123,32 +106,6 @@ def _reject_duplicates(values: list[str], *, label: str, container_label: str) -
         if value in seen:
             raise ValueError(f"Duplicate runtime mail-service {label} '{value}' in {container_label}")
         seen.add(value)
-
-
-def _reject_duplicate_local_ref_ids(service: "RuntimeMailService") -> None:
-    entries: list[tuple[str, str]] = [("service_id", service.service_id)]
-    for label, collection_name in (
-        ("component_id", "components"),
-        ("listener_id", "listeners"),
-        ("domain_id", "domains"),
-        ("store_id", "mailbox_stores"),
-        ("mailbox_id", "mailboxes"),
-        ("alias_id", "aliases"),
-        ("rule_id", "routing_rules"),
-        ("queue_id", "queues"),
-        ("setting_id", "settings"),
-    ):
-        entries.extend((label, getattr(item, label)) for item in getattr(service, collection_name))
-
-    seen: dict[str, str] = {}
-    for label, value in entries:
-        prior = seen.get(value)
-        if prior is not None:
-            raise ValueError(
-                f"Duplicate runtime mail-service stable id '{value}' in service "
-                f"'{service.service_id}' across {prior} and {label}"
-            )
-        seen[value] = label
 
 
 class RuntimeMailComponent(SDLModel):
@@ -494,7 +451,7 @@ class RuntimeMailSetting(SDLModel):
 class RuntimeMailService(SDLModel):
     """A node-scoped runtime mail-service logical inventory."""
 
-    service_id: str
+    mail_service_id: str
     service: str = ""
     engine: str = ""
     version: str = ""
@@ -510,13 +467,18 @@ class RuntimeMailService(SDLModel):
     queues: list[RuntimeMailQueue] = Field(default_factory=list)
     settings: list[RuntimeMailSetting] = Field(default_factory=list)
 
-    @field_validator("service_id")
+    @field_validator("mail_service_id")
     @classmethod
-    def validate_service_id(cls, v: str) -> str:
-        return require_symbol(v, field_name="service_id")
+    def validate_mail_service_id(cls, v: str) -> str:
+        return require_symbol(v, field_name="mail_service_id")
 
     @model_validator(mode="after")
     def validate_service(self) -> "RuntimeMailService":
+        self._reject_duplicate_collection_ids()
+        self._reject_duplicate_local_ref_ids()
+        return self
+
+    def _reject_duplicate_collection_ids(self) -> None:
         for label, attr in (
             ("component_id", "components"),
             ("listener_id", "listeners"),
@@ -531,10 +493,33 @@ class RuntimeMailService(SDLModel):
             _reject_duplicates(
                 [getattr(item, label) for item in getattr(self, attr)],
                 label=label,
-                container_label=f"mail service '{self.service_id}'",
+                container_label=f"mail service '{self.mail_service_id}'",
             )
-        _reject_duplicate_local_ref_ids(self)
-        return self
+
+    def _reject_duplicate_local_ref_ids(self) -> None:
+        entries: list[tuple[str, str]] = [("mail_service_id", self.mail_service_id)]
+        for label, collection_name in (
+            ("component_id", "components"),
+            ("listener_id", "listeners"),
+            ("domain_id", "domains"),
+            ("store_id", "mailbox_stores"),
+            ("mailbox_id", "mailboxes"),
+            ("alias_id", "aliases"),
+            ("rule_id", "routing_rules"),
+            ("queue_id", "queues"),
+            ("setting_id", "settings"),
+        ):
+            entries.extend((label, getattr(item, label)) for item in getattr(self, collection_name))
+
+        seen: dict[str, str] = {}
+        for label, value in entries:
+            prior = seen.get(value)
+            if prior is not None:
+                raise ValueError(
+                    f"Duplicate runtime mail-service stable id '{value}' in service "
+                    f"'{self.mail_service_id}' across {prior} and {label}"
+                )
+            seen[value] = label
 
 
 class RelationshipMailAccess(SDLModel):

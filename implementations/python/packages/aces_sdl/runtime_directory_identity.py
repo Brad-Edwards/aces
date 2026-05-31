@@ -13,7 +13,13 @@ from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from ._base import SDLModel, is_variable_ref, parse_int_or_var
 from .runtime_filesystem import RuntimeSensitivityClassification
-from .runtime_values import coerce_string_list, parse_optional_bool_or_var, parse_runtime_enum_or_var, require_symbol
+from .runtime_values import (
+    coerce_string_list,
+    name_indicates_secret,
+    parse_optional_bool_or_var,
+    parse_runtime_enum_or_var,
+    require_symbol,
+)
 
 __all__ = [
     "RuntimeIdentityAttribute",
@@ -30,24 +36,6 @@ __all__ = [
     "RuntimeIdentitySubjectKind",
 ]
 
-_SECRET_NAME_TOKENS = (
-    "password",  # noqa: S105
-    "passwd",
-    "pwd",
-    "secret",  # noqa: S105
-    "credential",
-    "credentials",
-    "keytab",
-    "krbprincipalkey",
-    "supplementalcredentials",
-    "private_key",
-    "privatekey",
-    "token",
-    "client_secret",  # noqa: S105
-    "clientsecret",
-    "access_token",  # noqa: S105
-    "refresh_token",  # noqa: S105
-)
 _REDACTED_SENSITIVITIES = frozenset(
     {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
 )
@@ -63,6 +51,7 @@ class RuntimeIdentityAuthorityKind(str, Enum):
     CLOUD_IAM = "cloud_iam"
     AUTHORIZATION_SYSTEM = "authorization_system"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeIdentityAuthorityProtocol(str, Enum):
@@ -78,6 +67,7 @@ class RuntimeIdentityAuthorityProtocol(str, Enum):
     AD_DS_RPC = "ad_ds_rpc"
     GRAPH_API = "graph_api"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeIdentitySubjectKind(str, Enum):
@@ -93,6 +83,7 @@ class RuntimeIdentitySubjectKind(str, Enum):
     APPLICATION = "application"
     ORGANIZATIONAL_UNIT = "organizational_unit"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeIdentityRelationshipKind(str, Enum):
@@ -108,6 +99,7 @@ class RuntimeIdentityRelationshipKind(str, Enum):
     SYNCS_FROM = "syncs_from"
     ASSOCIATED = "associated"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeIdentityPolicyKind(str, Enum):
@@ -122,6 +114,7 @@ class RuntimeIdentityPolicyKind(str, Enum):
     GROUP_POLICY = "group_policy"
     TRUST = "trust"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeIdentityRecordOrigin(str, Enum):
@@ -136,11 +129,6 @@ class RuntimeIdentityRecordOrigin(str, Enum):
     OPERATOR = "operator"
     UNKNOWN = "unknown"
     OTHER = "other"
-
-
-def _name_indicates_secret(name: str) -> bool:
-    lowered = name.lower().replace("-", "_")
-    return any(token in lowered for token in _SECRET_NAME_TOKENS)
 
 
 def _require_non_empty(value: str, *, field_name: str) -> str:
@@ -161,7 +149,7 @@ def _reject_duplicates(values: Any, *, label: str, container_label: str) -> None
 
 def _reject_duplicate_local_ref_ids(authority: "RuntimeIdentityAuthority") -> None:
     seen: dict[str, str] = {}
-    entries: list[tuple[str, str]] = [("authority_id", authority.authority_id)]
+    entries: list[tuple[str, str]] = [("identity_authority_id", authority.identity_authority_id)]
     entries.extend(("service_id", service.service_id) for service in authority.services)
     entries.extend(("subject_id", subject.subject_id) for subject in authority.subjects)
     entries.extend(("policy_id", policy.policy_id) for policy in authority.policies)
@@ -172,7 +160,7 @@ def _reject_duplicate_local_ref_ids(authority: "RuntimeIdentityAuthority") -> No
         if prior is not None:
             raise ValueError(
                 f"Duplicate runtime identity stable id '{value}' in identity authority "
-                f"'{authority.authority_id}' across {prior} and {label}"
+                f"'{authority.identity_authority_id}' across {prior} and {label}"
             )
         seen[value] = label
 
@@ -247,7 +235,7 @@ class RuntimeIdentityAttribute(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_values(self) -> "RuntimeIdentityAttribute":
-        if _name_indicates_secret(self.name):
+        if name_indicates_secret(self.name):
             self._enforce_secret_name_redaction()
         elif self.values and self.value_classification in _REDACTED_SENSITIVITIES:
             raise ValueError(
@@ -440,7 +428,7 @@ class RuntimeIdentityRelationship(SDLModel):
 class RuntimeIdentityAuthority(SDLModel):
     """A node-scoped identity authority inventory."""
 
-    authority_id: str
+    identity_authority_id: str
     kind: RuntimeIdentityAuthorityKind | str = RuntimeIdentityAuthorityKind.OTHER
     name: str = ""
     namespace: str = ""
@@ -455,10 +443,10 @@ class RuntimeIdentityAuthority(SDLModel):
     policies: list[RuntimeIdentityPolicy] = Field(default_factory=list)
     relationships: list[RuntimeIdentityRelationship] = Field(default_factory=list)
 
-    @field_validator("authority_id")
+    @field_validator("identity_authority_id")
     @classmethod
-    def validate_authority_id(cls, v: str) -> str:
-        return require_symbol(v, field_name="authority_id")
+    def validate_identity_authority_id(cls, v: str) -> str:
+        return require_symbol(v, field_name="identity_authority_id")
 
     @field_validator("kind", mode="before")
     @classmethod
@@ -467,7 +455,7 @@ class RuntimeIdentityAuthority(SDLModel):
 
     @model_validator(mode="after")
     def validate_authority(self) -> "RuntimeIdentityAuthority":
-        container = f"identity authority '{self.authority_id}'"
+        container = f"identity authority '{self.identity_authority_id}'"
         _reject_duplicates(
             (service.service_id for service in self.services), label="service_id", container_label=container
         )

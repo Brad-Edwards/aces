@@ -32,7 +32,7 @@ def _validate(scenario: Scenario) -> list[str]:
 
 def _suricata_sensor(**overrides) -> dict:
     sensor = {
-        "sensor_id": "suricata",
+        "network_sensor_id": "suricata",
         "implementation": "suricata",
         "sensor_kind": "ids",
         "monitoring_posture": "passive",
@@ -98,7 +98,7 @@ def test_vm_runtime_network_sensor_inventory() -> None:
     node = Node(type="vm", runtime={"network_sensors": [_suricata_sensor()]})
 
     sensor = node.runtime.network_sensors[0]
-    assert sensor.sensor_id == "suricata"
+    assert sensor.network_sensor_id == "suricata"
     assert sensor.implementation == RuntimeNetworkSensorImplementation.SURICATA
     assert sensor.sensor_kind == RuntimeNetworkSensorKind.IDS
     assert sensor.monitoring_posture == RuntimeNetworkSensorMonitoringPosture.PASSIVE
@@ -121,7 +121,7 @@ def test_parser_accepts_kebab_case_runtime_network_sensors() -> None:
                 endpoints:
                   - {network: dmz-net, ip-address: 172.20.1.50}
               network-sensors:
-                - sensor-id: suricata
+                - network-sensor-id: suricata
                   implementation: SURICATA
                   sensor-kind: ids
                   monitoring-posture: passive
@@ -135,7 +135,7 @@ def test_parser_accepts_kebab_case_runtime_network_sensors() -> None:
     )
 
     sensor = scenario.nodes["suricata"].runtime.network_sensors[0]
-    assert sensor.sensor_id == "suricata"
+    assert sensor.network_sensor_id == "suricata"
     assert sensor.sensor_kind == RuntimeNetworkSensorKind.IDS
     assert sensor.monitoring_posture == RuntimeNetworkSensorMonitoringPosture.PASSIVE
     assert sensor.capture_mode == RuntimeNetworkSensorCaptureMode.PCAP
@@ -145,7 +145,7 @@ def test_parser_accepts_kebab_case_runtime_network_sensors() -> None:
 
 def test_network_sensor_rejects_duplicate_monitored_network_refs() -> None:
     with pytest.raises(ValidationError, match="Duplicate runtime network sensor monitored_network_refs"):
-        RuntimeNetworkSensor(sensor_id="suricata", monitored_network_refs=["dmz-net", "dmz-net"])
+        RuntimeNetworkSensor(network_sensor_id="suricata", monitored_network_refs=["dmz-net", "dmz-net"])
 
 
 class TestRuntimeNetworkSensorSemanticValidation:

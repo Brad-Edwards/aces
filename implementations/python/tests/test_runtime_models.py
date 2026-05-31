@@ -91,17 +91,17 @@ nodes:
           stability: log
           sensitivity: operator-secret
       local-control-interfaces:
-        - path: /run/docker.sock
+        - control-interface-id: docker-sock
+          path: /run/docker.sock
           kind: unix-socket
           protocol: docker
           bind-source-sensitivity: operator-secret
           access: read-write
-      process:
-        pid: 1
-        command: ./shufflebackend
-        user: root
-        working-directory: /app
       processes:
+        - name: shufflebackend
+          command: ./shufflebackend
+          user: root
+          working-directory: /app
         - name: supervisord
           pid: 1
           command: supervisord -n
@@ -228,10 +228,9 @@ nodes:
         assert runtime["filesystem_inventory"][1]["sensitivity"] == "operator_secret"
         assert runtime["local_control_interfaces"][0]["path"] == "/run/docker.sock"
         assert runtime["local_control_interfaces"][0]["bind_source_sensitivity"] == "operator_secret"
-        assert runtime["process"]["pid"] == 1
-        assert runtime["process"]["command"] == ["./shufflebackend"]
-        assert runtime["processes"][0]["name"] == "supervisord"
-        assert runtime["processes"][1]["parent_pid"] == 1
+        assert runtime["processes"][0]["command"] == ["./shufflebackend"]
+        assert runtime["processes"][1]["name"] == "supervisord"
+        assert runtime["processes"][2]["parent_pid"] == 1
         assert runtime["environment"][0]["name"] == "TECHVAULT_ADMIN_PASSWORD"
         assert runtime["environment"][0]["value_classification"] == "redacted"
         assert runtime["environment"][1]["value_classification"] == "secret_fixture"
@@ -297,7 +296,7 @@ nodes:
       - {port: 88, name: kerberos}
     runtime:
       identity-authorities:
-        - authority-id: techvault-domain
+        - identity-authority-id: techvault-domain
           kind: domain
           namespace: techvault.local
           domain-name: TECHVAULT
@@ -317,7 +316,7 @@ nodes:
 
         runtime = model.node_deployments["provision.node.ad"].spec["node"]["runtime"]
         authority = runtime["identity_authorities"][0]
-        assert authority["authority_id"] == "techvault-domain"
+        assert authority["identity_authority_id"] == "techvault-domain"
         assert authority["kind"] == "domain"
         assert authority["services"][0]["protocol"] == "ldap"
         assert authority["subjects"][1]["kind"] == "group"
@@ -340,7 +339,7 @@ nodes:
         users:
           - {username: svc-fileshare, uid: 1100, primary_gid: 1100, primary_group: svc-fileshare}
       file-services:
-        - service-id: fileshare-smb
+        - file-service-id: fileshare-smb
           service: smb
           protocol: smb
           backend: samba-4.x
@@ -403,7 +402,7 @@ nodes:
 
         runtime = model.node_deployments["provision.node.fileshare"].spec["node"]["runtime"]
         file_service = runtime["file_services"][0]
-        assert file_service["service_id"] == "fileshare-smb"
+        assert file_service["file_service_id"] == "fileshare-smb"
         assert file_service["protocol"] == "smb"
         assert file_service["shares"][0]["kind"] == "disk"
         assert file_service["shares"][0]["guest_ok"] is True

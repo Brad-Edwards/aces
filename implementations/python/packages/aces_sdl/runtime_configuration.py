@@ -5,15 +5,21 @@ from enum import Enum
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
+from . import runtime_app_authorization as _runtime_app_authorization
 from . import runtime_application as _runtime_application
 from . import runtime_database as _runtime_database
+from . import runtime_datastore as _runtime_datastore
 from . import runtime_directory_identity as _runtime_directory_identity
 from . import runtime_dns as _runtime_dns
 from . import runtime_file_service as _runtime_file_service
+from . import runtime_forwarding_agent as _runtime_forwarding_agent
 from . import runtime_listeners as _runtime_listeners
 from . import runtime_mail_service as _runtime_mail_service
 from . import runtime_network_detection as _runtime_network_detection
 from . import runtime_network_sensor as _runtime_network_sensor
+from . import runtime_orchestration as _runtime_orchestration
+from . import runtime_platform_application as _runtime_platform_application
+from . import runtime_scheduled_job as _runtime_scheduled_job
 from . import runtime_security_monitoring as _runtime_security_monitoring
 from . import runtime_ssh_server as _runtime_ssh_server
 from ._base import (
@@ -166,6 +172,7 @@ class RuntimePackageVulnerabilitySeverity(str, Enum):
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
+    OTHER = "other"
 
 
 class RuntimeEnvironmentValueClassification(str, Enum):
@@ -175,6 +182,7 @@ class RuntimeEnvironmentValueClassification(str, Enum):
     REDACTED = "redacted"
     SECRET_FIXTURE = "secret_fixture"  # noqa: S105
     UNKNOWN = "unknown"
+    OTHER = "other"
 
 
 class RuntimeEnvironmentVariableProvenance(str, Enum):
@@ -355,7 +363,6 @@ class RuntimeConfiguration(SDLModel):
     mounts: list[RuntimeMount] = Field(default_factory=list)
     filesystem_inventory: list[RuntimeFilesystemEntry] = Field(default_factory=list)
     local_control_interfaces: list[RuntimeControlInterface] = Field(default_factory=list)
-    process: RuntimeProcessIdentity | None = None
     processes: list[RuntimeProcessIdentity] = Field(default_factory=list)
     environment: list[RuntimeEnvironmentVariable] = Field(default_factory=list)
     linux_capabilities: RuntimeCapabilityPolicy | None = None
@@ -369,7 +376,7 @@ class RuntimeConfiguration(SDLModel):
     network: RuntimeNetworkRealization | None = None
     service_listeners: list[_runtime_listeners.RuntimeServiceListener] = Field(default_factory=list)
     applications: list[_runtime_application.RuntimeApplicationSurface] = Field(default_factory=list)
-    database_services: list[_runtime_database.DatabaseService] = Field(default_factory=list)
+    database_services: list[_runtime_database.RuntimeDatabaseService] = Field(default_factory=list)
     dns_services: list[_runtime_dns.RuntimeDnsService] = Field(default_factory=list)
     network_sensors: list[_runtime_network_sensor.RuntimeNetworkSensor] = Field(default_factory=list)
     network_detection_engines: list[_runtime_network_detection.RuntimeNetworkDetectionEngine] = Field(
@@ -378,7 +385,13 @@ class RuntimeConfiguration(SDLModel):
     security_monitoring_managers: list[_runtime_security_monitoring.RuntimeSecurityMonitoringManager] = Field(
         default_factory=list
     )
-    ssh_servers: list[_runtime_ssh_server.SshServerConfig] = Field(default_factory=list)
+    ssh_servers: list[_runtime_ssh_server.RuntimeSshServer] = Field(default_factory=list)
+    datastore_services: list[_runtime_datastore.RuntimeDatastoreService] = Field(default_factory=list)
+    platform_applications: list[_runtime_platform_application.RuntimePlatformApplication] = Field(default_factory=list)
+    forwarding_agents: list[_runtime_forwarding_agent.RuntimeForwardingAgent] = Field(default_factory=list)
+    orchestration_authorities: list[_runtime_orchestration.RuntimeOrchestrationAuthority] = Field(default_factory=list)
+    app_authorizations: list[_runtime_app_authorization.RuntimeAppAuthorization] = Field(default_factory=list)
+    scheduled_jobs: list[_runtime_scheduled_job.RuntimeScheduledJob] = Field(default_factory=list)
     service_manager_units: list[ServiceManagerUnit] = Field(default_factory=list)
     packages: list[RuntimePackage] = Field(default_factory=list)
     software_components: list[RuntimeSoftwareComponent] = Field(default_factory=list)
@@ -389,17 +402,54 @@ class RuntimeConfiguration(SDLModel):
     def validate_unique_runtime_entries(self) -> "RuntimeConfiguration":
         _reject_duplicate_keys(self.environment, attr="name", label="environment variable")
         _reject_duplicate_keys(self.mounts, attr="target", label="mount target")
+        _reject_duplicate_keys(
+            self.local_control_interfaces,
+            attr="control_interface_id",
+            label="control_interface_id",
+        )
         _reject_duplicate_keys(self.filesystem_inventory, attr="path", label="filesystem path")
         _reject_duplicate_keys(self.processes, attr="name", label="process name")
         _reject_duplicate_keys(self.processes, attr="pid", label="process pid")
-        _reject_duplicate_keys(self.service_listeners, attr="listener_id", label="service_listener listener_id")
+        _reject_duplicate_keys(
+            self.service_listeners, attr="service_listener_id", label="service_listener service_listener_id"
+        )
         _reject_duplicate_keys(self.applications, attr="application_id", label="application_id")
         _reject_duplicate_keys(self.database_services, attr="database_service_id", label="database_service_id")
         _reject_duplicate_keys(self.dns_services, attr="dns_service_id", label="dns_service_id")
-        _reject_duplicate_keys(self.network_sensors, attr="sensor_id", label="network sensor")
-        _reject_duplicate_keys(self.network_detection_engines, attr="engine_id", label="network detection engine")
-        _reject_duplicate_keys(self.security_monitoring_managers, attr="manager_id", label="security manager")
-        _reject_duplicate_keys(self.ssh_servers, attr="server_id", label="ssh_server server_id")
+        _reject_duplicate_keys(self.network_sensors, attr="network_sensor_id", label="network sensor")
+        _reject_duplicate_keys(
+            self.network_detection_engines, attr="network_detection_engine_id", label="network detection engine"
+        )
+        _reject_duplicate_keys(
+            self.security_monitoring_managers, attr="security_monitoring_manager_id", label="security manager"
+        )
+        _reject_duplicate_keys(self.ssh_servers, attr="ssh_server_id", label="ssh_server ssh_server_id")
+        _reject_duplicate_keys(
+            self.datastore_services,
+            attr="datastore_service_id",
+            label="datastore_service_id",
+        )
+        _reject_duplicate_keys(
+            self.platform_applications,
+            attr="platform_application_id",
+            label="platform_application_id",
+        )
+        _reject_duplicate_keys(
+            self.forwarding_agents,
+            attr="forwarding_agent_id",
+            label="forwarding_agent_id",
+        )
+        _reject_duplicate_keys(
+            self.orchestration_authorities,
+            attr="orchestration_authority_id",
+            label="orchestration_authority_id",
+        )
+        _reject_duplicate_keys(
+            self.app_authorizations,
+            attr="app_authorization_id",
+            label="app_authorization_id",
+        )
+        _reject_duplicate_keys(self.scheduled_jobs, attr="scheduled_job_id", label="scheduled_job_id")
         _reject_duplicate_keys(
             self.service_manager_units,
             attr="unit_id",
@@ -410,8 +460,8 @@ class RuntimeConfiguration(SDLModel):
             attr="unit_name",
             label="service_manager_unit unit_name",
         )
-        _reject_duplicate_keys(self.identity_authorities, attr="authority_id", label="identity authority")
-        _reject_duplicate_keys(self.file_services, attr="service_id", label="file_service service_id")
-        _reject_duplicate_keys(self.mail_services, attr="service_id", label="mail_service service_id")
+        _reject_duplicate_keys(self.identity_authorities, attr="identity_authority_id", label="identity authority")
+        _reject_duplicate_keys(self.file_services, attr="file_service_id", label="file_service file_service_id")
+        _reject_duplicate_keys(self.mail_services, attr="mail_service_id", label="mail_service mail_service_id")
         _reject_duplicate_keys(self.software_components, attr="component_id", label="software component")
         return self

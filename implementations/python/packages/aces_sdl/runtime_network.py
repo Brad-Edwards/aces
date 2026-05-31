@@ -70,6 +70,7 @@ class RuntimeNetworkDriver(str, Enum):
     MACVLAN = "macvlan"
     NONE = "none"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 def _mac_address_or_var(value: str, *, field_name: str) -> str:

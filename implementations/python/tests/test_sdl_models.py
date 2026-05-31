@@ -20,7 +20,6 @@ from aces.core.sdl.nodes import (
     DatabaseProtocol,
     DatabaseRoleType,
     DatabaseSchema,
-    DatabaseService,
     DatabaseSetting,
     DatabaseSettingProvenance,
     DatabaseTable,
@@ -45,6 +44,7 @@ from aces.core.sdl.nodes import (
     ImageVerificationStatus,
     Node,
     NodeType,
+    RelationshipProxyUpstream,
     Resources,
     Role,
     RuntimeApplicationDisclosure,
@@ -55,6 +55,8 @@ from aces.core.sdl.nodes import (
     RuntimeApplicationRedirect,
     RuntimeApplicationResponse,
     RuntimeApplicationRoute,
+    RuntimeApplicationRouteUpstreamScheme,
+    RuntimeApplicationRouteUpstreamTarget,
     RuntimeApplicationSurface,
     RuntimeCapabilityOverrideScope,
     RuntimeCapabilityPolicy,
@@ -62,6 +64,7 @@ from aces.core.sdl.nodes import (
     RuntimeControlInterface,
     RuntimeControlInterfaceAccess,
     RuntimeControlInterfaceKind,
+    RuntimeDatabaseService,
     RuntimeEnvironmentValueClassification,
     RuntimeEnvironmentVariableProvenance,
     RuntimeFileService,
@@ -394,7 +397,7 @@ class TestNode:
             ("roles", {"admin": {"username": "root"}}),
             ("services", [{"port": 80, "name": "http"}]),
             ("asset_value", {"confidentiality": "high"}),
-            ("runtime", {"process": {"pid": 1, "command": "./shufflebackend"}}),
+            ("runtime", {"processes": [{"pid": 1, "command": "./shufflebackend"}]}),
         ],
     )
     def test_switch_rejects_other_vm_only_fields(self, field_name, value):
@@ -415,6 +418,7 @@ class TestNode:
                 ],
                 "local_control_interfaces": [
                     {
+                        "control_interface_id": "docker-sock",
                         "path": "/run/docker.sock",
                         "kind": "unix_socket",
                         "protocol": "docker",
@@ -422,12 +426,14 @@ class TestNode:
                         "access": "read_write",
                     }
                 ],
-                "process": {
-                    "pid": 1,
-                    "command": "./shufflebackend",
-                    "user": "root",
-                    "working_directory": "/app",
-                },
+                "processes": [
+                    {
+                        "pid": 1,
+                        "command": "./shufflebackend",
+                        "user": "root",
+                        "working_directory": "/app",
+                    }
+                ],
                 "packages": [
                     {
                         "manager": "apk",
@@ -487,11 +493,11 @@ class TestNode:
             == RuntimeSensitivityClassification.OPERATOR_SECRET
         )
         assert runtime.local_control_interfaces[0].access == RuntimeControlInterfaceAccess.READ_WRITE
-        assert runtime.process is not None
-        assert runtime.process.pid == 1
-        assert runtime.process.command == ["./shufflebackend"]
-        assert runtime.process.user == "root"
-        assert runtime.process.working_directory == "/app"
+        assert len(runtime.processes) == 1
+        assert runtime.processes[0].pid == 1
+        assert runtime.processes[0].command == ["./shufflebackend"]
+        assert runtime.processes[0].user == "root"
+        assert runtime.processes[0].working_directory == "/app"
         assert runtime.packages[0].manager == "apk"
         assert runtime.packages[0].name == "musl"
         assert runtime.packages[0].version == "1.2.4-r2"
@@ -721,7 +727,7 @@ class TestNode:
             runtime={
                 "file_services": [
                     {
-                        "service_id": "fileshare-smb",
+                        "file_service_id": "fileshare-smb",
                         "service": "smb",
                         "protocol": "smb",
                         "backend": "samba-4.x",
@@ -795,7 +801,7 @@ class TestNode:
         )
 
         service = n.runtime.file_services[0]
-        assert service.service_id == "fileshare-smb"
+        assert service.file_service_id == "fileshare-smb"
         assert service.protocol == RuntimeFileServiceProtocol.SMB
         assert service.shares[0].kind == RuntimeFileShareKind.DISK
         assert service.shares[1].read_only is False
@@ -807,7 +813,7 @@ class TestNode:
     def test_vm_runtime_file_service_rejects_duplicate_share_id(self):
         with pytest.raises(ValidationError):
             RuntimeFileService(
-                service_id="svc",
+                file_service_id="svc",
                 service="smb",
                 protocol="smb",
                 shares=[
@@ -819,7 +825,7 @@ class TestNode:
     def test_vm_runtime_file_service_rejects_id_collision_across_scopes(self):
         with pytest.raises(ValidationError):
             RuntimeFileService(
-                service_id="svc",
+                file_service_id="svc",
                 service="smb",
                 protocol="smb",
                 shares=[RuntimeFileServiceShare(share_id="alpha", name="alpha")],
@@ -1018,9 +1024,12 @@ class TestNode:
                 {"filesystem_inventory": [{"path": "/app/app.py"}, {"path": "/app/app.py"}]},
                 "Duplicate runtime filesystem path",
             ),
-            ({"local_control_interfaces": [{"path": "run/docker.sock"}]}, "path"),
-            ({"process": {"pid": 0, "command": "./shufflebackend"}}, "pid"),
-            ({"process": {"working_directory": "app"}}, "working_directory"),
+            (
+                {"local_control_interfaces": [{"control_interface_id": "docker-sock", "path": "run/docker.sock"}]},
+                "path",
+            ),
+            ({"processes": [{"pid": 0, "command": "./shufflebackend"}]}, "pid"),
+            ({"processes": [{"working_directory": "app"}]}, "working_directory"),
             ({"dependency_manifests": [{"ecosystem": "go", "path": "go.mod"}]}, "path"),
             ({"container": {"masked_paths": ["proc/acpi"]}}, "masked_paths"),
             ({"container": {"devices": [{"host_path": "dev/null", "container_path": "/dev/null"}]}}, "host_path"),
@@ -1147,8 +1156,8 @@ class TestNode:
             (
                 {
                     "identity_authorities": [
-                        {"authority_id": "techvault-domain"},
-                        {"authority_id": "techvault-domain"},
+                        {"identity_authority_id": "techvault-domain"},
+                        {"identity_authority_id": "techvault-domain"},
                     ]
                 },
                 "Duplicate runtime identity authority",
@@ -1157,7 +1166,7 @@ class TestNode:
                 {
                     "identity_authorities": [
                         {
-                            "authority_id": "techvault-domain",
+                            "identity_authority_id": "techvault-domain",
                             "subjects": [
                                 {"subject_id": "alice", "kind": "user", "name": "alice"},
                                 {"subject_id": "alice", "kind": "user", "name": "alice"},
@@ -1171,7 +1180,7 @@ class TestNode:
                 {
                     "identity_authorities": [
                         {
-                            "authority_id": "techvault-domain",
+                            "identity_authority_id": "techvault-domain",
                             "relationships": [
                                 {
                                     "relationship_id": "alice-admin",
@@ -1387,6 +1396,7 @@ class TestNode:
 
     def test_runtime_control_interface_accepts_windows_named_pipe_path(self):
         interface = RuntimeControlInterface(
+            control_interface_id="docker-engine-pipe",
             path=r"\\.\pipe\docker_engine",
             kind="named-pipe",
             bind_source=r"\\.\pipe\docker_engine",
@@ -1398,7 +1408,11 @@ class TestNode:
 
     def test_runtime_control_interface_named_pipe_path_requires_named_pipe_kind(self):
         with pytest.raises(ValidationError, match="named_pipe"):
-            RuntimeControlInterface(path=r"\\.\pipe\docker_engine", kind="unix-socket")
+            RuntimeControlInterface(
+                control_interface_id="docker-engine-pipe",
+                path=r"\\.\pipe\docker_engine",
+                kind="unix-socket",
+            )
 
     def test_runtime_mount_redacted_source_must_be_omitted(self):
         with pytest.raises(ValidationError, match="redacted runtime mount source"):
@@ -1438,12 +1452,14 @@ class TestNode:
     def test_runtime_control_interface_redacted_bind_source_must_be_omitted(self):
         with pytest.raises(ValidationError, match="redacted runtime control interface bind_source"):
             RuntimeControlInterface(
+                control_interface_id="docker-sock",
                 path="/run/docker.sock",
                 bind_source="/var/run/docker.sock",
                 bind_source_sensitivity="operator-secret",
             )
 
         interface = RuntimeControlInterface(
+            control_interface_id="docker-sock",
             path="/run/docker.sock",
             protocol="docker",
             bind_source_sensitivity="operator-secret",
@@ -1485,6 +1501,7 @@ class TestNode:
 
         validator.validate(
             {
+                "control_interface_id": "docker-sock",
                 "path": "/run/docker.sock",
                 "protocol": "docker",
                 "bind_source_sensitivity": "operator_secret",
@@ -1493,6 +1510,7 @@ class TestNode:
         with pytest.raises(JsonSchemaValidationError):
             validator.validate(
                 {
+                    "control_interface_id": "docker-sock",
                     "path": "/run/docker.sock",
                     "bind_source": "/var/run/docker.sock",
                     "bind_source_sensitivity": "OPERATOR_SECRET",
@@ -1635,7 +1653,7 @@ class TestRuntimeIdentityAuthorities:
             runtime={
                 "identity_authorities": [
                     {
-                        "authority_id": "techvault-domain",
+                        "identity_authority_id": "techvault-domain",
                         "kind": "domain",
                         "name": "TechVault Domain",
                         "namespace": "techvault.local",
@@ -1703,7 +1721,7 @@ class TestRuntimeIdentityAuthorities:
         )
 
         authority = n.runtime.identity_authorities[0]
-        assert authority.authority_id == "techvault-domain"
+        assert authority.identity_authority_id == "techvault-domain"
         assert authority.kind == RuntimeIdentityAuthorityKind.DOMAIN
         assert authority.namespace == "techvault.local"
         assert authority.domain_name == "TECHVAULT"
@@ -3193,6 +3211,76 @@ class TestRuntimeApplicationSurface:
                 templates=["/app/t.html", "/app/t.html"],
             )
 
+    def test_route_upstream_target_normalized(self):
+        route = RuntimeApplicationRoute(
+            route_id="proxy-root",
+            path="/",
+            methods=["GET"],
+            upstream_target={
+                "target_node_ref": "app-backend",
+                "target_service": "nodes.app-backend.services.gunicorn",
+                "scheme": "HTTPS",
+                "tls_terminated_here": True,
+            },
+        )
+        assert route.upstream_target is not None
+        assert route.upstream_target.target_node_ref == "app-backend"
+        assert route.upstream_target.scheme == RuntimeApplicationRouteUpstreamScheme.HTTPS
+        assert route.upstream_target.tls_terminated_here is True
+
+    def test_route_upstream_target_defaults(self):
+        target = RuntimeApplicationRouteUpstreamTarget()
+        assert target.scheme == RuntimeApplicationRouteUpstreamScheme.HTTP
+        assert target.target_node_ref == ""
+        assert target.tls_terminated_here is None
+
+    def test_route_upstream_scheme_is_closed(self):
+        # The CLOSED scheme taxonomy carries neither ``other`` nor ``unknown``.
+        with pytest.raises(ValidationError, match="scheme must be one of: http, https"):
+            RuntimeApplicationRouteUpstreamTarget(scheme="ftp")
+
+    def test_route_upstream_scheme_variable_placeholder_allowed(self):
+        target = RuntimeApplicationRouteUpstreamTarget(scheme="${proxy_scheme}")
+        assert target.scheme == "${proxy_scheme}"
+
+
+class TestRelationshipProxyUpstream:
+    def test_full_proxy_upstream(self):
+        access = RelationshipProxyUpstream(
+            route_ref="proxy-root",
+            upstream_node_ref="app-backend",
+            upstream_service_ref="gunicorn",
+            client_tls_terminated=True,
+            origin_plaintext=True,
+            body_limit="10 MiB",
+            description="nginx reverse proxy to gunicorn origin",
+        )
+        assert access.route_ref == "proxy-root"
+        assert access.client_tls_terminated is True
+        assert access.origin_plaintext is True
+        assert access.body_limit == "10 MiB"
+
+    def test_route_ref_required(self):
+        with pytest.raises(ValidationError, match="route_ref must be a non-empty route_id"):
+            RelationshipProxyUpstream(route_ref="  ")
+
+    def test_route_ref_allows_variable_placeholder(self):
+        access = RelationshipProxyUpstream(route_ref="${route_id}")
+        assert access.route_ref == "${route_id}"
+
+    def test_flags_accept_variable_placeholders(self):
+        access = RelationshipProxyUpstream(
+            route_ref="proxy-root",
+            client_tls_terminated="${tls_terminated}",
+            origin_plaintext="${plaintext}",
+        )
+        assert access.client_tls_terminated == "${tls_terminated}"
+        assert access.origin_plaintext == "${plaintext}"
+
+    def test_flag_rejects_non_bool(self):
+        with pytest.raises(ValidationError):
+            RelationshipProxyUpstream(route_ref="proxy-root", origin_plaintext="maybe")
+
 
 # ---------------------------------------------------------------------------
 # Runtime DNS service logical-state inventory (ADR-039)
@@ -3607,7 +3695,7 @@ class TestRuntimeDatabaseService:
 
     def test_database_service_id_rejects_variable_placeholder(self):
         with pytest.raises(ValidationError, match="database_service_id must be a stable identifier"):
-            DatabaseService(database_service_id="${svc}")
+            RuntimeDatabaseService(database_service_id="${svc}")
 
     def test_table_id_rejects_variable_placeholder(self):
         with pytest.raises(ValidationError, match="table_id must be a stable identifier"):
@@ -3623,7 +3711,7 @@ class TestRuntimeDatabaseService:
 
     def test_duplicate_database_id_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate database database_id 'dup'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 databases=[
                     {"database_id": "dup", "name": "a"},
@@ -3633,7 +3721,7 @@ class TestRuntimeDatabaseService:
 
     def test_duplicate_role_id_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate role role_id 'dup'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 roles=[
                     {"role_id": "dup", "name": "a"},
@@ -3651,7 +3739,7 @@ class TestRuntimeDatabaseService:
 
     def test_duplicate_setting_name_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate database setting 'port'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 settings=[
                     {"name": "port", "value": "5432"},
@@ -3716,15 +3804,15 @@ class TestRuntimeDatabaseService:
             )
 
     def test_engine_normalizes_case_and_hyphens(self):
-        svc = DatabaseService(database_service_id="svc", engine="PostgreSQL", protocol="postgresql")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="PostgreSQL", protocol="postgresql")
         assert svc.engine == DatabaseEngine.POSTGRESQL
 
     def test_unknown_engine_rejected(self):
         with pytest.raises(ValidationError, match="engine must be one of"):
-            DatabaseService(database_service_id="svc", engine="cobol-db")
+            RuntimeDatabaseService(database_service_id="svc", engine="cobol-db")
 
     def test_engine_protocol_accept_variable_placeholder(self):
-        svc = DatabaseService(database_service_id="svc", engine="${ENGINE}", protocol="${PROTO}")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="${ENGINE}", protocol="${PROTO}")
         assert svc.engine == "${ENGINE}"
         assert svc.protocol == "${PROTO}"
 
@@ -3741,32 +3829,32 @@ class TestRuntimeDatabaseService:
     )
     def test_known_engine_rejects_wrong_or_other_protocol(self, engine, bad_protocol, expected_protocol):
         with pytest.raises(ValidationError, match=f"requires protocol to be one of: {expected_protocol}"):
-            DatabaseService(database_service_id="svc", engine=engine, protocol=bad_protocol)
+            RuntimeDatabaseService(database_service_id="svc", engine=engine, protocol=bad_protocol)
 
     def test_postgresql_engine_default_protocol_other_is_rejected(self):
         # Without a cross-field check, defaulting protocol leaves PostgreSQL
         # at protocol=other — the exact ADR-027 §3 anti-pattern.
         with pytest.raises(ValidationError, match="requires protocol to be one of: postgresql"):
-            DatabaseService(database_service_id="svc", engine="postgresql")
+            RuntimeDatabaseService(database_service_id="svc", engine="postgresql")
 
     def test_engine_with_variable_protocol_is_skipped(self):
-        svc = DatabaseService(database_service_id="svc", engine="postgresql", protocol="${PROTO}")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="postgresql", protocol="${PROTO}")
         assert svc.protocol == "${PROTO}"
 
     def test_mariadb_engine_accepts_mysql_protocol(self):
-        svc = DatabaseService(database_service_id="svc", engine="mariadb", protocol="mysql")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="mariadb", protocol="mysql")
         assert svc.engine == DatabaseEngine.MARIADB
         assert svc.protocol == DatabaseProtocol.MYSQL
 
     def test_sqlite_engine_unconstrained_protocol(self):
         # SQLite has no wire protocol; default ``other`` is acceptable.
-        svc = DatabaseService(database_service_id="svc", engine="sqlite")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="sqlite")
         assert svc.engine == DatabaseEngine.SQLITE
 
     def test_duplicate_schema_id_across_databases_is_rejected(self):
         # Service-wide uniqueness for grant target resolution.
         with pytest.raises(ValidationError, match="Duplicate schema schema_id 'public' in database service 'svc'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 databases=[
                     {"database_id": "a", "name": "a", "schemas": [{"schema_id": "public", "name": "public"}]},
@@ -3776,7 +3864,7 @@ class TestRuntimeDatabaseService:
 
     def test_duplicate_table_id_across_schemas_is_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate table table_id 'users' in database service 'svc'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 databases=[
                     {

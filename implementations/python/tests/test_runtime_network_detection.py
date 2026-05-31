@@ -35,7 +35,7 @@ def _validate(scenario: Scenario) -> list[str]:
 
 def _suricata_sensor() -> dict:
     return {
-        "sensor_id": "suricata-sensor",
+        "network_sensor_id": "suricata-sensor",
         "implementation": "suricata",
         "sensor_kind": "ids",
         "monitoring_posture": "passive",
@@ -47,7 +47,7 @@ def _suricata_sensor() -> dict:
 
 def _suricata_engine(**overrides) -> dict:
     engine = {
-        "engine_id": "suricata-engine",
+        "network_detection_engine_id": "suricata-engine",
         "implementation": "suricata",
         "engine_kind": "ids",
         "version": "7.0.15",
@@ -176,7 +176,7 @@ def test_vm_runtime_network_detection_engine_inventory() -> None:
     node = Node(type="vm", runtime={"network_detection_engines": [_suricata_engine()]})
 
     engine = node.runtime.network_detection_engines[0]
-    assert engine.engine_id == "suricata-engine"
+    assert engine.network_detection_engine_id == "suricata-engine"
     assert engine.implementation == RuntimeNetworkDetectionEngineImplementation.SURICATA
     assert engine.engine_kind == RuntimeNetworkDetectionEngineKind.IDS
     assert engine.app_layer_protocols[0] == RuntimeNetworkDetectionAppProtocol.HTTP
@@ -197,14 +197,14 @@ def test_parser_accepts_kebab_case_runtime_network_detection_engines() -> None:
             resources: {ram: 2 gib, cpu: 2}
             runtime:
               network-sensors:
-                - sensor-id: suricata-sensor
+                - network-sensor-id: suricata-sensor
                   implementation: SURICATA
                   sensor-kind: ids
                   monitoring-posture: passive
                   capture-mode: pcap
                   monitored-network-refs: [dmz-net]
               network-detection-engines:
-                - engine-id: suricata-engine
+                - network-detection-engine-id: suricata-engine
                   implementation: SURICATA
                   engine-kind: ids
                   sensor-ref: suricata-sensor
@@ -236,7 +236,7 @@ def test_parser_accepts_kebab_case_runtime_network_detection_engines() -> None:
     )
 
     engine = scenario.nodes["suricata"].runtime.network_detection_engines[0]
-    assert engine.engine_id == "suricata-engine"
+    assert engine.network_detection_engine_id == "suricata-engine"
     assert engine.rule_sources[0].rule_count == 46
     assert engine.control_channels[0].capabilities == ["rule_reload"]
 

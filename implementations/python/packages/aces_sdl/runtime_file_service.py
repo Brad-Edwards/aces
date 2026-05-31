@@ -64,6 +64,7 @@ class RuntimeFileServiceProtocol(str, Enum):
     WEBDAV = "webdav"
     OBJECT_STORE = "object_store"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeFileShareKind(str, Enum):
@@ -73,6 +74,7 @@ class RuntimeFileShareKind(str, Enum):
     IPC = "ipc"
     PRINTER = "printer"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeFileServicePrincipalKind(str, Enum):
@@ -86,6 +88,7 @@ class RuntimeFileServicePrincipalKind(str, Enum):
     ANONYMOUS = "anonymous"
     SERVICE_ACCOUNT = "service_account"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeFileServicePrincipalStatus(str, Enum):
@@ -143,6 +146,7 @@ class RuntimeFileServiceAccessAction(str, Enum):
     EXECUTE = "execute"
     ADMINISTER = "administer"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeFileServiceAccessEffect(str, Enum):
@@ -187,7 +191,7 @@ def _require_non_empty(value: str, *, field_name: str) -> str:
 
 def _reject_duplicate_local_ref_ids(service: "RuntimeFileService") -> None:
     seen: dict[str, str] = {}
-    entries: list[tuple[str, str]] = [("service_id", service.service_id)]
+    entries: list[tuple[str, str]] = [("file_service_id", service.file_service_id)]
     entries.extend(("share_id", share.share_id) for share in service.shares)
     entries.extend(("principal_id", principal.principal_id) for principal in service.principals)
     entries.extend(("rule_id", rule.rule_id) for rule in service.access_rules)
@@ -198,7 +202,7 @@ def _reject_duplicate_local_ref_ids(service: "RuntimeFileService") -> None:
         if prior is not None:
             raise ValueError(
                 f"Duplicate runtime file-service stable id '{value}' in service "
-                f"'{service.service_id}' across {prior} and {label}"
+                f"'{service.file_service_id}' across {prior} and {label}"
             )
         seen[value] = label
 
@@ -433,7 +437,7 @@ class RuntimeFileService(SDLModel):
     (bare name or qualified ``nodes.<node>.services.<name>``).
     """
 
-    service_id: str
+    file_service_id: str
     service: str = ""
     protocol: RuntimeFileServiceProtocol | str = RuntimeFileServiceProtocol.OTHER
     backend: str = ""
@@ -443,10 +447,10 @@ class RuntimeFileService(SDLModel):
     access_rules: list[RuntimeFileServiceAccessRule] = Field(default_factory=list)
     access_observations: list[RuntimeFileServiceAccessObservation] = Field(default_factory=list)
 
-    @field_validator("service_id")
+    @field_validator("file_service_id")
     @classmethod
-    def validate_service_id(cls, v: str) -> str:
-        return require_symbol(v, field_name="service_id")
+    def validate_file_service_id(cls, v: str) -> str:
+        return require_symbol(v, field_name="file_service_id")
 
     @field_validator("protocol", mode="before")
     @classmethod
@@ -465,7 +469,9 @@ class RuntimeFileService(SDLModel):
             for item in getattr(self, attr):
                 key = getattr(item, label)
                 if key in seen:
-                    raise ValueError(f"Duplicate runtime file-service {label} '{key}' in service '{self.service_id}'")
+                    raise ValueError(
+                        f"Duplicate runtime file-service {label} '{key}' in service '{self.file_service_id}'"
+                    )
                 seen.add(key)
         _reject_duplicate_local_ref_ids(self)
         return self

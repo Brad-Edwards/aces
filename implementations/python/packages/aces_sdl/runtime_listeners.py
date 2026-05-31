@@ -47,6 +47,7 @@ class RuntimeListenerProtocol(str, Enum):
     SCTP = "sctp"
     UNIX = "unix"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeListenerAddressFamily(str, Enum):
@@ -57,6 +58,7 @@ class RuntimeListenerAddressFamily(str, Enum):
     UNIX = "unix"
     UNSPECIFIED = "unspecified"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeListenerScope(str, Enum):
@@ -198,7 +200,7 @@ class RuntimeListenerReadiness(SDLModel):
 class RuntimeServiceListener(SDLModel):
     """Observed generic runtime listener attached to a node."""
 
-    listener_id: str
+    service_listener_id: str
     service: str = ""
     address: str = ""
     port: int | str | None = None
@@ -215,10 +217,10 @@ class RuntimeServiceListener(SDLModel):
     evidence_refs: list[str] = Field(default_factory=list)
     description: str = ""
 
-    @field_validator("listener_id")
+    @field_validator("service_listener_id")
     @classmethod
-    def validate_listener_id(cls, v: str) -> str:
-        return require_symbol(v, field_name="listener_id")
+    def validate_service_listener_id(cls, v: str) -> str:
+        return require_symbol(v, field_name="service_listener_id")
 
     @field_validator("port", mode="before")
     @classmethod

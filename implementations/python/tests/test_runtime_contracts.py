@@ -74,7 +74,11 @@ def test_sdl_schema_rejects_redacted_runtime_mount_and_bind_raw_values():
                     "runtime": {
                         "mounts": [{"target": "/host-keys", "source_sensitivity": "operator_secret"}],
                         "local_control_interfaces": [
-                            {"path": "/run/docker.sock", "bind_source_sensitivity": "operator_secret"}
+                            {
+                                "control_interface_id": "docker-sock",
+                                "path": "/run/docker.sock",
+                                "bind_source_sensitivity": "operator_secret",
+                            }
                         ],
                     },
                 }
@@ -107,6 +111,7 @@ def test_sdl_schema_rejects_redacted_runtime_mount_and_bind_raw_values():
                 "runtime": {
                     "local_control_interfaces": [
                         {
+                            "control_interface_id": "docker-sock",
                             "path": "/run/docker.sock",
                             "bind_source": "/var/run/docker.sock",
                             "bind_source_sensitivity": "operator_secret",

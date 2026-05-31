@@ -92,7 +92,7 @@ def _reject_duplicate_values(values: list[str], *, field_name: str, sensor_id: s
 class RuntimeNetworkSensor(SDLModel):
     """Node-scoped runtime inventory for a passive or inline network sensor."""
 
-    sensor_id: str
+    network_sensor_id: str
     implementation: RuntimeNetworkSensorImplementation | str = RuntimeNetworkSensorImplementation.UNKNOWN
     sensor_kind: RuntimeNetworkSensorKind | str = RuntimeNetworkSensorKind.UNKNOWN
     monitoring_posture: RuntimeNetworkSensorMonitoringPosture | str = RuntimeNetworkSensorMonitoringPosture.UNKNOWN
@@ -108,10 +108,10 @@ class RuntimeNetworkSensor(SDLModel):
     evidence_refs: list[str] = Field(default_factory=list)
     description: str = ""
 
-    @field_validator("sensor_id")
+    @field_validator("network_sensor_id")
     @classmethod
-    def validate_sensor_id(cls, v: str) -> str:
-        return require_symbol(v, field_name="sensor_id")
+    def validate_network_sensor_id(cls, v: str) -> str:
+        return require_symbol(v, field_name="network_sensor_id")
 
     @field_validator("implementation", mode="before")
     @classmethod
@@ -162,11 +162,11 @@ class RuntimeNetworkSensor(SDLModel):
         _reject_duplicate_values(
             self.capture_interfaces,
             field_name="capture_interfaces",
-            sensor_id=self.sensor_id,
+            sensor_id=self.network_sensor_id,
         )
         _reject_duplicate_values(
             self.monitored_network_refs,
             field_name="monitored_network_refs",
-            sensor_id=self.sensor_id,
+            sensor_id=self.network_sensor_id,
         )
         return self

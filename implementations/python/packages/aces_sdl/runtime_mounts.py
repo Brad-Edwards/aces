@@ -28,6 +28,9 @@ from .runtime_values import (
 from .runtime_values import (
     parse_runtime_enum_or_var as _parse_runtime_enum_or_var,
 )
+from .runtime_values import (
+    require_symbol as _require_symbol,
+)
 
 __all__ = [
     "RuntimeControlInterface",
@@ -46,6 +49,7 @@ class RuntimeMountSourceKind(str, Enum):
     TMPFS = "tmpfs"
     IMAGE = "image"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeControlInterfaceKind(str, Enum):
@@ -55,6 +59,7 @@ class RuntimeControlInterfaceKind(str, Enum):
     NAMED_PIPE = "named_pipe"
     FILE = "file"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeControlInterfaceAccess(str, Enum):
@@ -63,6 +68,7 @@ class RuntimeControlInterfaceAccess(str, Enum):
     READ_ONLY = "read_only"
     READ_WRITE = "read_write"
     UNKNOWN = "unknown"
+    OTHER = "other"
 
 
 class RuntimeMount(SDLModel):
@@ -170,6 +176,7 @@ class RuntimeMount(SDLModel):
 class RuntimeControlInterface(SDLModel):
     """A non-network local control API exposed inside a runtime node."""
 
+    control_interface_id: str
     path: str
     kind: RuntimeControlInterfaceKind | str = RuntimeControlInterfaceKind.UNIX_SOCKET
     protocol: str = ""
@@ -177,6 +184,11 @@ class RuntimeControlInterface(SDLModel):
     bind_source_sensitivity: RuntimeSensitivityClassification | str = RuntimeSensitivityClassification.UNKNOWN
     access: RuntimeControlInterfaceAccess | str = RuntimeControlInterfaceAccess.UNKNOWN
     description: str = ""
+
+    @field_validator("control_interface_id")
+    @classmethod
+    def validate_control_interface_id(cls, v: str) -> str:
+        return _require_symbol(v, field_name="control_interface_id")
 
     @field_validator("path")
     @classmethod

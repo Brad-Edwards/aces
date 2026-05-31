@@ -31,6 +31,10 @@ adr-042-network-sensor-runtime-monitoring
 adr-043-runtime-service-listener-surface
 adr-044-network-detection-engine-runtime-inventory
 adr-045-security-monitoring-detection-definition-semantics
+adr-046-app-authorization-runtime-inventory
+adr-047-scheduled-job-runtime-inventory
+adr-048-datastore-service-runtime-inventory
+adr-049-platform-application-runtime-inventory
 ```
 
 | ADR | Title | Status | Date |
@@ -81,3 +85,10 @@ adr-045-security-monitoring-detection-definition-semantics
 | [043](adr-043-runtime-service-listener-surface.md) | Generic Runtime Service Listener Surface | accepted | 2026-05-29 |
 | [044](adr-044-network-detection-engine-runtime-inventory.md) | Network Detection Engine Runtime Inventory | accepted | 2026-05-29 |
 | [045](adr-045-security-monitoring-detection-definition-semantics.md) | Security-Monitoring Detection Definition Semantics | accepted | 2026-05-29 |
+| [046](adr-046-app-authorization-runtime-inventory.md) | Application-Internal Authorization Runtime Inventory | accepted | 2026-05-30 |
+| [047](adr-047-scheduled-job-runtime-inventory.md) | Scheduled-Job Runtime Inventory | accepted | 2026-05-30 |
+| [048](adr-048-datastore-service-runtime-inventory.md) | Datastore Service Runtime Inventory | accepted | 2026-05-30 |
+| [049](adr-049-platform-application-runtime-inventory.md) | Platform Application Runtime Inventory | accepted | 2026-05-30 |
+| [050](adr-050-forwarding-agent-runtime-inventory.md) | Forwarding Agent Runtime Inventory | accepted | 2026-05-30 |
+| [051](adr-051-orchestration-authority-runtime-inventory.md) | Orchestration Authority Runtime Inventory | accepted | 2026-05-30 |
+| [052](adr-052-typed-runtime-relationship-subtypes.md) | Typed Runtime Relationship Subtypes | accepted | 2026-05-30 |

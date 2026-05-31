@@ -34,6 +34,7 @@ class RuntimeMailProtocol(str, Enum):
     LMTP = "lmtp"
     SIEVE = "sieve"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeMailListenerRole(str, Enum):
@@ -48,6 +49,7 @@ class RuntimeMailListenerRole(str, Enum):
     SIEVE = "sieve"
     MONITORING = "monitoring"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeMailTlsMode(str, Enum):
@@ -76,6 +78,7 @@ class RuntimeMailAuthMechanism(str, Enum):
     EXTERNAL = "external"
     ANONYMOUS = "anonymous"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeMailComponentKind(str, Enum):
@@ -93,6 +96,7 @@ class RuntimeMailComponentKind(str, Enum):
     RELAY = "relay"
     POLICY_SERVICE = "policy_service"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeMailDomainRole(str, Enum):
@@ -105,6 +109,7 @@ class RuntimeMailDomainRole(str, Enum):
     CATCH_ALL = "catch_all"
     OUTBOUND = "outbound"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeMailMailboxStoreKind(str, Enum):
@@ -116,6 +121,7 @@ class RuntimeMailMailboxStoreKind(str, Enum):
     OBJECT_STORE = "object_store"
     REMOTE = "remote"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeMailMailboxRole(str, Enum):
@@ -129,6 +135,7 @@ class RuntimeMailMailboxRole(str, Enum):
     ABUSE = "abuse"
     AUTOMATED = "automated"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeMailMailboxStatus(str, Enum):
@@ -166,6 +173,7 @@ class RuntimeMailRoutingKind(str, Enum):
     CATCH_ALL = "catch_all"
     LIST = "list"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeMailQueueKind(str, Enum):
@@ -180,6 +188,7 @@ class RuntimeMailQueueKind(str, Enum):
     MAILDROP = "maildrop"
     MAILBOX = "mailbox"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeMailQueueStability(str, Enum):

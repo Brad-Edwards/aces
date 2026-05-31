@@ -32,7 +32,7 @@ def _validate(scenario: Scenario) -> list[str]:
 
 def _listener(**overrides) -> dict:
     listener = {
-        "listener_id": "nginx-http-ipv4",
+        "service_listener_id": "nginx-http-ipv4",
         "service": "http",
         "address": "0.0.0.0",  # noqa: S104 - wildcard bind is the behavior under test.
         "port": 80,
@@ -91,7 +91,7 @@ def test_vm_runtime_service_listener_surface() -> None:
     node = Node(type="vm", runtime={"service_listeners": [_listener()]})
 
     listener = node.runtime.service_listeners[0]
-    assert listener.listener_id == "nginx-http-ipv4"
+    assert listener.service_listener_id == "nginx-http-ipv4"
     assert listener.protocol == RuntimeListenerProtocol.TCP
     assert listener.address_family == RuntimeListenerAddressFamily.IPV4
     assert listener.scope == RuntimeListenerScope.WILDCARD
@@ -113,7 +113,7 @@ def test_parser_accepts_kebab_case_runtime_service_listeners() -> None:
               processes:
                 - {name: nginx, pid: 42}
               service-listeners:
-                - listener-id: nginx-http-ipv4
+                - service-listener-id: nginx-http-ipv4
                   service: http
                   address: 0.0.0.0
                   port: 80
@@ -129,7 +129,7 @@ def test_parser_accepts_kebab_case_runtime_service_listeners() -> None:
     )
 
     listener = scenario.nodes["misp"].runtime.service_listeners[0]
-    assert listener.listener_id == "nginx-http-ipv4"
+    assert listener.service_listener_id == "nginx-http-ipv4"
     assert listener.protocol == RuntimeListenerProtocol.TCP
     assert listener.readiness.probe == "GET /"
 
@@ -137,7 +137,7 @@ def test_parser_accepts_kebab_case_runtime_service_listeners() -> None:
 def test_runtime_service_listener_rejects_contradictory_scope() -> None:
     with pytest.raises(ValidationError, match="scope 'network_facing' contradicts loopback address"):
         RuntimeServiceListener(
-            listener_id="supervisord",
+            service_listener_id="supervisord",
             address="127.0.0.1",
             port=9001,
             protocol="tcp",
@@ -149,7 +149,7 @@ def test_runtime_service_listener_rejects_contradictory_scope() -> None:
 def test_runtime_service_listener_rejects_loopback_scope_for_non_loopback_address() -> None:
     with pytest.raises(ValidationError, match="scope 'loopback_only' contradicts non-loopback address"):
         RuntimeServiceListener(
-            listener_id="node-local-api",
+            service_listener_id="node-local-api",
             address="192.168.1.1",
             port=8080,
             protocol="tcp",
@@ -161,7 +161,7 @@ def test_runtime_service_listener_rejects_loopback_scope_for_non_loopback_addres
 def test_runtime_service_listener_rejects_non_wildcard_scope_for_wildcard_address() -> None:
     with pytest.raises(ValidationError, match="scope 'loopback_only' contradicts wildcard address"):
         RuntimeServiceListener(
-            listener_id="wildcard-api",
+            service_listener_id="wildcard-api",
             address="0.0.0.0",  # noqa: S104 - wildcard bind is the behavior under test.
             port=8080,
             protocol="tcp",
@@ -173,7 +173,7 @@ def test_runtime_service_listener_rejects_non_wildcard_scope_for_wildcard_addres
 def test_runtime_service_listener_rejects_address_family_mismatch() -> None:
     with pytest.raises(ValidationError, match="address_family 'ipv4' contradicts address '::'"):
         RuntimeServiceListener(
-            listener_id="ipv6-api",
+            service_listener_id="ipv6-api",
             address="::",
             port=8080,
             protocol="tcp",
@@ -185,7 +185,7 @@ def test_runtime_service_listener_rejects_address_family_mismatch() -> None:
 def test_runtime_service_listener_rejects_network_local_socket_scope() -> None:
     with pytest.raises(ValidationError, match="scope 'local_socket' requires Unix socket listener"):
         RuntimeServiceListener(
-            listener_id="supervisord",
+            service_listener_id="supervisord",
             address="127.0.0.1",
             port=9001,
             protocol="tcp",
@@ -196,11 +196,11 @@ def test_runtime_service_listener_rejects_network_local_socket_scope() -> None:
 
 def test_unix_listener_requires_socket_path_and_no_port() -> None:
     with pytest.raises(ValidationError, match="Unix listeners require socket_path"):
-        RuntimeServiceListener(listener_id="unix", protocol="unix", address_family="unix")
+        RuntimeServiceListener(service_listener_id="unix", protocol="unix", address_family="unix")
 
     with pytest.raises(ValidationError, match="Unix listeners must not set port"):
         RuntimeServiceListener(
-            listener_id="unix",
+            service_listener_id="unix",
             protocol="unix",
             address_family="unix",
             socket_path="/run/app.sock",
@@ -277,7 +277,7 @@ def test_runtime_service_listeners_encode_misp_listener_facts() -> None:
                   - {container-port: 80, protocol: tcp, host-ip: 0.0.0.0, host-port: 80}
                   - {container-port: 443, protocol: tcp, host-ip: 0.0.0.0, host-port: 443}
               service-listeners:
-                - listener-id: nginx-http-ipv4
+                - service-listener-id: nginx-http-ipv4
                   service: http
                   address: 0.0.0.0
                   port: 80
@@ -288,7 +288,7 @@ def test_runtime_service_listeners_encode_misp_listener_facts() -> None:
                   process-name: nginx
                   published-port-refs:
                     - {container-port: 80, protocol: tcp, host-ip: 0.0.0.0, host-port: 80}
-                - listener-id: nginx-http-ipv6
+                - service-listener-id: nginx-http-ipv6
                   service: http
                   address: "::"
                   port: 80
@@ -296,7 +296,7 @@ def test_runtime_service_listeners_encode_misp_listener_facts() -> None:
                   address-family: ipv6
                   scope: wildcard
                   process-ref: nginx
-                - listener-id: nginx-https-ipv4
+                - service-listener-id: nginx-https-ipv4
                   service: https
                   address: 0.0.0.0
                   port: 443
@@ -304,7 +304,7 @@ def test_runtime_service_listeners_encode_misp_listener_facts() -> None:
                   address-family: ipv4
                   scope: wildcard
                   process-ref: nginx
-                - listener-id: nginx-https-ipv6
+                - service-listener-id: nginx-https-ipv6
                   service: https
                   address: "::"
                   port: 443
@@ -312,21 +312,21 @@ def test_runtime_service_listeners_encode_misp_listener_facts() -> None:
                   address-family: ipv6
                   scope: wildcard
                   process-ref: nginx
-                - listener-id: supervisord-loopback
+                - service-listener-id: supervisord-loopback
                   address: 127.0.0.1
                   port: 9001
                   protocol: tcp
                   address-family: ipv4
                   scope: loopback-only
                   process-ref: supervisord
-                - listener-id: local-runtime-loopback
+                - service-listener-id: local-runtime-loopback
                   address: 127.0.0.1
                   port: 50000
                   protocol: tcp
                   address-family: ipv4
                   scope: loopback-only
                   process-name: runtime-local
-                - listener-id: docker-dns
+                - service-listener-id: docker-dns
                   address: 127.0.0.11
                   port: 53
                   protocol: udp
@@ -338,7 +338,7 @@ def test_runtime_service_listeners_encode_misp_listener_facts() -> None:
 
     assert _validate(scenario) == []
     listeners = scenario.nodes["misp"].runtime.service_listeners
-    assert [listener.listener_id for listener in listeners] == [
+    assert [listener.service_listener_id for listener in listeners] == [
         "nginx-http-ipv4",
         "nginx-http-ipv6",
         "nginx-https-ipv4",
