@@ -1187,6 +1187,8 @@ ValidTrace(tr) =
   /\ MonotoneSequence(tr)
   /\ RevisionDiscipline(tr)
   /\ OrderDiscipline(tr)
+  /\ forall j in JointActionRecords(tr): ConflictOK(j, tr)
+  /\ forall tm in TimeManagementContexts(tr): TimeManagementOK(tm, tr)
 ```
 
 Where:
@@ -1256,6 +1258,12 @@ Where:
 - `OrderDiscipline(tr)` requires every ordering claim to be backed by a
   declared order basis. Wall-clock-only order can support display order but not
   causality, simultaneity, serializability, or time-management claims.
+- `ConflictOK(j, tr)` is defined in the concurrency section. It validates the
+  conflict predicate, conflict policy, isolation, atomicity, rollback, retry,
+  and weak/unsupported disclosure claims for each joint-action record.
+- `TimeManagementOK(tm, tr)` is defined in the concurrency section. It
+  validates mode-specific clock, lookahead, time-advance, pacing, rollback,
+  DEVS, FMI, and backend-serialized time-management claims.
 
 ### Transition Schema
 
@@ -2185,6 +2193,109 @@ Policy meanings:
 Fairness and liveness claims are bounded claims. If ACES says a retry policy is
 fair or starvation-free, the retry bound, scheduler basis, or proof obligation
 must be present. Otherwise the claim must be limited to observed outcome facts.
+
+Named semantic gates for PRT-10:
+
+```text
+ConflictOK(j, tr) =
+  JointActionRecordBaseOK(j, tr)
+  /\ ConflictPredicateConsistent(j, tr)
+  /\ IsolationAtomicityOK(j, tr)
+  /\ ConflictPolicyOK(j, tr)
+  /\ RollbackRetryOK(j, tr)
+  /\ NoUnsupportedConcurrencyOverclaim(j, tr)
+
+TimeManagementOK(tm, tr) =
+  TimeManagementContextBaseOK(tm, tr)
+  /\ TimeModeEvidenceOK(tm, tr)
+  /\ TimeClaimStrengthOK(tm, tr)
+  /\ RollbackTimeLineageOK(tm, tr)
+  /\ NoUnsupportedTimeOverclaim(tm, tr)
+```
+
+`JointActionRecordBaseOK(j, tr)` requires every member event, participant,
+state revision, clock authority, time-management context, capability vector,
+retry policy, rollback ref, and participant observation ref in `j` to resolve in
+`tr` or in immutable run initialization. The record's
+`realized_order_relation`, `snapshot_basis`, read/write sets,
+exclusive-resource claims, `conflict_class`, and `conflict_policy` are
+interpreted only under those resolved refs.
+
+`ConflictPredicateConsistent(j, tr)` requires the declared conflict class to
+cover every conflict implied by read/write intersections, exclusive-resource
+claims, action-contract interference, and backend-reported contention,
+serialization, rollback, retry, rejection, throttling, starvation, or
+unsupported simultaneity. If any member's read/write set or resource claim is
+unknown, the record may report observed outcomes, but exact no-conflict,
+serializable, or simultaneity claims must downgrade.
+
+`IsolationAtomicityOK(j, tr)` requires snapshot claims to cite the read revision
+set, serializable claims to cite a realized serial order or proof obligation,
+and multi-object atomicity claims to cite all affected state revisions and the
+declared atomicity scope. `best_effort`, `unknown`, and `unsupported` isolation
+values are valid disclosures, but they cannot support stronger isolation or
+benchmark-comparison claims.
+
+`ConflictPolicyOK(j, tr)` validates policy-specific evidence: `Serialize`
+requires realized order and read/write revisions; `Reject` requires admission
+or operation-failure evidence for the denied attempts; `Retry` requires retry
+policy, retry bound, predecessor refs, and updated read revisions; `Withhold`
+requires withholding disposition; `Merge` requires a governed commutativity or
+merge rule; `Rollback` requires rollback or compensation refs satisfying
+`RollbackOK`; `DiscloseWeakGuarantee` and `Unsupported` require an explicit
+downgrade and forbid exact simultaneity, serializability, or conflict-resolution
+claims.
+
+`RollbackRetryOK(j, tr)` requires every rollback, anti-message, compensation, or
+retry record cited by `j` to be append-only, to cite affected prior events, to
+name superseding events when effects are replaced, and to preserve or downgrade
+participant-visible observation and replay claims after the correction.
+Fairness, starvation-free, and eventual-retry claims additionally require a
+scheduler basis, retry bound, or proof obligation.
+
+`NoUnsupportedConcurrencyOverclaim(j, tr)` requires the effective capability
+vector for ordering, isolation, rollback, conflict resolution, observer,
+redaction, and replay concerns to satisfy the claim. A weak backend coordinator
+or adapter limits the portable claim even when the native backend can execute a
+stronger operation internally.
+
+`TimeManagementContextBaseOK(tm, tr)` requires the time context id, time domain,
+mode, clock authority, logical/simulation/wall-clock fields, lookahead,
+time-advance refs, message refs, pacing policy, step-size refs, rollback refs,
+anti-message or compensation refs, superseded-event refs, and transition basis
+needed by the asserted time claim to resolve in `tr` or immutable run
+initialization.
+
+`TimeModeEvidenceOK(tm, tr)` validates the selected mode: `WallClockRealtime`
+supports pacing/display only; `ConservativeLogicalTime` requires a safe-delivery
+rule and lookahead/grant evidence where used; `HlaTimeManaged` requires
+time-regulating/time-constrained disclosure, time-advance request/grant refs,
+lookahead when relevant, and send/receive refs for causality claims;
+`OptimisticRollback` requires rollback, anti-message or compensation, and
+supersession evidence; `DevsDiscreteEvent` requires internal, external, or
+confluent transition basis plus time-advance support or unsupported disclosure;
+`FmiCoSimulation` requires step-size or step-negotiation refs, exchanged
+input/output variable evidence in the cited step-negotiation record, rollback
+support or no-rollback disclosure, and clock-domain mapping; `BackendSerialized`
+supports realized-order review but not simultaneity without a separate proof.
+
+`TimeClaimStrengthOK(tm, tr)` ensures time-management claims stay separate from
+ordering claims. Ordering evidence may support happens-before, but it does not
+by itself support pacing, HLA time management, optimistic rollback, DEVS
+transition semantics, FMI co-simulation, or true simultaneity. Wall-clock-only
+data cannot support causality or simultaneity.
+
+`RollbackTimeLineageOK(tm, tr)` requires rollback and anti-message claims to
+satisfy `RollbackOK`, identify affected prior messages or events, append
+superseding events after the rollback record, and disclose which prior
+participant-visible observations or state updates remain visible after
+rollback.
+
+`NoUnsupportedTimeOverclaim(tm, tr)` requires the effective capability vector
+for clock authority, lookahead, pacing, synchronization, rollback,
+step-negotiation, observer, redaction, and replay concerns to satisfy the
+asserted time-management claim. Unknown or unsupported mode-specific evidence
+must downgrade the claim rather than silently falling back to timestamp order.
 
 ## Capability Guarantee Vectors
 
@@ -3561,10 +3672,11 @@ Future implementation issues should turn the normative core above into an
 executable model or mechanically checked test harness. The minimum executable
 surface is: valid trace predicate, `Apply` transition predicates, observation
 reconstruction, capability meet/satisfaction, shared-state revision discipline,
-interaction-context validity, benchmark-validity predicates, and
-concurrency/time-management rules. TLA+/PlusCal, Alloy, state-machine property
-tests, or differential tests against backend traces are acceptable realizations
-only if they cover those predicates rather than rechecking schema shape alone.
+interaction-context validity, benchmark-validity predicates, `ConflictOK`,
+`TimeManagementOK`, and the related concurrency/time-management rules.
+TLA+/PlusCal, Alloy, state-machine property tests, or differential tests against
+backend traces are acceptable realizations only if they cover those predicates
+rather than rechecking schema shape alone.
 
 ## Invariants
 
