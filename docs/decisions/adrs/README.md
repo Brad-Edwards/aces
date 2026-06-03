@@ -35,6 +35,10 @@ adr-046-app-authorization-runtime-inventory
 adr-047-scheduled-job-runtime-inventory
 adr-048-datastore-service-runtime-inventory
 adr-049-platform-application-runtime-inventory
+adr-050-forwarding-agent-runtime-inventory
+adr-051-orchestration-authority-runtime-inventory
+adr-052-typed-runtime-relationship-subtypes
+adr-053-sdl-module-composition-for-inventory-backed-scenarios
 ```
 
 | ADR | Title | Status | Date |
@@ -92,3 +96,4 @@ adr-049-platform-application-runtime-inventory
 | [050](adr-050-forwarding-agent-runtime-inventory.md) | Forwarding Agent Runtime Inventory | accepted | 2026-05-30 |
 | [051](adr-051-orchestration-authority-runtime-inventory.md) | Orchestration Authority Runtime Inventory | accepted | 2026-05-30 |
 | [052](adr-052-typed-runtime-relationship-subtypes.md) | Typed Runtime Relationship Subtypes | accepted | 2026-05-30 |
+| [053](adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) | SDL Module Composition for Inventory-Backed Scenarios | accepted | 2026-06-03 |
