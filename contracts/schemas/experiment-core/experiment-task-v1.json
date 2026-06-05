@@ -2,6 +2,58 @@
   "$defs": {
     "ExperimentApparatusConstraintModel": {
       "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "allowed_processor_refs": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "allowed_processor_refs"
+          ]
+        },
+        {
+          "properties": {
+            "allowed_backend_refs": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "allowed_backend_refs"
+          ]
+        },
+        {
+          "properties": {
+            "required_manifest_refs": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "required_manifest_refs"
+          ]
+        },
+        {
+          "properties": {
+            "required_capabilities": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "required_capabilities"
+          ]
+        },
+        {
+          "properties": {
+            "notes": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "notes"
+          ]
+        }
+      ],
       "description": "Apparatus compatibility and capability constraints for a task.",
       "properties": {
         "allowed_backend_refs": {
@@ -46,7 +98,7 @@
       "type": "object",
       "x-aces-invariants": [
         {
-          "description": "Every allowed processor/backend identity reference must have a matching required manifest ref_id with matching subject identity and manifest schema version.",
+          "description": "Every allowed processor/backend identity reference must have a matching required manifest ref_id with matching manifest id, subject identity, and manifest schema version.",
           "id": "apparatus-constraint-identity-manifest-resolves",
           "inputs": [
             {
@@ -124,7 +176,7 @@
         },
         "satisfies_refs": {
           "items": {
-            "$ref": "#/$defs/ExperimentEvidenceReferenceModel"
+            "$ref": "#/$defs/ExperimentEvidenceSatisfactionReferenceModel"
           },
           "title": "Satisfies Refs",
           "type": "array"
@@ -173,20 +225,6 @@
       "additionalProperties": false,
       "description": "Reference constrained to a backend identity.",
       "properties": {
-        "ref_digest": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Ref Digest"
-        },
         "ref_id": {
           "minLength": 1,
           "title": "Ref Id",
@@ -196,19 +234,6 @@
           "const": "backend",
           "title": "Ref Kind",
           "type": "string"
-        },
-        "ref_path": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Ref Path"
         },
         "ref_version": {
           "anyOf": [
@@ -494,8 +519,170 @@
       "title": "ExperimentEvidenceReferenceModel",
       "type": "object"
     },
+    "ExperimentEvidenceSatisfactionReferenceModel": {
+      "additionalProperties": false,
+      "description": "Evidence concept reference that an artifact claims to satisfy.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "evidence",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentEvidenceSatisfactionReferenceModel",
+      "type": "object"
+    },
     "ExperimentManifestReferenceModel": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "properties": {
+            "ref_path": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ref_digest": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ref_digest"
+            ]
+          },
+          "then": {
+            "properties": {
+              "subject_ref": {
+                "properties": {
+                  "ref_kind": {
+                    "enum": [
+                      "processor",
+                      "backend"
+                    ]
+                  }
+                },
+                "required": [
+                  "ref_kind"
+                ]
+              }
+            },
+            "required": [
+              "subject_ref"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ref_digest": {
+                "type": "string"
+              },
+              "subject_ref": {
+                "properties": {
+                  "ref_kind": {
+                    "const": "processor"
+                  }
+                },
+                "required": [
+                  "ref_kind"
+                ]
+              }
+            },
+            "required": [
+              "ref_digest",
+              "subject_ref"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ref_version": {
+                "const": "processor-manifest/v2"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ref_digest": {
+                "type": "string"
+              },
+              "subject_ref": {
+                "properties": {
+                  "ref_kind": {
+                    "const": "backend"
+                  }
+                },
+                "required": [
+                  "ref_kind"
+                ]
+              }
+            },
+            "required": [
+              "ref_digest",
+              "subject_ref"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ref_version": {
+                "const": "backend-manifest/v2"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subject_ref": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "subject_ref"
+            ]
+          },
+          "then": {
+            "properties": {
+              "subject_ref": {
+                "properties": {
+                  "ref_digest": {
+                    "type": "null"
+                  },
+                  "ref_path": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
       "description": "Reference constrained to an apparatus or capability manifest.",
       "properties": {
         "ref_digest": {
@@ -565,7 +752,29 @@
         "ref_id"
       ],
       "title": "ExperimentManifestReferenceModel",
-      "type": "object"
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "Manifest digest qualifiers are limited to processor/backend manifest refs that can be checked against concrete manifest payload digests; manifest path qualifiers are not accepted in v1.",
+          "id": "manifest-reference-digest-scope-valid",
+          "inputs": [
+            {
+              "contract_id": "experiment-task-v1",
+              "instance_path": "#/$defs/ExperimentManifestReferenceModel"
+            },
+            {
+              "contract_id": "experiment-apparatus-context-v1",
+              "instance_path": "#/$defs/ExperimentManifestReferenceModel"
+            },
+            {
+              "contract_id": "experiment-run-v1",
+              "instance_path": "#/$defs/ExperimentManifestReferenceModel"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.ExperimentManifestReferenceModel._validate_manifest_reference_scope"
+        }
+      ]
     },
     "ExperimentMetricDefinitionModel": {
       "additionalProperties": false,
@@ -684,20 +893,6 @@
       "additionalProperties": false,
       "description": "Reference constrained to a processor identity.",
       "properties": {
-        "ref_digest": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Ref Digest"
-        },
         "ref_id": {
           "minLength": 1,
           "title": "Ref Id",
@@ -707,19 +902,6 @@
           "const": "processor",
           "title": "Ref Kind",
           "type": "string"
-        },
-        "ref_path": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Ref Path"
         },
         "ref_version": {
           "anyOf": [
@@ -825,6 +1007,33 @@
     },
     "ExperimentScenarioReferenceModel": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "ref_kind": {
+                "const": "scenario"
+              }
+            },
+            "required": [
+              "ref_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ref_digest": {
+                "type": "null"
+              },
+              "ref_path": {
+                "type": "null"
+              },
+              "ref_version": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
       "description": "Reference constrained to authored scenario material.",
       "properties": {
         "ref_digest": {
@@ -890,6 +1099,74 @@
     },
     "ExperimentSplitAndLeakageControlsModel": {
       "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "partitioning_strategy": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "partitioning_strategy"
+          ]
+        },
+        {
+          "properties": {
+            "temporal_availability": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "temporal_availability"
+          ]
+        },
+        {
+          "properties": {
+            "hidden_material_policy": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "hidden_material_policy"
+          ]
+        },
+        {
+          "properties": {
+            "grouping_constraints": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "grouping_constraints"
+          ]
+        },
+        {
+          "properties": {
+            "leakage_checks": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "leakage_checks"
+          ]
+        },
+        {
+          "properties": {
+            "unresolved_risks": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "unresolved_risks"
+          ]
+        }
+      ],
       "description": "Controls for data partitioning, hidden material, and leakage risk.",
       "properties": {
         "grouping_constraints": {
@@ -1011,20 +1288,13 @@
   "description": "Experiment task contract that separates scenario material from protocol intent.",
   "properties": {
     "apparatus_constraints": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/ExperimentApparatusConstraintModel"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null
+      "$ref": "#/$defs/ExperimentApparatusConstraintModel"
     },
     "artifact_refs": {
       "items": {
         "$ref": "#/$defs/ExperimentArtifactRefModel"
       },
+      "minItems": 1,
       "title": "Artifact Refs",
       "type": "array"
     },
@@ -1063,15 +1333,7 @@
       "type": "string"
     },
     "split_and_leakage_controls": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/ExperimentSplitAndLeakageControlsModel"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null
+      "$ref": "#/$defs/ExperimentSplitAndLeakageControlsModel"
     },
     "task_id": {
       "minLength": 1,
@@ -1092,6 +1354,7 @@
       "items": {
         "$ref": "#/$defs/ExperimentValidityNoteModel"
       },
+      "minItems": 1,
       "title": "Validity Notes",
       "type": "array"
     }
@@ -1105,7 +1368,11 @@
     "scenario_ref",
     "evaluation_protocol",
     "intended_use",
-    "population_or_construct"
+    "population_or_construct",
+    "split_and_leakage_controls",
+    "apparatus_constraints",
+    "validity_notes",
+    "artifact_refs"
   ],
   "title": "ExperimentTaskModel",
   "type": "object",

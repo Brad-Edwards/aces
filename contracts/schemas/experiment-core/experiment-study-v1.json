@@ -133,7 +133,7 @@
         },
         "satisfies_refs": {
           "items": {
-            "$ref": "#/$defs/ExperimentEvidenceReferenceModel"
+            "$ref": "#/$defs/ExperimentEvidenceSatisfactionReferenceModel"
           },
           "title": "Satisfies Refs",
           "type": "array"
@@ -286,6 +286,28 @@
     },
     "ExperimentConditionAssignmentModel": {
       "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "required_refs": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "required_refs"
+          ]
+        },
+        {
+          "properties": {
+            "required_parameters": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "required_parameters"
+          ]
+        }
+      ],
       "description": "Concrete treatment-condition assignment criteria for study evaluation runs.",
       "properties": {
         "condition_id": {
@@ -420,6 +442,18 @@
     },
     "ExperimentConditionAssignmentReferenceModel": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "properties": {
+            "ref_digest": {
+              "type": "null"
+            },
+            "ref_path": {
+              "type": "null"
+            }
+          }
+        }
+      ],
       "description": "Auditable run-level reference that can ground a study condition assignment.",
       "properties": {
         "ref_digest": {
@@ -491,24 +525,10 @@
       "title": "ExperimentConditionAssignmentReferenceModel",
       "type": "object"
     },
-    "ExperimentEvidenceReferenceModel": {
+    "ExperimentEvidenceSatisfactionReferenceModel": {
       "additionalProperties": false,
-      "description": "Reference constrained to evidence artifacts.",
+      "description": "Evidence concept reference that an artifact claims to satisfy.",
       "properties": {
-        "ref_digest": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Ref Digest"
-        },
         "ref_id": {
           "minLength": 1,
           "title": "Ref Id",
@@ -518,19 +538,6 @@
           "const": "evidence",
           "title": "Ref Kind",
           "type": "string"
-        },
-        "ref_path": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Ref Path"
         },
         "ref_version": {
           "anyOf": [
@@ -550,7 +557,7 @@
         "ref_kind",
         "ref_id"
       ],
-      "title": "ExperimentEvidenceReferenceModel",
+      "title": "ExperimentEvidenceSatisfactionReferenceModel",
       "type": "object"
     },
     "ExperimentMissingDataPolicyModel": {
@@ -787,7 +794,21 @@
         "replication_policy"
       ],
       "title": "ExperimentRunAllocationPlanModel",
-      "type": "object"
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "Run-allocation compared_conditions, condition_assignments keys, embedded condition ids, blocking factor ids, factor-level combinations, and run-level criteria signatures must be internally coherent.",
+          "id": "run-allocation-condition-assignments-valid",
+          "inputs": [
+            {
+              "contract_id": "experiment-study-v1",
+              "instance_path": "#/run_allocation"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.ExperimentRunAllocationPlanModel._validate_condition_assignments"
+        }
+      ]
     },
     "ExperimentStatisticalMethodModel": {
       "additionalProperties": false,
@@ -1029,6 +1050,37 @@
                 "required": [
                   "ref_kind"
                 ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "enum": [
+                  "primary-task",
+                  "comparison-task",
+                  "calibration-run",
+                  "evaluation-run"
+                ]
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "then": {
+            "properties": {
+              "target_ref": {
+                "properties": {
+                  "ref_digest": {
+                    "type": "null"
+                  },
+                  "ref_path": {
+                    "type": "null"
+                  }
+                }
               }
             }
           }

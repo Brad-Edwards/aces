@@ -78,6 +78,14 @@
       "schema_path": "contracts/schemas/control-plane/participant-episode-state-envelope-v1.json"
     },
     {
+      "contract_id": "participant-implementation-manifest-v1",
+      "schema_path": "contracts/schemas/participant-implementation-manifest/participant-implementation-manifest-v1.json"
+    },
+    {
+      "contract_id": "participant-implementation-provenance-v1",
+      "schema_path": "contracts/schemas/participant-implementation-provenance/participant-implementation-provenance-v1.json"
+    },
+    {
       "contract_id": "processor-manifest-v2",
       "schema_path": "contracts/schemas/processor-manifest/processor-manifest-v2.json"
     },

@@ -32,7 +32,10 @@ Evidence base:
 Criteria:
 
 - Scenario is authored environment meaning.
-- Task is evaluation protocol over a scenario or scenario snapshot.
+- Task is evaluation protocol over a scenario or scenario snapshot. For composed
+  SDL, snapshot identity is over the expanded canonical scenario, while module
+  fragment paths, module ids/namespaces, lock records, and fragment digests are
+  preserved as evidence/audit metadata.
 - Apparatus is execution instrument context.
 - Run is archival execution activity and result anchor.
 - Study/collection is analysis and comparison context.
@@ -226,15 +229,21 @@ Failure mode to avoid:
 
 - processor identity/version/manifest.
 - backend identity/version/profile.
+- participant implementation identity/version/manifest and run-level selected
+  implementation provenance when participant implementation apparatus is
+  present.
 - canonical processor and backend component entries that schema consumers can
   validate without out-of-band role interpretation.
 - selected SDL/manifests/images/datasets/dependencies.
 - canonical processor and backend manifest refs must be included in selected
-  manifests, with matching digest/path metadata and subject identities, and
-  ACES semantic validation must resolve those references to concrete
-  processor/backend manifest payloads so identity and manifest evidence cannot
-  drift.
-- compatibility declarations and conformance profiles.
+  manifests, with matching optional digest metadata and subject identities.
+  Manifest path qualifiers are not part of the v1 apparatus contract, and ACES
+  semantic validation must resolve canonical digest-qualified references to
+  concrete processor/backend manifest payloads so identity and manifest
+  evidence cannot drift.
+- compatibility declarations and conformance profiles as id/version
+  declarations without digest or path qualifiers unless a future validator binds
+  them to concrete profile/capability payloads.
 - host/VM/container/device context where relevant.
 - configuration, parameters, stochastic controls, clocks, and resource limits.
 - measurement channels and observed setup evidence.

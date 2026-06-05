@@ -43,8 +43,18 @@
       "participant-policy": {
         "component_kind": "participant-implementation",
         "identity": {
-          "name": "baseline-policy",
+          "name": "reference-red-agent",
           "version": "1.0.0"
+        },
+        "manifest_ref": {
+          "ref_kind": "manifest",
+          "ref_id": "reference-red-agent",
+          "ref_version": "participant-implementation-manifest/v1",
+          "subject_ref": {
+            "ref_kind": "participant-implementation",
+            "ref_id": "reference-red-agent",
+            "ref_version": "1.0.0"
+          }
         },
         "observed": true
       }
@@ -68,6 +78,16 @@
         "ref_kind": "backend",
         "ref_id": "stub-backend",
         "ref_version": "0.1.0"
+      }
+    },
+    {
+      "ref_kind": "manifest",
+      "ref_id": "reference-red-agent",
+      "ref_version": "participant-implementation-manifest/v1",
+      "subject_ref": {
+        "ref_kind": "participant-implementation",
+        "ref_id": "reference-red-agent",
+        "ref_version": "1.0.0"
       }
     }
   ],

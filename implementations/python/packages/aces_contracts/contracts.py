@@ -37,9 +37,12 @@ from pydantic_core import CoreSchema
 
 from .manifest_authority import (
     BACKEND_SUPPORTED_CONTRACT_IDS,
+    PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_SDL_VERSION_IDS,
     validate_backend_supported_contract_versions,
+    validate_participant_implementation_supported_contract_versions,
+    validate_participant_supported_contract_versions,
     validate_processor_supported_contract_versions,
     validate_processor_supported_sdl_versions,
 )
@@ -54,6 +57,8 @@ from .versions import (
     EXPERIMENT_TASK_SCHEMA_VERSION,
     OPERATION_SCHEMA_VERSION,
     PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION,
+    PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION,
+    PARTICIPANT_IMPLEMENTATION_PROVENANCE_V1_SCHEMA_VERSION,
     PROCESSOR_MANIFEST_V2_SCHEMA_VERSION,
     REFERENCE_MODELS_SCHEMA_VERSION,
     RUNTIME_SNAPSHOT_SCHEMA_VERSION,
@@ -133,12 +138,23 @@ _PROCESSOR_CONCEPT_BINDING_SCOPES = frozenset(
     }
 )
 
+_PARTICIPANT_IMPLEMENTATION_CONCEPT_BINDING_SCOPES = frozenset(
+    {
+        "implementation_kind",
+        "capabilities.supported_participant_contracts",
+        "capabilities.supported_decision_surface_modes",
+        "capabilities.tool_affordance_expectations",
+        "capabilities.exposure_policy_kinds",
+    }
+)
+
 _CONTROLLED_VOCABULARY_GOVERNED_SCOPES = frozenset(
     {
         "capabilities.supported_features",
         "capabilities.orchestrator.supported_workflow_features",
         "capabilities.orchestrator.supported_workflow_state_predicates",
         *_BACKEND_CONCEPT_BINDING_SCOPES,
+        *_PARTICIPANT_IMPLEMENTATION_CONCEPT_BINDING_SCOPES,
     }
 )
 
@@ -349,7 +365,7 @@ _SEMANTIC_PROFILE_PHASE_ALLOWED_BINDING_SCOPES = {
     "authoring": frozenset(),
     "exchange": frozenset(),
     "processing": _PROCESSOR_CONCEPT_BINDING_SCOPES,
-    "execution": _BACKEND_CONCEPT_BINDING_SCOPES,
+    "execution": _BACKEND_CONCEPT_BINDING_SCOPES | _PARTICIPANT_IMPLEMENTATION_CONCEPT_BINDING_SCOPES,
 }
 
 _JSON_SCHEMA_KEY = "$schema"
@@ -1222,6 +1238,187 @@ class BackendManifestV2Model(ContractModel):
         return json_schema
 
 
+class ParticipantImplementationCompatibilityModel(ContractModel):
+    participant_runtimes: list[NonEmptyString] = Field(default_factory=list)
+    processors: list[NonEmptyString] = Field(default_factory=list)
+    backends: list[NonEmptyString] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_non_empty_compatibility(self) -> ParticipantImplementationCompatibilityModel:
+        _validate_unique_string_values("participant_runtimes", self.participant_runtimes)
+        _validate_unique_string_values("processors", self.processors)
+        _validate_unique_string_values("backends", self.backends)
+        if not (self.participant_runtimes or self.processors or self.backends):
+            raise ValueError(
+                "compatibility must declare at least one participant runtime, processor, or backend surface"
+            )
+        return self
+
+
+class ParticipantImplementationCapabilitiesModel(ContractModel):
+    supported_participant_contracts: list[NonEmptyString] = Field(
+        min_length=1,
+        json_schema_extra={"uniqueItems": True},
+    )
+    supported_decision_surface_modes: list[NonEmptyString] = Field(
+        min_length=1,
+        json_schema_extra={"uniqueItems": True},
+    )
+    tool_affordance_expectations: list[NonEmptyString] = Field(
+        min_length=1,
+        json_schema_extra={"uniqueItems": True},
+    )
+    exposure_policy_kinds: list[NonEmptyString] = Field(
+        min_length=1,
+        json_schema_extra={"uniqueItems": True},
+    )
+
+    @model_validator(mode="after")
+    def _validate_participant_implementation_capabilities(self) -> ParticipantImplementationCapabilitiesModel:
+        _validate_unique_string_values("supported_participant_contracts", self.supported_participant_contracts)
+        _validate_unique_string_values("supported_decision_surface_modes", self.supported_decision_surface_modes)
+        _validate_unique_string_values("tool_affordance_expectations", self.tool_affordance_expectations)
+        _validate_unique_string_values("exposure_policy_kinds", self.exposure_policy_kinds)
+        validate_participant_supported_contract_versions(self.supported_participant_contracts)
+        _validate_controlled_vocabulary_terms(
+            "capabilities.supported_participant_contracts",
+            self.supported_participant_contracts,
+        )
+        _validate_controlled_vocabulary_terms(
+            "capabilities.supported_decision_surface_modes",
+            self.supported_decision_surface_modes,
+        )
+        _validate_controlled_vocabulary_terms(
+            "capabilities.tool_affordance_expectations",
+            self.tool_affordance_expectations,
+        )
+        _validate_controlled_vocabulary_terms("capabilities.exposure_policy_kinds", self.exposure_policy_kinds)
+        return self
+
+
+class ParticipantImplementationManifestModel(ContractModel):
+    schema_version: Literal[PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION] = (
+        PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION
+    )
+    identity: ApparatusIdentityModel
+    implementation_kind: NonEmptyString
+    supported_contract_versions: list[NonEmptyString] = Field(min_length=1)
+    compatibility: ParticipantImplementationCompatibilityModel
+    concept_bindings: list[ConceptBindingEntryModel] = Field(min_length=1)
+    constraints: dict[str, str] = Field(default_factory=dict)
+    capabilities: ParticipantImplementationCapabilitiesModel
+
+    @model_validator(mode="after")
+    def _validate_participant_implementation_manifest(self) -> ParticipantImplementationManifestModel:
+        validate_participant_implementation_supported_contract_versions(self.supported_contract_versions)
+        _validate_unique_string_values("supported_contract_versions", self.supported_contract_versions)
+        _validate_controlled_vocabulary_terms("implementation_kind", [self.implementation_kind])
+        unsupported = sorted(
+            set(self.capabilities.supported_participant_contracts) - set(self.supported_contract_versions)
+        )
+        if unsupported:
+            joined = ", ".join(unsupported)
+            raise ValueError(
+                "supported_participant_contracts must be declared in supported_contract_versions: " + joined
+            )
+        scopes = [binding.scope for binding in self.concept_bindings]
+        if len(scopes) != len(set(scopes)):
+            raise ValueError("concept_bindings must not contain duplicate scopes")
+        _validate_canonical_concept_bindings(
+            self,
+            allowed_scopes=_PARTICIPANT_IMPLEMENTATION_CONCEPT_BINDING_SCOPES,
+        )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema["properties"]["supported_contract_versions"]["items"]["enum"] = list(
+            PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS
+        )
+        return json_schema
+
+
+DigestString = Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
+
+
+class ParticipantExposurePolicyModel(ContractModel):
+    policy_id: NonEmptyString
+    policy_version: NonEmptyString | None = None
+    policy_digest: DigestString | None = None
+    exposure_policy_kinds: list[NonEmptyString] = Field(
+        min_length=1,
+        json_schema_extra={"uniqueItems": True},
+    )
+    disclosed_refs: list[NonEmptyString] = Field(default_factory=list)
+    withheld_refs: list[NonEmptyString] = Field(default_factory=list)
+    tool_affordance_refs: list[NonEmptyString] = Field(default_factory=list)
+    visibility_scope_refs: list[NonEmptyString] = Field(default_factory=list)
+    constraints: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _validate_exposure_policy(self) -> ParticipantExposurePolicyModel:
+        _validate_unique_string_values("exposure_policy_kinds", self.exposure_policy_kinds)
+        _validate_unique_string_values("disclosed_refs", self.disclosed_refs)
+        _validate_unique_string_values("withheld_refs", self.withheld_refs)
+        _validate_unique_string_values("tool_affordance_refs", self.tool_affordance_refs)
+        _validate_unique_string_values("visibility_scope_refs", self.visibility_scope_refs)
+        _validate_controlled_vocabulary_terms("capabilities.exposure_policy_kinds", self.exposure_policy_kinds)
+        if not (self.disclosed_refs or self.withheld_refs or self.tool_affordance_refs or self.visibility_scope_refs):
+            raise ValueError(
+                "exposure policy must declare disclosed_refs, withheld_refs, "
+                "tool_affordance_refs, or visibility_scope_refs"
+            )
+        return self
+
+
+class ParticipantImplementationSelectionModel(ContractModel):
+    participant_address: NonEmptyString
+    implementation_identity: ApparatusIdentityModel
+    manifest_ref: NonEmptyString
+    manifest_digest: DigestString
+    configuration_ref: NonEmptyString | None = None
+    configuration_digest: DigestString | None = None
+    selected_decision_surface_mode: NonEmptyString
+    participant_contract_versions: list[NonEmptyString] = Field(
+        min_length=1,
+        json_schema_extra={"uniqueItems": True},
+    )
+    exposure_policy: ParticipantExposurePolicyModel
+
+    @model_validator(mode="after")
+    def _validate_participant_implementation_selection(self) -> ParticipantImplementationSelectionModel:
+        _validate_unique_string_values("participant_contract_versions", self.participant_contract_versions)
+        validate_participant_supported_contract_versions(self.participant_contract_versions)
+        _validate_controlled_vocabulary_terms(
+            "capabilities.supported_decision_surface_modes",
+            [self.selected_decision_surface_mode],
+        )
+        return self
+
+
+class ParticipantImplementationProvenanceModel(ContractModel):
+    schema_version: Literal[PARTICIPANT_IMPLEMENTATION_PROVENANCE_V1_SCHEMA_VERSION] = (
+        PARTICIPANT_IMPLEMENTATION_PROVENANCE_V1_SCHEMA_VERSION
+    )
+    run_id: NonEmptyString
+    participant_implementations: list[ParticipantImplementationSelectionModel] = Field(min_length=1)
+    processor_manifest_ref: NonEmptyString | None = None
+    backend_manifest_ref: NonEmptyString | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _validate_unique_participant_addresses(self) -> ParticipantImplementationProvenanceModel:
+        addresses = [selection.participant_address for selection in self.participant_implementations]
+        _validate_unique_string_values("participant_address", addresses)
+        return self
+
+
 class ExperimentReferenceModel(ContractModel):
     """Typed reference to an experiment-core or adjacent ACES artifact."""
 
@@ -1256,11 +1453,66 @@ class ExperimentScenarioReferenceModel(ExperimentReferenceModel):
 
     ref_kind: Literal["scenario", "scenario-snapshot"]
 
+    @model_validator(mode="after")
+    def _validate_generic_scenario_reference_scope(self) -> ExperimentScenarioReferenceModel:
+        if self.ref_kind == "scenario" and (
+            self.ref_version is not None or self.ref_digest is not None or self.ref_path is not None
+        ):
+            raise ValueError(
+                "generic scenario references are id-only; use scenario-snapshot for version, digest, or path binding"
+            )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {
+                    "properties": {"ref_kind": {"const": "scenario"}},
+                    "required": ["ref_kind"],
+                },
+                "then": {
+                    "properties": {
+                        "ref_version": {"type": "null"},
+                        "ref_digest": {"type": "null"},
+                        "ref_path": {"type": "null"},
+                    }
+                },
+            }
+        )
+        return json_schema
+
 
 class ExperimentTaskReferenceModel(ExperimentReferenceModel):
     """Reference constrained to an experiment task."""
 
     ref_kind: Literal["task"]
+
+    @model_validator(mode="after")
+    def _validate_task_reference_scope(self) -> ExperimentTaskReferenceModel:
+        if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
+            raise ValueError("task references must not carry ref_digest or ref_path")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        properties = json_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("ref_digest", None)
+            properties.pop("ref_path", None)
+        return json_schema
 
 
 class ExperimentScenarioSnapshotReferenceModel(ExperimentReferenceModel):
@@ -1275,17 +1527,169 @@ class ExperimentManifestReferenceModel(ExperimentReferenceModel):
     ref_kind: Literal["manifest"]
     subject_ref: ExperimentReferenceModel | None = None
 
+    @model_validator(mode="after")
+    def _validate_manifest_reference_scope(self) -> ExperimentManifestReferenceModel:
+        if self.ref_path is not None:
+            raise ValueError("manifest references must not carry ref_path")
+        if self.subject_ref is not None and (
+            self.subject_ref.ref_digest is not None or self.subject_ref.ref_path is not None
+        ):
+            raise ValueError("manifest subject_ref must not carry ref_digest or ref_path")
+        if self.ref_digest is not None:
+            if self.subject_ref is None or self.subject_ref.ref_kind not in {"processor", "backend"}:
+                raise ValueError(
+                    "digest-bound manifest references must use processor/backend subject_ref values "
+                    "validated against concrete manifest payloads"
+                )
+            expected_manifest_version = (
+                PROCESSOR_MANIFEST_V2_SCHEMA_VERSION
+                if self.subject_ref.ref_kind == "processor"
+                else BACKEND_MANIFEST_V2_SCHEMA_VERSION
+            )
+            if self.ref_version != expected_manifest_version:
+                raise ValueError(
+                    "digest-bound processor/backend manifest references must use the supported manifest schema version"
+                )
+        if self.subject_ref is not None and self.subject_ref.ref_kind in {"processor", "backend"}:
+            if self.ref_id != self.subject_ref.ref_id:
+                raise ValueError("processor/backend manifest references ref_id must match subject_ref.ref_id")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {"properties": {"ref_path": {"type": "null"}}},
+                {
+                    "if": {
+                        "properties": {"ref_digest": {"type": "string"}},
+                        "required": ["ref_digest"],
+                    },
+                    "then": {
+                        "required": ["subject_ref"],
+                        "properties": {
+                            "subject_ref": {
+                                "required": ["ref_kind"],
+                                "properties": {"ref_kind": {"enum": ["processor", "backend"]}},
+                            }
+                        },
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "ref_digest": {"type": "string"},
+                            "subject_ref": {
+                                "properties": {"ref_kind": {"const": "processor"}},
+                                "required": ["ref_kind"],
+                            },
+                        },
+                        "required": ["ref_digest", "subject_ref"],
+                    },
+                    "then": {"properties": {"ref_version": {"const": PROCESSOR_MANIFEST_V2_SCHEMA_VERSION}}},
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "ref_digest": {"type": "string"},
+                            "subject_ref": {
+                                "properties": {"ref_kind": {"const": "backend"}},
+                                "required": ["ref_kind"],
+                            },
+                        },
+                        "required": ["ref_digest", "subject_ref"],
+                    },
+                    "then": {"properties": {"ref_version": {"const": BACKEND_MANIFEST_V2_SCHEMA_VERSION}}},
+                },
+                {
+                    "if": {"properties": {"subject_ref": {"type": "object"}}, "required": ["subject_ref"]},
+                    "then": {
+                        "properties": {
+                            "subject_ref": {
+                                "properties": {
+                                    "ref_digest": {"type": "null"},
+                                    "ref_path": {"type": "null"},
+                                }
+                            }
+                        }
+                    },
+                },
+            ]
+        )
+        _add_aces_invariant(
+            json_schema,
+            "manifest-reference-digest-scope-valid",
+            "Manifest digest qualifiers are limited to processor/backend manifest refs that can be checked "
+            "against concrete manifest payload digests; manifest path qualifiers are not accepted in v1.",
+            validator="aces_contracts.contracts.ExperimentManifestReferenceModel._validate_manifest_reference_scope",
+            inputs=[
+                {"contract_id": "experiment-task-v1", "instance_path": "#/$defs/ExperimentManifestReferenceModel"},
+                {
+                    "contract_id": "experiment-apparatus-context-v1",
+                    "instance_path": "#/$defs/ExperimentManifestReferenceModel",
+                },
+                {"contract_id": "experiment-run-v1", "instance_path": "#/$defs/ExperimentManifestReferenceModel"},
+            ],
+        )
+        return json_schema
+
 
 class ExperimentProcessorReferenceModel(ExperimentReferenceModel):
     """Reference constrained to a processor identity."""
 
     ref_kind: Literal["processor"]
 
+    @model_validator(mode="after")
+    def _validate_identity_reference_scope(self) -> ExperimentProcessorReferenceModel:
+        if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
+            raise ValueError("processor identity references must not carry ref_digest or ref_path")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        properties = json_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("ref_digest", None)
+            properties.pop("ref_path", None)
+        return json_schema
+
 
 class ExperimentBackendReferenceModel(ExperimentReferenceModel):
     """Reference constrained to a backend identity."""
 
     ref_kind: Literal["backend"]
+
+    @model_validator(mode="after")
+    def _validate_identity_reference_scope(self) -> ExperimentBackendReferenceModel:
+        if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
+            raise ValueError("backend identity references must not carry ref_digest or ref_path")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        properties = json_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("ref_digest", None)
+            properties.pop("ref_path", None)
+        return json_schema
 
 
 class ExperimentEvidenceReferenceModel(ExperimentReferenceModel):
@@ -1294,10 +1698,105 @@ class ExperimentEvidenceReferenceModel(ExperimentReferenceModel):
     ref_kind: Literal["evidence"]
 
 
+class ExperimentEvidenceSatisfactionReferenceModel(ExperimentEvidenceReferenceModel):
+    """Evidence concept reference that an artifact claims to satisfy."""
+
+    @model_validator(mode="after")
+    def _validate_satisfaction_reference_scope(self) -> ExperimentEvidenceSatisfactionReferenceModel:
+        if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
+            raise ValueError("artifact satisfies_refs must not carry ref_digest or ref_path")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        properties = json_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("ref_digest", None)
+            properties.pop("ref_path", None)
+        return json_schema
+
+
+class ExperimentRunEvidenceArtifactReferenceModel(ExperimentEvidenceReferenceModel):
+    """Run-internal reference to a concrete evidence artifact id."""
+
+    @model_validator(mode="after")
+    def _validate_run_evidence_artifact_reference_scope(self) -> ExperimentRunEvidenceArtifactReferenceModel:
+        if any(field in self.model_fields_set for field in ("ref_version", "ref_digest", "ref_path")):
+            raise ValueError("run result evidence_refs are artifact-id references and must not carry qualifiers")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        properties = json_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("ref_version", None)
+            properties.pop("ref_digest", None)
+            properties.pop("ref_path", None)
+        return json_schema
+
+
 class ExperimentMeasurementChannelReferenceModel(ExperimentReferenceModel):
     """Reference constrained to a declared measurement channel."""
 
     ref_kind: Literal["measurement-channel"]
+
+    @model_validator(mode="after")
+    def _validate_measurement_channel_reference_scope(self) -> ExperimentMeasurementChannelReferenceModel:
+        if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
+            raise ValueError("measurement-channel references must not carry ref_digest or ref_path")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        properties = json_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("ref_digest", None)
+            properties.pop("ref_path", None)
+        return json_schema
+
+
+class ExperimentApparatusCompatibilityReferenceModel(ExperimentReferenceModel):
+    """Profile or capability reference declared by apparatus compatibility metadata."""
+
+    ref_kind: Literal["profile", "capability"]
+
+    @model_validator(mode="after")
+    def _validate_compatibility_reference_scope(self) -> ExperimentApparatusCompatibilityReferenceModel:
+        if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
+            raise ValueError("apparatus compatibility references must not carry ref_digest or ref_path")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        properties = json_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("ref_digest", None)
+            properties.pop("ref_path", None)
+        return json_schema
 
 
 class ExperimentConditionAssignmentReferenceModel(ExperimentReferenceModel):
@@ -1316,10 +1815,47 @@ class ExperimentConditionAssignmentReferenceModel(ExperimentReferenceModel):
         "measurement-channel",
     ]
 
+    @model_validator(mode="after")
+    def _validate_condition_reference_scope(self) -> ExperimentConditionAssignmentReferenceModel:
+        if self.ref_digest is not None or self.ref_path is not None:
+            raise ValueError(
+                "condition assignment references are run-level criteria and must not carry ref_digest or ref_path; "
+                "use task evidence requirements or validated apparatus manifest refs for digest/path-bound evidence"
+            )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).append(
+            {
+                "properties": {
+                    "ref_digest": {"type": "null"},
+                    "ref_path": {"type": "null"},
+                },
+            }
+        )
+        return json_schema
+
 
 def _manifest_reference_key(
     reference: ExperimentManifestReferenceModel,
-) -> tuple[str, str | None, str | None, str | None, str | None, str | None, str | None]:
+) -> tuple[
+    str,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+    str | None,
+]:
     subject_ref = reference.subject_ref
     return (
         reference.ref_id,
@@ -1329,6 +1865,8 @@ def _manifest_reference_key(
         subject_ref.ref_kind if subject_ref is not None else None,
         subject_ref.ref_id if subject_ref is not None else None,
         subject_ref.ref_version if subject_ref is not None else None,
+        _canonical_digest(subject_ref.ref_digest) if subject_ref is not None else None,
+        subject_ref.ref_path if subject_ref is not None else None,
     )
 
 
@@ -1373,6 +1911,8 @@ def _reference_identity_satisfies_requirement(
 
 
 def _identity_matches_reference(identity: ApparatusIdentityModel, reference: ExperimentReferenceModel) -> bool:
+    if reference.ref_digest is not None or reference.ref_path is not None:
+        return False
     if identity.name != reference.ref_id:
         return False
     return reference.ref_version is None or identity.version == reference.ref_version
@@ -1448,7 +1988,7 @@ class ExperimentArtifactRefModel(ContractModel):
     size_bytes: NonNegativeInteger
     created_at: Rfc3339DateTimeString
     source: NonEmptyString
-    satisfies_refs: list[ExperimentEvidenceReferenceModel] = Field(default_factory=list)
+    satisfies_refs: list[ExperimentEvidenceSatisfactionReferenceModel] = Field(default_factory=list)
     sensitivity: Literal["public", "internal", "restricted", "redacted"]
     description: NonEmptyString | None = None
 
@@ -1544,6 +2084,50 @@ class ExperimentSplitAndLeakageControlsModel(ContractModel):
     leakage_checks: list[NonEmptyString] = Field(default_factory=list)
     unresolved_risks: list[NonEmptyString] = Field(default_factory=list)
 
+    @model_validator(mode="after")
+    def _validate_disclosure_surface(self) -> ExperimentSplitAndLeakageControlsModel:
+        if not any(
+            (
+                self.partitioning_strategy,
+                self.grouping_constraints,
+                self.temporal_availability,
+                self.hidden_material_policy,
+                self.leakage_checks,
+                self.unresolved_risks,
+            )
+        ):
+            raise ValueError("split_and_leakage_controls must disclose at least one control, policy, or risk")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("anyOf", []).extend(
+            [
+                {
+                    "required": ["partitioning_strategy"],
+                    "properties": {"partitioning_strategy": {"not": {"type": "null"}}},
+                },
+                {
+                    "required": ["temporal_availability"],
+                    "properties": {"temporal_availability": {"not": {"type": "null"}}},
+                },
+                {
+                    "required": ["hidden_material_policy"],
+                    "properties": {"hidden_material_policy": {"not": {"type": "null"}}},
+                },
+                {"required": ["grouping_constraints"], "properties": {"grouping_constraints": {"minItems": 1}}},
+                {"required": ["leakage_checks"], "properties": {"leakage_checks": {"minItems": 1}}},
+                {"required": ["unresolved_risks"], "properties": {"unresolved_risks": {"minItems": 1}}},
+            ]
+        )
+        return json_schema
+
 
 class ExperimentApparatusConstraintModel(ContractModel):
     """Apparatus compatibility and capability constraints for a task."""
@@ -1556,6 +2140,32 @@ class ExperimentApparatusConstraintModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_allowed_identity_manifest_refs(self) -> ExperimentApparatusConstraintModel:
+        if not any(
+            (
+                self.allowed_processor_refs,
+                self.allowed_backend_refs,
+                self.required_manifest_refs,
+                self.required_capabilities,
+                self.notes,
+            )
+        ):
+            raise ValueError("apparatus_constraints must declare at least one apparatus constraint or disclosure note")
+        for manifest in self.required_manifest_refs:
+            subject_ref = manifest.subject_ref
+            if subject_ref is None or subject_ref.ref_kind not in {"processor", "backend"}:
+                continue
+            expected_manifest_version = (
+                PROCESSOR_MANIFEST_V2_SCHEMA_VERSION
+                if subject_ref.ref_kind == "processor"
+                else BACKEND_MANIFEST_V2_SCHEMA_VERSION
+            )
+            if manifest.ref_version == expected_manifest_version:
+                if manifest.ref_id != subject_ref.ref_id:
+                    raise ValueError("processor/backend required_manifest_refs ref_id must match subject_ref.ref_id")
+                if subject_ref.ref_digest is not None or subject_ref.ref_path is not None:
+                    raise ValueError(
+                        "processor/backend required_manifest_refs subject_ref must not carry ref_digest or ref_path"
+                    )
         required_manifest_keys = {
             (
                 manifest.subject_ref.ref_kind,
@@ -1600,11 +2210,20 @@ class ExperimentApparatusConstraintModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("anyOf", []).extend(
+            [
+                {"required": ["allowed_processor_refs"], "properties": {"allowed_processor_refs": {"minItems": 1}}},
+                {"required": ["allowed_backend_refs"], "properties": {"allowed_backend_refs": {"minItems": 1}}},
+                {"required": ["required_manifest_refs"], "properties": {"required_manifest_refs": {"minItems": 1}}},
+                {"required": ["required_capabilities"], "properties": {"required_capabilities": {"minItems": 1}}},
+                {"required": ["notes"], "properties": {"notes": {"minItems": 1}}},
+            ]
+        )
         _add_aces_invariant(
             json_schema,
             "apparatus-constraint-identity-manifest-resolves",
             "Every allowed processor/backend identity reference must have a matching required manifest ref_id "
-            "with matching subject identity and manifest schema version.",
+            "with matching manifest id, subject identity, and manifest schema version.",
             validator="aces_contracts.contracts.ExperimentApparatusConstraintModel._validate_allowed_identity_manifest_refs",
             inputs=[{"contract_id": "experiment-task-v1", "instance_path": "#/apparatus_constraints"}],
         )
@@ -1624,10 +2243,10 @@ class ExperimentTaskModel(ContractModel):
     intended_use: NonEmptyString
     non_use: list[NonEmptyString] = Field(default_factory=list)
     population_or_construct: NonEmptyString
-    split_and_leakage_controls: ExperimentSplitAndLeakageControlsModel | None = None
-    apparatus_constraints: ExperimentApparatusConstraintModel | None = None
-    validity_notes: list[ExperimentValidityNoteModel] = Field(default_factory=list)
-    artifact_refs: list[ExperimentArtifactRefModel] = Field(default_factory=list)
+    split_and_leakage_controls: ExperimentSplitAndLeakageControlsModel
+    apparatus_constraints: ExperimentApparatusConstraintModel
+    validity_notes: list[ExperimentValidityNoteModel] = Field(min_length=1)
+    artifact_refs: list[ExperimentArtifactRefModel] = Field(min_length=1)
 
 
 class ExperimentParameterModel(ContractModel):
@@ -1712,7 +2331,7 @@ class ExperimentApparatusComponentModel(ContractModel):
     ]
     identity: ApparatusIdentityModel
     manifest_ref: ExperimentManifestReferenceModel | None = None
-    compatibility_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+    compatibility_refs: list[ExperimentApparatusCompatibilityReferenceModel] = Field(default_factory=list)
     observed: bool = False
     limitations: list[NonEmptyString] = Field(default_factory=list)
 
@@ -1726,7 +2345,7 @@ class ExperimentApparatusContextModel(ContractModel):
     declared_at: Rfc3339DateTimeString
     components: dict[NonEmptyString, ExperimentApparatusComponentModel] = Field(min_length=2)
     selected_manifests: list[ExperimentManifestReferenceModel] = Field(min_length=1)
-    compatibility_declarations: list[ExperimentReferenceModel] = Field(min_length=1)
+    compatibility_declarations: list[ExperimentApparatusCompatibilityReferenceModel] = Field(min_length=1)
     configuration_parameters: list[ExperimentParameterModel] = Field(min_length=1)
     stochastic_controls: list[ExperimentStochasticControlModel] = Field(min_length=1)
     clocks: list[ExperimentClockContextModel] = Field(min_length=1)
@@ -1745,7 +2364,38 @@ class ExperimentApparatusContextModel(ContractModel):
             )
         if backend is None or backend.component_kind != "backend":
             raise ValueError("apparatus components must include a 'backend' component with component_kind='backend'")
+        selected_manifest_subject_keys: dict[tuple[str, str, str | None, str | None], str] = {}
+        for selected_manifest in self.selected_manifests:
+            selected_subject_ref = selected_manifest.subject_ref
+            if selected_subject_ref is None:
+                continue
+            selected_subject_key = (
+                selected_subject_ref.ref_kind,
+                selected_subject_ref.ref_id,
+                selected_subject_ref.ref_version,
+                selected_manifest.ref_version,
+            )
+            prior_manifest_id = selected_manifest_subject_keys.get(selected_subject_key)
+            if prior_manifest_id is not None:
+                raise ValueError(
+                    "selected_manifests must not contain multiple manifest refs for the same subject identity "
+                    f"and manifest schema version: {selected_subject_ref.ref_kind}:{selected_subject_ref.ref_id}"
+                )
+            selected_manifest_subject_keys[selected_subject_key] = selected_manifest.ref_id
         selected_manifest_keys = {_manifest_reference_key(ref) for ref in self.selected_manifests}
+        canonical_component_manifest_keys: set[
+            tuple[
+                str,
+                str | None,
+                str | None,
+                str | None,
+                str | None,
+                str | None,
+                str | None,
+                str | None,
+                str | None,
+            ]
+        ] = set()
         for key, component in (("processor", processor), ("backend", backend)):
             if component.manifest_ref is None:
                 raise ValueError(f"apparatus component '{key}' must include manifest_ref")
@@ -1754,8 +2404,14 @@ class ExperimentApparatusContextModel(ContractModel):
                 raise ValueError(f"apparatus component '{key}' manifest_ref must include subject_ref")
             if subject_ref.ref_kind != key:
                 raise ValueError(f"apparatus component '{key}' manifest_ref subject_ref must use ref_kind='{key}'")
+            if component.manifest_ref.ref_id != component.identity.name:
+                raise ValueError(f"apparatus component '{key}' manifest_ref ref_id must match component identity")
             if subject_ref.ref_id != component.identity.name or subject_ref.ref_version != component.identity.version:
                 raise ValueError(f"apparatus component '{key}' manifest_ref subject_ref must match component identity")
+            if subject_ref.ref_digest is not None or subject_ref.ref_path is not None:
+                raise ValueError(
+                    f"apparatus component '{key}' manifest_ref subject_ref must not carry ref_digest or ref_path"
+                )
             expected_manifest_version = (
                 PROCESSOR_MANIFEST_V2_SCHEMA_VERSION if key == "processor" else BACKEND_MANIFEST_V2_SCHEMA_VERSION
             )
@@ -1763,8 +2419,57 @@ class ExperimentApparatusContextModel(ContractModel):
                 raise ValueError(
                     f"apparatus component '{key}' manifest_ref must use ref_version='{expected_manifest_version}'"
                 )
-            if _manifest_reference_key(component.manifest_ref) not in selected_manifest_keys:
+            component_manifest_key = _manifest_reference_key(component.manifest_ref)
+            canonical_component_manifest_keys.add(component_manifest_key)
+            if component_manifest_key not in selected_manifest_keys:
                 raise ValueError(f"apparatus component '{key}' manifest_ref must be present in selected_manifests")
+        participant_components = {
+            key: component
+            for key, component in self.components.items()
+            if component.component_kind == "participant-implementation"
+        }
+        for key, component in participant_components.items():
+            if component.manifest_ref is None:
+                raise ValueError(f"participant implementation component '{key}' must include manifest_ref")
+            subject_ref = component.manifest_ref.subject_ref
+            if subject_ref is None:
+                raise ValueError(f"participant implementation component '{key}' manifest_ref must include subject_ref")
+            if subject_ref.ref_kind != "participant-implementation":
+                raise ValueError(
+                    f"participant implementation component '{key}' manifest_ref subject_ref must use "
+                    "ref_kind='participant-implementation'"
+                )
+            if component.manifest_ref.ref_id != component.identity.name:
+                raise ValueError(
+                    f"participant implementation component '{key}' manifest_ref ref_id must match component identity"
+                )
+            if subject_ref.ref_id != component.identity.name or subject_ref.ref_version != component.identity.version:
+                raise ValueError(
+                    f"participant implementation component '{key}' manifest_ref subject_ref must match "
+                    "component identity"
+                )
+            if subject_ref.ref_digest is not None or subject_ref.ref_path is not None:
+                raise ValueError(
+                    f"participant implementation component '{key}' manifest_ref subject_ref must not carry "
+                    "ref_digest or ref_path"
+                )
+            if component.manifest_ref.ref_version != PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION:
+                raise ValueError(
+                    f"participant implementation component '{key}' manifest_ref must use "
+                    f"ref_version='{PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION}'"
+                )
+            if _manifest_reference_key(component.manifest_ref) not in selected_manifest_keys:
+                raise ValueError(
+                    f"participant implementation component '{key}' manifest_ref must be present in selected_manifests"
+                )
+        for selected_manifest in self.selected_manifests:
+            if (
+                selected_manifest.ref_digest is not None
+                and _manifest_reference_key(selected_manifest) not in canonical_component_manifest_keys
+            ):
+                raise ValueError(
+                    "digest-qualified selected_manifests must be canonical processor/backend component manifest refs"
+                )
         if not any(artifact.role == "apparatus-evidence" for artifact in self.observed_setup_evidence):
             raise ValueError("observed_setup_evidence must include at least one apparatus-evidence artifact")
         return self
@@ -1809,14 +2514,16 @@ class ExperimentApparatusContextModel(ContractModel):
         _add_aces_invariant(
             json_schema,
             "canonical-apparatus-manifest-selected",
-            "The canonical processor and backend component manifest_ref values must be present in selected_manifests.",
+            "The canonical processor and backend component manifest_ref values must be present in selected_manifests; "
+            "digest-qualified selected manifests must be canonical component manifests.",
             validator="aces_contracts.contracts.ExperimentApparatusContextModel._validate_instrument_context",
             inputs=[{"contract_id": "experiment-apparatus-context-v1", "instance_path": "#"}],
         )
         _add_aces_invariant(
             json_schema,
             "apparatus-manifest-payload-identity-valid",
-            "Canonical processor and backend manifest_ref values must resolve to manifest payloads with matching identities.",
+            "Canonical processor and backend manifest_ref values must resolve to manifest payloads with matching "
+            "identities and mutual compatibility declarations.",
             validator="aces_contracts.contracts.validate_experiment_apparatus_context_against_manifests",
             inputs=[
                 {"contract_id": "experiment-apparatus-context-v1", "instance_path": "#"},
@@ -1949,6 +2656,14 @@ def validate_experiment_apparatus_context_against_manifests(
         expected_schema_version=BACKEND_MANIFEST_V2_SCHEMA_VERSION,
         supplied_digest=backend_manifest_digest,
     )
+    if backend_manifest.identity.name not in processor_manifest.compatibility.backends:
+        raise ValueError(
+            "processor manifest compatibility.backends must include the selected backend manifest identity"
+        )
+    if processor_manifest.identity.name not in backend_manifest.compatibility.processors:
+        raise ValueError(
+            "backend manifest compatibility.processors must include the selected processor manifest identity"
+        )
 
 
 class ExperimentResultSummaryModel(ContractModel):
@@ -1957,7 +2672,7 @@ class ExperimentResultSummaryModel(ContractModel):
     metric_id: NonEmptyString
     value: str | int | float | bool | None = None
     value_status: Literal["reported", "missing", "withheld", "not-applicable"]
-    evidence_refs: list[ExperimentEvidenceReferenceModel] = Field(min_length=1)
+    evidence_refs: list[ExperimentRunEvidenceArtifactReferenceModel] = Field(min_length=1)
     uncertainty: NonEmptyString | None = None
     notes: NonEmptyString | None = None
 
@@ -2020,6 +2735,7 @@ class ExperimentRunModel(ContractModel):
     task_ref: ExperimentTaskReferenceModel
     scenario_snapshot_ref: ExperimentScenarioSnapshotReferenceModel
     apparatus_context: ExperimentApparatusContextModel
+    participant_implementation_provenance: ParticipantImplementationProvenanceModel | None = None
     parameter_set: list[ExperimentParameterModel] = Field(min_length=1)
     stochastic_controls: list[ExperimentStochasticControlModel] = Field(min_length=1)
     started_at: Rfc3339DateTimeString
@@ -2047,6 +2763,34 @@ class ExperimentRunModel(ContractModel):
             result.value_status == "reported" for result in self.result_summaries.values()
         ):
             raise ValueError("succeeded experiment runs must include at least one reported result summary")
+        participant_components = [
+            component
+            for component in self.apparatus_context.components.values()
+            if component.component_kind == "participant-implementation"
+        ]
+        if participant_components and self.participant_implementation_provenance is None:
+            raise ValueError(
+                "experiment runs with participant implementation apparatus components must include "
+                "participant_implementation_provenance"
+            )
+        if self.participant_implementation_provenance is not None:
+            if self.participant_implementation_provenance.run_id != self.run_id:
+                raise ValueError("participant_implementation_provenance run_id must match experiment run_id")
+            selected_identities = {
+                (selection.implementation_identity.name, selection.implementation_identity.version)
+                for selection in self.participant_implementation_provenance.participant_implementations
+            }
+            missing_component_identities = sorted(
+                f"{component.identity.name}:{component.identity.version}"
+                for component in participant_components
+                if (component.identity.name, component.identity.version) not in selected_identities
+            )
+            if missing_component_identities:
+                joined = ", ".join(missing_component_identities)
+                raise ValueError(
+                    "participant implementation apparatus components must resolve to "
+                    f"participant_implementation_provenance selections: {joined}"
+                )
         evidence_artifact_ids = {artifact.artifact_id for artifact in self.evidence_artifacts}
         missing_evidence_refs = sorted(
             {
@@ -2097,6 +2841,13 @@ class ExperimentRunModel(ContractModel):
         )
         _add_aces_invariant(
             json_schema,
+            "participant-implementation-provenance-resolves",
+            "Participant implementation apparatus components must resolve to run-level participant provenance.",
+            validator="aces_contracts.contracts.ExperimentRunModel._validate_archival_run",
+            inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
             "task-run-protocol-binding-valid",
             "Run apparatus, result metric ids, and concrete evidence artifacts must satisfy the referenced task protocol.",
             validator="aces_contracts.contracts.validate_experiment_run_against_task",
@@ -2132,13 +2883,11 @@ def validate_experiment_run_against_task(task: ExperimentTaskModel, run: Experim
     if run.task_ref.ref_id != task.task_id or run.task_ref.ref_version != task.task_version:
         raise ValueError("run task_ref must match task task_id and task_version")
 
-    if run.scenario_snapshot_ref.ref_id != task.scenario_ref.ref_id:
-        raise ValueError("run scenario_snapshot_ref ref_id must match task scenario_ref ref_id")
     if task.scenario_ref.ref_kind == "scenario-snapshot":
-        if run.scenario_snapshot_ref.ref_version != task.scenario_ref.ref_version:
-            raise ValueError("run scenario_snapshot_ref ref_version must match task scenario_ref ref_version")
-        if _canonical_digest(run.scenario_snapshot_ref.ref_digest) != _canonical_digest(task.scenario_ref.ref_digest):
-            raise ValueError("run scenario_snapshot_ref ref_digest must match task scenario_ref ref_digest")
+        if not _reference_satisfies_requirement(run.scenario_snapshot_ref, task.scenario_ref):
+            raise ValueError("run scenario_snapshot_ref must satisfy task scenario_ref")
+    elif run.scenario_snapshot_ref.ref_id != task.scenario_ref.ref_id:
+        raise ValueError("run scenario_snapshot_ref ref_id must match task scenario_ref ref_id")
 
     if task.apparatus_constraints is not None:
         _validate_apparatus_context_satisfies_constraints(task.apparatus_constraints, run.apparatus_context)
@@ -2209,6 +2958,10 @@ class ExperimentStudyMembershipModel(ContractModel):
         if allowed_ref_kinds is not None and self.target_ref.ref_kind not in allowed_ref_kinds:
             expected = ", ".join(sorted(allowed_ref_kinds))
             raise ValueError(f"study membership role '{self.role}' requires target_ref.ref_kind in {{{expected}}}")
+        if self.role in {"primary-task", "comparison-task", "calibration-run", "evaluation-run"} and (
+            self.target_ref.ref_digest is not None or self.target_ref.ref_path is not None
+        ):
+            raise ValueError("study task/run membership target_ref values must not carry ref_digest or ref_path")
         return self
 
     @classmethod
@@ -2240,6 +2993,26 @@ class ExperimentStudyMembershipModel(ContractModel):
             }
             for roles, ref_kinds in role_kind_constraints.items()
         )
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {
+                    "properties": {
+                        "role": {"enum": ["primary-task", "comparison-task", "calibration-run", "evaluation-run"]}
+                    },
+                    "required": ["role"],
+                },
+                "then": {
+                    "properties": {
+                        "target_ref": {
+                            "properties": {
+                                "ref_digest": {"type": "null"},
+                                "ref_path": {"type": "null"},
+                            }
+                        }
+                    }
+                },
+            }
+        )
         return json_schema
 
 
@@ -2265,6 +3038,22 @@ class ExperimentConditionAssignmentModel(ContractModel):
         if not self.required_refs and not self.required_parameters:
             raise ValueError("condition assignments must include required_refs or required_parameters")
         return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("anyOf", []).extend(
+            [
+                {"required": ["required_refs"], "properties": {"required_refs": {"minItems": 1}}},
+                {"required": ["required_parameters"], "properties": {"required_parameters": {"minItems": 1}}},
+            ]
+        )
+        return json_schema
 
 
 class ExperimentRunAllocationPlanModel(ContractModel):
@@ -2335,6 +3124,24 @@ class ExperimentRunAllocationPlanModel(ContractModel):
                     f"compared_conditions: {joined}"
                 )
         return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        _add_aces_invariant(
+            json_schema,
+            "run-allocation-condition-assignments-valid",
+            "Run-allocation compared_conditions, condition_assignments keys, embedded condition ids, blocking "
+            "factor ids, factor-level combinations, and run-level criteria signatures must be internally coherent.",
+            validator="aces_contracts.contracts.ExperimentRunAllocationPlanModel._validate_condition_assignments",
+            inputs=[{"contract_id": "experiment-study-v1", "instance_path": "#/run_allocation"}],
+        )
+        return json_schema
 
 
 class ExperimentStatisticalMethodModel(ContractModel):
@@ -2613,6 +3420,8 @@ def _run_model_key(run: ExperimentRunModel) -> tuple[str, str | None]:
 
 
 def _task_ref_matches_task(reference: ExperimentReferenceModel, task: ExperimentTaskModel) -> bool:
+    if reference.ref_digest is not None or reference.ref_path is not None:
+        return False
     return (
         reference.ref_kind == "task"
         and reference.ref_id == task.task_id
@@ -2621,6 +3430,8 @@ def _task_ref_matches_task(reference: ExperimentReferenceModel, task: Experiment
 
 
 def _run_ref_matches_run(reference: ExperimentReferenceModel, run: ExperimentRunModel) -> bool:
+    if reference.ref_digest is not None or reference.ref_path is not None:
+        return False
     return (
         reference.ref_kind == "run"
         and reference.ref_id == run.run_id
@@ -2635,6 +3446,16 @@ def _component_identity_matches_reference(
     return component.component_kind == reference.ref_kind and _identity_matches_reference(component.identity, reference)
 
 
+def _participant_selection_matches_reference(
+    selection: ParticipantImplementationSelectionModel,
+    reference: ExperimentReferenceModel,
+) -> bool:
+    return reference.ref_kind == "participant-implementation" and _identity_matches_reference(
+        selection.implementation_identity,
+        reference,
+    )
+
+
 def _reference_in_collection(
     references: list[ExperimentReferenceModel],
     requirement: ExperimentReferenceModel,
@@ -2644,19 +3465,30 @@ def _reference_in_collection(
 
 def _run_satisfies_condition_reference(run: ExperimentRunModel, requirement: ExperimentReferenceModel) -> bool:
     apparatus_context = run.apparatus_context
-    if requirement.ref_kind in {"processor", "backend", "participant-implementation"}:
+    if requirement.ref_kind in {"processor", "backend"}:
         return any(
             _component_identity_matches_reference(component, requirement)
             for component in apparatus_context.components.values()
+        )
+    if requirement.ref_kind == "participant-implementation":
+        provenance = run.participant_implementation_provenance
+        if provenance is None:
+            return False
+        return any(
+            _participant_selection_matches_reference(selection, requirement)
+            for selection in provenance.participant_implementations
         )
     if requirement.ref_kind == "task":
         return _reference_satisfies_requirement(run.task_ref, requirement)
     if requirement.ref_kind == "scenario-snapshot":
         return _reference_satisfies_requirement(run.scenario_snapshot_ref, requirement)
     if requirement.ref_kind == "apparatus-context":
-        return requirement.ref_id == apparatus_context.apparatus_context_id and (
-            requirement.ref_version is None or requirement.ref_version == apparatus_context.context_version
+        apparatus_context_ref = ExperimentReferenceModel(
+            ref_kind="apparatus-context",
+            ref_id=apparatus_context.apparatus_context_id,
+            ref_version=apparatus_context.context_version,
         )
+        return _reference_satisfies_requirement(apparatus_context_ref, requirement)
     if requirement.ref_kind == "manifest":
         return any(
             _reference_satisfies_requirement(selected_manifest, requirement)
@@ -3527,6 +4359,8 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "scenario-instantiation-request-v1": InstantiationRequestModel.model_json_schema(),
         "backend-manifest-v2": BackendManifestV2Model.model_json_schema(),
         "processor-manifest-v2": ProcessorManifestV2Model.model_json_schema(),
+        "participant-implementation-manifest-v1": ParticipantImplementationManifestModel.model_json_schema(),
+        "participant-implementation-provenance-v1": ParticipantImplementationProvenanceModel.model_json_schema(),
         "concept-families-v1": ConceptFamilyCatalogModel.model_json_schema(),
         "reference-models-v1": ReferenceModelCatalogModel.model_json_schema(),
         "controlled-vocabularies-v1": ControlledVocabularyCatalogModel.model_json_schema(),
@@ -3600,6 +4434,7 @@ __all__ = [
     "ControlledVocabularyTermModel",
     "ContractModel",
     "ExperimentAnalysisPlanModel",
+    "ExperimentApparatusCompatibilityReferenceModel",
     "ExperimentApparatusComponentModel",
     "ExperimentApparatusConstraintModel",
     "ExperimentApparatusContextModel",
@@ -3661,6 +4496,14 @@ __all__ = [
     "ParticipantBehaviorHistoryEventModel",
     "ParticipantEpisodeHistoryEventModel",
     "ParticipantEpisodeStateModel",
+    "PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION",
+    "PARTICIPANT_IMPLEMENTATION_PROVENANCE_V1_SCHEMA_VERSION",
+    "ParticipantExposurePolicyModel",
+    "ParticipantImplementationCapabilitiesModel",
+    "ParticipantImplementationCompatibilityModel",
+    "ParticipantImplementationManifestModel",
+    "ParticipantImplementationProvenanceModel",
+    "ParticipantImplementationSelectionModel",
     "ParticipantOutcomeInterpretationRecordModel",
     "ParticipantOutcomeSourceRecordModel",
     "ParticipantOutcomeTargetRecordModel",

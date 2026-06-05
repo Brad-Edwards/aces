@@ -15,6 +15,8 @@ from aces_contracts.contracts import (
     ExperimentRunModel,
     ExperimentStudyModel,
     ExperimentTaskModel,
+    ParticipantImplementationManifestModel,
+    ParticipantImplementationProvenanceModel,
     ProcessorManifestV2Model,
     schema_bundle,
     validate_aces_semantic_invariant_annotations,
@@ -25,6 +27,7 @@ from aces_contracts.contracts import (
 )
 from aces_contracts.manifest_authority import (
     BACKEND_SUPPORTED_CONTRACT_IDS,
+    PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_SDL_VERSION_IDS,
 )
@@ -60,6 +63,7 @@ def _processor_manifest_fixture() -> dict:
     )
     payload = json.loads(fixture_path.read_text(encoding="utf-8"))
     payload["identity"]["version"] = "0.1.0"
+    payload["compatibility"]["backends"] = ["stub-backend"]
     return payload
 
 
@@ -105,6 +109,8 @@ def test_published_contract_schemas_exist_and_match_bundle():
 def test_compat_contract_imports_reexport_neutral_contracts():
     assert compat_runtime_contracts.ProcessorManifestV2Model is ProcessorManifestV2Model
     assert compat_runtime_contracts.BackendManifestV2Model is BackendManifestV2Model
+    assert compat_runtime_contracts.ParticipantImplementationManifestModel is ParticipantImplementationManifestModel
+    assert compat_runtime_contracts.ParticipantImplementationProvenanceModel is ParticipantImplementationProvenanceModel
     assert compat_runtime_contracts.schema_bundle() == schema_bundle()
 
 
@@ -139,6 +145,8 @@ def test_closed_world_contract_models_for_runtime_envelopes():
     assert generated["runtime-snapshot-v1"]["additionalProperties"] is False
     assert generated["backend-manifest-v2"]["additionalProperties"] is False
     assert generated["processor-manifest-v2"]["additionalProperties"] is False
+    assert generated["participant-implementation-manifest-v1"]["additionalProperties"] is False
+    assert generated["participant-implementation-provenance-v1"]["additionalProperties"] is False
     assert generated["concept-families-v1"]["additionalProperties"] is False
     assert generated["reference-models-v1"]["additionalProperties"] is False
     assert generated["controlled-vocabularies-v1"]["additionalProperties"] is False
@@ -164,8 +172,21 @@ def test_experiment_core_schemas_publish_closed_world_contracts():
     assert run_schema["x-aces-semantic-profile"]["required"] is True
     assert study_schema["x-aces-semantic-profile"]["keyword"] == "x-aces-invariants"
     assert run_schema["x-aces-semantic-profile"]["entry_schema_contract_id"] == "aces-semantic-invariants-v1"
+    assert set(task_schema["required"]) >= {
+        "split_and_leakage_controls",
+        "apparatus_constraints",
+        "validity_notes",
+        "artifact_refs",
+    }
     assert task_schema["properties"]["scenario_ref"]["$ref"] == "#/$defs/ExperimentScenarioReferenceModel"
     assert task_schema["properties"]["evaluation_protocol"]["$ref"] == "#/$defs/ExperimentEvaluationProtocolModel"
+    split_and_leakage_schema = task_schema["$defs"]["ExperimentSplitAndLeakageControlsModel"]
+    assert any(rule.get("required") == ["hidden_material_policy"] for rule in split_and_leakage_schema["anyOf"])
+    apparatus_constraint_schema = task_schema["$defs"]["ExperimentApparatusConstraintModel"]
+    assert any(
+        rule.get("properties", {}).get("required_manifest_refs", {}).get("minItems") == 1
+        for rule in apparatus_constraint_schema["anyOf"]
+    )
     assert (
         task_schema["$defs"]["ExperimentApparatusConstraintModel"]["properties"]["required_manifest_refs"]["items"][
             "$ref"
@@ -201,12 +222,45 @@ def test_experiment_core_schemas_publish_closed_world_contracts():
         ]
         == "#/$defs/ExperimentBackendReferenceModel"
     )
+    assert "ref_digest" not in task_schema["$defs"]["ExperimentProcessorReferenceModel"]["properties"]
+    assert "ref_path" not in task_schema["$defs"]["ExperimentBackendReferenceModel"]["properties"]
     assert "apparatus-constraint-identity-manifest-resolves" in _invariant_ids(
         task_schema["$defs"]["ExperimentApparatusConstraintModel"]
     )
     assert "task-archival-times-rfc3339-valid" in _invariant_ids(task_schema)
     manifest_ref_schema = task_schema["$defs"]["ExperimentManifestReferenceModel"]
     assert "subject_ref" in manifest_ref_schema["properties"]
+    assert any(
+        rule.get("properties", {}).get("ref_path", {}).get("type") == "null" for rule in manifest_ref_schema["allOf"]
+    )
+    assert any(
+        rule.get("then", {}).get("required") == ["subject_ref"]
+        and rule.get("then", {})
+        .get("properties", {})
+        .get("subject_ref", {})
+        .get("properties", {})
+        .get("ref_kind", {})
+        .get("enum")
+        == ["processor", "backend"]
+        for rule in manifest_ref_schema["allOf"]
+    )
+    assert any(
+        rule.get("then", {})
+        .get("properties", {})
+        .get("subject_ref", {})
+        .get("properties", {})
+        .get("ref_digest", {})
+        .get("type")
+        == "null"
+        and rule.get("then", {})
+        .get("properties", {})
+        .get("subject_ref", {})
+        .get("properties", {})
+        .get("ref_path", {})
+        .get("type")
+        == "null"
+        for rule in manifest_ref_schema["allOf"]
+    )
     metric_schema = task_schema["$defs"]["ExperimentMetricDefinitionModel"]
     assert metric_schema["required"] == [
         "metric_id",
@@ -219,6 +273,10 @@ def test_experiment_core_schemas_publish_closed_world_contracts():
         "evidence_requirements",
     ]
     assert run_schema["properties"]["apparatus_context"]["$ref"] == "#/$defs/ExperimentApparatusContextModel"
+    assert (
+        run_schema["properties"]["participant_implementation_provenance"]["anyOf"][0]["$ref"]
+        == "#/$defs/ParticipantImplementationProvenanceModel"
+    )
     apparatus_schema = run_schema["$defs"]["ExperimentApparatusContextModel"]
     component_schema = run_schema["$defs"]["ExperimentApparatusComponentModel"]
     assert apparatus_schema["properties"]["components"]["minProperties"] == 2
@@ -231,12 +289,26 @@ def test_experiment_core_schemas_publish_closed_world_contracts():
     assert apparatus_schema["properties"]["selected_manifests"]["items"]["$ref"] == (
         "#/$defs/ExperimentManifestReferenceModel"
     )
+    assert apparatus_schema["properties"]["compatibility_declarations"]["items"]["$ref"] == (
+        "#/$defs/ExperimentApparatusCompatibilityReferenceModel"
+    )
     assert "canonical-apparatus-manifest-selected" in _invariant_ids(apparatus_schema)
     assert "apparatus-manifest-payload-identity-valid" in _invariant_ids(apparatus_schema)
     assert (
         component_schema["properties"]["manifest_ref"]["anyOf"][0]["$ref"] == "#/$defs/ExperimentManifestReferenceModel"
     )
+    assert component_schema["properties"]["compatibility_refs"]["items"]["$ref"] == (
+        "#/$defs/ExperimentApparatusCompatibilityReferenceModel"
+    )
+    compatibility_ref_schema = run_schema["$defs"]["ExperimentApparatusCompatibilityReferenceModel"]
+    assert "ref_digest" not in compatibility_ref_schema["properties"]
+    assert "ref_path" not in compatibility_ref_schema["properties"]
+    measurement_channel_schema = run_schema["$defs"]["ExperimentMeasurementChannelReferenceModel"]
+    assert "ref_digest" not in measurement_channel_schema["properties"]
+    assert "ref_path" not in measurement_channel_schema["properties"]
     assert run_schema["properties"]["task_ref"]["$ref"] == "#/$defs/ExperimentTaskReferenceModel"
+    assert "ref_digest" not in run_schema["$defs"]["ExperimentTaskReferenceModel"]["properties"]
+    assert "ref_path" not in run_schema["$defs"]["ExperimentTaskReferenceModel"]["properties"]
     assert (
         run_schema["properties"]["scenario_snapshot_ref"]["$ref"] == "#/$defs/ExperimentScenarioSnapshotReferenceModel"
     )
@@ -267,14 +339,20 @@ def test_experiment_core_schemas_publish_closed_world_contracts():
         "source",
         "sensitivity",
     ]
-    assert (
-        artifact_schema["properties"]["satisfies_refs"]["items"]["$ref"] == "#/$defs/ExperimentEvidenceReferenceModel"
+    assert artifact_schema["properties"]["satisfies_refs"]["items"]["$ref"] == (
+        "#/$defs/ExperimentEvidenceSatisfactionReferenceModel"
     )
+    assert "ref_digest" not in run_schema["$defs"]["ExperimentEvidenceSatisfactionReferenceModel"]["properties"]
     assert artifact_schema["properties"]["created_at"]["format"] == "date-time"
     assert "cost-resource-trace" in artifact_schema["properties"]["role"]["enum"]
     assert "scaffold" in artifact_schema["properties"]["role"]["enum"]
     result_schema = run_schema["$defs"]["ExperimentResultSummaryModel"]
     assert result_schema["required"] == ["metric_id", "value_status", "evidence_refs"]
+    assert result_schema["properties"]["evidence_refs"]["items"]["$ref"] == (
+        "#/$defs/ExperimentRunEvidenceArtifactReferenceModel"
+    )
+    assert "ref_digest" not in run_schema["$defs"]["ExperimentRunEvidenceArtifactReferenceModel"]["properties"]
+    assert "ref_version" not in run_schema["$defs"]["ExperimentRunEvidenceArtifactReferenceModel"]["properties"]
     assert run_schema["properties"]["result_summaries"]["type"] == "object"
     assert study_schema["properties"]["study_kind"]["enum"] == ["study", "collection", "benchmark", "cohort"]
     assert "owner" in study_schema["required"]
@@ -319,6 +397,30 @@ def test_experiment_core_schemas_publish_closed_world_contracts():
     assert "study-analysis-metrics-covered-by-evaluation-run-results" in _invariant_ids(study_schema)
     assert "study-run-allocation-covered-by-evaluation-run-members" in _invariant_ids(study_schema)
     assert "study-archival-times-rfc3339-valid" in _invariant_ids(study_schema)
+    assert "run-allocation-condition-assignments-valid" in _invariant_ids(run_allocation_schema)
+    condition_assignment_schema = study_schema["$defs"]["ExperimentConditionAssignmentModel"]
+    assert any(
+        rule.get("properties", {}).get("required_refs", {}).get("minItems") == 1
+        for rule in condition_assignment_schema["anyOf"]
+    )
+    condition_ref_schema = study_schema["$defs"]["ExperimentConditionAssignmentReferenceModel"]
+    assert any(
+        rule.get("properties", {}).get("ref_digest", {}).get("type") == "null"
+        and rule.get("properties", {}).get("ref_path", {}).get("type") == "null"
+        for rule in condition_ref_schema["allOf"]
+    )
+    membership_schema = study_schema["$defs"]["ExperimentStudyMembershipModel"]
+    assert any(
+        "evaluation-run" in rule.get("if", {}).get("properties", {}).get("role", {}).get("enum", [])
+        and rule.get("then", {})
+        .get("properties", {})
+        .get("target_ref", {})
+        .get("properties", {})
+        .get("ref_digest", {})
+        .get("type")
+        == "null"
+        for rule in membership_schema["allOf"]
+    )
     assert any(
         rule.get("if", {}).get("properties", {}).get("run_status", {}).get("const") == "invalidated"
         for rule in run_schema["allOf"]
@@ -405,6 +507,226 @@ def test_experiment_core_rejects_under_specified_apparatus_contexts():
     untyped_measurement_channel["measurement_channels"][0]["ref_kind"] = "evidence"
     _assert_schema_and_model_reject("experiment-apparatus-context-v1", untyped_measurement_channel)
 
+    for qualifier_name, qualifier_value in [
+        ("ref_digest", "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+        ("ref_path", "wrong/measurement-channel.json"),
+        ("ref_digest", None),
+        ("ref_path", None),
+    ]:
+        qualified_measurement_channel = deepcopy(payload)
+        qualified_measurement_channel["measurement_channels"][0][qualifier_name] = qualifier_value
+        _assert_schema_and_model_reject("experiment-apparatus-context-v1", qualified_measurement_channel)
+
+    for qualifier_name, qualifier_value in [
+        ("ref_digest", "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+        ("ref_path", "wrong/capability.json"),
+        ("ref_digest", None),
+        ("ref_path", None),
+    ]:
+        qualified_compatibility_declaration = deepcopy(payload)
+        qualified_compatibility_declaration["compatibility_declarations"][1][qualifier_name] = qualifier_value
+        _assert_schema_and_model_reject("experiment-apparatus-context-v1", qualified_compatibility_declaration)
+
+        qualified_component_compatibility_ref = deepcopy(payload)
+        qualified_component_compatibility_ref["components"]["processor"]["compatibility_refs"] = [
+            {
+                "ref_kind": "capability",
+                "ref_id": "workflow-results",
+                qualifier_name: qualifier_value,
+            }
+        ]
+        _assert_schema_and_model_reject("experiment-apparatus-context-v1", qualified_component_compatibility_ref)
+
+    unsupported_compatibility_declaration_kind = deepcopy(payload)
+    unsupported_compatibility_declaration_kind["compatibility_declarations"][0]["ref_kind"] = "run"
+    _assert_schema_and_model_reject("experiment-apparatus-context-v1", unsupported_compatibility_declaration_kind)
+
+    missing_participant_manifest = deepcopy(payload)
+    del missing_participant_manifest["components"]["participant-policy"]["manifest_ref"]
+    with pytest.raises(ValidationError, match="participant implementation component"):
+        ExperimentApparatusContextModel.model_validate(missing_participant_manifest)
+
+    missing_selected_participant_manifest = deepcopy(payload)
+    missing_selected_participant_manifest["selected_manifests"] = [
+        ref
+        for ref in missing_selected_participant_manifest["selected_manifests"]
+        if ref.get("subject_ref", {}).get("ref_kind") != "participant-implementation"
+    ]
+    with pytest.raises(ValidationError, match="participant implementation component"):
+        ExperimentApparatusContextModel.model_validate(missing_selected_participant_manifest)
+
+    wrong_participant_manifest_version = deepcopy(payload)
+    wrong_participant_manifest_version["components"]["participant-policy"]["manifest_ref"]["ref_version"] = (
+        "participant-implementation-manifest/vFuture"
+    )
+    with pytest.raises(ValidationError, match="participant-implementation-manifest/v1"):
+        ExperimentApparatusContextModel.model_validate(wrong_participant_manifest_version)
+
+    duplicate_selected_manifest_subject = deepcopy(payload)
+    duplicate_manifest = deepcopy(duplicate_selected_manifest_subject["selected_manifests"][0])
+    duplicate_manifest["ref_digest"] = "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    duplicate_selected_manifest_subject["selected_manifests"].append(duplicate_manifest)
+    with pytest.raises(ValidationError, match="selected_manifests"):
+        ExperimentApparatusContextModel.model_validate(duplicate_selected_manifest_subject)
+
+    mismatched_component_manifest_id = deepcopy(payload)
+    mismatched_component_manifest_id["components"]["processor"]["manifest_ref"]["ref_id"] = (
+        "alternate-processor-manifest"
+    )
+    with pytest.raises(ValidationError, match="manifest references ref_id"):
+        ExperimentApparatusContextModel.model_validate(mismatched_component_manifest_id)
+
+    manifest_path_qualifier = deepcopy(payload)
+    manifest_path_qualifier["components"]["processor"]["manifest_ref"]["ref_path"] = "wrong/processor-manifest.json"
+    manifest_path_qualifier["selected_manifests"][0]["ref_path"] = "wrong/processor-manifest.json"
+    _assert_schema_and_model_reject("experiment-apparatus-context-v1", manifest_path_qualifier)
+
+    subject_digest_qualifier = deepcopy(payload)
+    subject_digest_qualifier["selected_manifests"][0]["subject_ref"]["ref_digest"] = (
+        "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    )
+    _assert_schema_and_model_reject("experiment-apparatus-context-v1", subject_digest_qualifier)
+
+    extra_digest_manifest_without_subject = deepcopy(payload)
+    extra_digest_manifest_without_subject["selected_manifests"].append(
+        {
+            "ref_kind": "manifest",
+            "ref_id": "unvalidated-extra-manifest",
+            "ref_version": "extra-manifest/v1",
+            "ref_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        }
+    )
+    _assert_schema_and_model_reject("experiment-apparatus-context-v1", extra_digest_manifest_without_subject)
+
+    extra_digest_manifest_with_noncanonical_subject = deepcopy(payload)
+    extra_digest_manifest_with_noncanonical_subject["selected_manifests"].append(
+        {
+            "ref_kind": "manifest",
+            "ref_id": "unvalidated-extra-manifest",
+            "ref_version": "extra-manifest/v1",
+            "ref_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "subject_ref": {
+                "ref_kind": "measurement-channel",
+                "ref_id": "evaluation-history-channel",
+            },
+        }
+    )
+    _assert_schema_and_model_reject("experiment-apparatus-context-v1", extra_digest_manifest_with_noncanonical_subject)
+
+    unsupported_digest_manifest_version = deepcopy(payload)
+    unsupported_digest_manifest_version["selected_manifests"].append(
+        {
+            "ref_kind": "manifest",
+            "ref_id": "future-processor",
+            "ref_version": "processor-manifest/vFuture",
+            "ref_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "subject_ref": {
+                "ref_kind": "processor",
+                "ref_id": "future-processor",
+                "ref_version": "0.1.0",
+            },
+        }
+    )
+    _assert_schema_and_model_reject("experiment-apparatus-context-v1", unsupported_digest_manifest_version)
+
+    extra_digest_manifest_with_supported_processor_subject = deepcopy(payload)
+    extra_digest_manifest_with_supported_processor_subject["selected_manifests"].append(
+        {
+            "ref_kind": "manifest",
+            "ref_id": "extra-processor",
+            "ref_version": "processor-manifest/v2",
+            "ref_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "subject_ref": {
+                "ref_kind": "processor",
+                "ref_id": "extra-processor",
+                "ref_version": "0.1.0",
+            },
+        }
+    )
+    with pytest.raises(ValidationError, match="digest-qualified selected_manifests"):
+        ExperimentApparatusContextModel.model_validate(extra_digest_manifest_with_supported_processor_subject)
+
+
+def test_experiment_core_rejects_under_specified_task_disclosure_surfaces():
+    payload = _experiment_fixture("experiment-task-v1")
+
+    missing_leakage_controls = deepcopy(payload)
+    del missing_leakage_controls["split_and_leakage_controls"]
+    _assert_schema_and_model_reject("experiment-task-v1", missing_leakage_controls)
+
+    empty_leakage_controls = deepcopy(payload)
+    empty_leakage_controls["split_and_leakage_controls"] = {}
+    _assert_schema_and_model_reject("experiment-task-v1", empty_leakage_controls)
+
+    null_leakage_disclosure = deepcopy(payload)
+    null_leakage_disclosure["split_and_leakage_controls"] = {"hidden_material_policy": None}
+    _assert_schema_and_model_reject("experiment-task-v1", null_leakage_disclosure)
+
+    missing_apparatus_constraints = deepcopy(payload)
+    del missing_apparatus_constraints["apparatus_constraints"]
+    _assert_schema_and_model_reject("experiment-task-v1", missing_apparatus_constraints)
+
+    empty_apparatus_constraints = deepcopy(payload)
+    empty_apparatus_constraints["apparatus_constraints"] = {}
+    _assert_schema_and_model_reject("experiment-task-v1", empty_apparatus_constraints)
+
+    missing_validity_notes = deepcopy(payload)
+    del missing_validity_notes["validity_notes"]
+    _assert_schema_and_model_reject("experiment-task-v1", missing_validity_notes)
+
+    empty_artifact_refs = deepcopy(payload)
+    empty_artifact_refs["artifact_refs"] = []
+    _assert_schema_and_model_reject("experiment-task-v1", empty_artifact_refs)
+
+    generic_scenario_with_digest = deepcopy(payload)
+    generic_scenario_with_digest["scenario_ref"] = {
+        "ref_kind": "scenario",
+        "ref_id": "scenario-techvault",
+        "ref_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    }
+    _assert_schema_and_model_reject("experiment-task-v1", generic_scenario_with_digest)
+
+    mismatched_required_manifest_ref_id = deepcopy(payload)
+    mismatched_required_manifest_ref_id["apparatus_constraints"]["required_manifest_refs"][0]["ref_id"] = (
+        "alternate-processor-manifest"
+    )
+    with pytest.raises(ValidationError, match="manifest references ref_id"):
+        ExperimentTaskModel.model_validate(mismatched_required_manifest_ref_id)
+
+    digest_manifest_without_subject = deepcopy(payload)
+    digest_manifest_without_subject["apparatus_constraints"]["required_manifest_refs"].append(
+        {
+            "ref_kind": "manifest",
+            "ref_id": "unvalidated-extra-manifest",
+            "ref_version": "extra-manifest/v1",
+            "ref_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        }
+    )
+    _assert_schema_and_model_reject("experiment-task-v1", digest_manifest_without_subject)
+
+    digest_manifest_with_noncanonical_subject = deepcopy(payload)
+    digest_manifest_with_noncanonical_subject["apparatus_constraints"]["required_manifest_refs"].append(
+        {
+            "ref_kind": "manifest",
+            "ref_id": "unvalidated-extra-manifest",
+            "ref_version": "extra-manifest/v1",
+            "ref_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "subject_ref": {
+                "ref_kind": "measurement-channel",
+                "ref_id": "evaluation-history-channel",
+            },
+        }
+    )
+    _assert_schema_and_model_reject("experiment-task-v1", digest_manifest_with_noncanonical_subject)
+
+    processor_ref_with_null_digest = deepcopy(payload)
+    processor_ref_with_null_digest["apparatus_constraints"]["allowed_processor_refs"][0]["ref_digest"] = None
+    _assert_schema_and_model_reject("experiment-task-v1", processor_ref_with_null_digest)
+
+    backend_ref_with_null_path = deepcopy(payload)
+    backend_ref_with_null_path["apparatus_constraints"]["allowed_backend_refs"][0]["ref_path"] = None
+    _assert_schema_and_model_reject("experiment-task-v1", backend_ref_with_null_path)
+
 
 def test_experiment_core_validates_apparatus_context_against_manifest_payloads():
     apparatus = ExperimentApparatusContextModel.model_validate(_experiment_fixture("experiment-apparatus-context-v1"))
@@ -457,6 +779,24 @@ def test_experiment_core_validates_apparatus_context_against_manifest_payloads()
         processor_manifest_digest="sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     )
 
+    incompatible_processor_manifest_payload = _processor_manifest_fixture()
+    incompatible_processor_manifest_payload["compatibility"]["backends"] = ["different-backend"]
+    with pytest.raises(ValueError, match="compatibility.backends"):
+        validate_experiment_apparatus_context_against_manifests(
+            apparatus,
+            ProcessorManifestV2Model.model_validate(incompatible_processor_manifest_payload),
+            backend_manifest,
+        )
+
+    incompatible_backend_manifest_payload = _backend_manifest_fixture()
+    incompatible_backend_manifest_payload["compatibility"]["processors"] = ["different-processor"]
+    with pytest.raises(ValueError, match="compatibility.processors"):
+        validate_experiment_apparatus_context_against_manifests(
+            apparatus,
+            processor_manifest,
+            BackendManifestV2Model.model_validate(incompatible_backend_manifest_payload),
+        )
+
     selected_manifest_digest_mismatch = _experiment_fixture("experiment-apparatus-context-v1")
     selected_manifest_digest_mismatch["components"]["processor"]["manifest_ref"]["ref_digest"] = (
         "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -491,9 +831,58 @@ def test_experiment_core_rejects_empty_or_unsubstantiated_run_results():
     del artifact_without_sensitivity["evidence_artifacts"][0]["sensitivity"]
     _assert_schema_and_model_reject("experiment-run-v1", artifact_without_sensitivity)
 
+    artifact_satisfied_ref_with_digest = deepcopy(payload)
+    artifact_satisfied_ref_with_digest["evidence_artifacts"][0]["satisfies_refs"][0]["ref_digest"] = (
+        "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    )
+    _assert_schema_and_model_reject("experiment-run-v1", artifact_satisfied_ref_with_digest)
+
+    artifact_satisfied_ref_with_null_path = deepcopy(payload)
+    artifact_satisfied_ref_with_null_path["evidence_artifacts"][0]["satisfies_refs"][0]["ref_path"] = None
+    _assert_schema_and_model_reject("experiment-run-v1", artifact_satisfied_ref_with_null_path)
+
+    result_evidence_ref_with_digest = deepcopy(payload)
+    result_evidence_ref_with_digest["result_summaries"]["foothold-achieved-result"]["evidence_refs"][0][
+        "ref_digest"
+    ] = "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    _assert_schema_and_model_reject("experiment-run-v1", result_evidence_ref_with_digest)
+
+    result_evidence_ref_with_null_version = deepcopy(payload)
+    result_evidence_ref_with_null_version["result_summaries"]["foothold-achieved-result"]["evidence_refs"][0][
+        "ref_version"
+    ] = None
+    _assert_schema_and_model_reject("experiment-run-v1", result_evidence_ref_with_null_version)
+
+    task_ref_with_digest = deepcopy(payload)
+    task_ref_with_digest["task_ref"]["ref_digest"] = (
+        "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    )
+    _assert_schema_and_model_reject("experiment-run-v1", task_ref_with_digest)
+
+    task_ref_with_null_digest = deepcopy(payload)
+    task_ref_with_null_digest["task_ref"]["ref_digest"] = None
+    _assert_schema_and_model_reject("experiment-run-v1", task_ref_with_null_digest)
+
     redacted_parameter_with_value = deepcopy(payload)
     redacted_parameter_with_value["parameter_set"][0]["redaction"] = "redacted"
     _assert_schema_and_model_reject("experiment-run-v1", redacted_parameter_with_value)
+
+    missing_participant_provenance = deepcopy(payload)
+    del missing_participant_provenance["participant_implementation_provenance"]
+    with pytest.raises(ValidationError, match="participant_implementation_provenance"):
+        ExperimentRunModel.model_validate(missing_participant_provenance)
+
+    participant_provenance_run_id_mismatch = deepcopy(payload)
+    participant_provenance_run_id_mismatch["participant_implementation_provenance"]["run_id"] = "different-run"
+    with pytest.raises(ValidationError, match="run_id"):
+        ExperimentRunModel.model_validate(participant_provenance_run_id_mismatch)
+
+    participant_provenance_identity_mismatch = deepcopy(payload)
+    participant_provenance_identity_mismatch["participant_implementation_provenance"]["participant_implementations"][0][
+        "implementation_identity"
+    ]["name"] = "candidate-policy"
+    with pytest.raises(ValidationError, match="participant implementation apparatus components"):
+        ExperimentRunModel.model_validate(participant_provenance_identity_mismatch)
 
     reversed_time = deepcopy(payload)
     reversed_time["ended_at"] = "2026-05-26T00:09:00Z"
@@ -534,6 +923,10 @@ def test_experiment_core_validates_task_run_protocol_binding():
         "runs/run-techvault-001/evaluation-history.json"
     )
     validate_experiment_run_against_task(ExperimentTaskModel.model_validate(digest_bound_task), run)
+
+    snapshot_task_without_digest = deepcopy(task_payload)
+    del snapshot_task_without_digest["scenario_ref"]["ref_digest"]
+    validate_experiment_run_against_task(ExperimentTaskModel.model_validate(snapshot_task_without_digest), run)
 
     uppercase_digest_task = deepcopy(digest_bound_task)
     uppercase_digest_task["scenario_ref"]["ref_digest"] = (
@@ -608,6 +1001,18 @@ def test_experiment_core_validates_task_run_protocol_binding():
     disallowed_processor["apparatus_context"]["selected_manifests"][0]["subject_ref"]["ref_id"] = "different-processor"
     with pytest.raises(ValueError, match="allowed_processor_refs"):
         validate_experiment_run_against_task(task, ExperimentRunModel.model_validate(disallowed_processor))
+
+    unsupported_processor_digest = deepcopy(task_payload)
+    unsupported_processor_digest["apparatus_constraints"]["allowed_processor_refs"][0]["ref_digest"] = (
+        "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    )
+    _assert_schema_and_model_reject("experiment-task-v1", unsupported_processor_digest)
+
+    unsupported_backend_digest = deepcopy(task_payload)
+    unsupported_backend_digest["apparatus_constraints"]["allowed_backend_refs"][0]["ref_digest"] = (
+        "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    )
+    _assert_schema_and_model_reject("experiment-task-v1", unsupported_backend_digest)
 
     task_with_extra_manifest = deepcopy(task_payload)
     task_with_extra_manifest["apparatus_constraints"]["required_manifest_refs"].append(
@@ -693,11 +1098,48 @@ def test_experiment_core_validates_study_run_allocation_against_evaluation_membe
 
     validate_experiment_study_against_tasks_and_runs(study, [task], [run])
 
+    provenance_mismatch_run_payload = _experiment_fixture("experiment-run-v1")
+    provenance_mismatch_run_payload["participant_implementation_provenance"]["participant_implementations"][0][
+        "implementation_identity"
+    ] = {
+        "name": "candidate-policy",
+        "version": "1.0.0",
+    }
+    provenance_mismatch_run_payload["apparatus_context"]["components"]["participant-policy"]["identity"] = {
+        "name": "candidate-policy",
+        "version": "1.0.0",
+    }
+    provenance_mismatch_run_payload["apparatus_context"]["components"]["participant-policy"]["manifest_ref"][
+        "ref_id"
+    ] = "candidate-policy"
+    provenance_mismatch_run_payload["apparatus_context"]["components"]["participant-policy"]["manifest_ref"][
+        "subject_ref"
+    ] = {
+        "ref_kind": "participant-implementation",
+        "ref_id": "candidate-policy",
+        "ref_version": "1.0.0",
+    }
+    provenance_mismatch_run_payload["apparatus_context"]["selected_manifests"][2]["ref_id"] = "candidate-policy"
+    provenance_mismatch_run_payload["apparatus_context"]["selected_manifests"][2]["subject_ref"] = {
+        "ref_kind": "participant-implementation",
+        "ref_id": "candidate-policy",
+        "ref_version": "1.0.0",
+    }
+    provenance_mismatch_run = ExperimentRunModel.model_validate(provenance_mismatch_run_payload)
+    with pytest.raises(ValueError, match="condition assignments"):
+        validate_experiment_study_against_tasks_and_runs(study, [task], [provenance_mismatch_run])
+
     no_evaluation_run_payload = deepcopy(study_payload)
     del no_evaluation_run_payload["membership"]["run-001"]
     no_evaluation_run_study = ExperimentStudyModel.model_validate(no_evaluation_run_payload)
     with pytest.raises(ValueError, match="evaluation-run membership"):
         validate_experiment_study_against_tasks_and_runs(no_evaluation_run_study, [task], [run])
+
+    run_membership_with_digest = deepcopy(study_payload)
+    run_membership_with_digest["membership"]["run-001"]["target_ref"]["ref_digest"] = (
+        "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    )
+    _assert_schema_and_model_reject("experiment-study-v1", run_membership_with_digest)
 
     ungrouped_run_payload = deepcopy(study_payload)
     del ungrouped_run_payload["membership"]["run-001"]["grouping"]
@@ -733,6 +1175,11 @@ def test_experiment_core_validates_study_run_allocation_against_evaluation_membe
     del missing_assignment_payload["run_allocation"]["condition_assignments"]
     _assert_schema_and_model_reject("experiment-study-v1", missing_assignment_payload)
 
+    empty_assignment_criteria_payload = deepcopy(study_payload)
+    empty_assignment_criteria_payload["run_allocation"]["condition_assignments"]["baseline"]["required_refs"] = []
+    empty_assignment_criteria_payload["run_allocation"]["condition_assignments"]["baseline"]["required_parameters"] = []
+    _assert_schema_and_model_reject("experiment-study-v1", empty_assignment_criteria_payload)
+
     opaque_condition_ref_payload = deepcopy(study_payload)
     opaque_condition_ref_payload["run_allocation"]["condition_assignments"]["baseline"]["required_refs"] = [
         {"ref_kind": "other", "ref_id": "opaque-treatment-token"}
@@ -752,6 +1199,38 @@ def test_experiment_core_validates_study_run_allocation_against_evaluation_membe
         "required_parameters"
     ] = [{"name": "assignment-secret", "value": "token-a", "value_kind": "protocol", "redaction": "redacted"}]
     _assert_schema_and_model_reject("experiment-study-v1", redacted_condition_parameter_payload)
+
+    condition_qualifier_references = [
+        {"ref_kind": "participant-implementation", "ref_id": "reference-red-agent", "ref_version": "1.0.0"},
+        {"ref_kind": "processor", "ref_id": "aces-reference-processor", "ref_version": "0.1.0"},
+        {"ref_kind": "backend", "ref_id": "stub-backend", "ref_version": "0.1.0"},
+        {"ref_kind": "apparatus-context", "ref_id": "apparatus-techvault-reference", "ref_version": "1.0.0"},
+        {"ref_kind": "scenario-snapshot", "ref_id": "scenario-techvault", "ref_version": "2026-05-26"},
+        {"ref_kind": "task", "ref_id": "task-techvault-red-team-v1", "ref_version": "1.0.0"},
+        {"ref_kind": "manifest", "ref_id": "aces-reference-processor", "ref_version": "processor-manifest/v2"},
+        {"ref_kind": "profile", "ref_id": "reference-stack-v1", "ref_version": "semantic-profile/v1"},
+        {"ref_kind": "capability", "ref_id": "workflow-results"},
+        {
+            "ref_kind": "measurement-channel",
+            "ref_id": "evaluation-history-channel",
+            "ref_version": "1.0.0",
+        },
+    ]
+    for qualifier_name, qualifier_value in [
+        ("ref_digest", "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+        ("ref_path", "wrong/condition-qualifier.json"),
+    ]:
+        for reference in condition_qualifier_references:
+            unsupported_condition_ref_qualifier = deepcopy(study_payload)
+            unsupported_condition_ref_qualifier["run_allocation"]["condition_assignments"]["baseline"][
+                "required_refs"
+            ] = [
+                {
+                    **reference,
+                    qualifier_name: qualifier_value,
+                }
+            ]
+            _assert_schema_and_model_reject("experiment-study-v1", unsupported_condition_ref_qualifier)
 
     undeclared_blocking_factor_payload = deepcopy(study_payload)
     undeclared_blocking_factor_payload["run_allocation"]["blocking_factors"].append("undeclared-block")
@@ -863,7 +1342,7 @@ def test_experiment_core_validates_study_run_allocation_against_evaluation_membe
     overlapping_condition_payload["run_allocation"]["condition_assignments"]["candidate"]["required_refs"].append(
         {
             "ref_kind": "participant-implementation",
-            "ref_id": "baseline-policy",
+            "ref_id": "reference-red-agent",
             "ref_version": "1.0.0",
         }
     )
@@ -1181,6 +1660,78 @@ def test_manifest_schemas_publish_backend_and_processor_v2_with_surface_specific
         "concept_bindings",
         "capabilities",
     ]
+
+
+def test_participant_implementation_schemas_publish_manifest_and_provenance_boundaries():
+    generated = schema_bundle()
+    manifest = generated["participant-implementation-manifest-v1"]
+    provenance = generated["participant-implementation-provenance-v1"]
+    manifest_compatibility = manifest["$defs"]["ParticipantImplementationCompatibilityModel"]
+    manifest_capabilities = manifest["$defs"]["ParticipantImplementationCapabilitiesModel"]
+    selection = provenance["$defs"]["ParticipantImplementationSelectionModel"]
+    exposure_policy = provenance["$defs"]["ParticipantExposurePolicyModel"]
+
+    assert manifest["properties"]["identity"]["$ref"] == "#/$defs/ApparatusIdentityModel"
+    assert manifest["properties"]["compatibility"]["$ref"] == "#/$defs/ParticipantImplementationCompatibilityModel"
+    assert manifest["properties"]["supported_contract_versions"]["items"]["enum"] == list(
+        PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS
+    )
+    assert manifest_compatibility["properties"]["participant_runtimes"]["type"] == "array"
+    assert manifest_compatibility["properties"]["processors"]["type"] == "array"
+    assert manifest_compatibility["properties"]["backends"]["type"] == "array"
+    assert "participant_implementations" not in manifest_compatibility["properties"]
+    assert manifest_capabilities["properties"]["supported_participant_contracts"]["minItems"] == 1
+    assert manifest_capabilities["properties"]["supported_decision_surface_modes"]["minItems"] == 1
+    assert manifest_capabilities["properties"]["tool_affordance_expectations"]["minItems"] == 1
+    assert manifest_capabilities["properties"]["exposure_policy_kinds"]["minItems"] == 1
+    assert manifest["required"] == [
+        "identity",
+        "implementation_kind",
+        "supported_contract_versions",
+        "compatibility",
+        "concept_bindings",
+        "capabilities",
+    ]
+
+    assert provenance["properties"]["participant_implementations"]["minItems"] == 1
+    assert (
+        provenance["properties"]["participant_implementations"]["items"]["$ref"]
+        == "#/$defs/ParticipantImplementationSelectionModel"
+    )
+    assert selection["properties"]["implementation_identity"]["$ref"] == "#/$defs/ApparatusIdentityModel"
+    assert selection["properties"]["exposure_policy"]["$ref"] == "#/$defs/ParticipantExposurePolicyModel"
+    assert exposure_policy["properties"]["exposure_policy_kinds"]["minItems"] == 1
+    assert provenance["required"] == [
+        "run_id",
+        "participant_implementations",
+    ]
+
+
+def test_participant_implementation_fixtures_pass_schema_and_model_validation():
+    repo_root = Path(__file__).resolve().parents[3]
+    fixture_models = {
+        "participant-implementation-manifest-v1": ParticipantImplementationManifestModel,
+        "participant-implementation-provenance-v1": ParticipantImplementationProvenanceModel,
+    }
+    generated = schema_bundle()
+
+    for contract_id, model_cls in fixture_models.items():
+        fixture_root = repo_root / "contracts" / "fixtures" / contract_id.rsplit("-", 1)[0] / contract_id
+        validator = Draft202012Validator(generated[contract_id])
+        for path in sorted((fixture_root / "valid").glob("*.json")):
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            validator.validate(payload)
+            model_cls.model_validate(payload)
+        for path in sorted((fixture_root / "invalid").glob("*.json")):
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            schema_errors = list(validator.iter_errors(payload))
+            try:
+                model_cls.model_validate(payload)
+            except ValidationError:
+                model_rejected = True
+            else:
+                model_rejected = False
+            assert schema_errors or model_rejected
 
 
 def test_concept_binding_schema_in_v2_manifests():

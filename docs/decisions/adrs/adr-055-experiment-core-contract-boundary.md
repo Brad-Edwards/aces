@@ -1,4 +1,4 @@
-# ADR-037: Experiment Core Contract Boundary
+# ADR-055: Experiment Core Contract Boundary
 
 ## Status
 
@@ -84,27 +84,45 @@ runs, studies, or other artifact kinds where a manifest boundary is required.
 Processor and backend constraint fields use processor- and backend-constrained
 references with manifest `subject_ref` metadata for the same reason: role names
 and manifest subject identity must be enforceable by semantic validators, not
-only by convention.
+only by convention. Processor/backend identity references, run task references,
+study task/run membership references, generic scenario references, and
+run-internal result evidence links do not carry digest or path qualifiers when no
+validator can bind those qualifiers to a concrete payload. Condition-assignment
+references are likewise run-level identifiers only; they do not carry digest or
+path qualifiers. Digest-bound apparatus and observation evidence uses canonical
+processor/backend manifest payload validation or task evidence requirements that
+can be checked against concrete manifest payload digests or artifact
+checksums/paths.
 
 ### 1. Task Is Scenario Plus Protocol Plus Intent
 
 An experiment task references a scenario or scenario snapshot and binds it to an
 evaluation protocol, intent, unit of analysis, metric definitions, population or
-construct, leakage/split controls when relevant, apparatus constraints, validity
-notes, and supporting artifacts.
+construct, leakage/split control or risk disclosures, apparatus constraints or
+explicit apparatus disclosure notes, and at least one validity note and
+supporting artifact reference.
 
 Tasks do not own scenario meaning and do not become an SDL root section in this
 decision. One scenario may support multiple tasks, and one task may be executed
 many times.
 
+When SDL module composition is used, a `scenario-snapshot` reference identifies
+the expanded canonical scenario after import resolution, namespace rewriting,
+and full-scenario semantic validation. Module source layout, fragment paths,
+module ids/namespaces, lock records, and fragment digests remain evidence and
+audit metadata, not runtime semantic dependencies. Runs and task support
+artifacts should preserve that fragment provenance where it matters for review,
+but task/run scenario equality is checked against the canonical composed
+scenario identity and digest.
+
 ### 2. Apparatus Context Is Run-Scoped Instrument Context
 
 Execution apparatus context records the instrument conditions under which a run
 is executed: canonical processor and backend components with identity and
-manifests, participant implementation identity where relevant, selected
-manifests, compatibility declarations, setup context, configuration parameters,
-stochastic controls, clocks, measurement channels, observed setup evidence, and
-known limitations.
+manifests, participant implementation identity and participant implementation
+manifest refs where relevant, selected manifests, compatibility declarations,
+setup context, configuration parameters, stochastic controls, clocks,
+measurement channels, observed setup evidence, and known limitations.
 
 Apparatus context is not SDL scenario meaning, task intent, runtime snapshot
 metadata, or run result value. It may be embedded in an archival run record so a
@@ -114,15 +132,36 @@ The v1 contract intentionally rejects apparatus records that omit the primary
 processor, primary backend, selected manifests, clocks, measurement channels, or
 observed setup evidence. That strictness follows the cyber-range and simulation
 V&V literature: apparatus conditions are part of the evidence, not optional log
-metadata.
+metadata. Canonical processor/backend manifest refs must use the component
+identity as their manifest id, selected manifests must not contain multiple
+entries for the same subject identity and manifest schema version, and concrete
+processor/backend manifests must declare mutual compatibility. Manifest path
+qualifiers are not accepted in v1, and digest-qualified manifest refs are
+limited to processor/backend manifest refs that can be validated against
+concrete manifest payloads. Within an apparatus context, digest-qualified
+selected manifests must be the canonical processor/backend component manifests,
+because those are the manifest payloads passed to the semantic validator.
+Compatibility declarations, component compatibility refs, and measurement
+channel refs are id/version declarations in v1; they do not carry digest or path
+qualifiers because no v1 validator resolves those qualifiers to concrete
+profile, capability, or measurement-channel payloads.
+
+Participant implementations follow the participant implementation
+manifest/provenance boundary: a participant implementation apparatus component
+must identify the participant implementation manifest that declares the
+implementation, while the run-level participant implementation provenance
+records the selected implementation, manifest digest, optional configuration
+digest, decision-surface mode, participant contract versions, and exposure
+policy actually used for the run.
 
 ### 3. Run Is Archival Provenance, Not Live State
 
 An experiment run is a durable record of executing one declared task. It records
-the task reference, scenario snapshot reference, apparatus context, parameters,
-stochastic controls, timestamps, clock context, status, outcome status, evidence
-artifacts, result summaries, deviations, invalidation details, and lineage
-references.
+the task reference, scenario snapshot reference, apparatus context, participant
+implementation provenance when participant implementation apparatus is present,
+parameters, stochastic controls, timestamps, clock context, status, outcome
+status, evidence artifacts, result summaries, deviations, invalidation details,
+and lineage references.
 
 The run record may reference live observation artifacts captured at a specific
 seal point, but it must not be reconstructed lazily from mutable
@@ -142,7 +181,9 @@ sensitivity so FAIR, RO-Crate, and PROV-style exports do not need to infer the
 evidence surface from backend-private files. When an evidence requirement
 includes digest or path metadata, the task/run validator binds those fields to
 the concrete artifact checksum and URI/path rather than accepting an id-only
-match.
+match. Run result `evidence_refs` are deliberately artifact-id links inside the
+same run record; digest/path qualifiers belong on task evidence requirements or
+the evidence artifact checksum/URI.
 
 ### 4. Study And Collection Share One Contract
 
@@ -162,11 +203,15 @@ are not labels alone: each compared condition has a `condition_assignment` that
 binds it to declared study factor levels and concrete run-level criteria such
 as participant implementation, processor, backend, apparatus context, manifest,
 capability, measurement channel, task/scenario snapshot identity, or parameter
-values. Those condition criteria are restricted to auditable run-level
+values. Participant implementation criteria resolve through run-level
+participant implementation provenance rather than the mere presence of an
+apparatus component. Those condition criteria are restricted to auditable run-level
 references and non-opaque parameters; catch-all `other` references and `other`
-parameter kinds are not accepted as condition evidence, compared conditions
-cannot share identical factor-level combinations or concrete criteria, and an
-included run cannot satisfy more than one condition assignment. Declared
+parameter kinds are not accepted as condition evidence, condition references
+cannot carry digest/path qualifiers that would be self-certified by run metadata,
+compared conditions cannot share identical factor-level combinations or concrete
+criteria, and an included run cannot satisfy more than one condition assignment.
+Declared
 blocking factors must resolve to declared study factors with declared levels and
 an appropriate blocking, stratification, apparatus, or control kind.
 Analysis plans must name the analyzed metrics, primary metric, estimand/unit

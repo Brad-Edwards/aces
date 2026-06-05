@@ -63,6 +63,10 @@ model should be mappable to provenance concepts:
 
 - scenario snapshots, task specs, manifests, logs, metrics, and result files are
   entities;
+- for SDL modules/imports, the experiment `scenario-snapshot` digest identifies
+  the expanded canonical scenario; root paths, fragment paths, module
+  ids/namespaces, lock records, and fragment digests remain review evidence and
+  audit metadata;
 - run execution is an activity;
 - processor, backend, operator, participant role, and automation may be agents;
 - derivation links connect results to run evidence and run evidence to
@@ -140,7 +144,8 @@ ACES implications:
 The design should support the following export and schema needs:
 
 - ACES-owned JSON-compatible contract schemas for task, run, apparatus, study,
-  collection, metric definition, result summary, and artifact references.
+  participant implementation manifest/provenance, collection, metric
+  definition, result summary, and artifact references.
 - JSON Schema publication in the repo's existing contract publication mechanism.
 - Provenance mapping to PROV-like entity/activity/agent relations.
 - RO-Crate-like packaging where a study or run archive can carry task specs,
@@ -153,8 +158,8 @@ The design should support the following export and schema needs:
   identity binding, run-allocation coverage by eligible evaluation-run groupings
   and explicit condition assignments, distinct and auditable condition criteria,
   distinct factor-level combinations, analysis-run eligibility, operational
-  blocking factors, artifact evidence digest/path binding, and manifest
-  digest/path consistency.
+  blocking factors, artifact evidence digest/path binding, manifest digest
+  scope, and manifest path rejection.
 - Controlled vocabularies for lifecycle status, result kind, artifact role,
   apparatus component kind, stochastic-control kind, protocol-stage kind, and
   validity-threat category.

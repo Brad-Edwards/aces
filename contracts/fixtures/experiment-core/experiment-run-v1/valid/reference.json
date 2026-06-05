@@ -58,8 +58,18 @@
       "participant-policy": {
         "component_kind": "participant-implementation",
         "identity": {
-          "name": "baseline-policy",
+          "name": "reference-red-agent",
           "version": "1.0.0"
+        },
+        "manifest_ref": {
+          "ref_kind": "manifest",
+          "ref_id": "reference-red-agent",
+          "ref_version": "participant-implementation-manifest/v1",
+          "subject_ref": {
+            "ref_kind": "participant-implementation",
+            "ref_id": "reference-red-agent",
+            "ref_version": "1.0.0"
+          }
         },
         "observed": true
       }
@@ -83,6 +93,16 @@
           "ref_kind": "backend",
           "ref_id": "stub-backend",
           "ref_version": "0.1.0"
+        }
+      },
+      {
+        "ref_kind": "manifest",
+        "ref_id": "reference-red-agent",
+        "ref_version": "participant-implementation-manifest/v1",
+        "subject_ref": {
+          "ref_kind": "participant-implementation",
+          "ref_id": "reference-red-agent",
+          "ref_version": "1.0.0"
         }
       }
     ],
@@ -153,6 +173,49 @@
         "note": "The stub backend is a conformance apparatus, not a fidelity claim."
       }
     ]
+  },
+  "participant_implementation_provenance": {
+    "schema_version": "participant-implementation-provenance/v1",
+    "run_id": "run-techvault-001",
+    "participant_implementations": [
+      {
+        "participant_address": "participants.red",
+        "implementation_identity": {
+          "name": "reference-red-agent",
+          "version": "1.0.0"
+        },
+        "manifest_ref": "contracts/fixtures/participant-implementation-manifest/reference.json",
+        "manifest_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "selected_decision_surface_mode": "policy-directed",
+        "participant_contract_versions": [
+          "participant-episode-state-envelope-v1",
+          "participant-behavior-history-event-stream-v1"
+        ],
+        "exposure_policy": {
+          "policy_id": "red-agent-policy",
+          "policy_version": "1.0.0",
+          "policy_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "exposure_policy_kinds": [
+            "task-statement",
+            "tool-affordance"
+          ],
+          "disclosed_refs": [
+            "scenario.tasks.red"
+          ],
+          "withheld_refs": [
+            "scenario.hidden.answer-key"
+          ],
+          "tool_affordance_refs": [
+            "tool.shell"
+          ],
+          "visibility_scope_refs": [
+            "participants.red.visible"
+          ]
+        }
+      }
+    ],
+    "processor_manifest_ref": "processor-manifest-v2:aces-reference-processor",
+    "backend_manifest_ref": "backend-manifest-v2:stub-backend"
   },
   "parameter_set": [
     {

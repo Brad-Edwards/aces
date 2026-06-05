@@ -78,7 +78,7 @@
         "required_refs": [
           {
             "ref_kind": "participant-implementation",
-            "ref_id": "baseline-policy",
+            "ref_id": "reference-red-agent",
             "ref_version": "1.0.0"
           }
         ],

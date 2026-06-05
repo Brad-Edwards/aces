@@ -30,7 +30,7 @@ Rationale:
 ## Authoritative Artifacts
 
 - Normative prose: this directory.
-- Architecture decision: `docs/decisions/adrs/adr-037-experiment-core-contract-boundary.md`.
+- Architecture decision: `docs/decisions/adrs/adr-055-experiment-core-contract-boundary.md`.
 - Machine-readable schemas: `contracts/schemas/experiment-core/`.
 - Contract source: `implementations/python/packages/aces_contracts/contracts.py`.
 - Schema generation: `tools/generate_contract_schemas.py`.
@@ -68,9 +68,9 @@ snapshot. It binds:
 - metric definitions keyed by metric id, with the same metric id and a metric
   version embedded in each definition;
 - population or construct;
-- split/leakage controls when relevant;
-- apparatus constraints;
-- validity notes and supporting artifacts.
+- split/leakage controls or risk disclosures;
+- apparatus constraints or explicit apparatus disclosure notes;
+- at least one validity note and at least one supporting artifact reference.
 
 One scenario may be used by many tasks. One task may be executed by many runs.
 
@@ -81,7 +81,7 @@ references:
 
 - a canonical `processor` component with processor identity and manifest;
 - a canonical `backend` component with backend identity and manifest;
-- participant implementation identity where relevant;
+- participant implementation identity and manifest refs where relevant;
 - compatibility declarations;
 - selected manifests and profiles;
 - configuration parameters;
@@ -108,6 +108,8 @@ task. It binds:
 - task reference;
 - scenario snapshot reference;
 - apparatus context;
+- participant implementation provenance when participant implementation
+  apparatus is present;
 - parameter set;
 - stochastic controls;
 - start/end and clock context;
@@ -159,7 +161,13 @@ Studies carry accountable analysis context:
    `scenario-snapshot` as the reference kind.
 2. A run MUST reference exactly one task and one scenario snapshot. If the task
    references a generic scenario rather than a snapshot, the run snapshot MUST
-   still use the same scenario identity.
+   still use the same scenario identity. Generic scenario references are id-only;
+   version, digest, or path binding requires `scenario-snapshot`.
+   For composed SDL scenarios, the `scenario-snapshot` digest identifies the
+   expanded canonical scenario after import resolution, namespace rewriting, and
+   full-scenario semantic validation. Module source paths, module ids/namespaces,
+   lock records, and fragment digests are preserved as evidence/audit metadata,
+   not as alternate runtime identities.
 3. A run MUST carry apparatus context; apparatus context MUST NOT be represented
    only by free-form metadata or backend-private logs.
 4. A study MUST group typed artifact references; it MUST NOT redefine the task,
@@ -175,16 +183,27 @@ Studies carry accountable analysis context:
    reference kind.
 8. Processor and backend constraint fields MUST use processor- and
    backend-constrained references rather than generic artifact references.
-9. Study membership roles MUST constrain the referenced artifact kind: task
+   Processor/backend identity references MUST NOT carry digest or path
+   qualifiers; digest-bound apparatus evidence MUST be expressed through
+   canonical processor/backend manifest references or evidence requirements
+   that can be validated against concrete payloads.
+9. Run task references and study task/run membership references MUST NOT carry
+   digest or path qualifiers unless a future validator binds those fields to
+   concrete task/run payload artifacts.
+10. Study membership roles MUST constrain the referenced artifact kind: task
    roles reference tasks, run roles reference runs, result roles reference
    results, evidence roles reference evidence, and analysis roles reference
    analysis artifacts.
-10. Processor and backend identity constraints MUST resolve to required
+11. Processor and backend identity constraints MUST resolve to required
     manifest references with matching identity ids and manifest schema
-    versions. Manifest references for apparatus identity MUST carry a
+    versions. For processor/backend manifests, the manifest `ref_id` MUST match
+    the `subject_ref.ref_id`. Manifest references for apparatus identity MUST carry a
     `subject_ref` that identifies the processor or backend identity and version
-    described by the manifest.
-11. Required task apparatus capabilities MUST resolve to capability references
+    described by the manifest. Manifest references MUST NOT carry path
+    qualifiers; digest-qualified manifest references MUST identify a processor
+    or backend subject and the supported processor/backend manifest schema
+    version.
+12. Required task apparatus capabilities MUST resolve to capability references
     in the run apparatus compatibility declarations or component compatibility
     references.
 
@@ -199,7 +218,11 @@ Studies carry accountable analysis context:
 4. Checksums and reference digests MUST identify their digest algorithm and use
    algorithm-appropriate hex digest lengths.
 5. Run evidence and result summaries MUST be linkable back to the run that
-   generated or recorded them.
+   generated or recorded them. Run result `evidence_refs` are artifact-id links
+   within the same run and MUST NOT carry version, digest, or path qualifiers;
+   artifact `satisfies_refs` MAY carry evidence concept versions but MUST NOT
+   carry digest or path qualifiers because concrete checksum/URI metadata belongs
+   on the artifact record.
 6. Invalidation MUST be explicit when a run is marked `invalidated`.
 7. Apparatus context MUST identify selected manifests, compatibility
    declarations, configuration parameters, stochastic controls, clocks,
@@ -207,15 +230,23 @@ Studies carry accountable analysis context:
 8. Completed run intervals MUST not end before they start.
 9. Canonical apparatus processor and backend component manifests MUST appear in
    the same record's selected manifests with matching reference identity,
-   digest/path metadata, and `subject_ref` values that match the component
-   identities.
+   digest metadata, and `subject_ref` values that match the component
+   identities. Manifest path qualifiers are not part of the v1 apparatus
+   contract. Selected manifests MUST NOT contain multiple refs for the same
+   subject identity and manifest schema version. Digest-qualified selected
+   manifests MUST be the canonical processor/backend component manifests.
+   Compatibility declarations, component compatibility refs, and measurement
+   channel refs MUST NOT carry digest or path qualifiers unless a future
+   validator binds those fields to concrete profile, capability, or measurement
+   payload artifacts.
 10. Study and benchmark records MUST carry research questions, run allocation,
     validity notes, and an analysis plan with at least one metric, a primary
     metric, and structured statistical, uncertainty, multiple-comparison, and
     missing-data policies.
 11. ACES semantic validation MUST be able to resolve canonical processor and
     backend manifest references to concrete manifest payloads with matching
-    identities and schema versions.
+    identities, schema versions, optional digest evidence, and mutual
+    processor/backend compatibility declarations.
 12. Study analysis metrics MUST be grounded in the metric definitions of the
     included task protocols and represented by result summaries, including
     explicit missing/withheld statuses, in included evaluation runs before the
@@ -226,8 +257,13 @@ Studies carry accountable analysis context:
     processor, backend, apparatus context, manifest, capability, measurement
     channel, task/scenario snapshot identity, or non-opaque parameter values.
     Opaque catch-all references and `other` parameter kinds MUST NOT be used as
-    condition-assignment evidence. Compared conditions MUST NOT share identical
-    factor-level combinations or identical run-level criteria.
+    condition-assignment evidence. Participant implementation condition
+    references MUST resolve through run-level participant implementation
+    provenance, not only through an apparatus component identity. Condition-assignment
+    references MUST NOT carry digest or path qualifiers; digest/path evidence
+    binding belongs to task evidence requirements and canonical processor/backend
+    manifest payload validation. Compared conditions MUST NOT share identical factor-level
+    combinations or identical run-level criteria.
 14. Included evaluation-run membership groupings MUST reference declared
     `compared_conditions`, a single run MUST NOT be counted in multiple
     conditions, each included run MUST satisfy exactly one condition
