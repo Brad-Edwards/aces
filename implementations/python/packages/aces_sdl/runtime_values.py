@@ -2,6 +2,7 @@
 
 import ipaddress
 import re
+from collections.abc import Iterable
 from enum import Enum
 from typing import Any
 
@@ -87,6 +88,77 @@ def name_indicates_secret(name: str) -> bool:
         return True
     parts = frozenset(part for part in re.split(r"[^a-z0-9]+", lowered) if part)
     return bool(parts & SECRET_NAME_PARTS)
+
+
+def _has_raw_value(value: object) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value)
+    return bool(value)
+
+
+def _classification_label(value: object) -> str:
+    return value.value if isinstance(value, Enum) else str(value)
+
+
+def _classification_in(value: object, candidates: Iterable[object]) -> bool:
+    if is_variable_ref(value):
+        return False
+    value_label = _classification_label(value)
+    return any(value == candidate or value_label == _classification_label(candidate) for candidate in candidates)
+
+
+def _format_classification_set(values: Iterable[object]) -> str:
+    labels = tuple(_classification_label(value) for value in values)
+    if not labels:
+        return "a permitted classification"
+    if len(labels) == 1:
+        return f"'{labels[0]}'"
+    if len(labels) == 2:
+        return f"'{labels[0]}' or '{labels[1]}'"
+    return ", ".join(f"'{label}'" for label in labels[:-1]) + f", or '{labels[-1]}'"
+
+
+def enforce_observed_value_redaction(
+    *,
+    owner_label: str,
+    name: object,
+    value: object,
+    classification: object,
+    redacted_classifications: tuple[object, ...],
+    classification_field: str,
+    raw_value_label: str = "raw value",
+    secret_name_classifications: tuple[object, ...] | None = None,
+    raw_secret_name_classifications: tuple[object, ...] = (),
+    redacted_raw_message: str | None = None,
+) -> None:
+    """Validate the shared runtime observed-value secret/redaction invariant.
+
+    The helper covers only the common policy: a redacted/operator-secret
+    classification omits raw data, and a concrete secret-bearing name may carry
+    raw data only for explicitly allowed fixture classifications. Family models
+    still own their ids, scopes, refs, provenance enums, and closed lattices.
+    """
+    has_raw = _has_raw_value(value)
+    if has_raw and _classification_in(classification, redacted_classifications):
+        if redacted_raw_message:
+            raise ValueError(redacted_raw_message)
+        raise ValueError(
+            f"{owner_label} classified '{_classification_label(classification)}' must omit its {raw_value_label}"
+        )
+    if isinstance(name, str) and not is_variable_ref(name) and name_indicates_secret(name):
+        if has_raw:
+            if _classification_in(classification, raw_secret_name_classifications):
+                return
+            raise ValueError(f"{owner_label} carries a secret-bearing name and must omit its {raw_value_label}")
+        if is_variable_ref(classification):
+            return
+        allowed = secret_name_classifications or redacted_classifications
+        if not _classification_in(classification, allowed):
+            expected = _format_classification_set(allowed)
+            raise ValueError(f"{owner_label} carries a secret-bearing name; {classification_field} must be {expected}")
+        return
 
 
 def require_symbol(value: str, *, field_name: str) -> str:

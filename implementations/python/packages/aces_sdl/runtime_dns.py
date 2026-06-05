@@ -45,7 +45,7 @@ from .runtime_filesystem import RuntimeSensitivityClassification
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
-    name_indicates_secret,
+    enforce_observed_value_redaction,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
     require_symbol,
@@ -77,8 +77,9 @@ __all__ = [
     "DnsServiceRole",
 ]
 
-_REDACTED_SENSITIVITIES = frozenset(
-    {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
+_REDACTED_SENSITIVITIES = (
+    RuntimeSensitivityClassification.REDACTED,
+    RuntimeSensitivityClassification.OPERATOR_SECRET,
 )
 
 
@@ -261,24 +262,15 @@ class DnsRuntimeSetting(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_value(self) -> "DnsRuntimeSetting":
-        if name_indicates_secret(self.name):
-            self._enforce_secret_name_redaction()
-        elif self.value and self.value_classification in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"DNS setting '{self.name}' classified '{self.value_classification}' must omit its raw value"
-            )
+        enforce_observed_value_redaction(
+            owner_label=f"DNS setting '{self.name}'",
+            name=self.name,
+            value=self.value,
+            classification=self.value_classification,
+            redacted_classifications=_REDACTED_SENSITIVITIES,
+            classification_field="value_classification",
+        )
         return self
-
-    def _enforce_secret_name_redaction(self) -> None:
-        if self.value:
-            raise ValueError(f"DNS setting '{self.name}' carries a secret-bearing name and must omit its raw value")
-        if is_variable_ref(self.value_classification):
-            return
-        if self.value_classification not in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"DNS setting '{self.name}' carries a secret-bearing name; "
-                f"value_classification must be 'redacted' or 'operator_secret'"
-            )
 
 
 class DnsZone(SDLModel):

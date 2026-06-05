@@ -24,6 +24,7 @@ from .runtime_configuration import RuntimeEnvironmentValueClassification
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
+    enforce_observed_value_redaction,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
 )
@@ -43,6 +44,17 @@ __all__ = [
     "ImageSourceInput",
     "ImageVerificationStatus",
 ]
+
+_IMAGE_ENV_REDACTED_CLASSIFICATIONS = (
+    RuntimeEnvironmentValueClassification.REDACTED,
+    RuntimeEnvironmentValueClassification.OPERATOR_SECRET,
+)
+_IMAGE_ENV_SECRET_NAME_CLASSIFICATIONS = (
+    RuntimeEnvironmentValueClassification.REDACTED,
+    RuntimeEnvironmentValueClassification.OPERATOR_SECRET,
+    RuntimeEnvironmentValueClassification.SECRET_FIXTURE,
+)
+_IMAGE_ENV_RAW_SECRET_NAME_CLASSIFICATIONS = (RuntimeEnvironmentValueClassification.SECRET_FIXTURE,)
 
 
 class DockerfileInstructionKind(str, Enum):
@@ -176,8 +188,20 @@ class ImageBuildArg(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_value(self) -> "ImageBuildArg":
-        if self.value_classification == RuntimeEnvironmentValueClassification.REDACTED and self.value:
-            raise ValueError("redacted build arguments must omit value")
+        enforce_observed_value_redaction(
+            owner_label=f"build argument '{self.name}'",
+            name=self.name,
+            value=self.value,
+            classification=self.value_classification,
+            redacted_classifications=_IMAGE_ENV_REDACTED_CLASSIFICATIONS,
+            classification_field="value_classification",
+            raw_value_label="value",
+            secret_name_classifications=_IMAGE_ENV_SECRET_NAME_CLASSIFICATIONS,
+            raw_secret_name_classifications=_IMAGE_ENV_RAW_SECRET_NAME_CLASSIFICATIONS,
+            redacted_raw_message="redacted build arguments must omit value"
+            if self.value_classification == RuntimeEnvironmentValueClassification.REDACTED
+            else None,
+        )
         return self
 
 
@@ -212,8 +236,20 @@ class ImageEnvironmentDefault(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_value(self) -> "ImageEnvironmentDefault":
-        if self.value_classification == RuntimeEnvironmentValueClassification.REDACTED and self.value:
-            raise ValueError("redacted image environment variables must omit value")
+        enforce_observed_value_redaction(
+            owner_label=f"image environment variable '{self.name}'",
+            name=self.name,
+            value=self.value,
+            classification=self.value_classification,
+            redacted_classifications=_IMAGE_ENV_REDACTED_CLASSIFICATIONS,
+            classification_field="value_classification",
+            raw_value_label="value",
+            secret_name_classifications=_IMAGE_ENV_SECRET_NAME_CLASSIFICATIONS,
+            raw_secret_name_classifications=_IMAGE_ENV_RAW_SECRET_NAME_CLASSIFICATIONS,
+            redacted_raw_message="redacted image environment variables must omit value"
+            if self.value_classification == RuntimeEnvironmentValueClassification.REDACTED
+            else None,
+        )
         return self
 
 

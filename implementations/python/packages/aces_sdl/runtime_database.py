@@ -47,7 +47,7 @@ from .runtime_database_vocab import (
 from .runtime_filesystem import RuntimeSensitivityClassification
 from .runtime_values import (
     coerce_string_list,
-    name_indicates_secret,
+    enforce_observed_value_redaction,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
     require_symbol,
@@ -79,14 +79,10 @@ _MAX_PORT = 65535
 _HOSTNAME_LABEL = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
 
 # Sensitivity classes whose raw value must never be recorded.
-_REDACTED_SENSITIVITIES = frozenset(
-    {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
+_REDACTED_SENSITIVITIES = (
+    RuntimeSensitivityClassification.REDACTED,
+    RuntimeSensitivityClassification.OPERATOR_SECRET,
 )
-
-
-def _setting_name_is_concrete_secret(name: object) -> bool:
-    """Return whether ``name`` is a concrete (non-``${var}``) secret-bearing label."""
-    return isinstance(name, str) and not is_variable_ref(name) and name_indicates_secret(name)
 
 
 def _reject_duplicates(
@@ -388,25 +384,15 @@ class DatabaseSetting(SDLModel):
         # value even when the submitter left ``value_classification`` at the
         # default ``unknown`` — otherwise the protection is opt-in for the
         # author and absent for adversarial inputs (ADR-029 §5).
-        if _setting_name_is_concrete_secret(self.name):
-            self._enforce_secret_name_redaction()
-        elif self.value and self.value_classification in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"database setting '{self.name}' classified '{self.value_classification}' must omit its raw value"
-            )
+        enforce_observed_value_redaction(
+            owner_label=f"database setting '{self.name}'",
+            name=self.name,
+            value=self.value,
+            classification=self.value_classification,
+            redacted_classifications=_REDACTED_SENSITIVITIES,
+            classification_field="value_classification",
+        )
         return self
-
-    def _enforce_secret_name_redaction(self) -> None:
-        if self.value:
-            raise ValueError(
-                f"database setting '{self.name}' carries a secret-bearing name and must omit its raw value "
-                f"(value_classification must be 'redacted' or 'operator_secret')"
-            )
-        if not is_variable_ref(self.value_classification) and self.value_classification not in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"database setting '{self.name}' carries a secret-bearing name; "
-                f"value_classification must be 'redacted' or 'operator_secret'"
-            )
 
 
 class RuntimeDatabaseService(SDLModel):
