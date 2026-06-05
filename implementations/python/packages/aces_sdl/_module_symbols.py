@@ -1,18 +1,11 @@
-"""Symbol-index helpers for SDL module composition.
-
-Builds the per-section rename maps and the cross-section ``named`` alias
-table that ``composition._namespace_payload`` uses to rewrite SDL
-references when an imported module is mounted under a namespace.
-
-Lives next to ``composition.py`` (not inside it) to keep that file under
-the repo-policy line cap, mirroring ``_module_provenance.py``.
-"""
+"""Symbol-index helpers for SDL module composition."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
 
+from ._module_runtime_aliases import nested_node_runtime_aliases
 from .entities import flatten_entities
 from .scenario import ModuleDescriptor, Scenario
 
@@ -108,173 +101,6 @@ def _nested_node_service_aliases(
     return aliases
 
 
-def _nested_node_application_aliases(
-    scenario: Scenario,
-    node_rename_map: Mapping[str, str],
-) -> dict[str, str]:
-    """Qualified runtime-application refs ``nodes.<vm>.runtime.applications.<app>``.
-
-    The node segment must be rewritten so a qualified application ref used as a
-    relationship endpoint survives namespacing.
-    """
-    aliases: dict[str, str] = {}
-    for node_name, node in scenario.nodes.items():
-        prefixed_node = node_rename_map.get(node_name, node_name)
-        if prefixed_node == node_name:
-            continue
-        runtime = getattr(node, "runtime", None)
-        if runtime is None:
-            continue
-        for application in getattr(runtime, "applications", []):
-            app_id = getattr(application, "application_id", "")
-            if not app_id:
-                continue
-            bare_ref = f"nodes.{node_name}.runtime.applications.{app_id}"
-            aliases[bare_ref] = f"nodes.{prefixed_node}.runtime.applications.{app_id}"
-    return aliases
-
-
-def _database_service_aliases(
-    *,
-    node_name: str,
-    prefixed_node: str,
-    dbsvc: Any,
-) -> dict[str, str]:
-    """Aliases for one database service: the service ref and each contained database."""
-    svc_id = getattr(dbsvc, "database_service_id", "")
-    if not svc_id:
-        return {}
-    bare_base = f"nodes.{node_name}.runtime.database_services.{svc_id}"
-    prefixed_base = f"nodes.{prefixed_node}.runtime.database_services.{svc_id}"
-    aliases: dict[str, str] = {bare_base: prefixed_base}
-    for database in getattr(dbsvc, "databases", []):
-        db_id = getattr(database, "database_id", "")
-        if db_id:
-            aliases[f"{bare_base}.databases.{db_id}"] = f"{prefixed_base}.databases.{db_id}"
-    return aliases
-
-
-def _nested_node_database_aliases(
-    scenario: Scenario,
-    node_rename_map: Mapping[str, str],
-) -> dict[str, str]:
-    """Qualified database refs ``nodes.<vm>.runtime.database_services.<id>[...]``.
-
-    Covers the database-service ref and the ``.databases.<id>`` ref so an
-    application-to-database relationship endpoint survives namespacing
-    (ADR-029 §2).
-    """
-    aliases: dict[str, str] = {}
-    for node_name, node in scenario.nodes.items():
-        prefixed_node = node_rename_map.get(node_name, node_name)
-        if prefixed_node == node_name:
-            continue
-        runtime = getattr(node, "runtime", None)
-        if runtime is None:
-            continue
-        for dbsvc in getattr(runtime, "database_services", []):
-            aliases.update(
-                _database_service_aliases(
-                    node_name=node_name,
-                    prefixed_node=prefixed_node,
-                    dbsvc=dbsvc,
-                )
-            )
-    return aliases
-
-
-def _identity_authority_collection_aliases(
-    *,
-    bare_base: str,
-    prefixed_base: str,
-    collection: list[Any],
-    collection_name: str,
-    id_field: str,
-) -> dict[str, str]:
-    aliases: dict[str, str] = {}
-    for item in collection:
-        item_id = getattr(item, id_field, "")
-        if item_id:
-            aliases[f"{bare_base}.{collection_name}.{item_id}"] = f"{prefixed_base}.{collection_name}.{item_id}"
-    return aliases
-
-
-def _identity_authority_aliases(
-    *,
-    node_name: str,
-    prefixed_node: str,
-    authority: Any,
-) -> dict[str, str]:
-    """Aliases for one identity authority and its stable child records."""
-    authority_id = getattr(authority, "authority_id", "")
-    if not authority_id:
-        return {}
-    bare_base = f"nodes.{node_name}.runtime.identity_authorities.{authority_id}"
-    prefixed_base = f"nodes.{prefixed_node}.runtime.identity_authorities.{authority_id}"
-    aliases: dict[str, str] = {bare_base: prefixed_base}
-    aliases.update(
-        _identity_authority_collection_aliases(
-            bare_base=bare_base,
-            prefixed_base=prefixed_base,
-            collection=getattr(authority, "services", []),
-            collection_name="services",
-            id_field="service_id",
-        )
-    )
-    aliases.update(
-        _identity_authority_collection_aliases(
-            bare_base=bare_base,
-            prefixed_base=prefixed_base,
-            collection=getattr(authority, "subjects", []),
-            collection_name="subjects",
-            id_field="subject_id",
-        )
-    )
-    aliases.update(
-        _identity_authority_collection_aliases(
-            bare_base=bare_base,
-            prefixed_base=prefixed_base,
-            collection=getattr(authority, "policies", []),
-            collection_name="policies",
-            id_field="policy_id",
-        )
-    )
-    aliases.update(
-        _identity_authority_collection_aliases(
-            bare_base=bare_base,
-            prefixed_base=prefixed_base,
-            collection=getattr(authority, "relationships", []),
-            collection_name="relationships",
-            id_field="relationship_id",
-        )
-    )
-    return aliases
-
-
-def _nested_node_identity_authority_aliases(
-    scenario: Scenario,
-    node_rename_map: Mapping[str, str],
-) -> dict[str, str]:
-    """Qualified identity authority refs ``nodes.<vm>.runtime.identity_authorities.<id>[...]``."""
-    aliases: dict[str, str] = {}
-    for node_name, node in scenario.nodes.items():
-        prefixed_node = node_rename_map.get(node_name, node_name)
-        if prefixed_node == node_name:
-            continue
-        runtime = getattr(node, "runtime", None)
-        if runtime is None:
-            continue
-        for authority in getattr(runtime, "identity_authorities", []):
-            aliases.update(
-                _identity_authority_aliases(
-                    node_name=node_name,
-                    prefixed_node=prefixed_node,
-                    authority=authority,
-                )
-            )
-    return aliases
-
-
 def _nested_content_item_aliases(
     scenario: Scenario,
     content_rename_map: Mapping[str, str],
@@ -326,9 +152,7 @@ def symbol_index(
     named.update(_qualified_section_aliases("entities", entity_map))
 
     named.update(_nested_node_service_aliases(scenario, section_maps.get("nodes", {})))
-    named.update(_nested_node_application_aliases(scenario, section_maps.get("nodes", {})))
-    named.update(_nested_node_database_aliases(scenario, section_maps.get("nodes", {})))
-    named.update(_nested_node_identity_authority_aliases(scenario, section_maps.get("nodes", {})))
+    named.update(nested_node_runtime_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_content_item_aliases(scenario, section_maps.get("content", {})))
 
     return {

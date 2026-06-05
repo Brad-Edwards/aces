@@ -35,6 +35,7 @@ from .runtime_values import (
 )
 
 __all__ = [
+    "RelationshipProxyUpstream",
     "RuntimeApplicationDisclosure",
     "RuntimeApplicationExposedField",
     "RuntimeApplicationParameter",
@@ -43,6 +44,8 @@ __all__ = [
     "RuntimeApplicationRedirect",
     "RuntimeApplicationResponse",
     "RuntimeApplicationRoute",
+    "RuntimeApplicationRouteUpstreamScheme",
+    "RuntimeApplicationRouteUpstreamTarget",
     "RuntimeApplicationSurface",
 ]
 
@@ -69,6 +72,7 @@ class RuntimeApplicationProtocol(str, Enum):
     WS = "ws"
     WSS = "wss"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeApplicationParameterLocation(str, Enum):
@@ -82,6 +86,20 @@ class RuntimeApplicationParameterLocation(str, Enum):
     JSON_BODY = "json_body"
     UPLOADED_FILE = "uploaded_file"
     OTHER = "other"
+    UNKNOWN = "unknown"
+
+
+class RuntimeApplicationRouteUpstreamScheme(str, Enum):
+    """Wire scheme a reverse proxy uses to reach a route's upstream origin.
+
+    This is a CLOSED taxonomy: an upstream is reached over either cleartext
+    HTTP or TLS-wrapped HTTPS. Unlike the open ``RuntimeApplicationProtocol``,
+    it carries neither ``other`` nor ``unknown`` — a proxy-to-origin hop that is
+    neither HTTP nor HTTPS is not an application route upstream.
+    """
+
+    HTTP = "http"
+    HTTPS = "https"
 
 
 def _url_path_or_var(value: str, *, field_name: str, allow_empty: bool = False) -> str:
@@ -260,6 +278,37 @@ class RuntimeApplicationExposedField(SDLModel):
         return self
 
 
+class RuntimeApplicationRouteUpstreamTarget(SDLModel):
+    """The origin a reverse-proxied route forwards to.
+
+    A proxy/gateway route does not itself serve content; it relays to an
+    upstream origin on this or another node. ``target_node_ref`` /
+    ``target_service`` name that origin (the service-name forms mirror
+    ``RuntimeApplicationSurface.service``), ``scheme`` is the CLOSED
+    proxy-to-origin wire scheme, and ``tls_terminated_here`` records whether
+    TLS is terminated at the proxy (re-encrypted or plaintext to the origin).
+    All fields are observation metadata; nothing is resolved.
+    """
+
+    target_node_ref: str = ""
+    target_service: str = ""
+    scheme: RuntimeApplicationRouteUpstreamScheme | str = RuntimeApplicationRouteUpstreamScheme.HTTP
+    tls_terminated_here: bool | str | None = None
+
+    @field_validator("scheme", mode="before")
+    @classmethod
+    def normalize_scheme(
+        cls,
+        v: RuntimeApplicationRouteUpstreamScheme | str,
+    ) -> RuntimeApplicationRouteUpstreamScheme | str:
+        return parse_runtime_enum_or_var(v, RuntimeApplicationRouteUpstreamScheme, field_name="scheme")
+
+    @field_validator("tls_terminated_here", mode="before")
+    @classmethod
+    def parse_tls_terminated_here(cls, v: bool | str | None) -> bool | str | None:
+        return parse_optional_bool_or_var(v, field_name="tls_terminated_here")
+
+
 class RuntimeApplicationRoute(SDLModel):
     """An observed application route — a participant-visible endpoint.
 
@@ -283,6 +332,7 @@ class RuntimeApplicationRoute(SDLModel):
     redirects: list[RuntimeApplicationRedirect] = Field(default_factory=list)
     disclosures: list[RuntimeApplicationDisclosure] = Field(default_factory=list)
     exposed_fields: list[RuntimeApplicationExposedField] = Field(default_factory=list)
+    upstream_target: RuntimeApplicationRouteUpstreamTarget | None = None
 
     @field_validator("route_id")
     @classmethod
@@ -403,3 +453,38 @@ class RuntimeApplicationSurface(SDLModel):
                     )
                 seen_method_paths.add(key)
         return self
+
+
+class RelationshipProxyUpstream(SDLModel):
+    """Typed proxy-upstream detail carried by a top-level relationship edge.
+
+    When a reverse proxy / gateway forwards a route to an upstream origin, the
+    relationship's ``target`` resolves to that origin and this block keeps the
+    forwarding facts structurally validated rather than recorded as prose:
+    ``route_ref`` (a ``route_id`` on the proxy's application surface), the
+    resolved upstream node/service, whether the client-facing TLS is terminated
+    at the proxy, whether the proxy-to-origin hop is plaintext, and any request
+    ``body_limit`` the proxy enforces.
+    """
+
+    route_ref: str
+    upstream_node_ref: str = ""
+    upstream_service_ref: str = ""
+    client_tls_terminated: bool | str | None = None
+    origin_plaintext: bool | str | None = None
+    body_limit: str = ""
+    description: str = ""
+
+    @field_validator("route_ref")
+    @classmethod
+    def validate_route_ref(cls, v: str) -> str:
+        # A reference, not a symbol definition: a ``${var}`` placeholder is
+        # permitted, but an empty value is not.
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("route_ref must be a non-empty route_id")
+        return v
+
+    @field_validator("client_tls_terminated", "origin_plaintext", mode="before")
+    @classmethod
+    def parse_flags(cls, v: bool | str | None, info: ValidationInfo) -> bool | str | None:
+        return parse_optional_bool_or_var(v, field_name=info.field_name)

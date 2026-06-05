@@ -47,6 +47,7 @@ from .runtime_database_vocab import (
 from .runtime_filesystem import RuntimeSensitivityClassification
 from .runtime_values import (
     coerce_string_list,
+    name_indicates_secret,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
     require_symbol,
@@ -64,11 +65,11 @@ __all__ = [
     "DatabaseRole",
     "DatabaseRoleType",
     "DatabaseSchema",
-    "DatabaseService",
     "DatabaseSetting",
     "DatabaseSettingProvenance",
     "DatabaseTable",
     "RelationshipDatabaseAccess",
+    "RuntimeDatabaseService",
 ]
 
 _MIN_PORT = 1
@@ -82,38 +83,10 @@ _REDACTED_SENSITIVITIES = frozenset(
     {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
 )
 
-# Substrings (case-insensitive) on a setting ``name`` that indicate the value
-# field would carry credentials, hashes, private keys, bearer tokens, connection
-# strings, replication secrets, or auth-file material (ADR-029 §5). A setting
-# whose name matches one of these may not carry a raw ``value`` regardless of
-# how the submitter chose to classify it: passwords are not less secret because
-# the YAML author forgot to mark them.
-_SECRET_NAME_TOKENS: tuple[str, ...] = (
-    # These are identifier-shape tokens used to detect secret-bearing setting
-    # names, not secrets themselves; the noqa marker silences bandit's S105
-    # without dressing each line up as actual credential material.
-    "password",  # noqa: S105
-    "passwd",
-    "passphrase",
-    "secret",  # noqa: S105
-    "credential",
-    "conninfo",
-    "private_key",
-    "privatekey",
-    "keytab",
-    "pg_hba",
-)
-
-
-def _name_indicates_secret(name: str) -> bool:
-    """Return whether a setting name's substring suggests secret content."""
-    lowered = name.lower()
-    return any(token in lowered for token in _SECRET_NAME_TOKENS)
-
 
 def _setting_name_is_concrete_secret(name: object) -> bool:
     """Return whether ``name`` is a concrete (non-``${var}``) secret-bearing label."""
-    return isinstance(name, str) and not is_variable_ref(name) and _name_indicates_secret(name)
+    return isinstance(name, str) and not is_variable_ref(name) and name_indicates_secret(name)
 
 
 def _reject_duplicates(
@@ -436,7 +409,7 @@ class DatabaseSetting(SDLModel):
             )
 
 
-class DatabaseService(SDLModel):
+class RuntimeDatabaseService(SDLModel):
     """An observed database service hosted by a transport service on a node.
 
     ``service`` references the owning same-node ``Node.services[].name`` (bare
@@ -473,7 +446,7 @@ class DatabaseService(SDLModel):
         return parse_runtime_enum_or_var(v, DatabaseProtocol, field_name="protocol")
 
     @model_validator(mode="after")
-    def validate_service(self) -> "DatabaseService":
+    def validate_service(self) -> "RuntimeDatabaseService":
         self._reject_duplicate_top_level_ids()
         self._reject_duplicate_nested_object_ids()
         self._reject_duplicate_setting_names()

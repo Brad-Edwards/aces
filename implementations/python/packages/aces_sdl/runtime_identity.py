@@ -51,6 +51,7 @@ class RuntimeSudoPrincipalKind(str, Enum):
     USER = "user"
     GROUP = "group"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeLocalUser(SDLModel):

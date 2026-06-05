@@ -132,6 +132,10 @@ decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state
 decisions/adrs/adr-034-runtime-software-component-inventory
 decisions/adrs/adr-035-service-manager-unit-state-runtime-surface
 decisions/adrs/adr-036-sdl-processor-runtime-module-boundaries
+decisions/adrs/adr-037-runtime-file-service-and-filesystem-presence-semantics
+decisions/adrs/adr-038-runtime-mail-service-logical-state
+decisions/adrs/adr-039-dns-service-runtime-inventory
+decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory
 decisions/adrs/adr-055-experiment-core-contract-boundary
 decisions/sem-213-temporal-participant-preflight
 ```

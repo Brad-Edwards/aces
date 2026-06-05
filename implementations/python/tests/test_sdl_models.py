@@ -20,10 +20,16 @@ from aces.core.sdl.nodes import (
     DatabaseProtocol,
     DatabaseRoleType,
     DatabaseSchema,
-    DatabaseService,
     DatabaseSetting,
     DatabaseSettingProvenance,
     DatabaseTable,
+    DnsRecordClass,
+    DnsRecordType,
+    DnsResourceRecordSet,
+    DnsRuntimeSetting,
+    DnssecValidationMode,
+    DnsServerImplementation,
+    DnsServiceRole,
     DockerfileInstruction,
     DockerfileInstructionKind,
     ImageAttestation,
@@ -38,6 +44,7 @@ from aces.core.sdl.nodes import (
     ImageVerificationStatus,
     Node,
     NodeType,
+    RelationshipProxyUpstream,
     Resources,
     Role,
     RuntimeApplicationDisclosure,
@@ -48,6 +55,8 @@ from aces.core.sdl.nodes import (
     RuntimeApplicationRedirect,
     RuntimeApplicationResponse,
     RuntimeApplicationRoute,
+    RuntimeApplicationRouteUpstreamScheme,
+    RuntimeApplicationRouteUpstreamTarget,
     RuntimeApplicationSurface,
     RuntimeCapabilityOverrideScope,
     RuntimeCapabilityPolicy,
@@ -55,15 +64,28 @@ from aces.core.sdl.nodes import (
     RuntimeControlInterface,
     RuntimeControlInterfaceAccess,
     RuntimeControlInterfaceKind,
+    RuntimeDatabaseService,
     RuntimeEnvironmentValueClassification,
     RuntimeEnvironmentVariableProvenance,
+    RuntimeFileService,
+    RuntimeFileServiceAccessEffect,
+    RuntimeFileServiceAccessOutcome,
+    RuntimeFileServiceAccessRule,
+    RuntimeFileServiceCredentialClassification,
+    RuntimeFileServicePrincipal,
+    RuntimeFileServicePrincipalKind,
+    RuntimeFileServiceProtocol,
+    RuntimeFileServiceShare,
+    RuntimeFileShareKind,
     RuntimeFilesystemEntryType,
+    RuntimeFilesystemPresence,
     RuntimeFilesystemStability,
     RuntimeHealthStatus,
     RuntimeIdentityAttribute,
     RuntimeIdentityAuthorityKind,
     RuntimeIdentityAuthorityProtocol,
     RuntimeIdentityProvenance,
+    RuntimeIdentityRecordOrigin,
     RuntimeIdentityRelationshipKind,
     RuntimeIdentitySubjectKind,
     RuntimeLocalGroup,
@@ -375,7 +397,7 @@ class TestNode:
             ("roles", {"admin": {"username": "root"}}),
             ("services", [{"port": 80, "name": "http"}]),
             ("asset_value", {"confidentiality": "high"}),
-            ("runtime", {"process": {"pid": 1, "command": "./shufflebackend"}}),
+            ("runtime", {"processes": [{"pid": 1, "command": "./shufflebackend"}]}),
         ],
     )
     def test_switch_rejects_other_vm_only_fields(self, field_name, value):
@@ -396,6 +418,7 @@ class TestNode:
                 ],
                 "local_control_interfaces": [
                     {
+                        "control_interface_id": "docker-sock",
                         "path": "/run/docker.sock",
                         "kind": "unix_socket",
                         "protocol": "docker",
@@ -403,12 +426,14 @@ class TestNode:
                         "access": "read_write",
                     }
                 ],
-                "process": {
-                    "pid": 1,
-                    "command": "./shufflebackend",
-                    "user": "root",
-                    "working_directory": "/app",
-                },
+                "processes": [
+                    {
+                        "pid": 1,
+                        "command": "./shufflebackend",
+                        "user": "root",
+                        "working_directory": "/app",
+                    }
+                ],
                 "packages": [
                     {
                         "manager": "apk",
@@ -468,11 +493,11 @@ class TestNode:
             == RuntimeSensitivityClassification.OPERATOR_SECRET
         )
         assert runtime.local_control_interfaces[0].access == RuntimeControlInterfaceAccess.READ_WRITE
-        assert runtime.process is not None
-        assert runtime.process.pid == 1
-        assert runtime.process.command == ["./shufflebackend"]
-        assert runtime.process.user == "root"
-        assert runtime.process.working_directory == "/app"
+        assert len(runtime.processes) == 1
+        assert runtime.processes[0].pid == 1
+        assert runtime.processes[0].command == ["./shufflebackend"]
+        assert runtime.processes[0].user == "root"
+        assert runtime.processes[0].working_directory == "/app"
         assert runtime.packages[0].manager == "apk"
         assert runtime.packages[0].name == "musl"
         assert runtime.packages[0].version == "1.2.4-r2"
@@ -664,6 +689,208 @@ class TestNode:
         assert runtime.filesystem_inventory[2].stability == RuntimeFilesystemStability.RUNTIME_CREATED
         assert runtime.filesystem_inventory[2].sensitivity == RuntimeSensitivityClassification.SECRET_FIXTURE
 
+    def test_vm_runtime_filesystem_entry_presence_defaults_to_present(self):
+        n = Node(
+            type="vm",
+            runtime={
+                "filesystem_inventory": [
+                    {"path": "/etc/hosts", "entry_type": "file"},
+                ],
+            },
+        )
+
+        entry = n.runtime.filesystem_inventory[0]
+        assert entry.presence == RuntimeFilesystemPresence.PRESENT
+
+    def test_vm_runtime_filesystem_entry_expected_absent_preserves_entry_type(self):
+        n = Node(
+            type="vm",
+            runtime={
+                "filesystem_inventory": [
+                    {
+                        "path": "/root/.ssh/authorized_keys",
+                        "entry_type": "file",
+                        "presence": "expected_absent",
+                        "description": "Deploy-key path attempted by setup but not present at capture.",
+                    },
+                ],
+            },
+        )
+
+        entry = n.runtime.filesystem_inventory[0]
+        assert entry.presence == RuntimeFilesystemPresence.EXPECTED_ABSENT
+        assert entry.entry_type == RuntimeFilesystemEntryType.FILE
+
+    def test_vm_runtime_file_service_surface(self):
+        n = Node(
+            type="vm",
+            runtime={
+                "file_services": [
+                    {
+                        "file_service_id": "fileshare-smb",
+                        "service": "smb",
+                        "protocol": "smb",
+                        "backend": "samba-4.x",
+                        "description": "TechVault fileshare published over SMB.",
+                        "shares": [
+                            {
+                                "share_id": "public",
+                                "name": "public",
+                                "kind": "disk",
+                                "backing_path": "/srv/samba/public",
+                                "comment": "Anonymous-readable public share.",
+                                "read_only": True,
+                                "browseable": True,
+                                "guest_ok": True,
+                                "valid_users": ["guest"],
+                            },
+                            {
+                                "share_id": "deploy-keys",
+                                "name": "deploy_keys",
+                                "kind": "disk",
+                                "backing_path": "/srv/samba/deploy_keys",
+                                "read_only": False,
+                                "browseable": False,
+                                "guest_ok": False,
+                                "valid_users": ["svc-fileshare"],
+                                "write_users": ["svc-fileshare"],
+                            },
+                        ],
+                        "principals": [
+                            {
+                                "principal_id": "nobody",
+                                "kind": "guest",
+                                "name": "nobody",
+                                "external_id": "S-1-5-21-0-501",
+                                "status": "enabled",
+                                "credential_classification": "no_credential",
+                                "origin": "built_in",
+                            },
+                            {
+                                "principal_id": "svc-fileshare",
+                                "kind": "service_account",
+                                "name": "svc-fileshare",
+                                "status": "enabled",
+                                "credential_classification": "redacted",
+                                "origin": "provisioned",
+                            },
+                        ],
+                        "access_rules": [
+                            {
+                                "rule_id": "public-read",
+                                "subject_ref": "nobody",
+                                "resource_ref": "public",
+                                "action": "read",
+                                "effect": "allow",
+                                "basis": "share_config",
+                            },
+                        ],
+                        "access_observations": [
+                            {
+                                "observation_id": "anon-mount-allowed",
+                                "subject_ref": "anonymous",
+                                "resource_ref": "public",
+                                "action": "browse",
+                                "outcome": "allowed",
+                                "basis": "observed_probe",
+                            },
+                        ],
+                    },
+                ],
+            },
+        )
+
+        service = n.runtime.file_services[0]
+        assert service.file_service_id == "fileshare-smb"
+        assert service.protocol == RuntimeFileServiceProtocol.SMB
+        assert service.shares[0].kind == RuntimeFileShareKind.DISK
+        assert service.shares[1].read_only is False
+        assert service.principals[0].kind == RuntimeFileServicePrincipalKind.GUEST
+        assert service.principals[1].credential_classification == RuntimeFileServiceCredentialClassification.REDACTED
+        assert service.access_rules[0].effect == RuntimeFileServiceAccessEffect.ALLOW
+        assert service.access_observations[0].outcome == RuntimeFileServiceAccessOutcome.ALLOWED
+
+    def test_vm_runtime_file_service_rejects_duplicate_share_id(self):
+        with pytest.raises(ValidationError):
+            RuntimeFileService(
+                file_service_id="svc",
+                service="smb",
+                protocol="smb",
+                shares=[
+                    RuntimeFileServiceShare(share_id="dup", name="a"),
+                    RuntimeFileServiceShare(share_id="dup", name="b"),
+                ],
+            )
+
+    def test_vm_runtime_file_service_rejects_id_collision_across_scopes(self):
+        with pytest.raises(ValidationError):
+            RuntimeFileService(
+                file_service_id="svc",
+                service="smb",
+                protocol="smb",
+                shares=[RuntimeFileServiceShare(share_id="alpha", name="alpha")],
+                principals=[
+                    RuntimeFileServicePrincipal(
+                        principal_id="alpha",
+                        kind="user",
+                        name="alpha",
+                    )
+                ],
+            )
+
+    def test_vm_runtime_file_service_principal_credential_value_field_is_unrepresentable(self):
+        # Raw credential material must not be expressible on the principal
+        # record at all (ADR-036 §4, secret-handling gate). The field is
+        # absent from the model; SDLModel's ``extra='forbid'`` config rejects
+        # any attempt to set it, regardless of credential_classification.
+        for field_name in ("credential_value", "credential_hash"):
+            for classification in ("strong", "redacted", "no_credential", "${secret_class}"):
+                with pytest.raises(ValidationError, match=field_name):
+                    RuntimeFileServicePrincipal(
+                        principal_id="bad",
+                        kind="user",
+                        name="bad",
+                        credential_classification=classification,
+                        **{field_name: "hunter2"},
+                    )
+
+    def test_vm_runtime_file_service_rejects_unknown_action_enum(self):
+        with pytest.raises(ValidationError):
+            RuntimeFileServiceAccessRule(
+                rule_id="r",
+                subject_ref="s",
+                resource_ref="r",
+                action="not-an-action",
+                effect="allow",
+                basis="share_config",
+            )
+
+    def test_vm_runtime_filesystem_entry_expected_absent_rejects_present_only_fields(self):
+        for field_name, value in (
+            ("size", 4096),
+            ("content_digest", "deadbeef"),
+            ("uid", 0),
+            ("gid", 0),
+            ("mode", "0644"),
+            ("owner_user", "root"),
+            ("owner_group", "root"),
+            ("digest_algorithm", "sha256"),
+        ):
+            with pytest.raises(ValidationError, match=field_name):
+                Node(
+                    type="vm",
+                    runtime={
+                        "filesystem_inventory": [
+                            {
+                                "path": "/var/expected/missing",
+                                "entry_type": "file",
+                                "presence": "expected_absent",
+                                field_name: value,
+                            },
+                        ],
+                    },
+                )
+
     def test_vm_runtime_container_host_config_surfaces(self):
         n = Node(
             type="vm",
@@ -797,9 +1024,12 @@ class TestNode:
                 {"filesystem_inventory": [{"path": "/app/app.py"}, {"path": "/app/app.py"}]},
                 "Duplicate runtime filesystem path",
             ),
-            ({"local_control_interfaces": [{"path": "run/docker.sock"}]}, "path"),
-            ({"process": {"pid": 0, "command": "./shufflebackend"}}, "pid"),
-            ({"process": {"working_directory": "app"}}, "working_directory"),
+            (
+                {"local_control_interfaces": [{"control_interface_id": "docker-sock", "path": "run/docker.sock"}]},
+                "path",
+            ),
+            ({"processes": [{"pid": 0, "command": "./shufflebackend"}]}, "pid"),
+            ({"processes": [{"working_directory": "app"}]}, "working_directory"),
             ({"dependency_manifests": [{"ecosystem": "go", "path": "go.mod"}]}, "path"),
             ({"container": {"masked_paths": ["proc/acpi"]}}, "masked_paths"),
             ({"container": {"devices": [{"host_path": "dev/null", "container_path": "/dev/null"}]}}, "host_path"),
@@ -926,8 +1156,8 @@ class TestNode:
             (
                 {
                     "identity_authorities": [
-                        {"authority_id": "techvault-domain"},
-                        {"authority_id": "techvault-domain"},
+                        {"identity_authority_id": "techvault-domain"},
+                        {"identity_authority_id": "techvault-domain"},
                     ]
                 },
                 "Duplicate runtime identity authority",
@@ -936,7 +1166,7 @@ class TestNode:
                 {
                     "identity_authorities": [
                         {
-                            "authority_id": "techvault-domain",
+                            "identity_authority_id": "techvault-domain",
                             "subjects": [
                                 {"subject_id": "alice", "kind": "user", "name": "alice"},
                                 {"subject_id": "alice", "kind": "user", "name": "alice"},
@@ -950,7 +1180,7 @@ class TestNode:
                 {
                     "identity_authorities": [
                         {
-                            "authority_id": "techvault-domain",
+                            "identity_authority_id": "techvault-domain",
                             "relationships": [
                                 {
                                     "relationship_id": "alice-admin",
@@ -1166,6 +1396,7 @@ class TestNode:
 
     def test_runtime_control_interface_accepts_windows_named_pipe_path(self):
         interface = RuntimeControlInterface(
+            control_interface_id="docker-engine-pipe",
             path=r"\\.\pipe\docker_engine",
             kind="named-pipe",
             bind_source=r"\\.\pipe\docker_engine",
@@ -1177,7 +1408,11 @@ class TestNode:
 
     def test_runtime_control_interface_named_pipe_path_requires_named_pipe_kind(self):
         with pytest.raises(ValidationError, match="named_pipe"):
-            RuntimeControlInterface(path=r"\\.\pipe\docker_engine", kind="unix-socket")
+            RuntimeControlInterface(
+                control_interface_id="docker-engine-pipe",
+                path=r"\\.\pipe\docker_engine",
+                kind="unix-socket",
+            )
 
     def test_runtime_mount_redacted_source_must_be_omitted(self):
         with pytest.raises(ValidationError, match="redacted runtime mount source"):
@@ -1217,12 +1452,14 @@ class TestNode:
     def test_runtime_control_interface_redacted_bind_source_must_be_omitted(self):
         with pytest.raises(ValidationError, match="redacted runtime control interface bind_source"):
             RuntimeControlInterface(
+                control_interface_id="docker-sock",
                 path="/run/docker.sock",
                 bind_source="/var/run/docker.sock",
                 bind_source_sensitivity="operator-secret",
             )
 
         interface = RuntimeControlInterface(
+            control_interface_id="docker-sock",
             path="/run/docker.sock",
             protocol="docker",
             bind_source_sensitivity="operator-secret",
@@ -1264,6 +1501,7 @@ class TestNode:
 
         validator.validate(
             {
+                "control_interface_id": "docker-sock",
                 "path": "/run/docker.sock",
                 "protocol": "docker",
                 "bind_source_sensitivity": "operator_secret",
@@ -1272,6 +1510,7 @@ class TestNode:
         with pytest.raises(JsonSchemaValidationError):
             validator.validate(
                 {
+                    "control_interface_id": "docker-sock",
                     "path": "/run/docker.sock",
                     "bind_source": "/var/run/docker.sock",
                     "bind_source_sensitivity": "OPERATOR_SECRET",
@@ -1414,7 +1653,7 @@ class TestRuntimeIdentityAuthorities:
             runtime={
                 "identity_authorities": [
                     {
-                        "authority_id": "techvault-domain",
+                        "identity_authority_id": "techvault-domain",
                         "kind": "domain",
                         "name": "TechVault Domain",
                         "namespace": "techvault.local",
@@ -1482,7 +1721,7 @@ class TestRuntimeIdentityAuthorities:
         )
 
         authority = n.runtime.identity_authorities[0]
-        assert authority.authority_id == "techvault-domain"
+        assert authority.identity_authority_id == "techvault-domain"
         assert authority.kind == RuntimeIdentityAuthorityKind.DOMAIN
         assert authority.namespace == "techvault.local"
         assert authority.domain_name == "TECHVAULT"
@@ -1506,6 +1745,16 @@ class TestRuntimeIdentityAuthorities:
                 values=["not-for-fixtures"],
                 value_classification="plain",
             )
+
+    def test_runtime_identity_attribute_accepts_observation_provenance(self):
+        attr = RuntimeIdentityAttribute(name="misp_role", values=["admin"], provenance="runtime_created")
+
+        assert attr.origin == RuntimeIdentityRecordOrigin.RUNTIME_CREATED
+        assert attr.provenance == RuntimeIdentityRecordOrigin.RUNTIME_CREATED
+
+    def test_runtime_identity_attribute_rejects_conflicting_origin_and_provenance(self):
+        with pytest.raises(ValidationError, match="origin and provenance"):
+            RuntimeIdentityAttribute(name="misp_role", origin="provisioned", provenance="runtime_created")
 
     def test_runtime_identity_authority_inventory_is_optional(self):
         assert Node(type="vm", runtime={}).runtime.identity_authorities == []
@@ -2962,6 +3211,377 @@ class TestRuntimeApplicationSurface:
                 templates=["/app/t.html", "/app/t.html"],
             )
 
+    def test_route_upstream_target_normalized(self):
+        route = RuntimeApplicationRoute(
+            route_id="proxy-root",
+            path="/",
+            methods=["GET"],
+            upstream_target={
+                "target_node_ref": "app-backend",
+                "target_service": "nodes.app-backend.services.gunicorn",
+                "scheme": "HTTPS",
+                "tls_terminated_here": True,
+            },
+        )
+        assert route.upstream_target is not None
+        assert route.upstream_target.target_node_ref == "app-backend"
+        assert route.upstream_target.scheme == RuntimeApplicationRouteUpstreamScheme.HTTPS
+        assert route.upstream_target.tls_terminated_here is True
+
+    def test_route_upstream_target_defaults(self):
+        target = RuntimeApplicationRouteUpstreamTarget()
+        assert target.scheme == RuntimeApplicationRouteUpstreamScheme.HTTP
+        assert target.target_node_ref == ""
+        assert target.tls_terminated_here is None
+
+    def test_route_upstream_scheme_is_closed(self):
+        # The CLOSED scheme taxonomy carries neither ``other`` nor ``unknown``.
+        with pytest.raises(ValidationError, match="scheme must be one of: http, https"):
+            RuntimeApplicationRouteUpstreamTarget(scheme="ftp")
+
+    def test_route_upstream_scheme_variable_placeholder_allowed(self):
+        target = RuntimeApplicationRouteUpstreamTarget(scheme="${proxy_scheme}")
+        assert target.scheme == "${proxy_scheme}"
+
+
+class TestRelationshipProxyUpstream:
+    def test_full_proxy_upstream(self):
+        access = RelationshipProxyUpstream(
+            route_ref="proxy-root",
+            upstream_node_ref="app-backend",
+            upstream_service_ref="gunicorn",
+            client_tls_terminated=True,
+            origin_plaintext=True,
+            body_limit="10 MiB",
+            description="nginx reverse proxy to gunicorn origin",
+        )
+        assert access.route_ref == "proxy-root"
+        assert access.client_tls_terminated is True
+        assert access.origin_plaintext is True
+        assert access.body_limit == "10 MiB"
+
+    def test_route_ref_required(self):
+        with pytest.raises(ValidationError, match="route_ref must be a non-empty route_id"):
+            RelationshipProxyUpstream(route_ref="  ")
+
+    def test_route_ref_allows_variable_placeholder(self):
+        access = RelationshipProxyUpstream(route_ref="${route_id}")
+        assert access.route_ref == "${route_id}"
+
+    def test_flags_accept_variable_placeholders(self):
+        access = RelationshipProxyUpstream(
+            route_ref="proxy-root",
+            client_tls_terminated="${tls_terminated}",
+            origin_plaintext="${plaintext}",
+        )
+        assert access.client_tls_terminated == "${tls_terminated}"
+        assert access.origin_plaintext == "${plaintext}"
+
+    def test_flag_rejects_non_bool(self):
+        with pytest.raises(ValidationError):
+            RelationshipProxyUpstream(route_ref="proxy-root", origin_plaintext="maybe")
+
+
+# ---------------------------------------------------------------------------
+# Runtime DNS service logical-state inventory (ADR-039)
+# ---------------------------------------------------------------------------
+
+
+class TestRuntimeDnsService:
+    def test_vm_runtime_dns_service_inventory(self):
+        n = Node(
+            type="vm",
+            services=[
+                {"port": 53, "protocol": "udp", "name": "dns-udp"},
+                {"port": 53, "protocol": "tcp", "name": "dns-tcp"},
+            ],
+            runtime={
+                "filesystem_inventory": [
+                    {"path": "/etc/bind/named.conf", "entry_type": "file"},
+                    {"path": "/etc/bind/db.techvault.local", "entry_type": "file"},
+                    {"path": "/var/log/named/query.log", "entry_type": "file"},
+                ],
+                "dns_services": [
+                    {
+                        "dns_service_id": "techvault-bind",
+                        "service": "dns-udp",
+                        "implementation": "BIND",
+                        "version": "BIND 9.18.39-0ubuntu0.22.04.3-Ubuntu",
+                        "roles": ["authoritative", "recursive-resolver"],
+                        "configuration_file_refs": ["/etc/bind/named.conf"],
+                        "log_file_refs": ["/var/log/named/query.log"],
+                        "resolver_policy": {
+                            "recursion_enabled": True,
+                            "allow_recursion": ["172.20.0.0/16"],
+                            "forwarders": [{"address": "8.8.8.8", "port": 53}],
+                            "forwarding_policy": "first",
+                            "dnssec_validation": "auto",
+                            "query_logging": True,
+                            "default_logging": True,
+                        },
+                        "dynamic_update": {"enabled": False},
+                        "zones": [
+                            {
+                                "zone_id": "techvault-local",
+                                "name": "techvault.local.",
+                                "kind": "primary",
+                                "purpose": "forward",
+                                "zone_class": "IN",
+                                "provenance": "axfr",
+                                "zone_file_refs": ["/etc/bind/db.techvault.local"],
+                                "transfer": {
+                                    "axfr_enabled": True,
+                                    "ixfr_enabled": False,
+                                    "allowed_clients": ["172.20.0.0/16"],
+                                },
+                                "rrsets": [
+                                    {
+                                        "rrset_id": "soa",
+                                        "owner": "techvault.local.",
+                                        "record_type": "SOA",
+                                        "zone_class": "IN",
+                                        "ttl": 3600,
+                                        "records": [
+                                            {
+                                                "soa": {
+                                                    "mname": "ns1.techvault.local.",
+                                                    "rname": "hostmaster.techvault.local.",
+                                                    "serial": 2026010101,
+                                                    "refresh": 3600,
+                                                    "retry": 600,
+                                                    "expire": 604800,
+                                                    "minimum": 300,
+                                                },
+                                                "rdata": (
+                                                    "ns1.techvault.local. hostmaster.techvault.local. "
+                                                    "2026010101 3600 600 604800 300"
+                                                ),
+                                            }
+                                        ],
+                                    },
+                                    {
+                                        "rrset_id": "mx",
+                                        "owner": "techvault.local.",
+                                        "record_type": "MX",
+                                        "ttl": 300,
+                                        "records": [{"mx": {"preference": 10, "exchange": "mail.techvault.local."}}],
+                                    },
+                                    {
+                                        "rrset_id": "ldap-srv",
+                                        "owner": "_ldap._tcp.techvault.local.",
+                                        "record_type": "SRV",
+                                        "ttl": 300,
+                                        "records": [
+                                            {
+                                                "srv": {
+                                                    "priority": 0,
+                                                    "weight": 100,
+                                                    "port": 389,
+                                                    "target": "ad.techvault.local.",
+                                                }
+                                            }
+                                        ],
+                                    },
+                                    {
+                                        "rrset_id": "web-a",
+                                        "owner": "web.techvault.local.",
+                                        "record_type": "A",
+                                        "ttl": 300,
+                                        "records": [{"address": "172.20.10.20"}],
+                                    },
+                                    {
+                                        "rrset_id": "root-txt",
+                                        "owner": "techvault.local.",
+                                        "record_type": "TXT",
+                                        "ttl": 300,
+                                        "records": [{"text": ["site=techvault"]}],
+                                    },
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            },
+        )
+
+        service = n.runtime.dns_services[0]
+        assert service.dns_service_id == "techvault-bind"
+        assert service.implementation == DnsServerImplementation.BIND
+        assert service.roles == [DnsServiceRole.AUTHORITATIVE, DnsServiceRole.RECURSIVE_RESOLVER]
+        assert service.resolver_policy.dnssec_validation == DnssecValidationMode.AUTO
+        assert service.resolver_policy.recursion_enabled is True
+        assert service.resolver_policy.allow_recursion == ["172.20.0.0/16"]
+        assert service.resolver_policy.forwarding_policy == "first"
+        assert service.resolver_policy.query_logging is True
+        assert service.resolver_policy.default_logging is True
+        assert len(service.resolver_policy.forwarders) == 1
+        assert service.resolver_policy.forwarders[0].address == "8.8.8.8"
+        assert service.resolver_policy.forwarders[0].port == 53
+        assert service.dynamic_update is not None
+        assert service.dynamic_update.enabled is False
+        zone = service.zones[0]
+        assert zone.zone_class == DnsRecordClass.IN
+        assert zone.transfer is not None
+        assert zone.transfer.axfr_enabled is True
+        assert zone.transfer.ixfr_enabled is False
+        assert zone.transfer.allowed_clients == ["172.20.0.0/16"]
+        assert zone.rrsets[0].record_type == DnsRecordType.SOA
+        assert zone.rrsets[0].records[0].soa.serial == 2026010101
+        assert zone.rrsets[1].records[0].mx.preference == 10
+        assert zone.rrsets[2].records[0].srv.port == 389
+        assert zone.rrsets[3].records[0].address == "172.20.10.20"
+
+    def test_dns_rrset_ttl_range_enforced(self):
+        with pytest.raises(ValidationError, match="ttl must be >= 0"):
+            DnsResourceRecordSet(
+                rrset_id="web-a",
+                owner="web.example.test.",
+                record_type="A",
+                ttl=-1,
+                records=[{"address": "192.0.2.10"}],
+            )
+
+    def test_dns_a_record_requires_ipv4_address_when_typed_address_present(self):
+        with pytest.raises(ValidationError, match="A record address must be a valid IPv4 address"):
+            DnsResourceRecordSet(
+                rrset_id="web-a",
+                owner="web.example.test.",
+                record_type="A",
+                ttl=300,
+                records=[{"address": "2001:db8::10"}],
+            )
+
+    def test_dns_a_record_accepts_unresolved_address_placeholder(self):
+        rrset = DnsResourceRecordSet(
+            rrset_id="web-a",
+            owner="web.example.test.",
+            record_type="A",
+            ttl=300,
+            records=[{"address": "${web_ip}"}],
+        )
+
+        assert rrset.records[0].address == "${web_ip}"
+
+    @pytest.mark.parametrize(
+        "record",
+        [
+            {"address": "${web_ip}"},
+            {"target": "${dns_target}"},
+            {"text": ["${txt_value}"]},
+            {
+                "soa": {
+                    "mname": "${soa_mname}",
+                    "rname": "${soa_rname}",
+                    "serial": "${soa_serial}",
+                    "refresh": "${soa_refresh}",
+                    "retry": "${soa_retry}",
+                    "expire": "${soa_expire}",
+                    "minimum": "${soa_minimum}",
+                }
+            },
+            {"mx": {"preference": "${mx_preference}", "exchange": "${mx_exchange}"}},
+            {
+                "srv": {
+                    "priority": "${srv_priority}",
+                    "weight": "${srv_weight}",
+                    "port": "${srv_port}",
+                    "target": "${srv_target}",
+                }
+            },
+        ],
+    )
+    def test_dns_variable_record_type_defers_typed_payload_matching(self, record):
+        rrset = DnsResourceRecordSet(
+            rrset_id="runtime-record",
+            owner="${dns_owner}",
+            record_type="${dns_record_type}",
+            type_code="${dns_type_code}",
+            ttl="${dns_ttl}",
+            records=[record],
+        )
+
+        assert rrset.record_type == "${dns_record_type}"
+
+    def test_dns_target_payload_accepts_target_style_records(self):
+        rrset = DnsResourceRecordSet(
+            rrset_id="ns",
+            owner="example.test.",
+            record_type="NS",
+            ttl=300,
+            records=[{"target": "ns1.example.test."}],
+        )
+
+        assert rrset.records[0].target == "ns1.example.test."
+
+    def test_dns_target_payload_rejects_unrelated_record_types(self):
+        with pytest.raises(ValidationError, match="target typed payload is only valid"):
+            DnsResourceRecordSet(
+                rrset_id="web-a",
+                owner="web.example.test.",
+                record_type="A",
+                ttl=300,
+                records=[{"target": "ns1.example.test."}],
+            )
+
+    def test_dns_unknown_record_type_preserves_type_code_and_rdata(self):
+        rrset = DnsResourceRecordSet(
+            rrset_id="https",
+            owner="web.example.test.",
+            record_type="other",
+            type_code=65,
+            ttl=300,
+            records=[{"rdata": "1 . alpn=h2,h3"}],
+        )
+
+        assert rrset.record_type == DnsRecordType.OTHER
+        assert rrset.type_code == 65
+        assert rrset.records[0].rdata == "1 . alpn=h2,h3"
+
+    @pytest.mark.parametrize("name", ["tsig_secret", "api_key", "update_key", "rndc.key", "key"])
+    def test_dns_secret_bearing_setting_must_omit_raw_value(self, name):
+        with pytest.raises(ValidationError, match="must omit its raw value"):
+            DnsRuntimeSetting(name=name, value="base64secret", value_classification="plain")
+
+    def test_dns_setting_secret_name_detection_is_boundary_aware(self):
+        setting = DnsRuntimeSetting(name="keyboard_layout", value="us", value_classification="plain")
+
+        assert setting.value == "us"
+
+    def test_duplicate_dns_rrset_binding_rejected(self):
+        with pytest.raises(ValidationError, match="Duplicate DNS RRset binding"):
+            Node(
+                type="vm",
+                runtime={
+                    "dns_services": [
+                        {
+                            "dns_service_id": "dns",
+                            "zones": [
+                                {
+                                    "zone_id": "example",
+                                    "name": "example.test.",
+                                    "rrsets": [
+                                        {
+                                            "rrset_id": "web-a",
+                                            "owner": "web.example.test.",
+                                            "record_type": "A",
+                                            "ttl": 300,
+                                            "records": [{"address": "192.0.2.10"}],
+                                        },
+                                        {
+                                            "rrset_id": "web-a-alt",
+                                            "owner": "web.example.test.",
+                                            "record_type": "A",
+                                            "ttl": 300,
+                                            "records": [{"address": "192.0.2.11"}],
+                                        },
+                                    ],
+                                }
+                            ],
+                        }
+                    ]
+                },
+            )
+
 
 # ---------------------------------------------------------------------------
 # Runtime database logical-state surface inventory (ADR-027)
@@ -3075,7 +3695,7 @@ class TestRuntimeDatabaseService:
 
     def test_database_service_id_rejects_variable_placeholder(self):
         with pytest.raises(ValidationError, match="database_service_id must be a stable identifier"):
-            DatabaseService(database_service_id="${svc}")
+            RuntimeDatabaseService(database_service_id="${svc}")
 
     def test_table_id_rejects_variable_placeholder(self):
         with pytest.raises(ValidationError, match="table_id must be a stable identifier"):
@@ -3091,7 +3711,7 @@ class TestRuntimeDatabaseService:
 
     def test_duplicate_database_id_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate database database_id 'dup'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 databases=[
                     {"database_id": "dup", "name": "a"},
@@ -3101,7 +3721,7 @@ class TestRuntimeDatabaseService:
 
     def test_duplicate_role_id_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate role role_id 'dup'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 roles=[
                     {"role_id": "dup", "name": "a"},
@@ -3119,7 +3739,7 @@ class TestRuntimeDatabaseService:
 
     def test_duplicate_setting_name_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate database setting 'port'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 settings=[
                     {"name": "port", "value": "5432"},
@@ -3184,15 +3804,15 @@ class TestRuntimeDatabaseService:
             )
 
     def test_engine_normalizes_case_and_hyphens(self):
-        svc = DatabaseService(database_service_id="svc", engine="PostgreSQL", protocol="postgresql")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="PostgreSQL", protocol="postgresql")
         assert svc.engine == DatabaseEngine.POSTGRESQL
 
     def test_unknown_engine_rejected(self):
         with pytest.raises(ValidationError, match="engine must be one of"):
-            DatabaseService(database_service_id="svc", engine="cobol-db")
+            RuntimeDatabaseService(database_service_id="svc", engine="cobol-db")
 
     def test_engine_protocol_accept_variable_placeholder(self):
-        svc = DatabaseService(database_service_id="svc", engine="${ENGINE}", protocol="${PROTO}")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="${ENGINE}", protocol="${PROTO}")
         assert svc.engine == "${ENGINE}"
         assert svc.protocol == "${PROTO}"
 
@@ -3209,32 +3829,32 @@ class TestRuntimeDatabaseService:
     )
     def test_known_engine_rejects_wrong_or_other_protocol(self, engine, bad_protocol, expected_protocol):
         with pytest.raises(ValidationError, match=f"requires protocol to be one of: {expected_protocol}"):
-            DatabaseService(database_service_id="svc", engine=engine, protocol=bad_protocol)
+            RuntimeDatabaseService(database_service_id="svc", engine=engine, protocol=bad_protocol)
 
     def test_postgresql_engine_default_protocol_other_is_rejected(self):
         # Without a cross-field check, defaulting protocol leaves PostgreSQL
         # at protocol=other — the exact ADR-027 §3 anti-pattern.
         with pytest.raises(ValidationError, match="requires protocol to be one of: postgresql"):
-            DatabaseService(database_service_id="svc", engine="postgresql")
+            RuntimeDatabaseService(database_service_id="svc", engine="postgresql")
 
     def test_engine_with_variable_protocol_is_skipped(self):
-        svc = DatabaseService(database_service_id="svc", engine="postgresql", protocol="${PROTO}")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="postgresql", protocol="${PROTO}")
         assert svc.protocol == "${PROTO}"
 
     def test_mariadb_engine_accepts_mysql_protocol(self):
-        svc = DatabaseService(database_service_id="svc", engine="mariadb", protocol="mysql")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="mariadb", protocol="mysql")
         assert svc.engine == DatabaseEngine.MARIADB
         assert svc.protocol == DatabaseProtocol.MYSQL
 
     def test_sqlite_engine_unconstrained_protocol(self):
         # SQLite has no wire protocol; default ``other`` is acceptable.
-        svc = DatabaseService(database_service_id="svc", engine="sqlite")
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="sqlite")
         assert svc.engine == DatabaseEngine.SQLITE
 
     def test_duplicate_schema_id_across_databases_is_rejected(self):
         # Service-wide uniqueness for grant target resolution.
         with pytest.raises(ValidationError, match="Duplicate schema schema_id 'public' in database service 'svc'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 databases=[
                     {"database_id": "a", "name": "a", "schemas": [{"schema_id": "public", "name": "public"}]},
@@ -3244,7 +3864,7 @@ class TestRuntimeDatabaseService:
 
     def test_duplicate_table_id_across_schemas_is_rejected(self):
         with pytest.raises(ValidationError, match="Duplicate table table_id 'users' in database service 'svc'"):
-            DatabaseService(
+            RuntimeDatabaseService(
                 database_service_id="svc",
                 databases=[
                     {

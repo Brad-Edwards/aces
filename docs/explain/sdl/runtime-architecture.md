@@ -218,8 +218,11 @@ Processor manifests preserve processor-specific capability blocks inside `capabi
 
 At the ecosystem level, backend manifests are only one declaration surface.
 The reference processor publishes the same shared envelope with processor-specific capabilities.
-Participant-implementation manifests remain a distinct apparatus surface that
-is not materially implemented in code.
+Participant-implementation manifests are a distinct apparatus surface. They
+publish `participant-implementation-manifest-v1`, which declares implementation
+identity, implementation kind, supported participant contracts, supported
+decision-surface modes, tool and affordance expectations, compatibility,
+concept bindings, and constraints.
 
 Validation is semantic, not section-only. Current checks include:
 
@@ -261,6 +264,9 @@ not just a shape:
 The reference backend, reference processor, and backend conformance profiles use
 the shared `v2` apparatus manifests. Legacy `v1` manifest schemas remain in the
 repo as deprecated reference artifacts, not as the current conformance target.
+Participant implementations use `participant-implementation-manifest-v1`
+alongside the backend and processor surfaces rather than nesting inside either
+one.
 
 Capability validation operates on concrete instantiated values rather than
 placeholder domains guessed by backends. This removes the old “defer until
@@ -290,8 +296,9 @@ inspection from instantiation, and `create()` uses the manifest returned by
 Participant implementations do not collapse into the backend boundary. The
 backend remains responsible for world realization and execution services;
 participant implementations are a separate apparatus concern whose identity,
-configuration, and participant-visible decision surface belong in run
-provenance rather than being inferred from backend state.
+configuration, and participant-visible decision surface belong in
+`participant-implementation-provenance-v1` rather than being inferred from
+backend state.
 
 The orchestration runtime contract includes:
 

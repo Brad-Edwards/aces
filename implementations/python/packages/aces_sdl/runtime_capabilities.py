@@ -54,6 +54,7 @@ class RuntimeProcessRole(str, Enum):
     SIDECAR = "sidecar"
     AGENT = "agent"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class RuntimeCapabilityOverrideScope(str, Enum):

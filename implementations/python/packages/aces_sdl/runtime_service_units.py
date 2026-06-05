@@ -62,6 +62,7 @@ class ServiceManagerKind(str, Enum):
 
     SYSTEMD = "systemd"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class ServiceUnitKind(str, Enum):
@@ -79,6 +80,7 @@ class ServiceUnitKind(str, Enum):
     SLICE = "slice"
     SCOPE = "scope"
     OTHER = "other"
+    UNKNOWN = "unknown"
 
 
 class ServiceUnitLoadState(str, Enum):
@@ -92,6 +94,7 @@ class ServiceUnitLoadState(str, Enum):
     STUB = "stub"
     BAD_SETTING = "bad_setting"
     UNKNOWN = "unknown"
+    OTHER = "other"
 
 
 class ServiceUnitActiveState(str, Enum):
@@ -104,6 +107,7 @@ class ServiceUnitActiveState(str, Enum):
     ACTIVATING = "activating"
     DEACTIVATING = "deactivating"
     UNKNOWN = "unknown"
+    OTHER = "other"
 
 
 class ServiceUnitEnabledState(str, Enum):
@@ -119,6 +123,7 @@ class ServiceUnitEnabledState(str, Enum):
     INDIRECT = "indirect"
     TRANSIENT = "transient"
     UNKNOWN = "unknown"
+    OTHER = "other"
 
 
 class ServiceUnitResult(str, Enum):

@@ -23,6 +23,25 @@ Each ADR includes:
 
 ## Index
 
+```{toctree}
+:hidden:
+
+adr-041-participant-implementation-manifest-and-provenance
+adr-042-network-sensor-runtime-monitoring
+adr-043-runtime-service-listener-surface
+adr-044-network-detection-engine-runtime-inventory
+adr-045-security-monitoring-detection-definition-semantics
+adr-046-app-authorization-runtime-inventory
+adr-047-scheduled-job-runtime-inventory
+adr-048-datastore-service-runtime-inventory
+adr-049-platform-application-runtime-inventory
+adr-050-forwarding-agent-runtime-inventory
+adr-051-orchestration-authority-runtime-inventory
+adr-052-typed-runtime-relationship-subtypes
+adr-053-sdl-module-composition-for-inventory-backed-scenarios
+adr-054-participant-runtime-observable-lifecycle
+```
+
 | ADR | Title | Status | Date |
 |-----|-------|--------|------|
 | [000](adr-000-use-adrs.md) | Use Architecture Decision Records | accepted | 2026-03-20 |
@@ -62,4 +81,22 @@ Each ADR includes:
 | [034](adr-034-runtime-software-component-inventory.md) | Runtime Software Component Inventory | accepted | 2026-05-25 |
 | [035](adr-035-service-manager-unit-state-runtime-surface.md) | Service-Manager Unit State Runtime Surface | accepted | 2026-05-26 |
 | [036](adr-036-sdl-processor-runtime-module-boundaries.md) | SDL, Processor, Runtime Module Boundaries | accepted | 2026-05-26 |
+| [037](adr-037-runtime-file-service-and-filesystem-presence-semantics.md) | Runtime File-Service and Filesystem Presence Semantics | accepted | 2026-05-26 |
+| [038](adr-038-runtime-mail-service-logical-state.md) | Runtime Mail-Service Logical State | accepted | 2026-05-28 |
+| [039](adr-039-dns-service-runtime-inventory.md) | DNS Service Runtime Inventory | accepted | 2026-05-28 |
+| [040](adr-040-security-monitoring-manager-runtime-inventory.md) | Security-Monitoring Manager Runtime Inventory | accepted | 2026-05-29 |
+| [041](adr-041-participant-implementation-manifest-and-provenance.md) | Participant Implementation Manifest and Provenance Surface | accepted | 2026-05-29 |
+| [042](adr-042-network-sensor-runtime-monitoring.md) | Network Sensor Runtime Monitoring Posture | accepted | 2026-05-29 |
+| [043](adr-043-runtime-service-listener-surface.md) | Generic Runtime Service Listener Surface | accepted | 2026-05-29 |
+| [044](adr-044-network-detection-engine-runtime-inventory.md) | Network Detection Engine Runtime Inventory | accepted | 2026-05-29 |
+| [045](adr-045-security-monitoring-detection-definition-semantics.md) | Security-Monitoring Detection Definition Semantics | accepted | 2026-05-29 |
+| [046](adr-046-app-authorization-runtime-inventory.md) | Application-Internal Authorization Runtime Inventory | accepted | 2026-05-30 |
+| [047](adr-047-scheduled-job-runtime-inventory.md) | Scheduled-Job Runtime Inventory | accepted | 2026-05-30 |
+| [048](adr-048-datastore-service-runtime-inventory.md) | Datastore Service Runtime Inventory | accepted | 2026-05-30 |
+| [049](adr-049-platform-application-runtime-inventory.md) | Platform Application Runtime Inventory | accepted | 2026-05-30 |
+| [050](adr-050-forwarding-agent-runtime-inventory.md) | Forwarding Agent Runtime Inventory | accepted | 2026-05-30 |
+| [051](adr-051-orchestration-authority-runtime-inventory.md) | Orchestration Authority Runtime Inventory | accepted | 2026-05-30 |
+| [052](adr-052-typed-runtime-relationship-subtypes.md) | Typed Runtime Relationship Subtypes | accepted | 2026-05-30 |
+| [053](adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) | SDL Module Composition for Inventory-Backed Scenarios | accepted | 2026-06-03 |
+| [054](adr-054-participant-runtime-observable-lifecycle.md) | Participant Runtime Observable Lifecycle | proposed | 2026-06-05 |
 | [055](adr-055-experiment-core-contract-boundary.md) | Experiment Core Contract Boundary | accepted | 2026-05-26 |

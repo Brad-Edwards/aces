@@ -41,3 +41,15 @@ Participant Episodes
 
 .. automodule:: aces_contracts.participant_episode
    :members:
+
+Participant Implementation Manifests
+------------------------------------
+
+``ParticipantImplementationManifestModel`` and
+``ParticipantImplementationProvenanceModel`` live in
+``aces_contracts.contracts`` with the other published contract models. The
+manifest declares participant implementation identity, capabilities,
+compatibility, decision-surface modes, tool-affordance expectations, and
+constraints. The provenance record preserves the participant implementation,
+selected manifest, selected configuration reference, participant contract
+versions, and decision-surface exposure policy used in a run.

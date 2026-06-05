@@ -31,12 +31,12 @@ from .runtime_values import (
 )
 
 __all__ = [
+    "RuntimeSshServer",
     "SshForcedCommand",
     "SshForcedCommandKind",
     "SshMatchCriterion",
     "SshMatchCriterionKind",
     "SshMatchRule",
-    "SshServerConfig",
 ]
 
 
@@ -208,7 +208,7 @@ class _SshDirectiveBundle(SDLModel):
     ``AuthenticationMethods``, ``PasswordAuthentication`` /
     ``PubkeyAuthentication`` / ``PermitTTY``, ``ChrootDirectory``, and
     ``AuthorizedKeysFile`` — apply identically at the global scope
-    (``SshServerConfig``) and inside a ``Match`` rule
+    (``RuntimeSshServer``) and inside a ``Match`` rule
     (``SshMatchRule``). Centralising the field declarations and their
     validators here keeps the two surfaces in lockstep and removes the
     structural duplication SonarCloud flags when the same block is
@@ -300,10 +300,10 @@ def _criteria_fingerprint(rule: SshMatchRule) -> tuple[tuple[object, str], ...]:
     return tuple((crit.kind, crit.pattern) for crit in rule.criteria)
 
 
-class SshServerConfig(_SshDirectiveBundle):
+class RuntimeSshServer(_SshDirectiveBundle):
     """A scoped sshd server configuration observed on a node.
 
-    Each configuration carries a stable ``server_id`` and an explicit
+    Each configuration carries a stable ``ssh_server_id`` and an explicit
     ``service`` reference pointing at the owning same-node service (bare
     name or ``nodes.<node>.services.<name>`` form). Global sshd directives
     sit at the top level; scoped overrides live in ``match_rules``.
@@ -314,14 +314,14 @@ class SshServerConfig(_SshDirectiveBundle):
     payloads, session transcripts, or environment values.
     """
 
-    server_id: str
+    ssh_server_id: str
     service: str
     match_rules: list[SshMatchRule] = Field(default_factory=list)
 
-    @field_validator("server_id")
+    @field_validator("ssh_server_id")
     @classmethod
-    def validate_server_id(cls, v: str) -> str:
-        return _validate_stable_identifier(v, field_name="server_id")
+    def validate_ssh_server_id(cls, v: str) -> str:
+        return _validate_stable_identifier(v, field_name="ssh_server_id")
 
     @field_validator("service")
     @classmethod
@@ -331,7 +331,7 @@ class SshServerConfig(_SshDirectiveBundle):
         return v
 
     @model_validator(mode="after")
-    def validate_match_rules_unique(self) -> "SshServerConfig":
+    def validate_match_rules_unique(self) -> "RuntimeSshServer":
         seen_ids: set[str] = set()
         seen_fingerprints: set[tuple[tuple[object, str], ...]] = set()
         for rule in self.match_rules:
@@ -340,6 +340,8 @@ class SshServerConfig(_SshDirectiveBundle):
             seen_ids.add(rule.match_id)
             fingerprint = _criteria_fingerprint(rule)
             if fingerprint in seen_fingerprints:
-                raise ValueError(f"Duplicate ssh match rule criteria {list(fingerprint)} in server '{self.server_id}'")
+                raise ValueError(
+                    f"Duplicate ssh match rule criteria {list(fingerprint)} in server '{self.ssh_server_id}'"
+                )
             seen_fingerprints.add(fingerprint)
         return self

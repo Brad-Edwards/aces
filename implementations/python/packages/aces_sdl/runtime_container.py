@@ -72,7 +72,7 @@ class RuntimeInitProcess(SDLModel):
 
     Models authored container runtime intent — for example Docker Compose
     ``init: true`` causing PID 1 to be ``/sbin/docker-init`` (tini). This is
-    distinct from the observed PID-1 process recorded in ``runtime.process`` /
+    distinct from the observed PID-1 process recorded in
     ``runtime.processes``; see ADR-027.
     """
 

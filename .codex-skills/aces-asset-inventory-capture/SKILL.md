@@ -205,4 +205,8 @@ Before returning:
 - `aptl aces-inventory gaps <asset-dir>` has no unresolved
   `needs_gap_triage`;
 - any methodology document in the target checkout references this skill as the
-  canonical agent entry point.
+  canonical agent entry point;
+- surface workflow-improvement recommendations to the user. Include repeated
+  friction, missing capture/tooling support, confusing methodology language,
+  review gaps, and places where the capture workflow caused avoidable rework.
+  Keep these recommendations separate from the capture summary.

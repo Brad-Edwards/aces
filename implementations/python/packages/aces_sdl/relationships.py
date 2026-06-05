@@ -15,7 +15,11 @@ from enum import Enum
 from pydantic import Field, field_validator
 
 from ._base import SDLModel, normalize_enum_value
+from .runtime_application import RelationshipProxyUpstream
 from .runtime_database import RelationshipDatabaseAccess
+from .runtime_forwarding_agent import RelationshipForwardingEdge
+from .runtime_mail_service import RelationshipMailAccess
+from .runtime_platform_application import RelationshipServiceIntegration
 
 
 class RelationshipType(str, Enum):
@@ -43,10 +47,14 @@ class Relationship(SDLModel):
     because relationship properties vary widely and we don't want
     to gate expressiveness on pre-modeling every variant.
 
-    ``database_access`` is the one typed exception: when an application
-    connects to a database, the access role and auth method need
-    structural validation rather than prose, so they get a typed block
-    (ADR-029 §4).
+    ``database_access`` and ``mail_access`` are typed exceptions where
+    protocol/auth details need structural validation rather than prose.
+    ``forwarding_edge``, ``service_integration``, and ``proxy_upstream`` are
+    the same kind of typed exception for, respectively, a forwarding /
+    intel-sync agent's inter-node trust edge (SCN-010 §5.7), a platform
+    consumer-to-engine service integration, and a reverse-proxy/gateway
+    route-to-origin upstream hop. Each keeps protocol/auth/topology facts
+    structurally validated and cross-referable rather than buried in prose.
     """
 
     type: RelationshipType
@@ -55,6 +63,10 @@ class Relationship(SDLModel):
     description: str = ""
     properties: dict[str, str] = Field(default_factory=dict)
     database_access: RelationshipDatabaseAccess | None = None
+    mail_access: RelationshipMailAccess | None = None
+    forwarding_edge: RelationshipForwardingEdge | None = None
+    service_integration: RelationshipServiceIntegration | None = None
+    proxy_upstream: RelationshipProxyUpstream | None = None
 
     @field_validator("type", mode="before")
     @classmethod
