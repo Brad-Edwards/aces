@@ -5073,17 +5073,68 @@ Design commitments:
   for comparative, non-contamination, cost-normalized, or V&V/correspondence
   conclusions.
 
-Future implementation artifacts:
+Issue #192 implements the bounded `RUN-305` runtime state/history trace for
+portable participant episode state and behavior history. The implementation
+claim is intentionally limited to the fields and validators below; stronger
+claims such as full benchmark validity, shared-state revision discipline,
+RL/MARL step-signal support, RO-Crate export, or distributed-concurrency
+semantics require the separate contract rows named in the traceability matrix.
 
-- versioned participant runtime state/history envelopes;
+Implemented enforcement surfaces:
+
+- contract fields: `RuntimeSnapshot.participant_episode_results`,
+  `RuntimeSnapshot.participant_episode_history`, and
+  `RuntimeSnapshot.participant_behavior_history`;
+- public/persistence parity: `ControlPlaneStore` persists the three fields and
+  the HTTP `/snapshot` DTO publishes the same participant behavior history
+  field instead of dropping it;
+- schema gates: `RuntimeSnapshotEnvelopeModel.participant_behavior_history`
+  uses `ParticipantBehaviorHistoryEventModel`; common event identity fields are
+  non-empty, `event_type` and `observation_status` use closed portable
+  vocabularies, `realized_order` is non-negative when present, and generated
+  schema drift is checked by the contract-schema parity tests;
+- semantic gates: `iter_participant_behavior_snapshot_violations` rejects
+  malformed behavior-history maps, non-list histories, non-mapping events,
+  missing common identity fields, unknown event types, outer-key /
+  `participant_address` mismatches, invalid optional-field shape, duplicate
+  `shared_state_refs`, metadata/detail-map smuggling of participant runtime
+  state, and behavior events that reference an episode absent from the
+  participant episode state/history surfaces when those episode surfaces are
+  present;
+- transition gates:
+  `iter_participant_runtime_history_transition_violations` rejects backend
+  apply results that delete, shrink, or rewrite existing participant episode or
+  behavior history prefixes;
+- runtime apply gate:
+  `participant_runtime_state_contract_diagnostics` combines RUN-311 episode
+  snapshot invariants with the RUN-305 behavior-history snapshot validator; the
+  backend apply path then applies the append-only transition validator before
+  persisting returned snapshots, comparing against a defensive baseline rather
+  than a backend-mutable snapshot object, and rejects invalid snapshots with
+  `runtime.backend-contract-invalid` diagnostics;
+- SEM gates: the existing participant-semantics conformance validators remain
+  authoritative for deeper SEM-208/211/213/215 action, observation, temporal,
+  attribution, visibility, and outcome checks; the RUN-305 runtime gate does not
+  duplicate that semantic layer;
+- probes: `test_run_305_participant_runtime_state_history.py` covers public
+  `/snapshot` parity, backend-apply rejection, outer/inner participant mismatch,
+  unknown episode anchoring when episode surfaces exist, metadata state
+  smuggling, append-only history rewrite/deletion rejection, and model/schema
+  rejection of unsupported behavior event types.
+
+Remaining artifacts not claimed by issue #192:
+
+- separate base participant runtime event envelopes beyond the existing
+  `runtime-snapshot/v1` publication;
 - base envelope fields for schema version, event type, source refs, markings,
   and temporal context;
 - operation record model for asynchronous actions;
 - step-signal contract models for action masks, rewards, returns,
   termination/truncation, and auxiliary info;
-- schema publication through `aces_contracts`;
-- validation that history references known participant, episode, action,
-  operation, observation, and shared-state addresses;
+- full validation that behavior history references known action, operation,
+  observation, and shared-state addresses beyond the episode anchoring and
+  SEM-conformance checks already available when those compiled surfaces are
+  supplied;
 - validation that hidden truth, scoring state, and centralized-training state
   are not exposed as participant-visible observations without projection rules;
 - validation that rewards, returns, action masks, and terminal/truncation

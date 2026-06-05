@@ -510,6 +510,16 @@
       "title": "ParticipantAttributionSupportClass",
       "type": "string"
     },
+    "ParticipantBehaviorHistoryEventType": {
+      "description": "Portable history event kinds for participant behavior semantics.",
+      "enum": [
+        "action_attempted",
+        "state_transition_recorded",
+        "observation_emitted"
+      ],
+      "title": "ParticipantBehaviorHistoryEventType",
+      "type": "string"
+    },
     "ParticipantEffectClass": {
       "description": "SEM-211 effect classes for participant action results.",
       "enum": [
@@ -585,6 +595,15 @@
       },
       "title": "ParticipantObservationDetailsModel",
       "type": "object"
+    },
+    "ParticipantObservationStatus": {
+      "description": "Terminal interpretation of a participant observation event.",
+      "enum": [
+        "terminal",
+        "orphaned_action"
+      ],
+      "title": "ParticipantObservationStatus",
+      "type": "string"
     },
     "ParticipantOutcomeInterpretationRecordModel": {
       "additionalProperties": false,
@@ -924,6 +943,7 @@
       "action_contract_address": {
         "anyOf": [
           {
+            "minLength": 1,
             "type": "string"
           },
           {
@@ -934,6 +954,7 @@
         "title": "Action Contract Address"
       },
       "action_instance_id": {
+        "minLength": 1,
         "title": "Action Instance Id",
         "type": "string"
       },
@@ -951,6 +972,7 @@
       "actor_provenance": {
         "anyOf": [
           {
+            "minLength": 1,
             "type": "string"
           },
           {
@@ -971,12 +993,12 @@
         "$ref": "#/$defs/ParticipantObservationDetailsModel"
       },
       "episode_id": {
+        "minLength": 1,
         "title": "Episode Id",
         "type": "string"
       },
       "event_type": {
-        "title": "Event Type",
-        "type": "string"
+        "$ref": "#/$defs/ParticipantBehaviorHistoryEventType"
       },
       "interaction_class": {
         "anyOf": [
@@ -992,6 +1014,7 @@
       "interaction_ref": {
         "anyOf": [
           {
+            "minLength": 1,
             "type": "string"
           },
           {
@@ -1004,6 +1027,7 @@
       "joint_action_set_id": {
         "anyOf": [
           {
+            "minLength": 1,
             "type": "string"
           },
           {
@@ -1016,6 +1040,7 @@
       "observation_boundary_address": {
         "anyOf": [
           {
+            "minLength": 1,
             "type": "string"
           },
           {
@@ -1028,14 +1053,13 @@
       "observation_status": {
         "anyOf": [
           {
-            "type": "string"
+            "$ref": "#/$defs/ParticipantObservationStatus"
           },
           {
             "type": "null"
           }
         ],
-        "default": null,
-        "title": "Observation Status"
+        "default": null
       },
       "outcome_interpretations": {
         "items": {
@@ -1045,12 +1069,14 @@
         "type": "array"
       },
       "participant_address": {
+        "minLength": 1,
         "title": "Participant Address",
         "type": "string"
       },
       "post_state_digest": {
         "anyOf": [
           {
+            "minLength": 1,
             "type": "string"
           },
           {
@@ -1084,6 +1110,7 @@
       "state_transition_kind": {
         "anyOf": [
           {
+            "minLength": 1,
             "type": "string"
           },
           {
@@ -1101,6 +1128,7 @@
         "type": "array"
       },
       "timestamp": {
+        "minLength": 1,
         "title": "Timestamp",
         "type": "string"
       }

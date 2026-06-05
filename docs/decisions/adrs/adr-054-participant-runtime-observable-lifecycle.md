@@ -560,6 +560,17 @@ Do not introduce parallel schemas, validators, exception hierarchies,
 persistence stores, audit logs, backend-native DTOs, or compatibility-wrapper
 logic for participant runtime state.
 
+Issue #192 applies this boundary for `RUN-305`: participant behavior history is
+published through the existing `RuntimeSnapshot.participant_behavior_history`
+field, persisted through `ControlPlaneStore`, exposed by `/snapshot`, constrained
+by the generated `RuntimeSnapshotEnvelopeModel` schema, and checked by a neutral
+runtime snapshot validator plus an apply-time append-only transition check. The
+validator is deliberately limited to state/history integrity at the runtime
+boundary; the richer SEM-208/211/213/215 action, observation, temporal,
+attribution, visibility, and outcome semantics remain in the
+participant-semantics validators instead of being duplicated in the control
+plane.
+
 ## Consequences
 
 ### Positive
