@@ -262,17 +262,17 @@ nodes:
           stability: log
           sensitivity: operator-secret
       local-control-interfaces:
-        - path: /run/docker.sock
+        - control-interface-id: docker-sock
+          path: /run/docker.sock
           kind: unix-socket
           protocol: docker
           bind-source-sensitivity: operator-secret
           access: read-write
-      process:
-        pid: 1
-        command: ./shufflebackend
-        user: root
-        working-directory: /app
       processes:
+        - name: shufflebackend
+          command: ./shufflebackend
+          user: root
+          working-directory: /app
         - name: supervisord
           pid: 1
           command: supervisord -n
@@ -415,10 +415,9 @@ nodes:
         assert node.runtime.filesystem_inventory[1].sensitivity == "operator_secret"
         assert node.runtime.local_control_interfaces[0].path == "/run/docker.sock"
         assert node.runtime.local_control_interfaces[0].bind_source_sensitivity == "operator_secret"
-        assert node.runtime.process is not None
-        assert node.runtime.process.command == ["./shufflebackend"]
-        assert node.runtime.processes[0].name == "supervisord"
-        assert node.runtime.processes[1].parent_pid == 1
+        assert node.runtime.processes[0].command == ["./shufflebackend"]
+        assert node.runtime.processes[1].name == "supervisord"
+        assert node.runtime.processes[2].parent_pid == 1
         assert node.runtime.environment[0].name == "TECHVAULT_ADMIN_PASSWORD"
         assert node.runtime.environment[0].value_classification == "redacted"
         assert node.runtime.environment[1].value_classification == "secret_fixture"
@@ -1671,7 +1670,7 @@ nodes:
         name: ssh
     runtime:
       ssh-servers:
-        - server-id: sshd-default
+        - ssh-server-id: sshd-default
           service: ssh
           accept-env: [APTL_SESSION_ID, APTL_RUN_ID, APTL_TRACE_ID]
           password-authentication: false
@@ -1695,7 +1694,7 @@ nodes:
         ssh_servers = scenario.nodes["techvault-kali"].runtime.ssh_servers
         assert len(ssh_servers) == 1
         server = ssh_servers[0]
-        assert server.server_id == "sshd-default"
+        assert server.ssh_server_id == "sshd-default"
         assert server.service == "ssh"
         assert server.accept_env == ["APTL_SESSION_ID", "APTL_RUN_ID", "APTL_TRACE_ID"]
         assert server.password_authentication is False
@@ -1725,7 +1724,7 @@ nodes:
         name: ssh
     runtime:
       ssh-servers:
-        - server-id: sshd-default
+        - ssh-server-id: sshd-default
           service: ssh
           accept-env: APTL_SESSION_ID
 """
@@ -1749,7 +1748,7 @@ nodes:
         name: ssh
     runtime:
       ssh-servers:
-        - server-id: sshd-default
+        - ssh-server-id: sshd-default
           service: ssh
           chroot-directory: ${chroot_path}
 """
@@ -1778,11 +1777,11 @@ nodes:
         name: ssh
     runtime:
       ssh-servers:
-        - server-id: ${server_id}
+        - ssh-server-id: ${server_id}
           service: ssh
 """
         # The parse step itself should reject a variable-ref symbol-defining identifier
-        # because SshServerConfig.server_id rejects variable refs at model validation time.
+        # because RuntimeSshServer.ssh_server_id rejects variable refs at model validation time.
         with pytest.raises((SDLParseError, SDLInstantiationError)):
             parse_sdl(sdl)
 
@@ -1800,7 +1799,7 @@ nodes:
       - {port: 88, name: kerberos}
     runtime:
       identity-authorities:
-        - authority-id: techvault-domain
+        - identity-authority-id: techvault-domain
           kind: domain
           name: TechVault Domain
           namespace: techvault.local
@@ -1846,7 +1845,7 @@ nodes:
 """
         scenario = parse_sdl(sdl)
         authority = scenario.nodes["ad"].runtime.identity_authorities[0]
-        assert authority.authority_id == "techvault-domain"
+        assert authority.identity_authority_id == "techvault-domain"
         assert authority.domain_name == "TECHVAULT"
         assert authority.services[0].service_id == "ldap-endpoint"
         assert authority.services[0].port == 389
@@ -1869,7 +1868,7 @@ nodes:
     os: linux
     runtime:
       identity-authorities:
-        - authority-id: techvault-idp
+        - identity-authority-id: techvault-idp
           kind: identity-provider
           namespace: https://idp.techvault.local
           tenant-id: ${tenant_id}
@@ -1892,7 +1891,7 @@ nodes:
       - {port: 389, name: ldap}
     runtime:
       identity-authorities:
-        - authority-id: techvault-domain
+        - identity-authority-id: techvault-domain
           services:
             - service-id: ldap-endpoint
               service: missing-ldap
@@ -1910,7 +1909,7 @@ nodes:
     os: windows
     runtime:
       identity-authorities:
-        - authority-id: techvault-domain
+        - identity-authority-id: techvault-domain
           subjects:
             - {subject-id: domain-admins, kind: group, name: Domain Admins}
           relationships:
@@ -1931,7 +1930,7 @@ nodes:
     os: windows
     runtime:
       identity-authorities:
-        - authority-id: techvault-domain
+        - identity-authority-id: techvault-domain
           policies:
             - policy-id: default-policy
               applies-to-refs: [missing-subject]
@@ -1950,7 +1949,7 @@ nodes:
       - {port: 389, name: ldap}
     runtime:
       identity-authorities:
-        - authority-id: techvault-domain
+        - identity-authority-id: techvault-domain
           services:
             - service-id: ldap-endpoint
               service: ldap
@@ -2007,7 +2006,7 @@ nodes:
     os: windows
     runtime:
       identity-authorities:
-        - authority-id: {authority_id}
+        - identity-authority-id: {authority_id}
           services:
             - service-id: {service_id}
               protocol: ldap
@@ -2039,7 +2038,7 @@ nodes:
     os: windows
     runtime:
       identity-authorities:
-        - authority-id: techvault-domain
+        - identity-authority-id: techvault-domain
           services:
             - {service-id: ldap-endpoint, protocol: ldap}
           subjects:
@@ -2092,6 +2091,105 @@ imports:
         rel = scenario.relationships["shared.membership-policy"]
         assert rel.source == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.relationships.alice-admin"
         assert rel.target == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.policies.default-policy"
+
+
+class TestRuntimeDnsParsing:
+    def test_dns_service_field_keys_normalized_names_preserved(self):
+        sdl = """
+name: techvault-dns
+nodes:
+  dns-host:
+    type: vm
+    os: linux
+    services:
+      - {port: 53, protocol: udp, name: dns}
+    runtime:
+      dns-services:
+        - dns-service-id: tv-dns
+          service: dns
+          implementation: BIND
+          roles: [authoritative, recursive-resolver]
+          resolver-policy:
+            recursion-enabled: true
+            dnssec-validation: auto
+            forwarders:
+              - {address: 8.8.8.8, port: 53}
+          zones:
+            - zone-id: techvault-local
+              name: TechVault.Local.
+              zone-class: IN
+              purpose: forward
+              rrsets:
+                - rrset-id: web-a
+                  owner: Web.TechVault.Local.
+                  record-type: A
+                  ttl: 300
+                  records:
+                    - {address: 172.20.10.20}
+"""
+        raw = parse_sdl(sdl)
+        dns = raw.nodes["dns-host"].runtime.dns_services[0]
+        assert dns.dns_service_id == "tv-dns"
+        assert dns.implementation.value == "bind"
+        assert dns.roles[1].value == "recursive_resolver"
+        assert dns.resolver_policy.dnssec_validation.value == "auto"
+        zone = dns.zones[0]
+        # Observed names are DNS data and are not case-folded.
+        assert zone.name == "TechVault.Local."
+        assert zone.rrsets[0].owner == "Web.TechVault.Local."
+        assert zone.rrsets[0].record_type.value == "a"
+
+    def test_dns_runtime_refs_rewrite_on_module_import(self, tmp_path):
+        shared = tmp_path / "shared-dns.yaml"
+        shared.write_text(
+            """
+name: shared-dns
+version: 1.0.0
+nodes:
+  dns:
+    type: vm
+    os: linux
+    services:
+      - {port: 53, protocol: udp, name: dns}
+    runtime:
+      dns-services:
+        - dns-service-id: tv-dns
+          service: dns
+          zones:
+            - zone-id: techvault-local
+              name: techvault.local.
+              rrsets:
+                - rrset-id: web-a
+                  owner: web.techvault.local.
+                  record-type: a
+                  ttl: 300
+                  records:
+                    - {address: 172.20.10.20}
+relationships:
+  dns-record:
+    type: connects_to
+    source: nodes.dns.runtime.dns_services.tv-dns
+    target: nodes.dns.runtime.dns_services.tv-dns.zones.techvault-local.rrsets.web-a
+""",
+            encoding="utf-8",
+        )
+        root = tmp_path / "root.yaml"
+        root.write_text(
+            """
+name: root
+imports:
+  - path: shared-dns.yaml
+    namespace: shared
+    version: 1.0.0
+""",
+            encoding="utf-8",
+        )
+
+        scenario = parse_sdl_file(root)
+
+        rel = scenario.relationships["shared.dns-record"]
+        assert rel.source == "nodes.shared.dns.runtime.dns_services.tv-dns"
+        assert rel.target == "nodes.shared.dns.runtime.dns_services.tv-dns.zones.techvault-local.rrsets.web-a"
 
 
 class TestRuntimeDatabaseParsing:

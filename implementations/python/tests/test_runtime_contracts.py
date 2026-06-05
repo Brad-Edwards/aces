@@ -7,11 +7,14 @@ from pathlib import Path
 
 from aces_contracts.contracts import (
     BackendManifestV2Model,
+    ParticipantImplementationManifestModel,
+    ParticipantImplementationProvenanceModel,
     ProcessorManifestV2Model,
     schema_bundle,
 )
 from aces_contracts.manifest_authority import (
     BACKEND_SUPPORTED_CONTRACT_IDS,
+    PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_CONTRACT_IDS,
     PROCESSOR_SUPPORTED_SDL_VERSION_IDS,
 )
@@ -35,6 +38,8 @@ def test_published_contract_schemas_exist_and_match_bundle():
 def test_compat_contract_imports_reexport_neutral_contracts():
     assert compat_runtime_contracts.ProcessorManifestV2Model is ProcessorManifestV2Model
     assert compat_runtime_contracts.BackendManifestV2Model is BackendManifestV2Model
+    assert compat_runtime_contracts.ParticipantImplementationManifestModel is ParticipantImplementationManifestModel
+    assert compat_runtime_contracts.ParticipantImplementationProvenanceModel is ParticipantImplementationProvenanceModel
     assert compat_runtime_contracts.schema_bundle() == schema_bundle()
 
 
@@ -48,6 +53,8 @@ def test_closed_world_contract_models_for_runtime_envelopes():
     assert generated["runtime-snapshot-v1"]["additionalProperties"] is False
     assert generated["backend-manifest-v2"]["additionalProperties"] is False
     assert generated["processor-manifest-v2"]["additionalProperties"] is False
+    assert generated["participant-implementation-manifest-v1"]["additionalProperties"] is False
+    assert generated["participant-implementation-provenance-v1"]["additionalProperties"] is False
     assert generated["concept-families-v1"]["additionalProperties"] is False
     assert generated["reference-models-v1"]["additionalProperties"] is False
     assert generated["controlled-vocabularies-v1"]["additionalProperties"] is False
@@ -67,7 +74,11 @@ def test_sdl_schema_rejects_redacted_runtime_mount_and_bind_raw_values():
                     "runtime": {
                         "mounts": [{"target": "/host-keys", "source_sensitivity": "operator_secret"}],
                         "local_control_interfaces": [
-                            {"path": "/run/docker.sock", "bind_source_sensitivity": "operator_secret"}
+                            {
+                                "control_interface_id": "docker-sock",
+                                "path": "/run/docker.sock",
+                                "bind_source_sensitivity": "operator_secret",
+                            }
                         ],
                     },
                 }
@@ -100,6 +111,7 @@ def test_sdl_schema_rejects_redacted_runtime_mount_and_bind_raw_values():
                 "runtime": {
                     "local_control_interfaces": [
                         {
+                            "control_interface_id": "docker-sock",
                             "path": "/run/docker.sock",
                             "bind_source": "/var/run/docker.sock",
                             "bind_source_sensitivity": "operator_secret",
@@ -227,6 +239,51 @@ def test_manifest_schemas_publish_backend_and_processor_v2_with_surface_specific
         "compatibility",
         "concept_bindings",
         "capabilities",
+    ]
+
+
+def test_participant_implementation_schemas_publish_manifest_and_provenance_boundaries():
+    generated = schema_bundle()
+    manifest = generated["participant-implementation-manifest-v1"]
+    provenance = generated["participant-implementation-provenance-v1"]
+    manifest_compatibility = manifest["$defs"]["ParticipantImplementationCompatibilityModel"]
+    manifest_capabilities = manifest["$defs"]["ParticipantImplementationCapabilitiesModel"]
+    selection = provenance["$defs"]["ParticipantImplementationSelectionModel"]
+    exposure_policy = provenance["$defs"]["ParticipantExposurePolicyModel"]
+
+    assert manifest["properties"]["identity"]["$ref"] == "#/$defs/ApparatusIdentityModel"
+    assert manifest["properties"]["compatibility"]["$ref"] == "#/$defs/ParticipantImplementationCompatibilityModel"
+    assert manifest["properties"]["supported_contract_versions"]["items"]["enum"] == list(
+        PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS
+    )
+    assert manifest_compatibility["properties"]["participant_runtimes"]["type"] == "array"
+    assert manifest_compatibility["properties"]["processors"]["type"] == "array"
+    assert manifest_compatibility["properties"]["backends"]["type"] == "array"
+    assert "participant_implementations" not in manifest_compatibility["properties"]
+    assert manifest_capabilities["properties"]["supported_participant_contracts"]["minItems"] == 1
+    assert manifest_capabilities["properties"]["supported_decision_surface_modes"]["minItems"] == 1
+    assert manifest_capabilities["properties"]["tool_affordance_expectations"]["minItems"] == 1
+    assert manifest_capabilities["properties"]["exposure_policy_kinds"]["minItems"] == 1
+    assert manifest["required"] == [
+        "identity",
+        "implementation_kind",
+        "supported_contract_versions",
+        "compatibility",
+        "concept_bindings",
+        "capabilities",
+    ]
+
+    assert provenance["properties"]["participant_implementations"]["minItems"] == 1
+    assert (
+        provenance["properties"]["participant_implementations"]["items"]["$ref"]
+        == "#/$defs/ParticipantImplementationSelectionModel"
+    )
+    assert selection["properties"]["implementation_identity"]["$ref"] == "#/$defs/ApparatusIdentityModel"
+    assert selection["properties"]["exposure_policy"]["$ref"] == "#/$defs/ParticipantExposurePolicyModel"
+    assert exposure_policy["properties"]["exposure_policy_kinds"]["minItems"] == 1
+    assert provenance["required"] == [
+        "run_id",
+        "participant_implementations",
     ]
 
 

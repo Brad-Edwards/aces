@@ -32,6 +32,24 @@ class RuntimeFilesystemEntryType(str, Enum):
     SOCKET = "socket"
     FIFO = "fifo"
     OTHER = "other"
+    UNKNOWN = "unknown"
+
+
+class RuntimeFilesystemPresence(str, Enum):
+    """Observed presence state for a runtime filesystem inventory entry.
+
+    ``present`` is the default and preserves prior behavior. ``expected_absent``
+    records an authored or expected path that was not observed at capture time —
+    for example a deploy-key path attempted by setup code but missing in the
+    captured steady state. Absent entries retain their expected ``entry_type``
+    instead of collapsing to ``other``; present-only facts (size, content
+    digest, owner ids, mode) must be omitted, per ADR-037.
+    """
+
+    PRESENT = "present"
+    EXPECTED_ABSENT = "expected_absent"
+    UNKNOWN = "unknown"
+    OTHER = "other"
 
 
 class RuntimeFilesystemStability(str, Enum):
@@ -56,6 +74,7 @@ class RuntimeSensitivityClassification(str, Enum):
     SECRET_FIXTURE = "secret_fixture"  # noqa: S105
     OPERATOR_SECRET = "operator_secret"  # noqa: S105
     UNKNOWN = "unknown"
+    OTHER = "other"
 
 
 _REDACTED_LABEL_PATTERN = r"^[Rr][Ee][Dd][Aa][Cc][Tt][Ee][Dd]$"
@@ -89,11 +108,24 @@ def redacted_raw_value_schema(
     }
 
 
+_PRESENT_ONLY_FIELDS: tuple[str, ...] = (
+    "owner_user",
+    "owner_group",
+    "uid",
+    "gid",
+    "mode",
+    "size",
+    "content_digest",
+    "digest_algorithm",
+)
+
+
 class RuntimeFilesystemEntry(SDLModel):
     """A filesystem entry observed inside a runtime node or container asset."""
 
     path: str
     entry_type: RuntimeFilesystemEntryType | str = RuntimeFilesystemEntryType.OTHER
+    presence: RuntimeFilesystemPresence | str = RuntimeFilesystemPresence.PRESENT
     owner_user: str = ""
     owner_group: str = ""
     uid: int | str | None = None
@@ -117,6 +149,11 @@ class RuntimeFilesystemEntry(SDLModel):
     @classmethod
     def normalize_entry_type(cls, v: RuntimeFilesystemEntryType | str) -> RuntimeFilesystemEntryType | str:
         return parse_runtime_enum_or_var(v, RuntimeFilesystemEntryType, field_name="entry_type")
+
+    @field_validator("presence", mode="before")
+    @classmethod
+    def normalize_presence(cls, v: RuntimeFilesystemPresence | str) -> RuntimeFilesystemPresence | str:
+        return parse_runtime_enum_or_var(v, RuntimeFilesystemPresence, field_name="presence")
 
     @field_validator("uid", "gid", mode="before")
     @classmethod
@@ -163,4 +200,16 @@ class RuntimeFilesystemEntry(SDLModel):
             raise ValueError("content_digest requires digest_algorithm")
         if self.digest_algorithm and not self.content_digest:
             raise ValueError("digest_algorithm requires content_digest")
+        return self
+
+    @model_validator(mode="after")
+    def validate_presence(self) -> "RuntimeFilesystemEntry":
+        if self.presence != RuntimeFilesystemPresence.EXPECTED_ABSENT:
+            return self
+        for field_name in _PRESENT_ONLY_FIELDS:
+            value = getattr(self, field_name)
+            if value not in ("", None):
+                raise ValueError(
+                    f"filesystem entry '{self.path}' with presence 'expected_absent' must omit '{field_name}'"
+                )
         return self

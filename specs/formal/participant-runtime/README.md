@@ -34,6 +34,10 @@ What exists:
   and outcome interpretations.
 - `RuntimeSnapshot` carries participant episode state/history and behavior
   history as plain-data runtime surfaces.
+- ADR-041 and the `participant-implementation-manifest-v1` /
+  `participant-implementation-provenance-v1` contracts define the apparatus
+  identity, selected decision surface, participant contract versions, and
+  exposure-policy evidence for participant implementations used in a run.
 - Backend manifests can declare participant runtime roles, behavior features,
   interaction features, and required evidence contracts.
 
@@ -51,7 +55,8 @@ What is missing:
   ordering claims;
 - no information-state semantics for noisy, lossy, stochastic, or redacted
   observations;
-- no benchmark/runtime provenance surface sufficient for reproducibility claims;
+- no full benchmark/runtime provenance surface sufficient for reproducibility
+  claims beyond the participant implementation manifest/provenance contracts;
 - no per-UID design coverage for `RUN-305`, `RUN-306`, `RUN-307`, and
   `RUN-308`.
 

@@ -49,6 +49,14 @@ BACKEND_SUPPORTED_CONTRACT_IDS = (
     "participant-behavior-history-event-stream-v1",
 )
 
+PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS = (
+    "participant-implementation-manifest-v1",
+    "participant-implementation-provenance-v1",
+    "participant-episode-state-envelope-v1",
+    "participant-episode-history-event-stream-v1",
+    "participant-behavior-history-event-stream-v1",
+)
+
 
 def validate_processor_supported_sdl_versions(values: Iterable[str]) -> None:
     _validate_allowed_values(
@@ -74,6 +82,24 @@ def validate_backend_supported_contract_versions(values: Iterable[str]) -> None:
         values,
         BACKEND_SUPPORTED_CONTRACT_IDS,
         "published backend/runtime contract ids",
+    )
+
+
+def validate_participant_implementation_supported_contract_versions(values: Iterable[str]) -> None:
+    _validate_allowed_values(
+        "supported_contract_versions",
+        values,
+        PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
+        "published participant implementation contract ids",
+    )
+
+
+def validate_participant_supported_contract_versions(values: Iterable[str]) -> None:
+    _validate_allowed_values(
+        "supported_participant_contracts",
+        values,
+        PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
+        "published participant implementation contract ids",
     )
 
 

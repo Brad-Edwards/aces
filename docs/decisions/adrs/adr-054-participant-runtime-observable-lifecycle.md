@@ -1,4 +1,4 @@
-# ADR-037: Participant Runtime Observable Lifecycle
+# ADR-054: Participant Runtime Observable Lifecycle
 
 ## Status
 
@@ -6,7 +6,7 @@ proposed
 
 ## Date
 
-2026-05-26
+2026-06-05
 
 ## Context
 
@@ -25,6 +25,10 @@ The repository already has the adjacent pieces that this design must reuse:
 - ADR-022 and `specs/formal/participant-semantics/` define role-neutral
   participant behavior semantics: actions, observations, visibility, failures,
   temporal ordering, attribution, and outcome interpretation.
+- ADR-041 defines participant implementation manifests and run-level
+  participant implementation provenance as the apparatus identity and selection
+  surface for human proxies, scripts, policies, agents, and comparable
+  participant implementations.
 - Runtime contracts already use schema-first, plain-data envelopes, generated
   schemas, `RuntimeSnapshot`, `Diagnostic`, `ControlPlaneStore`, backend
   capability declarations, and conformance checks.
@@ -436,8 +440,9 @@ they must carry the fields needed to make benchmark claims auditable:
 
 - run id, repeat id, scenario version, contract bundle digest, and backend
   manifest digest;
-- participant implementation reference, scaffold/tool exposure, model or policy
-  version, and adapter version;
+- `participant-implementation-provenance-v1` selection refs, selected
+  participant implementation manifest digest, scaffold/tool exposure, model or
+  policy version, and adapter version;
 - seed, randomization, holdout/canary exposure labels, and run configuration
   digest;
 - treatment assignment, assignment unit, randomization/blocking or
@@ -542,6 +547,10 @@ Future implementation must reuse:
 - `ControlPlaneStore` JSON-like persistence;
 - backend manifests, `ParticipantRuntimeCapabilities`, controlled vocabulary
   scopes, and conformance checks;
+- ADR-041 `participant-implementation-manifest-v1` and
+  `participant-implementation-provenance-v1` contracts for participant
+  apparatus identity, selected decision surface, participant contract versions,
+  and exposure-policy evidence;
 - `aces_contracts` contract models and generated schema publication;
 - SDL parser, `SDLModel(extra="forbid")`, `SemanticValidator`,
   instantiation revalidation, compiler addresses, and runtime planning

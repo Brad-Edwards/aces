@@ -29,6 +29,8 @@ from aces_contracts.contracts import (
     ParticipantBehaviorHistoryEventModel,
     ParticipantEpisodeHistoryEventModel,
     ParticipantEpisodeStateModel,
+    ParticipantImplementationManifestModel,
+    ParticipantImplementationProvenanceModel,
     ProvisioningPlanModel,
     RuntimeSnapshotEnvelopeModel,
     WorkflowExecutionStateModel,
@@ -147,6 +149,8 @@ class BackendConformanceReport:
 
 _MODEL_VALIDATORS = {
     "backend-manifest-v2": BackendManifestV2Model.model_validate,
+    "participant-implementation-manifest-v1": ParticipantImplementationManifestModel.model_validate,
+    "participant-implementation-provenance-v1": ParticipantImplementationProvenanceModel.model_validate,
     "provisioning-plan-v1": ProvisioningPlanModel.model_validate,
     "orchestration-plan-v1": OrchestrationPlanModel.model_validate,
     "evaluation-plan-v1": EvaluationPlanModel.model_validate,

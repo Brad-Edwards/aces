@@ -26,6 +26,7 @@ from .orchestration import Event, Inject, Script, Story, Workflow
 from .participant_behavior import ParticipantActionContract, ParticipantObservationBoundary
 from .participant_outcome_semantics import OutcomeInterpretationRule
 from .relationships import Relationship
+from .runtime_forwarding_agent import RuntimeForwardingAgent
 from .scoring import TLO, Evaluation, Goal, Metric
 from .variables import Variable
 from .vulnerabilities import Vulnerability
@@ -117,6 +118,7 @@ class Scenario(SDLModel):
     content: dict[str, Content] = Field(default_factory=dict)
     accounts: dict[str, Account] = Field(default_factory=dict)
     relationships: dict[str, Relationship] = Field(default_factory=dict)
+    forwarding_agents: list[RuntimeForwardingAgent] = Field(default_factory=list)
     agents: dict[str, Agent] = Field(default_factory=dict)
     action_contracts: dict[str, ParticipantActionContract] = Field(default_factory=dict)
     observation_boundaries: dict[str, ParticipantObservationBoundary] = Field(default_factory=dict)
