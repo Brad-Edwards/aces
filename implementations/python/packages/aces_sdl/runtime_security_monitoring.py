@@ -20,7 +20,9 @@ from .runtime_values import (
     enforce_observed_value_redaction,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
+    require_non_empty,
     require_symbol,
+    validate_absolute_paths,
 )
 
 __all__ = [
@@ -187,24 +189,6 @@ class RuntimeSecurityMonitoringSettingProvenance(str, Enum):
     OTHER = "other"
 
 
-def _require_non_empty(value: str, *, field_name: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{field_name} must be a non-empty string")
-    return value
-
-
-def _normalize_enum(value: Any, enum_cls: type[Enum], *, field_name: str) -> Any:
-    return parse_runtime_enum_or_var(value, enum_cls, field_name=field_name)
-
-
-def _coerce_refs(value: Any) -> list[str]:
-    return coerce_string_list(value)
-
-
-def _absolute_refs(values: list[str], *, field_name: str) -> list[str]:
-    return [absolute_path_or_var(item, field_name=field_name) for item in values]
-
-
 class RuntimeSecurityMonitoringListener(SDLModel):
     """A manager listener bound to a same-node transport service."""
 
@@ -227,7 +211,7 @@ class RuntimeSecurityMonitoringListener(SDLModel):
         cls,
         v: RuntimeSecurityMonitoringListenerRole | str,
     ) -> RuntimeSecurityMonitoringListenerRole | str:
-        return _normalize_enum(v, RuntimeSecurityMonitoringListenerRole, field_name="role")
+        return parse_runtime_enum_or_var(v, RuntimeSecurityMonitoringListenerRole, field_name="role")
 
     @field_validator("auth_required", "tls_enabled", mode="before")
     @classmethod
@@ -257,7 +241,7 @@ class RuntimeSecurityMonitoringComponent(SDLModel):
         cls,
         v: RuntimeSecurityMonitoringComponentKind | str,
     ) -> RuntimeSecurityMonitoringComponentKind | str:
-        return _normalize_enum(v, RuntimeSecurityMonitoringComponentKind, field_name="kind")
+        return parse_runtime_enum_or_var(v, RuntimeSecurityMonitoringComponentKind, field_name="kind")
 
     @field_validator("status", mode="before")
     @classmethod
@@ -265,7 +249,7 @@ class RuntimeSecurityMonitoringComponent(SDLModel):
         cls,
         v: RuntimeSecurityMonitoringComponentStatus | str,
     ) -> RuntimeSecurityMonitoringComponentStatus | str:
-        return _normalize_enum(v, RuntimeSecurityMonitoringComponentStatus, field_name="status")
+        return parse_runtime_enum_or_var(v, RuntimeSecurityMonitoringComponentStatus, field_name="status")
 
     @field_validator("enabled", mode="before")
     @classmethod
@@ -275,7 +259,7 @@ class RuntimeSecurityMonitoringComponent(SDLModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="component name")
+        return require_non_empty(v, field_name="component name")
 
 
 class RuntimeSecurityMonitoringAgent(SDLModel):
@@ -302,17 +286,17 @@ class RuntimeSecurityMonitoringAgent(SDLModel):
         cls,
         v: RuntimeSecurityMonitoringAgentStatus | str,
     ) -> RuntimeSecurityMonitoringAgentStatus | str:
-        return _normalize_enum(v, RuntimeSecurityMonitoringAgentStatus, field_name="status")
+        return parse_runtime_enum_or_var(v, RuntimeSecurityMonitoringAgentStatus, field_name="status")
 
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="agent name")
+        return require_non_empty(v, field_name="agent name")
 
     @field_validator("group_refs", mode="before")
     @classmethod
     def coerce_group_refs(cls, v: Any) -> list[str]:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
 
 class RuntimeSecurityMonitoringAgentGroup(SDLModel):
@@ -332,12 +316,12 @@ class RuntimeSecurityMonitoringAgentGroup(SDLModel):
     @field_validator("member_refs", "configuration_file_refs", mode="before")
     @classmethod
     def coerce_lists(cls, v: Any) -> list[str]:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @field_validator("configuration_file_refs")
     @classmethod
     def validate_configuration_file_refs(cls, v: list[str]) -> list[str]:
-        return _absolute_refs(v, field_name="configuration_file_refs")
+        return validate_absolute_paths(v, field_name="configuration_file_refs")
 
 
 class RuntimeSecurityMonitoringContentSet(SDLModel):
@@ -363,7 +347,7 @@ class RuntimeSecurityMonitoringContentSet(SDLModel):
         cls,
         v: RuntimeSecurityMonitoringContentKind | str,
     ) -> RuntimeSecurityMonitoringContentKind | str:
-        return _normalize_enum(v, RuntimeSecurityMonitoringContentKind, field_name="kind")
+        return parse_runtime_enum_or_var(v, RuntimeSecurityMonitoringContentKind, field_name="kind")
 
     @field_validator("format", mode="before")
     @classmethod
@@ -371,7 +355,7 @@ class RuntimeSecurityMonitoringContentSet(SDLModel):
         cls,
         v: RuntimeSecurityMonitoringContentFormat | str,
     ) -> RuntimeSecurityMonitoringContentFormat | str:
-        return _normalize_enum(v, RuntimeSecurityMonitoringContentFormat, field_name="format")
+        return parse_runtime_enum_or_var(v, RuntimeSecurityMonitoringContentFormat, field_name="format")
 
     @field_validator("file_count", mode="before")
     @classmethod
@@ -381,12 +365,12 @@ class RuntimeSecurityMonitoringContentSet(SDLModel):
     @field_validator("file_refs", mode="before")
     @classmethod
     def coerce_file_refs(cls, v: Any) -> list[str]:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @field_validator("file_refs")
     @classmethod
     def validate_file_refs(cls, v: list[str]) -> list[str]:
-        return _absolute_refs(v, field_name="file_refs")
+        return validate_absolute_paths(v, field_name="file_refs")
 
     @field_validator("loaded", mode="before")
     @classmethod
@@ -414,7 +398,7 @@ class RuntimeSecurityMonitoringSetting(SDLModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="setting name")
+        return require_non_empty(v, field_name="setting name")
 
     @field_validator("value_classification", mode="before")
     @classmethod
@@ -422,7 +406,7 @@ class RuntimeSecurityMonitoringSetting(SDLModel):
         cls,
         v: RuntimeSensitivityClassification | str,
     ) -> RuntimeSensitivityClassification | str:
-        return _normalize_enum(v, RuntimeSensitivityClassification, field_name="value_classification")
+        return parse_runtime_enum_or_var(v, RuntimeSensitivityClassification, field_name="value_classification")
 
     @field_validator("provenance", mode="before")
     @classmethod
@@ -430,7 +414,7 @@ class RuntimeSecurityMonitoringSetting(SDLModel):
         cls,
         v: RuntimeSecurityMonitoringSettingProvenance | str,
     ) -> RuntimeSecurityMonitoringSettingProvenance | str:
-        return _normalize_enum(v, RuntimeSecurityMonitoringSettingProvenance, field_name="provenance")
+        return parse_runtime_enum_or_var(v, RuntimeSecurityMonitoringSettingProvenance, field_name="provenance")
 
     @field_validator("source_path")
     @classmethod
@@ -483,7 +467,7 @@ class RuntimeSecurityMonitoringManager(SDLModel):
         cls,
         v: RuntimeSecurityMonitoringImplementation | str,
     ) -> RuntimeSecurityMonitoringImplementation | str:
-        return _normalize_enum(v, RuntimeSecurityMonitoringImplementation, field_name="implementation")
+        return parse_runtime_enum_or_var(v, RuntimeSecurityMonitoringImplementation, field_name="implementation")
 
     @field_validator("manager_kind", mode="before")
     @classmethod
@@ -491,17 +475,17 @@ class RuntimeSecurityMonitoringManager(SDLModel):
         cls,
         v: RuntimeSecurityMonitoringManagerKind | str,
     ) -> RuntimeSecurityMonitoringManagerKind | str:
-        return _normalize_enum(v, RuntimeSecurityMonitoringManagerKind, field_name="manager_kind")
+        return parse_runtime_enum_or_var(v, RuntimeSecurityMonitoringManagerKind, field_name="manager_kind")
 
     @field_validator("configuration_file_refs", "log_file_refs", "evidence_refs", mode="before")
     @classmethod
     def coerce_file_refs(cls, v: Any) -> list[str]:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @field_validator("configuration_file_refs", "log_file_refs", "evidence_refs")
     @classmethod
     def validate_file_refs(cls, v: list[str], info: ValidationInfo) -> list[str]:
-        return _absolute_refs(v, field_name=info.field_name)
+        return validate_absolute_paths(v, field_name=info.field_name)
 
     @model_validator(mode="after")
     def validate_manager(self) -> "RuntimeSecurityMonitoringManager":

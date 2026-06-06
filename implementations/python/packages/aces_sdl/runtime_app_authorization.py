@@ -104,14 +104,6 @@ _OMIT_RAW_CLASSIFICATIONS: frozenset[RuntimeAppAuthorizationCredentialClassifica
 )
 
 
-def _normalize_enum(value: object, enum_cls: type[Enum], *, field_name: str) -> object:
-    return parse_runtime_enum_or_var(value, enum_cls, field_name=field_name)
-
-
-def _coerce_refs(value: object) -> object:
-    return coerce_string_list(value)
-
-
 class RuntimeAppAuthorizationPrincipal(SDLModel):
     """A user, service account, API key, or backend role known to the store.
 
@@ -138,7 +130,7 @@ class RuntimeAppAuthorizationPrincipal(SDLModel):
     @field_validator("kind", mode="before")
     @classmethod
     def normalize_kind(cls, v: RuntimeAppAuthorizationPrincipalKind | str) -> object:
-        return _normalize_enum(v, RuntimeAppAuthorizationPrincipalKind, field_name="kind")
+        return parse_runtime_enum_or_var(v, RuntimeAppAuthorizationPrincipalKind, field_name="kind")
 
     @field_validator("credential_classification", mode="before")
     @classmethod
@@ -146,7 +138,7 @@ class RuntimeAppAuthorizationPrincipal(SDLModel):
         cls,
         v: RuntimeAppAuthorizationCredentialClassification | str,
     ) -> object:
-        return _normalize_enum(
+        return parse_runtime_enum_or_var(
             v,
             RuntimeAppAuthorizationCredentialClassification,
             field_name="credential_classification",
@@ -160,7 +152,7 @@ class RuntimeAppAuthorizationPrincipal(SDLModel):
     @field_validator("backend_roles", mode="before")
     @classmethod
     def coerce_backend_roles(cls, v: object) -> object:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @model_validator(mode="after")
     def validate_principal(self) -> "RuntimeAppAuthorizationPrincipal":
@@ -224,17 +216,17 @@ class RuntimeAppAuthorizationGrant(SDLModel):
     @field_validator("resource_kind", mode="before")
     @classmethod
     def normalize_resource_kind(cls, v: RuntimeAppAuthorizationResourceVocabulary | str) -> object:
-        return _normalize_enum(v, RuntimeAppAuthorizationResourceVocabulary, field_name="resource_kind")
+        return parse_runtime_enum_or_var(v, RuntimeAppAuthorizationResourceVocabulary, field_name="resource_kind")
 
     @field_validator("effect", mode="before")
     @classmethod
     def normalize_effect(cls, v: RuntimeAppAuthorizationGrantEffect | str) -> object:
-        return _normalize_enum(v, RuntimeAppAuthorizationGrantEffect, field_name="effect")
+        return parse_runtime_enum_or_var(v, RuntimeAppAuthorizationGrantEffect, field_name="effect")
 
     @field_validator("actions", "resource_patterns", mode="before")
     @classmethod
     def coerce_lists(cls, v: object) -> object:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @model_validator(mode="after")
     def validate_grant(self) -> "RuntimeAppAuthorizationGrant":
@@ -261,7 +253,7 @@ class RuntimeAppAuthorizationRoleMapping(SDLModel):
     @field_validator("backend_roles", "users", "hosts", mode="before")
     @classmethod
     def coerce_lists(cls, v: object) -> object:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @model_validator(mode="after")
     def validate_role_mapping(self) -> "RuntimeAppAuthorizationRoleMapping":
@@ -308,7 +300,7 @@ class RuntimeAppAuthorization(SDLModel):
     @field_validator("resource_vocabulary", mode="before")
     @classmethod
     def normalize_resource_vocabulary(cls, v: RuntimeAppAuthorizationResourceVocabulary | str) -> object:
-        return _normalize_enum(v, RuntimeAppAuthorizationResourceVocabulary, field_name="resource_vocabulary")
+        return parse_runtime_enum_or_var(v, RuntimeAppAuthorizationResourceVocabulary, field_name="resource_vocabulary")
 
     @field_validator("auth_enabled", mode="before")
     @classmethod

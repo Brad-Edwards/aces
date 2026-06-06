@@ -6,7 +6,7 @@ from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from ._base import SDLModel, is_variable_ref, parse_int_or_var
 from .runtime_dns_vocab import DnsRecordClass, DnsRecordProvenance, DnsRecordType
-from .runtime_values import coerce_string_list, parse_runtime_enum_or_var, require_symbol
+from .runtime_values import coerce_string_list, parse_runtime_enum_or_var, require_non_empty, require_symbol
 
 __all__ = [
     "DnsMxRdata",
@@ -24,16 +24,10 @@ _ADDRESS_RECORD_TYPES = frozenset({DnsRecordType.A, DnsRecordType.AAAA})
 _TARGET_RECORD_TYPES = frozenset({DnsRecordType.CNAME, DnsRecordType.NS, DnsRecordType.PTR})
 
 
-def _require_non_empty(value: str, *, field_name: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{field_name} must be a non-empty string")
-    return value
-
-
 def _dns_name_or_var(value: str, *, field_name: str) -> str:
     if is_variable_ref(value):
         return value
-    _require_non_empty(value, field_name=field_name)
+    require_non_empty(value, field_name=field_name)
     if any(ch.isspace() for ch in value):
         raise ValueError(f"{field_name} must not contain whitespace")
     return value

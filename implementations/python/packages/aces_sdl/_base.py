@@ -31,10 +31,14 @@ def extract_variable_name(v: str) -> str | None:
 
 
 def normalize_enum_value(v: str) -> str:
-    """Normalize a string for case-insensitive enum matching."""
+    """Normalize a string for case-insensitive enum matching.
+
+    SDL enum authoring accepts hyphen aliases for underscore-valued members so
+    YAML-facing values can use either common spelling without per-family drift.
+    """
     if is_variable_ref(v):
         return v
-    return v.lower() if isinstance(v, str) else v
+    return v.lower().replace("-", "_") if isinstance(v, str) else v
 
 
 def parse_enum_or_var(
