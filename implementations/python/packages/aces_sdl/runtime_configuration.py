@@ -94,7 +94,7 @@ from .runtime_software import (
     RuntimeSoftwareComponentType,
 )
 from .runtime_values import absolute_path_or_var as _abs_path_or_var
-from .runtime_values import parse_ram
+from .runtime_values import enforce_observed_value_redaction, parse_ram
 from .runtime_values import parse_runtime_enum_or_var as _parse_runtime_enum_or_var
 
 _RUNTIME_SERVICE_FAMILY_EXPORTS = install_runtime_service_family_exports(globals())
@@ -181,8 +181,21 @@ class RuntimeEnvironmentValueClassification(str, Enum):
     PLAIN = "plain"
     REDACTED = "redacted"
     SECRET_FIXTURE = "secret_fixture"  # noqa: S105
+    OPERATOR_SECRET = "operator_secret"  # noqa: S105
     UNKNOWN = "unknown"
     OTHER = "other"
+
+
+_ENV_REDACTED_CLASSIFICATIONS = (
+    RuntimeEnvironmentValueClassification.REDACTED,
+    RuntimeEnvironmentValueClassification.OPERATOR_SECRET,
+)
+_ENV_SECRET_NAME_CLASSIFICATIONS = (
+    RuntimeEnvironmentValueClassification.REDACTED,
+    RuntimeEnvironmentValueClassification.OPERATOR_SECRET,
+    RuntimeEnvironmentValueClassification.SECRET_FIXTURE,
+)
+_ENV_RAW_SECRET_NAME_CLASSIFICATIONS = (RuntimeEnvironmentValueClassification.SECRET_FIXTURE,)
 
 
 class RuntimeEnvironmentVariableProvenance(str, Enum):
@@ -249,8 +262,17 @@ class RuntimeEnvironmentVariable(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_value(self) -> "RuntimeEnvironmentVariable":
-        if self.value_classification == RuntimeEnvironmentValueClassification.REDACTED and self.value:
-            raise ValueError("redacted runtime environment variables must omit value")
+        enforce_observed_value_redaction(
+            owner_label=f"runtime environment variable '{self.name}'",
+            name=self.name,
+            value=self.value,
+            classification=self.value_classification,
+            redacted_classifications=_ENV_REDACTED_CLASSIFICATIONS,
+            classification_field="value_classification",
+            raw_value_label="value",
+            secret_name_classifications=_ENV_SECRET_NAME_CLASSIFICATIONS,
+            raw_secret_name_classifications=_ENV_RAW_SECRET_NAME_CLASSIFICATIONS,
+        )
         return self
 
 

@@ -714,8 +714,9 @@ sockets; host-side bind sources use `bind_source_sensitivity` and must omit
 `bind_source` when classified as `redacted` or `operator_secret`; `processes`
 records the supervised or load-bearing process set, including the primary
 execution identity; `environment` records observed runtime environment
-variables with provenance and redaction classification; `linux_capabilities`
-records container/Linux
+variables with provenance and value classification, where redacted and
+operator-secret values omit raw data and `secret_fixture` is the explicit
+exercise-fixture disclosure; `linux_capabilities` records container/Linux
 capability policy; `operational_policy` records restart policy and observed
 resource limits; `container` records observed host/container configuration and
 namespace/security facts, including `seccomp_profile` (the portable seccomp
@@ -733,6 +734,8 @@ manifest files; and `package_vulnerabilities` records scanner-derived
 CVE/advisory findings tied to an image digest and scan time. Software
 components are WHAT-IS state, not invocation surfaces, process snapshots, HTTP
 route inventory, build provenance, or authored deployment intent (see
+[ADR-056](../../decisions/adrs/adr-056-runtime-observed-values-and-credential-posture.md)
+for the cross-surface observed-value and credential-posture inventory, and
 [ADR-034](../../decisions/adrs/adr-034-runtime-software-component-inventory.md)).
 Package findings are separate from the top-level `vulnerabilities` section,
 which remains the CWE-classified scenario vulnerability surface.

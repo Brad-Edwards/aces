@@ -80,6 +80,10 @@ classified as `redacted` or `operator_secret` must omit the corresponding raw
 value; the Python models and generated JSON Schemas both reject non-empty raw
 values for redacted/operator-secret labels accepted by the parser's
 normalization rules, including case-insensitive hyphen/underscore spellings.
+Runtime observed-value surfaces share the ADR-056 raw-value helper: redacted
+and operator-secret classifications omit raw values, concrete secret-bearing
+names reject unclassified raw values, and only explicit `secret_fixture`
+classifications may carry deliberate exercise fixture values.
 
 The optional `runtime.local_identity` inventory carries its own model-local
 rules. Local user `username` and local group `name` must be non-empty; user

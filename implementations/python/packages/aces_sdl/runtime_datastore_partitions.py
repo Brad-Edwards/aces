@@ -16,7 +16,7 @@ from enum import Enum
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
-from ._base import SDLModel, is_variable_ref, parse_int_or_var
+from ._base import SDLModel, parse_int_or_var
 from .runtime_datastore_vocab import (
     RuntimeDatastoreEvictionPolicy,
     RuntimeDatastoreNodeRole,
@@ -29,7 +29,7 @@ from .runtime_datastore_vocab import (
 from .runtime_filesystem import RuntimeSensitivityClassification
 from .runtime_values import (
     coerce_string_list,
-    name_indicates_secret,
+    enforce_observed_value_redaction,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
     require_symbol,
@@ -45,8 +45,9 @@ __all__ = [
 ]
 
 # Sensitivity classes whose raw value must never be recorded.
-_REDACTED_SENSITIVITIES = frozenset(
-    {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
+_REDACTED_SENSITIVITIES = (
+    RuntimeSensitivityClassification.REDACTED,
+    RuntimeSensitivityClassification.OPERATOR_SECRET,
 )
 
 
@@ -71,11 +72,6 @@ def _require_object_name(value: str, *, field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} must be a non-empty string")
     return value
-
-
-def _setting_name_is_concrete_secret(name: object) -> bool:
-    """Return whether ``name`` is a concrete (non-``${var}``) secret-bearing label."""
-    return isinstance(name, str) and not is_variable_ref(name) and name_indicates_secret(name)
 
 
 class RuntimeDatastoreNode(SDLModel):
@@ -298,22 +294,12 @@ class RuntimeDatastoreSetting(SDLModel):
 
     @model_validator(mode="after")
     def validate_setting(self) -> "RuntimeDatastoreSetting":
-        if _setting_name_is_concrete_secret(self.name):
-            self._enforce_secret_name_redaction()
-        elif self.value and self.classification in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"datastore setting '{self.setting_id}' classified '{self.classification}' must omit its raw value"
-            )
+        enforce_observed_value_redaction(
+            owner_label=f"datastore setting '{self.setting_id}'",
+            name=self.name,
+            value=self.value,
+            classification=self.classification,
+            redacted_classifications=_REDACTED_SENSITIVITIES,
+            classification_field="classification",
+        )
         return self
-
-    def _enforce_secret_name_redaction(self) -> None:
-        if self.value:
-            raise ValueError(
-                f"datastore setting '{self.setting_id}' carries a secret-bearing name and must omit its raw value "
-                f"(classification must be 'redacted' or 'operator_secret')"
-            )
-        if not is_variable_ref(self.classification) and self.classification not in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"datastore setting '{self.setting_id}' carries a secret-bearing name; "
-                f"classification must be 'redacted' or 'operator_secret'"
-            )

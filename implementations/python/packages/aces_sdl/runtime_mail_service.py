@@ -33,7 +33,7 @@ from .runtime_mail_vocab import (
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
-    name_indicates_secret,
+    enforce_observed_value_redaction,
     parse_runtime_enum_or_var,
     require_symbol,
 )
@@ -67,8 +67,9 @@ __all__ = [
 ]
 
 _EMAIL_ADDRESS = re.compile(r"^[^@\s]+@[^@\s]+$")
-_REDACTED_SENSITIVITIES = frozenset(
-    {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
+_REDACTED_SENSITIVITIES = (
+    RuntimeSensitivityClassification.REDACTED,
+    RuntimeSensitivityClassification.OPERATOR_SECRET,
 )
 
 
@@ -94,10 +95,6 @@ def _domain_name_or_var(value: str, *, field_name: str) -> str:
     if any(ch.isspace() for ch in value):
         raise ValueError(f"{field_name} must not contain whitespace")
     return value
-
-
-def _setting_name_is_concrete_secret(name: object) -> bool:
-    return isinstance(name, str) and not is_variable_ref(name) and name_indicates_secret(name)
 
 
 def _reject_duplicates(values: list[str], *, label: str, container_label: str) -> None:
@@ -427,25 +424,15 @@ class RuntimeMailSetting(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_value(self) -> "RuntimeMailSetting":
-        if _setting_name_is_concrete_secret(self.name):
-            self._enforce_secret_name_redaction()
-        elif self.value and self.value_classification in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"mail setting '{self.name}' classified '{self.value_classification}' must omit its raw value"
-            )
+        enforce_observed_value_redaction(
+            owner_label=f"mail setting '{self.name}'",
+            name=self.name,
+            value=self.value,
+            classification=self.value_classification,
+            redacted_classifications=_REDACTED_SENSITIVITIES,
+            classification_field="value_classification",
+        )
         return self
-
-    def _enforce_secret_name_redaction(self) -> None:
-        if self.value:
-            raise ValueError(
-                f"mail setting '{self.name}' carries a secret-bearing name and must omit its raw value "
-                f"(value_classification must be 'redacted' or 'operator_secret')"
-            )
-        if not is_variable_ref(self.value_classification) and self.value_classification not in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"mail setting '{self.name}' carries a secret-bearing name; "
-                f"value_classification must be 'redacted' or 'operator_secret'"
-            )
 
 
 class RuntimeMailService(SDLModel):
