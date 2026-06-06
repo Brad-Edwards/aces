@@ -22,7 +22,6 @@ from ._base import SDLModel
 from .runtime_values import (
     coerce_string_list,
     is_variable_ref,
-    name_indicates_secret,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
     require_symbol,
@@ -96,14 +95,6 @@ class RuntimeAppAuthorizationGrantEffect(str, Enum):
     DENY = "deny"
 
 
-_OMIT_RAW_CLASSIFICATIONS: frozenset[RuntimeAppAuthorizationCredentialClassification] = frozenset(
-    {
-        RuntimeAppAuthorizationCredentialClassification.REDACTED,
-        RuntimeAppAuthorizationCredentialClassification.OPERATOR_SECRET,
-    }
-)
-
-
 def _normalize_enum(value: object, enum_cls: type[Enum], *, field_name: str) -> object:
     return parse_runtime_enum_or_var(value, enum_cls, field_name=field_name)
 
@@ -165,26 +156,7 @@ class RuntimeAppAuthorizationPrincipal(SDLModel):
     @model_validator(mode="after")
     def validate_principal(self) -> "RuntimeAppAuthorizationPrincipal":
         _reject_duplicate_values(self.backend_roles, field_name="backend_roles", owner=self.principal_id)
-        self._enforce_secret_name_redaction()
         return self
-
-    def _enforce_secret_name_redaction(self) -> None:
-        """A secret-bearing principal name must be redaction-classified.
-
-        A principal whose ``name`` matches the shared secret-name vocabulary
-        (e.g. an api-key principal named for the key material it fronts) must
-        declare a ``redacted`` / ``operator_secret`` classification, never a
-        ``none`` posture that would imply a plaintext-equivalent identity.
-        """
-        if not self.name or is_variable_ref(self.name) or not name_indicates_secret(self.name):
-            return
-        if is_variable_ref(self.credential_classification):
-            return
-        if self.credential_classification not in _OMIT_RAW_CLASSIFICATIONS:
-            raise ValueError(
-                f"principal '{self.principal_id}' carries a secret-bearing name; "
-                f"credential_classification must be 'redacted' or 'operator_secret'"
-            )
 
 
 class RuntimeAppAuthorizationRole(SDLModel):

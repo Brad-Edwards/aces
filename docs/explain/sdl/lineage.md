@@ -209,9 +209,10 @@ Portable ACES references are stable `security_monitoring_manager_id`, `listener_
 `setting_id` symbols. Native manager identifiers, daemon names, file names,
 ruleset ids, rule ids, decoder names, agent labels, and API ids are preserved
 as observed data or evidence when needed, but they are not automatically ACES
-reference identity. Secret-bearing manager settings such as passwords,
-enrollment secrets, API tokens, shared keys, keytabs, or private keys must be
-redacted or operator-secret classified and must omit raw values.
+reference identity. Manager settings such as passwords, enrollment secrets, API
+tokens, shared keys, keytabs, or private keys may be scenario values; explicit
+`redacted`/`operator_secret` classifications omit raw values when the author
+marks a value withheld.
 
 The resulting model follows the same V&V posture as the DNS, mail, database,
 file-service, and identity-authority surfaces: state which manager concepts
@@ -422,8 +423,10 @@ ACES relies on prior work in four ways:
   and [SP 800-209](https://csrc.nist.gov/publications/detail/sp/800-209/final)
   (storage security), with [RFC 8446](https://www.rfc-editor.org/rfc/rfc8446)
   (TLS 1.3) and [RFC 5280](https://www.rfc-editor.org/rfc/rfc5280) (PKIX), frame
-  the transport-security posture and secret-bearing setting redaction; raw key
-  material and credentials are never stored.
+  the transport-security posture and explicit redaction classifications. Raw
+  key material and credentials may be scenario-realization facts when they
+  belong to the synthetic range; out-of-scenario operator secrets remain
+  outside SDL inventory.
 
 ## Security-Platform Application Semantics
 
@@ -517,8 +520,9 @@ ACES relies on prior work in four ways:
   [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) show the
   recurring source/transform/ship/buffer facts ACES preserves (tailed inputs,
   pipelines, exporters, back-pressure queues). These are implementation lineage,
-  not schema authority; enrollment identities and secret-bearing settings are
-  never stored as raw values.
+  not schema authority; enrollment identities carry only their closed
+  classification lattice, while forwarding settings use explicit redaction
+  classifications rather than name-derived omission.
 
 ## Container-Spawn Orchestration-Authority Semantics
 

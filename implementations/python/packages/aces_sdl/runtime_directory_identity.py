@@ -238,11 +238,9 @@ class RuntimeIdentityAttribute(SDLModel):
     def validate_redacted_values(self) -> "RuntimeIdentityAttribute":
         enforce_observed_value_redaction(
             owner_label=f"identity attribute '{self.name}'",
-            name=self.name,
             value=self.values,
             classification=self.value_classification,
             redacted_classifications=_REDACTED_SENSITIVITIES,
-            classification_field="value_classification",
             raw_value_label="raw values",
         )
         return self

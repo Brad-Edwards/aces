@@ -944,7 +944,7 @@
     },
     "DatabaseSetting": {
       "additionalProperties": false,
-      "description": "An observed database runtime setting with provenance and sensitivity.\n\nSettings that may carry credentials, hashes, connection strings, or\noperator-only values must omit their raw ``value`` and classify it as\n``redacted``/``operator_secret`` (ADR-029 \u00a75).",
+      "description": "An observed database runtime setting with provenance and sensitivity.\n\nExplicit ``redacted``/``operator_secret`` classifications omit raw values;\ncredential-shaped names remain scenario content unless the author marks the\nvalue withheld.",
       "properties": {
         "description": {
           "default": "",
@@ -5336,7 +5336,7 @@
     },
     "RuntimeApplicationExposedField": {
       "additionalProperties": false,
-      "description": "A route-visible fixture secret or intentionally exposed diagnostic field.\n\nThe sensitivity vocabulary is shared with the rest of the runtime surface.\nA ``redacted`` or ``operator_secret`` field must omit its raw ``value``;\nonly intentionally participant-visible ``secret_fixture``/``plain`` material\nis safe to record.",
+      "description": "A route-visible fixture secret or intentionally exposed diagnostic field.\n\nThe sensitivity vocabulary is shared with the rest of the runtime surface.\nA ``redacted`` or ``operator_secret`` field must omit its raw ``value``.\nOther values, including credential-shaped fixture facts, are scenario\ncontent needed for range realization and participant observation.",
       "properties": {
         "description": {
           "default": "",
@@ -7120,7 +7120,7 @@
     },
     "RuntimeDatastoreSetting": {
       "additionalProperties": false,
-      "description": "An observed datastore runtime setting with scope, provenance, and class.\n\nSettings that may carry credentials, hashes, or operator-only values must\nomit their raw ``value`` and classify it as ``redacted`` / ``operator_secret``\n\u2014 enforced via the shared ``name_indicates_secret`` helper even when the\nsubmitter left ``classification`` at its default.",
+      "description": "An observed datastore runtime setting with scope, provenance, and class.\n\nExplicit ``redacted`` / ``operator_secret`` classifications omit raw values;\nnames that look credential-bearing remain scenario content unless the\nauthor marks the value withheld.",
       "properties": {
         "classification": {
           "anyOf": [
@@ -8636,7 +8636,7 @@
     },
     "RuntimeForwardingSetting": {
       "additionalProperties": false,
-      "description": "An observed forwarding-agent runtime setting with provenance and class.\n\nSettings that may carry credentials or operator-only values must omit their\nraw ``value`` and classify it ``redacted`` / ``operator_secret`` \u2014 enforced\nvia the shared ``name_indicates_secret`` helper even when the submitter left\n``classification`` at its default.",
+      "description": "An observed forwarding-agent runtime setting with provenance and class.\n\nExplicit ``redacted`` / ``operator_secret`` classifications omit raw values;\ncredential-shaped names remain scenario content unless the author marks the\nvalue withheld.",
       "properties": {
         "classification": {
           "anyOf": [
@@ -12881,7 +12881,7 @@
     },
     "RuntimePlatformApplicationSetting": {
       "additionalProperties": false,
-      "description": "An observed platform setting with provenance and sensitivity.\n\nSettings whose name signals secret content must omit their raw ``value``\nand classify it as ``redacted`` / ``operator_secret``.",
+      "description": "An observed platform setting with provenance and sensitivity.\n\nExplicitly redacted/operator-secret settings must omit their raw ``value``.\nA setting name does not by itself redact SDL scenario content.",
       "properties": {
         "classification": {
           "anyOf": [

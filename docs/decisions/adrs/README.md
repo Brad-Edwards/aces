@@ -42,6 +42,7 @@ adr-053-sdl-module-composition-for-inventory-backed-scenarios
 adr-054-participant-runtime-observable-lifecycle
 adr-055-experiment-core-contract-boundary
 adr-056-runtime-observed-values-and-credential-posture
+adr-057-runtime-secret-name-classifier-boundaries
 ```
 
 | ADR | Title | Status | Date |
@@ -103,3 +104,4 @@ adr-056-runtime-observed-values-and-credential-posture
 | [054](adr-054-participant-runtime-observable-lifecycle.md) | Participant Runtime Observable Lifecycle | proposed | 2026-06-05 |
 | [055](adr-055-experiment-core-contract-boundary.md) | Experiment Core Contract Boundary | accepted | 2026-05-26 |
 | [056](adr-056-runtime-observed-values-and-credential-posture.md) | Runtime Observed Values and Credential Posture | accepted | 2026-06-05 |
+| [057](adr-057-runtime-secret-name-classifier-boundaries.md) | Runtime Scenario Value Realizability and Explicit Redaction | accepted | 2026-06-06 |

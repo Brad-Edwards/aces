@@ -287,16 +287,14 @@ def test_principal_carries_classification_only() -> None:
     assert principal.credential_classification == RuntimeAppAuthorizationCredentialClassification.REDACTED
 
 
-def test_secret_named_principal_must_be_redaction_classified() -> None:
-    with pytest.raises(
-        ValidationError,
-        match="carries a secret-bearing name; credential_classification must be 'redacted' or 'operator_secret'",
-    ):
-        RuntimeAppAuthorizationPrincipal(
-            principal_id="leaky",
-            name="root-api-key",
-            credential_classification="none",
-        )
+def test_secret_named_principal_may_use_none_classification() -> None:
+    principal = RuntimeAppAuthorizationPrincipal(
+        principal_id="root-api-key",
+        name="root-api-key",
+        credential_classification="none",
+    )
+
+    assert principal.credential_classification == RuntimeAppAuthorizationCredentialClassification.NONE
 
 
 def test_secret_named_principal_with_redacted_classification_is_valid() -> None:
