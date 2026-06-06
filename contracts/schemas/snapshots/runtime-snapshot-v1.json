@@ -449,6 +449,18 @@
       "title": "ParticipantActionResultModel",
       "type": "object"
     },
+    "ParticipantAdmissionDisposition": {
+      "description": "RUN-306 selection/admission disposition values.",
+      "enum": [
+        "admitted",
+        "rejected",
+        "withheld",
+        "unknown",
+        "not_applicable"
+      ],
+      "title": "ParticipantAdmissionDisposition",
+      "type": "string"
+    },
     "ParticipantAttributionCandidateKind": {
       "description": "Portable candidate classes for participant attribution edges.",
       "enum": [
@@ -740,6 +752,17 @@
           "default": null,
           "title": "Actor Provenance"
         },
+        "admission_disposition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantAdmissionDisposition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "attribution_edges": {
           "items": {
             "$ref": "#/$defs/ParticipantAttributionEdgeModel"
@@ -795,6 +818,17 @@
           "default": null,
           "title": "Joint Action Set Id"
         },
+        "lifecycle_phase": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantRuntimeLifecyclePhase"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "observation_boundary_address": {
           "anyOf": [
             {
@@ -819,6 +853,30 @@
           ],
           "default": null
         },
+        "operation_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Ref"
+        },
+        "operation_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantLifecycleOperationState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "outcome_interpretations": {
           "items": {
             "$ref": "#/$defs/ParticipantOutcomeInterpretationRecordModel"
@@ -830,6 +888,17 @@
           "minLength": 1,
           "title": "Participant Address",
           "type": "string"
+        },
+        "phase_realization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantPhaseRealization"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "post_state_digest": {
           "anyOf": [
@@ -1105,6 +1174,24 @@
       "title": "ParticipantInteractionClass",
       "type": "string"
     },
+    "ParticipantLifecycleOperationState": {
+      "description": "RUN-306 operation states for execution-attempt records.",
+      "enum": [
+        "submitted",
+        "acknowledged",
+        "running",
+        "blocked",
+        "completed",
+        "partial",
+        "failed",
+        "timed_out",
+        "cancelled",
+        "unknown",
+        "unsupported"
+      ],
+      "title": "ParticipantLifecycleOperationState",
+      "type": "string"
+    },
     "ParticipantObservationDetailsModel": {
       "additionalProperties": false,
       "properties": {
@@ -1357,6 +1444,20 @@
       "title": "ParticipantOutcomeTargetRecordModel",
       "type": "object"
     },
+    "ParticipantPhaseRealization": {
+      "description": "RUN-306 realization modes for an observable lifecycle phase.",
+      "enum": [
+        "observed",
+        "runtime_mediated",
+        "externally_supplied",
+        "opaque",
+        "unknown",
+        "not_applicable",
+        "unsupported"
+      ],
+      "title": "ParticipantPhaseRealization",
+      "type": "string"
+    },
     "ParticipantPreconditionClass": {
       "description": "SEM-211 precondition classes for participant action applicability.",
       "enum": [
@@ -1370,6 +1471,18 @@
         "realization"
       ],
       "title": "ParticipantPreconditionClass",
+      "type": "string"
+    },
+    "ParticipantRuntimeLifecyclePhase": {
+      "description": "RUN-306 observable participant runtime lifecycle phases.",
+      "enum": [
+        "intent_or_proposal",
+        "selection_or_admission",
+        "execution_attempt",
+        "observation_emission",
+        "state_update_commit"
+      ],
+      "title": "ParticipantRuntimeLifecyclePhase",
       "type": "string"
     },
     "ParticipantTemporalEventPoint": {

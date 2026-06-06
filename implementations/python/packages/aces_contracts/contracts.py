@@ -47,8 +47,12 @@ from .manifest_authority import (
     validate_processor_supported_sdl_versions,
 )
 from .participant_behavior import (
+    ParticipantAdmissionDisposition,
     ParticipantBehaviorHistoryEventType,
+    ParticipantLifecycleOperationState,
     ParticipantObservationStatus,
+    ParticipantPhaseRealization,
+    ParticipantRuntimeLifecyclePhase,
 )
 from .versions import (
     BACKEND_MANIFEST_V2_SCHEMA_VERSION,
@@ -744,6 +748,11 @@ class ParticipantBehaviorHistoryEventModel(ContractModel):
     observation_boundary_address: NonEmptyString | None = None
     observation_status: ParticipantObservationStatus | None = None
     actor_provenance: NonEmptyString | None = None
+    lifecycle_phase: ParticipantRuntimeLifecyclePhase | None = None
+    phase_realization: ParticipantPhaseRealization | None = None
+    admission_disposition: ParticipantAdmissionDisposition | None = None
+    operation_ref: NonEmptyString | None = None
+    operation_state: ParticipantLifecycleOperationState | None = None
     state_transition_kind: NonEmptyString | None = None
     post_state_digest: NonEmptyString | None = None
     joint_action_set_id: NonEmptyString | None = None
@@ -756,6 +765,69 @@ class ParticipantBehaviorHistoryEventModel(ContractModel):
     outcome_interpretations: list[ParticipantOutcomeInterpretationRecordModel] = Field(default_factory=list)
     temporal_contexts: list[ParticipantTemporalRuntimeContextModel] = Field(default_factory=list)
     details: ParticipantObservationDetailsModel = Field(default_factory=ParticipantObservationDetailsModel)
+
+    @model_validator(mode="after")
+    def _validate_lifecycle_fields(self) -> ParticipantBehaviorHistoryEventModel:
+        lifecycle_fields = (
+            self.phase_realization,
+            self.admission_disposition,
+            self.operation_ref,
+            self.operation_state,
+        )
+        if self.lifecycle_phase is None:
+            if any(value is not None for value in lifecycle_fields):
+                raise ValueError("participant behavior lifecycle fields require lifecycle_phase")
+            return self
+        if self.phase_realization is None:
+            raise ValueError("lifecycle_phase requires phase_realization")
+        self._validate_admission_lifecycle_scope()
+        self._validate_operation_lifecycle_scope()
+        self._validate_lifecycle_phase_matches_event_type()
+        return self
+
+    def _validate_admission_lifecycle_scope(self) -> None:
+        if self.lifecycle_phase == ParticipantRuntimeLifecyclePhase.SELECTION_OR_ADMISSION:
+            if self.admission_disposition is None:
+                raise ValueError("selection_or_admission lifecycle_phase requires admission_disposition")
+            return
+        if self.admission_disposition is not None:
+            raise ValueError("admission_disposition requires lifecycle_phase selection_or_admission")
+
+    def _validate_operation_lifecycle_scope(self) -> None:
+        if (
+            self.operation_state is not None
+            and self.lifecycle_phase != ParticipantRuntimeLifecyclePhase.EXECUTION_ATTEMPT
+        ):
+            raise ValueError("operation_state requires lifecycle_phase execution_attempt")
+        if (
+            self.operation_ref is not None
+            and self.lifecycle_phase != ParticipantRuntimeLifecyclePhase.EXECUTION_ATTEMPT
+        ):
+            raise ValueError("operation_ref requires lifecycle_phase execution_attempt")
+
+    def _validate_lifecycle_phase_matches_event_type(self) -> None:
+        if self.event_type == ParticipantBehaviorHistoryEventType.ACTION_ATTEMPTED:
+            allowed = {
+                ParticipantRuntimeLifecyclePhase.INTENT_OR_PROPOSAL,
+                ParticipantRuntimeLifecyclePhase.SELECTION_OR_ADMISSION,
+                ParticipantRuntimeLifecyclePhase.EXECUTION_ATTEMPT,
+            }
+            if self.lifecycle_phase not in allowed:
+                raise ValueError(
+                    "action_attempted lifecycle_phase must be one of intent_or_proposal, "
+                    "selection_or_admission, execution_attempt"
+                )
+            return
+        if (
+            self.event_type == ParticipantBehaviorHistoryEventType.STATE_TRANSITION_RECORDED
+            and self.lifecycle_phase != ParticipantRuntimeLifecyclePhase.STATE_UPDATE_COMMIT
+        ):
+            raise ValueError("state_transition_recorded lifecycle_phase must be state_update_commit")
+        if (
+            self.event_type == ParticipantBehaviorHistoryEventType.OBSERVATION_EMITTED
+            and self.lifecycle_phase != ParticipantRuntimeLifecyclePhase.OBSERVATION_EMISSION
+        ):
+            raise ValueError("observation_emitted lifecycle_phase must be observation_emission")
 
 
 class PlanOperationModel(ContractModel):

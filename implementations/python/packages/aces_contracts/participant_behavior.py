@@ -41,6 +41,54 @@ class ParticipantActionResultStatus(str, Enum):
     UNKNOWN = "unknown"
 
 
+class ParticipantRuntimeLifecyclePhase(str, Enum):
+    """RUN-306 observable participant runtime lifecycle phases."""
+
+    INTENT_OR_PROPOSAL = "intent_or_proposal"
+    SELECTION_OR_ADMISSION = "selection_or_admission"
+    EXECUTION_ATTEMPT = "execution_attempt"
+    OBSERVATION_EMISSION = "observation_emission"
+    STATE_UPDATE_COMMIT = "state_update_commit"
+
+
+class ParticipantPhaseRealization(str, Enum):
+    """RUN-306 realization modes for an observable lifecycle phase."""
+
+    OBSERVED = "observed"
+    RUNTIME_MEDIATED = "runtime_mediated"
+    EXTERNALLY_SUPPLIED = "externally_supplied"
+    OPAQUE = "opaque"
+    UNKNOWN = "unknown"
+    NOT_APPLICABLE = "not_applicable"
+    UNSUPPORTED = "unsupported"
+
+
+class ParticipantAdmissionDisposition(str, Enum):
+    """RUN-306 selection/admission disposition values."""
+
+    ADMITTED = "admitted"
+    REJECTED = "rejected"
+    WITHHELD = "withheld"
+    UNKNOWN = "unknown"
+    NOT_APPLICABLE = "not_applicable"
+
+
+class ParticipantLifecycleOperationState(str, Enum):
+    """RUN-306 operation states for execution-attempt records."""
+
+    SUBMITTED = "submitted"
+    ACKNOWLEDGED = "acknowledged"
+    RUNNING = "running"
+    BLOCKED = "blocked"
+    COMPLETED = "completed"
+    PARTIAL = "partial"
+    FAILED = "failed"
+    TIMED_OUT = "timed_out"
+    CANCELLED = "cancelled"
+    UNKNOWN = "unknown"
+    UNSUPPORTED = "unsupported"
+
+
 _PARTICIPANT_BEHAVIOR_HISTORY_KEY = "runtime.snapshot.participant-behavior-history"
 _PARTICIPANT_RUNTIME_METADATA_KEY = "runtime.snapshot.metadata"
 _RESERVED_RUNTIME_STATE_KEYS = frozenset(
@@ -65,6 +113,7 @@ _OPTIONAL_NON_EMPTY_STRING_FIELDS = (
     "post_state_digest",
     "joint_action_set_id",
     "interaction_ref",
+    "operation_ref",
 )
 
 
@@ -245,6 +294,87 @@ def _iter_behavior_event_shape_violations(
     if not isinstance(details, Mapping):
         yield (locator, "participant behavior details must be a mapping")
 
+    yield from _iter_behavior_event_lifecycle_violations(locator, event_type, event)
+
+
+def _enum_values(enum_type: type[Enum]) -> set[str]:
+    return {item.value for item in enum_type}
+
+
+def _iter_optional_enum_violations(
+    locator: str,
+    event: Mapping[object, object],
+    field: str,
+    enum_type: type[Enum],
+) -> Iterator[tuple[str, str]]:
+    value = event.get(field)
+    if value is not None and value not in _enum_values(enum_type):
+        yield (locator, f"participant behavior {field} {value!r} is not supported")
+
+
+def _iter_behavior_event_lifecycle_violations(
+    locator: str,
+    event_type: object,
+    event: Mapping[object, object],
+) -> Iterator[tuple[str, str]]:
+    lifecycle_phase = event.get("lifecycle_phase")
+    phase_realization = event.get("phase_realization")
+    admission_disposition = event.get("admission_disposition")
+    operation_ref = event.get("operation_ref")
+    operation_state = event.get("operation_state")
+
+    for field, enum_type in (
+        ("lifecycle_phase", ParticipantRuntimeLifecyclePhase),
+        ("phase_realization", ParticipantPhaseRealization),
+        ("admission_disposition", ParticipantAdmissionDisposition),
+        ("operation_state", ParticipantLifecycleOperationState),
+    ):
+        yield from _iter_optional_enum_violations(locator, event, field, enum_type)
+
+    if lifecycle_phase is None:
+        lifecycle_fields = (phase_realization, admission_disposition, operation_ref, operation_state)
+        if any(value is not None for value in lifecycle_fields):
+            yield (locator, "participant behavior lifecycle fields require lifecycle_phase")
+        return
+    if lifecycle_phase not in _enum_values(ParticipantRuntimeLifecyclePhase):
+        return
+    if phase_realization is None:
+        yield (locator, "lifecycle_phase requires phase_realization")
+    elif phase_realization not in _enum_values(ParticipantPhaseRealization):
+        return
+
+    if lifecycle_phase == ParticipantRuntimeLifecyclePhase.SELECTION_OR_ADMISSION.value:
+        if admission_disposition is None:
+            yield (locator, "selection_or_admission lifecycle_phase requires admission_disposition")
+    elif admission_disposition is not None:
+        yield (locator, "admission_disposition requires lifecycle_phase selection_or_admission")
+
+    if operation_state is not None and lifecycle_phase != ParticipantRuntimeLifecyclePhase.EXECUTION_ATTEMPT.value:
+        yield (locator, "operation_state requires lifecycle_phase execution_attempt")
+    if operation_ref is not None and lifecycle_phase != ParticipantRuntimeLifecyclePhase.EXECUTION_ATTEMPT.value:
+        yield (locator, "operation_ref requires lifecycle_phase execution_attempt")
+
+    if event_type == ParticipantBehaviorHistoryEventType.ACTION_ATTEMPTED.value:
+        allowed = {
+            ParticipantRuntimeLifecyclePhase.INTENT_OR_PROPOSAL.value,
+            ParticipantRuntimeLifecyclePhase.SELECTION_OR_ADMISSION.value,
+            ParticipantRuntimeLifecyclePhase.EXECUTION_ATTEMPT.value,
+        }
+        if lifecycle_phase not in allowed:
+            yield (
+                locator,
+                (
+                    "action_attempted lifecycle_phase must be one of intent_or_proposal, "
+                    "selection_or_admission, execution_attempt"
+                ),
+            )
+    elif event_type == ParticipantBehaviorHistoryEventType.STATE_TRANSITION_RECORDED.value:
+        if lifecycle_phase != ParticipantRuntimeLifecyclePhase.STATE_UPDATE_COMMIT.value:
+            yield (locator, "state_transition_recorded lifecycle_phase must be state_update_commit")
+    elif event_type == ParticipantBehaviorHistoryEventType.OBSERVATION_EMITTED.value:
+        if lifecycle_phase != ParticipantRuntimeLifecyclePhase.OBSERVATION_EMISSION.value:
+            yield (locator, "observation_emitted lifecycle_phase must be observation_emission")
+
 
 def _iter_behavior_event_episode_reference_violations(
     locator: str,
@@ -330,10 +460,14 @@ def _collect_episode_history_ids(
 
 
 __all__ = (
+    "ParticipantAdmissionDisposition",
     "ParticipantActionPreconditionStatus",
     "ParticipantActionResultStatus",
     "ParticipantBehaviorHistoryEventType",
+    "ParticipantLifecycleOperationState",
     "ParticipantObservationStatus",
+    "ParticipantPhaseRealization",
+    "ParticipantRuntimeLifecyclePhase",
     "iter_participant_behavior_snapshot_violations",
     "iter_participant_runtime_history_transition_violations",
 )

@@ -50,10 +50,22 @@ from aces_contracts.participant_behavior import (
     ParticipantActionResultStatus as ParticipantActionResultStatus,
 )
 from aces_contracts.participant_behavior import (
+    ParticipantAdmissionDisposition as ParticipantAdmissionDisposition,
+)
+from aces_contracts.participant_behavior import (
     ParticipantBehaviorHistoryEventType as ParticipantBehaviorHistoryEventType,
 )
 from aces_contracts.participant_behavior import (
+    ParticipantLifecycleOperationState as ParticipantLifecycleOperationState,
+)
+from aces_contracts.participant_behavior import (
     ParticipantObservationStatus as ParticipantObservationStatus,
+)
+from aces_contracts.participant_behavior import (
+    ParticipantPhaseRealization as ParticipantPhaseRealization,
+)
+from aces_contracts.participant_behavior import (
+    ParticipantRuntimeLifecyclePhase as ParticipantRuntimeLifecyclePhase,
 )
 from aces_contracts.participant_episode import (
     PARTICIPANT_EPISODE_CONTROL_EVENTS,
@@ -1929,6 +1941,38 @@ def _participant_interaction_class_from_payload(value: Any) -> ParticipantIntera
     return ParticipantInteractionClass(str(value))
 
 
+def _participant_lifecycle_phase_from_payload(value: Any) -> ParticipantRuntimeLifecyclePhase | None:
+    if value is None:
+        return None
+    if isinstance(value, ParticipantRuntimeLifecyclePhase):
+        return value
+    return ParticipantRuntimeLifecyclePhase(str(value))
+
+
+def _participant_phase_realization_from_payload(value: Any) -> ParticipantPhaseRealization | None:
+    if value is None:
+        return None
+    if isinstance(value, ParticipantPhaseRealization):
+        return value
+    return ParticipantPhaseRealization(str(value))
+
+
+def _participant_admission_disposition_from_payload(value: Any) -> ParticipantAdmissionDisposition | None:
+    if value is None:
+        return None
+    if isinstance(value, ParticipantAdmissionDisposition):
+        return value
+    return ParticipantAdmissionDisposition(str(value))
+
+
+def _participant_lifecycle_operation_state_from_payload(value: Any) -> ParticipantLifecycleOperationState | None:
+    if value is None:
+        return None
+    if isinstance(value, ParticipantLifecycleOperationState):
+        return value
+    return ParticipantLifecycleOperationState(str(value))
+
+
 def _participant_behavior_shared_state_refs_from_payload(value: Any) -> tuple[str, ...]:
     if value is None:
         return ()
@@ -2001,6 +2045,11 @@ class ParticipantBehaviorHistoryEvent:
     observation_boundary_address: str | None = None
     observation_status: ParticipantObservationStatus | None = None
     actor_provenance: str | None = None
+    lifecycle_phase: ParticipantRuntimeLifecyclePhase | None = None
+    phase_realization: ParticipantPhaseRealization | None = None
+    admission_disposition: ParticipantAdmissionDisposition | None = None
+    operation_ref: str | None = None
+    operation_state: ParticipantLifecycleOperationState | None = None
     state_transition_kind: str | None = None
     post_state_digest: str | None = None
     joint_action_set_id: str | None = None
@@ -2046,6 +2095,11 @@ class ParticipantBehaviorHistoryEvent:
             observation_boundary_address=_optional_payload_string(payload, "observation_boundary_address"),
             observation_status=_participant_observation_status_from_payload(payload.get("observation_status")),
             actor_provenance=_optional_payload_string(payload, "actor_provenance"),
+            lifecycle_phase=_participant_lifecycle_phase_from_payload(payload.get("lifecycle_phase")),
+            phase_realization=_participant_phase_realization_from_payload(payload.get("phase_realization")),
+            admission_disposition=_participant_admission_disposition_from_payload(payload.get("admission_disposition")),
+            operation_ref=_optional_payload_string(payload, "operation_ref"),
+            operation_state=_participant_lifecycle_operation_state_from_payload(payload.get("operation_state")),
             state_transition_kind=_optional_payload_string(payload, "state_transition_kind"),
             post_state_digest=_optional_payload_string(payload, "post_state_digest"),
             joint_action_set_id=_optional_payload_string(payload, "joint_action_set_id"),
@@ -2075,6 +2129,13 @@ class ParticipantBehaviorHistoryEvent:
             "observation_boundary_address": self.observation_boundary_address,
             "observation_status": self.observation_status.value if self.observation_status is not None else None,
             "actor_provenance": self.actor_provenance,
+            "lifecycle_phase": self.lifecycle_phase.value if self.lifecycle_phase is not None else None,
+            "phase_realization": self.phase_realization.value if self.phase_realization is not None else None,
+            "admission_disposition": (
+                self.admission_disposition.value if self.admission_disposition is not None else None
+            ),
+            "operation_ref": self.operation_ref,
+            "operation_state": self.operation_state.value if self.operation_state is not None else None,
             "state_transition_kind": self.state_transition_kind,
             "post_state_digest": self.post_state_digest,
             "joint_action_set_id": self.joint_action_set_id,
@@ -2119,6 +2180,7 @@ class ParticipantBehaviorHistoryEvent:
         ):
             raise TypeError("observation_status must be a ParticipantObservationStatus or None")
         self._validate_optional_string(self.actor_provenance, "actor_provenance must be a non-empty string or None")
+        self._validate_lifecycle_fields()
         self._validate_optional_state_fields()
         self._validate_realized_order()
         self._validate_interaction_type()
@@ -2146,6 +2208,64 @@ class ParticipantBehaviorHistoryEvent:
             self.joint_action_set_id,
             "joint_action_set_id must be a non-empty string or None",
         )
+
+    def _validate_lifecycle_fields(self) -> None:
+        if self.lifecycle_phase is not None and not isinstance(
+            self.lifecycle_phase,
+            ParticipantRuntimeLifecyclePhase,
+        ):
+            raise TypeError("lifecycle_phase must be a ParticipantRuntimeLifecyclePhase or None")
+        if self.phase_realization is not None and not isinstance(
+            self.phase_realization,
+            ParticipantPhaseRealization,
+        ):
+            raise TypeError("phase_realization must be a ParticipantPhaseRealization or None")
+        if self.admission_disposition is not None and not isinstance(
+            self.admission_disposition,
+            ParticipantAdmissionDisposition,
+        ):
+            raise TypeError("admission_disposition must be a ParticipantAdmissionDisposition or None")
+        if self.operation_state is not None and not isinstance(
+            self.operation_state,
+            ParticipantLifecycleOperationState,
+        ):
+            raise TypeError("operation_state must be a ParticipantLifecycleOperationState or None")
+        self._validate_optional_string(self.operation_ref, "operation_ref must be a non-empty string or None")
+
+        lifecycle_fields = (
+            self.phase_realization,
+            self.admission_disposition,
+            self.operation_ref,
+            self.operation_state,
+        )
+        if self.lifecycle_phase is None:
+            if any(value is not None for value in lifecycle_fields):
+                raise ValueError("participant behavior lifecycle fields require lifecycle_phase")
+            return
+        if self.phase_realization is None:
+            raise ValueError("lifecycle_phase requires phase_realization")
+        self._validate_admission_lifecycle_scope()
+        self._validate_operation_lifecycle_scope()
+
+    def _validate_admission_lifecycle_scope(self) -> None:
+        if self.lifecycle_phase == ParticipantRuntimeLifecyclePhase.SELECTION_OR_ADMISSION:
+            if self.admission_disposition is None:
+                raise ValueError("selection_or_admission lifecycle_phase requires admission_disposition")
+            return
+        if self.admission_disposition is not None:
+            raise ValueError("admission_disposition requires lifecycle_phase selection_or_admission")
+
+    def _validate_operation_lifecycle_scope(self) -> None:
+        if (
+            self.operation_state is not None
+            and self.lifecycle_phase != ParticipantRuntimeLifecyclePhase.EXECUTION_ATTEMPT
+        ):
+            raise ValueError("operation_state requires lifecycle_phase execution_attempt")
+        if (
+            self.operation_ref is not None
+            and self.lifecycle_phase != ParticipantRuntimeLifecyclePhase.EXECUTION_ATTEMPT
+        ):
+            raise ValueError("operation_ref requires lifecycle_phase execution_attempt")
 
     def _validate_realized_order(self) -> None:
         if self.realized_order is not None and (
@@ -2248,6 +2368,17 @@ class ParticipantBehaviorHistoryEvent:
             raise ValueError(f"{self.interaction_class.value} events require shared_state_refs")
 
     def _validate_action_attempted_fields(self) -> None:
+        if self.lifecycle_phase is not None:
+            allowed = {
+                ParticipantRuntimeLifecyclePhase.INTENT_OR_PROPOSAL,
+                ParticipantRuntimeLifecyclePhase.SELECTION_OR_ADMISSION,
+                ParticipantRuntimeLifecyclePhase.EXECUTION_ATTEMPT,
+            }
+            if self.lifecycle_phase not in allowed:
+                raise ValueError(
+                    "action_attempted lifecycle_phase must be one of intent_or_proposal, "
+                    "selection_or_admission, execution_attempt"
+                )
         if self.action_contract_address is None:
             raise ValueError("action_attempted events require action_contract_address")
         if self.actor_provenance is None:
@@ -2260,6 +2391,11 @@ class ParticipantBehaviorHistoryEvent:
             raise ValueError("action_attempted events may not report action_result")
 
     def _validate_state_transition_fields(self) -> None:
+        if (
+            self.lifecycle_phase is not None
+            and self.lifecycle_phase != ParticipantRuntimeLifecyclePhase.STATE_UPDATE_COMMIT
+        ):
+            raise ValueError("state_transition_recorded lifecycle_phase must be state_update_commit")
         if self.action_contract_address is None:
             raise ValueError("state_transition_recorded events require action_contract_address")
         if self.state_transition_kind is None:
@@ -2272,6 +2408,11 @@ class ParticipantBehaviorHistoryEvent:
             raise ValueError("state_transition_recorded events may not report action_result")
 
     def _validate_observation_emitted_fields(self) -> None:
+        if (
+            self.lifecycle_phase is not None
+            and self.lifecycle_phase != ParticipantRuntimeLifecyclePhase.OBSERVATION_EMISSION
+        ):
+            raise ValueError("observation_emitted lifecycle_phase must be observation_emission")
         if self.action_contract_address is None:
             raise ValueError("observation_emitted events require action_contract_address")
         if self.observation_boundary_address is None:
