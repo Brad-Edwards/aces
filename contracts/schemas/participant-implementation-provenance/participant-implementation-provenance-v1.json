@@ -191,6 +191,8 @@
       "type": "object"
     }
   },
+  "$id": "https://aces.dev/schemas/participant-implementation-provenance-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
     "backend_manifest_ref": {

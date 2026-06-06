@@ -619,6 +619,8 @@
       "type": "string"
     }
   },
+  "$id": "https://aces.dev/schemas/backend-manifest-v2.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
     "capabilities": {

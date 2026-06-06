@@ -9,6 +9,8 @@ from pathlib import Path
 
 
 def _schema_output_path(schemas_dir: Path, name: str) -> Path:
+    if name == "aces-semantic-invariants-v1":
+        return schemas_dir / "profiles" / f"{name}.json"
     if name in {
         "sdl-authoring-input-v1",
         "instantiated-scenario-v1",
@@ -33,6 +35,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("backend-profile-v"):
         return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("experiment-"):
+        return schemas_dir / "experiment-core" / f"{name}.json"
     if name.endswith("-plan-v1"):
         return schemas_dir / "plans" / f"{name}.json"
     if name == "runtime-snapshot-v1":

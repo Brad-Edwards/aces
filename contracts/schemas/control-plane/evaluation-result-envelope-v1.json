@@ -1,4 +1,6 @@
 {
+  "$id": "https://aces.dev/schemas/evaluation-result-envelope-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
     "detail": {

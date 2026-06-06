@@ -99,3 +99,4 @@ adr-054-participant-runtime-observable-lifecycle
 | [052](adr-052-typed-runtime-relationship-subtypes.md) | Typed Runtime Relationship Subtypes | accepted | 2026-05-30 |
 | [053](adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) | SDL Module Composition for Inventory-Backed Scenarios | accepted | 2026-06-03 |
 | [054](adr-054-participant-runtime-observable-lifecycle.md) | Participant Runtime Observable Lifecycle | proposed | 2026-06-05 |
+| [055](adr-055-experiment-core-contract-boundary.md) | Experiment Core Contract Boundary | accepted | 2026-05-26 |
