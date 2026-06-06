@@ -1,18 +1,11 @@
-"""Symbol-index helpers for SDL module composition.
-
-Builds the per-section rename maps and the cross-section ``named`` alias
-table that ``composition._namespace_payload`` uses to rewrite SDL
-references when an imported module is mounted under a namespace.
-
-Lives next to ``composition.py`` (not inside it) to keep that file under
-the repo-policy line cap, mirroring ``_module_provenance.py``.
-"""
+"""Symbol-index helpers for SDL module composition."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
 
+from ._module_runtime_aliases import nested_node_runtime_aliases
 from .entities import flatten_entities
 from .scenario import ModuleDescriptor, Scenario
 
@@ -159,6 +152,7 @@ def symbol_index(
     named.update(_qualified_section_aliases("entities", entity_map))
 
     named.update(_nested_node_service_aliases(scenario, section_maps.get("nodes", {})))
+    named.update(nested_node_runtime_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_content_item_aliases(scenario, section_maps.get("content", {})))
 
     return {

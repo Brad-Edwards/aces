@@ -180,6 +180,192 @@ class TestVerifyInfrastructure:
         assert any("cannot have count > 1" in e for e in errors)
 
 
+class TestVerifyRuntimeNetwork:
+    def test_endpoint_referencing_switch_is_valid(self):
+        s = _make_scenario(
+            nodes={
+                "sw": {"type": "switch"},
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {
+                        "network": {"endpoints": [{"network": "sw", "ip_address": "10.0.0.5", "gateway": "10.0.0.1"}]}
+                    },
+                },
+            },
+            infrastructure={
+                "sw": {"count": 1, "properties": {"cidr": "10.0.0.0/24", "gateway": "10.0.0.1"}},
+                "vm": {"count": 1, "links": ["sw"]},
+            },
+        )
+        assert _validate(s) == []
+
+    def test_endpoint_referencing_undefined_network_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {"network": {"endpoints": [{"network": "ghost-net"}]}},
+                },
+            },
+        )
+        errors = _validate(s)
+        assert any("references undefined network 'ghost-net'" in e for e in errors)
+
+    def test_endpoint_referencing_non_switch_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "other-vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {"network": {"endpoints": [{"network": "other-vm"}]}},
+                },
+            },
+            infrastructure={
+                "other-vm": {"count": 1},
+                "vm": {"count": 1},
+            },
+        )
+        errors = _validate(s)
+        assert any("must reference a switch/network entry" in e for e in errors)
+
+    def test_endpoint_ip_outside_referenced_cidr_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "sw": {"type": "switch"},
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {"network": {"endpoints": [{"network": "sw", "ip_address": "192.168.5.5"}]}},
+                },
+            },
+            infrastructure={
+                "sw": {"count": 1, "properties": {"cidr": "10.0.0.0/24", "gateway": "10.0.0.1"}},
+                "vm": {"count": 1, "links": ["sw"]},
+            },
+        )
+        errors = _validate(s)
+        assert any("ip_address 192.168.5.5 is not within network 'sw'" in e for e in errors)
+
+    def test_endpoint_network_variable_reference_is_skipped(self):
+        s = _make_scenario(
+            variables={"TARGET_NET": {"type": "string", "required": True}},
+            nodes={
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {"network": {"endpoints": [{"network": "${TARGET_NET}"}]}},
+                },
+            },
+        )
+        assert _validate(s) == []
+
+
+class TestVerifyRuntimeCapabilityOverrides:
+    def test_override_subject_matching_observed_process_is_valid(self):
+        s = _make_scenario(
+            nodes={
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {
+                        "processes": [
+                            {"name": "entrypoint", "pid": 1, "role": "supervisor"},
+                            {"name": "sshd", "parent_pid": 1, "role": "supervisor"},
+                        ],
+                        "linux_capabilities": {
+                            "required": ["CAP_AUDIT_CONTROL"],
+                            "process_overrides": [
+                                {
+                                    "subject": {"name": "sshd"},
+                                    "scope": "subtree",
+                                    "drop": ["CAP_AUDIT_CONTROL"],
+                                }
+                            ],
+                        },
+                    },
+                },
+            },
+        )
+        assert _validate(s) == []
+
+    def test_override_subject_missing_from_processes_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {
+                        "processes": [
+                            {"name": "entrypoint", "pid": 1, "role": "supervisor"},
+                        ],
+                        "linux_capabilities": {
+                            "process_overrides": [
+                                {
+                                    "subject": {"name": "ghost-sshd"},
+                                    "scope": "subtree",
+                                    "drop": ["CAP_AUDIT_CONTROL"],
+                                }
+                            ],
+                        },
+                    },
+                },
+            },
+        )
+        errors = _validate(s)
+        assert any("capability override subject 'ghost-sshd' does not match any process" in e for e in errors)
+
+    def test_override_with_variable_subject_name_is_skipped(self):
+        s = _make_scenario(
+            variables={"SHELL_NAME": {"type": "string", "required": True}},
+            nodes={
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {
+                        "processes": [
+                            {"name": "entrypoint", "pid": 1, "role": "supervisor"},
+                        ],
+                        "linux_capabilities": {
+                            "process_overrides": [
+                                {
+                                    "subject": {"name": "${SHELL_NAME}"},
+                                    "scope": "subtree",
+                                    "drop": ["CAP_AUDIT_CONTROL"],
+                                }
+                            ],
+                        },
+                    },
+                },
+            },
+        )
+        assert _validate(s) == []
+
+    def test_override_skipped_when_no_processes_declared(self):
+        s = _make_scenario(
+            nodes={
+                "vm": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "runtime": {
+                        "linux_capabilities": {
+                            "process_overrides": [
+                                {
+                                    "subject": {"name": "sshd", "parent_pid": 1},
+                                    "scope": "subtree",
+                                    "drop": ["CAP_AUDIT_CONTROL"],
+                                }
+                            ],
+                        },
+                    },
+                },
+            },
+        )
+        assert _validate(s) == []
+
+
 class TestVerifyFeatures:
     def test_feature_dependency_cycle(self):
         s = _make_scenario(
@@ -2581,3 +2767,1202 @@ class TestValidFullScenario:
         )
         errors = _validate(s)
         assert not errors
+
+
+class TestVerifyRuntimeApplication:
+    def _node_with_application(self, application: dict, **node_extra) -> dict:
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "runtime": {"applications": [application]},
+        }
+        node.update(node_extra)
+        return node
+
+    def test_application_service_ref_resolves(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_application(
+                    {"application_id": "app", "service": "http"},
+                    services=[{"port": 8080, "name": "http"}],
+                ),
+            },
+        )
+        assert _validate(s) == []
+
+    def test_application_service_ref_undefined_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_application({"application_id": "app", "service": "ghost"}),
+            },
+        )
+        errors = _validate(s)
+        assert any("references undefined service 'ghost'" in e for e in errors)
+
+    def test_application_qualified_service_ref_resolves(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_application(
+                    {"application_id": "app", "service": "nodes.vm.services.http"},
+                    services=[{"port": 8080, "name": "http"}],
+                ),
+            },
+        )
+        assert _validate(s) == []
+
+    def test_application_qualified_service_ref_other_node_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "other": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "vm": self._node_with_application(
+                    {"application_id": "app", "service": "nodes.other.services.http"},
+                    services=[{"port": 8080, "name": "http"}],
+                ),
+            },
+        )
+        errors = _validate(s)
+        assert any("must reference a service on the same node" in e for e in errors)
+
+    def test_application_service_variable_reference_is_skipped(self):
+        s = _make_scenario(
+            variables={"SVC": {"type": "string", "required": True}},
+            nodes={
+                "vm": self._node_with_application({"application_id": "app", "service": "${SVC}"}),
+            },
+        )
+        assert _validate(s) == []
+
+    def test_route_vulnerability_ref_resolves(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_application(
+                    {
+                        "application_id": "app",
+                        "routes": [
+                            {
+                                "route_id": "r1",
+                                "path": "/a",
+                                "methods": ["GET"],
+                                "vulnerability_refs": ["sqli"],
+                            }
+                        ],
+                    },
+                ),
+            },
+            vulnerabilities={"sqli": {"name": "SQLi", "description": "x", "class": "CWE-89"}},
+        )
+        assert _validate(s) == []
+
+    def test_route_vulnerability_ref_undefined_is_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_application(
+                    {
+                        "application_id": "app",
+                        "routes": [
+                            {
+                                "route_id": "r1",
+                                "path": "/a",
+                                "methods": ["GET"],
+                                "vulnerability_refs": ["ghost-vuln"],
+                            }
+                        ],
+                    },
+                ),
+            },
+        )
+        errors = _validate(s)
+        assert any("references undefined vulnerability 'ghost-vuln'" in e for e in errors)
+
+    def test_route_template_ref_resolves_to_filesystem_inventory(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "runtime": {
+                "filesystem_inventory": [{"path": "/app/templates/index.html", "entry_type": "file"}],
+                "applications": [
+                    {
+                        "application_id": "app",
+                        "routes": [
+                            {
+                                "route_id": "r1",
+                                "path": "/",
+                                "methods": ["GET"],
+                                "templates": ["/app/templates/index.html"],
+                            }
+                        ],
+                    }
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        assert _validate(s) == []
+
+    def test_route_template_ref_not_in_inventory_is_rejected(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "runtime": {
+                "filesystem_inventory": [{"path": "/app/templates/index.html", "entry_type": "file"}],
+                "applications": [
+                    {
+                        "application_id": "app",
+                        "routes": [
+                            {
+                                "route_id": "r1",
+                                "path": "/",
+                                "methods": ["GET"],
+                                "templates": ["/app/templates/missing.html"],
+                            }
+                        ],
+                    }
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        errors = _validate(s)
+        assert any("does not resolve to an observed file" in e for e in errors)
+
+    def test_route_static_asset_ref_resolves_to_filesystem_inventory(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "runtime": {
+                "filesystem_inventory": [{"path": "/app/static/style.css", "entry_type": "file"}],
+                "applications": [
+                    {
+                        "application_id": "app",
+                        "routes": [
+                            {
+                                "route_id": "r1",
+                                "path": "/",
+                                "methods": ["GET"],
+                                "static_assets": ["/app/static/style.css"],
+                            }
+                        ],
+                    }
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        assert _validate(s) == []
+
+    def test_route_static_asset_ref_not_in_inventory_is_rejected(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "runtime": {
+                "filesystem_inventory": [{"path": "/app/static/style.css", "entry_type": "file"}],
+                "applications": [
+                    {
+                        "application_id": "app",
+                        "routes": [
+                            {
+                                "route_id": "r1",
+                                "path": "/",
+                                "methods": ["GET"],
+                                "static_assets": ["/app/static/missing.css"],
+                            }
+                        ],
+                    }
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        errors = _validate(s)
+        assert any("does not resolve to an observed file" in e for e in errors)
+
+
+class TestVerifyRuntimeFileService:
+    def _service(self, **overrides) -> dict:
+        service = {
+            "file_service_id": "fileshare-smb",
+            "service": "smb",
+            "protocol": "smb",
+            "shares": [{"share_id": "public", "name": "public"}],
+            "principals": [{"principal_id": "nobody", "kind": "guest", "name": "nobody"}],
+            "access_rules": [],
+            "access_observations": [],
+        }
+        service.update(overrides)
+        return service
+
+    def _node(self, service: dict, **node_extra) -> dict:
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 445, "name": "smb"}],
+            "runtime": {"file_services": [service]},
+        }
+        node.update(node_extra)
+        return node
+
+    def test_file_service_resolves_with_same_node_service(self):
+        s = _make_scenario(nodes={"fs": self._node(self._service())})
+        assert _validate(s) == []
+
+    def test_file_service_rejects_unknown_service_ref(self):
+        s = _make_scenario(nodes={"fs": self._node(self._service(service="ghost"))})
+        errors = _validate(s)
+        assert any("ghost" in e and "file" in e.lower() for e in errors)
+
+    def test_file_service_rule_subject_ref_must_resolve(self):
+        svc = self._service(
+            access_rules=[
+                {
+                    "rule_id": "bad-rule",
+                    "subject_ref": "missing-principal",
+                    "resource_ref": "public",
+                    "action": "read",
+                    "effect": "allow",
+                    "basis": "share_config",
+                }
+            ]
+        )
+        s = _make_scenario(nodes={"fs": self._node(svc)})
+        errors = _validate(s)
+        assert any("subject_ref" in e and "missing-principal" in e for e in errors)
+
+    def test_file_service_rule_resource_ref_must_resolve(self):
+        svc = self._service(
+            access_rules=[
+                {
+                    "rule_id": "bad-rule",
+                    "subject_ref": "nobody",
+                    "resource_ref": "ghost-share",
+                    "action": "read",
+                    "effect": "allow",
+                    "basis": "share_config",
+                }
+            ]
+        )
+        s = _make_scenario(nodes={"fs": self._node(svc)})
+        errors = _validate(s)
+        assert any("resource_ref" in e and "ghost-share" in e for e in errors)
+
+    def test_file_service_observation_subject_resource_must_resolve(self):
+        svc = self._service(
+            access_observations=[
+                {
+                    "observation_id": "obs1",
+                    "subject_ref": "ghost",
+                    "resource_ref": "public",
+                    "action": "browse",
+                    "outcome": "allowed",
+                    "basis": "observed_probe",
+                }
+            ]
+        )
+        s = _make_scenario(nodes={"fs": self._node(svc)})
+        errors = _validate(s)
+        # 'guest' and 'anonymous' literals are accepted; 'ghost' is not.
+        assert any("subject_ref" in e and "ghost" in e for e in errors)
+
+    def test_file_service_observation_anonymous_subject_is_accepted(self):
+        svc = self._service(
+            access_observations=[
+                {
+                    "observation_id": "obs-anon",
+                    "subject_ref": "anonymous",
+                    "resource_ref": "public",
+                    "action": "browse",
+                    "outcome": "allowed",
+                    "basis": "observed_probe",
+                }
+            ]
+        )
+        s = _make_scenario(nodes={"fs": self._node(svc)})
+        assert _validate(s) == []
+
+    def test_file_service_local_user_ref_resolves_against_local_identity(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "service_account",
+                    "name": "svc-fileshare",
+                    "local_user_ref": "missing-user",
+                }
+            ]
+        )
+        node = self._node(svc)
+        node["runtime"]["local_identity"] = {
+            "users": [{"username": "real-user", "uid": 1100}],
+        }
+        s = _make_scenario(nodes={"fs": node})
+        errors = _validate(s)
+        assert any("local_user_ref" in e and "missing-user" in e for e in errors)
+
+    def test_file_service_local_user_ref_passes_when_present(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "service_account",
+                    "name": "svc-fileshare",
+                    "local_user_ref": "real-user",
+                }
+            ]
+        )
+        node = self._node(svc)
+        node["runtime"]["local_identity"] = {
+            "users": [{"username": "real-user", "uid": 1100}],
+        }
+        s = _make_scenario(nodes={"fs": node})
+        assert _validate(s) == []
+
+    def _ad_node(self) -> dict:
+        return {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 389, "name": "ldap"}],
+            "runtime": {
+                "identity_authorities": [
+                    {
+                        "identity_authority_id": "techvault-domain",
+                        "kind": "domain",
+                        "name": "TechVault Domain",
+                        "services": [
+                            {
+                                "service_id": "ldap-endpoint",
+                                "service": "ldap",
+                                "protocol": "LDAP",
+                            }
+                        ],
+                        "subjects": [
+                            {"subject_id": "alice", "kind": "user", "name": "alice"},
+                        ],
+                    }
+                ]
+            },
+        }
+
+    def test_file_service_directory_subject_ref_resolves_against_identity_authority(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "user",
+                    "name": "svc-fileshare",
+                    "directory_subject_ref": ("nodes.ad.runtime.identity_authorities.techvault-domain.subjects.alice"),
+                }
+            ]
+        )
+        s = _make_scenario(
+            nodes={
+                "fs": self._node(svc),
+                "ad": self._ad_node(),
+            }
+        )
+        assert _validate(s) == []
+
+    def test_file_service_directory_subject_ref_rejects_missing_subject(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "user",
+                    "name": "svc-fileshare",
+                    "directory_subject_ref": ("nodes.ad.runtime.identity_authorities.techvault-domain.subjects.ghost"),
+                }
+            ]
+        )
+        s = _make_scenario(
+            nodes={
+                "fs": self._node(svc),
+                "ad": self._ad_node(),
+            }
+        )
+        errors = _validate(s)
+        assert any("directory_subject_ref" in e and "ghost" in e and "does not resolve" in e for e in errors)
+
+    def test_file_service_directory_subject_ref_rejects_missing_authority(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "user",
+                    "name": "svc-fileshare",
+                    "directory_subject_ref": ("nodes.ad.runtime.identity_authorities.missing.subjects.alice"),
+                }
+            ]
+        )
+        s = _make_scenario(
+            nodes={
+                "fs": self._node(svc),
+                "ad": self._ad_node(),
+            }
+        )
+        errors = _validate(s)
+        assert any("directory_subject_ref" in e and "missing" in e and "does not resolve" in e for e in errors)
+
+    def test_file_service_directory_subject_ref_rejects_unqualified(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "user",
+                    "name": "svc-fileshare",
+                    "directory_subject_ref": "bare-alice",
+                }
+            ]
+        )
+        s = _make_scenario(nodes={"fs": self._node(svc)})
+        errors = _validate(s)
+        assert any("directory_subject_ref" in e and "must be a qualified" in e for e in errors)
+
+    def test_file_service_directory_subject_ref_skips_variable(self):
+        svc = self._service(
+            principals=[
+                {
+                    "principal_id": "svc-fileshare",
+                    "kind": "user",
+                    "name": "svc-fileshare",
+                    "directory_subject_ref": "${external_subject}",
+                }
+            ]
+        )
+        s = _make_scenario(
+            variables={"external_subject": {"type": "string", "required": True}},
+            nodes={"fs": self._node(svc)},
+        )
+        assert _validate(s) == []
+
+
+class TestVerifyRuntimeDatabaseServices:
+    def _node_with_db(self, **dbsvc_overrides):
+        dbsvc = {
+            "database_service_id": "tv-pg",
+            "service": "pg",
+            "engine": "postgresql",
+            "protocol": "postgresql",
+            "databases": [
+                {
+                    "database_id": "tv-db",
+                    "name": "techvault",
+                    "schemas": [
+                        {"schema_id": "pub", "name": "public", "tables": [{"table_id": "users", "name": "users"}]}
+                    ],
+                }
+            ],
+            "roles": [{"role_id": "app", "name": "techvault", "role_type": "application"}],
+        }
+        dbsvc.update(dbsvc_overrides)
+        return {
+            "type": "vm",
+            "services": [{"port": 5432, "name": "pg"}],
+            "runtime": {"database_services": [dbsvc]},
+        }
+
+    def test_database_service_with_same_node_service_is_valid(self):
+        s = _make_scenario(nodes={"db": self._node_with_db()})
+        assert _validate(s) == []
+
+    def test_database_service_qualified_same_node_ref_is_valid(self):
+        s = _make_scenario(nodes={"db": self._node_with_db(service="nodes.db.services.pg")})
+        assert _validate(s) == []
+
+    def test_database_service_owning_service_must_be_same_node(self):
+        node = self._node_with_db(service="nodes.other.services.pg")
+        s = _make_scenario(
+            nodes={
+                "db": node,
+                "other": {"type": "vm", "services": [{"port": 5432, "name": "pg"}]},
+            }
+        )
+        errors = _validate(s)
+        assert any("must reference a service on the same node" in e for e in errors)
+
+    def test_database_service_undefined_owning_service_rejected(self):
+        s = _make_scenario(nodes={"db": self._node_with_db(service="ghost")})
+        errors = _validate(s)
+        assert any("references undefined service 'ghost'" in e for e in errors)
+
+    def test_grant_with_resolvable_refs_is_valid(self):
+        s = _make_scenario(
+            nodes={
+                "db": self._node_with_db(
+                    grants=[
+                        {
+                            "grantee_role_ref": "app",
+                            "object_type": "table",
+                            "object_ref": "users",
+                            "privileges": ["SELECT"],
+                        }
+                    ]
+                )
+            }
+        )
+        assert _validate(s) == []
+
+    def test_grant_grantee_role_ref_must_resolve(self):
+        s = _make_scenario(
+            nodes={
+                "db": self._node_with_db(
+                    grants=[
+                        {
+                            "grantee_role_ref": "ghost",
+                            "object_type": "table",
+                            "object_ref": "users",
+                            "privileges": ["SELECT"],
+                        }
+                    ]
+                )
+            }
+        )
+        errors = _validate(s)
+        assert any("grant grantee_role_ref 'ghost' is not a role" in e for e in errors)
+
+    def test_grant_object_ref_must_match_object_type(self):
+        s = _make_scenario(
+            nodes={
+                "db": self._node_with_db(
+                    grants=[
+                        {
+                            "grantee_role_ref": "app",
+                            "object_type": "database",
+                            "object_ref": "users",
+                            "privileges": ["SELECT"],
+                        }
+                    ]
+                )
+            }
+        )
+        errors = _validate(s)
+        assert any("grant object_ref 'users' is not a database" in e for e in errors)
+
+
+class TestVerifyRuntimeDnsServices:
+    def _node_with_dns(self, **dns_overrides):
+        dns_service = {
+            "dns_service_id": "techvault-dns",
+            "service": "dns",
+            "implementation": "bind",
+            "roles": ["authoritative"],
+            "configuration_file_refs": ["/etc/bind/named.conf"],
+            "zones": [
+                {
+                    "zone_id": "techvault-local",
+                    "name": "techvault.local.",
+                    "zone_file_refs": ["/etc/bind/db.techvault.local"],
+                    "rrsets": [
+                        {
+                            "rrset_id": "web-a",
+                            "owner": "web.techvault.local.",
+                            "record_type": "a",
+                            "ttl": 300,
+                            "records": [{"address": "172.20.10.20"}],
+                        }
+                    ],
+                }
+            ],
+        }
+        dns_service.update(dns_overrides)
+        return {
+            "type": "vm",
+            "services": [{"port": 53, "protocol": "udp", "name": "dns"}],
+            "runtime": {
+                "filesystem_inventory": [
+                    {"path": "/etc/bind/named.conf", "entry_type": "file"},
+                    {"path": "/etc/bind/db.techvault.local", "entry_type": "file"},
+                ],
+                "dns_services": [dns_service],
+            },
+        }
+
+    def test_dns_service_with_same_node_service_is_valid(self):
+        s = _make_scenario(nodes={"dns": self._node_with_dns()})
+        assert _validate(s) == []
+
+    def test_dns_service_qualified_same_node_ref_is_valid(self):
+        s = _make_scenario(nodes={"dns": self._node_with_dns(service="nodes.dns.services.dns")})
+        assert _validate(s) == []
+
+    def test_dns_service_owning_service_must_be_same_node(self):
+        node = self._node_with_dns(service="nodes.other.services.dns")
+        s = _make_scenario(
+            nodes={
+                "dns": node,
+                "other": {"type": "vm", "services": [{"port": 53, "protocol": "udp", "name": "dns"}]},
+            }
+        )
+        errors = _validate(s)
+        assert any("must reference a service on the same node" in e for e in errors)
+
+    def test_dns_service_undefined_owning_service_rejected(self):
+        s = _make_scenario(nodes={"dns": self._node_with_dns(service="ghost")})
+        errors = _validate(s)
+        assert any("references undefined service 'ghost'" in e for e in errors)
+
+    def test_dns_file_refs_resolve_to_runtime_filesystem_inventory_when_present(self):
+        node = self._node_with_dns(configuration_file_refs=["/etc/bind/missing.conf"])
+        s = _make_scenario(nodes={"dns": node})
+        errors = _validate(s)
+        assert any("configuration_file_refs ref '/etc/bind/missing.conf' does not resolve" in e for e in errors)
+
+    def test_relationship_target_to_dns_service_zone_and_rrset_is_valid(self):
+        s = _make_scenario(
+            nodes={
+                "dns": self._node_with_dns(),
+                "client": {"type": "vm", "services": [{"port": 443, "name": "https"}]},
+            },
+            relationships={
+                "client-uses-dns": {
+                    "type": "connects_to",
+                    "source": "nodes.client",
+                    "target": "nodes.dns.runtime.dns_services.techvault-dns",
+                },
+                "zone-authority": {
+                    "type": "depends_on",
+                    "source": "nodes.dns.runtime.dns_services.techvault-dns",
+                    "target": "nodes.dns.runtime.dns_services.techvault-dns.zones.techvault-local",
+                },
+                "web-record": {
+                    "type": "depends_on",
+                    "source": "nodes.dns.runtime.dns_services.techvault-dns.zones.techvault-local",
+                    "target": "nodes.dns.runtime.dns_services.techvault-dns.zones.techvault-local.rrsets.web-a",
+                },
+            },
+        )
+        assert _validate(s) == []
+
+
+class TestVerifyRelationshipDatabaseAccess:
+    def _scenario_with_app_and_db(self, **rel_overrides):
+        rel = {
+            "type": "connects_to",
+            "source": "nodes.web.runtime.applications.webapp",
+            "target": "nodes.db.runtime.database_services.tv-pg",
+            "database_access": {"role_ref": "app", "auth_method": "scram_sha_256"},
+        }
+        rel.update(rel_overrides)
+        return _make_scenario(
+            nodes={
+                "db": {
+                    "type": "vm",
+                    "services": [{"port": 5432, "name": "pg"}],
+                    "runtime": {
+                        "database_services": [
+                            {
+                                "database_service_id": "tv-pg",
+                                "service": "pg",
+                                "engine": "postgresql",
+                                "protocol": "postgresql",
+                                "databases": [{"database_id": "tv-db", "name": "techvault"}],
+                                "roles": [{"role_id": "app", "name": "techvault"}],
+                            }
+                        ]
+                    },
+                },
+                "web": {
+                    "type": "vm",
+                    "services": [{"port": 8080, "name": "http"}],
+                    "runtime": {"applications": [{"application_id": "webapp", "service": "http"}]},
+                },
+            },
+            relationships={"webapp-to-db": rel},
+        )
+
+    def test_relationship_to_database_with_role_is_valid(self):
+        # Implicitly exercises the named-ref index for the application source
+        # and database target — the strict ``== []`` assertion catches both
+        # 'ref didn't resolve' and 'database-access check broke' regressions.
+        assert _validate(self._scenario_with_app_and_db()) == []
+
+    def test_relationship_target_to_logical_database_ref_is_valid(self):
+        s = self._scenario_with_app_and_db(target="nodes.db.runtime.database_services.tv-pg.databases.tv-db")
+        assert _validate(s) == []
+
+    def test_database_access_target_must_resolve_to_database(self):
+        s = self._scenario_with_app_and_db(target="nodes.web.runtime.applications.webapp")
+        errors = _validate(s)
+        assert any("does not resolve to a database service or database" in e for e in errors)
+
+    def test_database_access_role_ref_must_be_a_role_in_the_service(self):
+        s = self._scenario_with_app_and_db(database_access={"role_ref": "ghost", "auth_method": "password"})
+        errors = _validate(s)
+        assert any("role_ref 'ghost' is not a role in database service 'tv-pg'" in e for e in errors)
+
+    def test_database_access_source_must_be_a_runtime_application(self):
+        # A defined non-application scenario element (a node) passes generic
+        # relationship validation but is not a valid database_access source.
+        s = self._scenario_with_app_and_db(source="nodes.db")
+        errors = _validate(s)
+        assert any("source 'nodes.db' does not resolve to a runtime application" in e for e in errors)
+
+    def test_database_access_variable_source_is_skipped(self):
+        # An unresolved ${var} source is left for instantiation, not flagged.
+        s = self._scenario_with_app_and_db(source="${APP_REF}")
+        assert not any("does not resolve to a runtime application" in e for e in _validate(s))
+
+
+class TestVerifyRelationshipServiceIntegration:
+    def _scenario_with_platforms(
+        self,
+        auth_principal_ref: str = "cortex-api-user",
+        *,
+        engine_authorization_ref: str | None = "cortex-auth",
+    ) -> Scenario:
+        engine_application = {
+            "platform_application_id": "cortex",
+            "service": "api",
+            "platform_kind": "analyzer_engine",
+            "execution_policy": {"policy_id": "exec"},
+            "content_objects": [{"content_object_id": "analyzer", "kind": "analyzer"}],
+        }
+        if engine_authorization_ref is not None:
+            engine_application["authorization_ref"] = engine_authorization_ref
+        return _make_scenario(
+            nodes={
+                "thehive": {
+                    "type": "vm",
+                    "services": [{"port": 9000, "name": "api"}],
+                    "runtime": {
+                        "platform_applications": [
+                            {
+                                "platform_application_id": "thehive",
+                                "service": "api",
+                                "platform_kind": "case_management",
+                                "content_objects": [
+                                    {"content_object_id": "case-template", "kind": "case_template"},
+                                    {"content_object_id": "custom-field", "kind": "custom_field"},
+                                ],
+                            }
+                        ]
+                    },
+                },
+                "cortex": {
+                    "type": "vm",
+                    "services": [{"port": 9001, "name": "api"}],
+                    "runtime": {
+                        "app_authorizations": [
+                            {
+                                "app_authorization_id": "cortex-auth",
+                                "resource_vocabulary": "app_resource",
+                                "principals": [{"principal_id": "cortex-api-user"}],
+                                "roles": [{"role_id": "api-role"}],
+                                "permission_grants": [
+                                    {
+                                        "grant_id": "api-grant",
+                                        "role_ref": "api-role",
+                                        "resource_kind": "app_resource",
+                                    }
+                                ],
+                            },
+                            {
+                                "app_authorization_id": "unrelated-auth",
+                                "resource_vocabulary": "app_resource",
+                                "principals": [{"principal_id": "wrong-store-principal"}],
+                                "roles": [{"role_id": "other-role"}],
+                                "permission_grants": [
+                                    {
+                                        "grant_id": "other-grant",
+                                        "role_ref": "other-role",
+                                        "resource_kind": "app_resource",
+                                    }
+                                ],
+                            },
+                        ],
+                        "platform_applications": [engine_application],
+                    },
+                },
+            },
+            relationships={
+                "thehive-to-cortex": {
+                    "type": "connects_to",
+                    "source": "nodes.thehive.runtime.platform_applications.thehive",
+                    "target": "nodes.cortex.runtime.platform_applications.cortex",
+                    "service_integration": {
+                        "consumer_ref": "thehive",
+                        "engine_ref": "cortex",
+                        "integration_kind": "analyzer",
+                        "auth_principal_ref": auth_principal_ref,
+                    },
+                }
+            },
+        )
+
+    def test_service_integration_auth_principal_resolves_in_engine_authorization(self):
+        assert _validate(self._scenario_with_platforms()) == []
+
+    def test_service_integration_auth_principal_must_be_in_engine_authorization(self):
+        errors = _validate(self._scenario_with_platforms(auth_principal_ref="wrong-store-principal"))
+        assert any("authorization 'cortex-auth'" in error and "wrong-store-principal" in error for error in errors)
+
+    def test_service_integration_auth_principal_uses_any_engine_authorization_when_unset(self):
+        s = self._scenario_with_platforms(
+            auth_principal_ref="wrong-store-principal",
+            engine_authorization_ref=None,
+        )
+        assert _validate(s) == []
+
+
+class TestVerifyRelationshipProxyUpstream:
+    def _scenario_with_proxy(
+        self,
+        *,
+        route_upstream: dict | None = None,
+        proxy_upstream: dict | None = None,
+        proxy_node_name: str = "proxy",
+        backend_node_name: str = "backend",
+        relationship_target: str = "backend",
+    ) -> Scenario:
+        route = {"route_id": "root", "path": "/", "methods": ["GET"]}
+        if route_upstream is not None:
+            route["upstream_target"] = route_upstream
+        upstream = {"route_ref": "root", "upstream_node_ref": backend_node_name, "upstream_service_ref": "app"}
+        if proxy_upstream is not None:
+            upstream.update(proxy_upstream)
+        return _make_scenario(
+            nodes={
+                proxy_node_name: {
+                    "type": "vm",
+                    "services": [{"port": 443, "name": "https"}],
+                    "runtime": {
+                        "applications": [
+                            {
+                                "application_id": "nginx",
+                                "service": "https",
+                                "routes": [route],
+                            }
+                        ]
+                    },
+                },
+                backend_node_name: {
+                    "type": "vm",
+                    "services": [{"port": 8080, "name": "app"}],
+                },
+            },
+            relationships={
+                "proxy-to-backend": {
+                    "type": "connects_to",
+                    "source": f"nodes.{proxy_node_name}.runtime.applications.nginx",
+                    "target": relationship_target,
+                    "proxy_upstream": upstream,
+                }
+            },
+        )
+
+    def test_proxy_upstream_service_ref_must_resolve_on_upstream_node(self):
+        errors = _validate(self._scenario_with_proxy(proxy_upstream={"upstream_service_ref": "ghost"}))
+        assert any("upstream_service_ref 'ghost'" in error and "backend" in error for error in errors)
+
+    def test_route_upstream_target_service_ref_must_resolve(self):
+        errors = _validate(
+            self._scenario_with_proxy(
+                route_upstream={"target_node_ref": "backend", "target_service": "ghost"},
+            )
+        )
+        assert any("target_service 'ghost'" in error and "backend" in error for error in errors)
+
+    def test_route_upstream_target_service_ref_must_match_target_node_ref(self):
+        errors = _validate(
+            self._scenario_with_proxy(
+                route_upstream={
+                    "target_node_ref": "backend",
+                    "target_service": "nodes.proxy.services.https",
+                },
+            )
+        )
+        assert any("target_service 'nodes.proxy.services.https'" in error and "backend" in error for error in errors)
+
+    def test_proxy_upstream_service_ref_uses_qualified_relationship_target_node(self):
+        s = self._scenario_with_proxy(
+            relationship_target="nodes.backend.services.app",
+            proxy_upstream={"upstream_node_ref": ""},
+        )
+        assert _validate(s) == []
+
+    def test_proxy_upstream_service_ref_must_match_upstream_node_ref(self):
+        errors = _validate(
+            self._scenario_with_proxy(
+                proxy_upstream={"upstream_service_ref": "nodes.proxy.services.https"},
+            )
+        )
+        assert any(
+            "upstream_service_ref 'nodes.proxy.services.https'" in error and "backend" in error for error in errors
+        )
+
+    def test_proxy_upstream_invalid_upstream_node_ref_is_reported(self):
+        errors = _validate(
+            self._scenario_with_proxy(
+                proxy_upstream={"upstream_node_ref": "ghost"},
+            )
+        )
+        assert any("upstream_node_ref 'ghost'" in error and "defined node" in error for error in errors)
+
+    def test_proxy_upstream_agreement_uses_relationship_target_for_service_refs(self):
+        s = self._scenario_with_proxy(
+            route_upstream={
+                "target_service": "nodes.backend.services.app",
+                "tls_terminated_here": True,
+            },
+            proxy_upstream={
+                "upstream_node_ref": "",
+                "upstream_service_ref": "app",
+                "client_tls_terminated": True,
+            },
+            relationship_target="nodes.backend.services.app",
+        )
+        assert _validate(s) == []
+
+    def test_proxy_upstream_agreement_accepts_bare_and_qualified_service_refs(self):
+        s = self._scenario_with_proxy(
+            route_upstream={
+                "target_node_ref": "backend",
+                "target_service": "nodes.backend.services.app",
+                "tls_terminated_here": True,
+            },
+            proxy_upstream={"upstream_service_ref": "app", "client_tls_terminated": True},
+        )
+        assert _validate(s) == []
+
+    def test_proxy_upstream_accepts_dotted_node_names_in_qualified_service_refs(self):
+        s = self._scenario_with_proxy(
+            route_upstream={
+                "target_node_ref": "app.backend",
+                "target_service": "nodes.app.backend.services.app",
+                "tls_terminated_here": True,
+            },
+            proxy_upstream={"client_tls_terminated": True},
+            proxy_node_name="front.proxy",
+            backend_node_name="app.backend",
+            relationship_target="nodes.app.backend.services.app",
+        )
+        assert _validate(s) == []
+
+
+# ---------------------------------------------------------------------------
+# Runtime SSH server configuration semantics (ADR-031)
+# ---------------------------------------------------------------------------
+
+
+class TestVerifyRuntimeSshServer:
+    def _node_with_ssh_server(self, ssh_server: dict, **node_extra) -> dict:
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "runtime": {"ssh_servers": [ssh_server]},
+        }
+        node.update(node_extra)
+        return node
+
+    def test_bare_service_ref_resolves(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_ssh_server(
+                    {"ssh_server_id": "sshd-default", "service": "ssh"},
+                    services=[{"port": 22, "name": "ssh"}],
+                ),
+            },
+        )
+        assert _validate(s) == []
+
+    def test_undefined_service_ref_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_ssh_server(
+                    {"ssh_server_id": "sshd-default", "service": "ghost"},
+                ),
+            },
+        )
+        errors = _validate(s)
+        assert any("references undefined service 'ghost'" in e for e in errors)
+
+    def test_qualified_service_ref_same_node_resolves(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_ssh_server(
+                    {"ssh_server_id": "sshd-default", "service": "nodes.vm.services.ssh"},
+                    services=[{"port": 22, "name": "ssh"}],
+                ),
+            },
+        )
+        assert _validate(s) == []
+
+    def test_qualified_service_ref_other_node_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "other": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "vm": self._node_with_ssh_server(
+                    {"ssh_server_id": "sshd-default", "service": "nodes.other.services.ssh"},
+                    services=[{"port": 22, "name": "ssh"}],
+                ),
+            },
+        )
+        errors = _validate(s)
+        assert any("must reference a service on the same node" in e for e in errors)
+
+    def test_malformed_qualified_service_ref_rejected(self):
+        s = _make_scenario(
+            nodes={
+                "vm": self._node_with_ssh_server(
+                    {"ssh_server_id": "sshd-default", "service": "nodes.vm.svc.ssh"},
+                ),
+            },
+        )
+        errors = _validate(s)
+        assert any("must be a bare service name" in e for e in errors)
+
+    def test_service_variable_reference_skipped(self):
+        s = _make_scenario(
+            variables={"SVC": {"type": "string", "required": True}},
+            nodes={
+                "vm": self._node_with_ssh_server(
+                    {"ssh_server_id": "sshd-default", "service": "${SVC}"},
+                ),
+            },
+        )
+        assert _validate(s) == []
+
+    def test_local_user_criterion_present_in_inventory_passes(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 22, "name": "ssh"}],
+            "runtime": {
+                "local_identity": {
+                    "users": [{"username": "kali", "uid": 1000}],
+                },
+                "ssh_servers": [
+                    {
+                        "ssh_server_id": "sshd-default",
+                        "service": "ssh",
+                        "match_rules": [
+                            {
+                                "match_id": "m-kali",
+                                "criteria": [{"kind": "local_user", "pattern": "kali"}],
+                            },
+                        ],
+                    },
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        assert _validate(s) == []
+
+    def test_local_user_criterion_absent_from_populated_inventory_rejected(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 22, "name": "ssh"}],
+            "runtime": {
+                "local_identity": {
+                    "users": [{"username": "kali", "uid": 1000}],
+                },
+                "ssh_servers": [
+                    {
+                        "ssh_server_id": "sshd-default",
+                        "service": "ssh",
+                        "match_rules": [
+                            {
+                                "match_id": "m-ghost",
+                                "criteria": [{"kind": "local_user", "pattern": "ghost"}],
+                            },
+                        ],
+                    },
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        errors = _validate(s)
+        assert any("local user 'ghost'" in e for e in errors)
+
+    def test_local_user_criterion_without_inventory_does_not_error(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 22, "name": "ssh"}],
+            "runtime": {
+                "ssh_servers": [
+                    {
+                        "ssh_server_id": "sshd-default",
+                        "service": "ssh",
+                        "match_rules": [
+                            {
+                                "match_id": "m-kali",
+                                "criteria": [{"kind": "local_user", "pattern": "kali"}],
+                            },
+                        ],
+                    },
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        assert _validate(s) == []
+
+    def test_user_pattern_criterion_not_checked_against_inventory(self):
+        """USER (not LOCAL_USER) is a pattern, not an identity — not cross-checked."""
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 22, "name": "ssh"}],
+            "runtime": {
+                "local_identity": {"users": [{"username": "kali", "uid": 1000}]},
+                "ssh_servers": [
+                    {
+                        "ssh_server_id": "sshd-default",
+                        "service": "ssh",
+                        "match_rules": [
+                            {
+                                "match_id": "m-pattern",
+                                "criteria": [{"kind": "user", "pattern": "ghost"}],
+                            },
+                        ],
+                    },
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        assert _validate(s) == []
+
+    def test_local_user_wildcard_pattern_not_checked_against_inventory(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 22, "name": "ssh"}],
+            "runtime": {
+                "local_identity": {"users": [{"username": "kali", "uid": 1000}]},
+                "ssh_servers": [
+                    {
+                        "ssh_server_id": "sshd-default",
+                        "service": "ssh",
+                        "match_rules": [
+                            {
+                                "match_id": "m-glob",
+                                "criteria": [{"kind": "local_user", "pattern": "ka*"}],
+                            },
+                        ],
+                    },
+                ],
+            },
+        }
+        s = _make_scenario(nodes={"vm": node})
+        assert _validate(s) == []
+
+    def test_local_user_variable_ref_pattern_skipped(self):
+        node = {
+            "type": "vm",
+            "resources": {"ram": "1 gib", "cpu": 1},
+            "services": [{"port": 22, "name": "ssh"}],
+            "runtime": {
+                "local_identity": {"users": [{"username": "kali", "uid": 1000}]},
+                "ssh_servers": [
+                    {
+                        "ssh_server_id": "sshd-default",
+                        "service": "ssh",
+                        "match_rules": [
+                            {
+                                "match_id": "m-var",
+                                "criteria": [{"kind": "local_user", "pattern": "${ssh_user}"}],
+                            },
+                        ],
+                    },
+                ],
+            },
+        }
+        s = _make_scenario(
+            variables={"ssh_user": {"type": "string", "required": True}},
+            nodes={"vm": node},
+        )
+        assert _validate(s) == []

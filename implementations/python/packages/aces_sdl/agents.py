@@ -40,6 +40,7 @@ class Agent(SDLModel):
     """An autonomous participant in the scenario.
 
     Agents reference existing scenario elements:
+
     - ``entity`` links to the entities section (team/role) and supplies
       identity and role per ADR-020
     - ``starting_accounts`` links to the accounts section
@@ -54,6 +55,9 @@ class Agent(SDLModel):
     - ``operating_scope`` links to targetable named scenario elements
       (subnets, hosts, services, content) defining where the participant
       may act or observe (ACT-601, ADR-020)
+    - ``observation_boundaries`` links to declared participant observation
+      boundaries that define participant-specific projections of world and
+      evidence state (SEM-208)
     """
 
     entity: str = ""
@@ -66,6 +70,7 @@ class Agent(SDLModel):
     starting_conditions: list[str] = Field(default_factory=list)
     authority_anchors: list[str] = Field(default_factory=list)
     operating_scope: list[str] = Field(default_factory=list)
+    observation_boundaries: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_required_entity(self) -> "Agent":

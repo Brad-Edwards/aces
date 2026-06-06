@@ -1,0 +1,175 @@
+{
+  "$defs": {
+    "AcesSemanticInvariantEntryModel": {
+      "additionalProperties": false,
+      "description": "Machine-readable semantic invariant annotation entry.",
+      "properties": {
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "inputs": {
+          "items": {
+            "$ref": "#/$defs/AcesSemanticInvariantInputModel"
+          },
+          "minItems": 1,
+          "title": "Inputs",
+          "type": "array"
+        },
+        "level": {
+          "const": "error",
+          "title": "Level",
+          "type": "string"
+        },
+        "validator": {
+          "minLength": 1,
+          "title": "Validator",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "level",
+        "validator",
+        "inputs"
+      ],
+      "title": "AcesSemanticInvariantEntryModel",
+      "type": "object"
+    },
+    "AcesSemanticInvariantInputModel": {
+      "additionalProperties": false,
+      "description": "Input contract and instance path required by one ACES semantic invariant.",
+      "properties": {
+        "contract_id": {
+          "minLength": 1,
+          "title": "Contract Id",
+          "type": "string"
+        },
+        "instance_path": {
+          "pattern": "^#(?:/[A-Za-z0-9_.$~-]+)*$",
+          "title": "Instance Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_id",
+        "instance_path"
+      ],
+      "title": "AcesSemanticInvariantInputModel",
+      "type": "object"
+    },
+    "AcesSemanticInvariantProfileReferenceModel": {
+      "additionalProperties": false,
+      "description": "Host-schema reference to the ACES semantic-invariant profile.",
+      "properties": {
+        "contract_id": {
+          "minLength": 1,
+          "title": "Contract Id",
+          "type": "string"
+        },
+        "entry_schema_contract_id": {
+          "const": "aces-semantic-invariants-v1",
+          "title": "Entry Schema Contract Id",
+          "type": "string"
+        },
+        "entry_schema_pointer": {
+          "const": "#/$defs/AcesSemanticInvariantEntryModel",
+          "title": "Entry Schema Pointer",
+          "type": "string"
+        },
+        "id": {
+          "const": "aces-semantic-invariants-v1",
+          "title": "Id",
+          "type": "string"
+        },
+        "keyword": {
+          "const": "x-aces-invariants",
+          "title": "Keyword",
+          "type": "string"
+        },
+        "required": {
+          "const": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "uri": {
+          "const": "https://aces.dev/schemas/semantic-invariants/v1",
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "uri",
+        "contract_id",
+        "keyword",
+        "required",
+        "entry_schema_contract_id",
+        "entry_schema_pointer"
+      ],
+      "title": "AcesSemanticInvariantProfileReferenceModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/semantic-invariants/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Published shape for ACES semantic-invariant annotations.",
+  "properties": {
+    "invariant_entry_schema": {
+      "const": "#/$defs/AcesSemanticInvariantEntryModel",
+      "title": "Invariant Entry Schema",
+      "type": "string"
+    },
+    "invariants": {
+      "items": {
+        "$ref": "#/$defs/AcesSemanticInvariantEntryModel"
+      },
+      "title": "Invariants",
+      "type": "array"
+    },
+    "keyword": {
+      "const": "x-aces-invariants",
+      "title": "Keyword",
+      "type": "string"
+    },
+    "profile_id": {
+      "const": "aces-semantic-invariants-v1",
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "profile_reference_schema": {
+      "const": "#/$defs/AcesSemanticInvariantProfileReferenceModel",
+      "title": "Profile Reference Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "aces-semantic-invariants/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "uri": {
+      "const": "https://aces.dev/schemas/semantic-invariants/v1",
+      "title": "Uri",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "profile_id",
+    "uri",
+    "keyword",
+    "invariant_entry_schema",
+    "profile_reference_schema",
+    "invariants"
+  ],
+  "title": "AcesSemanticInvariantProfileModel",
+  "type": "object"
+}

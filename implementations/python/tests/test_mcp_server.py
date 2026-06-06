@@ -1,12 +1,13 @@
 """Tests for the ACES SDL MCP server tools.
 
-Verifies that all 14 tools produce correct results across
-reference, authoring, and inspection categories.
+Verifies that the registered tool surface produces correct results across
+reference, authoring, language-service, inspection, and operation categories.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 
 import pytest
 from aces_mcp.server import create_server
@@ -36,6 +37,11 @@ def _call(server, tool: str, args: dict | None = None) -> str:
 async def _async_call(server, tool: str, args: dict) -> str:
     result = await server.call_tool(tool, args)
     return _text(result)
+
+
+def _json_call(server, tool: str, args: dict | None = None) -> dict:
+    """Synchronously call a JSON-returning MCP tool."""
+    return json.loads(_call(server, tool, args or {}))
 
 
 # ---------------------------------------------------------------------------
@@ -223,12 +229,10 @@ class TestReferenceTools:
 
     def test_sdl_validation_reference(self, server):
         text = _call(server, "sdl_validation_reference")
-        # Both pieces of evidence: the documented "22 named passes" count
-        # AND a section heading specific to the validation reference. An OR
-        # disjunction over the generic "validation" substring would be
-        # vacuously satisfied by any response.
-        assert "22" in text
+        # Require both the section heading and a specific pass name so the
+        # response cannot satisfy the test with a generic "validation" string.
         assert "Validation Passes" in text
+        assert "verify_runtime_identity_authorities" in text
 
 
 # ---------------------------------------------------------------------------
@@ -349,6 +353,130 @@ variables:
             {"sdl_content": "name: x", "parameters_json": "{bad"},
         )
         assert "Invalid JSON" in text
+
+
+# ---------------------------------------------------------------------------
+# Language-service tools
+# ---------------------------------------------------------------------------
+
+
+class TestLanguageServiceTools:
+    def test_completions_suggest_reference_targets(self, server):
+        payload = _json_call(
+            server,
+            "sdl_completions",
+            {"sdl_content": FULL_SDL, "cursor_path": "/nodes/web/features"},
+        )
+
+        labels = {item["label"] for item in payload["items"]}
+        assert "app" in labels
+        assert any(item["detail"] == "features.app" for item in payload["items"])
+
+    def test_references_return_definition_locations(self, server):
+        payload = _json_call(
+            server,
+            "sdl_references",
+            {"sdl_content": FULL_SDL, "symbol": "app"},
+        )
+
+        assert payload["status"] == "ok"
+        assert any(item["qualified_name"] == "features.app" for item in payload["definitions"])
+        assert any(item["path"] == "/nodes/web/features/app" for item in payload["occurrences"])
+
+    def test_format_returns_normalized_yaml(self, server):
+        payload = _json_call(
+            server,
+            "sdl_format",
+            {"sdl_content": "Name: x\nNodes:\n  sw: {Type: Switch}\n"},
+        )
+
+        assert payload["status"] == "formatted"
+        assert payload["content"].startswith("name: x\nnodes:\n")
+
+    def test_diagnostics_return_structured_errors(self, server):
+        payload = _json_call(
+            server,
+            "sdl_diagnostics",
+            {"sdl_content": INVALID_SDL},
+        )
+
+        assert payload["status"] == "invalid"
+        assert payload["diagnostics"][0]["code"] == "sdl.semantic"
+        assert "ghost-feature" in payload["diagnostics"][0]["message"]
+
+    def test_apply_edit_sets_value_and_revalidates(self, server):
+        payload = _json_call(
+            server,
+            "sdl_apply_edit",
+            {
+                "sdl_content": MINIMAL_SDL,
+                "operation": "set",
+                "pointer": "/description",
+                "value_json": '"Edited"',
+            },
+        )
+
+        assert payload["status"] == "edited"
+        assert "description: Edited" in payload["content"]
+        assert payload["diagnostics"] == []
+
+    def test_apply_edit_deletes_value_and_revalidates(self, server):
+        payload = _json_call(
+            server,
+            "sdl_apply_edit",
+            {
+                "sdl_content": MINIMAL_SDL,
+                "operation": "delete",
+                "pointer": "/infrastructure/web/links",
+            },
+        )
+
+        assert payload["status"] == "edited"
+        assert "links" not in payload["content"]
+        assert payload["diagnostics"] == []
+
+    def test_apply_edit_appends_value_and_revalidates(self, server):
+        sdl = """\
+name: append-edit
+nodes:
+  net: {type: Switch}
+  net2: {type: Switch}
+  web: {type: VM, os: linux, resources: {ram: 2 GiB, cpu: 1}}
+infrastructure:
+  net: {count: 1, properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}}
+  net2: {count: 1, properties: {cidr: 10.0.1.0/24, gateway: 10.0.1.1}}
+  web: {count: 1, links: [net]}
+"""
+        payload = _json_call(
+            server,
+            "sdl_apply_edit",
+            {
+                "sdl_content": sdl,
+                "operation": "append",
+                "pointer": "/infrastructure/web/links",
+                "value_json": '"net2"',
+            },
+        )
+
+        assert payload["status"] == "edited"
+        assert "- net2" in payload["content"]
+        assert payload["diagnostics"] == []
+
+    def test_apply_edit_rejects_invalid_value_json(self, server):
+        payload = _json_call(
+            server,
+            "sdl_apply_edit",
+            {
+                "sdl_content": MINIMAL_SDL,
+                "operation": "set",
+                "pointer": "/description",
+                "value_json": "{bad",
+            },
+        )
+
+        assert payload["status"] == "invalid"
+        assert payload["diagnostics"][0]["code"] == "sdl.edit"
+        assert "Invalid JSON" in payload["diagnostics"][0]["message"]
 
 
 # ---------------------------------------------------------------------------
@@ -478,6 +606,104 @@ infrastructure:
 
 
 # ---------------------------------------------------------------------------
+# Operation and claim-assessment tools
+# ---------------------------------------------------------------------------
+
+
+class TestOperationTools:
+    def test_tool_surface_self_describes_boundaries(self, server):
+        payload = _json_call(server, "aces_tool_surface")
+        assert payload["surface"] == "aces-sdl"
+        assert "aces_agent_guidance" in payload["recommended_workflow"]
+        assert "sdl_claims_assessment" in payload["recommended_workflow"]
+        assert "sdl_completions" in payload["tool_families"]["language_service"]
+        assert "aces_agent_guidance" in payload["tool_families"]["guidance"]
+        assert any("does not expose participant cyber actions" in item for item in payload["boundaries"])
+
+    def test_agent_guidance_returns_machine_usable_profile(self, server):
+        payload = _json_call(server, "aces_agent_guidance")
+        assert payload["status"] == "ok"
+        assert payload["profile"] == "aces-agent-guidance"
+        assert "AUT-811" in payload["requirement_refs"]
+        assert set(payload["guidance"]) == {
+            "scope_boundaries",
+            "invariants",
+            "review_priorities",
+            "safe_operating_expectations",
+        }
+        assert payload["guidance"]["scope_boundaries"][0]["id"]
+        assert payload["guidance"]["scope_boundaries"][0]["source_refs"]
+
+    def test_agent_guidance_filters_by_audience(self, server):
+        payload = _json_call(server, "aces_agent_guidance", {"audience": "operator"})
+        assert payload["status"] == "ok"
+        for entries in payload["guidance"].values():
+            assert entries
+            assert all("operator" in entry["audience"] for entry in entries)
+
+    def test_parse_returns_machine_readable_summary(self, server):
+        payload = _json_call(server, "sdl_parse", {"sdl_content": MINIMAL_SDL})
+        assert payload["status"] == "parsed"
+        assert payload["semantic_validation"] == "skipped"
+        assert payload["scenario"]["name"] == "test-scenario"
+        assert payload["scenario"]["populated_sections"]["nodes"] == 2
+
+    def test_parse_can_run_semantic_validation(self, server):
+        payload = _json_call(
+            server,
+            "sdl_parse",
+            {"sdl_content": INVALID_SDL, "semantic_validation": True},
+        )
+        assert payload["status"] == "invalid"
+        assert payload["stage"] == "semantic_validation"
+        assert "ghost-feature" in payload["diagnostics"][0]["message"]
+
+    def test_compile_summarizes_runtime_model(self, server):
+        payload = _json_call(server, "sdl_compile", {"sdl_content": FULL_SDL})
+        assert payload["status"] == "compiled"
+        assert payload["runtime_model"]["domains"]["provisioning"]["nodes"] == 2
+        assert payload["runtime_model"]["domains"]["evaluation"]["objectives"] == 1
+        assert payload["runtime_model"]["domains"]["participant"]["action_contracts"] == 0
+
+    def test_plan_dry_run_reports_reference_manifest_and_operations(self, server):
+        payload = _json_call(server, "sdl_plan", {"sdl_content": FULL_SDL})
+        assert payload["status"] == "planned"
+        assert payload["manifest"]["backend"] == "stub"
+        assert payload["plan"]["is_valid"] is True
+        assert payload["plan"]["operations"]["provisioning"]["create"] > 0
+        assert "dry run" in payload["claim_boundary"]
+
+    def test_design_assessment_warns_about_action_names_without_contracts(self, server):
+        payload = _json_call(server, "sdl_design_assessment", {"sdl_content": FULL_SDL})
+        messages = [note["message"] for note in payload["design_notes"]]
+        assert any("action names without action contracts" in message for message in messages)
+        assert payload["plan"]["is_valid"] is True
+
+    def test_claims_assessment_limits_participant_skill_claims(self, server):
+        payload = _json_call(server, "sdl_claims_assessment", {"sdl_content": FULL_SDL})
+        unsupported_ids = {claim["id"] for claim in payload["claims"]["unsupported_without_more_evidence"]}
+        conditional_ids = {claim["id"] for claim in payload["claims"]["conditional"]}
+        assert "participant-skill" in unsupported_ids
+        assert "participant-behavior" in conditional_ids
+        assert "semantic-validation" in {claim["id"] for claim in payload["claims"]["supported"]}
+
+    def test_reference_manifests_expose_processor_and_backend(self, server):
+        payload = _json_call(server, "aces_reference_manifests")
+        assert payload["status"] == "ok"
+        assert payload["processor"]["identity"]["name"] == "aces-reference-processor"
+        assert payload["backend"]["identity"]["name"] == "stub"
+
+    def test_compile_bad_parameters_report_parameter_stage(self, server):
+        payload = _json_call(
+            server,
+            "sdl_compile",
+            {"sdl_content": MINIMAL_SDL, "parameters_json": "[1, 2]"},
+        )
+        assert payload["status"] == "invalid"
+        assert payload["stage"] == "parameter_parsing"
+
+
+# ---------------------------------------------------------------------------
 # Example scenario validation
 # ---------------------------------------------------------------------------
 
@@ -528,24 +754,40 @@ class TestExampleScenarios:
 class TestServerConstruction:
     def test_server_has_all_tools(self):
         server = create_server()
-        tool_names = [t.name for t in server._tool_manager._tools.values()]
+        payload = _json_call(server, "aces_tool_surface")
+        tool_names = {"aces_tool_surface"}
+        for family in payload["tool_families"].values():
+            tool_names.update(family)
         expected = {
+            "aces_tool_surface",
+            "aces_agent_guidance",
+            "aces_reference_manifests",
             "sdl_overview",
             "sdl_section_reference",
             "sdl_get_example",
             "sdl_parser_reference",
             "sdl_validation_reference",
+            "sdl_parse",
             "sdl_validate",
             "sdl_validate_section",
             "sdl_scaffold",
             "sdl_instantiate",
+            "sdl_completions",
+            "sdl_references",
+            "sdl_format",
+            "sdl_diagnostics",
+            "sdl_apply_edit",
             "sdl_summarize",
             "sdl_list_elements",
             "sdl_get_element",
             "sdl_check_references",
             "sdl_diagram",
+            "sdl_compile",
+            "sdl_plan",
+            "sdl_design_assessment",
+            "sdl_claims_assessment",
         }
-        assert set(tool_names) == expected
+        assert tool_names == expected
 
     def test_server_has_instructions(self):
         server = create_server()

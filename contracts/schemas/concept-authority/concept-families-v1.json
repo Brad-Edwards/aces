@@ -198,6 +198,8 @@
       "type": "string"
     }
   },
+  "$id": "https://aces.dev/schemas/concept-families-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
     "families": {

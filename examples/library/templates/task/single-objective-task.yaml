@@ -1,0 +1,44 @@
+template: aces-library-template
+version: 1
+id: single-objective-task
+surface: task
+requirement_refs: [AUT-806]
+source_refs:
+  - docs/explain/sdl/sections.md
+  - docs/explain/sdl/limitations.md
+summary: Task template using current SDL objectives and conditions as the materialized task boundary.
+body:
+  name: library-task-template
+  description: Task-oriented SDL wrapper using a single objective and success condition.
+  nodes:
+    target:
+      type: VM
+      resources: {ram: 1 GiB, cpu: 1}
+      services:
+        - {port: 22, name: ssh}
+  conditions:
+    task-complete:
+      command: test -f /tmp/aces-task-complete
+      interval: 15
+  entities:
+    participant:
+      role: blue
+  agents:
+    task-agent:
+      entity: participant
+  objectives:
+    complete-service-check-task:
+      agent: task-agent
+      targets: [nodes.target.services.ssh]
+      success:
+        conditions: [task-complete]
+  workflows:
+    task-flow:
+      start: perform-task
+      steps:
+        perform-task:
+          type: objective
+          objective: complete-service-check-task
+          on-success: done
+        done:
+          type: end

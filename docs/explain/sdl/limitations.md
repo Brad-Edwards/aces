@@ -1,47 +1,133 @@
-# SDL Limitations & Future Work
+# SDL Limitations
 
 ## Known Expressiveness Gaps
 
-These are things the SDL cannot currently express, identified through stress-testing against 19 real-world scenarios from 8 platforms.
+These are known current gaps identified through repository tests, examples,
+and stress testing against 19 scenarios from 8 platforms. The list is evidence
+from the current corpus, not a completeness proof.
 
-### Deployment-Layer Gaps (by design — belong in backend implementations)
+### Deployment Authoring Boundaries (by design)
 
-These are intentionally excluded from the specification layer:
+The SDL distinguishes authored deployment intent from observed runtime facts
+using the semantic boundary in
+[ADR-033](../../decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state.md).
+Backends own deployment-specific mechanics such as Docker Compose profiles,
+decisions to publish host ports, image build execution, and engine realization.
+The node `runtime` surface can record observed runtime facts for analysis and
+parity, including mounts, Linux capabilities, namespace modes, entrypoints,
+image commands, extra hosts, DNS options, security flags, resource limits,
+health status/logs, filesystem inventory, the local identity
+database (`/etc/passwd` users, `/etc/group` groups, and sudo/sudoers grants),
+software component identity below package-manager row granularity
+([ADR-034](../../decisions/adrs/adr-034-runtime-software-component-inventory.md)),
+container network realization (per-network aliases and DNS names,
+hostname/domain identity, endpoint MAC/IP/prefix/gateway, backend network and
+endpoint identifiers with stability classification, host-published port
+bindings, and observable backend driver/IPAM detail —
+[ADR-025](../../decisions/adrs/adr-025-container-network-realization-surface.md)),
+and the application HTTP route/API/UI surface (route paths and methods, owning
+service, auth/session requirements, typed request inputs, responses,
+template/static associations, route-specific vulnerability placement, exposed
+fixture secrets or diagnostic disclosures, and redirect/error behavior —
+[ADR-026](../../decisions/adrs/adr-026-application-http-surface-inventory.md)),
+database logical state (databases, schemas, tables, database-local roles,
+grants, listeners, settings, and database-access bindings -
+[ADR-029](../../decisions/adrs/adr-029-database-logical-state-runtime-surface.md)),
+DNS service logical state (authoritative zones, RRsets, typed common RDATA,
+resolver policy, forwarders, DNSSEC posture, dynamic-update posture, logging
+posture, settings, and evidence refs -
+[ADR-039](../../decisions/adrs/adr-039-dns-service-runtime-inventory.md)),
+network-sensor monitoring posture (passive or inline NSM/IDS sensor identity,
+capture mode/interfaces, monitored network refs, and evidence refs -
+[ADR-042](../../decisions/adrs/adr-042-network-sensor-runtime-monitoring.md)),
+network detection-engine runtime inventory (app-layer parsers, rule sources,
+network zoning/address-set variables, output streams, control channels, and
+evidence refs -
+[ADR-044](../../decisions/adrs/adr-044-network-detection-engine-runtime-inventory.md)),
+application-internal RBAC stores (principals with credential classification,
+roles, resource-scoped permission grants, role mappings, and tenants -
+[ADR-046](../../decisions/adrs/adr-046-app-authorization-runtime-inventory.md)),
+recurring scheduled-job cadence and run-state (closed interval/cron/calendar
+recurrence plus observed last/next run and last result, cadence-only -
+[ADR-047](../../decisions/adrs/adr-047-scheduled-job-runtime-inventory.md)),
+non-relational datastore logical state (search/wide-column/key-value clusters,
+partitions with shard/replica or replication geometry, key-value persistence
+posture, transport security, and settings, with an executable required-profile
+guard and internal RBAC delegated via `authorization_ref` -
+[ADR-048](../../decisions/adrs/adr-048-datastore-service-runtime-inventory.md)),
+security-platform application runtime inventory (threat-intel/SOAR/analyzer/
+case-management/dashboard kinds, bounded parsed content-object manifests,
+releasability markings, upstream bindings, connectors, and settings, with an
+executable required-profile guard -
+[ADR-049](../../decisions/adrs/adr-049-platform-application-runtime-inventory.md)),
+forwarding / intel-sync agent runtime inventory (sources, transforms, ship
+targets, buffer policy, reload channels, and settings for log forwarders and
+intel-sync co-processes, with an executable required-profile guard and
+ship-target node/service refs that resolve at scenario scope -
+[ADR-050](../../decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md)),
+container-spawn orchestration-authority runtime inventory (engine, scope, spawn
+templates, lifecycle policy, realized children, and a privilege class that
+references a same-node control-interface shell, with an executable
+required-profile guard -
+[ADR-051](../../decisions/adrs/adr-051-orchestration-authority-runtime-inventory.md)),
+SIEM/security-monitoring manager runtime inventory (manager identity, listeners,
+components, enrolled agents, agent groups, detection-content sets, parsed
+detection definitions, and settings -
+[ADR-040](../../decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory.md),
+[ADR-045](../../decisions/adrs/adr-045-security-monitoring-detection-definition-semantics.md)),
+mail-service logical state (listeners, domains, mailbox stores, mailboxes,
+aliases, routing rules, queues, and settings -
+[ADR-038](../../decisions/adrs/adr-038-runtime-mail-service-logical-state.md)),
+file-sharing and resource-access state (shares, principals, access rules, and
+access observations -
+[ADR-037](../../decisions/adrs/adr-037-runtime-file-service-and-filesystem-presence-semantics.md)),
+generic observed service listeners (bind endpoint, transport, address family,
+scope, owner, and readiness evidence -
+[ADR-043](../../decisions/adrs/adr-043-runtime-service-listener-surface.md)),
+and directory/domain/realm/IdP/IAM/federation identity-authority state
+(authority namespaces, services, subjects, policies, and typed relationships -
+[ADR-032](../../decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md)).
+Inter-element access detail is carried by typed relationship subtypes on the
+top-level edge - database, mail, forwarding, service-integration, and
+reverse-proxy-upstream access
+([ADR-052](../../decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md)) -
+rather than as untyped relationship properties.
+Deliberate non-gaps are recorded as confirmation-folds rather than new surfaces:
+a standalone Suricata IDS node is the existing `network_detection_engines` +
+`network_sensors` surfaces, a relational database is `database_services`,
+OS-local users/groups/sudo are `runtime.local_identity`, and transport/TLS
+exposure is `service_listeners` + `applications` + `runtime.network`. The
+SCN-010 expressivity gap analysis
+([scn010-expressivity-gap-analysis](../../aces/inventory/scn010-expressivity-gap-analysis.md))
+records each fold field-for-field, so the observable-parity gate is shown to cut
+against over-building as well as under-coverage.
+Container image build
+provenance is a separate source-artifact expressivity surface tracked by issue
+#364 and [ADR-023](../../decisions/adrs/adr-023-container-image-build-provenance-surface.md);
+recording either surface in SDL does not make Docker, Compose, or any specific
+container engine the normative deployment model.
 
-- **Port mappings** (host:container exposure) — deployment detail
-- **Volume mounts** — deployment detail
-- **Linux capabilities** (NET_RAW, SYS_ADMIN) — deployment detail
-- **Security options** (seccomp, cgroup) — deployment detail
-- **Docker Compose profiles** — deployment-specific grouping
-- **Image build contexts** (Dockerfile paths) — deployment detail
-- **Container entrypoints/commands** — deployment detail
-- **Extra hosts** (/etc/hosts overrides) — deployment detail
-- **Ulimits** (nofile, memlock) — deployment detail
+### Specification-Layer Gaps
 
-These remain outside the language itself and are addressed by backend
-implementations rather than by the SDL surface.
-
-### Specification-Layer Gaps (future SDL work)
-
-These are things that *should* be expressible in the SDL but aren't yet:
+These are current SDL expressiveness gaps:
 
 | Gap | Description | Candidate Precedent |
 |-----|-------------|-------------------|
-| **Hosted registry operations / ecosystem distribution** | OCI-backed module resolution, lockfiles, trust policy, and publishable image-layout packaging now exist, but operating a shared registry service, signer distribution, and ecosystem-wide discovery policy are still future work | Terraform registry, OCI artifact delivery |
-| **Manual compensation APIs / advanced rollback patterns** | SDL workflows now support explicit automatic compensation targets, reverse-completion rollback ordering, and cancel/timeout/failure compensation observation, but not manual rollback triggers, nested compensation-of-compensation, or richer exception-style recovery surfaces | CACAO v2.0 workflow types, saga compensation patterns |
+| **Hosted registry operations / ecosystem distribution** | OCI-backed module resolution, lockfiles, trust policy, and publishable image-layout packaging exist, but this repository does not operate a shared registry service, signer distribution, or ecosystem-wide discovery policy | Terraform registry, OCI artifact delivery |
+| **Manual compensation APIs / advanced rollback patterns** | SDL workflows support explicit automatic compensation targets, reverse-completion rollback ordering, and cancel/timeout/failure compensation observation, but not manual rollback triggers, nested compensation-of-compensation, or richer exception-style recovery surfaces | CACAO v2.0 workflow types, saga compensation patterns |
 | **Temporal operators** | STIX-style FOLLOWEDBY/WITHIN for time-ordered event assertions | STIX Patterning Language |
-| **Full time and clock model** | The SDL currently exposes timelines, timeouts, and budget-like controls, but it does not yet provide a full authoring surface for time domains, clock authority, pacing/dilation policy, synchronization mode, or explicit ordering/deadline semantics across different realizations | [Time and simulation research set](../../../research/primary/literature/time-and-simulation/README.md), ROS 2 Clock and Time, FMI, ns-3 realtime, DEVS/time-management literature |
-| **Full solver-backed verification** | Global proof-style verification that attack paths are reachable and defenses are consistent is still future work; today the repo adopts lightweight semantic modeling, invariants, typed contracts, and selective property/state-machine methods instead | VSDL SMT solver, CRACK Datalog |
-| **Full participant behavior surface** | The current `agents` section still under-expresses richer role-neutral behavior concerns such as tool/affordance declarations, control-context assets, decision-surface exposure policies, episode structure, and benchmark-oriented participant assets | CybORG, OpenRange, Open Trajectory Gym |
-| **Scenario-native observability and authored evidence requirements** | The ecosystem now treats in-world observability systems and authored “capture these data from these sources” requirements as first-class concerns, but the current SDL syntax does not yet surface the full required authoring model | OpenRange, OCSF-informed telemetry models |
+| **Full time and clock model** | The SDL currently exposes timelines, timeouts, and budget-like controls, but it does not provide a full authoring surface for time domains, clock authority, pacing/dilation policy, synchronization mode, or explicit ordering/deadline semantics across different realizations | Time-and-simulation primary references under `research/`, ROS 2 Clock and Time, FMI, ns-3 realtime, DEVS/time-management literature |
+| **Full solver-backed verification** | Global proof-style verification that attack paths are reachable and defenses are consistent is not implemented; the repository uses lightweight semantic modeling, invariants, typed contracts, and selective property/state-machine methods | VSDL SMT solver, CRACK Datalog |
+| **Full participant behavior surface** | The current `agents` section under-expresses richer role-neutral behavior concerns such as tool/affordance declarations, control-context assets, decision-surface exposure policies, episode structure, and benchmark-oriented participant assets | CybORG, OpenRange, Open Trajectory Gym |
+| **Scenario-native observability and authored evidence requirements** | The ecosystem treats in-world observability systems and authored "capture these data from these sources" requirements as first-class concerns. SDL now covers node-scoped network-sensor monitoring posture and network detection-engine inventory, but the broader authored evidence-requirements model remains incomplete | OpenRange, OCSF-informed telemetry models |
 | **User behavior profiles** | Normal user activity patterns (browsing, email, file access schedules) | CybORG Green agents |
 | **Multi-tenancy** | Multiple independent exercises sharing infrastructure | Locked Shields team-per-subnet model |
 
 ### Ecosystem-Layer Gaps (outside pure SDL syntax)
 
-Some of the newest requirement work is intentionally broader than SDL syntax
-alone. These concerns are now first-class ecosystem requirements, but they are
-not yet fully materialized as published contracts and implementations:
+Some current requirement work is intentionally broader than SDL syntax alone.
+These concerns are first-class ecosystem requirements, but they are
+not fully materialized as published contracts and implementations:
 
 - participant-implementation manifests for agents, policies, scripts, and
   human-control proxies
@@ -59,16 +145,18 @@ Variables (`${var_name}`) are stored as literal strings in the model. They are *
 
 - The validator can confirm that a full-value `${var}` reference has a matching variable definition
 - Cross-reference rules that depend on a placeholder's final concrete value are deferred to the repo-owned instantiation phase
-- Selected leaf enum-backed property fields are parameterizable, but discriminant/schema-shaping enums and user-defined mapping keys are still concrete
+- Selected leaf enum-backed property fields are parameterizable, but discriminant/schema-shaping enums and user-defined mapping keys remain concrete
 - Type checking of substituted runtime values happens during repo-owned instantiation, before compilation/runtime planning
 
 This is a deliberate design choice (matching CACAO's model), but substitution
-semantics are now owned by the repo rather than left to backend-specific
+semantics are owned by the repo rather than left to backend-specific
 interpretation.
 
 ## What Has Been Validated
 
-The SDL has been tested against 19 scenarios from 8 platforms:
+The SDL has been tested against 19 scenarios from 8 platforms. This establishes
+coverage over the listed examples; it does not establish general domain
+completeness or usability for all cyber-range designs.
 
 | # | Scenario | Source | Nodes | Services | Vulns |
 |---|----------|--------|-------|----------|-------|
@@ -93,5 +181,18 @@ The SDL has been tested against 19 scenarios from 8 platforms:
 | 19 | Locked Shields IT/OT | NATO exercise | 7 | 13 | 0 |
 
 Additionally, a 28-node enterprise lab topology (4 networks, 17 health checks, 17 vulnerabilities) has been described in SDL and validated.
+
+The directory/domain identity surface was added after the older Enterprise AD
+and AD trust/federation corpus entries. It is now covered by targeted parser
+and model tests plus the hospital ransomware scenario's AD/ADFS
+`runtime.identity_authorities` example. That coverage validates ACES's neutral
+reference and redaction mechanics; it is not a claim that ACES mirrors full
+AD DS, LDAP, Kerberos, SCIM, SAML, OIDC, cloud IAM, or BloodHound schemas.
+
+The DNS runtime surface is covered by targeted parser, model, validator, and
+module-composition tests. That coverage validates ACES's neutral RRset,
+resolver-policy, evidence-ref, and reference mechanics; it is not a claim that
+ACES mirrors full BIND, CoreDNS, PowerDNS, NSD, Knot, provider API, passive
+DNS, or telemetry schemas.
 
 Property-based fuzz testing (Hypothesis) has run 1,050+ random inputs through the parser with zero unhandled crashes.

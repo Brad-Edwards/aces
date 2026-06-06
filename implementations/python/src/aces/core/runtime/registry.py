@@ -1,5 +1,5 @@
 from aces._compat import reexport as _reexport
 
-_reexport(globals(), "aces_processor.registry")
+_reexport(globals(), "aces_runtime.registry")
 
 del _reexport

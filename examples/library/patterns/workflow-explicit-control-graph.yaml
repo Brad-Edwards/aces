@@ -1,0 +1,23 @@
+pattern: aces-library-pattern
+version: 1
+id: workflow-explicit-control-graph
+surface: workflow
+requirement_refs: [AUT-806]
+source_refs:
+  - examples/scenarios/satcom-release-poisoning.sdl.yaml
+  - docs/explain/sdl/sections.md
+summary: Model workflow behavior as explicit objective, branch, join, retry, call, and end nodes.
+intent: >
+  Keep workflow templates reusable by relying on named control-flow steps and
+  existing workflow semantic validation instead of prose-only sequencing.
+use_when:
+  - Translating an exercise procedure into workflow steps.
+  - Making branch convergence or terminal states reviewable.
+authoring_steps:
+  - Define the objective names the workflow will execute.
+  - Choose the smallest workflow step type that represents each transition.
+  - Name joins explicitly when using parallel branches.
+  - End every reachable path in an end step or a validated terminal transition.
+validation:
+  - command: parse_sdl_file
+    expected: workflow graph is acyclic and all reachable step references resolve.

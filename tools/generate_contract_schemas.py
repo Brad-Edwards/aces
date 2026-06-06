@@ -9,6 +9,8 @@ from pathlib import Path
 
 
 def _schema_output_path(schemas_dir: Path, name: str) -> Path:
+    if name == "aces-semantic-invariants-v1":
+        return schemas_dir / "profiles" / f"{name}.json"
     if name in {
         "sdl-authoring-input-v1",
         "instantiated-scenario-v1",
@@ -19,6 +21,10 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "backend-manifest" / f"{name}.json"
     if name.startswith("processor-manifest-v"):
         return schemas_dir / "processor-manifest" / f"{name}.json"
+    if name.startswith("participant-implementation-manifest-v"):
+        return schemas_dir / "participant-implementation-manifest" / f"{name}.json"
+    if name.startswith("participant-implementation-provenance-v"):
+        return schemas_dir / "participant-implementation-provenance" / f"{name}.json"
     if name == "concept-families-v1":
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "reference-models-v1":
@@ -29,6 +35,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("backend-profile-v"):
         return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("experiment-"):
+        return schemas_dir / "experiment-core" / f"{name}.json"
     if name.endswith("-plan-v1"):
         return schemas_dir / "plans" / f"{name}.json"
     if name == "runtime-snapshot-v1":

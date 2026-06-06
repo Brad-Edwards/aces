@@ -50,6 +50,7 @@ packages = [
     "packages/aces_conformance",
     "packages/aces_mcp",
     "packages/aces_processor",
+    "packages/aces_runtime",
     "packages/aces_sdl",
 ]
 
@@ -72,6 +73,7 @@ source = [
     "aces_conformance",
     "aces_mcp",
     "aces_processor",
+    "aces_runtime",
     "aces_sdl",
 ]
 
@@ -108,7 +110,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S108", "E402", "SIM105", "F841"]
 "packages/aces_cli/**" = ["B008"]      # typer requires function calls in defaults
-"packages/aces_processor/control_plane_api.py" = ["B008"]  # fastapi Depends() pattern
-"packages/aces_processor/control_plane.py" = ["S112"]      # intentional exception suppression
+"packages/aces_runtime/control_plane_api.py" = ["B008"]  # fastapi Depends() pattern
+"packages/aces_runtime/control_plane.py" = ["S112"]      # intentional exception suppression
 "packages/aces_sdl/module_registry.py" = ["S310", "S202"]  # explicit OCI URL fetch and tarball extract
 "packages/aces_sdl/validator.py" = ["F821"]                # string-quoted forward references in closures

@@ -151,6 +151,7 @@ def test_complex_examples_cover_new_sdl_surfaces():
     assert any(acct.password_strength == "${release_engineer_password_strength}" for acct in satcom.accounts.values())
 
     hospital = load_scenario(EXAMPLES_DIR / "hospital-ransomware-surgery-day.sdl.yaml")
+    assert hospital.nodes["ad01"].runtime.identity_authorities
     assert any(
         target.startswith("nodes.") for objective in hospital.objectives.values() for target in objective.targets
     )

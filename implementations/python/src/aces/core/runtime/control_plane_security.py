@@ -1,5 +1,5 @@
 from aces._compat import reexport as _reexport
 
-_reexport(globals(), "aces_processor.control_plane_security")
+_reexport(globals(), "aces_runtime.control_plane_security")
 
 del _reexport

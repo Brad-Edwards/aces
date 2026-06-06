@@ -7,16 +7,13 @@
 # the file instead. (See ADR-015.)
 files:
   - implementations/python/packages/aces_processor/models.py
-  - implementations/python/packages/aces_processor/manager.py
   - implementations/python/packages/aces_processor/compiler.py
   - implementations/python/packages/aces_sdl/validator.py
   - implementations/python/packages/aces_contracts/contracts.py
   - implementations/python/packages/aces_processor/planner.py
-  - implementations/python/packages/aces_processor/control_plane.py
   - implementations/python/packages/aces_conformance/conformance.py
   - implementations/python/packages/aces_backend_stubs/stubs.py
   - implementations/python/packages/aces_sdl/module_registry.py
-  - implementations/python/packages/aces_processor/control_plane_api.py
   - implementations/python/packages/aces_mcp/tools/authoring.py
   - implementations/python/packages/aces_mcp/tools/inspection.py
   - implementations/python/packages/aces_sdl/orchestration.py

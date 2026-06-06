@@ -6,7 +6,17 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_backend_protocols.capabilities import BackendManifest, OrchestratorCapabilities, ProvisionerCapabilities
+from aces_backend_protocols.capabilities import (
+    PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
+    PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
+    PARTICIPANT_RUNTIME_ROLE_SCOPE,
+    BackendManifest,
+    OrchestratorCapabilities,
+    ParticipantRuntimeCapabilities,
+    ProvisionerCapabilities,
+    participant_runtime_capability_contract_gaps,
+)
 from aces_backend_protocols.manifest import backend_manifest_payload
 from aces_backend_stubs.stubs import create_stub_manifest
 from aces_contracts.contracts import BackendManifestV2Model
@@ -83,6 +93,139 @@ def test_backend_manifest_v2_roundtrip_from_stub_manifest():
     ]
     assert model.realization_support[0].support_mode.value == "constrained"
     assert model.model_dump(mode="json") == payload
+
+
+def test_backend_manifest_v2_declares_participant_capability_dimensions():
+    """API-405: participant-runtime backends must declare the participant
+    roles, behavior features, and interaction features they support."""
+
+    payload = backend_manifest_payload(create_stub_manifest())
+    participant_runtime = payload["capabilities"]["participant_runtime"]
+
+    assert participant_runtime["supported_participant_roles"] == ["blue", "green", "red", "white"]
+    assert participant_runtime["supported_behavior_features"] == [
+        "action_contracts",
+        "attribution_support",
+        "behavior_history",
+        "effects",
+        "failure_classes",
+        "observation_boundaries",
+        "outcome_interpretation",
+        "preconditions",
+        "state_transitions",
+        "temporal_contracts",
+    ]
+    assert participant_runtime["supported_interaction_features"] == [
+        "contention",
+        "coordination",
+        "interference",
+        "shared_state_change",
+    ]
+
+    model = BackendManifestV2Model.model_validate(payload)
+    assert model.capabilities.participant_runtime is not None
+    assert model.capabilities.participant_runtime.supported_participant_roles == [
+        "blue",
+        "green",
+        "red",
+        "white",
+    ]
+
+
+def test_backend_manifest_without_participant_runtime_declares_no_participant_runtime_surface():
+    payload = backend_manifest_payload(create_stub_manifest(with_participant_runtime=False))
+
+    assert payload["capabilities"]["participant_runtime"] is None
+    model = BackendManifestV2Model.model_validate(payload)
+    assert model.capabilities.participant_runtime is None
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    [
+        "supported_participant_roles",
+        "supported_behavior_features",
+        "supported_interaction_features",
+    ],
+)
+def test_backend_manifest_v2_rejects_participant_runtime_without_api_405_declarations(field_name: str):
+    payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
+    payload["capabilities"]["participant_runtime"].pop(field_name, None)
+
+    with pytest.raises(ValidationError, match=field_name):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_backend_manifest_v2_rejects_duplicate_api_405_declarations():
+    payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
+    payload["capabilities"]["participant_runtime"]["supported_participant_roles"].append("blue")
+
+    with pytest.raises(ValidationError, match="duplicate"):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_participant_runtime_capabilities_validate_api_405_vocabularies():
+    capability = ParticipantRuntimeCapabilities(
+        name="participant-runtime",
+        supported_participant_roles=frozenset({"blue", "x-acme:observer"}),
+        supported_behavior_features=frozenset({"action_contracts", "x-acme:custom-feature"}),
+        supported_interaction_features=frozenset({"coordination", "x-acme:custom-interaction"}),
+    )
+
+    assert "x-acme:observer" in capability.supported_participant_roles
+    assert "x-acme:custom-feature" in capability.supported_behavior_features
+    assert "x-acme:custom-interaction" in capability.supported_interaction_features
+
+    with pytest.raises(ValueError, match="participant-runtime-behavior-features"):
+        ParticipantRuntimeCapabilities(
+            name="participant-runtime",
+            supported_participant_roles=frozenset({"blue"}),
+            supported_behavior_features=frozenset({"custom_feature"}),
+            supported_interaction_features=frozenset({"coordination"}),
+        )
+
+
+def test_participant_runtime_capability_evidence_covers_standard_vocabularies():
+    catalog_path = FIXTURES_ROOT / "concept-authority" / "controlled-vocabularies-v1" / "valid" / "reference.json"
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    terms_by_scope = {
+        scope: set(definition["terms"])
+        for definition in catalog["vocabularies"].values()
+        for scope in definition.get("governed_scopes", ())
+        if scope.startswith("capabilities.participant_runtime.")
+    }
+
+    assert (
+        set(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE])
+        == terms_by_scope[PARTICIPANT_RUNTIME_ROLE_SCOPE]
+    )
+    assert (
+        set(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE])
+        == terms_by_scope[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE]
+    )
+    assert (
+        set(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE])
+        == terms_by_scope[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
+    )
+
+
+def test_participant_runtime_capability_claims_require_published_contract_evidence():
+    manifest = create_stub_manifest()
+    weak_manifest = BackendManifest(
+        identity=manifest.identity,
+        supported_contract_versions=manifest.supported_contract_versions
+        - frozenset({"participant-behavior-history-event-stream-v1"}),
+        compatibility=manifest.compatibility,
+        realization_support=manifest.realization_support,
+        concept_bindings=manifest.concept_bindings,
+        constraints=manifest.constraints,
+        capabilities=manifest.capabilities,
+    )
+
+    assert participant_runtime_capability_contract_gaps(manifest) == ()
+    gaps = participant_runtime_capability_contract_gaps(weak_manifest)
+    assert any("supported_behavior_features.action_contracts" in gap for gap in gaps)
+    assert any("supported_interaction_features.coordination" in gap for gap in gaps)
 
 
 def test_backend_manifest_v2_requires_manifest_sections():
@@ -317,6 +460,6 @@ def test_backend_manifest_v2_rejects_duplicate_binding_scopes():
 def test_backend_manifest_v2_concept_bindings_roundtrip():
     payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
     model = BackendManifestV2Model.model_validate(payload)
-    assert len(model.concept_bindings) == 6
+    assert len(model.concept_bindings) == 9
     assert model.concept_bindings[0].scope == "capabilities.provisioner.supported_node_types"
     assert model.concept_bindings[0].family == "assets"

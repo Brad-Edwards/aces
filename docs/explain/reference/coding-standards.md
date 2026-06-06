@@ -115,7 +115,7 @@ Required artifacts:
 propagation, where multiple references must remain internally consistent across
 validation and compiled/runtime forms.
 
-Current FM2 examples in the repository now include:
+Current FM2 examples in the repository include:
 
 - normalized objective-window references that stay aligned across validator and
   compiler
@@ -207,7 +207,7 @@ For any semantic or stateful change:
 6. Keep validator, compiler, planner, and runtime language aligned when they
    describe the same behavior.
 7. For composition-adjacent work, preserve canonical identity semantics so
-   future namespace/module expansion can layer on without redefining FM2 rules.
+   namespace/module expansion does not redefine FM2 rules.
 
 For `FM2` and `FM3` changes, plans and reviews must explicitly name the
 invariants and the required artifacts.
@@ -243,11 +243,24 @@ Reviewers should ask:
 The goal is precision, not ceremony. Use the smallest adequate formalization
 that makes the semantic behavior clear and testable.
 
-## Near-Term Rollout
+## Static Analysis Alignment
 
-This policy establishes a path, not a requirement to formalize everything now.
+The Python implementation targets Python 3.11+ and uses Ruff with pyupgrade as
+the local style contract. SonarCloud is advisory but must not contradict that
+contract. Rules that require Python 2 compatibility idioms, Python 3.12-only
+generic syntax, or mechanical docstrings on every private helper are disabled in
+`sonar-project.properties` rather than encoded as source churn.
 
-The first follow-on candidate domains are:
+Compatibility modules that intentionally re-export symbols, such as
+`aces_processor.models`, may also receive a narrow Sonar unused-import exclusion.
+Those exclusions must stay file-specific and must not hide unused imports in
+owning implementation modules.
+
+## Current Scope
+
+This policy does not require formalizing every change.
+
+The policy applies most often to these semantic domains:
 
 1. workflow control semantics
 2. objective window and reachability semantics

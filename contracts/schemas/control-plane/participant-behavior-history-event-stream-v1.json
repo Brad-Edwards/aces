@@ -1,0 +1,1149 @@
+{
+  "$defs": {
+    "OutcomeInterpretationSourceLayer": {
+      "description": "Semantic layers that may feed a SEM-215 interpretation rule.",
+      "enum": [
+        "participant_action_outcome",
+        "participant_episode_status",
+        "objective_result",
+        "workflow_result",
+        "evaluation_result",
+        "evidence_claim",
+        "reward_signal",
+        "benchmark_milestone",
+        "subtask",
+        "gold_step",
+        "human_assistance",
+        "scaffold_variant",
+        "cost_resource_telemetry",
+        "privacy_redaction_result"
+      ],
+      "title": "OutcomeInterpretationSourceLayer",
+      "type": "string"
+    },
+    "OutcomeInterpretationTargetLayer": {
+      "description": "Semantic layers a SEM-215 interpretation rule may explicitly produce.",
+      "enum": [
+        "scenario_meaning",
+        "objective_result",
+        "workflow_result",
+        "evaluation_result",
+        "evidence_claim",
+        "reward_signal",
+        "benchmark_progress",
+        "privacy_redaction_result"
+      ],
+      "title": "OutcomeInterpretationTargetLayer",
+      "type": "string"
+    },
+    "ParticipantActionEffectResultModel": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "diagnostics": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "effect_class": {
+          "$ref": "#/$defs/ParticipantEffectClass"
+        },
+        "effect_id": {
+          "minLength": 1,
+          "title": "Effect Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "target_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Target Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "effect_id",
+        "effect_class",
+        "description"
+      ],
+      "title": "ParticipantActionEffectResultModel",
+      "type": "object"
+    },
+    "ParticipantActionPreconditionResultModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action_contract_address": {
+          "minLength": 1,
+          "title": "Action Contract Address",
+          "type": "string"
+        },
+        "diagnostics": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "observation_point": {
+          "minLength": 1,
+          "title": "Observation Point",
+          "type": "string"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "precondition_class": {
+          "$ref": "#/$defs/ParticipantPreconditionClass"
+        },
+        "precondition_id": {
+          "minLength": 1,
+          "title": "Precondition Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "satisfied",
+            "unsatisfied",
+            "unresolved"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "support_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Support Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "precondition_id",
+        "precondition_class",
+        "status",
+        "participant_address",
+        "episode_id",
+        "action_contract_address",
+        "observation_point"
+      ],
+      "title": "ParticipantActionPreconditionResultModel",
+      "type": "object"
+    },
+    "ParticipantActionResultModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action_contract_address": {
+          "minLength": 1,
+          "title": "Action Contract Address",
+          "type": "string"
+        },
+        "action_instance_id": {
+          "minLength": 1,
+          "title": "Action Instance Id",
+          "type": "string"
+        },
+        "diagnostics": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "effects": {
+          "items": {
+            "$ref": "#/$defs/ParticipantActionEffectResultModel"
+          },
+          "title": "Effects",
+          "type": "array"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "failure_class": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantFailureClass"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "observation_point": {
+          "minLength": 1,
+          "title": "Observation Point",
+          "type": "string"
+        },
+        "observations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Observations",
+          "type": "array"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "preconditions": {
+          "items": {
+            "$ref": "#/$defs/ParticipantActionPreconditionResultModel"
+          },
+          "title": "Preconditions",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "withheld",
+            "succeeded",
+            "failed",
+            "partial_success",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "participant_address",
+        "episode_id",
+        "action_instance_id",
+        "action_contract_address",
+        "observation_point"
+      ],
+      "title": "ParticipantActionResultModel",
+      "type": "object"
+    },
+    "ParticipantAttributionCandidateKind": {
+      "description": "Portable candidate classes for participant attribution edges.",
+      "enum": [
+        "action",
+        "state_change",
+        "detection",
+        "alert",
+        "observation",
+        "evidence",
+        "downstream_outcome",
+        "evaluation_result",
+        "objective_result"
+      ],
+      "title": "ParticipantAttributionCandidateKind",
+      "type": "string"
+    },
+    "ParticipantAttributionCandidateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_kind": {
+          "$ref": "#/$defs/ParticipantAttributionCandidateKind"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "ref": {
+          "minLength": 1,
+          "title": "Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_kind",
+        "ref",
+        "description"
+      ],
+      "title": "ParticipantAttributionCandidateModel",
+      "type": "object"
+    },
+    "ParticipantAttributionEdgeModel": {
+      "additionalProperties": false,
+      "properties": {
+        "cause_candidate": {
+          "$ref": "#/$defs/ParticipantAttributionCandidateModel"
+        },
+        "confidence": {
+          "minLength": 1,
+          "title": "Confidence",
+          "type": "string"
+        },
+        "edge_id": {
+          "minLength": 1,
+          "title": "Edge Id",
+          "type": "string"
+        },
+        "effect_candidate": {
+          "$ref": "#/$defs/ParticipantAttributionCandidateModel"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "evidence_basis": {
+          "$ref": "#/$defs/ParticipantAttributionEvidenceBasisModel"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "interpretation_rule_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interpretation Rule Ref"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "observation_point": {
+          "minLength": 1,
+          "title": "Observation Point",
+          "type": "string"
+        },
+        "ordering_basis": {
+          "$ref": "#/$defs/ParticipantAttributionOrderingBasisModel"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "strength": {
+          "minLength": 1,
+          "title": "Strength",
+          "type": "string"
+        },
+        "support_class": {
+          "$ref": "#/$defs/ParticipantAttributionSupportClass"
+        }
+      },
+      "required": [
+        "edge_id",
+        "participant_address",
+        "episode_id",
+        "observation_point",
+        "cause_candidate",
+        "effect_candidate",
+        "ordering_basis",
+        "evidence_basis",
+        "support_class",
+        "confidence",
+        "strength",
+        "limitations",
+        "evidence_refs"
+      ],
+      "title": "ParticipantAttributionEdgeModel",
+      "type": "object"
+    },
+    "ParticipantAttributionEvidenceBasisModel": {
+      "additionalProperties": false,
+      "properties": {
+        "capture_apparatus": {
+          "minLength": 1,
+          "title": "Capture Apparatus",
+          "type": "string"
+        },
+        "granularity": {
+          "minLength": 1,
+          "title": "Granularity",
+          "type": "string"
+        },
+        "loss_model": {
+          "minLength": 1,
+          "title": "Loss Model",
+          "type": "string"
+        },
+        "observer_effects": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Observer Effects",
+          "type": "array"
+        },
+        "redaction_policy": {
+          "minLength": 1,
+          "title": "Redaction Policy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "capture_apparatus",
+        "granularity",
+        "loss_model",
+        "redaction_policy",
+        "observer_effects"
+      ],
+      "title": "ParticipantAttributionEvidenceBasisModel",
+      "type": "object"
+    },
+    "ParticipantAttributionOrderingBasisKind": {
+      "description": "Explicit ordering bases for attribution edges.",
+      "enum": [
+        "happened_before",
+        "workflow_order",
+        "episode_order",
+        "backend_event_order",
+        "replay_order",
+        "ablation_order",
+        "structural_causal",
+        "timestamp_adjacency"
+      ],
+      "title": "ParticipantAttributionOrderingBasisKind",
+      "type": "string"
+    },
+    "ParticipantAttributionOrderingBasisModel": {
+      "additionalProperties": false,
+      "properties": {
+        "basis_kind": {
+          "$ref": "#/$defs/ParticipantAttributionOrderingBasisKind"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "ordered_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Ordered Event Refs",
+          "type": "array"
+        },
+        "relation_ref": {
+          "minLength": 1,
+          "title": "Relation Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "basis_kind",
+        "relation_ref",
+        "description"
+      ],
+      "title": "ParticipantAttributionOrderingBasisModel",
+      "type": "object"
+    },
+    "ParticipantAttributionSupportClass": {
+      "description": "Evidence-strength classes for participant attribution.",
+      "enum": [
+        "declared_association",
+        "temporal_support",
+        "contract_support",
+        "observation_support",
+        "counterfactual_support",
+        "intervention_support",
+        "replay_support",
+        "ablation_support",
+        "structural_causal_support"
+      ],
+      "title": "ParticipantAttributionSupportClass",
+      "type": "string"
+    },
+    "ParticipantBehaviorHistoryEventType": {
+      "description": "Portable history event kinds for participant behavior semantics.",
+      "enum": [
+        "action_attempted",
+        "state_transition_recorded",
+        "observation_emitted"
+      ],
+      "title": "ParticipantBehaviorHistoryEventType",
+      "type": "string"
+    },
+    "ParticipantEffectClass": {
+      "description": "SEM-211 effect classes for participant action results.",
+      "enum": [
+        "intended_effect",
+        "side_effect",
+        "observation_effect",
+        "visibility_effect",
+        "detection_effect",
+        "evidence_effect",
+        "no_effect",
+        "unknown_effect"
+      ],
+      "title": "ParticipantEffectClass",
+      "type": "string"
+    },
+    "ParticipantFailureClass": {
+      "description": "SEM-211 portable failure classes for participant action attempts.",
+      "enum": [
+        "precondition_unsatisfied",
+        "unsupported_action",
+        "target_unavailable",
+        "authority_denied",
+        "resource_exhausted",
+        "timeout",
+        "interrupted",
+        "contention_lost",
+        "partial_success",
+        "unsafe_withheld",
+        "backend_error",
+        "unknown"
+      ],
+      "title": "ParticipantFailureClass",
+      "type": "string"
+    },
+    "ParticipantInteractionClass": {
+      "description": "SEM-209 interaction classes for multi-participant behavior.",
+      "enum": [
+        "coordination",
+        "contention",
+        "interference",
+        "shared_state_change"
+      ],
+      "title": "ParticipantInteractionClass",
+      "type": "string"
+    },
+    "ParticipantObservationDetailsModel": {
+      "additionalProperties": false,
+      "properties": {
+        "disclosed_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Disclosed Refs",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "visible_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Visible Refs",
+          "type": "array"
+        }
+      },
+      "title": "ParticipantObservationDetailsModel",
+      "type": "object"
+    },
+    "ParticipantObservationStatus": {
+      "description": "Terminal interpretation of a participant observation event.",
+      "enum": [
+        "terminal",
+        "orphaned_action"
+      ],
+      "title": "ParticipantObservationStatus",
+      "type": "string"
+    },
+    "ParticipantOutcomeInterpretationRecordModel": {
+      "additionalProperties": false,
+      "properties": {
+        "diagnostics": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "interpretation_id": {
+          "minLength": 1,
+          "title": "Interpretation Id",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "observation_point": {
+          "minLength": 1,
+          "title": "Observation Point",
+          "type": "string"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "rule_address": {
+          "minLength": 1,
+          "title": "Rule Address",
+          "type": "string"
+        },
+        "source_bindings": {
+          "items": {
+            "$ref": "#/$defs/ParticipantOutcomeSourceRecordModel"
+          },
+          "minItems": 1,
+          "title": "Source Bindings",
+          "type": "array"
+        },
+        "target_bindings": {
+          "items": {
+            "$ref": "#/$defs/ParticipantOutcomeTargetRecordModel"
+          },
+          "minItems": 1,
+          "title": "Target Bindings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "interpretation_id",
+        "rule_address",
+        "participant_address",
+        "episode_id",
+        "observation_point",
+        "source_bindings",
+        "target_bindings",
+        "evidence_refs",
+        "limitations"
+      ],
+      "title": "ParticipantOutcomeInterpretationRecordModel",
+      "type": "object"
+    },
+    "ParticipantOutcomeSourceRecordModel": {
+      "additionalProperties": false,
+      "properties": {
+        "diagnostics": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "observed_value": {
+          "minLength": 1,
+          "title": "Observed Value",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "ref": {
+          "minLength": 1,
+          "title": "Ref",
+          "type": "string"
+        },
+        "source_id": {
+          "minLength": 1,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_layer": {
+          "$ref": "#/$defs/OutcomeInterpretationSourceLayer"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_layer",
+        "ref",
+        "observed_value"
+      ],
+      "title": "ParticipantOutcomeSourceRecordModel",
+      "type": "object"
+    },
+    "ParticipantOutcomeTargetRecordModel": {
+      "additionalProperties": false,
+      "properties": {
+        "diagnostics": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "governance_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Governance Ref"
+        },
+        "interpreted_value": {
+          "minLength": 1,
+          "title": "Interpreted Value",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "ref": {
+          "minLength": 1,
+          "title": "Ref",
+          "type": "string"
+        },
+        "target_id": {
+          "minLength": 1,
+          "title": "Target Id",
+          "type": "string"
+        },
+        "target_layer": {
+          "$ref": "#/$defs/OutcomeInterpretationTargetLayer"
+        }
+      },
+      "required": [
+        "target_id",
+        "target_layer",
+        "ref",
+        "interpreted_value",
+        "evidence_refs",
+        "limitations"
+      ],
+      "title": "ParticipantOutcomeTargetRecordModel",
+      "type": "object"
+    },
+    "ParticipantPreconditionClass": {
+      "description": "SEM-211 precondition classes for participant action applicability.",
+      "enum": [
+        "authority",
+        "capability",
+        "target",
+        "knowledge",
+        "resource",
+        "temporal",
+        "interaction",
+        "realization"
+      ],
+      "title": "ParticipantPreconditionClass",
+      "type": "string"
+    },
+    "ParticipantTemporalEventPoint": {
+      "description": "Named participant event points used by temporal contracts.",
+      "enum": [
+        "submit",
+        "start",
+        "end",
+        "observed",
+        "effective",
+        "deadline",
+        "window_open",
+        "window_close",
+        "reset",
+        "replay"
+      ],
+      "title": "ParticipantTemporalEventPoint",
+      "type": "string"
+    },
+    "ParticipantTemporalRuntimeContextModel": {
+      "additionalProperties": false,
+      "properties": {
+        "backend_disclosure_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Backend Disclosure Refs",
+          "type": "array"
+        },
+        "clock_authority": {
+          "minLength": 1,
+          "title": "Clock Authority",
+          "type": "string"
+        },
+        "event_points": {
+          "items": {
+            "$ref": "#/$defs/ParticipantTemporalEventPoint"
+          },
+          "minItems": 1,
+          "title": "Event Points",
+          "type": "array"
+        },
+        "observation_point": {
+          "minLength": 1,
+          "title": "Observation Point",
+          "type": "string"
+        },
+        "replay_boundary": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Replay Boundary"
+        },
+        "reset_boundary": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reset Boundary"
+        },
+        "temporal_contract_id": {
+          "minLength": 1,
+          "title": "Temporal Contract Id",
+          "type": "string"
+        },
+        "time_domain": {
+          "$ref": "#/$defs/ParticipantTimeDomain"
+        }
+      },
+      "required": [
+        "temporal_contract_id",
+        "time_domain",
+        "clock_authority",
+        "event_points",
+        "observation_point"
+      ],
+      "title": "ParticipantTemporalRuntimeContextModel",
+      "type": "object"
+    },
+    "ParticipantTimeDomain": {
+      "description": "Distinct SEM-213 time domains.",
+      "enum": [
+        "episode_step",
+        "scenario_time",
+        "simulation_time",
+        "backend_time",
+        "wall_clock_time"
+      ],
+      "title": "ParticipantTimeDomain",
+      "type": "string"
+    }
+  },
+  "$id": "https://aces.dev/schemas/participant-behavior-history-event-stream-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "items": {
+    "additionalProperties": false,
+    "properties": {
+      "action_contract_address": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Action Contract Address"
+      },
+      "action_instance_id": {
+        "minLength": 1,
+        "title": "Action Instance Id",
+        "type": "string"
+      },
+      "action_result": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ParticipantActionResultModel"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "actor_provenance": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Actor Provenance"
+      },
+      "attribution_edges": {
+        "items": {
+          "$ref": "#/$defs/ParticipantAttributionEdgeModel"
+        },
+        "title": "Attribution Edges",
+        "type": "array"
+      },
+      "details": {
+        "$ref": "#/$defs/ParticipantObservationDetailsModel"
+      },
+      "episode_id": {
+        "minLength": 1,
+        "title": "Episode Id",
+        "type": "string"
+      },
+      "event_type": {
+        "$ref": "#/$defs/ParticipantBehaviorHistoryEventType"
+      },
+      "interaction_class": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ParticipantInteractionClass"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "interaction_ref": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Interaction Ref"
+      },
+      "joint_action_set_id": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Joint Action Set Id"
+      },
+      "observation_boundary_address": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Observation Boundary Address"
+      },
+      "observation_status": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ParticipantObservationStatus"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "outcome_interpretations": {
+        "items": {
+          "$ref": "#/$defs/ParticipantOutcomeInterpretationRecordModel"
+        },
+        "title": "Outcome Interpretations",
+        "type": "array"
+      },
+      "participant_address": {
+        "minLength": 1,
+        "title": "Participant Address",
+        "type": "string"
+      },
+      "post_state_digest": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Post State Digest"
+      },
+      "realized_order": {
+        "anyOf": [
+          {
+            "minimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Realized Order"
+      },
+      "shared_state_refs": {
+        "items": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "title": "Shared State Refs",
+        "type": "array"
+      },
+      "state_transition_kind": {
+        "anyOf": [
+          {
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "State Transition Kind"
+      },
+      "temporal_contexts": {
+        "items": {
+          "$ref": "#/$defs/ParticipantTemporalRuntimeContextModel"
+        },
+        "title": "Temporal Contexts",
+        "type": "array"
+      },
+      "timestamp": {
+        "minLength": 1,
+        "title": "Timestamp",
+        "type": "string"
+      }
+    },
+    "required": [
+      "event_type",
+      "timestamp",
+      "participant_address",
+      "episode_id",
+      "action_instance_id"
+    ],
+    "title": "ParticipantBehaviorHistoryEventModel",
+    "type": "object"
+  },
+  "title": "ParticipantBehaviorHistoryEventStream",
+  "type": "array"
+}

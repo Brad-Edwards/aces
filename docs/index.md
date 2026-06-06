@@ -1,15 +1,16 @@
 # ACES SDL Documentation
 
-**A backend-agnostic cyber range scenario description language and runtime ecosystem.**
+**A backend-agnostic cyber range scenario description language and reference
+implementation.**
 
-`aces-sdl` is a fully working SDL stack for describing cyber range scenarios
-and experiments, validating their meaning, compiling runtime models, and
-defining portable backend contracts.
+`aces-sdl` currently provides a Python implementation for describing cyber
+range scenarios and experiments, validating their authored meaning, compiling
+runtime models, and checking published backend contracts.
 
-It is designed to stand on its own as a coherent system. It also serves as a
-working, contrastive ecosystem for RFC and standards work by the Red Queen
-Working Group, so language, semantics, runtime, and assurance questions can be
-tested in a live codebase rather than only in abstract design discussions.
+The repository is not a managed cyber range and does not ship production
+backend implementations. It is a working codebase for testing language,
+semantic, runtime, and assurance claims against source code, schemas, examples,
+and tests.
 
 ## Quick Start
 
@@ -36,7 +37,26 @@ for advisory in scenario.advisories:
 - **Semantic validation** and formal semantic artifacts
 - **Processor layer** with compiler, planner, and control-plane contracts
 - **Schemas** and backend conformance fixtures
-- **CLI commands**, docs, examples, and tests
+- **CLI commands**, docs, examples, reusable authoring templates, patterns, and tests
+
+## Reader Map
+
+- New users can start with the getting-started guide to choose the smallest
+  current entrypoint for their task and rigor level.
+- Scenario authors usually start with the SDL guide, sections reference,
+  parser behavior, validation rules, and limitations.
+- Backend implementers usually start with runtime architecture, contract
+  schemas, backend conformance, and the canonical reference map.
+- Researchers usually start with lineage, design precedents, formal
+  specifications, glossary, and limitations.
+- Contributors should read the documentation style guide before changing prose.
+
+```{toctree}
+:maxdepth: 2
+:caption: Getting Started
+
+explain/getting-started
+```
 
 ```{toctree}
 :maxdepth: 2
@@ -45,8 +65,12 @@ for advisory in scenario.advisories:
 explain/sdl/index
 explain/sdl/sections
 explain/sdl/parser
+explain/sdl/language-service
+explain/sdl/agent-guidance
 explain/sdl/validation
 explain/sdl/precedents
+explain/sdl/lineage
+explain/sdl/scenario-delivery-drift-audit
 explain/sdl/complex-scenarios
 explain/sdl/limitations
 explain/sdl/testing
@@ -57,6 +81,13 @@ explain/sdl/testing
 :caption: Runtime
 
 explain/sdl/runtime-architecture
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: Asset Inventory
+
+aces/inventory/index
 ```
 
 ```{toctree}
@@ -81,6 +112,32 @@ decisions/adrs/adr-013-participant-episode-lifecycle-boundaries
 decisions/adrs/adr-014-nox-as-canonical-verification-graph
 decisions/adrs/adr-015-sdl-processor-layering-and-source-file-size-cap
 decisions/adrs/adr-016-semantic-layer-scope-and-coverage-model
+decisions/adrs/adr-017-conversation-surface-hardening
+decisions/adrs/adr-018-classification-based-assurance-policy
+decisions/adrs/adr-019-normative-authority-boundary-manifest
+decisions/adrs/adr-020-declarative-participant-framing-boundaries
+decisions/adrs/adr-021-falsification-first-claim-evidence-gate
+decisions/adrs/adr-022-participant-behavior-and-interaction-semantics
+decisions/adrs/adr-023-container-image-build-provenance-surface
+decisions/adrs/adr-024-local-identity-inventory-surface
+decisions/adrs/adr-025-container-network-realization-surface
+decisions/adrs/adr-026-application-http-surface-inventory
+decisions/adrs/adr-027-container-init-reaper-runtime-surface
+decisions/adrs/adr-028-container-seccomp-security-options-surface
+decisions/adrs/adr-029-database-logical-state-runtime-surface
+decisions/adrs/adr-030-process-scoped-linux-capability-policy
+decisions/adrs/adr-031-ssh-server-configuration-surface
+decisions/adrs/adr-032-directory-domain-identity-runtime-surface
+decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state
+decisions/adrs/adr-034-runtime-software-component-inventory
+decisions/adrs/adr-035-service-manager-unit-state-runtime-surface
+decisions/adrs/adr-036-sdl-processor-runtime-module-boundaries
+decisions/adrs/adr-037-runtime-file-service-and-filesystem-presence-semantics
+decisions/adrs/adr-038-runtime-mail-service-logical-state
+decisions/adrs/adr-039-dns-service-runtime-inventory
+decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory
+decisions/adrs/adr-055-experiment-core-contract-boundary
+decisions/sem-213-temporal-participant-preflight
 ```
 
 ```{toctree}
@@ -89,6 +146,9 @@ decisions/adrs/adr-016-semantic-layer-scope-and-coverage-model
 
 explain/reference/README
 explain/reference/coding-standards
+explain/reference/canonical-reference-map
+explain/reference/documentation-style-guide
+explain/reference/glossary
 explain/reference/shared-concept-model
 explain/reference/shared-semantic-integrity
 explain/reference/backend-conformance
@@ -107,11 +167,22 @@ specs/formal
 
 ```{toctree}
 :maxdepth: 2
+:caption: Project Notes
+
+lessons/README
+migration/README
+research/experiment-core/index
+```
+
+```{toctree}
+:maxdepth: 2
 :caption: API Reference
 
 api/sdl
 api/sdl-semantics
 api/processor
 api/processor-semantics
+api/contracts
+api/runtime
 api/cli
 ```

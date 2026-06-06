@@ -47,6 +47,372 @@ features:
         }
         assert model.feature_bindings["provision.feature.vm1.nginx"].node_name == "vm1"
         assert model.feature_bindings["provision.feature.vm2.nginx"].node_name == "vm2"
+        assert not model.diagnostics
+
+    def test_node_runtime_preserves_runtime_configuration_metadata(self):
+        model = compile_runtime_model(
+            _scenario("""
+name: shuffle-runtime-inventory
+nodes:
+  shuffle-backend:
+    type: vm
+    os: linux
+    runtime:
+      mounts:
+        - target: /shuffle-database
+          source: aptl_shuffle_data
+          source-sensitivity: plain
+          source-kind: volume
+          filesystem-type: ext4
+          read-only: false
+          options: [rw, nosuid]
+          options-sensitivity: plain
+          propagation: rprivate
+          stability: volume-backed
+          backend-generated: true
+      filesystem-inventory:
+        - path: /app/app.py
+          entry-type: file
+          owner-user: root
+          owner-group: root
+          uid: "0"
+          gid: "0"
+          mode: "0644"
+          size: "4096"
+          content-digest: 4f8c2d
+          digest-algorithm: sha256
+          source-path: src/webapp/app.py
+          provenance: python-package
+          stability: stable
+          sensitivity: plain
+        - path: /var/log/gunicorn/access.log
+          entry-type: file
+          mode: "0600"
+          stability: log
+          sensitivity: operator-secret
+      local-control-interfaces:
+        - control-interface-id: docker-sock
+          path: /run/docker.sock
+          kind: unix-socket
+          protocol: docker
+          bind-source-sensitivity: operator-secret
+          access: read-write
+      processes:
+        - name: shufflebackend
+          command: ./shufflebackend
+          user: root
+          working-directory: /app
+        - name: supervisord
+          pid: 1
+          command: supervisord -n
+          role: supervisor
+        - name: gunicorn
+          parent-pid: 1
+          command: [gunicorn, app:app]
+          role: worker
+      environment:
+        - name: TECHVAULT_ADMIN_PASSWORD
+          value-classification: redacted
+          provenance: operator
+        - name: SCENARIO_FIXTURE_TOKEN
+          value: fixture-token
+          value-classification: secret-fixture
+          provenance: compose
+      linux-capabilities:
+        required: [CAP_NET_ADMIN]
+        effective: CAP_NET_ADMIN
+      operational-policy:
+        restart: unless-stopped
+        resource-limits:
+          memory: 512 MiB
+          cpu: 0.5
+          pids: 128
+      container:
+        entrypoint: [/entrypoint.sh]
+        command: [gunicorn, app:app]
+        log-driver: json-file
+        log-options:
+          max-size: 10m
+          max-file: "3"
+        namespaces:
+          cgroup: private
+          ipc: private
+          pid: private
+          userns: host
+          uts: private
+        privileged: false
+        read-only-rootfs: false
+        publish-all-ports: false
+        autoremove: false
+        shm-size: 64 MiB
+        masked-paths: [/proc/acpi, /proc/kcore]
+        read-only-paths: /proc/sys
+        cgroup-parent: /docker
+        runtime-name: runc
+        devices:
+          - host-path: /dev/null
+            container-path: /dev/null
+            permissions: rwm
+        device-cgroup-rules: c 1:3 rwm
+        seccomp-profile: unconfined
+        security-opt: [seccomp:unconfined, no-new-privileges]
+        extra-hosts:
+          - hostname: wazuh-manager
+            address: 172.20.0.10
+        dns: [8.8.8.8]
+        dns-options: ndots:0
+        dns-search: [techvault.local]
+        group-add: [adm, "101"]
+      health:
+        status: healthy
+        failing-streak: "0"
+        log:
+          - start: "2026-05-20T12:00:00Z"
+            end: "2026-05-20T12:00:01Z"
+            exit-code: "0"
+            output: ok
+      packages:
+        - manager: apk
+          name: musl
+          version: 1.2.4-r2
+      software-components:
+        - component-id: shuffle-backend-app
+          name: shuffle-backend
+          version: 1.2.3
+          component-type: application
+          provenance: scanner
+          ecosystem: go
+          purl: "pkg:golang/github.com/frikky/shuffle@1.2.3"
+          package-manager: apk
+          package-name: shuffle-backend
+          package-version: 1.2.3-r0
+          manifest-path: /app/go.mod
+          installed-paths: [/app/shufflebackend, /app/go.mod]
+          hashes:
+            - algorithm: sha256
+              value: abc123
+      dependency-manifests:
+        - ecosystem: go
+          path: /app/go.mod
+          format: go-module
+      package-vulnerabilities:
+        - id: CVE-2026-12345
+          package-name: musl
+          installed-version: 1.2.4-r2
+          fixed-version: 1.2.5-r0
+          severity: high
+          scanner: trivy
+          image-digest: sha256:abc123
+          scan-time: "2026-05-20T12:00:00Z"
+""")
+        )
+
+        runtime = model.node_deployments["provision.node.shuffle-backend"].spec["node"]["runtime"]
+        assert runtime["mounts"][0]["target"] == "/shuffle-database"
+        assert runtime["mounts"][0]["source_sensitivity"] == "plain"
+        assert runtime["mounts"][0]["filesystem_type"] == "ext4"
+        assert runtime["mounts"][0]["options_sensitivity"] == "plain"
+        assert runtime["mounts"][0]["propagation"] == "rprivate"
+        assert runtime["mounts"][0]["stability"] == "volume_backed"
+        assert runtime["mounts"][0]["backend_generated"] is True
+        assert runtime["filesystem_inventory"][0]["path"] == "/app/app.py"
+        assert runtime["filesystem_inventory"][0]["entry_type"] == "file"
+        assert runtime["filesystem_inventory"][0]["uid"] == 0
+        assert runtime["filesystem_inventory"][0]["gid"] == 0
+        assert runtime["filesystem_inventory"][0]["mode"] == "0644"
+        assert runtime["filesystem_inventory"][0]["size"] == 4096
+        assert runtime["filesystem_inventory"][0]["digest_algorithm"] == "sha256"
+        assert runtime["filesystem_inventory"][0]["content_digest"] == "4f8c2d"
+        assert runtime["filesystem_inventory"][0]["source_path"] == "src/webapp/app.py"
+        assert runtime["filesystem_inventory"][1]["stability"] == "log"
+        assert runtime["filesystem_inventory"][1]["sensitivity"] == "operator_secret"
+        assert runtime["local_control_interfaces"][0]["path"] == "/run/docker.sock"
+        assert runtime["local_control_interfaces"][0]["bind_source_sensitivity"] == "operator_secret"
+        assert runtime["processes"][0]["command"] == ["./shufflebackend"]
+        assert runtime["processes"][1]["name"] == "supervisord"
+        assert runtime["processes"][2]["parent_pid"] == 1
+        assert runtime["environment"][0]["name"] == "TECHVAULT_ADMIN_PASSWORD"
+        assert runtime["environment"][0]["value_classification"] == "redacted"
+        assert runtime["environment"][1]["value_classification"] == "secret_fixture"
+        assert runtime["linux_capabilities"]["required"] == ["CAP_NET_ADMIN"]
+        assert runtime["linux_capabilities"]["effective"] == ["CAP_NET_ADMIN"]
+        assert runtime["operational_policy"]["restart"] == "unless_stopped"
+        assert runtime["operational_policy"]["resource_limits"]["memory"] == 512 * 1048576
+        assert runtime["operational_policy"]["resource_limits"]["cpu"] == 0.5
+        assert runtime["operational_policy"]["resource_limits"]["pids"] == 128
+        assert runtime["container"]["entrypoint"] == ["/entrypoint.sh"]
+        assert runtime["container"]["command"] == ["gunicorn", "app:app"]
+        assert runtime["container"]["log_driver"] == "json-file"
+        assert runtime["container"]["log_options"] == {"max-size": "10m", "max-file": "3"}
+        assert runtime["container"]["namespaces"]["userns"] == "host"
+        assert runtime["container"]["shm_size"] == 64 * 1048576
+        assert runtime["container"]["masked_paths"] == ["/proc/acpi", "/proc/kcore"]
+        assert runtime["container"]["read_only_paths"] == ["/proc/sys"]
+        assert runtime["container"]["devices"][0]["container_path"] == "/dev/null"
+        assert runtime["container"]["device_cgroup_rules"] == ["c 1:3 rwm"]
+        assert runtime["container"]["seccomp_profile"] == "unconfined"
+        assert runtime["container"]["security_opt"] == ["seccomp:unconfined", "no-new-privileges"]
+        assert runtime["container"]["extra_hosts"][0]["hostname"] == "wazuh-manager"
+        assert runtime["container"]["dns_options"] == ["ndots:0"]
+        assert runtime["container"]["group_add"] == ["adm", "101"]
+        assert runtime["health"]["status"] == "healthy"
+        assert runtime["health"]["failing_streak"] == 0
+        assert runtime["health"]["log"][0]["exit_code"] == 0
+        assert runtime["packages"][0]["manager"] == "apk"
+        assert runtime["packages"][0]["name"] == "musl"
+        assert runtime["packages"][0]["version"] == "1.2.4-r2"
+        assert runtime["software_components"][0]["component_id"] == "shuffle-backend-app"
+        assert runtime["software_components"][0]["name"] == "shuffle-backend"
+        assert runtime["software_components"][0]["component_type"] == "application"
+        assert runtime["software_components"][0]["provenance"] == "scanner"
+        assert runtime["software_components"][0]["package_manager"] == "apk"
+        assert runtime["software_components"][0]["manifest_path"] == "/app/go.mod"
+        assert runtime["software_components"][0]["installed_paths"] == ["/app/shufflebackend", "/app/go.mod"]
+        assert runtime["software_components"][0]["hashes"][0]["algorithm"] == "sha256"
+        assert runtime["dependency_manifests"][0]["ecosystem"] == "go"
+        assert runtime["dependency_manifests"][0]["path"] == "/app/go.mod"
+        assert runtime["dependency_manifests"][0]["format"] == "go-module"
+        assert runtime["package_vulnerabilities"][0]["id"] == "CVE-2026-12345"
+        assert runtime["package_vulnerabilities"][0]["package_name"] == "musl"
+        assert runtime["package_vulnerabilities"][0]["installed_version"] == "1.2.4-r2"
+        assert runtime["package_vulnerabilities"][0]["fixed_version"] == "1.2.5-r0"
+        assert runtime["package_vulnerabilities"][0]["severity"] == "high"
+        assert runtime["package_vulnerabilities"][0]["scanner"] == "trivy"
+        assert runtime["package_vulnerabilities"][0]["image_digest"] == "sha256:abc123"
+        assert runtime["package_vulnerabilities"][0]["scan_time"] == "2026-05-20T12:00:00Z"
+        assert not model.diagnostics
+
+    def test_node_runtime_preserves_identity_authority_inventory(self):
+        model = compile_runtime_model(
+            _scenario("""
+name: directory-identity-runtime
+nodes:
+  ad:
+    type: vm
+    os: windows
+    resources: {ram: 2 gib, cpu: 2}
+    services:
+      - {port: 389, name: ldap}
+      - {port: 88, name: kerberos}
+    runtime:
+      identity-authorities:
+        - identity-authority-id: techvault-domain
+          kind: domain
+          namespace: techvault.local
+          domain-name: TECHVAULT
+          realm: TECHVAULT.LOCAL
+          services:
+            - {service-id: ldap-endpoint, service: ldap, protocol: ldap, port: 389}
+          subjects:
+            - {subject-id: alice, kind: user, name: alice}
+            - {subject-id: domain-admins, kind: group, name: Domain Admins}
+          relationships:
+            - relationship-id: alice-admin
+              relationship-type: member-of
+              source-ref: alice
+              target-ref: domain-admins
+""")
+        )
+
+        runtime = model.node_deployments["provision.node.ad"].spec["node"]["runtime"]
+        authority = runtime["identity_authorities"][0]
+        assert authority["identity_authority_id"] == "techvault-domain"
+        assert authority["kind"] == "domain"
+        assert authority["services"][0]["protocol"] == "ldap"
+        assert authority["subjects"][1]["kind"] == "group"
+        assert authority["relationships"][0]["relationship_type"] == "member_of"
+        assert not model.diagnostics
+
+    def test_node_runtime_preserves_file_service_inventory(self):
+        model = compile_runtime_model(
+            _scenario("""
+name: fileshare-runtime
+nodes:
+  fileshare:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    services:
+      - {port: 445, name: smb}
+    runtime:
+      local-identity:
+        users:
+          - {username: svc-fileshare, uid: 1100, primary_gid: 1100, primary_group: svc-fileshare}
+      file-services:
+        - file-service-id: fileshare-smb
+          service: smb
+          protocol: smb
+          backend: samba-4.x
+          shares:
+            - share-id: public
+              name: public
+              kind: disk
+              backing-path: /srv/samba/public
+              read-only: true
+              browseable: true
+              guest-ok: true
+            - share-id: deploy-keys
+              name: deploy_keys
+              kind: disk
+              backing-path: /srv/samba/deploy_keys
+              read-only: false
+              browseable: false
+              guest-ok: false
+              valid-users: [svc-fileshare]
+              write-users: [svc-fileshare]
+          principals:
+            - principal-id: nobody
+              kind: guest
+              name: nobody
+              external-id: S-1-5-21-0-501
+              status: enabled
+              credential-classification: no_credential
+              origin: built_in
+            - principal-id: svc-fileshare
+              kind: service_account
+              name: svc-fileshare
+              status: enabled
+              credential-classification: redacted
+              origin: provisioned
+              local-user-ref: svc-fileshare
+          access-rules:
+            - rule-id: public-read
+              subject-ref: nobody
+              resource-ref: public
+              action: read
+              effect: allow
+              basis: share_config
+          access-observations:
+            - observation-id: anon-mount-allowed
+              subject-ref: anonymous
+              resource-ref: public
+              action: browse
+              outcome: allowed
+              basis: observed_probe
+      filesystem-inventory:
+        - path: /srv/samba/public
+          entry-type: directory
+          presence: present
+        - path: /srv/samba/deploy_keys/id_ed25519
+          entry-type: file
+          presence: expected_absent
+          description: Expected deploy-key attempted by setup, absent at capture.
+""")
+        )
+
+        runtime = model.node_deployments["provision.node.fileshare"].spec["node"]["runtime"]
+        file_service = runtime["file_services"][0]
+        assert file_service["file_service_id"] == "fileshare-smb"
+        assert file_service["protocol"] == "smb"
+        assert file_service["shares"][0]["kind"] == "disk"
+        assert file_service["shares"][0]["guest_ok"] is True
+        assert file_service["principals"][0]["kind"] == "guest"
+        assert file_service["principals"][1]["credential_classification"] == "redacted"
+        assert file_service["access_rules"][0]["effect"] == "allow"
+        assert file_service["access_observations"][0]["outcome"] == "allowed"
+        assert runtime["filesystem_inventory"][1]["presence"] == "expected_absent"
+        assert runtime["filesystem_inventory"][1]["entry_type"] == "file"
+        assert not model.diagnostics
 
     def test_feature_binding_tracks_same_node_dependencies(self):
         model = compile_runtime_model(
@@ -143,6 +509,7 @@ injects:
         assert condition.result_contract.resource_type == "condition-binding"
         assert condition.result_contract.supports_passed is True
         assert condition.execution_contract.requires_start_event is True
+        assert not model.diagnostics
 
     def test_objective_windows_and_workflows_resolve_refresh_dependencies(self):
         model = compile_runtime_model(
@@ -235,6 +602,7 @@ workflows:
         assert model.metrics["evaluation.metric.uptime"].result_contract.supports_score is True
         assert model.metrics["evaluation.metric.uptime"].result_contract.fixed_max_score == 100
         assert model.objectives["evaluation.objective.initial"].result_contract.supports_passed is True
+        assert not model.diagnostics
 
     def test_objective_window_step_outside_window_workflows_emits_diagnostic(self):
         model = compile_runtime_model(
@@ -452,6 +820,7 @@ workflows:
             "evaluation.objective.recover",
         )
         assert "evaluation.condition.vm.health" in workflow.step_predicate_addresses["branch"]
+        assert not model.diagnostics
 
     def test_parallel_join_compiles_as_barrier_with_typed_predicate(self):
         model = compile_runtime_model(
@@ -545,6 +914,7 @@ workflows:
             WorkflowStatePredicateFeature.OUTCOME_MATCHING,
             WorkflowStatePredicateFeature.ATTEMPT_COUNTS,
         }
+        assert not model.diagnostics
 
     def test_module_expansion_compiles_like_flat_scenario(self, tmp_path: Path):
         imported = tmp_path / "shared.yaml"
@@ -635,9 +1005,14 @@ imports:
         expanded_model = compile_runtime_model(parse_sdl_file(root))
         flat_model = compile_runtime_model(flat)
 
+        assert not expanded_model.diagnostics
+        assert not flat_model.diagnostics
         assert expanded_model.workflows.keys() == flat_model.workflows.keys()
         assert expanded_model.objectives.keys() == flat_model.objectives.keys()
         assert expanded_model.condition_bindings.keys() == flat_model.condition_bindings.keys()
+        workflow = expanded_model.workflows["orchestration.workflow.shared.response"]
+        assert workflow.referenced_objective_addresses == ("evaluation.objective.shared.validate",)
+        assert workflow.control_steps["run"].objective_address == "evaluation.objective.shared.validate"
 
     def test_workflow_switch_call_and_timeout_compile_to_explicit_contracts(self):
         model = compile_runtime_model(
@@ -702,6 +1077,7 @@ imports:
             "succeeded",
             "failed",
         )
+        assert not model.diagnostics
 
     def test_workflow_compensation_compiles_to_explicit_contracts(self):
         model = compile_runtime_model(
@@ -761,3 +1137,4 @@ imports:
         assert workflow.execution_contract.compensation_targets == {"run": "orchestration.workflow.rollback"}
         assert workflow.execution_contract.compensation_ordering == "reverse_completion"
         assert workflow.execution_contract.compensation_failure_policy == "record_and_continue"
+        assert not model.diagnostics

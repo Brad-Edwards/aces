@@ -9,6 +9,9 @@ phases:
       - GOV-920
       - GOV-921
       - GOV-922
+  - id: sdl-language
+    patterns:
+      - ^DSL-
   - id: api400-core
     requirements:
       - API-412
@@ -64,6 +67,13 @@ phases:
   - id: modularity-initiative
     requirements:
       - MOD-001
+  - id: experiment-core
+    requirements:
+      - EXP-701
+      - EXP-702
+      - EXP-703
+      - EXP-704
+      - EXP-705
 
 ownership:
   gov-concept-authority:
@@ -89,6 +99,14 @@ ownership:
     - implementations/python/packages/aces_processor
     - implementations/python/pyproject.toml
     - implementations/python/src/aces
+    - implementations/python/tests
+    - CHANGELOG.md
+  sdl-language:
+    - contracts/schemas/sdl
+    - docs/decisions/adrs
+    - docs/explain/sdl
+    - docs/index.md
+    - implementations/python/packages/aces_sdl
     - implementations/python/tests
     - CHANGELOG.md
   api400-core:
@@ -129,6 +147,8 @@ ownership:
     - contracts/fixtures
     - CHANGELOG.md
   semantics-expansion:
+    - contracts/schemas/sdl
+    - docs/explain/reference
     - implementations/python/packages/aces_processor
     - implementations/python/packages/aces_sdl
     - implementations/python/tests
@@ -155,6 +175,22 @@ ownership:
     - docs/decisions/adrs
     - docs/explain/sdl
     - docs/index.md
+    - CHANGELOG.md
+  experiment-core:
+    - contracts/README.md
+    - contracts/schema-publication-manifest.json
+    - contracts/schemas/README.md
+    - contracts/schemas
+    - contracts/fixtures/experiment-core
+    - specs/formal/README.md
+    - specs/formal/experiment-core
+    - docs/decisions/adrs
+    - docs/research/experiment-core
+    - docs/index.md
+    - docs/specs/formal.md
+    - implementations/python/packages/aces_contracts
+    - implementations/python/tests/test_runtime_contracts.py
+    - tools/generate_contract_schemas.py
     - CHANGELOG.md
 
 traceability:

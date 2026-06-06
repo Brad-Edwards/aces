@@ -41,6 +41,9 @@ _HASHMAP_SECTIONS = frozenset(
         "accounts",
         "relationships",
         "agents",
+        "action_contracts",
+        "observation_boundaries",
+        "outcome_interpretation_rules",
         "objectives",
         "workflows",
         "variables",
@@ -54,6 +57,10 @@ _NESTED_HASHMAP_FIELDS = frozenset(
         "conditions",  # VM.conditions (dict[str, str])
         "injects",  # VM.injects (dict[str, str])
         "roles",  # Node.roles (dict[str, Role])
+        "log_options",  # RuntimeContainerConfiguration.log_options preserves native engine option keys
+        "labels",  # ImageConfig.labels preserves case-sensitive native image label keys
+        "driver_options",  # RuntimeNetworkBackendDetail.driver_options preserves native network driver keys
+        "ipam_options",  # RuntimeNetworkBackendDetail.ipam_options preserves native IPAM driver keys
         "facts",  # Entity.facts (dict[str, str])
         "entities",  # Entity.entities (dict[str, Entity])
         "events",  # Script.events (dict[str, int])
@@ -64,7 +71,9 @@ _NESTED_HASHMAP_FIELDS = frozenset(
 
 def _child_is_hashmap_field(key: str, value: Any) -> bool:
     """Return whether the children of ``key`` are user-defined hashmap keys."""
-    if key in _HASHMAP_SECTIONS or key in _NESTED_HASHMAP_FIELDS:
+    if key in _HASHMAP_SECTIONS:
+        return isinstance(value, dict)
+    if key in _NESTED_HASHMAP_FIELDS:
         return True
     # Complex properties use list items like ``[{switch-name: "10.0.0.10"}]``.
     return key == "properties" and isinstance(value, list)
@@ -182,8 +191,8 @@ def _expand_min_score(value: Any) -> Any:
 
 def _expand_shorthands(data: dict[str, Any]) -> dict[str, Any]:
     """Apply all shorthand expansions to normalized data."""
-    # Sections where "source" is a plain string reference, NOT a Source package.
-    _SOURCE_SKIP_SECTIONS = frozenset({"relationships", "agents", "imports"})
+    # Scopes where "source" is a plain string reference, NOT a Source package.
+    _SOURCE_SKIP_SECTIONS = frozenset({"relationships", "agents", "imports", "runtime"})
 
     def expand_sources_scoped(
         obj: Any,

@@ -44,6 +44,173 @@
         }
       }
     },
+    "participant-implementation-kinds": {
+      "title": "Participant Implementation Kinds",
+      "description": "Governed participant implementation categories for participant implementation manifests.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "implementation_kind"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "agent": {
+          "title": "Agent",
+          "description": "Autonomous or semi-autonomous software participant implementation."
+        },
+        "human-control-proxy": {
+          "title": "Human Control Proxy",
+          "description": "Implementation that mediates a human operator's participant control surface."
+        },
+        "policy": {
+          "title": "Policy",
+          "description": "Policy-directed participant implementation."
+        },
+        "script": {
+          "title": "Script",
+          "description": "Scripted participant implementation."
+        }
+      }
+    },
+    "participant-implementation-contracts": {
+      "title": "Participant Implementation Contracts",
+      "description": "Closed participant-facing contract identifiers that participant implementations may claim.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "capabilities.supported_participant_contracts"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "participant-behavior-history-event-stream-v1": {
+          "title": "Participant Behavior History Event Stream V1",
+          "description": "Participant behavior history event stream contract."
+        },
+        "participant-episode-history-event-stream-v1": {
+          "title": "Participant Episode History Event Stream V1",
+          "description": "Participant episode history event stream contract."
+        },
+        "participant-episode-state-envelope-v1": {
+          "title": "Participant Episode State Envelope V1",
+          "description": "Participant episode state envelope contract."
+        },
+        "participant-implementation-manifest-v1": {
+          "title": "Participant Implementation Manifest V1",
+          "description": "Participant implementation manifest contract."
+        },
+        "participant-implementation-provenance-v1": {
+          "title": "Participant Implementation Provenance V1",
+          "description": "Participant implementation provenance contract."
+        }
+      }
+    },
+    "participant-decision-surface-modes": {
+      "title": "Participant Decision Surface Modes",
+      "description": "Governed modes by which participant implementations make or relay decisions.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.supported_decision_surface_modes"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "autonomous": {
+          "title": "Autonomous",
+          "description": "Implementation selects participant actions without per-action external approval."
+        },
+        "human-control-proxy": {
+          "title": "Human Control Proxy",
+          "description": "Implementation relays a human operator's participant decisions."
+        },
+        "human-supervised": {
+          "title": "Human Supervised",
+          "description": "Implementation acts with human review or approval in the decision path."
+        },
+        "mixed-control": {
+          "title": "Mixed Control",
+          "description": "Implementation combines autonomous and externally directed decisions."
+        },
+        "policy-directed": {
+          "title": "Policy Directed",
+          "description": "Implementation selects actions from a declared policy or rule surface."
+        },
+        "replayed": {
+          "title": "Replayed",
+          "description": "Implementation replays a previously captured participant decision sequence."
+        },
+        "scripted": {
+          "title": "Scripted",
+          "description": "Implementation follows a fixed or parameterized script."
+        }
+      }
+    },
+    "participant-tool-affordance-expectations": {
+      "title": "Participant Tool Affordance Expectations",
+      "description": "Governed tool and affordance expectations declared by participant implementations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.tool_affordance_expectations"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "browser": {
+          "title": "Browser",
+          "description": "Implementation expects a browser-like interaction affordance."
+        },
+        "credential-store": {
+          "title": "Credential Store",
+          "description": "Implementation expects access to a governed credential-store affordance."
+        },
+        "file-system": {
+          "title": "File System",
+          "description": "Implementation expects file-system interaction affordances."
+        },
+        "http-api": {
+          "title": "HTTP API",
+          "description": "Implementation expects HTTP API interaction affordances."
+        },
+        "human-approval": {
+          "title": "Human Approval",
+          "description": "Implementation expects a human approval affordance."
+        },
+        "network-access": {
+          "title": "Network Access",
+          "description": "Implementation expects network interaction affordances."
+        },
+        "shell": {
+          "title": "Shell",
+          "description": "Implementation expects shell-command interaction affordances."
+        }
+      }
+    },
+    "participant-exposure-policy-kinds": {
+      "title": "Participant Exposure Policy Kinds",
+      "description": "Governed categories for participant implementation decision-surface exposure policies.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.exposure_policy_kinds"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "hidden-truth": {
+          "title": "Hidden Truth",
+          "description": "Policy controls hidden truth or answer material exposure."
+        },
+        "observation-stream": {
+          "title": "Observation Stream",
+          "description": "Policy controls participant-visible observation stream exposure."
+        },
+        "task-statement": {
+          "title": "Task Statement",
+          "description": "Policy controls public task statement exposure."
+        },
+        "tool-affordance": {
+          "title": "Tool Affordance",
+          "description": "Policy controls available tool or affordance exposure."
+        }
+      }
+    },
     "workflow-features": {
       "title": "Workflow Features",
       "description": "Closed portable workflow control feature identifiers.",
@@ -331,6 +498,114 @@
         "objectives": {
           "title": "Objectives",
           "description": "Objective section support."
+        }
+      }
+    },
+    "participant-runtime-roles": {
+      "title": "Participant Runtime Roles",
+      "description": "Backend-supported participant role vocabulary for participant runtime capability declarations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.participant_runtime.supported_participant_roles"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "blue": {
+          "title": "Blue",
+          "description": "Backend supports blue-team participant roles."
+        },
+        "green": {
+          "title": "Green",
+          "description": "Backend supports green-team participant roles."
+        },
+        "red": {
+          "title": "Red",
+          "description": "Backend supports red-team participant roles."
+        },
+        "white": {
+          "title": "White",
+          "description": "Backend supports white-team participant roles."
+        }
+      }
+    },
+    "participant-runtime-behavior-features": {
+      "title": "Participant Runtime Behavior Features",
+      "description": "Backend-supported participant behavior feature vocabulary for participant runtime capability declarations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.participant_runtime.supported_behavior_features"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "action_contracts": {
+          "title": "Action Contracts",
+          "description": "Backend supports governed participant action contracts."
+        },
+        "attribution_support": {
+          "title": "Attribution Support",
+          "description": "Backend supports evidence-labeled participant attribution claims."
+        },
+        "behavior_history": {
+          "title": "Behavior History",
+          "description": "Backend supports participant behavior history event streams."
+        },
+        "effects": {
+          "title": "Effects",
+          "description": "Backend supports declared participant action effects."
+        },
+        "failure_classes": {
+          "title": "Failure Classes",
+          "description": "Backend supports portable participant failure classes."
+        },
+        "observation_boundaries": {
+          "title": "Observation Boundaries",
+          "description": "Backend supports participant-visible observation boundary semantics."
+        },
+        "outcome_interpretation": {
+          "title": "Outcome Interpretation",
+          "description": "Backend supports participant-local outcome interpretation records."
+        },
+        "preconditions": {
+          "title": "Preconditions",
+          "description": "Backend supports declared participant action preconditions."
+        },
+        "state_transitions": {
+          "title": "State Transitions",
+          "description": "Backend supports participant behavior state-transition records."
+        },
+        "temporal_contracts": {
+          "title": "Temporal Contracts",
+          "description": "Backend supports participant temporal contracts and timing disclosures."
+        }
+      }
+    },
+    "participant-runtime-interaction-features": {
+      "title": "Participant Runtime Interaction Features",
+      "description": "Backend-supported multi-participant interaction feature vocabulary.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.participant_runtime.supported_interaction_features"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "contention": {
+          "title": "Contention",
+          "description": "Backend supports declared contention interaction semantics."
+        },
+        "coordination": {
+          "title": "Coordination",
+          "description": "Backend supports declared coordination interaction semantics."
+        },
+        "interference": {
+          "title": "Interference",
+          "description": "Backend supports declared interference interaction semantics."
+        },
+        "shared_state_change": {
+          "title": "Shared State Change",
+          "description": "Backend supports declared shared-state interaction semantics."
         }
       }
     }

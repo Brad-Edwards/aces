@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import importlib.util
 import shutil
 import sys
 import types
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
@@ -11,12 +13,40 @@ if str(REPO_ROOT) not in sys.path:
 
 import pytest
 import tools.check_generated_schemas as check_generated_schemas
+import yaml
 from tools.check_generated_schemas import _extra_published_schema_paths
 from tools.check_json_artifacts import collect_validation_targets, should_run_full_validation
 from tools.check_schema_publication import validate_schema_publication_manifest
 from tools.gitleaks_tool import _checksums_asset_name, _release_asset_name, gitleaks_binary_path
 from tools.policy.common import PolicyFailure
 from tools.policy.repo_policy import evaluate_repo_policy
+
+
+def load_noxfile_with_fake_nox(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
+    class FakeOptions:
+        default_venv_backend = ""
+        reuse_existing_virtualenvs = False
+        sessions: list[str] = []
+
+    def session(*args: object, **_kwargs: object) -> object:
+        if args and callable(args[0]):
+            return args[0]
+
+        def decorate(function: object) -> object:
+            return function
+
+        return decorate
+
+    fake_nox = types.SimpleNamespace(options=FakeOptions(), Session=object, session=session)
+    monkeypatch.setitem(sys.modules, "nox", fake_nox)
+
+    spec = importlib.util.spec_from_file_location("_aces_test_noxfile", REPO_ROOT / "noxfile.py")
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, "_aces_test_noxfile", module)
+    spec.loader.exec_module(module)
+    return module
 
 
 def write_text(path: Path, content: str) -> None:
@@ -46,11 +76,69 @@ def setup_policy_repo(tmp_path: Path) -> Path:
         "| --- | --- | --- | --- |\n"
         "| [001](adr-001-example.md) | Example ADR | Accepted | 2026-04-05 |\n",
     )
+    for package in (
+        "aces_sdl",
+        "aces_processor",
+        "aces_runtime",
+        "aces_backend_protocols",
+        "aces_backend_stubs",
+        "aces_conformance",
+        "aces_cli",
+        "aces_mcp",
+        "aces_contracts",
+    ):
+        write_text(
+            tmp_path / "implementations" / "python" / "packages" / package / "__init__.py",
+            "",
+        )
     return tmp_path
 
 
 def structural_runner_stub(_: dict) -> list[PolicyFailure]:
     return []
+
+
+def _load_test_policy(repo_root: Path) -> dict[str, Any]:
+    with (repo_root / "tools" / "policy" / "adr_policy.yaml").open("r", encoding="utf-8") as handle:
+        data = yaml.safe_load(handle)
+    assert isinstance(data, dict)
+    return data
+
+
+def _write_test_policy(repo_root: Path, policy: dict[str, Any]) -> None:
+    (repo_root / "tools" / "policy" / "adr_policy.yaml").write_text(
+        yaml.safe_dump(policy, sort_keys=False),
+        encoding="utf-8",
+    )
+
+
+def test_hygiene_parser_ignores_policy_only_verify_args(monkeypatch: pytest.MonkeyPatch) -> None:
+    noxfile = load_noxfile_with_fake_nox(monkeypatch)
+    calls: list[dict[str, object]] = []
+
+    def fake_changed_paths(*, staged: bool = False, base_rev: str | None = None) -> list[str]:
+        calls.append({"staged": staged, "base_rev": base_rev})
+        return ["noxfile.py"]
+
+    monkeypatch.setattr(noxfile, "_changed_paths", fake_changed_paths)
+
+    skip_selection = noxfile._parse_hygiene_posargs(
+        ["--base-rev", "origin/dev", "--skip-requirement"],
+        default_all_files=False,
+    )
+    uid_selection = noxfile._parse_hygiene_posargs(
+        ["--base-rev", "origin/dev", "--requirement-uid", "GOV-918"],
+        default_all_files=False,
+    )
+
+    assert skip_selection.paths == ["noxfile.py"]
+    assert skip_selection.source == "changes since origin/dev"
+    assert uid_selection.paths == ["noxfile.py"]
+    assert uid_selection.source == "changes since origin/dev"
+    assert calls == [
+        {"staged": False, "base_rev": "origin/dev"},
+        {"staged": False, "base_rev": "origin/dev"},
+    ]
 
 
 def test_structural_policy_runner_receives_policy_input(tmp_path: Path) -> None:
@@ -166,7 +254,7 @@ def test_layering_rule_rejects_aces_processor_imports(tmp_path: Path, import_lin
 
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
-    assert [f.rule_id for f in failures] == ["layering-rule-violation"], (
+    assert "layering-rule-violation" in [f.rule_id for f in failures], (
         f"import line {import_line!r} should fire layering-rule-violation; got {[f.rule_id for f in failures]}"
     )
 
@@ -205,6 +293,207 @@ def test_layering_rule_does_not_check_files_outside_scope(tmp_path: Path) -> Non
     failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
 
     assert failures == []
+
+
+# ── ADR-036: module ownership boundaries ────────────────────────────────
+
+
+def install_module_boundary_policy(repo_root: Path) -> None:
+    del repo_root
+
+
+def test_module_boundaries_reject_processor_importing_runtime(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/aces_processor/uses_runtime.py"
+    write_text(repo_root / rel, "from aces_runtime.manager import RuntimeManager\n")
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["module-boundary-import"]
+
+
+def test_module_boundaries_reject_runtime_importing_processor_private_modules(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/aces_runtime/uses_private_processor.py"
+    write_text(repo_root / rel, "from aces_processor._private import helper\n")
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["module-boundary-private-import"]
+
+
+def test_module_boundaries_allow_runtime_using_processor_public_api(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/aces_runtime/uses_processor.py"
+    write_text(
+        repo_root / rel,
+        "from aces_processor.compiler import compile_runtime_model\n"
+        "from aces_processor.models import RuntimeSnapshot\n"
+        "from aces_processor.planner import plan\n",
+    )
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert failures == []
+
+
+def test_module_boundaries_reject_runtime_using_non_public_processor_module(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/aces_runtime/uses_processor_semantics.py"
+    write_text(repo_root / rel, "from aces_processor.semantics.planner import reverse_delete_order\n")
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["module-boundary-public-api"]
+
+
+def test_module_boundaries_reject_sdl_importing_runtime(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/aces_sdl/uses_runtime.py"
+    write_text(repo_root / rel, "import aces_runtime\n")
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["module-boundary-import"]
+
+
+def test_module_boundaries_reject_authoring_importing_runtime_internals(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    install_module_boundary_policy(repo_root)
+    rel = "implementations/python/packages/aces_mcp/tools/authoring_runtime.py"
+    write_text(repo_root / rel, "from aces_runtime.control_plane import RuntimeControlPlane\n")
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["module-boundary-import"]
+
+
+def test_module_boundaries_reject_backend_stub_importing_processor(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    rel = "implementations/python/packages/aces_backend_stubs/uses_processor.py"
+    write_text(repo_root / rel, "from aces_processor.models import ApplyResult\n")
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["module-boundary-import"]
+
+
+def test_module_boundaries_reject_backend_protocol_any_signatures(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    rel = "implementations/python/packages/aces_backend_protocols/protocols.py"
+    write_text(
+        repo_root / rel,
+        "from typing import Any, Protocol\n\n"
+        "class Provisioner(Protocol):\n"
+        "    def apply(self, plan: Any) -> Any: ...\n",
+    )
+
+    failures = evaluate_repo_policy(repo_root, [rel], check_set="file-local", structural_runner=structural_runner_stub)
+
+    assert [f.rule_id for f in failures] == ["backend-protocol-untyped-contract"]
+
+
+def test_module_boundaries_config_is_required(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    policy = _load_test_policy(repo_root)
+    policy.pop("module_boundaries")
+    _write_test_policy(repo_root, policy)
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        ["tools/policy/adr_policy.yaml"],
+        check_set="file-local",
+        structural_runner=structural_runner_stub,
+    )
+
+    assert [f.rule_id for f in failures] == ["policy-config-malformed"]
+    assert "module_boundaries block is required" in failures[0].message
+
+
+def test_module_boundaries_config_is_required_even_without_changed_paths(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    policy = _load_test_policy(repo_root)
+    policy.pop("module_boundaries")
+    _write_test_policy(repo_root, policy)
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        [],
+        check_set="full",
+        structural_runner=structural_runner_stub,
+    )
+
+    assert [f.rule_id for f in failures] == ["policy-config-malformed"]
+    assert "module_boundaries block is required" in failures[0].message
+
+
+def test_module_boundaries_reject_missing_module_root(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    policy = _load_test_policy(repo_root)
+    policy["module_boundaries"]["modules"][0]["root"] = "implementations/python/packages/aces_typo"
+    _write_test_policy(repo_root, policy)
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        ["tools/policy/adr_policy.yaml"],
+        check_set="file-local",
+        structural_runner=structural_runner_stub,
+    )
+
+    assert [f.rule_id for f in failures] == ["policy-config-malformed"]
+    assert "must resolve to an existing directory" in failures[0].message
+
+
+def test_module_boundaries_reject_uncovered_package_root(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    write_text(repo_root / "implementations/python/packages/aces_new_package/__init__.py", "")
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        ["tools/policy/adr_policy.yaml"],
+        check_set="file-local",
+        structural_runner=structural_runner_stub,
+    )
+
+    assert [f.rule_id for f in failures] == ["policy-config-malformed"]
+    assert "aces_new_package" in failures[0].message
+    assert "missing from module_boundaries.modules" in failures[0].message
+
+
+def test_module_boundaries_full_check_scans_all_module_sources(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    rel = "implementations/python/packages/aces_processor/latent_runtime_import.py"
+    write_text(repo_root / rel, "from aces_runtime.manager import RuntimeManager\n")
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        ["tools/policy/adr_policy.yaml"],
+        check_set="full",
+        structural_runner=structural_runner_stub,
+    )
+
+    assert [f.rule_id for f in failures] == ["module-boundary-import"]
+    assert failures[0].path == rel
+
+
+def test_module_boundaries_reject_runtime_importing_sdl_semantics(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    rel = "implementations/python/packages/aces_runtime/uses_sdl_workflow_semantics.py"
+    write_text(repo_root / rel, "from aces_sdl.semantics.workflow import validate_workflow_step_result\n")
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        [rel],
+        check_set="file-local",
+        structural_runner=structural_runner_stub,
+    )
+
+    assert [f.rule_id for f in failures] == ["module-boundary-import"]
 
 
 # ── ADR-015: 600-line source-file cap ───────────────────────────────────

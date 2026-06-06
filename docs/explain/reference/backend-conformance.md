@@ -45,6 +45,9 @@ Reuse these existing surfaces before adding anything new:
   `aces_contracts.controlled_vocabularies`,
   `aces_contracts.apparatus`, and the `BackendManifestV2Model` validators
 - manifest rendering: `aces_backend_protocols.manifest.backend_manifest_payload`
+- participant capability declarations:
+  `capabilities.participant_runtime.supported_participant_roles`,
+  `supported_behavior_features`, and `supported_interaction_features`
 - runtime behavior probes: `compile_runtime_model()`, `plan()`,
   `RuntimeControlPlane`, and `RuntimeTarget`
 - diagnostics: `aces_processor.models.Diagnostic` and `Severity`
@@ -67,6 +70,16 @@ The conformance path touches these gates:
 - Manifest authority validation: `supported_contract_versions`,
   `concept_bindings`, capability vocabulary terms, and backend profile claims
   must resolve through existing authority helpers, not local string checks.
+- Participant capability validation: role, behavior-feature, and
+  interaction-feature support claims must resolve through the governed
+  vocabulary scopes on `capabilities.participant_runtime`; backend-specific
+  terms must use the governed `x-<owner>:<term>` extension format.
+- Participant capability evidence: standard API-405 claims must also have the
+  published contract surfaces required by
+  `PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS`; the conformance runner
+  reports `conformance.unsupported-capability-claim` when a manifest claims a
+  role or feature without the runtime contract evidence surface needed to check
+  it.
 - Control-plane probe validation: live probes must use `RuntimeControlPlane`
   and existing operation receipt/status/snapshot envelopes rather than backend
   native objects.
@@ -74,22 +87,38 @@ The conformance path touches these gates:
   codes and messages; do not surface raw tracebacks, environment variables,
   bearer tokens, credentials, or backend-private object representations.
 - Host/OS exposure: CLI options may accept profile names and local roots, but
-  must not require secrets or bearer tokens in process argv. Future live-target
+  must not require secrets or bearer tokens in process argv. Live-target
   authentication belongs in headers or process-local configuration that is not
   echoed in diagnostics.
 - Persistence: the suite is report-oriented and should not write durable state
   except explicit report output requested by the caller.
 
-## Extensibility Seam
+## Extension Boundary
 
 The seam is the published contract id and backend profile artifact, not a Python
-enum branch or hard-coded path. Adding a future backend profile or contract
+enum branch or hard-coded path. Adding a backend profile or contract
 family should require adding the contract schema/fixtures/profile artifact and
 registering the matching validator once, not editing every call site.
 
 Keep the profile loader parameterized by `profiles_root` and the fixture runner
 parameterized by `fixtures_root` so tests can use temporary corpora while the
 default path remains the published `contracts/` tree.
+
+Participant capability declarations follow the same extension boundary. API-405
+adds governed vocabulary surfaces under `capabilities.participant_runtime`
+instead of a backend-profile branch, snapshot metadata field, or control-plane
+role. Absence of the `participant_runtime` block declares no participant runtime
+surface; when the block is present, the role and feature declarations are
+mandatory and set-like. The standard terms are grounded in
+`docs/explain/sdl/lineage.md`, ADR-020, ADR-022, and
+`specs/formal/participant-semantics/`: exercise roles map to the existing
+`white`/`green`/`red`/`blue` framing vocabulary; behavior terms map to the
+action, observation, state-transition, failure, temporal, attribution, and
+outcome semantics already modeled in ACES; interaction terms map to the SEM-209
+coordination, contention, interference, and shared-state classes. Standard terms
+are not accepted as prose-only promises: target conformance checks that the
+manifest also declares the published participant episode or behavior-history
+contract surfaces that carry the evidence for those claims.
 
 ## Gotchas And Anti-Patterns
 

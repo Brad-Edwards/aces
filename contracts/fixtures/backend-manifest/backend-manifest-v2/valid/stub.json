@@ -17,7 +17,8 @@
     "evaluation-result-envelope-v1",
     "evaluation-history-event-stream-v1",
     "participant-episode-state-envelope-v1",
-    "participant-episode-history-event-stream-v1"
+    "participant-episode-history-event-stream-v1",
+    "participant-behavior-history-event-stream-v1"
   ],
   "compatibility": {
     "processors": ["aces-reference-processor"]
@@ -49,7 +50,10 @@
     {"scope": "capabilities.provisioner.supported_content_types", "family": "tools-and-artifacts"},
     {"scope": "capabilities.provisioner.supported_account_features", "family": "identities"},
     {"scope": "capabilities.orchestrator.supported_sections", "family": "actions-and-events"},
-    {"scope": "capabilities.evaluator.supported_sections", "family": "observables"}
+    {"scope": "capabilities.evaluator.supported_sections", "family": "observables"},
+    {"scope": "capabilities.participant_runtime.supported_participant_roles", "family": "identities"},
+    {"scope": "capabilities.participant_runtime.supported_behavior_features", "family": "actions-and-events"},
+    {"scope": "capabilities.participant_runtime.supported_interaction_features", "family": "relationships"}
   ],
   "constraints": {},
   "capabilities": {
@@ -93,6 +97,20 @@
     },
     "participant_runtime": {
       "name": "stub-participant-runtime",
+      "supported_participant_roles": ["blue", "green", "red", "white"],
+      "supported_behavior_features": [
+        "action_contracts",
+        "attribution_support",
+        "behavior_history",
+        "effects",
+        "failure_classes",
+        "observation_boundaries",
+        "outcome_interpretation",
+        "preconditions",
+        "state_transitions",
+        "temporal_contracts"
+      ],
+      "supported_interaction_features": ["contention", "coordination", "interference", "shared_state_change"],
       "constraints": {}
     }
   }

@@ -95,3 +95,8 @@ The first claim protocols are tracked as GitHub issues:
   re-litigated without a durable record.
 - If maturity summaries ignore claim status, the repository can drift back into
   confidence-based reporting.
+
+## References
+
+- ASR-530: Claim Falsification And Evidence Gate
+- Issue #162: Claim falsification and evidence gate

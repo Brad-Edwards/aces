@@ -143,6 +143,35 @@ def test_live_probe_catches_participant_runtime_that_does_not_populate_snapshot(
     assert any("exposes no participant_episode_history" in msg for msg in messages)
 
 
+def test_target_conformance_rejects_participant_capability_claims_without_contract_evidence():
+    manifest = create_stub_manifest()
+    weak_manifest = BackendManifest(
+        identity=manifest.identity,
+        supported_contract_versions=manifest.supported_contract_versions
+        - frozenset({"participant-behavior-history-event-stream-v1"}),
+        compatibility=manifest.compatibility,
+        realization_support=manifest.realization_support,
+        concept_bindings=manifest.concept_bindings,
+        constraints=manifest.constraints,
+        capabilities=manifest.capabilities,
+    )
+    components = create_stub_components(manifest=weak_manifest)
+    target = RuntimeTarget(
+        name="weak-participant-claims",
+        manifest=weak_manifest,
+        provisioner=components.provisioner,
+        orchestrator=components.orchestrator,
+        evaluator=components.evaluator,
+        participant_runtime=components.participant_runtime,
+    )
+
+    report = run_target_conformance(target, profile=BackendCapabilityProfile.PROVISIONING_ONLY)
+
+    assert report.passed is False
+    assert any(diagnostic.code == "conformance.unsupported-capability-claim" for diagnostic in report.diagnostics)
+    assert any("supported_behavior_features.action_contracts" in gap for gap in report.unsupported_capability_gaps)
+
+
 def test_fixture_suite_passes_for_full_remote_control_plane_profile():
     """RUN-311 — the FULL_REMOTE_CONTROL_PLANE profile now requires the
     participant episode envelope + history event stream fixtures, so running
@@ -157,6 +186,7 @@ def test_fixture_suite_passes_for_full_remote_control_plane_profile():
     contract_names = {case.contract_name for case in report.cases}
     assert "participant-episode-state-envelope-v1" in contract_names
     assert "participant-episode-history-event-stream-v1" in contract_names
+    assert "participant-behavior-history-event-stream-v1" in contract_names
 
 
 def test_runtime_snapshot_semantic_diagnostics_reject_invalid_participant_episode_state():
@@ -238,6 +268,399 @@ def test_runtime_snapshot_semantic_diagnostics_reject_invalid_participant_episod
     assert any("must report sequence_number>0" in diag.message for diag in diagnostics)
 
 
+def test_runtime_snapshot_behavior_history_refs_must_match_snapshot_entries():
+    action_address = "participant.action-contract.scan"
+    missing_boundary_address = "participant.observation-boundary.missing"
+    snapshot_payload = {
+        "schema_version": "runtime-snapshot/v1",
+        "entries": {
+            action_address: {
+                "address": action_address,
+                "domain": "participant",
+                "resource_type": "participant-action-contract",
+                "payload": {},
+                "ordering_dependencies": [],
+                "refresh_dependencies": [],
+                "status": "ready",
+            }
+        },
+        "orchestration_results": {},
+        "orchestration_history": {},
+        "evaluation_results": {},
+        "evaluation_history": {},
+        "participant_episode_results": {},
+        "participant_episode_history": {},
+        "participant_behavior_history": {
+            "participant.red": [
+                {
+                    "event_type": "action_attempted",
+                    "timestamp": "2026-05-18T18:30:00Z",
+                    "participant_address": "participant.red",
+                    "episode_id": "episode-1",
+                    "action_instance_id": "scan-1",
+                    "action_contract_address": action_address,
+                    "actor_provenance": "participant:red",
+                    "details": {},
+                },
+                {
+                    "event_type": "state_transition_recorded",
+                    "timestamp": "2026-05-18T18:30:01Z",
+                    "participant_address": "participant.red",
+                    "episode_id": "episode-1",
+                    "action_instance_id": "scan-1",
+                    "action_contract_address": action_address,
+                    "state_transition_kind": "knowledge-expanded",
+                    "post_state_digest": "sha256:known",
+                    "details": {},
+                },
+                {
+                    "event_type": "observation_emitted",
+                    "timestamp": "2026-05-18T18:30:02Z",
+                    "participant_address": "participant.red",
+                    "episode_id": "episode-1",
+                    "action_instance_id": "scan-1",
+                    "action_contract_address": action_address,
+                    "observation_boundary_address": missing_boundary_address,
+                    "observation_status": "terminal",
+                    "post_state_digest": "sha256:known",
+                    "details": {},
+                },
+            ]
+        },
+        "metadata": {},
+    }
+
+    diagnostics = _semantic_diagnostics("runtime-snapshot-v1", snapshot_payload)
+
+    messages = [diagnostic.message for diagnostic in diagnostics]
+    assert any("unknown observation_boundary_address" in message for message in messages)
+    assert not any("unknown action_contract_address" in message for message in messages)
+
+
+def test_runtime_snapshot_behavior_history_validates_joint_action_order_across_participants():
+    action_address = "participant.action-contract.scan"
+    boundary_address = "participant.observation-boundary.red-view"
+
+    def _snapshot_entry(address: str, resource_type: str) -> dict[str, object]:
+        return {
+            "address": address,
+            "domain": "participant",
+            "resource_type": resource_type,
+            "payload": {},
+            "ordering_dependencies": [],
+            "refresh_dependencies": [],
+            "status": "ready",
+        }
+
+    def _behavior_history(participant_address: str, action_instance_id: str) -> list[dict[str, object]]:
+        return [
+            {
+                "event_type": "action_attempted",
+                "timestamp": "2026-05-18T18:30:00Z",
+                "participant_address": participant_address,
+                "episode_id": "episode-1",
+                "action_instance_id": action_instance_id,
+                "action_contract_address": action_address,
+                "actor_provenance": f"participant:{participant_address.rsplit('.', 1)[-1]}",
+                "joint_action_set_id": "joint-0001",
+                "realized_order": 0,
+                "interaction_class": "shared_state_change",
+                "shared_state_refs": ["nodes.web.services.http"],
+                "details": {},
+            },
+            {
+                "event_type": "state_transition_recorded",
+                "timestamp": "2026-05-18T18:30:01Z",
+                "participant_address": participant_address,
+                "episode_id": "episode-1",
+                "action_instance_id": action_instance_id,
+                "action_contract_address": action_address,
+                "state_transition_kind": "knowledge-expanded",
+                "post_state_digest": f"sha256:{action_instance_id}",
+                "details": {},
+            },
+            {
+                "event_type": "observation_emitted",
+                "timestamp": "2026-05-18T18:30:02Z",
+                "participant_address": participant_address,
+                "episode_id": "episode-1",
+                "action_instance_id": action_instance_id,
+                "action_contract_address": action_address,
+                "observation_boundary_address": boundary_address,
+                "observation_status": "terminal",
+                "post_state_digest": f"sha256:{action_instance_id}",
+                "details": {},
+            },
+        ]
+
+    snapshot_payload = {
+        "schema_version": "runtime-snapshot/v1",
+        "entries": {
+            action_address: _snapshot_entry(action_address, "participant-action-contract"),
+            boundary_address: _snapshot_entry(boundary_address, "participant-observation-boundary"),
+        },
+        "orchestration_results": {},
+        "orchestration_history": {},
+        "evaluation_results": {},
+        "evaluation_history": {},
+        "participant_episode_results": {},
+        "participant_episode_history": {},
+        "participant_behavior_history": {
+            "participant.red": _behavior_history("participant.red", "scan-red-1"),
+            "participant.blue": _behavior_history("participant.blue", "scan-blue-1"),
+        },
+        "metadata": {},
+    }
+
+    diagnostics = _semantic_diagnostics("runtime-snapshot-v1", snapshot_payload)
+
+    assert any(
+        diagnostic.code == "conformance.semantic-invalid"
+        and diagnostic.address == "runtime.snapshot.participant-behavior-history.joint-action-set.joint-0001"
+        and "realized_order 0 is assigned to multiple action_attempted events" in diagnostic.message
+        for diagnostic in diagnostics
+    )
+
+
+def test_runtime_snapshot_behavior_visibility_validation_is_participant_local():
+    action_address = "participant.action-contract.scan"
+    red_boundary = "participant.observation-boundary.red-view"
+    blue_boundary = "participant.observation-boundary.blue-view"
+    red_participant = "participant.behavior.red-agent"
+    blue_participant = "participant.behavior.blue-agent"
+
+    def _snapshot_entry(address: str, resource_type: str, payload: dict[str, object]) -> dict[str, object]:
+        return {
+            "address": address,
+            "domain": "participant",
+            "resource_type": resource_type,
+            "payload": payload,
+            "ordering_dependencies": [],
+            "refresh_dependencies": [],
+            "status": "ready",
+        }
+
+    def _boundary_payload(transition_id: str, action_instance_id: str) -> dict[str, object]:
+        return {
+            "name": transition_id,
+            "boundary_name": transition_id,
+            "projection_basis": "participant-local projection",
+            "hidden_refs": ["nodes.web"],
+            "observable_refs": [],
+            "evidence_refs": ["evidence.scan-output"],
+            "disclosed_refs": [],
+            "evidence_only_refs": [],
+            "discovered_refs": [],
+            "inferred_refs": [],
+            "concealed_refs": [],
+            "deceptive_refs": [],
+            "view_transitions": [
+                {
+                    "transition_id": transition_id,
+                    "history_event_type": "observation_emitted",
+                    "action_instance_id": action_instance_id,
+                    "effective_order": 10,
+                }
+            ],
+            "view_relation_timeline": [
+                {
+                    "transition_id": "initial",
+                    "effective_order": -1,
+                    "view_relation": {"nodes.web": "hidden"},
+                },
+                {
+                    "transition_id": transition_id,
+                    "effective_order": 10,
+                    "view_relation": {"nodes.web": "discovered"},
+                },
+            ],
+            "realized_view_disclosure": "terminal scan result only",
+            "spec": {},
+        }
+
+    def _participant_payload(boundary_address: str) -> dict[str, object]:
+        return {
+            "participant_name": "agent",
+            "entity_name": "team",
+            "action_contract_addresses": [action_address],
+            "observation_boundary_addresses": [boundary_address],
+            "interpretation_mode": "role-neutral-projection",
+            "spec": {},
+        }
+
+    def _behavior_history(
+        participant_address: str,
+        action_instance_id: str,
+        boundary_address: str,
+    ) -> list[dict[str, object]]:
+        return [
+            {
+                "event_type": "action_attempted",
+                "timestamp": "2026-05-18T18:30:00Z",
+                "participant_address": participant_address,
+                "episode_id": "episode-1",
+                "action_instance_id": action_instance_id,
+                "action_contract_address": action_address,
+                "actor_provenance": participant_address,
+                "details": {},
+            },
+            {
+                "event_type": "state_transition_recorded",
+                "timestamp": "2026-05-18T18:30:01Z",
+                "participant_address": participant_address,
+                "episode_id": "episode-1",
+                "action_instance_id": action_instance_id,
+                "action_contract_address": action_address,
+                "state_transition_kind": "knowledge-expanded",
+                "post_state_digest": f"sha256:{action_instance_id}",
+                "details": {},
+            },
+            {
+                "event_type": "observation_emitted",
+                "timestamp": "2026-05-18T18:30:02Z",
+                "participant_address": participant_address,
+                "episode_id": "episode-1",
+                "action_instance_id": action_instance_id,
+                "action_contract_address": action_address,
+                "observation_boundary_address": boundary_address,
+                "observation_status": "terminal",
+                "post_state_digest": f"sha256:{action_instance_id}",
+                "details": {"visible_refs": ["nodes.web"]},
+            },
+        ]
+
+    snapshot_payload = {
+        "schema_version": "runtime-snapshot/v1",
+        "entries": {
+            action_address: _snapshot_entry(action_address, "participant-action-contract", {}),
+            red_boundary: _snapshot_entry(
+                red_boundary, "participant-observation-boundary", _boundary_payload("red-discover", "red-scan")
+            ),
+            blue_boundary: _snapshot_entry(
+                blue_boundary, "participant-observation-boundary", _boundary_payload("blue-discover", "blue-scan")
+            ),
+            red_participant: _snapshot_entry(
+                red_participant, "participant-behavior", _participant_payload(red_boundary)
+            ),
+            blue_participant: _snapshot_entry(
+                blue_participant, "participant-behavior", _participant_payload(blue_boundary)
+            ),
+        },
+        "orchestration_results": {},
+        "orchestration_history": {},
+        "evaluation_results": {},
+        "evaluation_history": {},
+        "participant_episode_results": {},
+        "participant_episode_history": {},
+        "participant_behavior_history": {
+            red_participant: _behavior_history(red_participant, "red-scan", red_boundary),
+            blue_participant: _behavior_history(blue_participant, "blue-scan", blue_boundary),
+        },
+        "metadata": {},
+    }
+
+    diagnostics = _semantic_diagnostics("runtime-snapshot-v1", snapshot_payload)
+
+    assert diagnostics == []
+
+
+def test_runtime_snapshot_behavior_history_rejects_outer_key_participant_mismatch():
+    action_address = "participant.action-contract.scan"
+    boundary_address = "participant.observation-boundary.red-view"
+    red_participant = "participant.behavior.red-agent"
+    blue_participant = "participant.behavior.blue-agent"
+
+    def _snapshot_entry(address: str, resource_type: str, payload: dict[str, object]) -> dict[str, object]:
+        return {
+            "address": address,
+            "domain": "participant",
+            "resource_type": resource_type,
+            "payload": payload,
+            "ordering_dependencies": [],
+            "refresh_dependencies": [],
+            "status": "ready",
+        }
+
+    def _participant_payload() -> dict[str, object]:
+        return {
+            "participant_name": "red-agent",
+            "entity_name": "red-team",
+            "action_contract_addresses": [action_address],
+            "observation_boundary_addresses": [boundary_address],
+            "interpretation_mode": "role-neutral-projection",
+            "spec": {},
+        }
+
+    def _behavior_history(participant_address: str) -> list[dict[str, object]]:
+        return [
+            {
+                "event_type": "action_attempted",
+                "timestamp": "2026-05-18T18:30:00Z",
+                "participant_address": participant_address,
+                "episode_id": "episode-1",
+                "action_instance_id": "scan-1",
+                "action_contract_address": action_address,
+                "actor_provenance": participant_address,
+                "details": {},
+            },
+            {
+                "event_type": "state_transition_recorded",
+                "timestamp": "2026-05-18T18:30:01Z",
+                "participant_address": participant_address,
+                "episode_id": "episode-1",
+                "action_instance_id": "scan-1",
+                "action_contract_address": action_address,
+                "state_transition_kind": "knowledge-expanded",
+                "post_state_digest": "sha256:scan-1",
+                "details": {},
+            },
+            {
+                "event_type": "observation_emitted",
+                "timestamp": "2026-05-18T18:30:02Z",
+                "participant_address": participant_address,
+                "episode_id": "episode-1",
+                "action_instance_id": "scan-1",
+                "action_contract_address": action_address,
+                "observation_boundary_address": boundary_address,
+                "observation_status": "terminal",
+                "post_state_digest": "sha256:scan-1",
+                "details": {},
+            },
+        ]
+
+    snapshot_payload = {
+        "schema_version": "runtime-snapshot/v1",
+        "entries": {
+            action_address: _snapshot_entry(action_address, "participant-action-contract", {}),
+            boundary_address: _snapshot_entry(boundary_address, "participant-observation-boundary", {}),
+            red_participant: _snapshot_entry(red_participant, "participant-behavior", _participant_payload()),
+        },
+        "orchestration_results": {},
+        "orchestration_history": {},
+        "evaluation_results": {},
+        "evaluation_history": {},
+        "participant_episode_results": {},
+        "participant_episode_history": {},
+        "participant_behavior_history": {
+            red_participant: _behavior_history(blue_participant),
+        },
+        "metadata": {},
+    }
+
+    diagnostics = _semantic_diagnostics("runtime-snapshot-v1", snapshot_payload)
+
+    mismatch_messages = [
+        diagnostic.message
+        for diagnostic in diagnostics
+        if "does not match inner participant_address" in diagnostic.message
+    ]
+    expected_message = (
+        "participant behavior history event outer key 'participant.behavior.red-agent' "
+        "does not match inner participant_address 'participant.behavior.blue-agent'"
+    )
+    assert mismatch_messages == [expected_message, expected_message, expected_message]
+
+
 def test_target_conformance_fails_when_declared_contracts_do_not_cover_profile_requirements():
     reference_manifest = create_stub_manifest()
     manifest = BackendManifest(
@@ -275,6 +698,7 @@ def test_target_conformance_fails_when_declared_contracts_do_not_cover_profile_r
         "operation-receipt-v1",
         "operation-status-v1",
         "orchestration-plan-v1",
+        "participant-behavior-history-event-stream-v1",
         "participant-episode-history-event-stream-v1",
         "participant-episode-state-envelope-v1",
         "provisioning-plan-v1",

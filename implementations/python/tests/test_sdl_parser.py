@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from aces.core.sdl._errors import SDLParseError
+from aces.core.sdl import instantiate_scenario
+from aces.core.sdl._errors import SDLParseError, SDLValidationError
 from aces.core.sdl.nodes import NodeType
 from aces.core.sdl.parser import parse_sdl, parse_sdl_file
 
@@ -219,6 +220,542 @@ nodes:
 """
         s = parse_sdl(sdl)
         assert any("without 'resources'" in advisory for advisory in s.advisories)
+
+    def test_runtime_configuration_parses_without_overloading_other_sections(self):
+        sdl = """
+name: shuffle-runtime-inventory
+nodes:
+  shuffle-backend:
+    type: vm
+    os: linux
+    runtime:
+      mounts:
+        - target: /shuffle-database
+          source: aptl_shuffle_data
+          source-sensitivity: plain
+          source-kind: volume
+          filesystem-type: ext4
+          read-only: false
+          options: [rw, nosuid]
+          options-sensitivity: plain
+          propagation: rprivate
+          stability: volume-backed
+          backend-generated: true
+      filesystem-inventory:
+        - path: /app/app.py
+          entry-type: file
+          owner-user: root
+          owner-group: root
+          uid: "0"
+          gid: "0"
+          mode: "0644"
+          size: "4096"
+          content-digest: 4f8c2d
+          digest-algorithm: sha256
+          source-path: src/webapp/app.py
+          provenance: python-package
+          stability: stable
+          sensitivity: plain
+        - path: /var/log/gunicorn/access.log
+          entry-type: file
+          mode: "0600"
+          stability: log
+          sensitivity: operator-secret
+      local-control-interfaces:
+        - control-interface-id: docker-sock
+          path: /run/docker.sock
+          kind: unix-socket
+          protocol: docker
+          bind-source-sensitivity: operator-secret
+          access: read-write
+      processes:
+        - name: shufflebackend
+          command: ./shufflebackend
+          user: root
+          working-directory: /app
+        - name: supervisord
+          pid: 1
+          command: supervisord -n
+          role: supervisor
+        - name: gunicorn
+          parent-pid: 1
+          command: [gunicorn, app:app]
+          role: worker
+      environment:
+        - name: TECHVAULT_ADMIN_PASSWORD
+          value-classification: redacted
+          provenance: operator
+        - name: SCENARIO_FIXTURE_TOKEN
+          value: fixture-token
+          value-classification: secret-fixture
+          provenance: compose
+      linux-capabilities:
+        required: [CAP_NET_ADMIN]
+        effective: CAP_NET_ADMIN
+        process-overrides:
+          - subject:
+              name: gunicorn
+              parent-pid: 1
+            scope: subtree
+            drop: [cap-audit-control]
+            description: interactive participant shell
+      operational-policy:
+        restart: unless-stopped
+        resource-limits:
+          memory: 512 MiB
+          cpu: 0.5
+          pids: 128
+      container:
+        entrypoint: [/entrypoint.sh]
+        command: [gunicorn, app:app]
+        log-driver: json-file
+        log-options:
+          max-size: 10m
+          max-file: "3"
+        namespaces:
+          cgroup: private
+          ipc: private
+          pid: private
+          userns: host
+          uts: private
+        privileged: false
+        read-only-rootfs: false
+        publish-all-ports: false
+        autoremove: false
+        shm-size: 64 MiB
+        masked-paths: [/proc/acpi, /proc/kcore]
+        read-only-paths: /proc/sys
+        cgroup-parent: /docker
+        runtime-name: runc
+        init-process:
+          enabled: true
+          implementation: docker-init
+          executable-path: /sbin/docker-init
+          reaps-children: true
+          argv: [/sbin/docker-init, "--", /entrypoint.sh]
+        devices:
+          - host-path: /dev/null
+            container-path: /dev/null
+            permissions: rwm
+        device-cgroup-rules: c 1:3 rwm
+        extra-hosts:
+          - hostname: wazuh-manager
+            address: 172.20.0.10
+        dns: [8.8.8.8]
+        dns-options: ndots:0
+        dns-search: [techvault.local]
+        group-add: [adm, "101"]
+      health:
+        status: healthy
+        failing-streak: "0"
+        log:
+          - start: "2026-05-20T12:00:00Z"
+            end: "2026-05-20T12:00:01Z"
+            exit-code: "0"
+            output: ok
+      packages:
+        - manager: apk
+          name: musl
+          version: 1.2.4-r2
+      software-components:
+        - component-id: shuffle-backend-app
+          name: shuffle-backend
+          version: 1.2.3
+          component-type: application
+          provenance: scanner
+          ecosystem: go
+          purl: "pkg:golang/github.com/frikky/shuffle@1.2.3"
+          cpe: "cpe:2.3:a:shuffle:shuffle:1.2.3:*:*:*:*:*:*:*"
+          package-manager: apk
+          package-name: shuffle-backend
+          package-version: 1.2.3-r0
+          manifest-path: /app/go.mod
+          installed-paths: [/app/shufflebackend, /app/go.mod]
+          hashes:
+            - algorithm: sha256
+              value: abc123
+      dependency-manifests:
+        - ecosystem: go
+          path: /app/go.mod
+          format: go-module
+      package-vulnerabilities:
+        - id: CVE-2026-12345
+          package-name: musl
+          installed-version: 1.2.4-r2
+          fixed-version: 1.2.5-r0
+          severity: high
+          scanner: trivy
+          image-digest: sha256:abc123
+          scan-time: "2026-05-20T12:00:00Z"
+"""
+        scenario = parse_sdl(sdl)
+        node = scenario.nodes["shuffle-backend"]
+
+        assert node.services == []
+        assert scenario.vulnerabilities == {}
+        assert node.runtime is not None
+        assert node.runtime.mounts[0].target == "/shuffle-database"
+        assert node.runtime.mounts[0].source_sensitivity == "plain"
+        assert node.runtime.mounts[0].filesystem_type == "ext4"
+        assert node.runtime.mounts[0].options_sensitivity == "plain"
+        assert node.runtime.mounts[0].propagation == "rprivate"
+        assert node.runtime.mounts[0].stability == "volume_backed"
+        assert node.runtime.mounts[0].backend_generated is True
+        assert node.runtime.filesystem_inventory[0].path == "/app/app.py"
+        assert node.runtime.filesystem_inventory[0].entry_type == "file"
+        assert node.runtime.filesystem_inventory[0].uid == 0
+        assert node.runtime.filesystem_inventory[0].gid == 0
+        assert node.runtime.filesystem_inventory[0].mode == "0644"
+        assert node.runtime.filesystem_inventory[0].size == 4096
+        assert node.runtime.filesystem_inventory[0].digest_algorithm == "sha256"
+        assert node.runtime.filesystem_inventory[0].content_digest == "4f8c2d"
+        assert node.runtime.filesystem_inventory[0].source_path == "src/webapp/app.py"
+        assert node.runtime.filesystem_inventory[0].stability == "stable"
+        assert node.runtime.filesystem_inventory[1].stability == "log"
+        assert node.runtime.filesystem_inventory[1].sensitivity == "operator_secret"
+        assert node.runtime.local_control_interfaces[0].path == "/run/docker.sock"
+        assert node.runtime.local_control_interfaces[0].bind_source_sensitivity == "operator_secret"
+        assert node.runtime.processes[0].command == ["./shufflebackend"]
+        assert node.runtime.processes[1].name == "supervisord"
+        assert node.runtime.processes[2].parent_pid == 1
+        assert node.runtime.environment[0].name == "TECHVAULT_ADMIN_PASSWORD"
+        assert node.runtime.environment[0].value_classification == "redacted"
+        assert node.runtime.environment[1].value_classification == "secret_fixture"
+        assert node.runtime.linux_capabilities.required == ["CAP_NET_ADMIN"]
+        assert node.runtime.linux_capabilities.effective == ["CAP_NET_ADMIN"]
+        overrides = node.runtime.linux_capabilities.process_overrides
+        assert len(overrides) == 1
+        assert overrides[0].subject.name == "gunicorn"
+        assert overrides[0].subject.parent_pid == 1
+        assert overrides[0].scope == "subtree"
+        assert overrides[0].drop == ["CAP_AUDIT_CONTROL"]
+        assert node.runtime.operational_policy.restart == "unless_stopped"
+        assert node.runtime.operational_policy.resource_limits.memory == 512 * 1048576
+        assert node.runtime.operational_policy.resource_limits.cpu == 0.5
+        assert node.runtime.operational_policy.resource_limits.pids == 128
+        assert node.runtime.container is not None
+        assert node.runtime.container.entrypoint == ["/entrypoint.sh"]
+        assert node.runtime.container.command == ["gunicorn", "app:app"]
+        assert node.runtime.container.log_driver == "json-file"
+        assert node.runtime.container.log_options == {"max-size": "10m", "max-file": "3"}
+        assert node.runtime.container.namespaces.userns == "host"
+        assert node.runtime.container.shm_size == 64 * 1048576
+        assert node.runtime.container.masked_paths == ["/proc/acpi", "/proc/kcore"]
+        assert node.runtime.container.read_only_paths == ["/proc/sys"]
+        assert node.runtime.container.devices[0].container_path == "/dev/null"
+        assert node.runtime.container.device_cgroup_rules == ["c 1:3 rwm"]
+        assert node.runtime.container.extra_hosts[0].hostname == "wazuh-manager"
+        assert node.runtime.container.dns_options == ["ndots:0"]
+        assert node.runtime.container.group_add == ["adm", "101"]
+        assert node.runtime.container.init_process is not None
+        assert node.runtime.container.init_process.enabled is True
+        assert node.runtime.container.init_process.implementation == "docker-init"
+        assert node.runtime.container.init_process.executable_path == "/sbin/docker-init"
+        assert node.runtime.container.init_process.reaps_children is True
+        assert node.runtime.container.init_process.argv == ["/sbin/docker-init", "--", "/entrypoint.sh"]
+        assert node.runtime.health is not None
+        assert node.runtime.health.status == "healthy"
+        assert node.runtime.health.failing_streak == 0
+        assert node.runtime.health.log[0].exit_code == 0
+        assert node.runtime.packages[0].manager == "apk"
+        assert node.runtime.packages[0].name == "musl"
+        assert node.runtime.packages[0].version == "1.2.4-r2"
+        assert node.runtime.software_components[0].component_id == "shuffle-backend-app"
+        assert node.runtime.software_components[0].name == "shuffle-backend"
+        assert node.runtime.software_components[0].version == "1.2.3"
+        assert node.runtime.software_components[0].component_type == "application"
+        assert node.runtime.software_components[0].provenance == "scanner"
+        assert node.runtime.software_components[0].ecosystem == "go"
+        assert node.runtime.software_components[0].purl == "pkg:golang/github.com/frikky/shuffle@1.2.3"
+        assert node.runtime.software_components[0].package_manager == "apk"
+        assert node.runtime.software_components[0].package_name == "shuffle-backend"
+        assert node.runtime.software_components[0].package_version == "1.2.3-r0"
+        assert node.runtime.software_components[0].manifest_path == "/app/go.mod"
+        assert node.runtime.software_components[0].installed_paths == ["/app/shufflebackend", "/app/go.mod"]
+        assert node.runtime.software_components[0].hashes[0].value == "abc123"
+        assert node.runtime.dependency_manifests[0].ecosystem == "go"
+        assert node.runtime.dependency_manifests[0].path == "/app/go.mod"
+        assert node.runtime.dependency_manifests[0].format == "go-module"
+        assert node.runtime.package_vulnerabilities[0].id == "CVE-2026-12345"
+        assert node.runtime.package_vulnerabilities[0].package_name == "musl"
+        assert node.runtime.package_vulnerabilities[0].installed_version == "1.2.4-r2"
+        assert node.runtime.package_vulnerabilities[0].fixed_version == "1.2.5-r0"
+        assert node.runtime.package_vulnerabilities[0].severity == "high"
+        assert node.runtime.package_vulnerabilities[0].scanner == "trivy"
+        assert node.runtime.package_vulnerabilities[0].image_digest == "sha256:abc123"
+        assert node.runtime.package_vulnerabilities[0].scan_time == "2026-05-20T12:00:00Z"
+
+    def test_runtime_local_identity_inventory_parses_with_kebab_keys(self):
+        sdl = """
+name: techvault-identity-inventory
+nodes:
+  techvault-webapp:
+    type: vm
+    os: linux
+    runtime:
+      local-identity:
+        description: getent passwd/group capture
+        users:
+          - username: root
+            uid: 0
+            primary-gid: 0
+            primary-group: root
+            gecos: root
+            home: /root
+            shell: /bin/bash
+            provenance: image
+            stability: stable
+          - username: www-data
+            uid: 33
+            primary-gid: 33
+            primary-group: www-data
+            home: /var/www
+            shell: /usr/sbin/nologin
+            supplemental-groups: [wazuh]
+            no-login: true
+            provenance: package
+        groups:
+          - name: root
+            gid: 0
+            members: [root]
+          - name: wazuh
+            gid: 101
+            members: [www-data]
+        sudo-rules:
+          - principal: operator
+            principal-kind: user
+            run-as-users: [root]
+            commands: ["/usr/bin/systemctl restart gunicorn"]
+            nopasswd: true
+"""
+        scenario = parse_sdl(sdl)
+        identity = scenario.nodes["techvault-webapp"].runtime.local_identity
+        assert identity is not None
+        assert identity.description == "getent passwd/group capture"
+        assert identity.users[0].username == "root"
+        assert identity.users[0].primary_gid == 0
+        assert identity.users[0].provenance == "image"
+        assert identity.users[1].username == "www-data"
+        assert identity.users[1].no_login is True
+        assert identity.users[1].supplemental_groups == ["wazuh"]
+        assert identity.users[1].provenance == "package"
+        assert identity.groups[1].name == "wazuh"
+        assert identity.groups[1].gid == 101
+        assert identity.sudo_rules[0].principal == "operator"
+        assert identity.sudo_rules[0].run_as_users == ["root"]
+        assert identity.sudo_rules[0].commands == ["/usr/bin/systemctl restart gunicorn"]
+        assert identity.sudo_rules[0].nopasswd is True
+
+    def test_runtime_local_identity_uid_variable_substitutes_on_instantiation(self):
+        sdl = """
+name: techvault-identity-variable
+variables:
+  svc_uid:
+    type: integer
+    required: true
+nodes:
+  techvault-webapp:
+    type: vm
+    os: linux
+    runtime:
+      local-identity:
+        users:
+          - username: wazuh
+            uid: ${svc_uid}
+            home: /var/ossec
+            shell: /usr/sbin/nologin
+            no-login: true
+"""
+        raw = parse_sdl(sdl)
+        assert raw.nodes["techvault-webapp"].runtime.local_identity.users[0].uid == "${svc_uid}"
+        instantiated = instantiate_scenario(raw, parameters={"svc_uid": 999})
+        user = instantiated.nodes["techvault-webapp"].runtime.local_identity.users[0]
+        assert user.uid == 999
+        assert user.no_login is True
+
+    def test_runtime_network_realization_parses_with_kebab_keys(self):
+        sdl = """
+name: techvault-network-realization
+nodes:
+  aptl-dmz:
+    type: switch
+  techvault-webapp:
+    type: vm
+    os: linux
+    runtime:
+      network:
+        description: Docker network realization observed by harness inspection.
+        hostname: techvault-webapp
+        domainname: techvault.local
+        endpoints:
+          - network: aptl-dmz
+            network-id: net-a1b2c3d4e5f6
+            network-id-stability: stable
+            endpoint-id: ep-1a2b3c4d5e6f
+            endpoint-id-stability: ephemeral
+            backend-generated: true
+            ip-address: 172.20.0.20
+            ip-prefix-length: "24"
+            gateway: 172.20.0.1
+            mac-address: 02:42:ac:14:00:14
+            aliases: [aptl-webapp, webapp]
+            dns-names: [aptl-webapp, webapp]
+            generated-dns-names: [a1b2c3d4e5f6]
+            backend:
+              driver: bridge
+              ipam-driver: default
+              driver-options:
+                com.docker.network.bridge.name: br-dmz
+              ipam-options:
+                com.docker.network.driver.mtu: "1500"
+        published-ports:
+          - container-port: "8080"
+            protocol: tcp
+            host-ip: 127.0.0.1
+            host-port: "8080"
+infrastructure:
+  aptl-dmz:
+    properties:
+      cidr: 172.20.0.0/24
+      gateway: 172.20.0.1
+"""
+        scenario = parse_sdl(sdl)
+        network = scenario.nodes["techvault-webapp"].runtime.network
+        assert network is not None
+        assert network.hostname == "techvault-webapp"
+        assert network.domainname == "techvault.local"
+        endpoint = network.endpoints[0]
+        assert endpoint.network == "aptl-dmz"
+        assert endpoint.network_id == "net-a1b2c3d4e5f6"
+        assert endpoint.network_id_stability == "stable"
+        assert endpoint.endpoint_id_stability == "ephemeral"
+        assert endpoint.backend_generated is True
+        assert endpoint.ip_address == "172.20.0.20"
+        assert endpoint.ip_prefix_length == 24
+        assert endpoint.gateway == "172.20.0.1"
+        assert endpoint.mac_address == "02:42:ac:14:00:14"
+        assert endpoint.aliases == ["aptl-webapp", "webapp"]
+        assert endpoint.dns_names == ["aptl-webapp", "webapp"]
+        assert endpoint.generated_dns_names == ["a1b2c3d4e5f6"]
+        # Backend-native option keys are preserved verbatim (not key-normalized).
+        assert endpoint.backend.driver == "bridge"
+        assert endpoint.backend.driver_options == {"com.docker.network.bridge.name": "br-dmz"}
+        assert endpoint.backend.ipam_options == {"com.docker.network.driver.mtu": "1500"}
+        binding = network.published_ports[0]
+        assert binding.container_port == 8080
+        assert binding.host_ip == "127.0.0.1"
+        assert binding.host_port == 8080
+        assert binding.protocol == "tcp"
+
+    def test_runtime_network_ip_variable_substitutes_on_instantiation(self):
+        sdl = """
+name: techvault-network-variable
+variables:
+  webapp_ip:
+    type: string
+    required: true
+nodes:
+  aptl-dmz:
+    type: switch
+  techvault-webapp:
+    type: vm
+    os: linux
+    runtime:
+      network:
+        endpoints:
+          - network: aptl-dmz
+            ip-address: ${webapp_ip}
+infrastructure:
+  aptl-dmz:
+    properties:
+      cidr: 172.20.0.0/24
+      gateway: 172.20.0.1
+"""
+        raw = parse_sdl(sdl)
+        assert raw.nodes["techvault-webapp"].runtime.network.endpoints[0].ip_address == "${webapp_ip}"
+        instantiated = instantiate_scenario(raw, parameters={"webapp_ip": "172.20.0.20"})
+        endpoint = instantiated.nodes["techvault-webapp"].runtime.network.endpoints[0]
+        assert endpoint.ip_address == "172.20.0.20"
+
+    def test_source_build_provenance_parses_with_kebab_keys(self):
+        sdl = """
+name: techvault-build-provenance
+nodes:
+  techvault-webapp:
+    type: vm
+    os: linux
+    source:
+      name: techvault-webapp
+      version: local
+      build:
+        base-image: python:3.12-slim
+        base-image-digest: sha256:deadbeef
+        dockerfile-path: containers/webapp/Dockerfile
+        instructions:
+          - instruction: from
+            arguments: [python:3.12-slim]
+          - instruction: copy
+            arguments: [webapp/app.py, /app/app.py]
+        layers:
+          - digest: sha256:layer1
+            created-by: FROM python:3.12-slim
+            size: "31000000"
+          - created-by: ENV APP_HOME=/app
+            empty: true
+        build-args:
+          - name: APP_VERSION
+            value: 1.4.2
+            value-classification: plain
+          - name: PIP_INDEX_TOKEN
+            value-classification: redacted
+        copied-sources:
+          - source-path: webapp/app.py
+            destination-path: /app/app.py
+        config:
+          entrypoint: [/entrypoint.sh]
+          command: [gunicorn, app:app]
+          working-directory: /app
+          exposed-ports: [8080/tcp]
+          labels:
+            org.opencontainers.image.source: https://example.test/techvault
+            com.Example.Tier: webapp
+          default-environment:
+            - name: APP_HOME
+              value: /app
+        source-inputs:
+          - identifier: webapp-app
+            source-path: webapp/app.py
+            destination-path: /app/app.py
+            checksum: 4f8c2d
+            checksum-algorithm: sha256
+        attestation:
+          status: absent
+          verification: not-applicable
+          attestation-type: in-toto
+"""
+        s = parse_sdl(sdl, skip_semantic_validation=True)
+        build = s.nodes["techvault-webapp"].source.build
+
+        assert build is not None
+        assert build.base_image == "python:3.12-slim"
+        assert build.dockerfile_path == "containers/webapp/Dockerfile"
+        assert build.instructions[1].instruction.value == "copy"
+        assert build.instructions[1].arguments == ["webapp/app.py", "/app/app.py"]
+        assert build.layers[0].size == 31000000
+        assert build.layers[1].empty is True
+        assert build.build_args[1].value_classification.value == "redacted"
+        assert build.copied_sources[0].destination_path == "/app/app.py"
+        assert build.config.working_directory == "/app"
+        assert build.config.exposed_ports == ["8080/tcp"]
+        # Native, case-sensitive image label keys are preserved verbatim.
+        assert build.config.labels == {
+            "org.opencontainers.image.source": "https://example.test/techvault",
+            "com.Example.Tier": "webapp",
+        }
+        assert build.config.default_environment[0].name == "APP_HOME"
+        assert build.source_inputs[0].checksum_algorithm == "sha256"
+        assert build.attestation.verification.value == "not_applicable"
+        assert build.attestation.attestation_type.value == "in_toto"
 
     def test_source_shorthand(self):
         sdl = """
@@ -576,7 +1113,7 @@ variables:
     default: hello
 """,
         }
-        with pytest.raises(SDLParseError):
+        with pytest.raises(SDLParseError, match=rf"{field_name}[\s\S]*Input should be"):
             parse_sdl(sdl_by_field[field_name], skip_semantic_validation=True)
 
     @pytest.mark.parametrize(
@@ -630,7 +1167,7 @@ class TestErrorHandling:
             parse_sdl("- just\n- a\n- list")
 
     def test_no_identity(self):
-        with pytest.raises(SDLParseError):
+        with pytest.raises(SDLParseError, match="name"):
             parse_sdl("description: no name or metadata")
 
 
@@ -950,6 +1487,74 @@ imports:
         with pytest.raises(SDLParseError, match="collides"):
             parse_sdl_file(root)
 
+    def test_parse_sdl_file_rewrites_database_and_application_relationship_refs(self, tmp_path: Path):
+        # End-to-end composition: the relationship's source (a runtime
+        # application ref) and target (a database service ref) must survive
+        # module namespacing. Without `_nested_node_application_aliases` /
+        # `_nested_node_database_aliases` being consumed by composition's
+        # relationship rewrite, the refs would point at the un-namespaced
+        # nodes and fail semantic validation on the composed scenario
+        # (ADR-027 §2).
+        imported = tmp_path / "shared-db.yaml"
+        imported.write_text(
+            """
+name: shared-db
+version: 1.0.0
+nodes:
+  db:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    services:
+      - {port: 5432, name: pg}
+    runtime:
+      database_services:
+        - database_service_id: tv-pg
+          service: pg
+          engine: postgresql
+          protocol: postgresql
+          databases:
+            - {database_id: tv, name: techvault}
+          roles:
+            - {role_id: app, name: techvault}
+  web:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    services:
+      - {port: 8080, name: http}
+    runtime:
+      applications:
+        - {application_id: webapp, service: http}
+relationships:
+  webapp-to-db:
+    type: connects_to
+    source: nodes.web.runtime.applications.webapp
+    target: nodes.db.runtime.database_services.tv-pg
+    database_access: {role_ref: app, auth_method: scram_sha_256}
+""",
+            encoding="utf-8",
+        )
+        root = tmp_path / "root.yaml"
+        root.write_text(
+            """
+name: root
+imports:
+  - path: shared-db.yaml
+    namespace: shared
+    version: 1.0.0
+""",
+            encoding="utf-8",
+        )
+
+        scenario = parse_sdl_file(root)
+
+        rel = scenario.relationships["shared.webapp-to-db"]
+        assert rel.source == "nodes.shared.web.runtime.applications.webapp"
+        assert rel.target == "nodes.shared.db.runtime.database_services.tv-pg"
+        # ``role_ref`` is service-local and intentionally not rewritten.
+        assert rel.database_access.role_ref == "app"
+
 
 class TestLoadRealScenarios:
     """ACES legacy scenario YAMLs use the metadata format which is no
@@ -972,3 +1577,682 @@ class TestLoadRealScenarios:
         for path in sorted(scenarios_dir.glob("*.yaml")):
             scenario = parse_sdl_file(path)
             assert scenario.name
+
+
+class TestRuntimeApplicationParsing:
+    def test_runtime_application_surface_parses_with_kebab_keys(self):
+        sdl = """
+name: techvault-application-surface
+nodes:
+  techvault-webapp:
+    type: vm
+    os: linux
+    services:
+      - port: 8080
+        name: techvault-http
+    runtime:
+      applications:
+        - application-id: techvault-webapp
+          service: techvault-http
+          protocol: http
+          base-path: /
+          framework: flask
+          routes:
+            - route-id: login
+              path: /login
+              methods: [get, post]
+              auth-required: false
+              session-required: false
+              parameters:
+                - name: username
+                  location: form
+                  required: true
+              responses:
+                - status-code: "200"
+                  content-type: text/html
+              redirects:
+                - target: /dashboard
+                  status-code: "302"
+"""
+        scenario = parse_sdl(sdl)
+        applications = scenario.nodes["techvault-webapp"].runtime.applications
+        assert len(applications) == 1
+        surface = applications[0]
+        assert surface.application_id == "techvault-webapp"
+        assert surface.service == "techvault-http"
+        assert surface.base_path == "/"
+        route = surface.routes[0]
+        assert route.route_id == "login"
+        assert route.methods == ["GET", "POST"]
+        assert route.auth_required is False
+        assert route.parameters[0].name == "username"
+        assert route.responses[0].status_code == 200
+        assert route.redirects[0].status_code == 302
+
+    def test_runtime_application_auth_variable_substitutes_on_instantiation(self):
+        sdl = """
+name: techvault-application-variable
+variables:
+  login_auth:
+    type: boolean
+    required: true
+nodes:
+  techvault-webapp:
+    type: vm
+    os: linux
+    runtime:
+      applications:
+        - application-id: techvault-webapp
+          routes:
+            - route-id: login
+              path: /login
+              methods: [GET]
+              auth-required: ${login_auth}
+"""
+        raw = parse_sdl(sdl)
+        route = raw.nodes["techvault-webapp"].runtime.applications[0].routes[0]
+        assert route.auth_required == "${login_auth}"
+        instantiated = instantiate_scenario(raw, parameters={"login_auth": True})
+        route = instantiated.nodes["techvault-webapp"].runtime.applications[0].routes[0]
+        assert route.auth_required is True
+
+
+class TestRuntimeSshServerParsing:
+    def test_ssh_server_configuration_parses_with_kebab_keys(self):
+        sdl = """
+name: techvault-ssh-surface
+nodes:
+  techvault-kali:
+    type: vm
+    os: linux
+    services:
+      - port: 22
+        name: ssh
+    runtime:
+      ssh-servers:
+        - ssh-server-id: sshd-default
+          service: ssh
+          accept-env: [APTL_SESSION_ID, APTL_RUN_ID, APTL_TRACE_ID]
+          password-authentication: false
+          pubkey-authentication: true
+          permit-tty: true
+          allow-users: [kali]
+          authentication-methods: [publickey]
+          chroot-directory: /var/empty
+          authorized-keys-file: /etc/ssh/authorized_keys.d/%u
+          match-rules:
+            - match-id: m-kali
+              criteria:
+                - kind: user
+                  pattern: kali
+              forced-command:
+                command-kind: absolute_path
+                command: /usr/local/bin/aptl-wrap-shell.sh
+              permit-tty: true
+"""
+        scenario = parse_sdl(sdl)
+        ssh_servers = scenario.nodes["techvault-kali"].runtime.ssh_servers
+        assert len(ssh_servers) == 1
+        server = ssh_servers[0]
+        assert server.ssh_server_id == "sshd-default"
+        assert server.service == "ssh"
+        assert server.accept_env == ["APTL_SESSION_ID", "APTL_RUN_ID", "APTL_TRACE_ID"]
+        assert server.password_authentication is False
+        assert server.pubkey_authentication is True
+        assert server.permit_tty is True
+        assert server.allow_users == ["kali"]
+        assert server.authentication_methods == ["publickey"]
+        assert server.chroot_directory == "/var/empty"
+        assert server.authorized_keys_file == "/etc/ssh/authorized_keys.d/%u"
+        assert len(server.match_rules) == 1
+        rule = server.match_rules[0]
+        assert rule.match_id == "m-kali"
+        assert rule.criteria[0].pattern == "kali"
+        assert rule.forced_command is not None
+        assert rule.forced_command.command == "/usr/local/bin/aptl-wrap-shell.sh"
+        assert rule.permit_tty is True
+
+    def test_ssh_server_accept_env_scalar_coerces_to_list(self):
+        sdl = """
+name: techvault-ssh-scalar
+nodes:
+  techvault-kali:
+    type: vm
+    os: linux
+    services:
+      - port: 22
+        name: ssh
+    runtime:
+      ssh-servers:
+        - ssh-server-id: sshd-default
+          service: ssh
+          accept-env: APTL_SESSION_ID
+"""
+        scenario = parse_sdl(sdl)
+        server = scenario.nodes["techvault-kali"].runtime.ssh_servers[0]
+        assert server.accept_env == ["APTL_SESSION_ID"]
+
+    def test_ssh_server_chroot_directory_variable_substitutes_on_instantiation(self):
+        sdl = """
+name: techvault-ssh-variable
+variables:
+  chroot_path:
+    type: string
+    required: true
+nodes:
+  techvault-kali:
+    type: vm
+    os: linux
+    services:
+      - port: 22
+        name: ssh
+    runtime:
+      ssh-servers:
+        - ssh-server-id: sshd-default
+          service: ssh
+          chroot-directory: ${chroot_path}
+"""
+        raw = parse_sdl(sdl)
+        server = raw.nodes["techvault-kali"].runtime.ssh_servers[0]
+        assert server.chroot_directory == "${chroot_path}"
+        instantiated = instantiate_scenario(raw, parameters={"chroot_path": "/var/empty"})
+        server = instantiated.nodes["techvault-kali"].runtime.ssh_servers[0]
+        assert server.chroot_directory == "/var/empty"
+
+    def test_ssh_server_variable_ref_server_id_rejected_on_instantiation(self):
+        from aces.core.sdl._errors import SDLInstantiationError
+
+        sdl = """
+name: techvault-ssh-bad-id
+variables:
+  server_id:
+    type: string
+    required: true
+nodes:
+  techvault-kali:
+    type: vm
+    os: linux
+    services:
+      - port: 22
+        name: ssh
+    runtime:
+      ssh-servers:
+        - ssh-server-id: ${server_id}
+          service: ssh
+"""
+        # The parse step itself should reject a variable-ref symbol-defining identifier
+        # because RuntimeSshServer.ssh_server_id rejects variable refs at model validation time.
+        with pytest.raises((SDLParseError, SDLInstantiationError)):
+            parse_sdl(sdl)
+
+
+class TestRuntimeIdentityAuthorityParsing:
+    def test_identity_authority_surface_parses_with_kebab_keys(self):
+        sdl = """
+name: techvault-directory-identity
+nodes:
+  ad:
+    type: vm
+    os: windows
+    services:
+      - {port: 389, name: ldap}
+      - {port: 88, name: kerberos}
+    runtime:
+      identity-authorities:
+        - identity-authority-id: techvault-domain
+          kind: domain
+          name: TechVault Domain
+          namespace: techvault.local
+          domain-name: TECHVAULT
+          realm: TECHVAULT.LOCAL
+          base-dn: DC=techvault,DC=local
+          services:
+            - service-id: ldap-endpoint
+              service: ldap
+              protocol: LDAP
+              address: dc.techvault.local
+              port: "389"
+          subjects:
+            - subject-id: alice
+              kind: user
+              name: alice
+              principal-name: alice@TECHVAULT.LOCAL
+              distinguished-name: CN=Alice,CN=Users,DC=techvault,DC=local
+              enabled: true
+              attributes:
+                - name: department
+                  values: security
+            - subject-id: domain-admins
+              kind: group
+              name: Domain Admins
+            - subject-id: ldap-svc
+              kind: service-principal
+              name: ldap
+              service-principal-names: [LDAP/dc.techvault.local]
+          relationships:
+            - relationship-id: alice-admin
+              relationship-type: member-of
+              source-ref: alice
+              target-ref: domain-admins
+          policies:
+            - policy-id: default-password-policy
+              policy-kind: password
+              name: Default Domain Policy
+              applies-to-refs: [techvault-domain]
+              settings:
+                - name: min_length
+                  values: "14"
+"""
+        scenario = parse_sdl(sdl)
+        authority = scenario.nodes["ad"].runtime.identity_authorities[0]
+        assert authority.identity_authority_id == "techvault-domain"
+        assert authority.domain_name == "TECHVAULT"
+        assert authority.services[0].service_id == "ldap-endpoint"
+        assert authority.services[0].port == 389
+        assert authority.subjects[0].principal_name == "alice@TECHVAULT.LOCAL"
+        assert authority.subjects[0].attributes[0].values == ["security"]
+        assert authority.subjects[2].service_principal_names == ["LDAP/dc.techvault.local"]
+        assert authority.relationships[0].target_ref == "domain-admins"
+        assert authority.policies[0].settings[0].values == ["14"]
+
+    def test_identity_authority_value_fields_substitute_on_instantiation(self):
+        sdl = """
+name: techvault-directory-variable
+variables:
+  tenant_id:
+    type: string
+    required: true
+nodes:
+  idp:
+    type: vm
+    os: linux
+    runtime:
+      identity-authorities:
+        - identity-authority-id: techvault-idp
+          kind: identity-provider
+          namespace: https://idp.techvault.local
+          tenant-id: ${tenant_id}
+"""
+        raw = parse_sdl(sdl)
+        authority = raw.nodes["idp"].runtime.identity_authorities[0]
+        assert authority.tenant_id == "${tenant_id}"
+        instantiated = instantiate_scenario(raw, parameters={"tenant_id": "tenant-123"})
+        authority = instantiated.nodes["idp"].runtime.identity_authorities[0]
+        assert authority.tenant_id == "tenant-123"
+
+    def test_identity_authority_service_ref_must_resolve_to_same_node_service(self):
+        sdl = """
+name: bad-directory-service-ref
+nodes:
+  ad:
+    type: vm
+    os: windows
+    services:
+      - {port: 389, name: ldap}
+    runtime:
+      identity-authorities:
+        - identity-authority-id: techvault-domain
+          services:
+            - service-id: ldap-endpoint
+              service: missing-ldap
+              protocol: ldap
+"""
+        with pytest.raises(SDLValidationError, match="references undefined service 'missing-ldap'"):
+            parse_sdl(sdl)
+
+    def test_identity_authority_relationship_refs_must_resolve_inside_authority(self):
+        sdl = """
+name: bad-directory-relationship-ref
+nodes:
+  ad:
+    type: vm
+    os: windows
+    runtime:
+      identity-authorities:
+        - identity-authority-id: techvault-domain
+          subjects:
+            - {subject-id: domain-admins, kind: group, name: Domain Admins}
+          relationships:
+            - relationship-id: alice-admin
+              relationship-type: member-of
+              source-ref: alice
+              target-ref: domain-admins
+"""
+        with pytest.raises(SDLValidationError, match="source_ref 'alice' does not resolve"):
+            parse_sdl(sdl)
+
+    def test_identity_authority_policy_applies_to_ref_must_resolve_inside_authority(self):
+        sdl = """
+name: bad-policy-ref
+nodes:
+  ad:
+    type: vm
+    os: windows
+    runtime:
+      identity-authorities:
+        - identity-authority-id: techvault-domain
+          policies:
+            - policy-id: default-policy
+              applies-to-refs: [missing-subject]
+"""
+        with pytest.raises(SDLValidationError, match="applies_to_ref 'missing-subject' does not resolve"):
+            parse_sdl(sdl)
+
+    def test_identity_authority_local_refs_include_stable_service_and_relationship_ids(self):
+        sdl = """
+name: directory-local-refs
+nodes:
+  ad:
+    type: vm
+    os: windows
+    services:
+      - {port: 389, name: ldap}
+    runtime:
+      identity-authorities:
+        - identity-authority-id: techvault-domain
+          services:
+            - service-id: ldap-endpoint
+              service: ldap
+              protocol: ldap
+          subjects:
+            - {subject-id: alice, kind: user, name: alice}
+            - {subject-id: domain-admins, kind: group, name: Domain Admins}
+          relationships:
+            - relationship-id: alice-admin
+              relationship-type: member-of
+              source-ref: alice
+              target-ref: domain-admins
+            - relationship-id: ldap-documents-membership
+              relationship-type: associated
+              source-ref: ldap-endpoint
+              target-ref: alice-admin
+          policies:
+            - policy-id: ldap-audit-policy
+              policy-kind: other
+              applies-to-refs: [ldap-endpoint, alice-admin]
+"""
+        authority = parse_sdl(sdl).nodes["ad"].runtime.identity_authorities[0]
+
+        assert authority.relationships[1].source_ref == "ldap-endpoint"
+        assert authority.relationships[1].target_ref == "alice-admin"
+        assert authority.policies[0].applies_to_refs == ["ldap-endpoint", "alice-admin"]
+
+    @pytest.mark.parametrize(
+        ("left", "right"),
+        [
+            ("authority", "service"),
+            ("authority", "subject"),
+            ("authority", "policy"),
+            ("authority", "relationship"),
+            ("service", "subject"),
+            ("service", "policy"),
+            ("service", "relationship"),
+            ("subject", "policy"),
+            ("subject", "relationship"),
+            ("policy", "relationship"),
+        ],
+    )
+    def test_identity_authority_local_ref_ids_must_be_unique_across_id_families(self, left, right):
+        authority_id = "shared" if "authority" in (left, right) else "techvault-domain"
+        service_id = "shared" if "service" in (left, right) else "ldap-endpoint"
+        subject_id = "shared" if "subject" in (left, right) else "alice"
+        policy_id = "shared" if "policy" in (left, right) else "default-policy"
+        relationship_id = "shared" if "relationship" in (left, right) else "alice-external"
+        sdl = f"""
+name: ambiguous-directory-local-ref
+nodes:
+  ad:
+    type: vm
+    os: windows
+    runtime:
+      identity-authorities:
+        - identity-authority-id: {authority_id}
+          services:
+            - service-id: {service_id}
+              protocol: ldap
+          subjects:
+            - subject-id: {subject_id}
+              kind: user
+              name: alice
+          relationships:
+            - relationship-id: {relationship_id}
+              relationship-type: associated
+              source-ref: {subject_id}
+              external-target: external.example
+          policies:
+            - policy-id: {policy_id}
+              applies-to-refs: [{subject_id}]
+"""
+        with pytest.raises(SDLParseError, match="Duplicate runtime identity stable id 'shared'"):
+            parse_sdl(sdl)
+
+    def test_imported_identity_authority_refs_survive_module_namespacing(self, tmp_path):
+        imported = tmp_path / "shared-directory.yaml"
+        imported.write_text(
+            """
+name: shared-directory
+version: 1.0.0
+nodes:
+  ad:
+    type: vm
+    os: windows
+    runtime:
+      identity-authorities:
+        - identity-authority-id: techvault-domain
+          services:
+            - {service-id: ldap-endpoint, protocol: ldap}
+          subjects:
+            - {subject-id: alice, kind: user, name: alice}
+            - {subject-id: domain-admins, kind: group, name: Domain Admins}
+          policies:
+            - policy-id: default-policy
+              applies-to-refs: [techvault-domain]
+          relationships:
+            - relationship-id: alice-admin
+              relationship-type: member-of
+              source-ref: alice
+              target-ref: domain-admins
+relationships:
+  alice-admin:
+    type: trusts
+    source: nodes.ad.runtime.identity_authorities.techvault-domain.subjects.alice
+    target: nodes.ad.runtime.identity_authorities.techvault-domain.subjects.domain-admins
+  ldap-policy:
+    type: depends_on
+    source: nodes.ad.runtime.identity_authorities.techvault-domain.services.ldap-endpoint
+    target: nodes.ad.runtime.identity_authorities.techvault-domain.policies.default-policy
+  membership-policy:
+    type: depends_on
+    source: nodes.ad.runtime.identity_authorities.techvault-domain.relationships.alice-admin
+    target: nodes.ad.runtime.identity_authorities.techvault-domain.policies.default-policy
+""",
+            encoding="utf-8",
+        )
+        root = tmp_path / "root.yaml"
+        root.write_text(
+            """
+name: root
+imports:
+  - path: shared-directory.yaml
+    namespace: shared
+    version: 1.0.0
+""",
+            encoding="utf-8",
+        )
+
+        scenario = parse_sdl_file(root)
+
+        rel = scenario.relationships["shared.alice-admin"]
+        assert rel.source == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.subjects.alice"
+        assert rel.target == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.subjects.domain-admins"
+        rel = scenario.relationships["shared.ldap-policy"]
+        assert rel.source == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.services.ldap-endpoint"
+        assert rel.target == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.policies.default-policy"
+        rel = scenario.relationships["shared.membership-policy"]
+        assert rel.source == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.relationships.alice-admin"
+        assert rel.target == "nodes.shared.ad.runtime.identity_authorities.techvault-domain.policies.default-policy"
+
+
+class TestRuntimeDnsParsing:
+    def test_dns_service_field_keys_normalized_names_preserved(self):
+        sdl = """
+name: techvault-dns
+nodes:
+  dns-host:
+    type: vm
+    os: linux
+    services:
+      - {port: 53, protocol: udp, name: dns}
+    runtime:
+      dns-services:
+        - dns-service-id: tv-dns
+          service: dns
+          implementation: BIND
+          roles: [authoritative, recursive-resolver]
+          resolver-policy:
+            recursion-enabled: true
+            dnssec-validation: auto
+            forwarders:
+              - {address: 8.8.8.8, port: 53}
+          zones:
+            - zone-id: techvault-local
+              name: TechVault.Local.
+              zone-class: IN
+              purpose: forward
+              rrsets:
+                - rrset-id: web-a
+                  owner: Web.TechVault.Local.
+                  record-type: A
+                  ttl: 300
+                  records:
+                    - {address: 172.20.10.20}
+"""
+        raw = parse_sdl(sdl)
+        dns = raw.nodes["dns-host"].runtime.dns_services[0]
+        assert dns.dns_service_id == "tv-dns"
+        assert dns.implementation.value == "bind"
+        assert dns.roles[1].value == "recursive_resolver"
+        assert dns.resolver_policy.dnssec_validation.value == "auto"
+        zone = dns.zones[0]
+        # Observed names are DNS data and are not case-folded.
+        assert zone.name == "TechVault.Local."
+        assert zone.rrsets[0].owner == "Web.TechVault.Local."
+        assert zone.rrsets[0].record_type.value == "a"
+
+    def test_dns_runtime_refs_rewrite_on_module_import(self, tmp_path):
+        shared = tmp_path / "shared-dns.yaml"
+        shared.write_text(
+            """
+name: shared-dns
+version: 1.0.0
+nodes:
+  dns:
+    type: vm
+    os: linux
+    services:
+      - {port: 53, protocol: udp, name: dns}
+    runtime:
+      dns-services:
+        - dns-service-id: tv-dns
+          service: dns
+          zones:
+            - zone-id: techvault-local
+              name: techvault.local.
+              rrsets:
+                - rrset-id: web-a
+                  owner: web.techvault.local.
+                  record-type: a
+                  ttl: 300
+                  records:
+                    - {address: 172.20.10.20}
+relationships:
+  dns-record:
+    type: connects_to
+    source: nodes.dns.runtime.dns_services.tv-dns
+    target: nodes.dns.runtime.dns_services.tv-dns.zones.techvault-local.rrsets.web-a
+""",
+            encoding="utf-8",
+        )
+        root = tmp_path / "root.yaml"
+        root.write_text(
+            """
+name: root
+imports:
+  - path: shared-dns.yaml
+    namespace: shared
+    version: 1.0.0
+""",
+            encoding="utf-8",
+        )
+
+        scenario = parse_sdl_file(root)
+
+        rel = scenario.relationships["shared.dns-record"]
+        assert rel.source == "nodes.shared.dns.runtime.dns_services.tv-dns"
+        assert rel.target == "nodes.shared.dns.runtime.dns_services.tv-dns.zones.techvault-local.rrsets.web-a"
+
+
+class TestRuntimeDatabaseParsing:
+    def test_database_service_field_keys_normalized_names_preserved(self):
+        # Field keys (hyphenated/cased) normalize; observed object names are
+        # data and survive verbatim — including mixed case and underscores.
+        sdl = """
+name: techvault-db
+nodes:
+  db-host:
+    type: vm
+    os: linux
+    services:
+      - {port: 5432, name: pg}
+    runtime:
+      database-services:
+        - database-service-id: tv-pg
+          service: pg
+          engine: PostgreSQL
+          protocol: postgresql
+          databases:
+            - database-id: tv-db
+              name: TechVault_Prod
+              schemas:
+                - schema-id: pub
+                  name: public
+                  tables:
+                    - {table-id: audit, name: Audit_Log}
+          settings:
+            - {name: log_statement, value: all, provenance: configuration-file}
+"""
+        raw = parse_sdl(sdl)
+        dbsvc = raw.nodes["db-host"].runtime.database_services[0]
+        assert dbsvc.database_service_id == "tv-pg"
+        # Engine string normalizes for enum matching.
+        assert str(dbsvc.engine.value) == "postgresql"
+        # Observed names are preserved exactly, not case-folded.
+        assert dbsvc.databases[0].name == "TechVault_Prod"
+        assert dbsvc.databases[0].schemas[0].tables[0].name == "Audit_Log"
+        assert dbsvc.settings[0].provenance.value == "configuration_file"
+
+    def test_database_service_variable_substitutes_on_instantiation(self):
+        sdl = """
+name: techvault-db-variable
+variables:
+  pg_version:
+    type: string
+    required: true
+nodes:
+  db-host:
+    type: vm
+    os: linux
+    services:
+      - {port: 5432, name: pg}
+    runtime:
+      database-services:
+        - database-service-id: tv-pg
+          service: pg
+          engine: postgresql
+          protocol: postgresql
+          version: ${pg_version}
+"""
+        raw = parse_sdl(sdl)
+        assert raw.nodes["db-host"].runtime.database_services[0].version == "${pg_version}"
+        instantiated = instantiate_scenario(raw, parameters={"pg_version": "16.13"})
+        assert instantiated.nodes["db-host"].runtime.database_services[0].version == "16.13"

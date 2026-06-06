@@ -4,7 +4,6 @@ Ports the OCR SDL Node/VM/Switch/Resources/Role structs with
 backend-agnostic Source references.
 """
 
-import re
 from enum import Enum
 
 from pydantic import Field, field_validator, model_validator
@@ -16,57 +15,158 @@ from ._base import (
     parse_enum_or_var,
     parse_int_or_var,
 )
+from ._runtime_service_families import install_runtime_service_family_exports
 from ._source import Source
-
-MAX_NODE_NAME_LENGTH = 35
-
-_BYTE_UNITS = {
-    "b": 1,
-    "kb": 1_000,
-    "kib": 1_024,
-    "mb": 1_000_000,
-    "mib": 1_048_576,
-    "gb": 1_000_000_000,
-    "gib": 1_073_741_824,
-    "tb": 1_000_000_000_000,
-    "tib": 1_099_511_627_776,
-}
-
-_RAM_PATTERN = re.compile(
-    r"^\s*(\d+(?:\.\d+)?)\s*(" + "|".join(_BYTE_UNITS) + r")\s*$",
-    re.IGNORECASE,
+from .image_provenance import (
+    ContainerImageBuildProvenance,
+    DockerfileInstruction,
+    DockerfileInstructionKind,
+    ImageAttestation,
+    ImageAttestationStatus,
+    ImageAttestationType,
+    ImageBuildArg,
+    ImageConfig,
+    ImageCopiedSource,
+    ImageEnvironmentDefault,
+    ImageLayer,
+    ImageSourceInput,
+    ImageVerificationStatus,
+)
+from .runtime_configuration import (
+    RuntimeCapabilityOverrideScope,
+    RuntimeCapabilityPolicy,
+    RuntimeConfiguration,
+    RuntimeContainerConfiguration,
+    RuntimeControlInterface,
+    RuntimeControlInterfaceAccess,
+    RuntimeControlInterfaceKind,
+    RuntimeDeviceMapping,
+    RuntimeEnvironmentValueClassification,
+    RuntimeEnvironmentVariable,
+    RuntimeEnvironmentVariableProvenance,
+    RuntimeExtraHost,
+    RuntimeFilesystemEntry,
+    RuntimeFilesystemEntryType,
+    RuntimeFilesystemPresence,
+    RuntimeFilesystemStability,
+    RuntimeHealthcheckLog,
+    RuntimeHealthObservation,
+    RuntimeHealthStatus,
+    RuntimeIdentityProvenance,
+    RuntimeInitProcess,
+    RuntimeLocalGroup,
+    RuntimeLocalIdentityInventory,
+    RuntimeLocalUser,
+    RuntimeMount,
+    RuntimeMountPropagation,
+    RuntimeMountSourceKind,
+    RuntimeNamespaceConfiguration,
+    RuntimeNetworkBackendDetail,
+    RuntimeNetworkDriver,
+    RuntimeNetworkEndpoint,
+    RuntimeNetworkIdStability,
+    RuntimeNetworkRealization,
+    RuntimeOperationalPolicy,
+    RuntimePackage,
+    RuntimePackageVulnerabilityFinding,
+    RuntimePackageVulnerabilitySeverity,
+    RuntimeProcessCapabilityOverride,
+    RuntimeProcessIdentity,
+    RuntimeProcessRole,
+    RuntimePublishedPort,
+    RuntimeResourceLimits,
+    RuntimeRestartPolicy,
+    RuntimeSensitivityClassification,
+    RuntimeSoftwareComponent,
+    RuntimeSoftwareComponentHash,
+    RuntimeSoftwareComponentProvenance,
+    RuntimeSoftwareComponentType,
+    RuntimeSudoPrincipalKind,
+    RuntimeSudoRule,
+    parse_ram,
 )
 
+_RUNTIME_SERVICE_FAMILY_EXPORTS = install_runtime_service_family_exports(globals())
 
-def parse_ram(value: str | int) -> int | str:
-    """Parse a human-readable RAM string to bytes.
+__all__ = [
+    "AssetValue",
+    "AssetValueLevel",
+    "ContainerImageBuildProvenance",
+    "DockerfileInstruction",
+    "DockerfileInstructionKind",
+    "ImageAttestation",
+    "ImageAttestationStatus",
+    "ImageAttestationType",
+    "ImageBuildArg",
+    "ImageConfig",
+    "ImageCopiedSource",
+    "ImageEnvironmentDefault",
+    "ImageLayer",
+    "ImageSourceInput",
+    "ImageVerificationStatus",
+    "MAX_NODE_NAME_LENGTH",
+    "Node",
+    "NodeType",
+    "OSFamily",
+    "Resources",
+    "Role",
+    "Source",
+    *_RUNTIME_SERVICE_FAMILY_EXPORTS,
+    "RuntimeCapabilityOverrideScope",
+    "RuntimeCapabilityPolicy",
+    "RuntimeContainerConfiguration",
+    "RuntimeConfiguration",
+    "RuntimeControlInterface",
+    "RuntimeControlInterfaceAccess",
+    "RuntimeControlInterfaceKind",
+    "RuntimeDeviceMapping",
+    "RuntimeEnvironmentValueClassification",
+    "RuntimeEnvironmentVariable",
+    "RuntimeEnvironmentVariableProvenance",
+    "RuntimeExtraHost",
+    "RuntimeFilesystemEntry",
+    "RuntimeFilesystemEntryType",
+    "RuntimeFilesystemPresence",
+    "RuntimeFilesystemStability",
+    "RuntimeHealthObservation",
+    "RuntimeHealthStatus",
+    "RuntimeHealthcheckLog",
+    "RuntimeIdentityProvenance",
+    "RuntimeInitProcess",
+    "RuntimeLocalGroup",
+    "RuntimeLocalIdentityInventory",
+    "RuntimeLocalUser",
+    "RuntimeMount",
+    "RuntimeMountPropagation",
+    "RuntimeMountSourceKind",
+    "RuntimeNamespaceConfiguration",
+    "RuntimeNetworkBackendDetail",
+    "RuntimeNetworkDriver",
+    "RuntimeNetworkEndpoint",
+    "RuntimeNetworkIdStability",
+    "RuntimeNetworkRealization",
+    "RuntimeOperationalPolicy",
+    "RuntimePackage",
+    "RuntimePackageVulnerabilityFinding",
+    "RuntimePackageVulnerabilitySeverity",
+    "RuntimeProcessCapabilityOverride",
+    "RuntimeProcessIdentity",
+    "RuntimeProcessRole",
+    "RuntimePublishedPort",
+    "RuntimeResourceLimits",
+    "RuntimeRestartPolicy",
+    "RuntimeSensitivityClassification",
+    "RuntimeSoftwareComponent",
+    "RuntimeSoftwareComponentHash",
+    "RuntimeSoftwareComponentProvenance",
+    "RuntimeSoftwareComponentType",
+    "RuntimeSudoPrincipalKind",
+    "RuntimeSudoRule",
+    "ServicePort",
+    "parse_ram",
+]
 
-    Accepts bare integers (treated as bytes) or strings like
-    ``"4 GiB"``, ``"2048 MiB"``, ``"512mb"``.
-    """
-    if is_variable_ref(value):
-        return value
-    if isinstance(value, bool):
-        raise ValueError("RAM must be a positive integer or human-readable size")
-    if isinstance(value, int):
-        if value < 1:
-            raise ValueError("RAM must be >= 1 byte")
-        return value
-    value_str = str(value).strip()
-    if value_str.isdigit():
-        parsed = int(value_str)
-        if parsed < 1:
-            raise ValueError("RAM must be >= 1 byte")
-        return parsed
-    match = _RAM_PATTERN.match(value_str)
-    if not match:
-        raise ValueError(f"Invalid RAM value: {value_str!r}. Use a number with a unit (e.g., '4 GiB', '2048 MiB').")
-    amount = float(match.group(1))
-    unit = match.group(2).lower()
-    parsed = int(amount * _BYTE_UNITS[unit])
-    if parsed < 1:
-        raise ValueError("RAM must be >= 1 byte")
-    return parsed
+MAX_NODE_NAME_LENGTH = 35
 
 
 class NodeType(str, Enum):
@@ -189,6 +289,7 @@ class Node(SDLModel):
     roles: dict[str, Role] = Field(default_factory=dict)
     services: list[ServicePort] = Field(default_factory=list)
     asset_value: AssetValue | None = None
+    runtime: RuntimeConfiguration | None = None
 
     @field_validator("os", mode="before")
     @classmethod
@@ -198,33 +299,30 @@ class Node(SDLModel):
     @model_validator(mode="after")
     def validate_type_constraints(self) -> "Node":
         """Switch nodes cannot carry VM-only fields."""
-        if self.type == NodeType.SWITCH:
-            disallowed_fields: list[str] = []
-            if self.source is not None:
-                disallowed_fields.append("source")
-            if self.resources is not None:
-                disallowed_fields.append("resources")
-            if self.os is not None:
-                disallowed_fields.append("os")
-            if self.os_version:
-                disallowed_fields.append("os_version")
-            if self.features:
-                disallowed_fields.append("features")
-            if self.conditions:
-                disallowed_fields.append("conditions")
-            if self.injects:
-                disallowed_fields.append("injects")
-            if self.vulnerabilities:
-                disallowed_fields.append("vulnerabilities")
-            if self.roles:
-                disallowed_fields.append("roles")
-            if self.services:
-                disallowed_fields.append("services")
-            if self.asset_value is not None:
-                disallowed_fields.append("asset_value")
-            if disallowed_fields:
-                raise ValueError("Switch nodes cannot have VM-only fields: " + ", ".join(disallowed_fields))
+        if self.type != NodeType.SWITCH:
+            return self
+
+        disallowed_fields = self._populated_vm_only_fields()
+        if disallowed_fields:
+            raise ValueError("Switch nodes cannot have VM-only fields: " + ", ".join(disallowed_fields))
         return self
+
+    def _populated_vm_only_fields(self) -> list[str]:
+        fields = {
+            "source": self.source is not None,
+            "resources": self.resources is not None,
+            "os": self.os is not None,
+            "os_version": bool(self.os_version),
+            "features": bool(self.features),
+            "conditions": bool(self.conditions),
+            "injects": bool(self.injects),
+            "vulnerabilities": bool(self.vulnerabilities),
+            "roles": bool(self.roles),
+            "services": bool(self.services),
+            "asset_value": self.asset_value is not None,
+            "runtime": self.runtime is not None,
+        }
+        return [field_name for field_name, is_populated in fields.items() if is_populated]
 
     @model_validator(mode="after")
     def validate_unique_service_ports(self) -> "Node":

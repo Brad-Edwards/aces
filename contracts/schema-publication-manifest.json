@@ -2,6 +2,10 @@
   "schema_version": "schema-publication-manifest/v1",
   "schemas": [
     {
+      "contract_id": "aces-semantic-invariants-v1",
+      "schema_path": "contracts/schemas/profiles/aces-semantic-invariants-v1.json"
+    },
+    {
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json"
     },
@@ -30,6 +34,22 @@
       "schema_path": "contracts/schemas/control-plane/evaluation-result-envelope-v1.json"
     },
     {
+      "contract_id": "experiment-apparatus-context-v1",
+      "schema_path": "contracts/schemas/experiment-core/experiment-apparatus-context-v1.json"
+    },
+    {
+      "contract_id": "experiment-run-v1",
+      "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json"
+    },
+    {
+      "contract_id": "experiment-study-v1",
+      "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json"
+    },
+    {
+      "contract_id": "experiment-task-v1",
+      "schema_path": "contracts/schemas/experiment-core/experiment-task-v1.json"
+    },
+    {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json"
     },
@@ -46,12 +66,24 @@
       "schema_path": "contracts/schemas/plans/orchestration-plan-v1.json"
     },
     {
+      "contract_id": "participant-behavior-history-event-stream-v1",
+      "schema_path": "contracts/schemas/control-plane/participant-behavior-history-event-stream-v1.json"
+    },
+    {
       "contract_id": "participant-episode-history-event-stream-v1",
       "schema_path": "contracts/schemas/control-plane/participant-episode-history-event-stream-v1.json"
     },
     {
       "contract_id": "participant-episode-state-envelope-v1",
       "schema_path": "contracts/schemas/control-plane/participant-episode-state-envelope-v1.json"
+    },
+    {
+      "contract_id": "participant-implementation-manifest-v1",
+      "schema_path": "contracts/schemas/participant-implementation-manifest/participant-implementation-manifest-v1.json"
+    },
+    {
+      "contract_id": "participant-implementation-provenance-v1",
+      "schema_path": "contracts/schemas/participant-implementation-provenance/participant-implementation-provenance-v1.json"
     },
     {
       "contract_id": "processor-manifest-v2",
