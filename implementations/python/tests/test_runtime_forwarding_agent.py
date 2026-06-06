@@ -228,9 +228,10 @@ def test_buffer_policy_id_participates_in_uniqueness() -> None:
         )
 
 
-def test_secret_named_setting_must_omit_raw_value() -> None:
-    with pytest.raises(ValidationError, match="secret-bearing name and must omit its raw value"):
-        RuntimeForwardingSetting(setting_id="enroll", name="enrollment_key", value="hunter2")
+def test_secret_named_setting_may_carry_scenario_value() -> None:
+    setting = RuntimeForwardingSetting(setting_id="enroll", name="enrollment_key", value="hunter2")
+
+    assert setting.value == "hunter2"
 
 
 def test_secret_named_setting_redacted_is_accepted() -> None:

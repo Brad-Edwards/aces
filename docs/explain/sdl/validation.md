@@ -80,10 +80,18 @@ classified as `redacted` or `operator_secret` must omit the corresponding raw
 value; the Python models and generated JSON Schemas both reject non-empty raw
 values for redacted/operator-secret labels accepted by the parser's
 normalization rules, including case-insensitive hyphen/underscore spellings.
-Runtime observed-value surfaces share the ADR-056 raw-value helper: redacted
-and operator-secret classifications omit raw values, concrete secret-bearing
-names reject unclassified raw values, and only explicit `secret_fixture`
-classifications may carry deliberate exercise fixture values.
+Runtime observed-value surfaces share the ADR-056/ADR-057 raw-value helper:
+redacted and operator-secret classifications omit raw values. ADR-057 supersedes
+the earlier name-driven omission rule: credential-shaped names do not by
+themselves reject values or require redaction, because SDL runtime values are
+scenario-realization facts.
+[ADR-057](../../decisions/adrs/adr-057-runtime-secret-name-classifier-boundaries.md)
+records the realizability decision: generated credentials, hashes, key
+material, weak fixture values, public-key fingerprints, working-directory
+variables such as `PWD`, and scalar metadata such as `secret_key_length` may all
+be recorded when they are facts of the synthetic scenario. Authors still
+classify any value as `redacted` or `operator_secret` when the value is
+intentionally withheld from the authoritative SDL.
 
 The optional `runtime.local_identity` inventory carries its own model-local
 rules. Local user `username` and local group `name` must be non-empty; user
@@ -99,9 +107,9 @@ semantic rules. Authorities, services, subjects, policies, relationships,
 attributes, and settings use stable non-empty ids or names. Stable ids must be
 unique across the authority-local reference namespace, not just within each
 child collection. The model also rejects duplicate attribute and setting names,
-normalizes bounded kind/protocol/provenance/value classifications, and keeps
-raw values out of secret-bearing attributes or settings. Authority services may
-reference only services declared on the same node. Authority-local refs resolve
+normalizes bounded kind/protocol/provenance/value classifications, and enforces
+explicit redaction classifications on attributes and settings. Authority
+services may reference only services declared on the same node. Authority-local refs resolve
 against all stable ids in the authority:
 `identity_authority_id`, `service_id`, `subject_id`, `policy_id`, and
 `relationship_id`. Provider names and external object identifiers are data, not
@@ -115,10 +123,10 @@ owner/class/type bindings are unique within a zone. RRsets must have at least
 one record, TTL and type-code fields are bounded integer-or-variable values,
 `record_type: other` requires `type_code`, and typed RDATA must match the
 owning RRset type. A/AAAA typed address payloads are validated as IPv4/IPv6
-respectively. Secret-bearing DNS settings such as TSIG, RNDC, password, token,
-or private-key settings must omit raw values and use redacted/operator-secret
-classifications. DNS services may reference only services declared on the same
-node. File refs under the DNS service and its zones are checked against
+respectively. DNS settings such as TSIG, RNDC, password, token, or private-key
+settings may carry scenario values unless explicitly classified as
+redacted/operator-secret. DNS services may reference only services declared on
+the same node. File refs under the DNS service and its zones are checked against
 `runtime.filesystem_inventory` when that inventory is non-empty.
 
 The optional `runtime.network_sensors` inventory has model-local and semantic
@@ -168,10 +176,10 @@ manager kinds, listener roles, component kinds/statuses, agent statuses,
 content kinds/formats, detection engines/kinds, field-predicate operators,
 setting provenance, and value classifications are normalized from bounded
 enums while allowing full-value variables where the model permits.
-Secret-bearing settings such as passwords, API tokens, credentials, shared
-keys, keytabs, or private keys must omit raw values and use
-redacted/operator-secret classifications. Managers and listeners may reference
-only services declared on the same node. Manager configuration/log/evidence
+Settings such as passwords, API tokens, credentials, shared keys, keytabs, or
+private keys may carry scenario values unless explicitly classified as
+redacted/operator-secret. Managers and listeners may reference only services
+declared on the same node. Manager configuration/log/evidence
 refs, agent-group configuration refs, content-set file refs,
 detection-definition source/evidence refs, and setting source paths are checked
 against `runtime.filesystem_inventory` when that inventory is non-empty. Group
@@ -192,9 +200,8 @@ its principal, role, permission-grant, role-mapping, and tenant collections.
 Resource vocabularies, principal kinds, grant effects, and credential
 classifications are normalized from bounded enums while allowing full-value
 variables where the model permits. A principal never carries a raw credential
-value: its posture is the `credential_classification`, and a principal whose
-`name` matches the shared secret-name vocabulary must declare a `redacted` or
-`operator_secret` classification rather than `none`. An authorization that
+value: its posture is the `credential_classification`, and a principal name
+does not force a redaction classification. An authorization that
 declares a concrete (non-`unknown`) `resource_vocabulary` must carry at least
 one permission grant whose `resource_kind` matches that vocabulary; a declared
 but unused vocabulary is rejected, while a `${var}` placeholder or the open
@@ -228,8 +235,8 @@ node, partition, and setting ids are unique across the service. Engines, data
 models, partition kinds, node roles, persistence eviction policies, replication
 strategies, transport-security modes, and setting scope/provenance/classification
 are normalized from bounded enums while allowing full-value variables.
-Secret-bearing settings must omit raw values and use redacted/operator-secret
-classifications. The `require_profile_for_data_model` guard makes the
+Explicit redacted/operator-secret setting classifications omit raw values; names
+alone do not force omission. The `require_profile_for_data_model` guard makes the
 discriminator executable: a `${var}` placeholder is exempt and the open
 `unknown`/`other`/`relational` tail is permissive, but a concrete `search_index`
 requires at least one `index` partition carrying shard/replica geometry, a
@@ -248,8 +255,9 @@ and setting provenance/classification are normalized from bounded enums (the
 marking `scheme` is a closed `tlp`/`pap`/`distribution` vocabulary) while
 allowing full-value variables. Content objects are bounded parsed manifests —
 typed kind, bounded attributes, typed references, marking refs, and evidence refs
-— never raw bodies; secret-bearing settings and connector names must use
-redacted/operator-secret classifications. The `require_profile_for_platform_kind`
+— never raw bodies. Explicit redacted/operator-secret setting classifications
+omit raw values, and connector names do not force redaction classifications. The
+`require_profile_for_platform_kind`
 guard makes the discriminator executable: a `${var}` placeholder is exempt and
 `unknown`/`other` are permissive, but each concrete kind requires its defining
 content/binding profile (threat-intel taxonomy/galaxy/warninglist/feed/sharing
@@ -269,9 +277,9 @@ implementations, kinds, source kinds, parse formats, transform kinds, protocols,
 buffer crypto, reload-channel kinds, enrollment classifications, and setting
 provenance/classification are normalized from bounded enums while allowing
 full-value variables. A ship-target enrollment identity is never recorded — only
-the closed `none`/`redacted`/`operator_secret` lattice — and a setting whose name
-matches the shared secret-name vocabulary must omit its raw value and declare a
-redacted/operator-secret classification. The `require_profile_for_agent_kind`
+the closed `none`/`redacted`/`operator_secret` lattice — and explicit
+redacted/operator-secret setting classifications omit raw values. The
+`require_profile_for_agent_kind`
 guard makes the `agent_kind` discriminator executable: a `${var}` placeholder is
 exempt and the open `unknown`/`other` tail is permissive, but a concrete
 `log_forwarder` requires a `buffer_policy` and at least one `ship_target` carrying

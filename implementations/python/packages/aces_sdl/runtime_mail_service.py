@@ -426,11 +426,9 @@ class RuntimeMailSetting(SDLModel):
     def validate_redacted_value(self) -> "RuntimeMailSetting":
         enforce_observed_value_redaction(
             owner_label=f"mail setting '{self.name}'",
-            name=self.name,
             value=self.value,
             classification=self.value_classification,
             redacted_classifications=_REDACTED_SENSITIVITIES,
-            classification_field="value_classification",
         )
         return self
 

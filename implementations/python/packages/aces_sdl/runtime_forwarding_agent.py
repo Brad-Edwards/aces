@@ -18,9 +18,9 @@ is exempt (nothing concrete is asserted); the ``unknown`` / ``other`` tail is
 permissive.
 
 This is observed runtime state attached to ``Node.runtime``. Secret-bearing
-settings and ship-target enrollment identities never carry raw values; they
-classify ``redacted`` / ``operator_secret`` via the shared
-``name_indicates_secret`` helper and the closed enrollment lattice.
+setting values are scenario content unless explicitly classified
+``redacted`` / ``operator_secret``; ship-target enrollment identities use the
+closed enrollment lattice because they intentionally carry no raw value field.
 """
 
 from enum import Enum
@@ -249,10 +249,9 @@ class RuntimeForwardingReloadChannel(SDLModel):
 class RuntimeForwardingSetting(SDLModel):
     """An observed forwarding-agent runtime setting with provenance and class.
 
-    Settings that may carry credentials or operator-only values must omit their
-    raw ``value`` and classify it ``redacted`` / ``operator_secret`` — enforced
-    via the shared ``name_indicates_secret`` helper even when the submitter left
-    ``classification`` at its default.
+    Explicit ``redacted`` / ``operator_secret`` classifications omit raw values;
+    credential-shaped names remain scenario content unless the author marks the
+    value withheld.
     """
 
     setting_id: str
@@ -281,11 +280,9 @@ class RuntimeForwardingSetting(SDLModel):
     def validate_setting(self) -> "RuntimeForwardingSetting":
         enforce_observed_value_redaction(
             owner_label=f"forwarding setting '{self.setting_id}'",
-            name=self.name,
             value=self.value,
             classification=self.classification,
             redacted_classifications=_REDACTED_SETTING_CLASSIFICATIONS,
-            classification_field="classification",
         )
         return self
 

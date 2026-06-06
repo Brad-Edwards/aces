@@ -441,11 +441,9 @@ class RuntimeSecurityMonitoringSetting(SDLModel):
     def validate_redacted_value(self) -> "RuntimeSecurityMonitoringSetting":
         enforce_observed_value_redaction(
             owner_label=f"security-monitoring setting '{self.name}'",
-            name=self.name,
             value=self.value,
             classification=self.value_classification,
             redacted_classifications=_REDACTED_SENSITIVITIES,
-            classification_field="value_classification",
         )
         return self
 

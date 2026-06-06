@@ -387,14 +387,15 @@ def test_detection_definition_digest_requires_algorithm_pair() -> None:
 
 
 @pytest.mark.parametrize("setting_name", ["api_token", "api_key", "shared_key"])
-def test_security_monitoring_setting_rejects_secret_bearing_raw_value(setting_name: str) -> None:
-    with pytest.raises(ValidationError, match="must omit its raw value"):
-        RuntimeSecurityMonitoringSetting(
-            setting_id="api-token",
-            name=setting_name,
-            value="plaintext-token",
-            value_classification="plain",
-        )
+def test_security_monitoring_setting_accepts_secret_named_scenario_value(setting_name: str) -> None:
+    setting = RuntimeSecurityMonitoringSetting(
+        setting_id="api-token",
+        name=setting_name,
+        value="plaintext-token",
+        value_classification="plain",
+    )
+
+    assert setting.value == "plaintext-token"
 
 
 class TestRuntimeSecurityMonitoringSemanticValidation:

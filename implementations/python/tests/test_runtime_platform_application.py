@@ -323,12 +323,14 @@ def test_content_object_has_no_raw_body_field() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_secret_named_connector_must_be_redaction_classified() -> None:
-    with pytest.raises(
-        ValidationError,
-        match="carries a secret-bearing name; credential_classification must be 'redacted' or 'operator_secret'",
-    ):
-        RuntimePlatformApplicationConnector(connector_id="c", name="cortex-api-key", credential_classification="plain")
+def test_secret_named_connector_may_use_plain_scenario_classification() -> None:
+    connector = RuntimePlatformApplicationConnector(
+        connector_id="c",
+        name="cortex-api-key",
+        credential_classification="plain",
+    )
+
+    assert connector.credential_classification == RuntimePlatformApplicationSettingClassification.PLAIN
 
 
 def test_secret_named_connector_with_redacted_classification_is_valid() -> None:
@@ -338,9 +340,10 @@ def test_secret_named_connector_with_redacted_classification_is_valid() -> None:
     assert connector.credential_classification == RuntimePlatformApplicationSettingClassification.OPERATOR_SECRET
 
 
-def test_secret_named_setting_must_omit_raw_value() -> None:
-    with pytest.raises(ValidationError, match="carries a secret-bearing name and must omit its raw value"):
-        RuntimePlatformApplicationSetting(setting_id="s", name="admin_password", value="hunter2")
+def test_secret_named_setting_may_carry_scenario_value() -> None:
+    setting = RuntimePlatformApplicationSetting(setting_id="s", name="admin_password", value="hunter2")
+
+    assert setting.value == "hunter2"
 
 
 def test_secret_named_setting_redacted_is_valid() -> None:
