@@ -67,6 +67,13 @@ phases:
   - id: modularity-initiative
     requirements:
       - MOD-001
+  - id: experiment-core
+    requirements:
+      - EXP-701
+      - EXP-702
+      - EXP-703
+      - EXP-704
+      - EXP-705
 
 ownership:
   gov-concept-authority:
@@ -168,6 +175,22 @@ ownership:
     - docs/decisions/adrs
     - docs/explain/sdl
     - docs/index.md
+    - CHANGELOG.md
+  experiment-core:
+    - contracts/README.md
+    - contracts/schema-publication-manifest.json
+    - contracts/schemas/README.md
+    - contracts/schemas
+    - contracts/fixtures/experiment-core
+    - specs/formal/README.md
+    - specs/formal/experiment-core
+    - docs/decisions/adrs
+    - docs/research/experiment-core
+    - docs/index.md
+    - docs/specs/formal.md
+    - implementations/python/packages/aces_contracts
+    - implementations/python/tests/test_runtime_contracts.py
+    - tools/generate_contract_schemas.py
     - CHANGELOG.md
 
 traceability:

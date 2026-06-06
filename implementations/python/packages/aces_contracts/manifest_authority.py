@@ -1,4 +1,4 @@
-"""Authority sets for processor and backend manifest declarations."""
+"""Authority sets for processor, backend, and participant implementation declarations."""
 
 from __future__ import annotations
 

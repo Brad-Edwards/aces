@@ -16496,6 +16496,8 @@
       "type": "object"
     }
   },
+  "$id": "https://aces.dev/schemas/sdl-authoring-input-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Top-level scenario specification.\n\nA YAML document with up to 21 named sections. Only ``name``\nis required. All sections are optional dicts keyed by\nuser-defined identifiers.",
   "properties": {

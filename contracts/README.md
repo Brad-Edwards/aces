@@ -26,6 +26,16 @@ It includes:
 - live runtime/control-plane contracts
 - experiment, evidence, and provenance artifact boundaries
 
+The first published experiment-core contract family includes task, run,
+apparatus-context, and study/collection schemas under
+`contracts/schemas/experiment-core/`. These contracts are archival design
+artifacts for scientific experiment records; they do not add runtime execution,
+storage, or API behavior by themselves.
+
+Within experiment-core contracts, identifier-bearing collections that require
+uniqueness are object maps keyed by that identifier. This keeps uniqueness
+portable in the published JSON Schemas rather than implementation-private.
+
 Not every one of those surfaces is fully materialized in published schemas yet,
 but they share the same language-neutral contract discipline.
 

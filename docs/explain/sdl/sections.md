@@ -45,7 +45,7 @@ Canonical `imports.source` classes are:
 | `accounts` | `dict[str, Account]` | Curated scenario/provisioning accounts on nodes, not full runtime identity inventory | CyRIS `add_account` |
 | `relationships` | `dict[str, Relationship]` | Typed edges between elements (auth, trust, federation) | STIX Relationship SRO |
 | `agents` | `dict[str, Agent]` | Autonomous participants (actions, knowledge, scope) | CybORG Agents |
-| `objectives` | `dict[str, Objective]` | Declarative experiment tasks binding actors, targets, windows, and success | OCR scoring + CACAO action/target/agent |
+| `objectives` | `dict[str, Objective]` | Scenario-local objectives binding actors, targets, windows, and success; not EXP task records | OCR scoring + CACAO action/target/agent |
 | `workflows` | `dict[str, Workflow]` | Branching and parallel control graphs over declared objectives | CACAO workflow graph patterns; semantics tightened using Step Functions / Argo / SCXML style control-flow rules |
 | `variables` | `dict[str, Variable]` | Parameterization (types, defaults, substitution) | CACAO playbook_variables |
 
@@ -1636,7 +1636,7 @@ Every objective must declare exactly one actor: either `agent` or `entity`. `suc
 
 `depends_on` is an ordering relation, not just commentary. It defines a partial order over objectives: downstream objectives are not considered ready until their predecessors have been satisfied. Objective dependency cycles are rejected.
 
-This section is intentionally declarative. It says who is trying to do what, against what, during which window, and how success is interpreted. It does **not** embed backend-specific probes such as Wazuh queries or command-output checks.
+This section is intentionally declarative. It says who is trying to do what, against what, during which window, and how success is interpreted. It does **not** embed backend-specific probes such as Wazuh queries or command-output checks. These objectives are scenario-local declarations; experiment-core task records live outside SDL and bind a scenario or scenario snapshot to an evaluation protocol, apparatus constraints, and study context.
 
 ---
 
@@ -1812,5 +1812,9 @@ The SDL carries both:
 - the OCR-style scoring pipeline (`conditions → metrics → evaluations → TLOs → goals`)
 - declarative objectives that bind actors, targets, windows, and success criteria
 - workflow graphs that branch or parallelize declared objectives without embedding runtime probe logic
+
+Experiment-core task, run, apparatus-context, and study records are separate
+contracts. They may reference SDL scenarios or scenario snapshots, but they are
+not SDL sections.
 
 Backend-specific auto-validation mechanics still live outside the SDL. The runtime may use Wazuh queries, command probes, file checks, or other adapters to determine whether an SDL-declared objective or scoring condition has been satisfied, but those probe details are not the language itself.
