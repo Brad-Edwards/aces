@@ -27,6 +27,7 @@ from ._base import (
 from .runtime_filesystem import RuntimeSensitivityClassification
 from .runtime_values import (
     coerce_string_list,
+    enforce_observed_value_redaction,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
 )
@@ -59,9 +60,16 @@ _MAX_REDIRECT_STATUS_CODE = 399
 _HTTP_METHODS = frozenset({"GET", "HEAD", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE", "PATCH"})
 
 # Sensitivity classes whose raw value must never be recorded.
-_REDACTED_SENSITIVITIES = frozenset(
-    {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
+_REDACTED_SENSITIVITIES = (
+    RuntimeSensitivityClassification.REDACTED,
+    RuntimeSensitivityClassification.OPERATOR_SECRET,
 )
+_EXPOSED_FIELD_SECRET_CLASSIFICATIONS = (
+    RuntimeSensitivityClassification.REDACTED,
+    RuntimeSensitivityClassification.OPERATOR_SECRET,
+    RuntimeSensitivityClassification.SECRET_FIXTURE,
+)
+_RAW_EXPOSED_FIELD_SECRET_CLASSIFICATIONS = (RuntimeSensitivityClassification.SECRET_FIXTURE,)
 
 
 class RuntimeApplicationProtocol(str, Enum):
@@ -273,8 +281,16 @@ class RuntimeApplicationExposedField(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_value(self) -> "RuntimeApplicationExposedField":
-        if self.value and self.sensitivity in _REDACTED_SENSITIVITIES:
-            raise ValueError(f"exposed field '{self.name}' classified '{self.sensitivity}' must omit its raw value")
+        enforce_observed_value_redaction(
+            owner_label=f"exposed field '{self.name}'",
+            name=self.name,
+            value=self.value,
+            classification=self.sensitivity,
+            redacted_classifications=_REDACTED_SENSITIVITIES,
+            classification_field="sensitivity",
+            secret_name_classifications=_EXPOSED_FIELD_SECRET_CLASSIFICATIONS,
+            raw_secret_name_classifications=_RAW_EXPOSED_FIELD_SECRET_CLASSIFICATIONS,
+        )
         return self
 
 

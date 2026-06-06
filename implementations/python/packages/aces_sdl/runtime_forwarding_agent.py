@@ -43,7 +43,7 @@ from .runtime_forwarding_agent_vocab import (
 )
 from .runtime_security_monitoring import RuntimeSecurityMonitoringListenerRole
 from .runtime_values import (
-    name_indicates_secret,
+    enforce_observed_value_redaction,
     parse_runtime_enum_or_var,
     require_symbol,
 )
@@ -78,21 +78,14 @@ _PRESENT_ENROLLMENT_CLASSIFICATIONS = frozenset(
     }
 )
 # Setting classifications whose raw value must never be recorded.
-_REDACTED_SETTING_CLASSIFICATIONS = frozenset(
-    {
-        RuntimeForwardingSettingClassification.REDACTED,
-        RuntimeForwardingSettingClassification.OPERATOR_SECRET,
-    }
+_REDACTED_SETTING_CLASSIFICATIONS = (
+    RuntimeForwardingSettingClassification.REDACTED,
+    RuntimeForwardingSettingClassification.OPERATOR_SECRET,
 )
 
 
 def _normalize_enum(value: object, enum_cls: type[Enum], *, field_name: str) -> object:
     return parse_runtime_enum_or_var(value, enum_cls, field_name=field_name)
-
-
-def _setting_name_is_concrete_secret(name: object) -> bool:
-    """Return whether ``name`` is a concrete (non-``${var}``) secret-bearing label."""
-    return isinstance(name, str) and not is_variable_ref(name) and name_indicates_secret(name)
 
 
 class RuntimeForwardingSource(SDLModel):
@@ -286,25 +279,15 @@ class RuntimeForwardingSetting(SDLModel):
 
     @model_validator(mode="after")
     def validate_setting(self) -> "RuntimeForwardingSetting":
-        if _setting_name_is_concrete_secret(self.name):
-            self._enforce_secret_name_redaction()
-        elif self.value and self.classification in _REDACTED_SETTING_CLASSIFICATIONS:
-            raise ValueError(
-                f"forwarding setting '{self.setting_id}' classified '{self.classification}' must omit its raw value"
-            )
+        enforce_observed_value_redaction(
+            owner_label=f"forwarding setting '{self.setting_id}'",
+            name=self.name,
+            value=self.value,
+            classification=self.classification,
+            redacted_classifications=_REDACTED_SETTING_CLASSIFICATIONS,
+            classification_field="classification",
+        )
         return self
-
-    def _enforce_secret_name_redaction(self) -> None:
-        if self.value:
-            raise ValueError(
-                f"forwarding setting '{self.setting_id}' carries a secret-bearing name and must omit its raw value "
-                f"(classification must be 'redacted' or 'operator_secret')"
-            )
-        if not is_variable_ref(self.classification) and self.classification not in _REDACTED_SETTING_CLASSIFICATIONS:
-            raise ValueError(
-                f"forwarding setting '{self.setting_id}' carries a secret-bearing name; "
-                f"classification must be 'redacted' or 'operator_secret'"
-            )
 
 
 class RuntimeForwardingAgent(SDLModel):

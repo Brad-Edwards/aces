@@ -23,6 +23,7 @@ from .runtime_platform_application_vocab import (
 )
 from .runtime_values import (
     coerce_string_list,
+    enforce_observed_value_redaction,
     name_indicates_secret,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
@@ -40,11 +41,9 @@ __all__ = [
     "RuntimePlatformApplicationUpstreamBinding",
 ]
 
-_OMIT_RAW_CLASSIFICATIONS: frozenset[RuntimePlatformApplicationSettingClassification] = frozenset(
-    {
-        RuntimePlatformApplicationSettingClassification.REDACTED,
-        RuntimePlatformApplicationSettingClassification.OPERATOR_SECRET,
-    }
+_OMIT_RAW_CLASSIFICATIONS = (
+    RuntimePlatformApplicationSettingClassification.REDACTED,
+    RuntimePlatformApplicationSettingClassification.OPERATOR_SECRET,
 )
 
 
@@ -286,25 +285,12 @@ class RuntimePlatformApplicationSetting(SDLModel):
 
     @model_validator(mode="after")
     def validate_setting(self) -> "RuntimePlatformApplicationSetting":
-        if self._name_is_concrete_secret():
-            self._enforce_secret_name_redaction()
-        elif self.value and self.classification in _OMIT_RAW_CLASSIFICATIONS:
-            raise ValueError(
-                f"platform setting '{self.name}' classified '{self.classification}' must omit its raw value"
-            )
+        enforce_observed_value_redaction(
+            owner_label=f"platform setting '{self.name}'",
+            name=self.name,
+            value=self.value,
+            classification=self.classification,
+            redacted_classifications=_OMIT_RAW_CLASSIFICATIONS,
+            classification_field="classification",
+        )
         return self
-
-    def _name_is_concrete_secret(self) -> bool:
-        return bool(self.name) and not is_variable_ref(self.name) and name_indicates_secret(self.name)
-
-    def _enforce_secret_name_redaction(self) -> None:
-        if self.value:
-            raise ValueError(
-                f"platform setting '{self.name}' carries a secret-bearing name and must omit its raw value "
-                f"(classification must be 'redacted' or 'operator_secret')"
-            )
-        if not is_variable_ref(self.classification) and self.classification not in _OMIT_RAW_CLASSIFICATIONS:
-            raise ValueError(
-                f"platform setting '{self.name}' carries a secret-bearing name; "
-                f"classification must be 'redacted' or 'operator_secret'"
-            )

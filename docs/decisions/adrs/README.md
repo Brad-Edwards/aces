@@ -40,6 +40,8 @@ adr-051-orchestration-authority-runtime-inventory
 adr-052-typed-runtime-relationship-subtypes
 adr-053-sdl-module-composition-for-inventory-backed-scenarios
 adr-054-participant-runtime-observable-lifecycle
+adr-055-experiment-core-contract-boundary
+adr-056-runtime-observed-values-and-credential-posture
 ```
 
 | ADR | Title | Status | Date |
@@ -100,3 +102,4 @@ adr-054-participant-runtime-observable-lifecycle
 | [053](adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) | SDL Module Composition for Inventory-Backed Scenarios | accepted | 2026-06-03 |
 | [054](adr-054-participant-runtime-observable-lifecycle.md) | Participant Runtime Observable Lifecycle | proposed | 2026-06-05 |
 | [055](adr-055-experiment-core-contract-boundary.md) | Experiment Core Contract Boundary | accepted | 2026-05-26 |
+| [056](adr-056-runtime-observed-values-and-credential-posture.md) | Runtime Observed Values and Credential Posture | accepted | 2026-06-05 |

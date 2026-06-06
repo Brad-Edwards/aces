@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
-from ._base import SDLModel, is_variable_ref, parse_int_or_var
+from ._base import SDLModel, parse_int_or_var
 from .runtime_filesystem import RuntimeSensitivityClassification
 from .runtime_security_monitoring_definitions import (
     RuntimeSecurityMonitoringDetectionDefinition,
@@ -17,7 +17,7 @@ from .runtime_security_monitoring_definitions import (
 from .runtime_values import (
     absolute_path_or_var,
     coerce_string_list,
-    name_indicates_secret,
+    enforce_observed_value_redaction,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
     require_symbol,
@@ -47,8 +47,9 @@ __all__ = [
     "RuntimeSecurityMonitoringSettingProvenance",
 ]
 
-_REDACTED_SENSITIVITIES = frozenset(
-    {RuntimeSensitivityClassification.REDACTED, RuntimeSensitivityClassification.OPERATOR_SECRET}
+_REDACTED_SENSITIVITIES = (
+    RuntimeSensitivityClassification.REDACTED,
+    RuntimeSensitivityClassification.OPERATOR_SECRET,
 )
 
 
@@ -438,27 +439,15 @@ class RuntimeSecurityMonitoringSetting(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_value(self) -> "RuntimeSecurityMonitoringSetting":
-        if name_indicates_secret(self.name):
-            self._enforce_secret_name_redaction()
-        elif self.value and self.value_classification in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"security-monitoring setting '{self.name}' classified "
-                f"'{self.value_classification}' must omit its raw value"
-            )
+        enforce_observed_value_redaction(
+            owner_label=f"security-monitoring setting '{self.name}'",
+            name=self.name,
+            value=self.value,
+            classification=self.value_classification,
+            redacted_classifications=_REDACTED_SENSITIVITIES,
+            classification_field="value_classification",
+        )
         return self
-
-    def _enforce_secret_name_redaction(self) -> None:
-        if self.value:
-            raise ValueError(
-                f"security-monitoring setting '{self.name}' carries a secret-bearing name and must omit its raw value"
-            )
-        if is_variable_ref(self.value_classification):
-            return
-        if self.value_classification not in _REDACTED_SENSITIVITIES:
-            raise ValueError(
-                f"security-monitoring setting '{self.name}' carries a secret-bearing name; "
-                f"value_classification must be 'redacted' or 'operator_secret'"
-            )
 
 
 class RuntimeSecurityMonitoringManager(SDLModel):

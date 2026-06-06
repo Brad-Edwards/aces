@@ -7463,6 +7463,7 @@
         "plain",
         "redacted",
         "secret_fixture",
+        "operator_secret",
         "unknown",
         "other"
       ],
