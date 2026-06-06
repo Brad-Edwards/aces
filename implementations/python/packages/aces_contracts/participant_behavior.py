@@ -476,13 +476,14 @@ def _behavior_event_shared_state_ref_violations(
     locator: str,
     shared_state_refs: object,
 ) -> list[tuple[str, str]]:
+    violations: list[tuple[str, str]] = []
     if not isinstance(shared_state_refs, list):
-        return [(locator, "participant behavior shared_state_refs must be a list")]
-    if any(not isinstance(ref, str) or not ref for ref in shared_state_refs):
-        return [(locator, "participant behavior shared_state_refs entries must be non-empty strings")]
-    if len(set(shared_state_refs)) != len(shared_state_refs):
-        return [(locator, "participant behavior shared_state_refs entries must be unique")]
-    return []
+        violations.append((locator, "participant behavior shared_state_refs must be a list"))
+    elif any(not isinstance(ref, str) or not ref for ref in shared_state_refs):
+        violations.append((locator, "participant behavior shared_state_refs entries must be non-empty strings"))
+    elif len(set(shared_state_refs)) != len(shared_state_refs):
+        violations.append((locator, "participant behavior shared_state_refs entries must be unique"))
+    return violations
 
 
 def _iter_behavior_event_lifecycle_violations(
