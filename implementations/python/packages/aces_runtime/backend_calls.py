@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from copy import deepcopy
 
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 
 from .diagnostics import _failure_diagnostic
 from .evaluation_result_contracts import evaluation_result_contract_diagnostics
-from .participant_result_contracts import participant_episode_contract_diagnostics
+from .participant_result_contracts import (
+    participant_runtime_history_transition_diagnostics,
+    participant_runtime_state_contract_diagnostics,
+)
 from .workflow_result_contracts import workflow_result_contract_diagnostics
 
 _BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
@@ -42,19 +46,24 @@ def _call_backend_apply(
     address: str,
     snapshot: RuntimeSnapshot,
 ) -> ApplyResult:
+    baseline_snapshot = deepcopy(snapshot)
+    backend_snapshot = deepcopy(snapshot)
+    backend_args = tuple(backend_snapshot if arg is snapshot else arg for arg in args)
     try:
-        result = method(*args)
+        result = method(*backend_args)
     except Exception as exc:
-        apply_result = _failed_apply_result(snapshot, _backend_call_failed(address, exc))
+        apply_result = _failed_apply_result(baseline_snapshot, _backend_call_failed(address, exc))
     else:
         invalid_message = _apply_result_contract_violation(result, address)
         if invalid_message is not None:
-            apply_result = _failed_apply_result(snapshot, _backend_contract_invalid(address, invalid_message))
+            apply_result = _failed_apply_result(baseline_snapshot, _backend_contract_invalid(address, invalid_message))
         else:
             assert isinstance(result, ApplyResult)
             contract_diagnostics = _snapshot_contract_diagnostics(result.snapshot)
+            if not contract_diagnostics:
+                contract_diagnostics = _snapshot_transition_contract_diagnostics(baseline_snapshot, result.snapshot)
             apply_result = (
-                ApplyResult(success=False, snapshot=snapshot, diagnostics=contract_diagnostics)
+                ApplyResult(success=False, snapshot=baseline_snapshot, diagnostics=contract_diagnostics)
                 if contract_diagnostics
                 else result
             )
@@ -151,4 +160,11 @@ def _snapshot_contract_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic
     diagnostics = evaluation_result_contract_diagnostics(snapshot)
     if diagnostics:
         return diagnostics
-    return participant_episode_contract_diagnostics(snapshot)
+    return participant_runtime_state_contract_diagnostics(snapshot)
+
+
+def _snapshot_transition_contract_diagnostics(
+    previous_snapshot: RuntimeSnapshot,
+    next_snapshot: RuntimeSnapshot,
+) -> list[Diagnostic]:
+    return participant_runtime_history_transition_diagnostics(previous_snapshot, next_snapshot)

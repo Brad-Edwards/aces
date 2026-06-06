@@ -691,6 +691,16 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 - CALDERA adversary-emulation research informs the action semantics: cyber
   actions can change foothold, knowledge, observations, detection surface, and
   downstream outcomes under uncertainty.
+- RUN-305's runtime snapshot design follows that lineage by making participant
+  episode state and behavior history first-class portable records rather than
+  backend logs or `metadata`: action attempts, observations, state-transition
+  records, and outcome interpretations need stable participant/episode/action
+  identity to support review across RL agents, LLM agents, humans, scripts, and
+  cyber-range backends. OpenSpiel's information-state separation and the
+  cyber-agent sim-to-emulation sources above are the reason the snapshot
+  preserves behavior history without claiming hidden world truth, private
+  participant internals, benchmark validity, or full replay guarantees from that
+  history alone.
 
 ## Benchmark And Experiment Lineage
 

@@ -31,7 +31,7 @@ from aces_sdl.participant_temporal_semantics import (
     ParticipantTimeDomain,
 )
 from aces_sdl.scenario import InstantiatedScenario, Scenario
-from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler, model_validator
+from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler, StrictInt, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
@@ -45,6 +45,10 @@ from .manifest_authority import (
     validate_participant_supported_contract_versions,
     validate_processor_supported_contract_versions,
     validate_processor_supported_sdl_versions,
+)
+from .participant_behavior import (
+    ParticipantBehaviorHistoryEventType,
+    ParticipantObservationStatus,
 )
 from .versions import (
     BACKEND_MANIFEST_V2_SCHEMA_VERSION,
@@ -731,21 +735,21 @@ class ParticipantOutcomeInterpretationRecordModel(ContractModel):
 
 
 class ParticipantBehaviorHistoryEventModel(ContractModel):
-    event_type: str
-    timestamp: str
-    participant_address: str
-    episode_id: str
-    action_instance_id: str
-    action_contract_address: str | None = None
-    observation_boundary_address: str | None = None
-    observation_status: str | None = None
-    actor_provenance: str | None = None
-    state_transition_kind: str | None = None
-    post_state_digest: str | None = None
-    joint_action_set_id: str | None = None
-    realized_order: int | None = Field(default=None, ge=0)
+    event_type: ParticipantBehaviorHistoryEventType
+    timestamp: NonEmptyString
+    participant_address: NonEmptyString
+    episode_id: NonEmptyString
+    action_instance_id: NonEmptyString
+    action_contract_address: NonEmptyString | None = None
+    observation_boundary_address: NonEmptyString | None = None
+    observation_status: ParticipantObservationStatus | None = None
+    actor_provenance: NonEmptyString | None = None
+    state_transition_kind: NonEmptyString | None = None
+    post_state_digest: NonEmptyString | None = None
+    joint_action_set_id: NonEmptyString | None = None
+    realized_order: StrictInt | None = Field(default=None, ge=0)
     interaction_class: ParticipantInteractionClass | None = None
-    interaction_ref: str | None = None
+    interaction_ref: NonEmptyString | None = None
     shared_state_refs: list[NonEmptyString] = Field(default_factory=list)
     action_result: ParticipantActionResultModel | None = None
     attribution_edges: list[ParticipantAttributionEdgeModel] = Field(default_factory=list)
