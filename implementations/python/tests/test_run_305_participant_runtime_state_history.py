@@ -319,3 +319,16 @@ def test_participant_behavior_event_schema_and_model_reject_unknown_event_type()
 
     validator = Draft202012Validator(schema_bundle()["runtime-snapshot-v1"])
     assert list(validator.iter_errors(_snapshot_payload(invalid_event)))
+
+
+def test_participant_behavior_event_schema_and_model_reject_boolean_realized_order():
+    invalid_event = {
+        **_behavior_event(),
+        "realized_order": True,
+    }
+
+    with pytest.raises(ValidationError):
+        ParticipantBehaviorHistoryEventModel.model_validate(invalid_event)
+
+    validator = Draft202012Validator(schema_bundle()["runtime-snapshot-v1"])
+    assert list(validator.iter_errors(_snapshot_payload(invalid_event)))

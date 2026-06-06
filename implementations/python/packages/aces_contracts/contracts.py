@@ -28,7 +28,7 @@ from aces_sdl.participant_temporal_semantics import (
     ParticipantTimeDomain,
 )
 from aces_sdl.scenario import InstantiatedScenario, Scenario
-from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler, model_validator
+from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler, StrictInt, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
@@ -378,7 +378,7 @@ class ParticipantBehaviorHistoryEventModel(ContractModel):
     state_transition_kind: NonEmptyString | None = None
     post_state_digest: NonEmptyString | None = None
     joint_action_set_id: NonEmptyString | None = None
-    realized_order: int | None = Field(default=None, ge=0)
+    realized_order: StrictInt | None = Field(default=None, ge=0)
     interaction_class: ParticipantInteractionClass | None = None
     interaction_ref: NonEmptyString | None = None
     shared_state_refs: list[NonEmptyString] = Field(default_factory=list)
