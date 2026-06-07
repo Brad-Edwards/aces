@@ -67,10 +67,15 @@ concrete structural data model requires its defining geometry:
 
 The service owns single nested postures (`cluster`, `persistence`,
 `transport_security`) and id-bearing child collections (`nodes`, `partitions`,
-`settings`); `templates`, `aliases`, `mappings`, `lifecycle_policies`,
-`ingest_pipelines`, `pubsub_channels`, `queues_streams`, `engine_plugins`, and
-`backup_targets` are bare reference-name lists. Secret-bearing settings omit
-their raw value and classify `redacted` / `operator_secret`.
+`templates`, `mappings`, and `settings`). `templates` and `mappings` are bounded
+manifests rather than raw engine payloads: templates carry index patterns,
+selected settings, optional mapping refs, digests, and evidence refs; mappings
+carry partition refs, field-count/type census, dynamic policy, dynamic-template
+count, date-detection posture, schema digests, and evidence refs. `aliases`,
+`lifecycle_policies`, `ingest_pipelines`, `pubsub_channels`, `queues_streams`,
+`engine_plugins`, and `backup_targets` remain bare reference-name lists.
+Secret-bearing settings omit their raw value and classify `redacted` /
+`operator_secret`.
 
 ### 4. Keep datastore inventory targetable but not executable
 
@@ -80,6 +85,8 @@ qualified refs:
 - `nodes.<node>.runtime.datastore_services.<datastore_service_id>`
 - `nodes.<node>.runtime.datastore_services.<datastore_service_id>.nodes.<node_id>`
 - `nodes.<node>.runtime.datastore_services.<datastore_service_id>.partitions.<partition_id>`
+- `nodes.<node>.runtime.datastore_services.<datastore_service_id>.templates.<template_id>`
+- `nodes.<node>.runtime.datastore_services.<datastore_service_id>.mappings.<mapping_id>`
 - `nodes.<node>.runtime.datastore_services.<datastore_service_id>.settings.<setting_id>`
 
 These refs are inventory targets. They do not imply query execution, indexing,
@@ -91,14 +98,17 @@ replication, or persistence behavior.
   fields are normalized through the single runtime enum-parse helper. Duplicate
   service ids and duplicate service-local child ids fail early.
 - Required-profile gate: the `require_profile_for_data_model` guard fails an
-  under-populated `search_index` / `wide_column` / `key_value` instance.
+  under-populated `search_index` / `wide_column` / `key_value` instance. A
+  concrete `search_index` also requires at least one structured mapping manifest
+  so index schema inventory cannot collapse to a name-only partition.
 - Semantic validation gate: the owning `service` ref resolves to a same-node
   binding; a non-empty, non-variable `authorization_ref` resolves to a same-node
   `app_authorization`.
 - Relationship/reference gate: service and child qualified refs resolve in
   generic relationships and survive module import namespacing.
-- Secret/payload gate: raw key material, credentials, and secret-bearing setting
-  values stay out of SDL model data.
+- Secret/payload gate: raw key material, credentials, secret-bearing setting
+  values, and raw `_mapping` / `_template` response bodies stay out of SDL model
+  data; bounded manifests retain digests and evidence refs instead.
 - Contract/schema gate: published schemas are regenerated from Python model
   sources; generated JSON schemas are not edited by hand.
 

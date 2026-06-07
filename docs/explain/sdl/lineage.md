@@ -388,7 +388,10 @@ irreducibly-relational `runtime.database_services` cannot shape. Its defining
 addition is the open `data_model` discriminator paired with a
 `require_profile_for_data_model` guard that makes each data model's defining
 geometry (search shard/replica counts, wide-column replication, key-value
-persistence) executable rather than optional.
+persistence, and bounded search-index mapping manifests) executable rather than
+optional. Search-index mappings and templates are captured as bounded manifests
+with counts, summaries, digests, refs, and evidence pointers rather than as raw
+backend JSON bodies.
 
 ACES relies on prior work in four ways:
 
