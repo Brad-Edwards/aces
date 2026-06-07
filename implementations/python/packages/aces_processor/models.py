@@ -50,10 +50,25 @@ from aces_contracts.participant_behavior import (
     ParticipantActionResultStatus as ParticipantActionResultStatus,
 )
 from aces_contracts.participant_behavior import (
+    ParticipantAdmissionDisposition as ParticipantAdmissionDisposition,
+)
+from aces_contracts.participant_behavior import (
     ParticipantBehaviorHistoryEventType as ParticipantBehaviorHistoryEventType,
 )
 from aces_contracts.participant_behavior import (
+    ParticipantLifecycleOperationState as ParticipantLifecycleOperationState,
+)
+from aces_contracts.participant_behavior import (
     ParticipantObservationStatus as ParticipantObservationStatus,
+)
+from aces_contracts.participant_behavior import (
+    ParticipantPhaseRealization as ParticipantPhaseRealization,
+)
+from aces_contracts.participant_behavior import (
+    ParticipantRuntimeLifecyclePhase as ParticipantRuntimeLifecyclePhase,
+)
+from aces_contracts.participant_behavior import (
+    participant_lifecycle_field_violation_messages as participant_lifecycle_field_violation_messages,
 )
 from aces_contracts.participant_episode import (
     PARTICIPANT_EPISODE_CONTROL_EVENTS,
@@ -1929,6 +1944,46 @@ def _participant_interaction_class_from_payload(value: Any) -> ParticipantIntera
     return ParticipantInteractionClass(str(value))
 
 
+def _participant_lifecycle_phase_from_payload(
+    value: str | ParticipantRuntimeLifecyclePhase | None,
+) -> ParticipantRuntimeLifecyclePhase | None:
+    if value is None:
+        return None
+    if isinstance(value, ParticipantRuntimeLifecyclePhase):
+        return value
+    return ParticipantRuntimeLifecyclePhase(str(value))
+
+
+def _participant_phase_realization_from_payload(
+    value: str | ParticipantPhaseRealization | None,
+) -> ParticipantPhaseRealization | None:
+    if value is None:
+        return None
+    if isinstance(value, ParticipantPhaseRealization):
+        return value
+    return ParticipantPhaseRealization(str(value))
+
+
+def _participant_admission_disposition_from_payload(
+    value: str | ParticipantAdmissionDisposition | None,
+) -> ParticipantAdmissionDisposition | None:
+    if value is None:
+        return None
+    if isinstance(value, ParticipantAdmissionDisposition):
+        return value
+    return ParticipantAdmissionDisposition(str(value))
+
+
+def _participant_lifecycle_operation_state_from_payload(
+    value: str | ParticipantLifecycleOperationState | None,
+) -> ParticipantLifecycleOperationState | None:
+    if value is None:
+        return None
+    if isinstance(value, ParticipantLifecycleOperationState):
+        return value
+    return ParticipantLifecycleOperationState(str(value))
+
+
 def _participant_behavior_shared_state_refs_from_payload(value: Any) -> tuple[str, ...]:
     if value is None:
         return ()
@@ -2001,6 +2056,11 @@ class ParticipantBehaviorHistoryEvent:
     observation_boundary_address: str | None = None
     observation_status: ParticipantObservationStatus | None = None
     actor_provenance: str | None = None
+    lifecycle_phase: ParticipantRuntimeLifecyclePhase | None = None
+    phase_realization: ParticipantPhaseRealization | None = None
+    admission_disposition: ParticipantAdmissionDisposition | None = None
+    operation_ref: str | None = None
+    operation_state: ParticipantLifecycleOperationState | None = None
     state_transition_kind: str | None = None
     post_state_digest: str | None = None
     joint_action_set_id: str | None = None
@@ -2046,6 +2106,11 @@ class ParticipantBehaviorHistoryEvent:
             observation_boundary_address=_optional_payload_string(payload, "observation_boundary_address"),
             observation_status=_participant_observation_status_from_payload(payload.get("observation_status")),
             actor_provenance=_optional_payload_string(payload, "actor_provenance"),
+            lifecycle_phase=_participant_lifecycle_phase_from_payload(payload.get("lifecycle_phase")),
+            phase_realization=_participant_phase_realization_from_payload(payload.get("phase_realization")),
+            admission_disposition=_participant_admission_disposition_from_payload(payload.get("admission_disposition")),
+            operation_ref=_optional_payload_string(payload, "operation_ref"),
+            operation_state=_participant_lifecycle_operation_state_from_payload(payload.get("operation_state")),
             state_transition_kind=_optional_payload_string(payload, "state_transition_kind"),
             post_state_digest=_optional_payload_string(payload, "post_state_digest"),
             joint_action_set_id=_optional_payload_string(payload, "joint_action_set_id"),
@@ -2075,6 +2140,13 @@ class ParticipantBehaviorHistoryEvent:
             "observation_boundary_address": self.observation_boundary_address,
             "observation_status": self.observation_status.value if self.observation_status is not None else None,
             "actor_provenance": self.actor_provenance,
+            "lifecycle_phase": self.lifecycle_phase.value if self.lifecycle_phase is not None else None,
+            "phase_realization": self.phase_realization.value if self.phase_realization is not None else None,
+            "admission_disposition": (
+                self.admission_disposition.value if self.admission_disposition is not None else None
+            ),
+            "operation_ref": self.operation_ref,
+            "operation_state": self.operation_state.value if self.operation_state is not None else None,
             "state_transition_kind": self.state_transition_kind,
             "post_state_digest": self.post_state_digest,
             "joint_action_set_id": self.joint_action_set_id,
@@ -2119,6 +2191,7 @@ class ParticipantBehaviorHistoryEvent:
         ):
             raise TypeError("observation_status must be a ParticipantObservationStatus or None")
         self._validate_optional_string(self.actor_provenance, "actor_provenance must be a non-empty string or None")
+        self._validate_lifecycle_fields()
         self._validate_optional_state_fields()
         self._validate_realized_order()
         self._validate_interaction_type()
@@ -2146,6 +2219,47 @@ class ParticipantBehaviorHistoryEvent:
             self.joint_action_set_id,
             "joint_action_set_id must be a non-empty string or None",
         )
+
+    def _validate_lifecycle_fields(self) -> None:
+        self._validate_lifecycle_enum_types()
+        self._validate_optional_string(self.operation_ref, "operation_ref must be a non-empty string or None")
+        messages = participant_lifecycle_field_violation_messages(
+            event_type=self.event_type,
+            lifecycle_phase=self.lifecycle_phase,
+            phase_realization=self.phase_realization,
+            admission_disposition=self.admission_disposition,
+            operation_ref=self.operation_ref,
+            operation_state=self.operation_state,
+        )
+        if messages:
+            raise ValueError(messages[0])
+
+    def _validate_lifecycle_enum_types(self) -> None:
+        expectations = (
+            (
+                self.lifecycle_phase,
+                ParticipantRuntimeLifecyclePhase,
+                "lifecycle_phase must be a ParticipantRuntimeLifecyclePhase or None",
+            ),
+            (
+                self.phase_realization,
+                ParticipantPhaseRealization,
+                "phase_realization must be a ParticipantPhaseRealization or None",
+            ),
+            (
+                self.admission_disposition,
+                ParticipantAdmissionDisposition,
+                "admission_disposition must be a ParticipantAdmissionDisposition or None",
+            ),
+            (
+                self.operation_state,
+                ParticipantLifecycleOperationState,
+                "operation_state must be a ParticipantLifecycleOperationState or None",
+            ),
+        )
+        for value, enum_type, message in expectations:
+            if value is not None and not isinstance(value, enum_type):
+                raise TypeError(message)
 
     def _validate_realized_order(self) -> None:
         if self.realized_order is not None and (

@@ -41,6 +41,54 @@ class ParticipantActionResultStatus(str, Enum):
     UNKNOWN = "unknown"
 
 
+class ParticipantRuntimeLifecyclePhase(str, Enum):
+    """RUN-306 observable participant runtime lifecycle phases."""
+
+    INTENT_OR_PROPOSAL = "intent_or_proposal"
+    SELECTION_OR_ADMISSION = "selection_or_admission"
+    EXECUTION_ATTEMPT = "execution_attempt"
+    OBSERVATION_EMISSION = "observation_emission"
+    STATE_UPDATE_COMMIT = "state_update_commit"
+
+
+class ParticipantPhaseRealization(str, Enum):
+    """RUN-306 realization modes for an observable lifecycle phase."""
+
+    OBSERVED = "observed"
+    RUNTIME_MEDIATED = "runtime_mediated"
+    EXTERNALLY_SUPPLIED = "externally_supplied"
+    OPAQUE = "opaque"
+    UNKNOWN = "unknown"
+    NOT_APPLICABLE = "not_applicable"
+    UNSUPPORTED = "unsupported"
+
+
+class ParticipantAdmissionDisposition(str, Enum):
+    """RUN-306 selection/admission disposition values."""
+
+    ADMITTED = "admitted"
+    REJECTED = "rejected"
+    WITHHELD = "withheld"
+    UNKNOWN = "unknown"
+    NOT_APPLICABLE = "not_applicable"
+
+
+class ParticipantLifecycleOperationState(str, Enum):
+    """RUN-306 operation states for execution-attempt records."""
+
+    SUBMITTED = "submitted"
+    ACKNOWLEDGED = "acknowledged"
+    RUNNING = "running"
+    BLOCKED = "blocked"
+    COMPLETED = "completed"
+    PARTIAL = "partial"
+    FAILED = "failed"
+    TIMED_OUT = "timed_out"
+    CANCELLED = "cancelled"
+    UNKNOWN = "unknown"
+    UNSUPPORTED = "unsupported"
+
+
 _PARTICIPANT_BEHAVIOR_HISTORY_KEY = "runtime.snapshot.participant-behavior-history"
 _PARTICIPANT_RUNTIME_METADATA_KEY = "runtime.snapshot.metadata"
 _RESERVED_RUNTIME_STATE_KEYS = frozenset(
@@ -65,7 +113,155 @@ _OPTIONAL_NON_EMPTY_STRING_FIELDS = (
     "post_state_digest",
     "joint_action_set_id",
     "interaction_ref",
+    "operation_ref",
 )
+
+
+def _enum_values(enum_type: type[Enum]) -> frozenset[str]:
+    return frozenset(str(item.value) for item in enum_type.__members__.values())
+
+
+_PARTICIPANT_BEHAVIOR_EVENT_TYPE_VALUES = _enum_values(ParticipantBehaviorHistoryEventType)
+_PARTICIPANT_OBSERVATION_STATUS_VALUES = _enum_values(ParticipantObservationStatus)
+_PARTICIPANT_RUNTIME_LIFECYCLE_PHASE_VALUES = _enum_values(ParticipantRuntimeLifecyclePhase)
+_PARTICIPANT_PHASE_REALIZATION_VALUES = _enum_values(ParticipantPhaseRealization)
+_PARTICIPANT_ADMISSION_DISPOSITION_VALUES = _enum_values(ParticipantAdmissionDisposition)
+_PARTICIPANT_LIFECYCLE_OPERATION_STATE_VALUES = _enum_values(ParticipantLifecycleOperationState)
+_ACTION_ATTEMPTED_LIFECYCLE_PHASE_VALUES = frozenset(
+    {
+        ParticipantRuntimeLifecyclePhase.INTENT_OR_PROPOSAL.value,
+        ParticipantRuntimeLifecyclePhase.SELECTION_OR_ADMISSION.value,
+        ParticipantRuntimeLifecyclePhase.EXECUTION_ATTEMPT.value,
+    }
+)
+_LIFECYCLE_ENUM_FIELDS = (
+    ("lifecycle_phase", _PARTICIPANT_RUNTIME_LIFECYCLE_PHASE_VALUES),
+    ("phase_realization", _PARTICIPANT_PHASE_REALIZATION_VALUES),
+    ("admission_disposition", _PARTICIPANT_ADMISSION_DISPOSITION_VALUES),
+    ("operation_state", _PARTICIPANT_LIFECYCLE_OPERATION_STATE_VALUES),
+)
+_LIFECYCLE_PHASE_BY_EVENT_TYPE = {
+    ParticipantBehaviorHistoryEventType.ACTION_ATTEMPTED.value: _ACTION_ATTEMPTED_LIFECYCLE_PHASE_VALUES,
+    ParticipantBehaviorHistoryEventType.STATE_TRANSITION_RECORDED.value: frozenset(
+        {ParticipantRuntimeLifecyclePhase.STATE_UPDATE_COMMIT.value}
+    ),
+    ParticipantBehaviorHistoryEventType.OBSERVATION_EMITTED.value: frozenset(
+        {ParticipantRuntimeLifecyclePhase.OBSERVATION_EMISSION.value}
+    ),
+}
+_LIFECYCLE_PHASE_BY_EVENT_TYPE_MESSAGES = {
+    ParticipantBehaviorHistoryEventType.ACTION_ATTEMPTED.value: (
+        "action_attempted lifecycle_phase must be one of intent_or_proposal, selection_or_admission, execution_attempt"
+    ),
+    ParticipantBehaviorHistoryEventType.STATE_TRANSITION_RECORDED.value: (
+        "state_transition_recorded lifecycle_phase must be state_update_commit"
+    ),
+    ParticipantBehaviorHistoryEventType.OBSERVATION_EMITTED.value: (
+        "observation_emitted lifecycle_phase must be observation_emission"
+    ),
+}
+
+
+def _enum_scalar(value: object) -> object:
+    return value.value if isinstance(value, Enum) else value
+
+
+def _optional_enum_violation_messages(field_values: Mapping[str, object]) -> list[str]:
+    messages: list[str] = []
+    for field, allowed_values in _LIFECYCLE_ENUM_FIELDS:
+        value = field_values[field]
+        if value is not None and value not in allowed_values:
+            messages.append(f"participant behavior {field} {value!r} is not supported")
+    return messages
+
+
+def _lifecycle_presence_violation_messages(
+    lifecycle_phase: object,
+    phase_realization: object,
+    lifecycle_fields: tuple[object, ...],
+) -> list[str]:
+    if lifecycle_phase is None and any(value is not None for value in lifecycle_fields):
+        return ["participant behavior lifecycle fields require lifecycle_phase"]
+    if lifecycle_phase is not None and phase_realization is None:
+        return ["lifecycle_phase requires phase_realization"]
+    return []
+
+
+def _lifecycle_scope_violation_messages(
+    lifecycle_phase: object,
+    admission_disposition: object,
+    operation_ref: object,
+    operation_state: object,
+) -> list[str]:
+    messages: list[str] = []
+    execution_attempt = ParticipantRuntimeLifecyclePhase.EXECUTION_ATTEMPT.value
+    if lifecycle_phase == ParticipantRuntimeLifecyclePhase.SELECTION_OR_ADMISSION.value:
+        if admission_disposition is None:
+            messages.append("selection_or_admission lifecycle_phase requires admission_disposition")
+    elif admission_disposition is not None:
+        messages.append("admission_disposition requires lifecycle_phase selection_or_admission")
+    if operation_state is not None and lifecycle_phase != execution_attempt:
+        messages.append("operation_state requires lifecycle_phase execution_attempt")
+    if operation_ref is not None and lifecycle_phase != execution_attempt:
+        messages.append("operation_ref requires lifecycle_phase execution_attempt")
+    return messages
+
+
+def _lifecycle_event_type_violation_messages(event_type: object, lifecycle_phase: object) -> list[str]:
+    allowed_phases = _LIFECYCLE_PHASE_BY_EVENT_TYPE.get(event_type)
+    if allowed_phases is not None and lifecycle_phase not in allowed_phases:
+        return [_LIFECYCLE_PHASE_BY_EVENT_TYPE_MESSAGES[str(event_type)]]
+    return []
+
+
+def participant_lifecycle_field_violation_messages(
+    *,
+    event_type: object,
+    lifecycle_phase: object,
+    phase_realization: object,
+    admission_disposition: object,
+    operation_ref: object,
+    operation_state: object,
+) -> tuple[str, ...]:
+    """Return RUN-306 participant lifecycle validation messages."""
+
+    values = {
+        "lifecycle_phase": _enum_scalar(lifecycle_phase),
+        "phase_realization": _enum_scalar(phase_realization),
+        "admission_disposition": _enum_scalar(admission_disposition),
+        "operation_state": _enum_scalar(operation_state),
+    }
+    lifecycle_phase_value = values["lifecycle_phase"]
+    phase_realization_value = values["phase_realization"]
+    messages = _optional_enum_violation_messages(values)
+    messages.extend(
+        _lifecycle_presence_violation_messages(
+            lifecycle_phase_value,
+            phase_realization_value,
+            (
+                phase_realization_value,
+                values["admission_disposition"],
+                operation_ref,
+                values["operation_state"],
+            ),
+        )
+    )
+
+    if lifecycle_phase_value not in _PARTICIPANT_RUNTIME_LIFECYCLE_PHASE_VALUES:
+        return tuple(messages)
+    if phase_realization_value is not None and phase_realization_value not in _PARTICIPANT_PHASE_REALIZATION_VALUES:
+        return tuple(messages)
+
+    messages.extend(
+        _lifecycle_scope_violation_messages(
+            lifecycle_phase_value,
+            values["admission_disposition"],
+            operation_ref,
+            values["operation_state"],
+        )
+    )
+    messages.extend(_lifecycle_event_type_violation_messages(_enum_scalar(event_type), lifecycle_phase_value))
+    return tuple(messages)
 
 
 def iter_participant_behavior_snapshot_violations(
@@ -190,60 +386,120 @@ def _iter_behavior_event_shape_violations(
     locator: str,
     outer_key: str,
     event: Mapping[object, object],
-) -> Iterator[tuple[str, str]]:
-    missing = [field for field in _REQUIRED_BEHAVIOR_EVENT_FIELDS if field not in event]
-    if missing:
-        yield (locator, "participant behavior history event is missing required fields: " + ", ".join(missing))
-        return
-
-    for field in _REQUIRED_BEHAVIOR_EVENT_FIELDS:
-        value = event[field]
-        if not isinstance(value, str) or not value:
-            yield (locator, f"participant behavior history event field {field} must be a non-empty string")
-            return
+) -> list[tuple[str, str]]:
+    violations = _behavior_event_required_shape_violations(locator, event)
+    if violations:
+        return violations
 
     event_type = event["event_type"]
-    if event_type not in {kind.value for kind in ParticipantBehaviorHistoryEventType}:
-        yield (locator, f"participant behavior history event_type {event_type!r} is not supported")
-
-    participant_address = event["participant_address"]
-    if participant_address != outer_key:
-        yield (
-            locator,
-            (
-                f"participant behavior history event outer key {outer_key!r} "
-                f"does not match inner participant_address {participant_address!r}"
-            ),
-        )
-
     observation_status = event.get("observation_status")
-    if observation_status is not None and observation_status not in {
-        status.value for status in ParticipantObservationStatus
-    }:
-        yield (locator, f"participant behavior observation_status {observation_status!r} is not supported")
-
-    for field in _OPTIONAL_NON_EMPTY_STRING_FIELDS:
-        value = event.get(field)
-        if value is not None and (not isinstance(value, str) or not value):
-            yield (locator, f"participant behavior history event field {field} must be a non-empty string or None")
+    violations.extend(_behavior_event_type_violations(locator, outer_key, event_type, event["participant_address"]))
+    violations.extend(_behavior_event_observation_status_violations(locator, observation_status))
+    violations.extend(_behavior_event_optional_field_violations(locator, event))
+    violations.extend(_behavior_event_shared_state_ref_violations(locator, event.get("shared_state_refs", [])))
 
     realized_order = event.get("realized_order")
     if realized_order is not None and (
         isinstance(realized_order, bool) or not isinstance(realized_order, int) or realized_order < 0
     ):
-        yield (locator, "participant behavior realized_order must be a non-negative integer or None")
-
-    shared_state_refs = event.get("shared_state_refs", [])
-    if not isinstance(shared_state_refs, list):
-        yield (locator, "participant behavior shared_state_refs must be a list")
-    elif any(not isinstance(ref, str) or not ref for ref in shared_state_refs):
-        yield (locator, "participant behavior shared_state_refs entries must be non-empty strings")
-    elif len(set(shared_state_refs)) != len(shared_state_refs):
-        yield (locator, "participant behavior shared_state_refs entries must be unique")
+        violations.append((locator, "participant behavior realized_order must be a non-negative integer or None"))
 
     details = event.get("details", {})
     if not isinstance(details, Mapping):
-        yield (locator, "participant behavior details must be a mapping")
+        violations.append((locator, "participant behavior details must be a mapping"))
+
+    violations.extend(_iter_behavior_event_lifecycle_violations(locator, event_type, event))
+    return violations
+
+
+def _behavior_event_required_shape_violations(
+    locator: str,
+    event: Mapping[object, object],
+) -> list[tuple[str, str]]:
+    missing = [field for field in _REQUIRED_BEHAVIOR_EVENT_FIELDS if field not in event]
+    if missing:
+        return [(locator, "participant behavior history event is missing required fields: " + ", ".join(missing))]
+
+    for field in _REQUIRED_BEHAVIOR_EVENT_FIELDS:
+        value = event[field]
+        if not isinstance(value, str) or not value:
+            return [(locator, f"participant behavior history event field {field} must be a non-empty string")]
+    return []
+
+
+def _behavior_event_type_violations(
+    locator: str,
+    outer_key: str,
+    event_type: object,
+    participant_address: object,
+) -> list[tuple[str, str]]:
+    violations: list[tuple[str, str]] = []
+    if event_type not in _PARTICIPANT_BEHAVIOR_EVENT_TYPE_VALUES:
+        violations.append((locator, f"participant behavior history event_type {event_type!r} is not supported"))
+    if participant_address != outer_key:
+        violations.append(
+            (
+                locator,
+                (
+                    f"participant behavior history event outer key {outer_key!r} "
+                    f"does not match inner participant_address {participant_address!r}"
+                ),
+            )
+        )
+    return violations
+
+
+def _behavior_event_observation_status_violations(
+    locator: str,
+    observation_status: object,
+) -> list[tuple[str, str]]:
+    if observation_status is not None and observation_status not in _PARTICIPANT_OBSERVATION_STATUS_VALUES:
+        return [(locator, f"participant behavior observation_status {observation_status!r} is not supported")]
+    return []
+
+
+def _behavior_event_optional_field_violations(
+    locator: str,
+    event: Mapping[object, object],
+) -> list[tuple[str, str]]:
+    violations: list[tuple[str, str]] = []
+    for field in _OPTIONAL_NON_EMPTY_STRING_FIELDS:
+        value = event.get(field)
+        if value is not None and (not isinstance(value, str) or not value):
+            violations.append(
+                (locator, f"participant behavior history event field {field} must be a non-empty string or None")
+            )
+    return violations
+
+
+def _behavior_event_shared_state_ref_violations(
+    locator: str,
+    shared_state_refs: object,
+) -> list[tuple[str, str]]:
+    violations: list[tuple[str, str]] = []
+    if not isinstance(shared_state_refs, list):
+        violations.append((locator, "participant behavior shared_state_refs must be a list"))
+    elif any(not isinstance(ref, str) or not ref for ref in shared_state_refs):
+        violations.append((locator, "participant behavior shared_state_refs entries must be non-empty strings"))
+    elif len(set(shared_state_refs)) != len(shared_state_refs):
+        violations.append((locator, "participant behavior shared_state_refs entries must be unique"))
+    return violations
+
+
+def _iter_behavior_event_lifecycle_violations(
+    locator: str,
+    event_type: object,
+    event: Mapping[object, object],
+) -> list[tuple[str, str]]:
+    messages = participant_lifecycle_field_violation_messages(
+        event_type=event_type,
+        lifecycle_phase=event.get("lifecycle_phase"),
+        phase_realization=event.get("phase_realization"),
+        admission_disposition=event.get("admission_disposition"),
+        operation_ref=event.get("operation_ref"),
+        operation_state=event.get("operation_state"),
+    )
+    return [(locator, message) for message in messages]
 
 
 def _iter_behavior_event_episode_reference_violations(
@@ -330,10 +586,14 @@ def _collect_episode_history_ids(
 
 
 __all__ = (
+    "ParticipantAdmissionDisposition",
     "ParticipantActionPreconditionStatus",
     "ParticipantActionResultStatus",
     "ParticipantBehaviorHistoryEventType",
+    "ParticipantLifecycleOperationState",
     "ParticipantObservationStatus",
+    "ParticipantPhaseRealization",
+    "ParticipantRuntimeLifecyclePhase",
     "iter_participant_behavior_snapshot_violations",
     "iter_participant_runtime_history_transition_violations",
 )

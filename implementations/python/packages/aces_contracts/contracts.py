@@ -47,8 +47,13 @@ from .manifest_authority import (
     validate_processor_supported_sdl_versions,
 )
 from .participant_behavior import (
+    ParticipantAdmissionDisposition,
     ParticipantBehaviorHistoryEventType,
+    ParticipantLifecycleOperationState,
     ParticipantObservationStatus,
+    ParticipantPhaseRealization,
+    ParticipantRuntimeLifecyclePhase,
+    participant_lifecycle_field_violation_messages,
 )
 from .versions import (
     BACKEND_MANIFEST_V2_SCHEMA_VERSION,
@@ -744,6 +749,11 @@ class ParticipantBehaviorHistoryEventModel(ContractModel):
     observation_boundary_address: NonEmptyString | None = None
     observation_status: ParticipantObservationStatus | None = None
     actor_provenance: NonEmptyString | None = None
+    lifecycle_phase: ParticipantRuntimeLifecyclePhase | None = None
+    phase_realization: ParticipantPhaseRealization | None = None
+    admission_disposition: ParticipantAdmissionDisposition | None = None
+    operation_ref: NonEmptyString | None = None
+    operation_state: ParticipantLifecycleOperationState | None = None
     state_transition_kind: NonEmptyString | None = None
     post_state_digest: NonEmptyString | None = None
     joint_action_set_id: NonEmptyString | None = None
@@ -756,6 +766,20 @@ class ParticipantBehaviorHistoryEventModel(ContractModel):
     outcome_interpretations: list[ParticipantOutcomeInterpretationRecordModel] = Field(default_factory=list)
     temporal_contexts: list[ParticipantTemporalRuntimeContextModel] = Field(default_factory=list)
     details: ParticipantObservationDetailsModel = Field(default_factory=ParticipantObservationDetailsModel)
+
+    @model_validator(mode="after")
+    def _validate_lifecycle_fields(self) -> ParticipantBehaviorHistoryEventModel:
+        messages = participant_lifecycle_field_violation_messages(
+            event_type=self.event_type,
+            lifecycle_phase=self.lifecycle_phase,
+            phase_realization=self.phase_realization,
+            admission_disposition=self.admission_disposition,
+            operation_ref=self.operation_ref,
+            operation_state=self.operation_state,
+        )
+        if messages:
+            raise ValueError(messages[0])
+        return self
 
 
 class PlanOperationModel(ContractModel):
