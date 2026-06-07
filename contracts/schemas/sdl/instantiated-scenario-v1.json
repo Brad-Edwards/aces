@@ -6543,7 +6543,7 @@
     },
     "RuntimeDatastoreCluster": {
       "additionalProperties": false,
-      "description": "The single observed cluster posture of a datastore service.\n\nCaptures the cluster-identity facts a search/wide-column cluster exposes:\nhealth, discovery mode, partitioner, and native protocol version.",
+      "description": "The single observed cluster posture of a datastore service.\n\nCaptures the cluster-identity facts a search/wide-column cluster exposes:\nnative UUID, aggregate cardinality and size, shard totals, health,\ndiscovery mode, partitioner, and native protocol version.",
       "properties": {
         "cluster_id": {
           "title": "Cluster Id",
@@ -6558,6 +6558,21 @@
           "default": "",
           "title": "Discovery Mode",
           "type": "string"
+        },
+        "doc_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Doc Count"
         },
         "health": {
           "default": "",
@@ -6574,9 +6589,74 @@
           "title": "Native Protocol Version",
           "type": "string"
         },
+        "node_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Node Count"
+        },
         "partitioner": {
           "default": "",
           "title": "Partitioner",
+          "type": "string"
+        },
+        "shard_primaries": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shard Primaries"
+        },
+        "shard_total": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shard Total"
+        },
+        "store_size_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Store Size Bytes"
+        },
+        "uuid": {
+          "default": "",
+          "title": "Uuid",
           "type": "string"
         }
       },
@@ -6709,8 +6789,13 @@
     },
     "RuntimeDatastorePartition": {
       "additionalProperties": false,
-      "description": "An observed partition primitive (index / keyspace / logical_db / family).\n\nCarries the geometry that differentiates one datastore data model from\nanother: shard/replica counts for a search index, replication strategy +\nfactor + per-DC factor map for a wide-column keyspace, and a datatype census\nfor a key-value logical database.",
+      "description": "An observed partition primitive (index / keyspace / logical_db / family).\n\nCarries the geometry that differentiates one datastore data model from\nanother: native partition/index UUID, shard/replica and document counts for\na search index, replication strategy + factor + per-DC factor map for a\nwide-column keyspace, and a datatype census for a key-value logical\ndatabase.",
       "properties": {
+        "creation_timestamp": {
+          "default": "",
+          "title": "Creation Timestamp",
+          "type": "string"
+        },
         "datatype_census": {
           "additionalProperties": {
             "anyOf": [
@@ -6729,6 +6814,36 @@
           "default": "",
           "title": "Description",
           "type": "string"
+        },
+        "doc_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Doc Count"
+        },
+        "doc_count_deleted": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Doc Count Deleted"
         },
         "durable_writes": {
           "anyOf": [
@@ -6765,6 +6880,11 @@
         "name": {
           "default": "",
           "title": "Name",
+          "type": "string"
+        },
+        "open_closed_status": {
+          "default": "",
+          "title": "Open Closed Status",
           "type": "string"
         },
         "partition_id": {
@@ -6841,6 +6961,26 @@
           ],
           "default": null,
           "title": "Shard Count"
+        },
+        "store_size_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Store Size Bytes"
+        },
+        "uuid": {
+          "default": "",
+          "title": "Uuid",
+          "type": "string"
         }
       },
       "required": [

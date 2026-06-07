@@ -101,15 +101,22 @@ class RuntimeDatastoreCluster(SDLModel):
     """The single observed cluster posture of a datastore service.
 
     Captures the cluster-identity facts a search/wide-column cluster exposes:
-    health, discovery mode, partitioner, and native protocol version.
+    native UUID, aggregate cardinality and size, shard totals, health,
+    discovery mode, partitioner, and native protocol version.
     """
 
     cluster_id: str
+    uuid: str = ""
     name: str = ""
     health: str = ""
     discovery_mode: str = ""
     partitioner: str = ""
     native_protocol_version: str = ""
+    node_count: int | str | None = None
+    shard_total: int | str | None = None
+    shard_primaries: int | str | None = None
+    doc_count: int | str | None = None
+    store_size_bytes: int | str | None = None
     description: str = ""
 
     @field_validator("cluster_id")
@@ -117,21 +124,33 @@ class RuntimeDatastoreCluster(SDLModel):
     def validate_cluster_id(cls, v: str) -> str:
         return require_symbol(v, field_name="cluster_id")
 
+    @field_validator("node_count", "shard_total", "shard_primaries", "doc_count", "store_size_bytes", mode="before")
+    @classmethod
+    def parse_counts(cls, v: object, info: ValidationInfo) -> int | str | None:
+        return parse_int_or_var(v, minimum=0, field_name=info.field_name) if v is not None else v
+
 
 class RuntimeDatastorePartition(SDLModel):
     """An observed partition primitive (index / keyspace / logical_db / family).
 
     Carries the geometry that differentiates one datastore data model from
-    another: shard/replica counts for a search index, replication strategy +
-    factor + per-DC factor map for a wide-column keyspace, and a datatype census
-    for a key-value logical database.
+    another: native partition/index UUID, shard/replica and document counts for
+    a search index, replication strategy + factor + per-DC factor map for a
+    wide-column keyspace, and a datatype census for a key-value logical
+    database.
     """
 
     partition_id: str
     kind: RuntimeDatastorePartitionKind | str = RuntimeDatastorePartitionKind.UNKNOWN
     name: str = ""
+    uuid: str = ""
     shard_count: int | str | None = None
     replica_count: int | str | None = None
+    doc_count: int | str | None = None
+    doc_count_deleted: int | str | None = None
+    store_size_bytes: int | str | None = None
+    creation_timestamp: str = ""
+    open_closed_status: str = ""
     replication_strategy: RuntimeDatastoreReplicationStrategy | str = RuntimeDatastoreReplicationStrategy.UNKNOWN
     replication_factor: int | str | None = None
     per_dc_factor_map: dict[str, int | str] = Field(default_factory=dict)
@@ -155,7 +174,15 @@ class RuntimeDatastorePartition(SDLModel):
     def normalize_replication_strategy(cls, v: RuntimeDatastoreReplicationStrategy | str) -> object:
         return parse_runtime_enum_or_var(v, RuntimeDatastoreReplicationStrategy, field_name="replication_strategy")
 
-    @field_validator("shard_count", "replica_count", "replication_factor", mode="before")
+    @field_validator(
+        "shard_count",
+        "replica_count",
+        "doc_count",
+        "doc_count_deleted",
+        "store_size_bytes",
+        "replication_factor",
+        mode="before",
+    )
     @classmethod
     def parse_counts(cls, v: object, info: ValidationInfo) -> int | str | None:
         return parse_int_or_var(v, minimum=0, field_name=info.field_name) if v is not None else v

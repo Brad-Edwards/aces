@@ -255,6 +255,11 @@ node, partition, and setting ids are unique across the service. Engines, data
 models, partition kinds, node roles, persistence eviction policies, replication
 strategies, transport-security modes, and setting scope/provenance/classification
 are normalized from bounded enums while allowing full-value variables.
+Native cluster/index UUIDs are observed datastore facts, not SDL reference
+identities; references continue to target the stable ACES ids. Count and byte
+fields on clusters and partitions accept only non-negative integers or
+full-value variables, keeping document cardinality and byte-normalized store
+size distinct from `datatype_census`.
 Explicit redacted/operator-secret setting classifications omit raw values; names
 alone do not force omission. The `require_profile_for_data_model` guard makes the
 discriminator executable: a `${var}` placeholder is exempt and the open
