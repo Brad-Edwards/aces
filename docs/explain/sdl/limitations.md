@@ -52,9 +52,13 @@ recurrence plus observed last/next run and last result, cadence-only -
 [ADR-047](../../decisions/adrs/adr-047-scheduled-job-runtime-inventory.md)),
 non-relational datastore logical state (search/wide-column/key-value clusters,
 partitions with shard/replica or replication geometry, key-value persistence
-posture, transport security, and settings, with an executable required-profile
-guard and internal RBAC delegated via `authorization_ref` -
-[ADR-048](../../decisions/adrs/adr-048-datastore-service-runtime-inventory.md)),
+posture, transport security, settings, and per-node engine provenance — version/
+build hash/build type, heap byte bounds, mlockall, a typed per-plugin-versioned
+plugin inventory, and a product-neutral client/peer endpoint inventory (published
+topology, not OS-bind or host-publication proof) - with an executable
+required-profile guard and internal RBAC delegated via `authorization_ref` -
+[ADR-048](../../decisions/adrs/adr-048-datastore-service-runtime-inventory.md),
+[ADR-058](../../decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints.md)),
 security-platform application runtime inventory (threat-intel/SOAR/analyzer/
 case-management/dashboard kinds, bounded parsed content-object manifests,
 releasability markings, upstream bindings, connectors, and settings, with an
