@@ -35,6 +35,8 @@ from .runtime_values import (
     coerce_string_list,
     enforce_observed_value_redaction,
     parse_runtime_enum_or_var,
+    reject_duplicates,
+    require_non_empty,
     require_symbol,
 )
 
@@ -71,12 +73,7 @@ _REDACTED_SENSITIVITIES = (
     RuntimeSensitivityClassification.REDACTED,
     RuntimeSensitivityClassification.OPERATOR_SECRET,
 )
-
-
-def _require_non_empty(value: str, *, field_name: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{field_name} must be a non-empty string")
-    return value
+_DUPLICATE_MAIL_TEMPLATE = "Duplicate runtime mail-service {label} '{value}' in {container_label}"
 
 
 def _mail_address_or_var(value: str, *, field_name: str) -> str:
@@ -95,14 +92,6 @@ def _domain_name_or_var(value: str, *, field_name: str) -> str:
     if any(ch.isspace() for ch in value):
         raise ValueError(f"{field_name} must not contain whitespace")
     return value
-
-
-def _reject_duplicates(values: list[str], *, label: str, container_label: str) -> None:
-    seen: set[str] = set()
-    for value in values:
-        if value in seen:
-            raise ValueError(f"Duplicate runtime mail-service {label} '{value}' in {container_label}")
-        seen.add(value)
 
 
 class RuntimeMailComponent(SDLModel):
@@ -127,7 +116,7 @@ class RuntimeMailComponent(SDLModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="component name")
+        return require_non_empty(v, field_name="component name")
 
 
 class RuntimeMailListener(SDLModel):
@@ -400,7 +389,7 @@ class RuntimeMailSetting(SDLModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="setting name")
+        return require_non_empty(v, field_name="setting name")
 
     @field_validator("value_classification", mode="before")
     @classmethod
@@ -475,10 +464,12 @@ class RuntimeMailService(SDLModel):
             ("queue_id", "queues"),
             ("setting_id", "settings"),
         ):
-            _reject_duplicates(
+            reject_duplicates(
                 [getattr(item, label) for item in getattr(self, attr)],
                 label=label,
                 container_label=f"mail service '{self.mail_service_id}'",
+                duplicate_template=_DUPLICATE_MAIL_TEMPLATE,
+                skip_empty=False,
             )
 
     def _reject_duplicate_local_ref_ids(self) -> None:

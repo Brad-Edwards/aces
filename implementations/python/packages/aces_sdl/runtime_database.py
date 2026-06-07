@@ -50,6 +50,7 @@ from .runtime_values import (
     enforce_observed_value_redaction,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
+    reject_duplicates,
     require_symbol,
 )
 
@@ -83,23 +84,6 @@ _REDACTED_SENSITIVITIES = (
     RuntimeSensitivityClassification.REDACTED,
     RuntimeSensitivityClassification.OPERATOR_SECRET,
 )
-
-
-def _reject_duplicates(
-    values: Any,
-    *,
-    label: str,
-    container_label: str,
-    duplicate_template: str = "Duplicate {label} '{value}' in {container_label}",
-) -> None:
-    """Raise on the first repeated value in ``values``; skip empty / None entries."""
-    seen: set[object] = set()
-    for value in values:
-        if value is None or value == "":
-            continue
-        if value in seen:
-            raise ValueError(duplicate_template.format(label=label, value=value, container_label=container_label))
-        seen.add(value)
 
 
 def _db_listen_address_or_var(value: str, *, field_name: str) -> str:
@@ -436,7 +420,7 @@ class RuntimeDatabaseService(SDLModel):
 
     def _reject_duplicate_top_level_ids(self) -> None:
         for field_name, attr in (("database", "database_id"), ("role", "role_id")):
-            _reject_duplicates(
+            reject_duplicates(
                 (getattr(item, attr) for item in getattr(self, f"{field_name}s")),
                 label=f"{field_name} {attr}",
                 container_label=f"database service '{self.database_service_id}'",
@@ -451,11 +435,11 @@ class RuntimeDatabaseService(SDLModel):
         schema_ids = [schema.schema_id for db in self.databases for schema in db.schemas]
         table_ids = [table.table_id for db in self.databases for schema in db.schemas for table in schema.tables]
         suffix = f"database service '{self.database_service_id}'; grant object_ref needs unambiguous resolution"
-        _reject_duplicates(schema_ids, label="schema schema_id", container_label=suffix)
-        _reject_duplicates(table_ids, label="table table_id", container_label=suffix)
+        reject_duplicates(schema_ids, label="schema schema_id", container_label=suffix)
+        reject_duplicates(table_ids, label="table table_id", container_label=suffix)
 
     def _reject_duplicate_setting_names(self) -> None:
-        _reject_duplicates(
+        reject_duplicates(
             (setting.name for setting in self.settings),
             label="database setting",
             container_label=f"database service '{self.database_service_id}'",

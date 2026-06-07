@@ -12,6 +12,7 @@ from .runtime_values import (
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
     require_symbol,
+    validate_absolute_paths,
 )
 
 __all__ = [
@@ -183,18 +184,6 @@ class RuntimeNetworkDetectionControlCapability(str, Enum):
     OTHER = "other"
 
 
-def _normalize_enum(value: object, enum_cls: type[Enum], *, field_name: str) -> object:
-    return parse_runtime_enum_or_var(value, enum_cls, field_name=field_name)
-
-
-def _coerce_refs(value: object) -> object:
-    return coerce_string_list(value)
-
-
-def _absolute_refs(values: list[str], *, field_name: str) -> list[str]:
-    return [absolute_path_or_var(item, field_name=field_name) for item in values]
-
-
 def _reject_duplicate_values(values: list[object], *, field_name: str, owner: str) -> None:
     seen: set[object] = set()
     for value in values:
@@ -224,12 +213,12 @@ class RuntimeNetworkDetectionRuleSource(SDLModel):
     @field_validator("kind", mode="before")
     @classmethod
     def normalize_kind(cls, v: RuntimeNetworkDetectionRuleSourceKind | str) -> object:
-        return _normalize_enum(v, RuntimeNetworkDetectionRuleSourceKind, field_name="kind")
+        return parse_runtime_enum_or_var(v, RuntimeNetworkDetectionRuleSourceKind, field_name="kind")
 
     @field_validator("format", mode="before")
     @classmethod
     def normalize_format(cls, v: RuntimeNetworkDetectionRuleFormat | str) -> object:
-        return _normalize_enum(v, RuntimeNetworkDetectionRuleFormat, field_name="format")
+        return parse_runtime_enum_or_var(v, RuntimeNetworkDetectionRuleFormat, field_name="format")
 
     @field_validator("rule_count", mode="before")
     @classmethod
@@ -239,12 +228,12 @@ class RuntimeNetworkDetectionRuleSource(SDLModel):
     @field_validator("file_refs", mode="before")
     @classmethod
     def coerce_file_refs(cls, v: object) -> object:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @field_validator("file_refs")
     @classmethod
     def validate_file_refs(cls, v: list[str]) -> list[str]:
-        return _absolute_refs(v, field_name="file_refs")
+        return validate_absolute_paths(v, field_name="file_refs")
 
     @field_validator("loaded", mode="before")
     @classmethod
@@ -270,12 +259,12 @@ class RuntimeNetworkDetectionNetworkSet(SDLModel):
     @field_validator("kind", mode="before")
     @classmethod
     def normalize_kind(cls, v: RuntimeNetworkDetectionNetworkSetKind | str) -> object:
-        return _normalize_enum(v, RuntimeNetworkDetectionNetworkSetKind, field_name="kind")
+        return parse_runtime_enum_or_var(v, RuntimeNetworkDetectionNetworkSetKind, field_name="kind")
 
     @field_validator("selector_values", "network_refs", mode="before")
     @classmethod
     def coerce_lists(cls, v: object) -> object:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @model_validator(mode="after")
     def validate_unique_values(self) -> "RuntimeNetworkDetectionNetworkSet":
@@ -302,7 +291,7 @@ class RuntimeNetworkDetectionOutputStream(SDLModel):
     @field_validator("format", mode="before")
     @classmethod
     def normalize_format(cls, v: RuntimeNetworkDetectionOutputFormat | str) -> object:
-        return _normalize_enum(v, RuntimeNetworkDetectionOutputFormat, field_name="format")
+        return parse_runtime_enum_or_var(v, RuntimeNetworkDetectionOutputFormat, field_name="format")
 
     @field_validator("path")
     @classmethod
@@ -312,10 +301,11 @@ class RuntimeNetworkDetectionOutputStream(SDLModel):
     @field_validator("event_types", mode="before")
     @classmethod
     def normalize_event_types(cls, v: object) -> object:
-        values = _coerce_refs(v)
+        values = coerce_string_list(v)
         if isinstance(values, list):
             return [
-                _normalize_enum(item, RuntimeNetworkDetectionEventType, field_name="event_types") for item in values
+                parse_runtime_enum_or_var(item, RuntimeNetworkDetectionEventType, field_name="event_types")
+                for item in values
             ]
         return values
 
@@ -349,7 +339,7 @@ class RuntimeNetworkDetectionControlChannel(SDLModel):
     @field_validator("kind", mode="before")
     @classmethod
     def normalize_kind(cls, v: RuntimeNetworkDetectionControlChannelKind | str) -> object:
-        return _normalize_enum(v, RuntimeNetworkDetectionControlChannelKind, field_name="kind")
+        return parse_runtime_enum_or_var(v, RuntimeNetworkDetectionControlChannelKind, field_name="kind")
 
     @field_validator("path")
     @classmethod
@@ -359,10 +349,10 @@ class RuntimeNetworkDetectionControlChannel(SDLModel):
     @field_validator("capabilities", mode="before")
     @classmethod
     def normalize_capabilities(cls, v: object) -> object:
-        values = _coerce_refs(v)
+        values = coerce_string_list(v)
         if isinstance(values, list):
             return [
-                _normalize_enum(item, RuntimeNetworkDetectionControlCapability, field_name="capabilities")
+                parse_runtime_enum_or_var(item, RuntimeNetworkDetectionControlCapability, field_name="capabilities")
                 for item in values
             ]
         return values
@@ -409,30 +399,30 @@ class RuntimeNetworkDetectionEngine(SDLModel):
     @field_validator("implementation", mode="before")
     @classmethod
     def normalize_implementation(cls, v: RuntimeNetworkDetectionEngineImplementation | str) -> object:
-        return _normalize_enum(v, RuntimeNetworkDetectionEngineImplementation, field_name="implementation")
+        return parse_runtime_enum_or_var(v, RuntimeNetworkDetectionEngineImplementation, field_name="implementation")
 
     @field_validator("engine_kind", mode="before")
     @classmethod
     def normalize_engine_kind(cls, v: RuntimeNetworkDetectionEngineKind | str) -> object:
-        return _normalize_enum(v, RuntimeNetworkDetectionEngineKind, field_name="engine_kind")
+        return parse_runtime_enum_or_var(v, RuntimeNetworkDetectionEngineKind, field_name="engine_kind")
 
     @field_validator("configuration_file_refs", "log_file_refs", "evidence_refs", mode="before")
     @classmethod
     def coerce_file_refs(cls, v: object) -> object:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @field_validator("configuration_file_refs", "log_file_refs", "evidence_refs")
     @classmethod
     def validate_file_refs(cls, v: list[str], info: ValidationInfo) -> list[str]:
-        return _absolute_refs(v, field_name=info.field_name)
+        return validate_absolute_paths(v, field_name=info.field_name)
 
     @field_validator("app_layer_protocols", mode="before")
     @classmethod
     def normalize_app_layer_protocols(cls, v: object) -> object:
-        values = _coerce_refs(v)
+        values = coerce_string_list(v)
         if isinstance(values, list):
             return [
-                _normalize_enum(item, RuntimeNetworkDetectionAppProtocol, field_name="app_layer_protocols")
+                parse_runtime_enum_or_var(item, RuntimeNetworkDetectionAppProtocol, field_name="app_layer_protocols")
                 for item in values
             ]
         return values

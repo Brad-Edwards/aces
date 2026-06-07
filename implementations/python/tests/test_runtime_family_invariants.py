@@ -17,14 +17,19 @@ surface, old and new.
 
 from __future__ import annotations
 
+import ast
 import enum
 import importlib
 import pkgutil
 import typing
+from pathlib import Path
 
 import aces_sdl
 from aces_sdl import _runtime_service_families as rsf
+from aces_sdl._base import parse_enum_or_var
 from aces_sdl.runtime_configuration import RuntimeConfiguration
+from aces_sdl.runtime_directory_identity import RuntimeIdentityRelationshipKind
+from aces_sdl.runtime_values import parse_runtime_enum_or_var
 
 
 def _singularize(plural: str) -> str:
@@ -69,6 +74,21 @@ def _current_violations() -> set[str]:
 # whole surface satisfies the invariant set.
 KNOWN_VIOLATIONS: set[str] = set()
 
+_SHARED_HELPER_DEFINITION_NAMES = frozenset(
+    {
+        "_absolute_refs",
+        "_coerce_refs",
+        "_normalize_enum",
+        "_reject_duplicates",
+        "_require_non_empty",
+        "coerce_string_list",
+        "parse_runtime_enum_or_var",
+        "reject_duplicates",
+        "require_non_empty",
+        "validate_absolute_paths",
+    }
+)
+
 
 def test_runtime_family_invariants_no_new_drift() -> None:
     """Live violations must exactly match the tracked allowlist (no drift)."""
@@ -80,6 +100,35 @@ def test_runtime_family_invariants_no_new_drift() -> None:
         "Runtime service-family structural-invariant drift detected.\n"
         f"  NEW violations (fix the family, or this change is wrong): {new}\n"
         f"  RESOLVED but still allow-listed (remove from KNOWN_VIOLATIONS): {resolved}"
+    )
+
+
+def test_runtime_modules_do_not_redeclare_shared_validation_helpers() -> None:
+    """Runtime families import shared helper policy instead of shadowing it."""
+
+    package_dir = Path(aces_sdl.__file__).resolve().parent
+    offenders: list[str] = []
+    for path in sorted(package_dir.glob("runtime_*.py")):
+        if path.name == "runtime_values.py":
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name in _SHARED_HELPER_DEFINITION_NAMES:
+                offenders.append(f"{path.name}:{node.lineno}:{node.name}")
+
+    assert not offenders, "Runtime modules must not redeclare shared validation helpers:\n  " + "\n  ".join(offenders)
+
+
+def test_enum_or_var_helpers_share_hyphen_alias_normalization() -> None:
+    """Runtime and base enum parsing share one author-facing normalization rule."""
+
+    assert (
+        parse_runtime_enum_or_var("member-of", RuntimeIdentityRelationshipKind, field_name="relationship_type")
+        is RuntimeIdentityRelationshipKind.MEMBER_OF
+    )
+    assert (
+        parse_enum_or_var("member-of", RuntimeIdentityRelationshipKind, field_name="relationship_type")
+        is RuntimeIdentityRelationshipKind.MEMBER_OF
     )
 
 

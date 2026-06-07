@@ -84,6 +84,39 @@ authored SDL `agents`, participant episode lifecycle state, control-plane
 identity, backend provenance, processor provenance, and derived evaluation
 results.
 
+## Security and Validation Gates
+
+- Contract/model gate: both contracts are closed `ContractModel` payloads with
+  generated JSON Schemas, conformance fixtures, and publication-manifest entries.
+- Vocabulary gate: implementation kinds, participant implementation contracts,
+  decision-surface modes, tool-affordance expectations, and exposure-policy
+  kinds resolve through `controlled-vocabularies-v1`.
+- Provenance gate: run-level records preserve selected manifest/config refs and
+  digests instead of inferring implementation identity from authored SDL agents,
+  backend state, or logs.
+- Exposure gate: decision-surface mode and exposure-policy kind are explicit
+  data so reviewers can distinguish what the participant implementation was
+  allowed to see from what the authored scenario intended.
+- Secret-handling gate: hidden context, credentials, prompts, and raw
+  participant implementation configuration remain outside the portable
+  manifest/provenance records; references and digests are the portable surface.
+- Schema gate: generated schemas are derived from contract model sources and are
+  not edited by hand.
+- Conformance gate: valid and invalid fixtures exercise both the manifest and
+  provenance contracts through the existing conformance runner.
+
+## Guardrails
+
+- Do not use SDL `agents` as evidence of which participant implementation ran.
+- Do not treat backend `participant_runtime` capability or processor capability
+  as participant implementation identity.
+- Do not place participant implementation manifests under SDL runtime node
+  inventory; this is apparatus metadata, not observed node state.
+- Do not include hidden prompts, secret credentials, raw configuration payloads,
+  or decision-surface contents in the portable manifest/provenance artifacts.
+- Do not fork a participant-specific schema publication path; use the existing
+  contract/schema/conformance machinery.
+
 ## Consequences
 
 ### Positive
@@ -121,3 +154,11 @@ results.
 - Redesign participant episode lifecycle contracts.
 - Change control-plane authentication or authorization.
 - Implement a live external participant runtime protocol.
+
+## References
+
+- [SDL Runtime Architecture](../../explain/sdl/runtime-architecture.md) and
+  [SDL Semantic Validation](../../explain/sdl/validation.md).
+- [Contract publication manifest](../../../contracts/schema-publication-manifest.json)
+  and
+  [Controlled vocabularies](../../../contracts/concept-authority/controlled-vocabularies-v1.json).

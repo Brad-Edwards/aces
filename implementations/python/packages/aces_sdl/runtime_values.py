@@ -9,6 +9,7 @@ from typing import Any
 from ._base import (
     is_variable_ref,
     parse_bool_or_var,
+    parse_enum_or_var,
 )
 
 _BYTE_UNITS = {
@@ -227,18 +228,7 @@ def control_interface_path_or_var(value: str, *, field_name: str) -> str:
 
 
 def parse_runtime_enum_or_var(value: Any, enum_cls: type[Enum], *, field_name: str):
-    if value is None or is_variable_ref(value):
-        return value
-    if isinstance(value, enum_cls):
-        return value
-    if isinstance(value, str):
-        normalized = value.lower().replace("-", "_")
-        try:
-            return enum_cls(normalized)
-        except ValueError as e:
-            allowed = ", ".join(member.value for member in enum_cls)
-            raise ValueError(f"{field_name} must be one of: {allowed}") from e
-    raise ValueError(f"{field_name} must be a string")
+    return parse_enum_or_var(value, enum_cls, field_name=field_name)
 
 
 def parse_optional_bool_or_var(value: Any, *, field_name: str) -> bool | str | None:
@@ -253,8 +243,37 @@ def coerce_string_list(value: Any):
     return value
 
 
+def require_non_empty(value: str, *, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} must be a non-empty string")
+    return value
+
+
 def validate_absolute_paths(values: list[str], *, field_name: str) -> list[str]:
     return [absolute_path_or_var(value, field_name=field_name) for value in values]
+
+
+def reject_duplicates(
+    values: Iterable[object],
+    *,
+    label: str,
+    container_label: str,
+    duplicate_template: str = "Duplicate {label} '{value}' in {container_label}",
+    skip_empty: bool = True,
+) -> None:
+    """Raise on the first repeated value in ``values``.
+
+    Most runtime child-id checks ignore optional empty refs, while a few service
+    namespaces validate all values. ``skip_empty`` keeps that policy explicit at
+    each call site.
+    """
+    seen: set[object] = set()
+    for value in values:
+        if skip_empty and (value is None or value == ""):
+            continue
+        if value in seen:
+            raise ValueError(duplicate_template.format(label=label, value=value, container_label=container_label))
+        seen.add(value)
 
 
 def parse_ram(value: str | int) -> int | str:

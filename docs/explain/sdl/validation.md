@@ -54,6 +54,8 @@ becoming a validator-only interpretation of the SDL.
 | `verify_runtime_platform_applications` | Runtime platform applications resolve their owning transport `service` to a same-node service binding, a non-empty, non-variable `authorization_ref` to a same-node `app_authorization`, content-object `references` to sibling `content_object_id` values, and `marking_refs` to sibling `marking_id` values. The model-local `require_profile_for_platform_kind` guard fails an under-populated `threat_intel`/`soar`/`analyzer_engine`/`case_management`/`analytics_dashboard` instance. |
 | `verify_runtime_forwarding_agents` | Runtime forwarding agents resolve each `ship_target`'s `target_node_ref`, when concrete, to a defined node, and a concrete `target_service_ref` to a service on the referenced node (or, for node-hosted agents only, on the owning node). Scenario-level forwarding agents require `target_node_ref` when `target_service_ref` is concrete, and `forwarding_agent_id` values are unique across node-hosted and scenario-level registries. The model-local `require_profile_for_agent_kind` guard fails an under-populated `log_forwarder` (requires a `buffer_policy` plus an ingestion `ship_target`, rejects `ioc_to_rule` transforms) or `content_sync` (requires an `api_pull` source, an `ioc_to_rule` transform, and a `reload_channel`, rejects a `buffer_policy` and `ship_target` enrollment endpoints) instance. |
 | `verify_runtime_orchestration_authorities` | Runtime orchestration authorities resolve a non-empty, non-variable `control_interface_ref` to a `RuntimeControlInterface` declared in the same node's `runtime.local_control_interfaces` (by `control_interface_id`); for a `host_root_equivalent` privilege class the referenced interface must additionally be a read-write docker socket (access `read_write`, kind `unix_socket`, path ending in `docker.sock`), with `${var}` interface access/kind/path permissive. The model-local `require_profile_for_privilege_class` guard fails a `host_root_equivalent` authority that carries no concrete `control_interface_ref`. |
+| `verify_runtime_mail_services` | Runtime mail services and listeners resolve optional same-node `Node.services` refs. Listener component refs, mailbox domain/store refs, alias target refs, routing source/target refs, and setting component refs resolve inside the owning mail service. Mailbox account refs resolve to top-level accounts, local-user refs resolve to `runtime.local_identity` when present, and setting source paths resolve to observed runtime filesystem entries when the node has file inventory. |
+| `verify_relationship_mail_access` | A relationship with `mail_access` must target a runtime mail service. Concrete `listener_ref`, `mailbox_ref`, and `domain_ref` values resolve within that target service, while protocol, auth-mechanism, and TLS-mode fields are structurally normalized by the `RelationshipMailAccess` model. |
 | `verify_agents` | Entity references resolve. Starting accounts and initial-knowledge accounts exist in accounts section. Allowed subnets and initial-knowledge subnets must resolve to switch-backed infrastructure entries. Initial-knowledge hosts must resolve to VM nodes. Initial-knowledge services exist in `nodes.*.services[].name`. |
 | `verify_participant_behavior` | Agent action refs resolve to declared action contracts, observation-boundary refs resolve to declared boundaries, interaction refs resolve to declared actions or targetable state, and boundary view rules/transitions resolve to declared observable, hidden, or evidence refs. |
 | `verify_objectives` | Objective actors resolve (`agent` or `entity`). Objective actions must be declared by the referenced agent. Targets resolve to named scenario elements, including qualified service/ACL refs and section-qualified top-level refs. Ambiguous bare refs are rejected with qualified alternatives. Success criteria resolve to declared conditions/metrics/evaluations/TLOs/goals. Optional windows resolve through one shared normalized analysis over stories/scripts/events/workflows/workflow-steps, must remain internally consistent, and fail closed on dangling or out-of-window refs. Objective dependencies must resolve and stay acyclic. |
@@ -155,6 +157,24 @@ concrete listener port/protocol values must match the service. Optional
 process name or PID. Optional `published_port_refs` entries resolve to
 `runtime.network.published_ports` by host IP, host port, container port, and
 protocol and must match the listener's container-side port/protocol.
+
+The optional `runtime.mail_services` inventory has model-local and semantic
+rules. Mail-service ids are stable concrete symbols and unique within a node
+runtime block; service-local component, listener, domain, mailbox-store,
+mailbox, alias, routing-rule, queue, and setting ids are unique within their
+collections and across the service-local reference namespace. Mail protocols,
+listener roles, AUTH mechanisms, TLS modes, domain/mailbox/store/queue kinds,
+mailbox status, setting provenance, and value classifications are normalized
+from bounded enums while allowing full-value variables. Secret-bearing settings
+must omit raw values and use redacted/operator-secret classifications. Service
+and listener `service` refs resolve to same-node transport bindings; component,
+domain, mailbox-store, mailbox, alias, routing, and setting refs resolve inside
+the owning mail service. Mailbox `account_ref` values resolve to top-level
+accounts, mailbox `local_user_ref` values resolve to `runtime.local_identity`
+when local users are declared, and setting source paths are checked against
+`runtime.filesystem_inventory` when that inventory is non-empty. A top-level
+relationship with `mail_access` targets a runtime mail service and resolves
+concrete listener, mailbox, and domain refs inside that target service.
 
 The optional `runtime.network_detection_engines` inventory has model-local and
 semantic rules. Engine ids are stable concrete symbols and are unique within
@@ -360,6 +380,18 @@ decision-surface exposure policy contracts, augmentation disclosure, and full
 evidence-capture contract surfaces are separate validation domains.
 They should not be retrofitted into validator-only behavior before the authored
 surface or external contracts exist.
+
+## Enum normalization convention
+
+All SDL enum-or-var parsers share one author-facing normalization rule:
+concrete strings are lowercased and hyphen aliases are mapped to underscore
+enum values before matching, while full-value `${var}` placeholders and `None`
+remain deferred. Runtime fields continue to call
+`parse_runtime_enum_or_var`, but that helper delegates to the canonical
+`parse_enum_or_var` implementation in `_base.py`, so runtime and non-runtime
+enum fields cannot drift on accepted spellings. The shared behavior is covered by
+`test_enum_or_var_helpers_share_hyphen_alias_normalization` in
+`tests/test_runtime_family_invariants.py`.
 
 ## Runtime enum sentinel convention
 

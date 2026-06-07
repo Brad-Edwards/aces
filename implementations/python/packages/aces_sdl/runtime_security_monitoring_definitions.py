@@ -11,7 +11,9 @@ from .runtime_values import (
     coerce_string_list,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
+    require_non_empty,
     require_symbol,
+    validate_absolute_paths,
 )
 
 __all__ = [
@@ -70,24 +72,6 @@ class RuntimeSecurityMonitoringFieldPredicateOperator(str, Enum):
     UNKNOWN = "unknown"
 
 
-def _require_non_empty(value: str, *, field_name: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{field_name} must be a non-empty string")
-    return value
-
-
-def _normalize_enum(value: Any, enum_cls: type[Enum], *, field_name: str) -> Any:
-    return parse_runtime_enum_or_var(value, enum_cls, field_name=field_name)
-
-
-def _coerce_refs(value: Any) -> list[str]:
-    return coerce_string_list(value)
-
-
-def _absolute_refs(values: list[str], *, field_name: str) -> list[str]:
-    return [absolute_path_or_var(item, field_name=field_name) for item in values]
-
-
 class RuntimeSecurityMonitoringFieldPredicate(SDLModel):
     """A normalized field predicate extracted from a detection definition."""
 
@@ -101,7 +85,7 @@ class RuntimeSecurityMonitoringFieldPredicate(SDLModel):
     @field_validator("field")
     @classmethod
     def validate_field(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="field predicate field")
+        return require_non_empty(v, field_name="field predicate field")
 
     @field_validator("operator", mode="before")
     @classmethod
@@ -109,7 +93,7 @@ class RuntimeSecurityMonitoringFieldPredicate(SDLModel):
         cls,
         v: RuntimeSecurityMonitoringFieldPredicateOperator | str,
     ) -> RuntimeSecurityMonitoringFieldPredicateOperator | str:
-        return _normalize_enum(v, RuntimeSecurityMonitoringFieldPredicateOperator, field_name="operator")
+        return parse_runtime_enum_or_var(v, RuntimeSecurityMonitoringFieldPredicateOperator, field_name="operator")
 
 
 class RuntimeSecurityMonitoringDetectionDefinition(SDLModel):
@@ -167,7 +151,7 @@ class RuntimeSecurityMonitoringDetectionDefinition(SDLModel):
         cls,
         v: RuntimeSecurityMonitoringDetectionEngine | str,
     ) -> RuntimeSecurityMonitoringDetectionEngine | str:
-        return _normalize_enum(v, RuntimeSecurityMonitoringDetectionEngine, field_name="engine")
+        return parse_runtime_enum_or_var(v, RuntimeSecurityMonitoringDetectionEngine, field_name="engine")
 
     @field_validator("definition_kind", mode="before")
     @classmethod
@@ -175,7 +159,9 @@ class RuntimeSecurityMonitoringDetectionDefinition(SDLModel):
         cls,
         v: RuntimeSecurityMonitoringDetectionDefinitionKind | str,
     ) -> RuntimeSecurityMonitoringDetectionDefinitionKind | str:
-        return _normalize_enum(v, RuntimeSecurityMonitoringDetectionDefinitionKind, field_name="definition_kind")
+        return parse_runtime_enum_or_var(
+            v, RuntimeSecurityMonitoringDetectionDefinitionKind, field_name="definition_kind"
+        )
 
     @field_validator("source_file_ref")
     @classmethod
@@ -224,12 +210,12 @@ class RuntimeSecurityMonitoringDetectionDefinition(SDLModel):
     )
     @classmethod
     def coerce_lists(cls, v: Any) -> list[str]:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @field_validator("evidence_refs")
     @classmethod
     def validate_evidence_refs(cls, v: list[str]) -> list[str]:
-        return _absolute_refs(v, field_name="evidence_refs")
+        return validate_absolute_paths(v, field_name="evidence_refs")
 
     @model_validator(mode="after")
     def validate_definition(self) -> "RuntimeSecurityMonitoringDetectionDefinition":
