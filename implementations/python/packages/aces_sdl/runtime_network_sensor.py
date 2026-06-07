@@ -6,10 +6,10 @@ from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from ._base import SDLModel
 from .runtime_values import (
-    absolute_path_or_var,
     coerce_string_list,
     parse_runtime_enum_or_var,
     require_symbol,
+    validate_absolute_paths,
 )
 
 __all__ = [
@@ -69,18 +69,6 @@ class RuntimeNetworkSensorCaptureMode(str, Enum):
     OTHER = "other"
 
 
-def _normalize_enum(value: object, enum_cls: type[Enum], *, field_name: str) -> object:
-    return parse_runtime_enum_or_var(value, enum_cls, field_name=field_name)
-
-
-def _coerce_refs(value: object) -> object:
-    return coerce_string_list(value)
-
-
-def _absolute_refs(values: list[str], *, field_name: str) -> list[str]:
-    return [absolute_path_or_var(item, field_name=field_name) for item in values]
-
-
 def _reject_duplicate_values(values: list[str], *, field_name: str, sensor_id: str) -> None:
     seen: set[str] = set()
     for value in values:
@@ -119,12 +107,12 @@ class RuntimeNetworkSensor(SDLModel):
         cls,
         v: RuntimeNetworkSensorImplementation | str,
     ) -> RuntimeNetworkSensorImplementation | str:
-        return _normalize_enum(v, RuntimeNetworkSensorImplementation, field_name="implementation")
+        return parse_runtime_enum_or_var(v, RuntimeNetworkSensorImplementation, field_name="implementation")
 
     @field_validator("sensor_kind", mode="before")
     @classmethod
     def normalize_sensor_kind(cls, v: RuntimeNetworkSensorKind | str) -> RuntimeNetworkSensorKind | str:
-        return _normalize_enum(v, RuntimeNetworkSensorKind, field_name="sensor_kind")
+        return parse_runtime_enum_or_var(v, RuntimeNetworkSensorKind, field_name="sensor_kind")
 
     @field_validator("monitoring_posture", mode="before")
     @classmethod
@@ -132,7 +120,7 @@ class RuntimeNetworkSensor(SDLModel):
         cls,
         v: RuntimeNetworkSensorMonitoringPosture | str,
     ) -> RuntimeNetworkSensorMonitoringPosture | str:
-        return _normalize_enum(v, RuntimeNetworkSensorMonitoringPosture, field_name="monitoring_posture")
+        return parse_runtime_enum_or_var(v, RuntimeNetworkSensorMonitoringPosture, field_name="monitoring_posture")
 
     @field_validator("capture_mode", mode="before")
     @classmethod
@@ -140,22 +128,22 @@ class RuntimeNetworkSensor(SDLModel):
         cls,
         v: RuntimeNetworkSensorCaptureMode | str,
     ) -> RuntimeNetworkSensorCaptureMode | str:
-        return _normalize_enum(v, RuntimeNetworkSensorCaptureMode, field_name="capture_mode")
+        return parse_runtime_enum_or_var(v, RuntimeNetworkSensorCaptureMode, field_name="capture_mode")
 
     @field_validator("capture_interfaces", "monitored_network_refs", mode="before")
     @classmethod
     def coerce_ref_lists(cls, v: object) -> object:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @field_validator("configuration_file_refs", "log_file_refs", "evidence_refs", mode="before")
     @classmethod
     def coerce_file_refs(cls, v: object) -> object:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @field_validator("configuration_file_refs", "log_file_refs", "evidence_refs")
     @classmethod
     def validate_file_refs(cls, v: list[str], info: ValidationInfo) -> list[str]:
-        return _absolute_refs(v, field_name=info.field_name)
+        return validate_absolute_paths(v, field_name=info.field_name)
 
     @model_validator(mode="after")
     def validate_unique_refs(self) -> "RuntimeNetworkSensor":

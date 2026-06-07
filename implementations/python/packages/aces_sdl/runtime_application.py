@@ -64,12 +64,6 @@ _REDACTED_SENSITIVITIES = (
     RuntimeSensitivityClassification.REDACTED,
     RuntimeSensitivityClassification.OPERATOR_SECRET,
 )
-_EXPOSED_FIELD_SECRET_CLASSIFICATIONS = (
-    RuntimeSensitivityClassification.REDACTED,
-    RuntimeSensitivityClassification.OPERATOR_SECRET,
-    RuntimeSensitivityClassification.SECRET_FIXTURE,
-)
-_RAW_EXPOSED_FIELD_SECRET_CLASSIFICATIONS = (RuntimeSensitivityClassification.SECRET_FIXTURE,)
 
 
 class RuntimeApplicationProtocol(str, Enum):
@@ -254,9 +248,9 @@ class RuntimeApplicationExposedField(SDLModel):
     """A route-visible fixture secret or intentionally exposed diagnostic field.
 
     The sensitivity vocabulary is shared with the rest of the runtime surface.
-    A ``redacted`` or ``operator_secret`` field must omit its raw ``value``;
-    only intentionally participant-visible ``secret_fixture``/``plain`` material
-    is safe to record.
+    A ``redacted`` or ``operator_secret`` field must omit its raw ``value``.
+    Other values, including credential-shaped fixture facts, are scenario
+    content needed for range realization and participant observation.
     """
 
     name: str
@@ -283,13 +277,9 @@ class RuntimeApplicationExposedField(SDLModel):
     def validate_redacted_value(self) -> "RuntimeApplicationExposedField":
         enforce_observed_value_redaction(
             owner_label=f"exposed field '{self.name}'",
-            name=self.name,
             value=self.value,
             classification=self.sensitivity,
             redacted_classifications=_REDACTED_SENSITIVITIES,
-            classification_field="sensitivity",
-            secret_name_classifications=_EXPOSED_FIELD_SECRET_CLASSIFICATIONS,
-            raw_secret_name_classifications=_RAW_EXPOSED_FIELD_SECRET_CLASSIFICATIONS,
         )
         return self
 

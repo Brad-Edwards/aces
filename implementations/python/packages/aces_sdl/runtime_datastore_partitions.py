@@ -7,12 +7,9 @@ ADR-015 600-line cap. These typed children compose into
 its ``require_profile_for_data_model`` guard live in ``runtime_datastore.py``.
 
 Every typed child carries a ``<child_noun>_id`` validated by ``require_symbol``.
-Settings whose name signals secret content omit their raw value and classify
-``redacted`` / ``operator_secret`` via the shared ``name_indicates_secret``
-helper, exactly as the relational ``DatabaseSetting`` does.
+Settings explicitly classified ``redacted`` / ``operator_secret`` omit their raw
+value, exactly as the relational ``DatabaseSetting`` does.
 """
-
-from enum import Enum
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
@@ -51,14 +48,6 @@ _REDACTED_SENSITIVITIES = (
 )
 
 
-def _normalize_enum(value: object, enum_cls: type[Enum], *, field_name: str) -> object:
-    return parse_runtime_enum_or_var(value, enum_cls, field_name=field_name)
-
-
-def _coerce_refs(value: object) -> object:
-    return coerce_string_list(value)
-
-
 def _reject_duplicate_values(values: list[object], *, field_name: str, owner: str) -> None:
     seen: set[object] = set()
     for value in values:
@@ -92,9 +81,9 @@ class RuntimeDatastoreNode(SDLModel):
     @field_validator("roles", mode="before")
     @classmethod
     def normalize_roles(cls, v: object) -> object:
-        values = _coerce_refs(v)
+        values = coerce_string_list(v)
         if isinstance(values, list):
-            return [_normalize_enum(item, RuntimeDatastoreNodeRole, field_name="roles") for item in values]
+            return [parse_runtime_enum_or_var(item, RuntimeDatastoreNodeRole, field_name="roles") for item in values]
         return values
 
     @field_validator("is_coordinator", mode="before")
@@ -159,12 +148,12 @@ class RuntimeDatastorePartition(SDLModel):
     @field_validator("kind", mode="before")
     @classmethod
     def normalize_kind(cls, v: RuntimeDatastorePartitionKind | str) -> object:
-        return _normalize_enum(v, RuntimeDatastorePartitionKind, field_name="kind")
+        return parse_runtime_enum_or_var(v, RuntimeDatastorePartitionKind, field_name="kind")
 
     @field_validator("replication_strategy", mode="before")
     @classmethod
     def normalize_replication_strategy(cls, v: RuntimeDatastoreReplicationStrategy | str) -> object:
-        return _normalize_enum(v, RuntimeDatastoreReplicationStrategy, field_name="replication_strategy")
+        return parse_runtime_enum_or_var(v, RuntimeDatastoreReplicationStrategy, field_name="replication_strategy")
 
     @field_validator("shard_count", "replica_count", "replication_factor", mode="before")
     @classmethod
@@ -207,7 +196,7 @@ class RuntimeDatastorePersistence(SDLModel):
     @field_validator("rdb_save_points", mode="before")
     @classmethod
     def coerce_save_points(cls, v: object) -> object:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @field_validator("aof", mode="before")
     @classmethod
@@ -217,7 +206,7 @@ class RuntimeDatastorePersistence(SDLModel):
     @field_validator("eviction", mode="before")
     @classmethod
     def normalize_eviction(cls, v: RuntimeDatastoreEvictionPolicy | str) -> object:
-        return _normalize_enum(v, RuntimeDatastoreEvictionPolicy, field_name="eviction")
+        return parse_runtime_enum_or_var(v, RuntimeDatastoreEvictionPolicy, field_name="eviction")
 
 
 class RuntimeDatastoreTransportSecurity(SDLModel):
@@ -242,7 +231,7 @@ class RuntimeDatastoreTransportSecurity(SDLModel):
     @field_validator("mode", mode="before")
     @classmethod
     def normalize_mode(cls, v: RuntimeDatastoreTransportSecurityMode | str) -> object:
-        return _normalize_enum(v, RuntimeDatastoreTransportSecurityMode, field_name="mode")
+        return parse_runtime_enum_or_var(v, RuntimeDatastoreTransportSecurityMode, field_name="mode")
 
     @field_validator("client_verification", "node_verification", mode="before")
     @classmethod
@@ -253,10 +242,9 @@ class RuntimeDatastoreTransportSecurity(SDLModel):
 class RuntimeDatastoreSetting(SDLModel):
     """An observed datastore runtime setting with scope, provenance, and class.
 
-    Settings that may carry credentials, hashes, or operator-only values must
-    omit their raw ``value`` and classify it as ``redacted`` / ``operator_secret``
-    — enforced via the shared ``name_indicates_secret`` helper even when the
-    submitter left ``classification`` at its default.
+    Explicit ``redacted`` / ``operator_secret`` classifications omit raw values;
+    names that look credential-bearing remain scenario content unless the
+    author marks the value withheld.
     """
 
     setting_id: str
@@ -280,26 +268,24 @@ class RuntimeDatastoreSetting(SDLModel):
     @field_validator("scope", mode="before")
     @classmethod
     def normalize_scope(cls, v: RuntimeDatastoreSettingScope | str) -> object:
-        return _normalize_enum(v, RuntimeDatastoreSettingScope, field_name="scope")
+        return parse_runtime_enum_or_var(v, RuntimeDatastoreSettingScope, field_name="scope")
 
     @field_validator("provenance", mode="before")
     @classmethod
     def normalize_provenance(cls, v: RuntimeDatastoreSettingProvenance | str) -> object:
-        return _normalize_enum(v, RuntimeDatastoreSettingProvenance, field_name="provenance")
+        return parse_runtime_enum_or_var(v, RuntimeDatastoreSettingProvenance, field_name="provenance")
 
     @field_validator("classification", mode="before")
     @classmethod
     def normalize_classification(cls, v: RuntimeSensitivityClassification | str) -> object:
-        return _normalize_enum(v, RuntimeSensitivityClassification, field_name="classification")
+        return parse_runtime_enum_or_var(v, RuntimeSensitivityClassification, field_name="classification")
 
     @model_validator(mode="after")
     def validate_setting(self) -> "RuntimeDatastoreSetting":
         enforce_observed_value_redaction(
             owner_label=f"datastore setting '{self.setting_id}'",
-            name=self.name,
             value=self.value,
             classification=self.classification,
             redacted_classifications=_REDACTED_SENSITIVITIES,
-            classification_field="classification",
         )
         return self

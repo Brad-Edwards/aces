@@ -18,6 +18,8 @@ from .runtime_values import (
     enforce_observed_value_redaction,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
+    reject_duplicates,
+    require_non_empty,
     require_symbol,
 )
 
@@ -40,6 +42,7 @@ _REDACTED_SENSITIVITIES = (
     RuntimeSensitivityClassification.REDACTED,
     RuntimeSensitivityClassification.OPERATOR_SECRET,
 )
+_DUPLICATE_IDENTITY_TEMPLATE = "Duplicate runtime identity {label} '{value}' in {container_label}"
 
 
 class RuntimeIdentityAuthorityKind(str, Enum):
@@ -132,22 +135,6 @@ class RuntimeIdentityRecordOrigin(str, Enum):
     OTHER = "other"
 
 
-def _require_non_empty(value: str, *, field_name: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{field_name} must be a non-empty string")
-    return value
-
-
-def _reject_duplicates(values: Any, *, label: str, container_label: str) -> None:
-    seen: set[object] = set()
-    for value in values:
-        if value is None or value == "":
-            continue
-        if value in seen:
-            raise ValueError(f"Duplicate runtime identity {label} '{value}' in {container_label}")
-        seen.add(value)
-
-
 def _reject_duplicate_local_ref_ids(authority: "RuntimeIdentityAuthority") -> None:
     seen: dict[str, str] = {}
     entries: list[tuple[str, str]] = [("identity_authority_id", authority.identity_authority_id)]
@@ -184,7 +171,7 @@ class RuntimeIdentityAttribute(SDLModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="identity attribute name")
+        return require_non_empty(v, field_name="identity attribute name")
 
     @field_validator("values", mode="before")
     @classmethod
@@ -238,11 +225,9 @@ class RuntimeIdentityAttribute(SDLModel):
     def validate_redacted_values(self) -> "RuntimeIdentityAttribute":
         enforce_observed_value_redaction(
             owner_label=f"identity attribute '{self.name}'",
-            name=self.name,
             value=self.values,
             classification=self.value_classification,
             redacted_classifications=_REDACTED_SENSITIVITIES,
-            classification_field="value_classification",
             raw_value_label="raw values",
         )
         return self
@@ -306,7 +291,7 @@ class RuntimeIdentitySubject(SDLModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="identity subject name")
+        return require_non_empty(v, field_name="identity subject name")
 
     @field_validator("enabled", mode="before")
     @classmethod
@@ -325,15 +310,17 @@ class RuntimeIdentitySubject(SDLModel):
 
     @model_validator(mode="after")
     def validate_subject(self) -> "RuntimeIdentitySubject":
-        _reject_duplicates(
+        reject_duplicates(
             self.service_principal_names,
             label="service_principal_name",
             container_label=f"subject '{self.subject_id}'",
+            duplicate_template=_DUPLICATE_IDENTITY_TEMPLATE,
         )
-        _reject_duplicates(
+        reject_duplicates(
             (attribute.name for attribute in self.attributes),
             label="attribute",
             container_label=f"subject '{self.subject_id}'",
+            duplicate_template=_DUPLICATE_IDENTITY_TEMPLATE,
         )
         return self
 
@@ -365,15 +352,17 @@ class RuntimeIdentityPolicy(SDLModel):
 
     @model_validator(mode="after")
     def validate_policy(self) -> "RuntimeIdentityPolicy":
-        _reject_duplicates(
+        reject_duplicates(
             self.applies_to_refs,
             label="policy applies_to_ref",
             container_label=f"policy '{self.policy_id}'",
+            duplicate_template=_DUPLICATE_IDENTITY_TEMPLATE,
         )
-        _reject_duplicates(
+        reject_duplicates(
             (setting.name for setting in self.settings),
             label="policy setting",
             container_label=f"policy '{self.policy_id}'",
+            duplicate_template=_DUPLICATE_IDENTITY_TEMPLATE,
         )
         return self
 
@@ -404,12 +393,12 @@ class RuntimeIdentityRelationship(SDLModel):
     @field_validator("source_ref")
     @classmethod
     def validate_source_ref(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="source_ref")
+        return require_non_empty(v, field_name="source_ref")
 
     @field_validator("target_ref", "external_target")
     @classmethod
     def validate_optional_targets(cls, v: str, info: ValidationInfo) -> str:
-        return _require_non_empty(v, field_name=info.field_name) if v else v
+        return require_non_empty(v, field_name=info.field_name) if v else v
 
     @model_validator(mode="after")
     def validate_relationship_target(self) -> "RuntimeIdentityRelationship":
@@ -449,17 +438,29 @@ class RuntimeIdentityAuthority(SDLModel):
     @model_validator(mode="after")
     def validate_authority(self) -> "RuntimeIdentityAuthority":
         container = f"identity authority '{self.identity_authority_id}'"
-        _reject_duplicates(
-            (service.service_id for service in self.services), label="service_id", container_label=container
+        reject_duplicates(
+            (service.service_id for service in self.services),
+            label="service_id",
+            container_label=container,
+            duplicate_template=_DUPLICATE_IDENTITY_TEMPLATE,
         )
-        _reject_duplicates(
-            (subject.subject_id for subject in self.subjects), label="subject_id", container_label=container
+        reject_duplicates(
+            (subject.subject_id for subject in self.subjects),
+            label="subject_id",
+            container_label=container,
+            duplicate_template=_DUPLICATE_IDENTITY_TEMPLATE,
         )
-        _reject_duplicates((policy.policy_id for policy in self.policies), label="policy_id", container_label=container)
-        _reject_duplicates(
+        reject_duplicates(
+            (policy.policy_id for policy in self.policies),
+            label="policy_id",
+            container_label=container,
+            duplicate_template=_DUPLICATE_IDENTITY_TEMPLATE,
+        )
+        reject_duplicates(
             (relationship.relationship_id for relationship in self.relationships),
             label="relationship_id",
             container_label=container,
+            duplicate_template=_DUPLICATE_IDENTITY_TEMPLATE,
         )
         _reject_duplicate_local_ref_ids(self)
         return self

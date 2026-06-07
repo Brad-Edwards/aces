@@ -7,12 +7,11 @@ markings, organizations, tenants, outbound upstream bindings, connectors, the
 optional execution policy, and provenance-bearing settings.
 """
 
-from enum import Enum
 from typing import Any
 
 from pydantic import Field, field_validator, model_validator
 
-from ._base import SDLModel, is_variable_ref, parse_int_or_var
+from ._base import SDLModel, parse_int_or_var
 from .runtime_platform_application_vocab import (
     RuntimePlatformApplicationConnectorKind,
     RuntimePlatformApplicationContentObjectKind,
@@ -24,7 +23,6 @@ from .runtime_platform_application_vocab import (
 from .runtime_values import (
     coerce_string_list,
     enforce_observed_value_redaction,
-    name_indicates_secret,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
     require_symbol,
@@ -45,14 +43,6 @@ _OMIT_RAW_CLASSIFICATIONS = (
     RuntimePlatformApplicationSettingClassification.REDACTED,
     RuntimePlatformApplicationSettingClassification.OPERATOR_SECRET,
 )
-
-
-def _normalize_enum(value: object, enum_cls: type[Enum], *, field_name: str) -> object:
-    return parse_runtime_enum_or_var(value, enum_cls, field_name=field_name)
-
-
-def _coerce_refs(value: object) -> object:
-    return coerce_string_list(value)
 
 
 def _reject_duplicate_values(values: list[object], *, field_name: str, owner: str) -> None:
@@ -114,12 +104,12 @@ class RuntimePlatformApplicationContentObject(SDLModel):
     @field_validator("kind", mode="before")
     @classmethod
     def normalize_kind(cls, v: RuntimePlatformApplicationContentObjectKind | str) -> object:
-        return _normalize_enum(v, RuntimePlatformApplicationContentObjectKind, field_name="kind")
+        return parse_runtime_enum_or_var(v, RuntimePlatformApplicationContentObjectKind, field_name="kind")
 
     @field_validator("references", "marking_refs", "evidence_refs", mode="before")
     @classmethod
     def coerce_ref_lists(cls, v: object) -> object:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @model_validator(mode="after")
     def validate_content_object(self) -> "RuntimePlatformApplicationContentObject":
@@ -146,7 +136,7 @@ class RuntimePlatformApplicationMarking(SDLModel):
     @field_validator("scheme", mode="before")
     @classmethod
     def normalize_scheme(cls, v: RuntimePlatformApplicationMarkingScheme | str) -> object:
-        return _normalize_enum(v, RuntimePlatformApplicationMarkingScheme, field_name="scheme")
+        return parse_runtime_enum_or_var(v, RuntimePlatformApplicationMarkingScheme, field_name="scheme")
 
 
 class RuntimePlatformApplicationUpstreamBinding(SDLModel):
@@ -166,7 +156,7 @@ class RuntimePlatformApplicationUpstreamBinding(SDLModel):
     @field_validator("role", mode="before")
     @classmethod
     def normalize_role(cls, v: RuntimePlatformApplicationUpstreamBindingRole | str) -> object:
-        return _normalize_enum(v, RuntimePlatformApplicationUpstreamBindingRole, field_name="role")
+        return parse_runtime_enum_or_var(v, RuntimePlatformApplicationUpstreamBindingRole, field_name="role")
 
 
 class RuntimePlatformApplicationConnector(SDLModel):
@@ -193,7 +183,7 @@ class RuntimePlatformApplicationConnector(SDLModel):
     @field_validator("kind", mode="before")
     @classmethod
     def normalize_kind(cls, v: RuntimePlatformApplicationConnectorKind | str) -> object:
-        return _normalize_enum(v, RuntimePlatformApplicationConnectorKind, field_name="kind")
+        return parse_runtime_enum_or_var(v, RuntimePlatformApplicationConnectorKind, field_name="kind")
 
     @field_validator("credential_classification", mode="before")
     @classmethod
@@ -201,7 +191,7 @@ class RuntimePlatformApplicationConnector(SDLModel):
         cls,
         v: RuntimePlatformApplicationSettingClassification | str,
     ) -> object:
-        return _normalize_enum(
+        return parse_runtime_enum_or_var(
             v,
             RuntimePlatformApplicationSettingClassification,
             field_name="credential_classification",
@@ -214,20 +204,7 @@ class RuntimePlatformApplicationConnector(SDLModel):
 
     @model_validator(mode="after")
     def validate_connector(self) -> "RuntimePlatformApplicationConnector":
-        self._enforce_secret_name_redaction()
         return self
-
-    def _enforce_secret_name_redaction(self) -> None:
-        """A secret-bearing connector name must carry a redaction classification."""
-        if not self.name or is_variable_ref(self.name) or not name_indicates_secret(self.name):
-            return
-        if is_variable_ref(self.credential_classification):
-            return
-        if self.credential_classification not in _OMIT_RAW_CLASSIFICATIONS:
-            raise ValueError(
-                f"connector '{self.connector_id}' carries a secret-bearing name; "
-                f"credential_classification must be 'redacted' or 'operator_secret'"
-            )
 
 
 class RuntimePlatformApplicationExecutionPolicy(SDLModel):
@@ -254,8 +231,8 @@ class RuntimePlatformApplicationExecutionPolicy(SDLModel):
 class RuntimePlatformApplicationSetting(SDLModel):
     """An observed platform setting with provenance and sensitivity.
 
-    Settings whose name signals secret content must omit their raw ``value``
-    and classify it as ``redacted`` / ``operator_secret``.
+    Explicitly redacted/operator-secret settings must omit their raw ``value``.
+    A setting name does not by itself redact SDL scenario content.
     """
 
     setting_id: str
@@ -276,21 +253,21 @@ class RuntimePlatformApplicationSetting(SDLModel):
     @field_validator("provenance", mode="before")
     @classmethod
     def normalize_provenance(cls, v: RuntimePlatformApplicationSettingProvenance | str) -> object:
-        return _normalize_enum(v, RuntimePlatformApplicationSettingProvenance, field_name="provenance")
+        return parse_runtime_enum_or_var(v, RuntimePlatformApplicationSettingProvenance, field_name="provenance")
 
     @field_validator("classification", mode="before")
     @classmethod
     def normalize_classification(cls, v: RuntimePlatformApplicationSettingClassification | str) -> object:
-        return _normalize_enum(v, RuntimePlatformApplicationSettingClassification, field_name="classification")
+        return parse_runtime_enum_or_var(
+            v, RuntimePlatformApplicationSettingClassification, field_name="classification"
+        )
 
     @model_validator(mode="after")
     def validate_setting(self) -> "RuntimePlatformApplicationSetting":
         enforce_observed_value_redaction(
             owner_label=f"platform setting '{self.name}'",
-            name=self.name,
             value=self.value,
             classification=self.classification,
             redacted_classifications=_OMIT_RAW_CLASSIFICATIONS,
-            classification_field="classification",
         )
         return self

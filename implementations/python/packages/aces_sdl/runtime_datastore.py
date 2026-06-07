@@ -22,8 +22,6 @@ via ``authorization_ref`` (a string ``app_authorization_id`` resolved by the
 semantic validator) — this surface carries no embedded principal/role/grant.
 """
 
-from enum import Enum
-
 from pydantic import Field, field_validator, model_validator
 
 from ._base import SDLModel, is_variable_ref
@@ -72,14 +70,6 @@ __all__ = [
 ]
 
 
-def _normalize_enum(value: object, enum_cls: type[Enum], *, field_name: str) -> object:
-    return parse_runtime_enum_or_var(value, enum_cls, field_name=field_name)
-
-
-def _coerce_refs(value: object) -> object:
-    return coerce_string_list(value)
-
-
 class RuntimeDatastoreService(SDLModel):
     """An observed datastore service hosted by a transport service on a node.
 
@@ -123,12 +113,12 @@ class RuntimeDatastoreService(SDLModel):
     @field_validator("engine", mode="before")
     @classmethod
     def normalize_engine(cls, v: RuntimeDatastoreEngine | str) -> object:
-        return _normalize_enum(v, RuntimeDatastoreEngine, field_name="engine")
+        return parse_runtime_enum_or_var(v, RuntimeDatastoreEngine, field_name="engine")
 
     @field_validator("data_model", mode="before")
     @classmethod
     def normalize_data_model(cls, v: RuntimeDatastoreDataModel | str) -> object:
-        return _normalize_enum(v, RuntimeDatastoreDataModel, field_name="data_model")
+        return parse_runtime_enum_or_var(v, RuntimeDatastoreDataModel, field_name="data_model")
 
     @field_validator(
         "templates",
@@ -144,7 +134,7 @@ class RuntimeDatastoreService(SDLModel):
     )
     @classmethod
     def coerce_string_lists(cls, v: object) -> object:
-        return _coerce_refs(v)
+        return coerce_string_list(v)
 
     @model_validator(mode="after")
     def validate_datastore_service(self) -> "RuntimeDatastoreService":

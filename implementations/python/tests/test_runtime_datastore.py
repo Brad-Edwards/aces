@@ -233,9 +233,10 @@ def test_rejects_duplicate_string_list_entries() -> None:
         RuntimeDatastoreService(**_search_index_service(engine_plugins=["a", "a"]))
 
 
-def test_secret_named_setting_must_omit_raw_value() -> None:
-    with pytest.raises(ValidationError, match="secret-bearing name and must omit its raw value"):
-        RuntimeDatastoreSetting(setting_id="admin-pw", name="admin_password", value="hunter2")
+def test_secret_named_setting_may_carry_scenario_value() -> None:
+    setting = RuntimeDatastoreSetting(setting_id="admin-pw", name="admin_password", value="hunter2")
+
+    assert setting.value == "hunter2"
 
 
 def test_secret_named_setting_with_redacted_class_is_valid() -> None:
