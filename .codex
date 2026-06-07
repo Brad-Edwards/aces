@@ -33,3 +33,11 @@ such as `GOV-918`.
 - For Claude Code, use
   `.claude/skills/aces-asset-inventory-capture/SKILL.md`. This server also
   links it at `~/.claude/skills/aces-asset-inventory-capture`.
+- For Codex, use `.codex-skills/aces-gap-remediation-implement/SKILL.md`
+  when remediating ACES/APTL gaps found by the asset-inventory methodology.
+  This server also links it at
+  `~/.codex/skills/aces-gap-remediation-implement`.
+- For Claude Code, use
+  `.claude/skills/aces-gap-remediation-implement/SKILL.md` for the same
+  overlay. This server also links it at
+  `~/.claude/skills/aces-gap-remediation-implement`.
