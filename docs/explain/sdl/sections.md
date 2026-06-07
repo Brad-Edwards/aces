@@ -390,7 +390,7 @@ nodes:
               privileges: [SELECT, INSERT, UPDATE]
           settings:
             - {name: listen_addresses, value: "*", provenance: configuration_file}
-            - name: password_encryption     # secret-bearing settings omit value
+            - name: password_encryption     # explicit redaction omits value
               value_classification: redacted
               provenance: operator_override
       dns_services:                     # observed DNS authoritative/resolver state
@@ -431,7 +431,7 @@ nodes:
                   records:
                     - {address: 10.0.0.20}
           settings:
-            - name: tsig_secret          # secret-bearing settings omit value
+            - name: tsig_secret          # explicit redaction omits value
               value_classification: redacted
               provenance: operator_override
       network_detection_engines:        # observed IDS/NDR engine state
@@ -531,7 +531,7 @@ nodes:
               value: "yes"
               provenance: configuration_file
               source_path: /var/ossec/etc/ossec.conf
-            - setting_id: api-token       # secret-bearing settings omit value
+            - setting_id: api-token       # explicit redaction omits value
               name: api_token
               value_classification: redacted
               provenance: operator_override
@@ -559,7 +559,7 @@ nodes:
             node_verification: true
           authorization_ref: opensearch-rbac   # same-node runtime.app_authorizations id
           settings:
-            - setting_id: keystore-pw   # secret-bearing settings omit value
+            - setting_id: keystore-pw   # explicit redaction omits value
               name: bootstrap.password
               classification: redacted
       platform_applications:            # observed security platform application state
@@ -615,7 +615,7 @@ nodes:
             eps: 500
             crypto: aes
           settings:
-            - setting_id: authd-pass    # secret-bearing settings omit value
+            - setting_id: authd-pass    # explicit redaction omits value
               name: authd.pass
               classification: redacted
       orchestration_authorities:        # observed container-spawn authority state
@@ -873,8 +873,11 @@ weakness placement, `redirects`, observable error/disclosure behavior in
 `disclosures`, and `exposed_fields` for route-visible fixture secrets or
 intentionally exposed diagnostic fields classified with the shared runtime
 sensitivity vocabulary — `redacted` and `operator_secret` fields omit their raw
-value (see
-[ADR-026](../../decisions/adrs/adr-026-application-http-surface-inventory.md)).
+value, while `secret_fixture` fields may carry deliberate exercise fixture
+values (see
+[ADR-026](../../decisions/adrs/adr-026-application-http-surface-inventory.md)
+and
+[ADR-057](../../decisions/adrs/adr-057-runtime-secret-name-classifier-boundaries.md)).
 
 `runtime.database_services` records the participant-observable database
 logical state — what an adversary, defender, agent, scanner, or evaluator can
@@ -973,8 +976,10 @@ Sieve, or other mail protocols to same-node transport services and carry
 advertised capabilities, banners, AUTH mechanisms, and TLS/STARTTLS posture.
 `mailboxes` are service-local runtime records with address, domain/store refs,
 role/status, authentication mechanisms, and credential-strength classification;
-raw passwords and hashes are not representable. `settings` carry provenance and
-source paths, and secret-bearing setting names must omit raw values. Mail
+raw passwords and hashes are not representable on mailbox records. `settings`
+carry provenance and source paths; explicit `redacted`/`operator_secret`
+classifications omit raw values, while credential-shaped names remain scenario
+content under ADR-057. Mail
 client, DNS, logging/SIEM, relay, and similar edges stay in top-level
 `relationships`; a typed `mail_access` block records mail protocol/auth/TLS and
 mailbox/domain/listener refs when an edge needs mail-specific semantics (see
@@ -996,8 +1001,10 @@ remain observed data: use the specific field when one exists
 (`distinguished_name`, `principal_name`, `service_principal_names`,
 `issuer`, `tenant_id`, `base_dn`) or a bounded `attributes` entry for values
 such as AD `objectGUID`/SID, LDAP `entryUUID`, SCIM `id`/`externalId`, SAML
-NameID, or the OIDC `iss` + `sub` pair. Secret-bearing attribute or policy
-setting names must omit raw values and use the runtime sensitivity vocabulary.
+NameID, or the OIDC `iss` + `sub` pair. Attribute and policy setting values use
+the runtime sensitivity vocabulary: explicit `redacted`/`operator_secret`
+classifications omit raw values, and credential-shaped names do not force
+omission under ADR-057.
 Local authority references resolve against all stable ids in the owning
 authority; fully qualified references such as
 `nodes.ad.runtime.identity_authorities.corp-domain.subjects.alice` participate
@@ -1021,7 +1028,7 @@ model. `principals` are users, service accounts, API keys, or backend roles
 with `reserved`/`hidden` flags; a principal never stores a raw bcrypt hash,
 API key, or password — its credential posture is recorded purely via a
 `credential_classification` (`none`, `redacted`, `operator_secret`), and a
-secret-bearing principal name must declare `redacted` or `operator_secret`.
+secret-shaped principal name alone does not force a redaction classification.
 `roles` are named local roles. The defining addition over a directory is the
 resource-scoped `permission_grants` entry (role reference → `actions` →
 `resource_patterns`) with an `allow`/`deny` effect and a `resource_kind`; the
@@ -1077,8 +1084,9 @@ and `transport_security` are single nested postures, while `nodes`,
 `aliases`, `mappings`, `lifecycle_policies`, `ingest_pipelines`,
 `pubsub_channels`, `queues_streams`, `engine_plugins`, and `backup_targets` are
 bare reference-name lists. `settings` reuse the shared runtime sensitivity
-vocabulary so secret-bearing names omit their raw value and classify
-`redacted`/`operator_secret`. Application-internal RBAC is delegated to
+vocabulary: explicit `redacted`/`operator_secret` classifications omit raw
+values, while credential-shaped setting names remain scenario content unless
+the author marks the value withheld. Application-internal RBAC is delegated to
 `runtime.app_authorizations` via the string `authorization_ref` (resolved to a
 same-node `app_authorization_id`), so the surface carries no embedded
 principal/role/grant. Fully qualified refs such as
@@ -1132,10 +1140,10 @@ requires at least one `api_pull` source, one `ioc_to_rule` transform, and one
 `reload_channel`, and rejects a `buffer_policy` and any `ship_target` enrollment
 endpoint. A ship target's `target_node_ref`, when concrete, resolves to a defined
 node, and a `target_service_ref` resolves to a service on the referenced node
-(or, absent a node ref, on the owning node). Ship-target enrollment identities and
-secret-bearing settings never carry raw values: they classify
-`redacted`/`operator_secret` through the shared `name_indicates_secret` helper and
-the closed enrollment lattice. Cadence composes a `runtime.scheduled_jobs` entry
+(or, absent a node ref, on the owning node). Ship-target enrollment identities
+use the closed `none`/`redacted`/`operator_secret` lattice and carry no raw value
+field; forwarding settings use explicit redaction classifications to omit raw
+values, not name-derived omission. Cadence composes a `runtime.scheduled_jobs` entry
 and the inter-node trust edge composes a relationship forwarding edge — neither is
 re-typed here. Fully qualified refs such as
 `nodes.sensor.runtime.forwarding_agents.wazuh-sidecar.ship_targets.manager`
@@ -1184,7 +1192,8 @@ recipe text is intentionally not stored, since `${...}` in shell/Dockerfile
 syntax would collide with SDL variable substitution); the `layers` chain with
 per-layer `digest`, `created_by`, `size`, and `empty` flag; `build_args` with a
 `value_classification` so secret build arguments are redacted rather than
-recorded; `copied_sources` mapping build-context `source_path` to in-image
+recorded, except for explicitly disclosed `secret_fixture` exercise values;
+`copied_sources` mapping build-context `source_path` to in-image
 `destination_path`; `config` recording image *defaults* (entrypoint, command,
 working directory, exposed ports, native-keyed `labels`, and
 `default_environment`); `source_inputs` mapping source-package inputs to

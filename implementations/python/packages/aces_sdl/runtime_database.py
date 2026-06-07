@@ -332,9 +332,9 @@ class DatabaseGrant(SDLModel):
 class DatabaseSetting(SDLModel):
     """An observed database runtime setting with provenance and sensitivity.
 
-    Settings that may carry credentials, hashes, connection strings, or
-    operator-only values must omit their raw ``value`` and classify it as
-    ``redacted``/``operator_secret`` (ADR-029 §5).
+    Explicit ``redacted``/``operator_secret`` classifications omit raw values;
+    credential-shaped names remain scenario content unless the author marks the
+    value withheld.
     """
 
     name: str
@@ -363,18 +363,13 @@ class DatabaseSetting(SDLModel):
 
     @model_validator(mode="after")
     def validate_redacted_value(self) -> "DatabaseSetting":
-        # Settings whose name signals secret content (passwords, hashes,
-        # connection strings, auth files, private keys) must omit their raw
-        # value even when the submitter left ``value_classification`` at the
-        # default ``unknown`` — otherwise the protection is opt-in for the
-        # author and absent for adversarial inputs (ADR-029 §5).
+        # Explicit redaction classifications omit raw values; credential-shaped
+        # names remain scenario content unless the author marks them withheld.
         enforce_observed_value_redaction(
             owner_label=f"database setting '{self.name}'",
-            name=self.name,
             value=self.value,
             classification=self.value_classification,
             redacted_classifications=_REDACTED_SENSITIVITIES,
-            classification_field="value_classification",
         )
         return self
 

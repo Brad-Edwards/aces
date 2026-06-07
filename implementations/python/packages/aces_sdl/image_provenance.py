@@ -49,12 +49,6 @@ _IMAGE_ENV_REDACTED_CLASSIFICATIONS = (
     RuntimeEnvironmentValueClassification.REDACTED,
     RuntimeEnvironmentValueClassification.OPERATOR_SECRET,
 )
-_IMAGE_ENV_SECRET_NAME_CLASSIFICATIONS = (
-    RuntimeEnvironmentValueClassification.REDACTED,
-    RuntimeEnvironmentValueClassification.OPERATOR_SECRET,
-    RuntimeEnvironmentValueClassification.SECRET_FIXTURE,
-)
-_IMAGE_ENV_RAW_SECRET_NAME_CLASSIFICATIONS = (RuntimeEnvironmentValueClassification.SECRET_FIXTURE,)
 
 
 class DockerfileInstructionKind(str, Enum):
@@ -190,14 +184,10 @@ class ImageBuildArg(SDLModel):
     def validate_redacted_value(self) -> "ImageBuildArg":
         enforce_observed_value_redaction(
             owner_label=f"build argument '{self.name}'",
-            name=self.name,
             value=self.value,
             classification=self.value_classification,
             redacted_classifications=_IMAGE_ENV_REDACTED_CLASSIFICATIONS,
-            classification_field="value_classification",
             raw_value_label="value",
-            secret_name_classifications=_IMAGE_ENV_SECRET_NAME_CLASSIFICATIONS,
-            raw_secret_name_classifications=_IMAGE_ENV_RAW_SECRET_NAME_CLASSIFICATIONS,
             redacted_raw_message="redacted build arguments must omit value"
             if self.value_classification == RuntimeEnvironmentValueClassification.REDACTED
             else None,
@@ -238,14 +228,10 @@ class ImageEnvironmentDefault(SDLModel):
     def validate_redacted_value(self) -> "ImageEnvironmentDefault":
         enforce_observed_value_redaction(
             owner_label=f"image environment variable '{self.name}'",
-            name=self.name,
             value=self.value,
             classification=self.value_classification,
             redacted_classifications=_IMAGE_ENV_REDACTED_CLASSIFICATIONS,
-            classification_field="value_classification",
             raw_value_label="value",
-            secret_name_classifications=_IMAGE_ENV_SECRET_NAME_CLASSIFICATIONS,
-            raw_secret_name_classifications=_IMAGE_ENV_RAW_SECRET_NAME_CLASSIFICATIONS,
             redacted_raw_message="redacted image environment variables must omit value"
             if self.value_classification == RuntimeEnvironmentValueClassification.REDACTED
             else None,

@@ -7,9 +7,8 @@ ADR-015 600-line cap. These typed children compose into
 its ``require_profile_for_data_model`` guard live in ``runtime_datastore.py``.
 
 Every typed child carries a ``<child_noun>_id`` validated by ``require_symbol``.
-Settings whose name signals secret content omit their raw value and classify
-``redacted`` / ``operator_secret`` via the shared ``name_indicates_secret``
-helper, exactly as the relational ``DatabaseSetting`` does.
+Settings explicitly classified ``redacted`` / ``operator_secret`` omit their raw
+value, exactly as the relational ``DatabaseSetting`` does.
 """
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
@@ -243,10 +242,9 @@ class RuntimeDatastoreTransportSecurity(SDLModel):
 class RuntimeDatastoreSetting(SDLModel):
     """An observed datastore runtime setting with scope, provenance, and class.
 
-    Settings that may carry credentials, hashes, or operator-only values must
-    omit their raw ``value`` and classify it as ``redacted`` / ``operator_secret``
-    — enforced via the shared ``name_indicates_secret`` helper even when the
-    submitter left ``classification`` at its default.
+    Explicit ``redacted`` / ``operator_secret`` classifications omit raw values;
+    names that look credential-bearing remain scenario content unless the
+    author marks the value withheld.
     """
 
     setting_id: str
@@ -286,10 +284,8 @@ class RuntimeDatastoreSetting(SDLModel):
     def validate_setting(self) -> "RuntimeDatastoreSetting":
         enforce_observed_value_redaction(
             owner_label=f"datastore setting '{self.setting_id}'",
-            name=self.name,
             value=self.value,
             classification=self.classification,
             redacted_classifications=_REDACTED_SENSITIVITIES,
-            classification_field="classification",
         )
         return self
