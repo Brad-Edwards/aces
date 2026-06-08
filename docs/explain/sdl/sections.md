@@ -547,7 +547,7 @@ nodes:
             discovery_mode: zen
           nodes:
             - node_id: os-node-1
-              roles: [data, master]
+              roles: [data, cluster_manager]
               engine_version: "2.13"      # product-neutral node engine provenance
               build_type: rpm
               build_hash: dae2bfc9389617
@@ -574,6 +574,19 @@ nodes:
               kind: index
               shard_count: 3
               replica_count: 1
+          mappings:                     # bounded schema manifest, not raw _mapping JSON
+            - mapping_id: alerts-mapping
+              partition_ref: alerts-index
+              leaf_field_count: 670
+              field_type_census: {keyword: 220, date: 9, ip: 12}
+              dynamic_policy: "true"
+              dynamic_template_count: 5
+              schema_digest: sha256:alerts-mapping
+          templates:                    # bounded template manifest, not raw _template JSON
+            - template_id: wazuh-template
+              index_patterns: [wazuh-alerts-4.x-*]
+              settings_summary: {index.number_of_shards: "3"}
+              mapping_ref: alerts-mapping
           transport_security:
             transport_security_id: os-transport
             mode: tls
@@ -1101,10 +1114,16 @@ partition with a `replication_strategy` and `replication_factor`; and a
 `key_value` store requires a `persistence` profile and rejects relational
 object-tree (`keyspace`/`column_family`) partitions. `cluster`, `persistence`,
 and `transport_security` are single nested postures, while `nodes`,
-`partitions`, and `settings` are id-bearing child collections; `templates`,
-`aliases`, `mappings`, `lifecycle_policies`, `ingest_pipelines`,
-`pubsub_channels`, `queues_streams`, and `backup_targets` are bare
-reference-name lists. Each `node` additionally carries product-neutral engine
+`partitions`, `templates`, `mappings`, and `settings` are id-bearing child
+collections. `templates` and `mappings` are bounded manifests rather than raw
+engine payloads: templates carry index patterns, selected settings, optional
+mapping refs, digests, and evidence refs; mappings carry partition refs,
+field-count/type census, dynamic policy, dynamic-template count, date-detection
+posture, schema digests, and evidence refs. A concrete `search_index` service
+must carry at least one structured mapping manifest. `aliases`,
+`lifecycle_policies`, `ingest_pipelines`, `pubsub_channels`, `queues_streams`,
+and `backup_targets` remain bare reference-name lists. Each `node` additionally
+carries product-neutral engine
 provenance and runtime posture (`engine_version`, `build_hash`, `build_type`,
 initial/maximum `heap_init_bytes`/`heap_max_bytes` byte bounds, and
 `memory_locked`), a typed per-node `plugins` inventory
@@ -1126,6 +1145,8 @@ the author marks the value withheld. Application-internal RBAC is delegated to
 same-node `app_authorization_id`), so the surface carries no embedded
 principal/role/grant. Fully qualified refs such as
 `nodes.indexer.runtime.datastore_services.opensearch-store.partitions.alerts-index`
+and
+`nodes.indexer.runtime.datastore_services.opensearch-store.mappings.alerts-mapping`
 participate in relationships, generic reference validation, and module import
 rewriting (see
 [ADR-048](../../decisions/adrs/adr-048-datastore-service-runtime-inventory.md)).

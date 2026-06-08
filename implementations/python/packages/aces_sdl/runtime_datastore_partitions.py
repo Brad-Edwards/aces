@@ -37,11 +37,13 @@ from .runtime_values import (
 __all__ = [
     "RuntimeDatastoreCluster",
     "RuntimeDatastoreEnginePlugin",
+    "RuntimeDatastoreMapping",
     "RuntimeDatastoreNode",
     "RuntimeDatastoreNodeEndpoint",
     "RuntimeDatastorePartition",
     "RuntimeDatastorePersistence",
     "RuntimeDatastoreSetting",
+    "RuntimeDatastoreTemplate",
     "RuntimeDatastoreTransportSecurity",
 ]
 
@@ -273,6 +275,92 @@ class RuntimeDatastorePartition(SDLModel):
         if not isinstance(v, dict):
             return v
         return {key: parse_int_or_var(value, minimum=0, field_name=info.field_name) for key, value in v.items()}
+
+
+class RuntimeDatastoreMapping(SDLModel):
+    """A bounded manifest of an observed search-index mapping/schema.
+
+    Carries schema geometry and digest/evidence facts, never the raw
+    OpenSearch/Elasticsearch ``_mapping`` response body.
+    """
+
+    mapping_id: str
+    name: str = ""
+    partition_ref: str = ""
+    top_level_field_count: int | str | None = None
+    leaf_field_count: int | str | None = None
+    field_type_census: dict[str, int | str] = Field(default_factory=dict)
+    dynamic_policy: str = ""
+    dynamic_template_count: int | str | None = None
+    date_detection: bool | str | None = None
+    schema_digest: str = ""
+    evidence_refs: list[str] = Field(default_factory=list)
+    description: str = ""
+
+    @field_validator("mapping_id")
+    @classmethod
+    def validate_mapping_id(cls, v: str) -> str:
+        return require_symbol(v, field_name="mapping_id")
+
+    @field_validator("top_level_field_count", "leaf_field_count", "dynamic_template_count", mode="before")
+    @classmethod
+    def parse_counts(cls, v: object, info: ValidationInfo) -> int | str | None:
+        return parse_int_or_var(v, minimum=0, field_name=info.field_name) if v is not None else v
+
+    @field_validator("field_type_census", mode="before")
+    @classmethod
+    def parse_field_type_census(cls, v: object) -> object:
+        if not isinstance(v, dict):
+            return v
+        return {key: parse_int_or_var(value, minimum=0, field_name="field_type_census") for key, value in v.items()}
+
+    @field_validator("date_detection", mode="before")
+    @classmethod
+    def parse_date_detection(cls, v: object) -> bool | str | None:
+        return parse_optional_bool_or_var(v, field_name="date_detection")
+
+    @field_validator("evidence_refs", mode="before")
+    @classmethod
+    def coerce_evidence_refs(cls, v: object) -> object:
+        return coerce_string_list(v)
+
+    @model_validator(mode="after")
+    def validate_mapping(self) -> "RuntimeDatastoreMapping":
+        _reject_duplicate_values(self.evidence_refs, field_name="evidence_refs", owner=self.mapping_id)
+        return self
+
+
+class RuntimeDatastoreTemplate(SDLModel):
+    """A bounded manifest of an observed index template body.
+
+    The template captures patterns, selected settings, optional mapping linkage,
+    digest, and evidence refs without embedding the backend's raw template JSON.
+    """
+
+    template_id: str
+    name: str = ""
+    index_patterns: list[str] = Field(default_factory=list)
+    settings_summary: dict[str, str | int | bool] = Field(default_factory=dict)
+    mapping_ref: str = ""
+    template_digest: str = ""
+    evidence_refs: list[str] = Field(default_factory=list)
+    description: str = ""
+
+    @field_validator("template_id")
+    @classmethod
+    def validate_template_id(cls, v: str) -> str:
+        return require_symbol(v, field_name="template_id")
+
+    @field_validator("index_patterns", "evidence_refs", mode="before")
+    @classmethod
+    def coerce_string_fields(cls, v: object) -> object:
+        return coerce_string_list(v)
+
+    @model_validator(mode="after")
+    def validate_template(self) -> "RuntimeDatastoreTemplate":
+        _reject_duplicate_values(self.index_patterns, field_name="index_patterns", owner=self.template_id)
+        _reject_duplicate_values(self.evidence_refs, field_name="evidence_refs", owner=self.template_id)
+        return self
 
 
 class RuntimeDatastorePersistence(SDLModel):
