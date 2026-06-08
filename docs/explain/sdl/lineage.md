@@ -431,6 +431,19 @@ ACES relies on prior work in four ways:
   belong to the synthetic range; out-of-scenario operator secrets remain
   outside SDL inventory.
 
+The node-scoped extension (SCN-010 DSL-141,
+[ADR-058](../../decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints.md))
+closes the `wazuh.indexer` parity gap (Brad-Edwards/aptl#341) that ADR-048 left
+at the node level: typed engine provenance (version, build hash, build type),
+JVM/process memory posture (initial/maximum heap bytes, `mlockall`), a per-node
+engine-plugin inventory with per-plugin version, and a product-neutral
+client/peer endpoint inventory. The Elasticsearch/OpenSearch
+[Nodes Info API](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-info.html)
+reports each of these per node; the client/peer listener split is structural
+across the search-cluster tech class (OpenSearch http/transport, Cassandra
+native/internode, Redis client/cluster-bus), which is why ACES types an
+engine-neutral `role` taxonomy rather than engine-named address fields.
+
 ## Security-Platform Application Semantics
 
 The `runtime.platform_applications` surface is the SCN-010 (DSL-133) response to

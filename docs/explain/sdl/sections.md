@@ -548,6 +548,27 @@ nodes:
           nodes:
             - node_id: os-node-1
               roles: [data, cluster_manager]
+              engine_version: "2.13"      # product-neutral node engine provenance
+              build_type: rpm
+              build_hash: dae2bfc9389617
+              heap_init_bytes: "1 GiB"    # human sizes normalize to bytes
+              heap_max_bytes: "1 GiB"
+              memory_locked: true         # observed mlockall posture
+              endpoints:
+                - endpoint_id: http       # participant-facing listener
+                  role: client
+                  protocol: https
+                  address: 172.20.0.12
+                  port: 9200
+                - endpoint_id: transport  # inter-node listener
+                  role: peer
+                  protocol: transport
+                  address: 172.20.0.12
+                  port: 9300
+              plugins:                    # per-plugin version retained
+                - plugin_id: opensearch-security
+                  name: opensearch-security
+                  version: 2.13.0.0
           partitions:                   # search_index requires shard/replica geometry
             - partition_id: alerts-index
               kind: index
@@ -1101,11 +1122,25 @@ field-count/type census, dynamic policy, dynamic-template count, date-detection
 posture, schema digests, and evidence refs. A concrete `search_index` service
 must carry at least one structured mapping manifest. `aliases`,
 `lifecycle_policies`, `ingest_pipelines`, `pubsub_channels`, `queues_streams`,
-`engine_plugins`, and `backup_targets` remain bare reference-name lists.
-`settings` reuse the shared runtime sensitivity vocabulary: explicit
-`redacted`/`operator_secret` classifications omit raw values, while
-credential-shaped setting names remain scenario content unless the author marks
-the value withheld. Application-internal RBAC is delegated to
+and `backup_targets` remain bare reference-name lists. Each `node` additionally
+carries product-neutral engine
+provenance and runtime posture (`engine_version`, `build_hash`, `build_type`,
+initial/maximum `heap_init_bytes`/`heap_max_bytes` byte bounds, and
+`memory_locked`), a typed per-node `plugins` inventory
+(`RuntimeDatastoreEnginePlugin{plugin_id, name, version}` — retaining the
+per-plugin version the former service-level `engine_plugins` list dropped), and a
+typed `endpoints` inventory
+(`RuntimeDatastoreNodeEndpoint{endpoint_id, role, protocol, address, port}`)
+whose open `client`/`peer` role taxonomy distinguishes the participant-facing
+listener from the inter-node one without naming any engine's protocol (replacing
+the single ambiguous node `address`). Node plugin and endpoint ids share the
+datastore service-wide stable-id namespace and are targetable as nested refs
+(see
+[ADR-058](../../decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints.md)
+amending ADR-048). `settings` reuse the shared runtime sensitivity
+vocabulary: explicit `redacted`/`operator_secret` classifications omit raw
+values, while credential-shaped setting names remain scenario content unless
+the author marks the value withheld. Application-internal RBAC is delegated to
 `runtime.app_authorizations` via the string `authorization_ref` (resolved to a
 same-node `app_authorization_id`), so the surface carries no embedded
 principal/role/grant. Fully qualified refs such as

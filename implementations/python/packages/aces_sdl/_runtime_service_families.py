@@ -189,7 +189,14 @@ RUNTIME_SERVICE_FAMILIES: tuple[RuntimeServiceFamily, ...] = (
         collection_name="datastore_services",
         id_field="datastore_service_id",
         child_refs=(
-            RuntimeReferenceChild("nodes", "node_id"),
+            RuntimeReferenceChild(
+                "nodes",
+                "node_id",
+                children=(
+                    RuntimeReferenceChild("plugins", "plugin_id"),
+                    RuntimeReferenceChild("endpoints", "endpoint_id"),
+                ),
+            ),
             RuntimeReferenceChild("partitions", "partition_id"),
             RuntimeReferenceChild("templates", "template_id"),
             RuntimeReferenceChild("mappings", "mapping_id"),
