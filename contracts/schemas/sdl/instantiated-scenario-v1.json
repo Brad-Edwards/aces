@@ -6695,6 +6695,36 @@
       "title": "RuntimeDatastoreEngine",
       "type": "string"
     },
+    "RuntimeDatastoreEnginePlugin": {
+      "additionalProperties": false,
+      "description": "An engine extension/plugin/module installed on a datastore node.\n\nPer-node installed-capability inventory (OpenSearch plugins, Redis modules,\n\u2026). Carries the per-plugin ``version`` the name-only service-level list could\nnot. ``plugin_id`` is a stable symbol; ``name`` is the observed engine name.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "plugin_id": {
+          "title": "Plugin Id",
+          "type": "string"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plugin_id"
+      ],
+      "title": "RuntimeDatastoreEnginePlugin",
+      "type": "object"
+    },
     "RuntimeDatastoreEvictionPolicy": {
       "description": "A key-value eviction policy.\n\nOPEN taxonomy: carries both ``unknown`` and ``other``. Covers Redis\n``maxmemory-policy`` values.",
       "enum": [
@@ -6714,17 +6744,64 @@
     },
     "RuntimeDatastoreNode": {
       "additionalProperties": false,
-      "description": "An observed node participating in a datastore cluster.",
+      "description": "An observed node participating in a datastore cluster.\n\nBeyond cluster membership and roles, a node carries product-neutral engine\nprovenance (version, build hash/type), JVM/process memory posture (initial\nand maximum heap byte bounds, memory-lock state), a typed per-node engine\nplugin inventory, and typed published endpoints (client vs peer listeners).\nAll are observed runtime facts \u2014 never host policy or software-component\nidentity (ADR-058 amending ADR-048).",
       "properties": {
-        "address": {
+        "build_hash": {
           "default": "",
-          "title": "Address",
+          "title": "Build Hash",
+          "type": "string"
+        },
+        "build_type": {
+          "default": "",
+          "title": "Build Type",
           "type": "string"
         },
         "description": {
           "default": "",
           "title": "Description",
           "type": "string"
+        },
+        "endpoints": {
+          "items": {
+            "$ref": "#/$defs/RuntimeDatastoreNodeEndpoint"
+          },
+          "title": "Endpoints",
+          "type": "array"
+        },
+        "engine_version": {
+          "default": "",
+          "title": "Engine Version",
+          "type": "string"
+        },
+        "heap_init_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heap Init Bytes"
+        },
+        "heap_max_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heap Max Bytes"
         },
         "is_coordinator": {
           "anyOf": [
@@ -6741,6 +6818,21 @@
           "default": null,
           "title": "Is Coordinator"
         },
+        "memory_locked": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Memory Locked"
+        },
         "name": {
           "default": "",
           "title": "Name",
@@ -6749,6 +6841,13 @@
         "node_id": {
           "title": "Node Id",
           "type": "string"
+        },
+        "plugins": {
+          "items": {
+            "$ref": "#/$defs/RuntimeDatastoreEnginePlugin"
+          },
+          "title": "Plugins",
+          "type": "array"
         },
         "roles": {
           "items": {
@@ -6770,6 +6869,74 @@
       ],
       "title": "RuntimeDatastoreNode",
       "type": "object"
+    },
+    "RuntimeDatastoreNodeEndpoint": {
+      "additionalProperties": false,
+      "description": "An observed published listener on a datastore node.\n\nProduct-neutral node listener topology: ``role`` distinguishes the\nparticipant-facing ``client`` listener from the inter-node ``peer`` listener\nwithout encoding engine-native names. ``address`` and ``port`` stay split,\nmatching every other runtime listener surface. A node endpoint records\npublished topology, not proof of an OS bind or host publication (ADR-058).",
+      "properties": {
+        "address": {
+          "default": "",
+          "title": "Address",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "endpoint_id": {
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Port"
+        },
+        "protocol": {
+          "default": "",
+          "title": "Protocol",
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDatastoreNodeEndpointRole"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Role"
+        }
+      },
+      "required": [
+        "endpoint_id"
+      ],
+      "title": "RuntimeDatastoreNodeEndpoint",
+      "type": "object"
+    },
+    "RuntimeDatastoreNodeEndpointRole": {
+      "description": "The role a datastore node's published listener fulfils.\n\nOPEN taxonomy: carries both ``unknown`` and ``other``. ``client`` is the\nparticipant/application-facing listener (OpenSearch ``http``, Cassandra\nnative/CQL, Redis client); ``peer`` is the inter-node/cluster listener\n(OpenSearch ``transport``, Cassandra internode, Redis cluster-bus).\nEngine-native listener names are intentionally not modelled \u2014 the datastore\nspine stays product-neutral (ADR-048, ADR-058).",
+      "enum": [
+        "client",
+        "peer",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeDatastoreNodeEndpointRole",
+      "type": "string"
     },
     "RuntimeDatastoreNodeRole": {
       "description": "A role a cluster node fulfils.\n\nOPEN taxonomy: carries both ``unknown`` and ``other``. Covers OpenSearch\n``cluster_manager``/``data``/``ingest``/``ml`` roles and Cassandra\n``coordinator``/``seed`` roles uniformly.",
@@ -7138,13 +7305,6 @@
           ],
           "default": "unknown",
           "title": "Engine"
-        },
-        "engine_plugins": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Engine Plugins",
-          "type": "array"
         },
         "ingest_pipelines": {
           "items": {

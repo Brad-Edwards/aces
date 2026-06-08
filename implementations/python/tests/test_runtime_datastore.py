@@ -14,7 +14,9 @@ from aces_sdl.runtime_datastore import (
     RuntimeDatastoreCluster,
     RuntimeDatastoreDataModel,
     RuntimeDatastoreEngine,
+    RuntimeDatastoreEnginePlugin,
     RuntimeDatastoreNode,
+    RuntimeDatastoreNodeEndpoint,
     RuntimeDatastorePartitionKind,
     RuntimeDatastorePersistence,
     RuntimeDatastoreService,
@@ -23,6 +25,7 @@ from aces_sdl.runtime_datastore import (
 )
 from aces_sdl.runtime_datastore_vocab import (
     RuntimeDatastoreEvictionPolicy,
+    RuntimeDatastoreNodeEndpointRole,
     RuntimeDatastoreNodeRole,
     RuntimeDatastoreReplicationStrategy,
     RuntimeDatastoreSettingProvenance,
@@ -53,6 +56,32 @@ def _search_index_service(**overrides) -> dict:
                 "name": "wazuh.indexer",
                 "roles": ["cluster_manager", "data", "ingest"],
                 "is_coordinator": True,
+                "engine_version": "2.19.1",
+                "build_hash": "dae2bfc93896178873b43cdf4781f183c72b238f",
+                "build_type": "rpm",
+                "heap_init_bytes": "1 GiB",
+                "heap_max_bytes": "1 GiB",
+                "memory_locked": True,
+                "endpoints": [
+                    {
+                        "endpoint_id": "http",
+                        "role": "client",
+                        "protocol": "https",
+                        "address": "172.20.0.12",
+                        "port": 9200,
+                    },
+                    {
+                        "endpoint_id": "transport",
+                        "role": "peer",
+                        "protocol": "transport",
+                        "address": "172.20.0.12",
+                        "port": 9300,
+                    },
+                ],
+                "plugins": [
+                    {"plugin_id": "opensearch-security", "name": "opensearch-security", "version": "2.19.1.0"},
+                    {"plugin_id": "opensearch-alerting", "name": "opensearch-alerting", "version": "2.19.1.0"},
+                ],
             }
         ],
         "partitions": [
@@ -70,7 +99,6 @@ def _search_index_service(**overrides) -> dict:
         "mappings": ["index.mapping.total_fields.limit=10000"],
         "lifecycle_policies": ["wazuh-ism"],
         "ingest_pipelines": ["geoip"],
-        "engine_plugins": ["opensearch-security", "opensearch-alerting"],
         "transport_security": {
             "transport_security_id": "indexer-tls",
             "mode": "mutual_tls",
@@ -158,7 +186,22 @@ def test_search_index_service_typed_children() -> None:
     assert svc.engine is RuntimeDatastoreEngine.OPENSEARCH
     assert svc.data_model is RuntimeDatastoreDataModel.SEARCH_INDEX
     assert isinstance(svc.cluster, RuntimeDatastoreCluster)
-    assert svc.nodes[0].roles[0] is RuntimeDatastoreNodeRole.CLUSTER_MANAGER
+    node = svc.nodes[0]
+    assert node.roles[0] is RuntimeDatastoreNodeRole.CLUSTER_MANAGER
+    assert node.engine_version == "2.19.1"
+    assert node.build_hash == "dae2bfc93896178873b43cdf4781f183c72b238f"
+    assert node.build_type == "rpm"
+    assert node.heap_init_bytes == 1_073_741_824
+    assert node.heap_max_bytes == 1_073_741_824
+    assert node.memory_locked is True
+    assert [e.role for e in node.endpoints] == [
+        RuntimeDatastoreNodeEndpointRole.CLIENT,
+        RuntimeDatastoreNodeEndpointRole.PEER,
+    ]
+    assert node.endpoints[0].port == 9200
+    assert node.endpoints[1].port == 9300
+    assert node.plugins[0].name == "opensearch-security"
+    assert node.plugins[0].version == "2.19.1.0"
     assert svc.partitions[0].kind is RuntimeDatastorePartitionKind.INDEX
     assert svc.partitions[0].shard_count == 3
     assert isinstance(svc.transport_security, RuntimeDatastoreTransportSecurity)
@@ -360,8 +403,8 @@ def test_rejects_duplicate_stable_ids_across_children() -> None:
 
 
 def test_rejects_duplicate_string_list_entries() -> None:
-    with pytest.raises(ValidationError, match="Duplicate runtime datastore engine_plugins"):
-        RuntimeDatastoreService(**_search_index_service(engine_plugins=["a", "a"]))
+    with pytest.raises(ValidationError, match="Duplicate runtime datastore templates"):
+        RuntimeDatastoreService(**_search_index_service(templates=["a", "a"]))
 
 
 def test_secret_named_setting_may_carry_scenario_value() -> None:
@@ -457,3 +500,197 @@ def test_wide_column_rejects_keyspace_missing_factor() -> None:
                 ],
             )
         )
+
+
+# --------------------------------------------------------------------------- #
+# DSL-141 — node engine provenance, heap posture, plugins, endpoints          #
+# --------------------------------------------------------------------------- #
+
+
+def test_node_provenance_defaults_are_empty() -> None:
+    node = RuntimeDatastoreNode(node_id="n1")
+    assert node.engine_version == ""
+    assert node.build_hash == ""
+    assert node.build_type == ""
+    assert node.heap_init_bytes is None
+    assert node.heap_max_bytes is None
+    assert node.memory_locked is None
+    assert node.endpoints == []
+    assert node.plugins == []
+
+
+def test_node_heap_bytes_accept_human_int_and_var() -> None:
+    node = RuntimeDatastoreNode(node_id="n1", heap_init_bytes="512 MiB", heap_max_bytes=1_073_741_824)
+    assert node.heap_init_bytes == 536_870_912
+    assert node.heap_max_bytes == 1_073_741_824
+
+    var_node = RuntimeDatastoreNode(node_id="n2", heap_max_bytes="${HEAP}")
+    assert var_node.heap_max_bytes == "${HEAP}"
+
+
+def test_node_rejects_heap_init_above_max() -> None:
+    with pytest.raises(ValidationError, match="heap_init_bytes.*heap_max_bytes"):
+        RuntimeDatastoreNode(node_id="n1", heap_init_bytes="2 GiB", heap_max_bytes="1 GiB")
+
+
+def test_node_heap_ordering_exempt_for_variable_bounds() -> None:
+    node = RuntimeDatastoreNode(node_id="n1", heap_init_bytes="${INIT}", heap_max_bytes=1024)
+    assert node.heap_init_bytes == "${INIT}"
+
+
+def test_node_memory_locked_parses_bool_and_var() -> None:
+    assert RuntimeDatastoreNode(node_id="n1", memory_locked="true").memory_locked is True
+    assert RuntimeDatastoreNode(node_id="n2", memory_locked="${MLOCK}").memory_locked == "${MLOCK}"
+
+
+def test_engine_plugin_retains_per_plugin_version() -> None:
+    plugin = RuntimeDatastoreEnginePlugin(
+        plugin_id="opensearch-security", name="opensearch-security", version="2.19.1.0"
+    )
+    assert plugin.plugin_id == "opensearch-security"
+    assert plugin.version == "2.19.1.0"
+
+
+def test_engine_plugin_id_must_be_stable_symbol() -> None:
+    with pytest.raises(ValidationError, match="plugin_id"):
+        RuntimeDatastoreEnginePlugin(plugin_id="${PLUGIN}", name="x")
+    with pytest.raises(ValidationError, match="plugin_id"):
+        RuntimeDatastoreEnginePlugin(plugin_id="", name="x")
+
+
+def test_node_endpoint_typed_fields() -> None:
+    endpoint = RuntimeDatastoreNodeEndpoint(
+        endpoint_id="http", role="client", protocol="https", address="172.20.0.12", port=9200
+    )
+    assert endpoint.role is RuntimeDatastoreNodeEndpointRole.CLIENT
+    assert endpoint.address == "172.20.0.12"
+    assert endpoint.port == 9200
+
+
+def test_endpoint_role_normalizes_hyphen_alias_and_open_sentinels() -> None:
+    assert RuntimeDatastoreNodeEndpointRole.UNKNOWN.value == "unknown"
+    assert RuntimeDatastoreNodeEndpointRole.OTHER.value == "other"
+    endpoint = RuntimeDatastoreNodeEndpoint(endpoint_id="e1", role="PEER")
+    assert endpoint.role is RuntimeDatastoreNodeEndpointRole.PEER
+
+
+def test_endpoint_role_rejects_unrecognized_value() -> None:
+    # An unrecognized (non-var) role must raise with the closed-set error
+    # envelope, never silently pass through as an arbitrary string.
+    with pytest.raises(ValidationError, match="role must be one of: client, peer, unknown, other"):
+        RuntimeDatastoreNodeEndpoint(endpoint_id="e1", role="gossip")
+
+
+def test_endpoint_id_must_be_stable_symbol() -> None:
+    with pytest.raises(ValidationError, match="endpoint_id"):
+        RuntimeDatastoreNodeEndpoint(endpoint_id="${E}")
+
+
+def test_endpoint_port_range_enforced() -> None:
+    # Both bounds: above the 65535 ceiling and below the minimum of 1.
+    with pytest.raises(ValidationError, match="port"):
+        RuntimeDatastoreNodeEndpoint(endpoint_id="e1", port=70000)
+    with pytest.raises(ValidationError, match="port"):
+        RuntimeDatastoreNodeEndpoint(endpoint_id="e1", port=0)
+
+
+def test_node_rejects_duplicate_plugin_ids() -> None:
+    with pytest.raises(ValidationError, match="plugin"):
+        RuntimeDatastoreNode(
+            node_id="n1",
+            plugins=[{"plugin_id": "dup", "name": "a"}, {"plugin_id": "dup", "name": "b"}],
+        )
+
+
+def test_node_rejects_duplicate_endpoint_ids() -> None:
+    with pytest.raises(ValidationError, match="endpoint"):
+        RuntimeDatastoreNode(
+            node_id="n1",
+            endpoints=[{"endpoint_id": "dup"}, {"endpoint_id": "dup"}],
+        )
+
+
+def test_service_wide_id_namespace_includes_plugin_and_endpoint_ids() -> None:
+    # A plugin id colliding with the node id is a service-wide stable-id clash.
+    with pytest.raises(ValidationError, match="Duplicate runtime datastore stable id 'indexer-1'"):
+        RuntimeDatastoreService(
+            **_search_index_service(
+                nodes=[
+                    {
+                        "node_id": "indexer-1",
+                        "roles": ["data"],
+                        "plugins": [{"plugin_id": "indexer-1", "name": "x"}],
+                    }
+                ]
+            )
+        )
+
+
+def test_endpoint_id_collision_with_partition_is_service_wide() -> None:
+    with pytest.raises(ValidationError, match="Duplicate runtime datastore stable id 'wazuh-alerts'"):
+        RuntimeDatastoreService(
+            **_search_index_service(
+                nodes=[
+                    {
+                        "node_id": "indexer-1",
+                        "roles": ["data"],
+                        "endpoints": [{"endpoint_id": "wazuh-alerts"}],
+                    }
+                ]
+            )
+        )
+
+
+def test_same_plugin_id_on_two_nodes_is_rejected_service_wide() -> None:
+    # The service-wide namespace spans ALL nodes: the same plugin_id appearing
+    # on two distinct nodes is a collision the per-node check cannot catch. A
+    # service-scoped check that only deduped within each node would pass this.
+    with pytest.raises(ValidationError, match="Duplicate runtime datastore stable id 'opensearch-security'"):
+        RuntimeDatastoreService(
+            **_search_index_service(
+                nodes=[
+                    {
+                        "node_id": "indexer-1",
+                        "roles": ["cluster_manager", "data"],
+                        "plugins": [{"plugin_id": "opensearch-security", "name": "x"}],
+                    },
+                    {
+                        "node_id": "indexer-2",
+                        "roles": ["data"],
+                        "plugins": [{"plugin_id": "opensearch-security", "name": "y"}],
+                    },
+                ]
+            )
+        )
+
+
+def test_same_endpoint_id_on_two_nodes_is_rejected_service_wide() -> None:
+    # Same cross-node obligation for endpoint ids: the same endpoint_id on two
+    # distinct nodes collides in the service-wide stable-id namespace.
+    with pytest.raises(ValidationError, match="Duplicate runtime datastore stable id 'transport'"):
+        RuntimeDatastoreService(
+            **_search_index_service(
+                nodes=[
+                    {
+                        "node_id": "indexer-1",
+                        "roles": ["cluster_manager", "data"],
+                        "endpoints": [{"endpoint_id": "transport", "role": "peer"}],
+                    },
+                    {
+                        "node_id": "indexer-2",
+                        "roles": ["data"],
+                        "endpoints": [{"endpoint_id": "transport", "role": "peer"}],
+                    },
+                ]
+            )
+        )
+
+
+def test_removed_node_address_field_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="address"):
+        RuntimeDatastoreNode(node_id="n1", address="172.20.0.12")
+
+
+def test_removed_service_engine_plugins_field_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="engine_plugins"):
+        RuntimeDatastoreService(**_search_index_service(engine_plugins=["opensearch-security"]))

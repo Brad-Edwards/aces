@@ -27,7 +27,9 @@ from pydantic import Field, field_validator, model_validator
 from ._base import SDLModel, is_variable_ref
 from .runtime_datastore_partitions import (
     RuntimeDatastoreCluster,
+    RuntimeDatastoreEnginePlugin,
     RuntimeDatastoreNode,
+    RuntimeDatastoreNodeEndpoint,
     RuntimeDatastorePartition,
     RuntimeDatastorePersistence,
     RuntimeDatastoreSetting,
@@ -37,6 +39,7 @@ from .runtime_datastore_vocab import (
     RuntimeDatastoreDataModel,
     RuntimeDatastoreEngine,
     RuntimeDatastoreEvictionPolicy,
+    RuntimeDatastoreNodeEndpointRole,
     RuntimeDatastoreNodeRole,
     RuntimeDatastorePartitionKind,
     RuntimeDatastoreReplicationStrategy,
@@ -54,8 +57,11 @@ __all__ = [
     "RuntimeDatastoreCluster",
     "RuntimeDatastoreDataModel",
     "RuntimeDatastoreEngine",
+    "RuntimeDatastoreEnginePlugin",
     "RuntimeDatastoreEvictionPolicy",
     "RuntimeDatastoreNode",
+    "RuntimeDatastoreNodeEndpoint",
+    "RuntimeDatastoreNodeEndpointRole",
     "RuntimeDatastoreNodeRole",
     "RuntimeDatastorePartition",
     "RuntimeDatastorePartitionKind",
@@ -98,7 +104,6 @@ class RuntimeDatastoreService(SDLModel):
     persistence: RuntimeDatastorePersistence | None = None
     pubsub_channels: list[str] = Field(default_factory=list)
     queues_streams: list[str] = Field(default_factory=list)
-    engine_plugins: list[str] = Field(default_factory=list)
     transport_security: RuntimeDatastoreTransportSecurity | None = None
     backup_targets: list[str] = Field(default_factory=list)
     settings: list[RuntimeDatastoreSetting] = Field(default_factory=list)
@@ -128,7 +133,6 @@ class RuntimeDatastoreService(SDLModel):
         "ingest_pipelines",
         "pubsub_channels",
         "queues_streams",
-        "engine_plugins",
         "backup_targets",
         mode="before",
     )
@@ -152,7 +156,6 @@ class RuntimeDatastoreService(SDLModel):
             "ingest_pipelines",
             "pubsub_channels",
             "queues_streams",
-            "engine_plugins",
             "backup_targets",
         ):
             _reject_duplicate_values(getattr(self, field_name), field_name=field_name, owner=self.datastore_service_id)
@@ -269,6 +272,10 @@ def _reject_duplicate_local_ref_ids(service: RuntimeDatastoreService) -> None:
         ("setting_id", "settings"),
     ):
         entries.extend((label, getattr(item, label)) for item in getattr(service, collection_name))
+    # Node-nested plugin/endpoint ids share the service-wide stable-id namespace.
+    for node in service.nodes:
+        entries.extend(("plugin_id", plugin.plugin_id) for plugin in node.plugins)
+        entries.extend(("endpoint_id", endpoint.endpoint_id) for endpoint in node.endpoints)
 
     seen: dict[str, str] = {}
     for label, value in entries:
