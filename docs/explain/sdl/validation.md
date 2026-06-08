@@ -251,29 +251,34 @@ and is therefore not a scheduled job.
 The optional `runtime.datastore_services` inventory has model-local and semantic
 rules. Datastore-service ids are stable concrete symbols and are unique within a
 node runtime block; the service-local cluster, persistence, transport-security,
-node, partition, setting, node-plugin, and node-endpoint ids are unique across
-the service. Engines, data models, partition kinds, node roles, node-endpoint
-roles, persistence eviction policies, replication strategies, transport-security
-modes, and setting scope/provenance/classification are normalized from bounded
-enums while allowing full-value variables. Native cluster/index UUIDs are
-observed datastore facts, not SDL reference identities; references continue to
-target the stable ACES ids. Count and byte fields on clusters and partitions
-accept only non-negative integers or full-value variables, keeping document
-cardinality and byte-normalized store size distinct from `datatype_census`.
-Node engine provenance is observed inventory: heap byte bounds normalize human
-sizes to bytes and a concrete `heap_init_bytes` must not exceed a concrete
-`heap_max_bytes`; node-endpoint ports are validated to the 1-65535 range with
-address and port kept split.
+node, partition, template, mapping, setting, node-plugin, and node-endpoint ids
+are unique across the service. Engines, data models, partition kinds, node
+roles, node-endpoint roles, persistence eviction policies, replication
+strategies, transport-security modes, and setting scope/provenance/classification
+are normalized from bounded enums while allowing full-value variables. Native
+cluster/index UUIDs are observed datastore facts, not SDL reference identities;
+references continue to target the stable ACES ids. Count and byte fields on
+clusters and partitions accept only non-negative integers or full-value
+variables, keeping document cardinality and byte-normalized store size distinct
+from `datatype_census`. Node engine provenance is observed inventory: heap byte
+bounds normalize human sizes to bytes and a concrete `heap_init_bytes` must not
+exceed a concrete `heap_max_bytes`; node-endpoint ports are validated to the
+1-65535 range with address and port kept split.
 Explicit redacted/operator-secret setting classifications omit raw values; names
 alone do not force omission. The `require_profile_for_data_model` guard makes the
 discriminator executable: a `${var}` placeholder is exempt and the open
 `unknown`/`other`/`relational` tail is permissive, but a concrete `search_index`
-requires at least one `index` partition carrying shard/replica geometry, a
-`wide_column` store requires at least one `keyspace` partition with a replication
-strategy and factor, and a `key_value` store requires a `persistence` profile and
-rejects relational/wide-column partitions. The owning transport `service`
-resolves to a same-node binding, and a non-empty, non-variable `authorization_ref`
-resolves to a same-node `app_authorization` (the delegated internal RBAC store).
+requires at least one `index` partition carrying shard/replica geometry and at
+least one structured mapping manifest, a `wide_column` store requires at least
+one `keyspace` partition with a replication strategy and factor, and a
+`key_value` store requires a `persistence` profile and rejects
+relational/wide-column partitions. Mapping `partition_ref` values resolve to
+sibling datastore partitions, and template `mapping_ref` values resolve to
+sibling mapping manifests. Raw mapping/template response bodies are not model
+data; bounded manifests carry counts, summaries, digests, and evidence refs.
+The owning transport `service` resolves to a same-node binding, and a non-empty,
+non-variable `authorization_ref` resolves to a same-node `app_authorization` (the
+delegated internal RBAC store).
 
 The optional `runtime.platform_applications` inventory has model-local and
 semantic rules. Platform-application ids are stable concrete symbols and unique

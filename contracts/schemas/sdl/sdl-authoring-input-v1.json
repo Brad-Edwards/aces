@@ -6742,6 +6742,127 @@
       "title": "RuntimeDatastoreEvictionPolicy",
       "type": "string"
     },
+    "RuntimeDatastoreMapping": {
+      "additionalProperties": false,
+      "description": "A bounded manifest of an observed search-index mapping/schema.\n\nCarries schema geometry and digest/evidence facts, never the raw\nOpenSearch/Elasticsearch ``_mapping`` response body.",
+      "properties": {
+        "date_detection": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Date Detection"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "dynamic_policy": {
+          "default": "",
+          "title": "Dynamic Policy",
+          "type": "string"
+        },
+        "dynamic_template_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dynamic Template Count"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "field_type_census": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "title": "Field Type Census",
+          "type": "object"
+        },
+        "leaf_field_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Leaf Field Count"
+        },
+        "mapping_id": {
+          "title": "Mapping Id",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "partition_ref": {
+          "default": "",
+          "title": "Partition Ref",
+          "type": "string"
+        },
+        "schema_digest": {
+          "default": "",
+          "title": "Schema Digest",
+          "type": "string"
+        },
+        "top_level_field_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top Level Field Count"
+        }
+      },
+      "required": [
+        "mapping_id"
+      ],
+      "title": "RuntimeDatastoreMapping",
+      "type": "object"
+    },
     "RuntimeDatastoreNode": {
       "additionalProperties": false,
       "description": "An observed node participating in a datastore cluster.\n\nBeyond cluster membership and roles, a node carries product-neutral engine\nprovenance (version, build hash/type), JVM/process memory posture (initial\nand maximum heap byte bounds, memory-lock state), a typed per-node engine\nplugin inventory, and typed published endpoints (client vs peer listeners).\nAll are observed runtime facts \u2014 never host policy or software-component\nidentity (ADR-058 amending ADR-048).",
@@ -7322,7 +7443,7 @@
         },
         "mappings": {
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/RuntimeDatastoreMapping"
           },
           "title": "Mappings",
           "type": "array"
@@ -7390,7 +7511,7 @@
         },
         "templates": {
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/RuntimeDatastoreTemplate"
           },
           "title": "Templates",
           "type": "array"
@@ -7508,6 +7629,72 @@
       ],
       "title": "RuntimeDatastoreSettingScope",
       "type": "string"
+    },
+    "RuntimeDatastoreTemplate": {
+      "additionalProperties": false,
+      "description": "A bounded manifest of an observed index template body.\n\nThe template captures patterns, selected settings, optional mapping linkage,\ndigest, and evidence refs without embedding the backend's raw template JSON.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "index_patterns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Index Patterns",
+          "type": "array"
+        },
+        "mapping_ref": {
+          "default": "",
+          "title": "Mapping Ref",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "settings_summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "title": "Settings Summary",
+          "type": "object"
+        },
+        "template_digest": {
+          "default": "",
+          "title": "Template Digest",
+          "type": "string"
+        },
+        "template_id": {
+          "title": "Template Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "template_id"
+      ],
+      "title": "RuntimeDatastoreTemplate",
+      "type": "object"
     },
     "RuntimeDatastoreTransportSecurity": {
       "additionalProperties": false,

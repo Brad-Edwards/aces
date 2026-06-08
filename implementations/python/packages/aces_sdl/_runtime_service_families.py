@@ -198,6 +198,8 @@ RUNTIME_SERVICE_FAMILIES: tuple[RuntimeServiceFamily, ...] = (
                 ),
             ),
             RuntimeReferenceChild("partitions", "partition_id"),
+            RuntimeReferenceChild("templates", "template_id"),
+            RuntimeReferenceChild("mappings", "mapping_id"),
             RuntimeReferenceChild("settings", "setting_id"),
         ),
     ),
