@@ -15,6 +15,7 @@ __all__ = [
     "RuntimeDatastoreDataModel",
     "RuntimeDatastoreEngine",
     "RuntimeDatastoreEvictionPolicy",
+    "RuntimeDatastoreNodeEndpointRole",
     "RuntimeDatastoreNodeRole",
     "RuntimeDatastorePartitionKind",
     "RuntimeDatastoreReplicationStrategy",
@@ -91,6 +92,23 @@ class RuntimeDatastoreNodeRole(str, Enum):
     ML = "ml"
     SEED = "seed"
     COORDINATOR = "coordinator"
+    UNKNOWN = "unknown"
+    OTHER = "other"
+
+
+class RuntimeDatastoreNodeEndpointRole(str, Enum):
+    """The role a datastore node's published listener fulfils.
+
+    OPEN taxonomy: carries both ``unknown`` and ``other``. ``client`` is the
+    participant/application-facing listener (OpenSearch ``http``, Cassandra
+    native/CQL, Redis client); ``peer`` is the inter-node/cluster listener
+    (OpenSearch ``transport``, Cassandra internode, Redis cluster-bus).
+    Engine-native listener names are intentionally not modelled — the datastore
+    spine stays product-neutral (ADR-048, ADR-058).
+    """
+
+    CLIENT = "client"
+    PEER = "peer"
     UNKNOWN = "unknown"
     OTHER = "other"
 

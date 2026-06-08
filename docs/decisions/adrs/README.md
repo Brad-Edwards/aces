@@ -43,6 +43,7 @@ adr-054-participant-runtime-observable-lifecycle
 adr-055-experiment-core-contract-boundary
 adr-056-runtime-observed-values-and-credential-posture
 adr-057-runtime-secret-name-classifier-boundaries
+adr-058-datastore-node-engine-provenance-and-endpoints
 ```
 
 | ADR | Title | Status | Date |
@@ -105,3 +106,4 @@ adr-057-runtime-secret-name-classifier-boundaries
 | [055](adr-055-experiment-core-contract-boundary.md) | Experiment Core Contract Boundary | accepted | 2026-05-26 |
 | [056](adr-056-runtime-observed-values-and-credential-posture.md) | Runtime Observed Values and Credential Posture | accepted | 2026-06-05 |
 | [057](adr-057-runtime-secret-name-classifier-boundaries.md) | Runtime Scenario Value Realizability and Explicit Redaction | accepted | 2026-06-06 |
+| [058](adr-058-datastore-node-engine-provenance-and-endpoints.md) | Datastore Node Engine Provenance and Endpoints | accepted | 2026-06-07 |
