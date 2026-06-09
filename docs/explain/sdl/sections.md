@@ -543,8 +543,14 @@ nodes:
           version: "2.13"
           cluster:
             cluster_id: os-cluster
+            uuid: native-cluster-uuid
             health: green
             discovery_mode: zen
+            node_count: 3
+            shard_total: 6
+            shard_primaries: 3
+            doc_count: 1053842
+            store_size_bytes: 1391460626
           nodes:
             - node_id: os-node-1
               roles: [data, cluster_manager]
@@ -571,7 +577,13 @@ nodes:
                   version: 2.13.0.0
           partitions:                   # search_index requires shard/replica geometry
             - partition_id: alerts-index
+              uuid: native-index-uuid
               kind: index
+              doc_count: 68993
+              doc_count_deleted: 0
+              store_size_bytes: 96888422
+              creation_timestamp: "2026-05-28T00:00:05.253Z"
+              open_closed_status: open
               shard_count: 3
               replica_count: 1
           mappings:                     # bounded schema manifest, not raw _mapping JSON
@@ -1109,7 +1121,11 @@ irreducibly-relational `runtime.database_services` cannot shape. Each entry is a
 `wide_column`, `key_value`, `relational`, `unknown`, `other`). The discriminator
 drives a required-profile guard so an under-populated instance fails validation:
 a `search_index` requires at least one `partition` with `kind: index` carrying
-shard/replica geometry; a `wide_column` store requires at least one `keyspace`
+shard/replica geometry; a search cluster may also record native UUID,
+node/shard/document aggregate counts, and byte-normalized store size, while each
+index partition may record native UUID, live and deleted document counts,
+byte-normalized store size, creation timestamp, and open/closed status. A
+`wide_column` store requires at least one `keyspace`
 partition with a `replication_strategy` and `replication_factor`; and a
 `key_value` store requires a `persistence` profile and rejects relational
 object-tree (`keyspace`/`column_family`) partitions. `cluster`, `persistence`,
@@ -1140,7 +1156,9 @@ datastore service-wide stable-id namespace and are targetable as nested refs
 amending ADR-048). `settings` reuse the shared runtime sensitivity
 vocabulary: explicit `redacted`/`operator_secret` classifications omit raw
 values, while credential-shaped setting names remain scenario content unless
-the author marks the value withheld. Application-internal RBAC is delegated to
+the author marks the value withheld. `datatype_census` remains a key-value
+datatype census and is not a search-index document count. Application-internal
+RBAC is delegated to
 `runtime.app_authorizations` via the string `authorization_ref` (resolved to a
 same-node `app_authorization_id`), so the surface carries no embedded
 principal/role/grant. Fully qualified refs such as

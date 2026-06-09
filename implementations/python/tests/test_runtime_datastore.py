@@ -297,6 +297,137 @@ def test_search_index_service_typed_children() -> None:
     assert svc.authorization_ref == "wazuh-indexer-rbac"
 
 
+def test_search_index_records_cardinality_size_and_identity() -> None:
+    svc = RuntimeDatastoreService(
+        **_search_index_service(
+            cluster={
+                "cluster_id": "wazuh-cluster",
+                "uuid": "u-vGl1n0Q7e-SKz1tWvb-w",
+                "name": "wazuh",
+                "health": "green",
+                "discovery_mode": "single-node",
+                "node_count": 1,
+                "shard_total": 102,
+                "shard_primaries": 102,
+                "doc_count": 1_053_842,
+                "store_size_bytes": 1_391_460_626,
+            },
+            partitions=[
+                {
+                    "partition_id": "wazuh-alerts",
+                    "uuid": "s0fv6XlzTEuJ",
+                    "kind": "index",
+                    "name": "wazuh-alerts-4.x-2026.05.28",
+                    "shard_count": 3,
+                    "replica_count": 0,
+                    "doc_count": 68_993,
+                    "doc_count_deleted": 0,
+                    "store_size_bytes": 96_888_422,
+                    "creation_timestamp": "2026-05-28T00:00:05.253Z",
+                    "open_closed_status": "open",
+                    "health": "green",
+                }
+            ],
+        )
+    )
+
+    assert svc.cluster is not None
+    assert svc.cluster.uuid == "u-vGl1n0Q7e-SKz1tWvb-w"
+    assert svc.cluster.node_count == 1
+    assert svc.cluster.shard_total == 102
+    assert svc.cluster.shard_primaries == 102
+    assert svc.cluster.doc_count == 1_053_842
+    assert svc.cluster.store_size_bytes == 1_391_460_626
+
+    partition = svc.partitions[0]
+    assert partition.uuid == "s0fv6XlzTEuJ"
+    assert partition.doc_count == 68_993
+    assert partition.doc_count_deleted == 0
+    assert partition.store_size_bytes == 96_888_422
+    assert partition.creation_timestamp == "2026-05-28T00:00:05.253Z"
+    assert partition.open_closed_status == "open"
+
+
+def test_datastore_cardinality_fields_accept_variable_refs() -> None:
+    svc = RuntimeDatastoreService(
+        **_search_index_service(
+            cluster={
+                "cluster_id": "wazuh-cluster",
+                "node_count": "${NODE_COUNT}",
+                "shard_total": "${SHARDS}",
+                "shard_primaries": "${PRIMARIES}",
+                "doc_count": "${DOCS}",
+                "store_size_bytes": "${BYTES}",
+            },
+            partitions=[
+                {
+                    "partition_id": "wazuh-alerts",
+                    "kind": "index",
+                    "shard_count": "${SHARDS}",
+                    "replica_count": "${REPLICAS}",
+                    "doc_count": "${DOCS}",
+                    "doc_count_deleted": "${DELETED}",
+                    "store_size_bytes": "${BYTES}",
+                }
+            ],
+        )
+    )
+
+    assert svc.cluster is not None
+    assert svc.cluster.doc_count == "${DOCS}"
+    assert svc.cluster.store_size_bytes == "${BYTES}"
+    assert svc.partitions[0].doc_count_deleted == "${DELETED}"
+
+
+def test_datastore_cluster_rejects_negative_cardinality() -> None:
+    with pytest.raises(ValidationError, match="node_count must be >= 0"):
+        RuntimeDatastoreCluster(cluster_id="cluster", node_count=-1)
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    ["node_count", "shard_total", "shard_primaries", "doc_count", "store_size_bytes"],
+)
+def test_datastore_cluster_rejects_non_integer_cardinality_strings(field_name: str) -> None:
+    with pytest.raises(ValidationError, match=f"{field_name} must be an integer"):
+        RuntimeDatastoreCluster(cluster_id="cluster", **{field_name: "92.4mb"})
+
+
+def test_datastore_partition_rejects_negative_cardinality() -> None:
+    with pytest.raises(ValidationError, match="doc_count_deleted must be >= 0"):
+        RuntimeDatastoreService(
+            **_search_index_service(
+                partitions=[
+                    {
+                        "partition_id": "idx",
+                        "kind": "index",
+                        "shard_count": 1,
+                        "replica_count": 0,
+                        "doc_count_deleted": -1,
+                    }
+                ]
+            )
+        )
+
+
+@pytest.mark.parametrize("field_name", ["doc_count", "doc_count_deleted", "store_size_bytes"])
+def test_datastore_partition_rejects_non_integer_cardinality_strings(field_name: str) -> None:
+    with pytest.raises(ValidationError, match=f"{field_name} must be an integer"):
+        RuntimeDatastoreService(
+            **_search_index_service(
+                partitions=[
+                    {
+                        "partition_id": "idx",
+                        "kind": "index",
+                        "shard_count": 1,
+                        "replica_count": 0,
+                        field_name: "92.4mb",
+                    }
+                ]
+            )
+        )
+
+
 def test_wide_column_service_typed_children() -> None:
     svc = RuntimeDatastoreService(**_wide_column_service())
 
