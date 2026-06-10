@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import shutil
+import subprocess
 import sys
 import types
 from pathlib import Path
@@ -14,6 +15,12 @@ if str(REPO_ROOT) not in sys.path:
 import pytest
 import tools.check_generated_schemas as check_generated_schemas
 import yaml
+from tools.check_adr_immutability import (
+    amendment_refs,
+    canonical_content,
+    content_hash,
+    evaluate_adr_immutability,
+)
 from tools.check_generated_schemas import _extra_published_schema_paths
 from tools.check_json_artifacts import collect_validation_targets, should_run_full_validation
 from tools.check_schema_publication import validate_schema_publication_manifest
@@ -1111,3 +1118,404 @@ def test_check_generated_schemas_main_rejects_stale_extra_schema_files(
     monkeypatch.setitem(sys.modules, "aces_contracts.contracts", fake_contracts)
 
     assert check_generated_schemas.main() == 1
+
+
+# --- ADR acceptance-content pin gate (ADR-059 / GOV-941) ----------------------
+
+AMENDMENTS_TABLE_HEADER = "## Amendments\n\n| Date | Commit/PR | Summary |\n|------|-----------|---------|\n"
+
+
+def _adr_dir(tmp_path: Path) -> Path:
+    adr_dir = tmp_path / "docs" / "decisions" / "adrs"
+    adr_dir.mkdir(parents=True, exist_ok=True)
+    return adr_dir
+
+
+def _make_adr(
+    adr_dir: Path,
+    number: str,
+    *,
+    status: str = "accepted",
+    body: str = "\n## Context\n\nThe decision body.\n",
+    amendment_rows: list[tuple[str, str, str]] | None = None,
+) -> str:
+    text = _adr_text(number, status=status, body=body)
+    if amendment_rows:
+        rows = "".join(f"| {date} | {ref} | {summary} |\n" for date, ref, summary in amendment_rows)
+        text += "\n" + AMENDMENTS_TABLE_HEADER + rows
+    write_text(adr_dir / f"adr-{number}-example.md", text)
+    return text
+
+
+def _write_manifest(adr_dir: Path, entries: list[dict], *, algorithm: str = "sha256") -> None:
+    write_text(
+        adr_dir / "adr-index.yaml",
+        yaml.safe_dump({"hash_algorithm": algorithm, "adrs": entries}, sort_keys=False),
+    )
+
+
+def _entry(number: str, text: str, *, pin_text: str | None = None, amendments: list[dict] | None = None) -> dict:
+    # ``pin_text`` lets a caller pin over content that is NOT byte-identical to the
+    # on-disk ADR (``text``). Recorded-amendment tests rely on this to pin over the
+    # *unamended* body so the gate only stays green if ``canonical_content`` truly
+    # strips the ``## Amendments`` section — pinning over the amended text would be
+    # tautological (both sides hashed from the same amended bytes).
+    entry = {
+        "id": f"ADR-{number}",
+        "path": f"docs/decisions/adrs/adr-{number}-example.md",
+        "pin": content_hash(pin_text if pin_text is not None else text),
+    }
+    if amendments is not None:
+        entry["amendments"] = amendments
+    return entry
+
+
+def _adr_text(number: str, *, status: str = "accepted", body: str = "\n## Context\n\nThe decision body.\n") -> str:
+    """The unamended ADR text ``_make_adr`` writes for ``(number, status, body)``,
+    without touching disk. Used to compute a pin over body-only content so the
+    amendment-stripping invariant is falsifiable."""
+    return f"# ADR-{number}: Example {number}\n\n## Status\n\n{status}\n\n## Date\n\n2026-04-05\n{body}"
+
+
+def _rule_ids(failures: list[PolicyFailure]) -> list[str]:
+    return [failure.rule_id for failure in failures]
+
+
+def _init_git_repo(repo_root: Path) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=repo_root, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=repo_root, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=repo_root, check=True, capture_output=True)
+
+
+def _git_commit_all(repo_root: Path, message: str) -> None:
+    subprocess.run(["git", "add", "-A"], cwd=repo_root, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-q", "-m", message], cwd=repo_root, check=True, capture_output=True, text=True)
+
+
+def _git_add_all(repo_root: Path) -> None:
+    subprocess.run(["git", "add", "-A"], cwd=repo_root, check=True, capture_output=True, text=True)
+
+
+def test_adr_pin_gate_passes_on_pinned_accepted_corpus(tmp_path: Path) -> None:
+    adr_dir = _adr_dir(tmp_path)
+    accepted_one = _make_adr(adr_dir, "001")
+    accepted_two = _make_adr(adr_dir, "002")
+    _make_adr(adr_dir, "003", status="proposed")  # proposed ADRs are not pinned
+    _write_manifest(adr_dir, [_entry("001", accepted_one), _entry("002", accepted_two)])
+
+    assert evaluate_adr_immutability(tmp_path) == []
+
+
+def test_adr_pin_gate_flags_unrecorded_edit(tmp_path: Path) -> None:
+    adr_dir = _adr_dir(tmp_path)
+    original = _make_adr(adr_dir, "001")
+    _write_manifest(adr_dir, [_entry("001", original)])
+    # Edit the ADR body without updating the pin.
+    _make_adr(adr_dir, "001", body="\n## Context\n\nA substantively different body.\n")
+
+    failures = evaluate_adr_immutability(tmp_path)
+    assert "adr-pin-stale" in _rule_ids(failures)
+
+
+def test_adr_pin_gate_accepts_recorded_amendment(tmp_path: Path) -> None:
+    adr_dir = _adr_dir(tmp_path)
+    text = _make_adr(adr_dir, "001", amendment_rows=[("2026-06-07", "abc1234", "added a field")])
+    # Pin over the *unamended* body. If canonical_content stops stripping the
+    # ## Amendments section, the on-disk (amended) hash diverges from this pin and
+    # the gate fires adr-pin-stale — so this assertion genuinely verifies the
+    # "amendment records never change the pin" invariant rather than tautologically
+    # hashing the same amended bytes on both sides.
+    _write_manifest(
+        adr_dir,
+        [
+            _entry(
+                "001",
+                text,
+                pin_text=_adr_text("001"),
+                amendments=[{"date": "2026-06-07", "ref": "abc1234", "summary": "added a field"}],
+            )
+        ],
+    )
+
+    # The pin is over canonical content (amendments excluded), so the recorded
+    # amendment does not perturb it, and the manifest refs match the table 1:1.
+    assert evaluate_adr_immutability(tmp_path) == []
+
+
+def test_adr_pin_gate_flags_missing_pin(tmp_path: Path) -> None:
+    adr_dir = _adr_dir(tmp_path)
+    pinned = _make_adr(adr_dir, "001")
+    _make_adr(adr_dir, "002")  # accepted but absent from the manifest
+    _write_manifest(adr_dir, [_entry("001", pinned)])
+
+    failures = evaluate_adr_immutability(tmp_path)
+    assert "adr-pin-missing" in _rule_ids(failures)
+
+
+def test_adr_pin_gate_flags_orphan_entry(tmp_path: Path) -> None:
+    adr_dir = _adr_dir(tmp_path)
+    proposed = _make_adr(adr_dir, "001", status="proposed")
+    _write_manifest(adr_dir, [_entry("001", proposed)])  # pins a non-accepted ADR
+
+    failures = evaluate_adr_immutability(tmp_path)
+    assert "adr-pin-orphan" in _rule_ids(failures)
+
+
+def test_adr_pin_gate_flags_amendment_record_mismatch(tmp_path: Path) -> None:
+    adr_dir = _adr_dir(tmp_path)
+    text = _make_adr(adr_dir, "001", amendment_rows=[("2026-06-07", "abc1234", "added a field")])
+    _write_manifest(adr_dir, [_entry("001", text, amendments=[])])  # table row not mirrored in manifest
+
+    failures = evaluate_adr_immutability(tmp_path)
+    assert "adr-amendment-record-mismatch" in _rule_ids(failures)
+
+
+def test_adr_pin_gate_rejects_unsupported_algorithm(tmp_path: Path) -> None:
+    adr_dir = _adr_dir(tmp_path)
+    text = _make_adr(adr_dir, "001")
+    _write_manifest(adr_dir, [_entry("001", text)], algorithm="md5")
+
+    failures = evaluate_adr_immutability(tmp_path)
+    assert _rule_ids(failures) == ["adr-manifest-malformed"]
+
+
+def test_adr_pin_gate_rejects_duplicate_id(tmp_path: Path) -> None:
+    adr_dir = _adr_dir(tmp_path)
+    text = _make_adr(adr_dir, "001")
+    _write_manifest(adr_dir, [_entry("001", text), _entry("001", text)])
+
+    failures = evaluate_adr_immutability(tmp_path)
+    assert "adr-manifest-malformed" in _rule_ids(failures)
+
+
+def test_adr_pin_gate_rejects_unsafe_path(tmp_path: Path) -> None:
+    adr_dir = _adr_dir(tmp_path)
+    _write_manifest(
+        adr_dir,
+        [{"id": "ADR-001", "path": "../outside-the-repo.md", "pin": "0" * 64}],
+    )
+
+    failures = evaluate_adr_immutability(tmp_path)
+    assert "adr-manifest-path-unsafe" in _rule_ids(failures)
+
+
+def test_adr_pin_gate_missing_manifest_fails_cleanly(tmp_path: Path) -> None:
+    _adr_dir(tmp_path)
+    failures = evaluate_adr_immutability(tmp_path)
+    assert _rule_ids(failures) == ["adr-manifest-malformed"]
+
+
+def test_adr_pin_gate_base_rev_flags_pin_bump_without_amendment(tmp_path: Path) -> None:
+    adr_dir = _adr_dir(tmp_path)
+    original = _make_adr(adr_dir, "001")
+    _write_manifest(adr_dir, [_entry("001", original)])
+    _init_git_repo(tmp_path)
+    _git_commit_all(tmp_path, "base")
+
+    # Edit the body AND bump the pin, but record no amendment.
+    edited = _make_adr(adr_dir, "001", body="\n## Context\n\nA materially changed body.\n")
+    _write_manifest(adr_dir, [_entry("001", edited)])
+
+    failures = evaluate_adr_immutability(tmp_path, base_rev="HEAD")
+    assert _rule_ids(failures) == ["adr-amendment-unrecorded"]
+
+
+def test_adr_pin_gate_base_rev_accepts_recorded_amendment(tmp_path: Path) -> None:
+    adr_dir = _adr_dir(tmp_path)
+    original = _make_adr(adr_dir, "001")
+    _write_manifest(adr_dir, [_entry("001", original)])
+    _init_git_repo(tmp_path)
+    _git_commit_all(tmp_path, "base")
+
+    changed_body = "\n## Context\n\nA materially changed body.\n"
+    edited = _make_adr(
+        adr_dir,
+        "001",
+        body=changed_body,
+        amendment_rows=[("2026-06-08", "def5678", "changed the body")],
+    )
+    # Pin over the unamended edited body so the recorded amendment is what makes
+    # the change legitimate; a canonical_content regression that stops stripping
+    # amendments would diverge this pin from the on-disk hash and fail the test.
+    _write_manifest(
+        adr_dir,
+        [
+            _entry(
+                "001",
+                edited,
+                pin_text=_adr_text("001", body=changed_body),
+                amendments=[{"date": "2026-06-08", "ref": "def5678", "summary": "changed the body"}],
+            )
+        ],
+    )
+
+    assert evaluate_adr_immutability(tmp_path, base_rev="HEAD") == []
+
+
+def test_adr_pin_gate_base_rev_allows_supersession(tmp_path: Path) -> None:
+    adr_dir = _adr_dir(tmp_path)
+    original = _make_adr(adr_dir, "001")
+    _write_manifest(adr_dir, [_entry("001", original)])
+    _init_git_repo(tmp_path)
+    _git_commit_all(tmp_path, "base")
+
+    # Supersede ADR-001: status changes (so it leaves the accepted/pinned set)
+    # and a new superseding ADR-002 is added; drop ADR-001 from the manifest.
+    _make_adr(adr_dir, "001", status="superseded by ADR-002")
+    superseding = _make_adr(adr_dir, "002")
+    _write_manifest(adr_dir, [_entry("002", superseding)])
+
+    assert evaluate_adr_immutability(tmp_path, base_rev="HEAD") == []
+
+
+def test_adr_pin_gate_staged_flags_pin_bump_without_amendment(tmp_path: Path) -> None:
+    # The pre-commit invocation: ``staged=True`` compares the git *index*
+    # (``git show :<path>``) against HEAD, a distinct code path from ``base_rev``
+    # (which reads the working tree from disk). A staged pin bump without an
+    # amendment must be flagged just like the base_rev case.
+    adr_dir = _adr_dir(tmp_path)
+    original = _make_adr(adr_dir, "001")
+    _write_manifest(adr_dir, [_entry("001", original)])
+    _init_git_repo(tmp_path)
+    _git_commit_all(tmp_path, "base")
+
+    edited = _make_adr(adr_dir, "001", body="\n## Context\n\nA materially changed body.\n")
+    _write_manifest(adr_dir, [_entry("001", edited)])
+    _git_add_all(tmp_path)
+
+    failures = evaluate_adr_immutability(tmp_path, staged=True)
+    assert _rule_ids(failures) == ["adr-amendment-unrecorded"]
+
+
+def test_adr_pin_gate_staged_accepts_recorded_amendment(tmp_path: Path) -> None:
+    # A staged edit that records its amendment (and bumps the pin) passes — proving
+    # the staged branch does not over-fire on legitimately recorded changes.
+    adr_dir = _adr_dir(tmp_path)
+    original = _make_adr(adr_dir, "001")
+    _write_manifest(adr_dir, [_entry("001", original)])
+    _init_git_repo(tmp_path)
+    _git_commit_all(tmp_path, "base")
+
+    changed_body = "\n## Context\n\nA materially changed body.\n"
+    edited = _make_adr(
+        adr_dir,
+        "001",
+        body=changed_body,
+        amendment_rows=[("2026-06-08", "def5678", "changed the body")],
+    )
+    # Pin over the unamended edited body (see recorded-amendment tests above): the
+    # green result must depend on canonical_content actually stripping amendments.
+    _write_manifest(
+        adr_dir,
+        [
+            _entry(
+                "001",
+                edited,
+                pin_text=_adr_text("001", body=changed_body),
+                amendments=[{"date": "2026-06-08", "ref": "def5678", "summary": "changed the body"}],
+            )
+        ],
+    )
+    _git_add_all(tmp_path)
+
+    assert evaluate_adr_immutability(tmp_path, staged=True) == []
+
+
+def test_adr_pin_gate_staged_sources_head_text_from_index_not_disk(tmp_path: Path) -> None:
+    # Pins down that ``head_text`` in the staged branch comes from the git *index*
+    # (``git show :<path>``), not the working tree. We stage an unrecorded ADR edit
+    # (with a bumped pin) and then restore the working-tree file to the committed
+    # original. Now the index holds the edit while disk == HEAD, so:
+    #   * the pin-hash check (which reads disk) sees the original and stays green;
+    #   * the corpus checks all pass against the staged pin too, so evaluation
+    #     reaches the staged unrecorded-edit detector;
+    #   * only an index-sourced ``head_text`` can observe the edit and flag it.
+    # If the detector read disk instead, head_text would equal base_text and the
+    # edit would silently pass — exactly the false exit-0 this test forbids.
+    adr_dir = _adr_dir(tmp_path)
+    original = _make_adr(adr_dir, "001")
+    _write_manifest(adr_dir, [_entry("001", original)])
+    _init_git_repo(tmp_path)
+    _git_commit_all(tmp_path, "base")
+
+    # Stage the edited ADR. The bumped pin must match the *index* (edited) content
+    # so the disk-based pin-hash check will be green once we restore disk below.
+    edited = _make_adr(adr_dir, "001", body="\n## Context\n\nA materially changed body.\n")
+    _git_add_all(tmp_path)  # index now holds the edited ADR
+
+    # Restore the working tree to the committed original while keeping the index
+    # edit. Pin stays over the original content so the disk-read pin-hash is green.
+    write_text(adr_dir / "adr-001-example.md", original)
+    _write_manifest(adr_dir, [_entry("001", original)])
+
+    failures = evaluate_adr_immutability(tmp_path, staged=True)
+    assert _rule_ids(failures) == ["adr-amendment-unrecorded"]
+
+
+def test_amendment_refs_parses_table_rows() -> None:
+    text = (
+        "# ADR-001: Example\n\n## Status\n\naccepted\n\n## Date\n\n2026-04-05\n\n"
+        + AMENDMENTS_TABLE_HEADER
+        + "| 2026-06-07 | abc1234 | first |\n| 2026-06-08 | def5678 | second |\n"
+    )
+    assert amendment_refs(text) == ["abc1234", "def5678"]
+
+
+def test_amendment_parsing_ignores_fenced_examples(tmp_path: Path) -> None:
+    # An ADR that documents the amendment format (like ADR-059) embeds a
+    # ``## Amendments`` example inside a fenced code block. That example must
+    # not be read as a real section, or the ADR's pin would truncate and a
+    # bogus amendment would be parsed from the example row.
+    adr_dir = _adr_dir(tmp_path)
+    text = (
+        "# ADR-001: Policy\n\n## Status\n\naccepted\n\n## Date\n\n2026-04-05\n\n"
+        "## Decision\n\nRecord amendments like:\n\n"
+        "```markdown\n## Amendments\n\n| Date | Commit/PR | Summary |\n"
+        "|------|-----------|---------|\n| 2026-06-07 | deadbee | example |\n```\n\n"
+        "## Consequences\n\nDone.\n"
+    )
+    write_text(adr_dir / "adr-001-example.md", text)
+    assert amendment_refs(text) == []
+    _write_manifest(adr_dir, [_entry("001", text)])  # _entry hashes full text; no amendments
+
+    assert evaluate_adr_immutability(tmp_path) == []
+
+
+def test_canonical_content_detects_boundary_blank_line_edits() -> None:
+    # ADR-059 declares only per-line trailing whitespace and the file-final
+    # newline as normalized. A leading or interior blank line is significant, so
+    # adding one must change the canonical hash; toggling the final newline must
+    # not. This keeps the pin from silently absorbing boundary blank-line edits.
+    base = "# ADR-001: Example\n\n## Context\n\nThe body.\n"
+    leading_blank = "\n" + base
+    interior_blank = "# ADR-001: Example\n\n\n## Context\n\nThe body.\n"
+    no_final_newline = base.rstrip("\n")
+    trailing_blank = base + "\n"
+
+    assert canonical_content(base) != canonical_content(leading_blank)
+    assert canonical_content(base) != canonical_content(interior_blank)
+    assert canonical_content(base) == canonical_content(no_final_newline)
+    assert canonical_content(base) == canonical_content(trailing_blank)
+
+
+def test_adr_pin_gate_base_rev_flags_boundary_blank_line_edit(tmp_path: Path) -> None:
+    adr_dir = _adr_dir(tmp_path)
+    original = _make_adr(adr_dir, "001")
+    _write_manifest(adr_dir, [_entry("001", original)])
+    _init_git_repo(tmp_path)
+    _git_commit_all(tmp_path, "base")
+
+    # Prepend a blank line (a boundary-only edit) and bump the pin, no amendment.
+    edited = "\n" + original
+    write_text(adr_dir / "adr-001-example.md", edited)
+    _write_manifest(adr_dir, [_entry("001", edited)])
+
+    failures = evaluate_adr_immutability(tmp_path, base_rev="HEAD")
+    assert _rule_ids(failures) == ["adr-amendment-unrecorded"]
+
+
+def test_real_repo_adr_index_is_green() -> None:
+    """The committed adr-index.yaml must pin every accepted ADR honestly so the
+    gate starts (and stays) green on the real corpus."""
+    failures = evaluate_adr_immutability(REPO_ROOT)
+    assert failures == [], "\n".join(failure.render() for failure in failures)

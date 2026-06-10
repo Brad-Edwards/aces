@@ -177,3 +177,10 @@ replication, or persistence behavior.
 - [Scenario/Delivery Boundary for Runtime Node State](adr-033-scenario-delivery-boundary-for-runtime-node-state.md)
 - [Lineage and Prior Work](../../explain/sdl/lineage.md) and
   [Design Precedents](../../explain/sdl/precedents.md)
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-07 | e782722 | Added structured datastore mapping manifests. |
+| 2026-06-07 | adf63e5 | Added datastore cardinality fields. |

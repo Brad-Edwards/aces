@@ -158,3 +158,9 @@ resolves across both node-hosted and scenario-level forwarding-agent registries.
 - [Scenario/Delivery Boundary for Runtime Node State](adr-033-scenario-delivery-boundary-for-runtime-node-state.md)
 - [Lineage and Prior Work](../../explain/sdl/lineage.md) and
   [Design Precedents](../../explain/sdl/precedents.md)
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-05-31 | e815f27 | Added scenario-level forwarding agents (top-level `Scenario.forwarding_agents`) with cross-registry ref resolution and uniqueness. |

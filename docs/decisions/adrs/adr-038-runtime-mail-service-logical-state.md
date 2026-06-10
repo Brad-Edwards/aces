@@ -169,3 +169,9 @@ Rejected alternatives:
 - [SDL Semantic Validation](../../explain/sdl/validation.md),
   [Runtime Architecture](../../explain/sdl/runtime-architecture.md), and
   [SDL Limitations](../../explain/sdl/limitations.md).
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-06 | 6958fed | Added Security and Validation Gates and Guardrails sections: shared enum-or-var parser, secret-classification boundaries, and service-local reference resolution. |
