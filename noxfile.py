@@ -484,6 +484,12 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
         ),
     )
     repo_args, requirement_args, skip_requirement = _split_policy_session_args(list(args))
+    arg_list = list(args)
+    adr_pin_args: list[str] = []
+    if "--base-rev" in arg_list:
+        base_index = arg_list.index("--base-rev")
+        if base_index + 1 < len(arg_list):
+            adr_pin_args = ["--base-rev", arg_list[base_index + 1]]
     reporter.run(
         "policy / repo policy",
         lambda: _run_project_python(session, "tools/check_repo_policy.py", *repo_args),
@@ -519,6 +525,10 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
             "policy / example library catalog",
             "skipped on staged check; runs on push and verify",
         )
+        reporter.skip(
+            "policy / ADR acceptance-content pin",
+            "skipped on staged check; runs on push and verify",
+        )
     else:
         reporter.run(
             "policy / semantic coverage ADR",
@@ -539,6 +549,10 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
         reporter.run(
             "policy / example library catalog",
             lambda: _run_project_python(session, "tools/check_example_library.py"),
+        )
+        reporter.run(
+            "policy / ADR acceptance-content pin",
+            lambda: _run_project_python(session, "tools/check_adr_immutability.py", *adr_pin_args),
         )
 
 

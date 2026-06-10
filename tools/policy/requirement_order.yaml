@@ -74,6 +74,9 @@ phases:
       - EXP-703
       - EXP-704
       - EXP-705
+  - id: decision-record-governance
+    requirements:
+      - GOV-941
 
 ownership:
   gov-concept-authority:
@@ -176,6 +179,8 @@ ownership:
     - docs/explain/sdl
     - docs/index.md
     - CHANGELOG.md
+  decision-record-governance:
+    - docs/decisions/adrs
   experiment-core:
     - contracts/README.md
     - contracts/schema-publication-manifest.json

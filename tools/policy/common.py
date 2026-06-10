@@ -35,6 +35,23 @@ def repo_path(value: str | Path) -> str:
     return Path(value).as_posix().strip("/")
 
 
+def safe_repo_path(repo_root: Path, rel_path: str) -> Path | None:
+    """Resolve ``rel_path`` against ``repo_root`` and return the resolved
+    path only if it stays inside the repository. Returns None for absolute
+    paths, parent-traversal segments, or symlinks that resolve outside the
+    repo. This guards every place a policy reads a path that ultimately comes
+    from PR-controlled config or the changed-file list."""
+    candidate = Path(rel_path)
+    if candidate.is_absolute() or any(part == ".." for part in candidate.parts):
+        return None
+    try:
+        resolved = (repo_root / candidate).resolve()
+        resolved.relative_to(repo_root.resolve())
+    except (ValueError, OSError):
+        return None
+    return resolved
+
+
 def run_git(args: list[str], repo_root: Path = REPO_ROOT) -> str:
     proc = subprocess.run(
         ["git", *args],

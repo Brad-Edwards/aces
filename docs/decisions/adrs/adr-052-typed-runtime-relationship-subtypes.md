@@ -151,3 +151,10 @@ silently contradict:
   NIST SP 800-44; Kubernetes Ingress / Gateway API.
 - [Lineage and Prior Work](../../explain/sdl/lineage.md) and
   [Design Precedents](../../explain/sdl/precedents.md)
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-05-31 | d727d84 | Tightened SCN-010 SDL validation closure: `authorization_ref` and `upstream_service_ref` resolution rules. |
+| 2026-05-31 | e815f27 | Extended typed relationship handling for scenario-level forwarding agents. |

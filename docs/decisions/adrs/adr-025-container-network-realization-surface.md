@@ -202,3 +202,9 @@ creating a second network schema elsewhere.
 - A free-form backend payload would bypass closed-world schema validation and
   make redaction, stability classification, and cross-backend comparison
   brittle.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-05-25 | 4b959c3 | Corrected the control-plane API cross-reference from `aces_processor.control_plane_api` to `aces_runtime.control_plane_api`. |

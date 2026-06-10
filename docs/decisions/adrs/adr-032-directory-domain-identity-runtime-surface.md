@@ -251,3 +251,9 @@ directory exports.
   invite later incompatible surfaces.
 - Recording raw directory secrets would leak sensitive material into fixtures,
   generated artifacts, diagnostics, or logs.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-05-25 | 5e42bd8 | Added primary-standards and access-control literature grounding (LDAP/Kerberos/SCIM/SAML/OAuth/OIDC RFCs, NIST SP 800-63C/162/207, RBAC/ABAC) for identity authorities and authority boundaries. |

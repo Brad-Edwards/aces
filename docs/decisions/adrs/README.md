@@ -16,8 +16,19 @@ Each ADR includes:
 
 ## Principles
 
-- ADRs are **immutable** once accepted. To reverse a decision, create a new ADR
-  that supersedes it.
+- An **accepted** ADR's content is **pinned** and citable. Its acceptance (or
+  last-amendment) content hash is recorded in
+  [`adr-index.yaml`](adr-index.yaml) and enforced by the `policy` nox session
+  (`tools/check_adr_immutability.py`). A substantive change to an accepted ADR
+  is legitimate only as a new **superseding** ADR, or as a recorded **amendment**
+  (a `## Amendments` row plus an updated pin, in the same change). Editorial-only
+  fixes (typos, formatting) also record a one-line amendment row — the gate
+  cannot tell editorial from substantive, so every canonical-content change is
+  recorded. See
+  [ADR-059](adr-059-adr-amendment-policy-and-pin-gate.md) for the full policy.
+- `proposed` ADRs are still being decided and may change freely;
+  `superseded`/`deprecated` ADRs leave the pinned set (the citable decision has
+  moved to the replacing ADR).
 - ADRs are **numbered sequentially** and never reused.
 - ADRs are **versioned with code** and live in the repo.
 
@@ -44,6 +55,7 @@ adr-055-experiment-core-contract-boundary
 adr-056-runtime-observed-values-and-credential-posture
 adr-057-runtime-secret-name-classifier-boundaries
 adr-058-datastore-node-engine-provenance-and-endpoints
+adr-059-adr-amendment-policy-and-pin-gate
 ```
 
 | ADR | Title | Status | Date |
@@ -107,3 +119,4 @@ adr-058-datastore-node-engine-provenance-and-endpoints
 | [056](adr-056-runtime-observed-values-and-credential-posture.md) | Runtime Observed Values and Credential Posture | accepted | 2026-06-05 |
 | [057](adr-057-runtime-secret-name-classifier-boundaries.md) | Runtime Scenario Value Realizability and Explicit Redaction | accepted | 2026-06-06 |
 | [058](adr-058-datastore-node-engine-provenance-and-endpoints.md) | Datastore Node Engine Provenance and Endpoints | accepted | 2026-06-07 |
+| [059](adr-059-adr-amendment-policy-and-pin-gate.md) | ADR Amendment Policy and Acceptance-Content Pin Gate | accepted | 2026-06-10 |

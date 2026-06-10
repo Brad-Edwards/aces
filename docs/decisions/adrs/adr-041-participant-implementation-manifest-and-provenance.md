@@ -162,3 +162,9 @@ results.
 - [Contract publication manifest](../../../contracts/schema-publication-manifest.json)
   and
   [Controlled vocabularies](../../../contracts/concept-authority/controlled-vocabularies-v1.json).
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-06 | 6958fed | Added Security and Validation Gates and Guardrails sections: controlled-vocabulary resolution and references/digests as the portable manifest/provenance surface. |
