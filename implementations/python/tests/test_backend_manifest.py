@@ -21,7 +21,11 @@ from aces_backend_protocols.manifest import backend_manifest_payload
 from aces_backend_stubs.stubs import create_stub_manifest
 from aces_contracts.contracts import BackendManifestV2Model
 from aces_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
-from aces_contracts.vocabulary import WorkflowFeature, WorkflowStatePredicateFeature
+from aces_contracts.vocabulary import (
+    ParticipantFeatureSupportLevel,
+    WorkflowFeature,
+    WorkflowStatePredicateFeature,
+)
 from pydantic import ValidationError
 
 FIXTURES_ROOT = Path(__file__).resolve().parents[3] / "contracts" / "fixtures"
@@ -226,6 +230,163 @@ def test_participant_runtime_capability_claims_require_published_contract_eviden
     gaps = participant_runtime_capability_contract_gaps(weak_manifest)
     assert any("supported_behavior_features.action_contracts" in gap for gap in gaps)
     assert any("supported_interaction_features.coordination" in gap for gap in gaps)
+
+
+def _stub_payload_with_feature_support(entries: list[dict]) -> dict:
+    payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
+    payload["capabilities"]["participant_runtime"]["feature_support"] = entries
+    return payload
+
+
+def test_backend_manifest_v2_accepts_feature_support_declarations():
+    """API-407: per-feature support declarations carry governed terms and levels."""
+
+    payload = json.loads((V2_VALID_DIR / "feature-support-bounded.json").read_text(encoding="utf-8"))
+    model = BackendManifestV2Model.model_validate(payload)
+
+    assert model.capabilities.participant_runtime is not None
+    feature_support = model.capabilities.participant_runtime.feature_support
+    assert [entry.feature for entry in feature_support] == [
+        "behavior_history",
+        "coordination",
+        "x-acme:custom-feature",
+    ]
+    assert feature_support[0].support_level == ParticipantFeatureSupportLevel.BOUNDED
+    assert feature_support[0].disclosure_refs == ["disclosures.behavior-history.bounded.v1"]
+    assert feature_support[2].support_level == ParticipantFeatureSupportLevel.DISCLOSED_WEAK
+
+
+def test_backend_manifest_v2_feature_support_defaults_to_empty():
+    payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
+    model = BackendManifestV2Model.model_validate(payload)
+
+    assert model.capabilities.participant_runtime is not None
+    assert model.capabilities.participant_runtime.feature_support == []
+
+
+def test_backend_manifest_v2_accepts_exact_feature_support_without_disclosure():
+    payload = _stub_payload_with_feature_support(
+        [{"feature": "coordination", "support_level": "exact", "constraint_refs": [], "disclosure_refs": []}]
+    )
+    model = BackendManifestV2Model.model_validate(payload)
+
+    assert model.capabilities.participant_runtime is not None
+    assert model.capabilities.participant_runtime.feature_support[0].support_level == (
+        ParticipantFeatureSupportLevel.EXACT
+    )
+
+
+def test_backend_manifest_v2_accepts_unsupported_feature_support_for_undeclared_feature():
+    payload = _stub_payload_with_feature_support(
+        [
+            {
+                "feature": "x-acme:custom-feature",
+                "support_level": "unsupported",
+                "constraint_refs": [],
+                "disclosure_refs": ["disclosures.acme.custom-feature.unsupported.v1"],
+            }
+        ]
+    )
+    model = BackendManifestV2Model.model_validate(payload)
+
+    assert model.capabilities.participant_runtime is not None
+    assert model.capabilities.participant_runtime.feature_support[0].support_level == (
+        ParticipantFeatureSupportLevel.UNSUPPORTED
+    )
+
+
+def test_backend_manifest_v2_rejects_unguarded_feature_support_terms():
+    payload = _stub_payload_with_feature_support(
+        [{"feature": "custom-feature", "support_level": "exact", "constraint_refs": [], "disclosure_refs": []}]
+    )
+
+    with pytest.raises(ValidationError, match="not a governed term"):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_backend_manifest_v2_rejects_unknown_feature_support_levels():
+    payload = _stub_payload_with_feature_support(
+        [{"feature": "coordination", "support_level": "partial", "constraint_refs": [], "disclosure_refs": []}]
+    )
+
+    with pytest.raises(ValidationError, match="support_level"):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_backend_manifest_v2_rejects_duplicate_feature_support_features():
+    payload = _stub_payload_with_feature_support(
+        [
+            {
+                "feature": "coordination",
+                "support_level": "bounded",
+                "constraint_refs": [],
+                "disclosure_refs": ["disclosures.coordination.bounded.v1"],
+            },
+            {"feature": "coordination", "support_level": "exact", "constraint_refs": [], "disclosure_refs": []},
+        ]
+    )
+
+    with pytest.raises(ValidationError, match="duplicate"):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_backend_manifest_v2_rejects_unsupported_feature_support_for_declared_feature():
+    payload = _stub_payload_with_feature_support(
+        [
+            {
+                "feature": "behavior_history",
+                "support_level": "unsupported",
+                "constraint_refs": [],
+                "disclosure_refs": ["disclosures.behavior-history.unsupported.v1"],
+            }
+        ]
+    )
+
+    with pytest.raises(ValidationError, match="declares support_level 'unsupported'"):
+        BackendManifestV2Model.model_validate(payload)
+
+
+@pytest.mark.parametrize("support_level", ["unsupported", "disclosed_weak", "bounded"])
+def test_backend_manifest_v2_rejects_below_exact_feature_support_without_disclosure(support_level: str):
+    payload = _stub_payload_with_feature_support(
+        [
+            {
+                "feature": "x-acme:custom-feature",
+                "support_level": support_level,
+                "constraint_refs": [],
+                "disclosure_refs": [],
+            }
+        ]
+    )
+
+    with pytest.raises(ValidationError, match="disclosure_refs"):
+        BackendManifestV2Model.model_validate(payload)
+
+
+def test_backend_manifest_v2_schema_publishes_feature_support_disclosure_rule():
+    from aces_contracts.contracts import schema_bundle
+
+    schema = schema_bundle()["backend-manifest-v2"]
+    feature_support_schema = schema["$defs"]["ParticipantFeatureSupportModel"]
+
+    assert feature_support_schema["additionalProperties"] is False
+    assert feature_support_schema["properties"]["support_level"]["$ref"] == "#/$defs/ParticipantFeatureSupportLevel"
+    assert schema["$defs"]["ParticipantFeatureSupportLevel"]["enum"] == [
+        "unsupported",
+        "disclosed_weak",
+        "bounded",
+        "exact",
+    ]
+    assert {
+        "if": {
+            "properties": {"support_level": {"enum": ["unsupported", "disclosed_weak", "bounded"]}},
+            "required": ["support_level"],
+        },
+        "then": {
+            "required": ["disclosure_refs"],
+            "properties": {"disclosure_refs": {"minItems": 1}},
+        },
+    } in feature_support_schema["allOf"]
 
 
 def test_backend_manifest_v2_requires_manifest_sections():

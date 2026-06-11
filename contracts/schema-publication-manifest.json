@@ -70,6 +70,10 @@
       "schema_path": "contracts/schemas/control-plane/participant-behavior-history-event-stream-v1.json"
     },
     {
+      "contract_id": "participant-context-view-v1",
+      "schema_path": "contracts/schemas/control-plane/participant-context-view-v1.json"
+    },
+    {
       "contract_id": "participant-episode-history-event-stream-v1",
       "schema_path": "contracts/schemas/control-plane/participant-episode-history-event-stream-v1.json"
     },
@@ -78,12 +82,36 @@
       "schema_path": "contracts/schemas/control-plane/participant-episode-state-envelope-v1.json"
     },
     {
+      "contract_id": "participant-history-view-v1",
+      "schema_path": "contracts/schemas/control-plane/participant-history-view-v1.json"
+    },
+    {
       "contract_id": "participant-implementation-manifest-v1",
       "schema_path": "contracts/schemas/participant-implementation-manifest/participant-implementation-manifest-v1.json"
     },
     {
       "contract_id": "participant-implementation-provenance-v1",
       "schema_path": "contracts/schemas/participant-implementation-provenance/participant-implementation-provenance-v1.json"
+    },
+    {
+      "contract_id": "participant-lifecycle-event-v1",
+      "schema_path": "contracts/schemas/participant-runtime/participant-lifecycle-event-v1.json"
+    },
+    {
+      "contract_id": "participant-observation-envelope-v1",
+      "schema_path": "contracts/schemas/participant-runtime/participant-observation-envelope-v1.json"
+    },
+    {
+      "contract_id": "participant-outcome-report-v1",
+      "schema_path": "contracts/schemas/participant-runtime/participant-outcome-report-v1.json"
+    },
+    {
+      "contract_id": "participant-shared-state-record-v1",
+      "schema_path": "contracts/schemas/participant-runtime/participant-shared-state-record-v1.json"
+    },
+    {
+      "contract_id": "participant-status-view-v1",
+      "schema_path": "contracts/schemas/control-plane/participant-status-view-v1.json"
     },
     {
       "contract_id": "processor-manifest-v2",

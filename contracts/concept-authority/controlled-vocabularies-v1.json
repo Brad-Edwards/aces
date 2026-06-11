@@ -608,6 +608,30 @@
           "description": "Backend supports declared shared-state interaction semantics."
         }
       }
+    },
+    "participant-runtime-feature-support-levels": {
+      "title": "Participant Runtime Feature Support Levels",
+      "description": "Closed ADR-054 guarantee-strength scale for per-feature participant runtime support declarations.",
+      "kind": "enumeration",
+      "extension_policy": "closed",
+      "terms": {
+        "bounded": {
+          "title": "Bounded",
+          "description": "Backend realizes the feature within explicitly disclosed bounds."
+        },
+        "disclosed_weak": {
+          "title": "Disclosed Weak",
+          "description": "Backend realizes the feature with disclosed weak guarantees."
+        },
+        "exact": {
+          "title": "Exact",
+          "description": "Backend realizes the feature with exact declared semantics."
+        },
+        "unsupported": {
+          "title": "Unsupported",
+          "description": "Backend declares no portable guarantee for the feature."
+        }
+      }
     }
   }
 }
