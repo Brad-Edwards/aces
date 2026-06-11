@@ -120,3 +120,4 @@ adr-059-adr-amendment-policy-and-pin-gate
 | [057](adr-057-runtime-secret-name-classifier-boundaries.md) | Runtime Scenario Value Realizability and Explicit Redaction | accepted | 2026-06-06 |
 | [058](adr-058-datastore-node-engine-provenance-and-endpoints.md) | Datastore Node Engine Provenance and Endpoints | accepted | 2026-06-07 |
 | [059](adr-059-adr-amendment-policy-and-pin-gate.md) | ADR Amendment Policy and Acceptance-Content Pin Gate | accepted | 2026-06-10 |
+| [060](adr-060-participant-backend-facing-contract-surface.md) | Participant Backend-Facing Contract Surface | proposed | 2026-06-11 |
