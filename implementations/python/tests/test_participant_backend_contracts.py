@@ -7,12 +7,19 @@ from pathlib import Path
 
 import pytest
 from aces_contracts.contracts import (
+    VIEW_SCOPE_PROJECTED_FIELDS,
+    ParticipantBehaviorHistoryEventModel,
     ParticipantContextViewModel,
+    ParticipantEpisodeHistoryEventModel,
+    ParticipantEpisodeStateModel,
+    ParticipantHistoryViewBehaviorEventModel,
+    ParticipantHistoryViewEpisodeEventModel,
     ParticipantHistoryViewModel,
     ParticipantLifecycleEventModel,
     ParticipantObservationEnvelopeModel,
     ParticipantOutcomeReportModel,
     ParticipantSharedStateRecordModel,
+    ParticipantStatusViewEpisodeStateModel,
     ParticipantStatusViewModel,
     schema_bundle,
 )
@@ -150,12 +157,12 @@ def test_participant_views_reuse_published_episode_shapes():
     status_schema = generated["participant-status-view-v1"]
     history_schema = generated["participant-history-view-v1"]
 
-    assert "ParticipantEpisodeStateModel" in status_schema["$defs"]
+    assert "ParticipantStatusViewEpisodeStateModel" in status_schema["$defs"]
     assert history_schema["properties"]["episode_history"]["items"]["$ref"] == (
-        "#/$defs/ParticipantEpisodeHistoryEventModel"
+        "#/$defs/ParticipantHistoryViewEpisodeEventModel"
     )
     assert history_schema["properties"]["behavior_history"]["items"]["$ref"] == (
-        "#/$defs/ParticipantBehaviorHistoryEventModel"
+        "#/$defs/ParticipantHistoryViewBehaviorEventModel"
     )
     context_schema = generated["participant-context-view-v1"]
     assert context_schema["properties"]["derived_from_refs"]["minItems"] == 1
@@ -201,7 +208,33 @@ def test_participant_history_view_requires_completeness_basis_unless_complete():
     assert model.completeness_basis is None
 
 
-def test_participant_status_view_rejects_episode_state_for_another_participant():
+def _projected_field_parity(source_cls, projected_cls):
+    source_fields = dict(source_cls.model_fields)
+    for field_name in VIEW_SCOPE_PROJECTED_FIELDS:
+        assert field_name in source_fields, f"{source_cls.__name__} no longer carries {field_name}"
+        source_fields.pop(field_name)
+    projected_fields = projected_cls.model_fields
+    assert set(projected_fields) == set(source_fields), (
+        f"{projected_cls.__name__} drifted from {source_cls.__name__}: "
+        f"missing={set(source_fields) - set(projected_fields)} "
+        f"extra={set(projected_fields) - set(source_fields)}"
+    )
+    for field_name, source_field in source_fields.items():
+        assert projected_fields[field_name].annotation == source_field.annotation, (
+            f"{projected_cls.__name__}.{field_name} type drifted from {source_cls.__name__}"
+        )
+        assert projected_fields[field_name].is_required() == source_field.is_required(), (
+            f"{projected_cls.__name__}.{field_name} requiredness drifted from {source_cls.__name__}"
+        )
+
+
+def test_view_projected_models_track_recorded_contract_shapes():
+    _projected_field_parity(ParticipantEpisodeStateModel, ParticipantStatusViewEpisodeStateModel)
+    _projected_field_parity(ParticipantEpisodeHistoryEventModel, ParticipantHistoryViewEpisodeEventModel)
+    _projected_field_parity(ParticipantBehaviorHistoryEventModel, ParticipantHistoryViewBehaviorEventModel)
+
+
+def test_participant_status_view_rejects_episode_state_restating_scope():
     payload = _valid_fixture("participant-status-view-v1")
     payload["episode_state"]["participant_address"] = "participants.red.llm"
 
@@ -209,23 +242,21 @@ def test_participant_status_view_rejects_episode_state_for_another_participant()
         ParticipantStatusViewModel.model_validate(payload)
 
 
-def test_participant_status_view_rejects_episode_state_for_another_episode():
+def test_participant_status_view_requires_episode_id_when_state_embedded():
     payload = _valid_fixture("participant-status-view-v1")
-    payload["episode_state"]["episode_id"] = "ep-blue-009"
+    payload["episode_id"] = None
 
     with pytest.raises(ValidationError, match="episode_id"):
         ParticipantStatusViewModel.model_validate(payload)
 
 
-def test_participant_history_view_rejects_events_for_another_participant():
+def test_participant_history_view_rejects_events_restating_scope():
     payload = _valid_fixture("participant-history-view-v1")
     payload["episode_history"][0]["participant_address"] = "participants.red.llm"
 
     with pytest.raises(ValidationError, match="participant_address"):
         ParticipantHistoryViewModel.model_validate(payload)
 
-
-def test_participant_history_view_rejects_events_for_another_episode():
     payload = _valid_fixture("participant-history-view-v1")
     payload["behavior_history"][0]["episode_id"] = "ep-blue-001"
 

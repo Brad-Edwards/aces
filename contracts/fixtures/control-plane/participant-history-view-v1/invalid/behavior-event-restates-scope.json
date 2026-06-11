@@ -25,7 +25,8 @@
       "actor_provenance": "participant_observed",
       "state_transition_kind": null,
       "post_state_digest": null,
-      "details": {}
+      "details": {},
+      "episode_id": "ep-blue-001"
     },
     {
       "event_type": "observation_emitted",

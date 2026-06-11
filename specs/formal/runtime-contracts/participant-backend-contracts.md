@@ -129,9 +129,20 @@ never a second source of truth. They live in the `control-plane` family:
 
 | Contract id | Projects | Notes |
 | --- | --- | --- |
-| `participant-status-view-v1` | Episode state and lifecycle facts for one participant (+ open operation refs) | embeds the existing episode-state shape |
+| `participant-status-view-v1` | Episode state and lifecycle facts for one participant (+ open operation refs) | embeds the scope-projected episode-state shape |
 | `participant-history-view-v1` | Episode and behavior history retrieval | carries `completeness` (`complete`/`truncated`/`filtered`) with a required basis when not complete |
 | `participant-context-view-v1` | Derived operational context views | reference-and-provenance only; see below |
+
+Views are one-participant projections, and the contract makes that structural:
+`participant_address` and `episode_id` are carried exactly once, at the view
+level, and the embedded episode-state and history-event records are
+scope-projected variants of the recorded contracts with those fields removed.
+A nested record scoped to another participant or episode is therefore
+unrepresentable in a valid view payload — closed-world validation rejects any
+embedded record that restates scope — rather than merely forbidden by prose.
+The projected record shapes must track their recorded source contracts
+field-for-field apart from the removed scope fields; divergence is a defect
+(PRT-19).
 
 Rules:
 

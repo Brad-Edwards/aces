@@ -1,22 +1,15 @@
 {
   "$defs": {
-    "ParticipantEpisodeStateModel": {
+    "ParticipantStatusViewEpisodeStateModel": {
       "additionalProperties": false,
+      "description": "Scope-projected episode state embedded in API-408 status views.\n\nThe view carries `participant_address` and `episode_id` once at the top\nlevel; the embedded record cannot restate them, so a nested record scoped\nto another participant or episode is structurally unrepresentable.",
       "properties": {
-        "episode_id": {
-          "title": "Episode Id",
-          "type": "string"
-        },
         "initialized_at": {
           "title": "Initialized At",
           "type": "string"
         },
         "last_control_action": {
           "title": "Last Control Action",
-          "type": "string"
-        },
-        "participant_address": {
-          "title": "Participant Address",
           "type": "string"
         },
         "previous_episode_id": {
@@ -75,15 +68,13 @@
         }
       },
       "required": [
-        "participant_address",
-        "episode_id",
         "sequence_number",
         "status",
         "initialized_at",
         "updated_at",
         "last_control_action"
       ],
-      "title": "ParticipantEpisodeStateModel",
+      "title": "ParticipantStatusViewEpisodeStateModel",
       "type": "object"
     }
   },
@@ -108,7 +99,7 @@
     "episode_state": {
       "anyOf": [
         {
-          "$ref": "#/$defs/ParticipantEpisodeStateModel"
+          "$ref": "#/$defs/ParticipantStatusViewEpisodeStateModel"
         },
         {
           "type": "null"

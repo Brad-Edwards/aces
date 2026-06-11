@@ -11,7 +11,8 @@
       "sequence_number": 1,
       "terminal_reason": null,
       "control_action": "initialize",
-      "details": {}
+      "details": {},
+      "participant_address": "participants.red.llm"
     }
   ],
   "behavior_history": [

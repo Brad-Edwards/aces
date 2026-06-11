@@ -13,7 +13,8 @@
     "updated_at": "2026-05-26T10:20:10Z",
     "terminated_at": null,
     "last_control_action": "initialize",
-    "previous_episode_id": "ep-blue-001"
+    "previous_episode_id": "ep-blue-001",
+    "participant_address": "participants.red.llm"
   },
   "open_operation_refs": [
     "op-blue-12"

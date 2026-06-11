@@ -522,8 +522,53 @@
       "title": "ParticipantAttributionSupportClass",
       "type": "string"
     },
-    "ParticipantBehaviorHistoryEventModel": {
+    "ParticipantBehaviorHistoryEventType": {
+      "description": "Portable history event kinds for participant behavior semantics.",
+      "enum": [
+        "action_attempted",
+        "state_transition_recorded",
+        "observation_emitted"
+      ],
+      "title": "ParticipantBehaviorHistoryEventType",
+      "type": "string"
+    },
+    "ParticipantEffectClass": {
+      "description": "SEM-211 effect classes for participant action results.",
+      "enum": [
+        "intended_effect",
+        "side_effect",
+        "observation_effect",
+        "visibility_effect",
+        "detection_effect",
+        "evidence_effect",
+        "no_effect",
+        "unknown_effect"
+      ],
+      "title": "ParticipantEffectClass",
+      "type": "string"
+    },
+    "ParticipantFailureClass": {
+      "description": "SEM-211 portable failure classes for participant action attempts.",
+      "enum": [
+        "precondition_unsatisfied",
+        "unsupported_action",
+        "target_unavailable",
+        "authority_denied",
+        "resource_exhausted",
+        "timeout",
+        "interrupted",
+        "contention_lost",
+        "partial_success",
+        "unsafe_withheld",
+        "backend_error",
+        "unknown"
+      ],
+      "title": "ParticipantFailureClass",
+      "type": "string"
+    },
+    "ParticipantHistoryViewBehaviorEventModel": {
       "additionalProperties": false,
+      "description": "Scope-projected behavior history event embedded in API-408 history views.",
       "properties": {
         "action_contract_address": {
           "anyOf": [
@@ -587,11 +632,6 @@
         },
         "details": {
           "$ref": "#/$defs/ParticipantObservationDetailsModel"
-        },
-        "episode_id": {
-          "minLength": 1,
-          "title": "Episode Id",
-          "type": "string"
         },
         "event_type": {
           "$ref": "#/$defs/ParticipantBehaviorHistoryEventType"
@@ -699,11 +739,6 @@
           "title": "Outcome Interpretations",
           "type": "array"
         },
-        "participant_address": {
-          "minLength": 1,
-          "title": "Participant Address",
-          "type": "string"
-        },
         "phase_realization": {
           "anyOf": [
             {
@@ -778,40 +813,14 @@
       "required": [
         "event_type",
         "timestamp",
-        "participant_address",
-        "episode_id",
         "action_instance_id"
       ],
-      "title": "ParticipantBehaviorHistoryEventModel",
+      "title": "ParticipantHistoryViewBehaviorEventModel",
       "type": "object"
     },
-    "ParticipantBehaviorHistoryEventType": {
-      "description": "Portable history event kinds for participant behavior semantics.",
-      "enum": [
-        "action_attempted",
-        "state_transition_recorded",
-        "observation_emitted"
-      ],
-      "title": "ParticipantBehaviorHistoryEventType",
-      "type": "string"
-    },
-    "ParticipantEffectClass": {
-      "description": "SEM-211 effect classes for participant action results.",
-      "enum": [
-        "intended_effect",
-        "side_effect",
-        "observation_effect",
-        "visibility_effect",
-        "detection_effect",
-        "evidence_effect",
-        "no_effect",
-        "unknown_effect"
-      ],
-      "title": "ParticipantEffectClass",
-      "type": "string"
-    },
-    "ParticipantEpisodeHistoryEventModel": {
+    "ParticipantHistoryViewEpisodeEventModel": {
       "additionalProperties": false,
+      "description": "Scope-projected episode history event embedded in API-408 history views.",
       "properties": {
         "control_action": {
           "anyOf": [
@@ -830,16 +839,8 @@
           "title": "Details",
           "type": "object"
         },
-        "episode_id": {
-          "title": "Episode Id",
-          "type": "string"
-        },
         "event_type": {
           "title": "Event Type",
-          "type": "string"
-        },
-        "participant_address": {
-          "title": "Participant Address",
           "type": "string"
         },
         "sequence_number": {
@@ -866,31 +867,10 @@
       "required": [
         "event_type",
         "timestamp",
-        "participant_address",
-        "episode_id",
         "sequence_number"
       ],
-      "title": "ParticipantEpisodeHistoryEventModel",
+      "title": "ParticipantHistoryViewEpisodeEventModel",
       "type": "object"
-    },
-    "ParticipantFailureClass": {
-      "description": "SEM-211 portable failure classes for participant action attempts.",
-      "enum": [
-        "precondition_unsatisfied",
-        "unsupported_action",
-        "target_unavailable",
-        "authority_denied",
-        "resource_exhausted",
-        "timeout",
-        "interrupted",
-        "contention_lost",
-        "partial_success",
-        "unsafe_withheld",
-        "backend_error",
-        "unknown"
-      ],
-      "title": "ParticipantFailureClass",
-      "type": "string"
     },
     "ParticipantInteractionClass": {
       "description": "SEM-209 interaction classes for multi-participant behavior.",
@@ -1353,7 +1333,7 @@
   "properties": {
     "behavior_history": {
       "items": {
-        "$ref": "#/$defs/ParticipantBehaviorHistoryEventModel"
+        "$ref": "#/$defs/ParticipantHistoryViewBehaviorEventModel"
       },
       "title": "Behavior History",
       "type": "array"
@@ -1382,7 +1362,7 @@
     },
     "episode_history": {
       "items": {
-        "$ref": "#/$defs/ParticipantEpisodeHistoryEventModel"
+        "$ref": "#/$defs/ParticipantHistoryViewEpisodeEventModel"
       },
       "title": "Episode History",
       "type": "array"

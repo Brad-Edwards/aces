@@ -1057,6 +1057,84 @@ class ParticipantOutcomeReportModel(ParticipantRuntimeBaseEnvelopeModel):
     state_relationships: list[ParticipantOutcomeReportStateRelationshipModel] = Field(default_factory=list)
 
 
+class ParticipantStatusViewEpisodeStateModel(ContractModel):
+    """Scope-projected episode state embedded in API-408 status views.
+
+    The view carries `participant_address` and `episode_id` once at the top
+    level; the embedded record cannot restate them, so a nested record scoped
+    to another participant or episode is structurally unrepresentable.
+    """
+
+    state_schema_version: Literal[PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION] = PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION
+    sequence_number: int
+    status: str
+    terminal_reason: str | None = None
+    initialized_at: str
+    updated_at: str
+    terminated_at: str | None = None
+    last_control_action: str
+    previous_episode_id: str | None = None
+
+
+class ParticipantHistoryViewEpisodeEventModel(ContractModel):
+    """Scope-projected episode history event embedded in API-408 history views."""
+
+    event_type: str
+    timestamp: str
+    sequence_number: int
+    terminal_reason: str | None = None
+    control_action: str | None = None
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class ParticipantHistoryViewBehaviorEventModel(ContractModel):
+    """Scope-projected behavior history event embedded in API-408 history views."""
+
+    event_type: ParticipantBehaviorHistoryEventType
+    timestamp: NonEmptyString
+    action_instance_id: NonEmptyString
+    action_contract_address: NonEmptyString | None = None
+    observation_boundary_address: NonEmptyString | None = None
+    observation_status: ParticipantObservationStatus | None = None
+    actor_provenance: NonEmptyString | None = None
+    lifecycle_phase: ParticipantRuntimeLifecyclePhase | None = None
+    phase_realization: ParticipantPhaseRealization | None = None
+    admission_disposition: ParticipantAdmissionDisposition | None = None
+    operation_ref: NonEmptyString | None = None
+    operation_state: ParticipantLifecycleOperationState | None = None
+    state_transition_kind: NonEmptyString | None = None
+    post_state_digest: NonEmptyString | None = None
+    joint_action_set_id: NonEmptyString | None = None
+    realized_order: StrictInt | None = Field(default=None, ge=0)
+    interaction_class: ParticipantInteractionClass | None = None
+    interaction_ref: NonEmptyString | None = None
+    shared_state_refs: list[NonEmptyString] = Field(default_factory=list)
+    action_result: ParticipantActionResultModel | None = None
+    attribution_edges: list[ParticipantAttributionEdgeModel] = Field(default_factory=list)
+    outcome_interpretations: list[ParticipantOutcomeInterpretationRecordModel] = Field(default_factory=list)
+    temporal_contexts: list[ParticipantTemporalRuntimeContextModel] = Field(default_factory=list)
+    details: ParticipantObservationDetailsModel = Field(default_factory=ParticipantObservationDetailsModel)
+
+    @model_validator(mode="after")
+    def _validate_lifecycle_fields(self) -> ParticipantHistoryViewBehaviorEventModel:
+        messages = participant_lifecycle_field_violation_messages(
+            event_type=self.event_type,
+            lifecycle_phase=self.lifecycle_phase,
+            phase_realization=self.phase_realization,
+            admission_disposition=self.admission_disposition,
+            operation_ref=self.operation_ref,
+            operation_state=self.operation_state,
+        )
+        if messages:
+            raise ValueError(messages[0])
+        return self
+
+
+VIEW_SCOPE_PROJECTED_FIELDS: tuple[str, ...] = ("participant_address", "episode_id")
+"""Recorded-contract fields carried once at the view level and removed from
+records embedded in API-408 retrieval projections."""
+
+
 class ParticipantStatusViewModel(ContractModel):
     """API-408 retrieval projection of one participant's episode status."""
 
@@ -1065,26 +1143,16 @@ class ParticipantStatusViewModel(ContractModel):
     episode_id: NonEmptyString | None = None
     generated_at: Rfc3339DateTimeString
     source_snapshot_ref: NonEmptyString
-    episode_state: ParticipantEpisodeStateModel | None = None
+    episode_state: ParticipantStatusViewEpisodeStateModel | None = None
     open_operation_refs: list[NonEmptyString] = Field(default_factory=list)
     visibility_projection_ref: NonEmptyString
     marking_definition_refs: list[NonEmptyString] = Field(default_factory=list)
     redaction_policy_ref: NonEmptyString | None = None
 
     @model_validator(mode="after")
-    def _validate_embedded_record_scope(self) -> ParticipantStatusViewModel:
-        if self.episode_state is not None:
-            if self.episode_state.participant_address != self.participant_address:
-                raise ValueError(
-                    "episode_state.participant_address "
-                    f"'{self.episode_state.participant_address}' does not match the "
-                    f"view participant_address '{self.participant_address}'"
-                )
-            if self.episode_id is not None and self.episode_state.episode_id != self.episode_id:
-                raise ValueError(
-                    f"episode_state.episode_id '{self.episode_state.episode_id}' "
-                    f"does not match the view episode_id '{self.episode_id}'"
-                )
+    def _validate_episode_scope(self) -> ParticipantStatusViewModel:
+        if self.episode_state is not None and self.episode_id is None:
+            raise ValueError("episode_id is required when episode_state is embedded")
         return self
 
 
@@ -1096,8 +1164,8 @@ class ParticipantHistoryViewModel(ContractModel):
     episode_id: NonEmptyString
     generated_at: Rfc3339DateTimeString
     source_snapshot_ref: NonEmptyString
-    episode_history: list[ParticipantEpisodeHistoryEventModel] = Field(default_factory=list)
-    behavior_history: list[ParticipantBehaviorHistoryEventModel] = Field(default_factory=list)
+    episode_history: list[ParticipantHistoryViewEpisodeEventModel] = Field(default_factory=list)
+    behavior_history: list[ParticipantHistoryViewBehaviorEventModel] = Field(default_factory=list)
     visibility_projection_ref: NonEmptyString
     redaction_policy_ref: NonEmptyString | None = None
     completeness: Literal["complete", "truncated", "filtered"]
@@ -1108,26 +1176,6 @@ class ParticipantHistoryViewModel(ContractModel):
     def _validate_completeness_basis(self) -> ParticipantHistoryViewModel:
         if self.completeness != "complete" and self.completeness_basis is None:
             raise ValueError("completeness_basis is required when completeness is not 'complete'")
-        return self
-
-    @model_validator(mode="after")
-    def _validate_embedded_record_scope(self) -> ParticipantHistoryViewModel:
-        for field_name, events in (
-            ("episode_history", self.episode_history),
-            ("behavior_history", self.behavior_history),
-        ):
-            for index, event in enumerate(events):
-                if event.participant_address != self.participant_address:
-                    raise ValueError(
-                        f"{field_name}[{index}].participant_address "
-                        f"'{event.participant_address}' does not match the "
-                        f"view participant_address '{self.participant_address}'"
-                    )
-                if event.episode_id != self.episode_id:
-                    raise ValueError(
-                        f"{field_name}[{index}].episode_id '{event.episode_id}' "
-                        f"does not match the view episode_id '{self.episode_id}'"
-                    )
         return self
 
     @classmethod
@@ -5014,6 +5062,8 @@ __all__ = [
     "ParticipantExposurePolicyModel",
     "ParticipantFeatureSupportLevel",
     "ParticipantFeatureSupportModel",
+    "ParticipantHistoryViewBehaviorEventModel",
+    "ParticipantHistoryViewEpisodeEventModel",
     "ParticipantHistoryViewModel",
     "ParticipantImplementationCapabilitiesModel",
     "ParticipantImplementationCompatibilityModel",
@@ -5034,8 +5084,10 @@ __all__ = [
     "ParticipantRuntimeCapabilitiesModel",
     "ParticipantSharedStateAccessModel",
     "ParticipantSharedStateRecordModel",
+    "ParticipantStatusViewEpisodeStateModel",
     "ParticipantStatusViewModel",
     "ParticipantTemporalRuntimeContextModel",
+    "VIEW_SCOPE_PROJECTED_FIELDS",
     "PlanOperationModel",
     "ProcessorFeature",
     "PROCESSOR_MANIFEST_V2_SCHEMA_VERSION",
