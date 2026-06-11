@@ -144,6 +144,16 @@ The projected record shapes must track their recorded source contracts
 field-for-field apart from the removed scope fields; divergence is a defect
 (PRT-19).
 
+The scope binding is recursive. Behavior events cite recorded semantic
+records — action results and their precondition results, attribution edges,
+outcome interpretations — that legitimately carry their own
+`participant_address`/`episode_id` because they are recorded contracts, not
+view projections. A valid history view requires every such nested scope field
+to equal the view scope; a one-participant view cannot smuggle another
+participant's or episode's records through nested semantic payloads. This is
+a semantic-gate obligation (model-level validation with negative tests), not
+a schema-shape rule.
+
 Rules:
 
 - every view names its `source_snapshot_ref`, `visibility_projection_ref`,

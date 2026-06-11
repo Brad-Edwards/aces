@@ -264,6 +264,137 @@ def test_participant_history_view_rejects_events_restating_scope():
         ParticipantHistoryViewModel.model_validate(payload)
 
 
+def _scoped_action_result(participant_address: str, episode_id: str) -> dict:
+    return {
+        "status": "succeeded",
+        "participant_address": participant_address,
+        "episode_id": episode_id,
+        "action_instance_id": "act-blue-42",
+        "action_contract_address": "contracts.defense.isolate-host.v1",
+        "observation_point": "order.sim.42.blue",
+        "preconditions": [
+            {
+                "precondition_id": "pre-1",
+                "precondition_class": "authority",
+                "status": "satisfied",
+                "participant_address": participant_address,
+                "episode_id": episode_id,
+                "action_contract_address": "contracts.defense.isolate-host.v1",
+                "observation_point": "order.sim.42.blue",
+            }
+        ],
+    }
+
+
+def _history_payload_with_action_result(participant_address: str, episode_id: str) -> dict:
+    payload = _valid_fixture("participant-history-view-v1")
+    event = payload["behavior_history"][0]
+    event["event_type"] = "action_attempted"
+    event["action_result"] = _scoped_action_result(participant_address, episode_id)
+    return payload
+
+
+def test_participant_history_view_accepts_in_scope_nested_records():
+    payload = _history_payload_with_action_result("participants.blue.rl", "ep-blue-002")
+    ParticipantHistoryViewModel.model_validate(payload)
+
+
+def test_participant_history_view_rejects_nested_action_result_for_another_participant():
+    payload = _history_payload_with_action_result("participants.red.llm", "ep-blue-002")
+
+    with pytest.raises(ValidationError, match="participant_address"):
+        ParticipantHistoryViewModel.model_validate(payload)
+
+
+def test_participant_history_view_rejects_nested_precondition_for_another_episode():
+    payload = _history_payload_with_action_result("participants.blue.rl", "ep-blue-002")
+    payload["behavior_history"][0]["action_result"]["preconditions"][0]["episode_id"] = "ep-blue-001"
+
+    with pytest.raises(ValidationError, match="episode_id"):
+        ParticipantHistoryViewModel.model_validate(payload)
+
+
+def test_participant_history_view_rejects_nested_attribution_edge_out_of_scope():
+    payload = _valid_fixture("participant-history-view-v1")
+    event = payload["behavior_history"][-1]
+    event["attribution_edges"] = [
+        {
+            "edge_id": "edge-1",
+            "participant_address": "participants.red.llm",
+            "episode_id": "ep-blue-002",
+            "observation_point": "order.sim.42.blue",
+            "cause_candidate": {
+                "candidate_kind": "action",
+                "ref": "act-blue-42",
+                "description": "isolate host attempt",
+            },
+            "effect_candidate": {
+                "candidate_kind": "observation",
+                "ref": "obs-blue-43",
+                "description": "telemetry delta",
+            },
+            "ordering_basis": {
+                "basis_kind": "backend_event_order",
+                "relation_ref": "order.sim.42",
+                "description": "simulation tick order",
+                "ordered_event_refs": ["act-blue-42", "obs-blue-43"],
+            },
+            "evidence_basis": {
+                "capture_apparatus": "cyborg.sim",
+                "granularity": "event",
+                "loss_model": "none",
+                "redaction_policy": "redaction.blue-observation.v1",
+                "observer_effects": ["none_declared"],
+            },
+            "support_class": "observation_support",
+            "confidence": "high",
+            "strength": "supported",
+            "limitations": ["single-run evidence"],
+            "evidence_refs": ["evidence.obs-blue-43-redacted"],
+        }
+    ]
+
+    with pytest.raises(ValidationError, match="participant_address"):
+        ParticipantHistoryViewModel.model_validate(payload)
+
+
+def test_participant_history_view_rejects_nested_outcome_interpretation_out_of_scope():
+    payload = _valid_fixture("participant-history-view-v1")
+    event = payload["behavior_history"][-1]
+    event["outcome_interpretations"] = [
+        {
+            "interpretation_id": "interp-1",
+            "rule_address": "rules.outcome.blue.v1",
+            "participant_address": "participants.blue.rl",
+            "episode_id": "ep-blue-001",
+            "observation_point": "order.sim.42.blue",
+            "source_bindings": [
+                {
+                    "source_id": "src-1",
+                    "source_layer": "participant_action_outcome",
+                    "ref": "act-blue-42",
+                    "observed_value": "succeeded",
+                }
+            ],
+            "target_bindings": [
+                {
+                    "target_id": "tgt-1",
+                    "target_layer": "objective_result",
+                    "ref": "objectives.contain-intrusion",
+                    "interpreted_value": "progressed",
+                    "evidence_refs": ["evidence.obs-blue-43-redacted"],
+                    "limitations": ["partial coverage"],
+                }
+            ],
+            "evidence_refs": ["evidence.obs-blue-43-redacted"],
+            "limitations": ["single-run evidence"],
+        }
+    ]
+
+    with pytest.raises(ValidationError, match="episode_id"):
+        ParticipantHistoryViewModel.model_validate(payload)
+
+
 def test_participant_context_view_requires_source_snapshot_ref():
     payload = _valid_fixture("participant-context-view-v1")
     payload.pop("source_snapshot_ref")

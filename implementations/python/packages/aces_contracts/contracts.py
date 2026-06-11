@@ -1178,6 +1178,43 @@ class ParticipantHistoryViewModel(ContractModel):
             raise ValueError("completeness_basis is required when completeness is not 'complete'")
         return self
 
+    @model_validator(mode="after")
+    def _validate_nested_record_scope(self) -> ParticipantHistoryViewModel:
+        """Recursively bind nested recorded-contract scope to the view scope.
+
+        The direct embedded event shapes are scope-projected, but behavior
+        events cite recorded semantic records (action results and their
+        preconditions, attribution edges, outcome interpretations) that carry
+        their own `participant_address`/`episode_id`. A one-participant view
+        must not smuggle records scoped to another participant or episode
+        through those subrecords.
+        """
+
+        def _walk(node: object, path: str) -> None:
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    if key == "participant_address" and isinstance(value, str) and value != self.participant_address:
+                        raise ValueError(
+                            f"{path}.{key} '{value}' does not match the view "
+                            f"participant_address '{self.participant_address}'"
+                        )
+                    if key == "episode_id" and isinstance(value, str) and value != self.episode_id:
+                        raise ValueError(
+                            f"{path}.{key} '{value}' does not match the view episode_id '{self.episode_id}'"
+                        )
+                    _walk(value, f"{path}.{key}")
+            elif isinstance(node, list):
+                for index, item in enumerate(node):
+                    _walk(item, f"{path}[{index}]")
+
+        for field_name, events in (
+            ("episode_history", self.episode_history),
+            ("behavior_history", self.behavior_history),
+        ):
+            for index, event in enumerate(events):
+                _walk(event.model_dump(mode="python"), f"{field_name}[{index}]")
+        return self
+
     @classmethod
     def __get_pydantic_json_schema__(
         cls,
