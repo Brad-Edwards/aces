@@ -1071,6 +1071,22 @@ class ParticipantStatusViewModel(ContractModel):
     marking_definition_refs: list[NonEmptyString] = Field(default_factory=list)
     redaction_policy_ref: NonEmptyString | None = None
 
+    @model_validator(mode="after")
+    def _validate_embedded_record_scope(self) -> ParticipantStatusViewModel:
+        if self.episode_state is not None:
+            if self.episode_state.participant_address != self.participant_address:
+                raise ValueError(
+                    "episode_state.participant_address "
+                    f"'{self.episode_state.participant_address}' does not match the "
+                    f"view participant_address '{self.participant_address}'"
+                )
+            if self.episode_id is not None and self.episode_state.episode_id != self.episode_id:
+                raise ValueError(
+                    f"episode_state.episode_id '{self.episode_state.episode_id}' "
+                    f"does not match the view episode_id '{self.episode_id}'"
+                )
+        return self
+
 
 class ParticipantHistoryViewModel(ContractModel):
     """API-408 retrieval projection of participant episode/behavior history."""
@@ -1092,6 +1108,26 @@ class ParticipantHistoryViewModel(ContractModel):
     def _validate_completeness_basis(self) -> ParticipantHistoryViewModel:
         if self.completeness != "complete" and self.completeness_basis is None:
             raise ValueError("completeness_basis is required when completeness is not 'complete'")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_embedded_record_scope(self) -> ParticipantHistoryViewModel:
+        for field_name, events in (
+            ("episode_history", self.episode_history),
+            ("behavior_history", self.behavior_history),
+        ):
+            for index, event in enumerate(events):
+                if event.participant_address != self.participant_address:
+                    raise ValueError(
+                        f"{field_name}[{index}].participant_address "
+                        f"'{event.participant_address}' does not match the "
+                        f"view participant_address '{self.participant_address}'"
+                    )
+                if event.episode_id != self.episode_id:
+                    raise ValueError(
+                        f"{field_name}[{index}].episode_id '{event.episode_id}' "
+                        f"does not match the view episode_id '{self.episode_id}'"
+                    )
         return self
 
     @classmethod
@@ -1124,6 +1160,7 @@ class ParticipantContextViewModel(ContractModel):
     participant_address: NonEmptyString
     episode_id: NonEmptyString | None = None
     generated_at: Rfc3339DateTimeString
+    source_snapshot_ref: NonEmptyString
     view_ref: NonEmptyString
     derived_from_refs: list[NonEmptyString] = Field(min_length=1)
     derivation_basis_ref: NonEmptyString | None = None

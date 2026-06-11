@@ -201,6 +201,46 @@ def test_participant_history_view_requires_completeness_basis_unless_complete():
     assert model.completeness_basis is None
 
 
+def test_participant_status_view_rejects_episode_state_for_another_participant():
+    payload = _valid_fixture("participant-status-view-v1")
+    payload["episode_state"]["participant_address"] = "participants.red.llm"
+
+    with pytest.raises(ValidationError, match="participant_address"):
+        ParticipantStatusViewModel.model_validate(payload)
+
+
+def test_participant_status_view_rejects_episode_state_for_another_episode():
+    payload = _valid_fixture("participant-status-view-v1")
+    payload["episode_state"]["episode_id"] = "ep-blue-009"
+
+    with pytest.raises(ValidationError, match="episode_id"):
+        ParticipantStatusViewModel.model_validate(payload)
+
+
+def test_participant_history_view_rejects_events_for_another_participant():
+    payload = _valid_fixture("participant-history-view-v1")
+    payload["episode_history"][0]["participant_address"] = "participants.red.llm"
+
+    with pytest.raises(ValidationError, match="participant_address"):
+        ParticipantHistoryViewModel.model_validate(payload)
+
+
+def test_participant_history_view_rejects_events_for_another_episode():
+    payload = _valid_fixture("participant-history-view-v1")
+    payload["behavior_history"][0]["episode_id"] = "ep-blue-001"
+
+    with pytest.raises(ValidationError, match="episode_id"):
+        ParticipantHistoryViewModel.model_validate(payload)
+
+
+def test_participant_context_view_requires_source_snapshot_ref():
+    payload = _valid_fixture("participant-context-view-v1")
+    payload.pop("source_snapshot_ref")
+
+    with pytest.raises(ValidationError, match="source_snapshot_ref"):
+        ParticipantContextViewModel.model_validate(payload)
+
+
 def test_participant_lifecycle_event_rejects_unknown_mapping_loss():
     payload = _valid_fixture("participant-lifecycle-event-v1")
     payload["mapping_loss"] = "collapsed"

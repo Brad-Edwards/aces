@@ -3,11 +3,17 @@
   "participant_address": "participants.blue.rl",
   "episode_id": "ep-blue-002",
   "generated_at": "2026-05-26T10:21:00Z",
+  "source_snapshot_ref": "snapshots.run-778.tick42",
   "view_ref": "views.context.network-posture.v1",
-  "derived_from_refs": ["snapshots.run-778.tick42", "obs-blue-43"],
+  "derived_from_refs": [
+    "snapshots.run-778.tick42",
+    "obs-blue-43"
+  ],
   "derivation_basis_ref": "rules.context.network-posture.v1",
   "payload_ref": "evidence.context.blue.network-posture.tick42",
   "visibility_projection_ref": "projections.blue.context.v1",
-  "marking_definition_refs": ["markings.participant_visible.v1"],
+  "marking_definition_refs": [
+    "markings.participant_visible.v1"
+  ],
   "redaction_policy_ref": "redaction.blue-observation.v1"
 }

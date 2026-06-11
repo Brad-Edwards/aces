@@ -85,6 +85,11 @@
       "default": null,
       "title": "Redaction Policy Ref"
     },
+    "source_snapshot_ref": {
+      "minLength": 1,
+      "title": "Source Snapshot Ref",
+      "type": "string"
+    },
     "view_id": {
       "minLength": 1,
       "title": "View Id",
@@ -105,6 +110,7 @@
     "view_id",
     "participant_address",
     "generated_at",
+    "source_snapshot_ref",
     "view_ref",
     "derived_from_refs",
     "visibility_projection_ref"
