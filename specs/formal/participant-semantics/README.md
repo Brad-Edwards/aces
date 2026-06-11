@@ -81,19 +81,65 @@ under incomplete observation; the core lesson for ACES is that a participant's
 observation stream is not the environment state. Local history and belief matter
 when interpreting behavior.
 
-Littman's Markov games and the Dec-POMDP/POSG literature generalize this to
-multi-agent interaction. Bernstein, Zilberstein, and Immerman show that
-decentralized control under partial observability is fundamentally harder than
-centralized MDP/POMDP control. ACES should not pretend that one global state and
-one global observation stream are enough for multi-participant experiments.
+Littman's Markov games (ICML 1994) and the Dec-POMDP/POSG literature
+(Bernstein, Zilberstein, and Immerman; Hansen, Bernstein, and Zilberstein;
+Oliehoek and Amato's standard treatment) generalize this to multi-agent
+interaction. Bernstein, Zilberstein, and Immerman show that decentralized
+control under partial observability is fundamentally harder than centralized
+MDP/POMDP control. ACES should not pretend that one global state and one
+global observation stream are enough for multi-participant experiments.
+
+### Knowledge, Action Theories, And Concurrency Foundations
+
+The information-boundary and visibility machinery in this design is a profile
+of established theory, not new theory. The interpreted-systems framework of
+Fagin, Halpern, Moses, and Vardi defines an agent's knowledge by
+indistinguishability over its local history within a run; perfect recall and
+the distinction between an observation stream and an information state are
+formalized there and in extensive-form game theory (Kuhn 1953; von Stengel).
+ACES's view relation `V_p,t`, participant belief/history, and the runtime
+information-state guarantees instantiate that lineage. Dynamic epistemic
+logic (van Ditmarsch, van der Hoek, and Kooi) supplies semantics for
+information-changing actions; the discovery, disclosure, concealment,
+revocation, and deception view transitions in this design are
+runtime-auditable counterparts of such updates.
+
+Information-flow security supplies the boundary discipline. Noninterference
+(Goguen and Meseguer) is the baseline no-flow-across-the-boundary property,
+and Sabelfeld and Sands's declassification dimensions — what, who, where,
+when — map directly onto ACES view rules and time-indexed view transitions.
+Hidden truth, answer keys, canaries, and holdout material are governed by
+declassification policy in this sense, not by informal benchmark setup.
+
+Action contracts with typed preconditions and effects are the AI-planning
+lineage: STRIPS (Fikes and Nilsson), PDDL (McDermott et al.), durative
+actions in PDDL2.1 (Fox and Long), and stochastic effects in PPDDL (Younes
+and Littman) and RDDL (Sanner). Situation-calculus action theories (Reiter)
+carry the same content logically, including the frame problem that ACES's
+explicit side-effect, no-effect, and unknown-effect classes answer
+operationally. ACES adopts no planner and no planning language; the lineage
+defines what a reviewable action contract must state.
+
+For joint actions, true-concurrency semantics already treat causality,
+conflict, and independence as first-class relations over events: event
+structures (Winskel) and Mazurkiewicz traces are the canonical forms, and
+ACES's interaction classes plus realized-order provenance record the same
+distinctions operationally. Chockler and Halpern's degrees of responsibility
+and blame extend the structural-model causality used for attribution toward
+graded, epistemically conditioned attribution claims. The deception view
+disposition is grounded empirically by cyber-deception field studies such as
+the Tularosa study (Ferguson-Walter et al.) and theoretically by hypergame
+models of conflicts where participants play different perceived games.
 
 ### Cyber Agent Environments
 
-[CybORG](https://arxiv.org/abs/2108.09118) is the closest cyber-agent precedent.
-It defines scenarios with agents, action spaces, observations, rewards, and
-reset; it also supports simulation and emulation. Its reported sim-to-emulation
-transfer failures are directly relevant: an agent can overfit to an observation
-artifact that does not exist in the emulator. ACES must therefore record
+[CybORG](https://arxiv.org/abs/2108.09118) (Standen et al., 2021 — distinct
+from the earlier 2020 CybORG paper by Baillie et al.) is the closest
+cyber-agent precedent. It defines scenarios with agents, action spaces,
+observations, rewards, and reset; it also supports simulation and emulation.
+The sim-to-emulation transfer failures reported in its results section are
+directly relevant: an agent can overfit to an observation artifact that does
+not exist in the emulator. ACES must therefore record
 observation provenance and realized backend disclosure, not just action results.
 
 [CyberBattleSim](https://www.microsoft.com/en-us/research/project/cyberbattlesim/)
@@ -102,7 +148,9 @@ for studying automated agents, but its high-level abstraction reinforces the
 need to disclose which action/effect/observation semantics are realized rather
 than assuming simulation results transfer to operational environments.
 
-[CyGIL's unified emulation/simulation training design](https://arxiv.org/abs/2304.01244)
+[The CyGIL unified emulation-simulation training environment](https://arxiv.org/abs/2304.01244)
+(Li et al., 2023; the paper title is "Unified Emulation-Simulation Training
+Environment for Autonomous Cyber Agents")
 is relevant because it derives simulation transitions from emulated traces,
 preserving the same action space across the sim-to-real loop. It motivates
 ACES's requirement that action and observation contracts survive across backend
@@ -201,12 +249,24 @@ concealment, and evaluation across heterogeneous participant implementations.
 
 Lamport's happened-before relation establishes the key warning: distributed
 systems have partial ordering, and physical timestamps alone are not the same as
-causal ordering.
+causal ordering. Vector clocks (Fidge; Mattern) and Schwarz and Mattern's
+causality-detection survey sharpen the warning: scalar logical clocks are
+consistent with happened-before but cannot characterize it, so causal-order
+claims need vector-clock-strength evidence or a declared stronger order
+basis.
 
-HLA time-management literature, Time Warp, DEVS, SimPy scheduling, ROS 2 clock
-design, ns-3 realtime mode, and FMI all reinforce that clock authority, time
-domain, advancement, pacing, synchronization, and event ordering are separate
-semantic concerns.
+HLA time-management literature (IEEE 1516; Fujimoto), Time Warp (Jefferson),
+DEVS (Zeigler, Praehofer, and Kim), SimPy scheduling, ROS 2 clock design,
+ns-3 realtime mode, and FMI (Blochwitz et al.) all reinforce that clock
+authority, time domain, advancement, pacing, synchronization, and event
+ordering are separate semantic concerns.
+
+Timed automata (Alur and Dill), metric temporal logic (Koymans; signal
+temporal logic for monitorable trace semantics, Maler and Nickovic), and
+Allen's interval algebra give the canonical semantics for deadline, dwell,
+cadence, latency, and window constraints. The SEM-213 temporal contracts are
+profiles over those formalisms, monitored against declared clock authorities,
+rather than an invented vocabulary.
 
 [SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
 provides cyber objects and events for simulation interoperability. It supports
@@ -217,7 +277,10 @@ semantics around those events.
 Halpern and Pearl's structural-model causality motivates the attribution rule
 in this spec: an observed alert after an action is not automatically caused by
 that action. Causal claims require an evidence basis and, for strong claims, a
-counterfactual or intervention model.
+counterfactual or intervention model. Chockler and Halpern's degrees of
+responsibility and blame extend the same structural-model machinery to graded
+attribution, including attribution conditioned on what the acting participant
+could know — connecting the attribution layer to the visibility layer.
 
 ### DSL Evaluation And Language Critique
 
@@ -988,9 +1051,35 @@ Future implementation PRs should include:
 - [OpenSpiel](https://arxiv.org/abs/1908.09453)
 - [Planning and Acting in Partially Observable Stochastic Domains](https://people.smp.uq.edu.au/YoniNazarathy/Control4406_2014/resources/KaelblingLittmanCassandra1998.pdf)
 - [The Complexity of Decentralized Control of Markov Decision Processes](https://arxiv.org/abs/1301.3836)
-- [CybORG](https://arxiv.org/abs/2108.09118)
-- [CyGIL unified emulation-simulation training](https://arxiv.org/abs/2304.01244)
+  (Bernstein, Zilberstein, and Immerman, UAI 2000; archival version with
+  Givan as second author, Mathematics of Operations Research 27(4), 2002)
+- [Littman, Markov games as a framework for multi-agent reinforcement learning (ICML 1994)](https://doi.org/10.1016/B978-1-55860-335-6.50027-1)
+- [Hansen, Bernstein, and Zilberstein, Dynamic Programming for Partially Observable Stochastic Games (AAAI 2004)](https://cdn.aaai.org/AAAI/2004/AAAI04-112.pdf)
+- Oliehoek and Amato, A Concise Introduction to Decentralized POMDPs,
+  Springer, 2016
+- [Kuhn, Extensive Games and the Problem of Information (1953)](https://doi.org/10.1515/9781400881970-012)
+  (Contributions to the Theory of Games II, Annals of Mathematics Studies 28)
+- [von Stengel, Efficient Computation of Behavior Strategies (Games and Economic Behavior, 1996)](https://doi.org/10.1006/game.1996.0050)
+- Fagin, Halpern, Moses, and Vardi, Reasoning About Knowledge, MIT Press,
+  1995
+- van Ditmarsch, van der Hoek, and Kooi, Dynamic Epistemic Logic, Springer
+  Synthese Library 337, 2008
+- [Goguen and Meseguer, Security Policies and Security Models (IEEE S&P 1982)](https://doi.org/10.1109/SP.1982.10014)
+- [Sabelfeld and Sands, Declassification: Dimensions and Principles (Journal of Computer Security, 2009)](https://doi.org/10.3233/JCS-2009-0352)
+- [Fikes and Nilsson, STRIPS (Artificial Intelligence, 1971)](https://doi.org/10.1016/0004-3702(71)90010-5)
+- McDermott et al., PDDL — The Planning Domain Definition Language, Yale
+  CVC TR-98-003, 1998
+- [Fox and Long, PDDL2.1 (JAIR, 2003)](https://doi.org/10.1613/jair.1129)
+- [Younes and Littman, PPDDL 1.0 (CMU-CS-04-167, 2004)](https://www.tempastic.org/papers/CMU-CS-04-167.pdf)
+- [Sanner, Relational Dynamic Influence Diagram Language (RDDL): Language Description (2010)](https://users.cecs.anu.edu.au/~ssanner/IPPC_2011/RDDL.pdf)
+- Reiter, Knowledge in Action: Logical Foundations for Specifying and
+  Implementing Dynamical Systems, MIT Press, 2001
+- [Winskel, An Introduction to Event Structures (LNCS 354, 1989)](https://doi.org/10.1007/BFb0013026)
+- [Mazurkiewicz, Trace Theory (LNCS 255, 1987)](https://doi.org/10.1007/3-540-17906-2_30)
+- [CybORG](https://arxiv.org/abs/2108.09118) (Standen et al., 2021)
+- [CyGIL unified emulation-simulation training (Li et al., 2023; titled "Unified Emulation-Simulation Training Environment for Autonomous Cyber Agents")](https://arxiv.org/abs/2304.01244)
 - [CyberBattleSim](https://www.microsoft.com/en-us/research/project/cyberbattlesim/)
+  (Microsoft, 2021; software project without a peer-reviewed paper)
 - [Cybench](https://arxiv.org/abs/2408.08926)
 - [AutoPenBench](https://arxiv.org/abs/2410.03225)
 - [CAIBench](https://arxiv.org/abs/2510.24317)
@@ -1001,12 +1090,31 @@ Future implementation PRs should include:
 - [Automated Cyber Range Design](https://arxiv.org/abs/2307.04416)
 - [Open Cyber Range SDL](https://documentation.opencyberrange.ee/docs/sdl/)
 - [CRACK: Building next generation Cyber Ranges](https://iris.imtlucca.it/handle/20.500.11771/15672)
+  (Russo, Costa, and Armando; Computers & Security, 2020)
 - [CACAO Security Playbooks v2.0](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.pdf)
 - [OCSF](https://ocsf.io/)
 - [MITRE ATT&CK Design and Philosophy](https://www.mitre.org/news-insights/publication/mitre-attck-design-and-philosophy)
 - [CALDERA planning and acting with unknowns](https://www.mitre.org/sites/default/files/2021-11/prs-18-0944-1-automated-adversary-emulation-planning-acting.pdf)
 - [Halpern and Pearl, structural-model causality](https://arxiv.org/abs/cs/0011012)
+  (2000; revised version in the British Journal for the Philosophy of
+  Science, 2005)
+- [Chockler and Halpern, Responsibility and Blame: A Structural-Model Approach (JAIR, 2004)](https://arxiv.org/abs/cs/0312038)
 - [Lamport, Time, Clocks, and the Ordering of Events](https://systems.cs.columbia.edu/ds2-class/papers/lamport-time.pdf)
+- [Fidge, Timestamps in Message-Passing Systems That Preserve the Partial Ordering (ACSC 1988)](https://zoo.cs.yale.edu/classes/cs426/2012/lab/bib/fidge88timestamps.pdf)
+- [Mattern, Virtual Time and Global States of Distributed Systems (1989)](https://www.vs.inf.ethz.ch/publ/papers/VirtTimeGlobStates.pdf)
+- [Schwarz and Mattern, Detecting Causal Relationships in Distributed Computations (Distributed Computing, 1994)](https://doi.org/10.1007/BF02277859)
+- [Jefferson, Virtual Time (ACM TOPLAS, 1985)](https://doi.org/10.1145/3916.3988)
+- [Fujimoto, Time Management in the High Level Architecture (SIMULATION, 1998)](https://doi.org/10.1177/003754979807100604)
+- Zeigler, Praehofer, and Kim, Theory of Modeling and Simulation, 2nd ed.,
+  Academic Press, 2000
+- [Blochwitz et al., The Functional Mockup Interface (8th Modelica Conference, 2011)](https://doi.org/10.3384/ecp11063105)
+- [Alur and Dill, A Theory of Timed Automata (Theoretical Computer Science, 1994)](https://doi.org/10.1016/0304-3975(94)90010-8)
+- [Koymans, Specifying Real-Time Properties with Metric Temporal Logic (Real-Time Systems, 1990)](https://doi.org/10.1007/BF01995674)
+- [Maler and Nickovic, Monitoring Temporal Properties of Continuous Signals (FORMATS/FTRTFT 2004)](https://doi.org/10.1007/978-3-540-30206-3_12)
+- [Allen, Maintaining Knowledge about Temporal Intervals (CACM, 1983)](https://doi.org/10.1145/182.358434)
 - [IEEE HLA 1516 family](https://standards.ieee.org/ieee/1516/3744/)
+  (IEEE Std 1516-2010 and successor editions)
 - [SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
+- [Ferguson-Walter et al., The Tularosa Study (HICSS 2019)](https://doi.org/10.24251/HICSS.2019.874)
+- [Kovach, Gibson, and Lamont, Hypergame Theory: A Model for Conflict, Misperception, and Deception (Game Theory, 2015)](https://doi.org/10.1155/2015/570639)
 - [Do Software Languages Engineers Evaluate their Languages?](https://arxiv.org/abs/1109.6794)

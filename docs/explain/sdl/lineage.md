@@ -700,7 +700,47 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 - POMDP, Dec-POMDP, POSG, and Markov-game literature is the theoretical lineage
   behind ACES's insistence that participant-visible observations are not world
   truth, and that multi-participant behavior cannot be reduced to a single
-  centralized state stream.
+  centralized state stream. Oliehoek and Amato's *A Concise Introduction to
+  Decentralized POMDPs* (Springer, 2016) is the standard modeling treatment
+  behind the joint-action and local-history machinery.
+- Extensive-form game theory is the source of two concepts the participant
+  runtime names directly: chance moves and perfect recall (Kuhn, "Extensive
+  Games and the Problem of Information," 1953; von Stengel, *Games and
+  Economic Behavior*, 1996). OpenSpiel operationalizes both; PettingZoo does
+  not provide chance nodes, mean-field updates, or information-state
+  discipline, so those concepts are anchored to their theory sources, not to
+  the framework APIs.
+- The runs-and-systems epistemic framework (Fagin, Halpern, Moses, and Vardi,
+  *Reasoning About Knowledge*, MIT Press, 1995) defines agent knowledge as
+  indistinguishability over local histories; ACES's view relation,
+  belief/history separation, and information-state guarantees instantiate it.
+  Dynamic epistemic logic (van Ditmarsch, van der Hoek, and Kooi, Springer,
+  2008) gives semantics to the discovery, disclosure, concealment,
+  revocation, and deception view transitions.
+- Information-flow security grounds the information-boundary discipline:
+  noninterference (Goguen and Meseguer, IEEE S&P 1982) and declassification
+  dimensions ([Sabelfeld and Sands, *Journal of Computer Security*, 2009](https://doi.org/10.3233/JCS-2009-0352)).
+- AI-planning action theories ground typed precondition/effect/failure
+  contracts: STRIPS (Fikes and Nilsson, 1971), PDDL (McDermott et al., 1998),
+  durative actions in [PDDL2.1 (Fox and Long, JAIR 2003)](https://doi.org/10.1613/jair.1129),
+  stochastic effects in [PPDDL (Younes and Littman, 2004)](https://www.tempastic.org/papers/CMU-CS-04-167.pdf)
+  and [RDDL (Sanner, 2010)](https://users.cecs.anu.edu.au/~ssanner/IPPC_2011/RDDL.pdf),
+  and situation-calculus action theories (Reiter, *Knowledge in Action*, MIT
+  Press, 2001).
+- True-concurrency semantics ground the interaction classes and realized-order
+  provenance: event structures (Winskel, 1989) and Mazurkiewicz traces (1987)
+  treat causality, conflict, and independence as first-class relations over
+  events.
+- Mean-field interaction modes are approximation-regime claims from mean-field
+  game theory (Huang, Malhamé, and Caines, 2006; Lasry and Lions, 2007) and
+  [mean-field MARL (Yang et al., ICML 2018)](https://arxiv.org/abs/1802.05438).
+- [Chockler and Halpern, "Responsibility and Blame" (JAIR 2004)](https://arxiv.org/abs/cs/0312038)
+  extends the Halpern-Pearl structural-model causality ACES uses for
+  attribution toward graded, epistemically conditioned attribution.
+- The deception view disposition is grounded empirically by the Tularosa cyber
+  deception field study (Ferguson-Walter et al., HICSS 2019) and theoretically
+  by hypergame models of misperceived games
+  ([Kovach, Gibson, and Lamont, 2015](https://doi.org/10.1155/2015/570639)).
 - [CybORG](https://arxiv.org/abs/2108.09118),
   [CyberBattleSim](https://www.microsoft.com/en-us/research/project/cyberbattlesim/),
   and [CyGIL](https://arxiv.org/abs/2304.01244) are the cyber-agent environment
@@ -764,9 +804,26 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   time management, and object publication.
 - [SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
   and Cyber FOM are cyber-specific simulation-interoperability precedents.
-- Lamport logical clocks, HLA time management, Time Warp, DEVS, SimPy, ROS 2
-  time, ns-3 realtime mode, and FMI inform ACES's separation of timestamp,
-  ordering, clock authority, pacing, synchronization, and causality.
+- Lamport logical clocks, HLA time management (Fujimoto, *SIMULATION*, 1998),
+  Time Warp (Jefferson, *ACM TOPLAS*, 1985), DEVS (Zeigler, Praehofer, and
+  Kim, 2000), SimPy, ROS 2 time, ns-3 realtime mode, and FMI (Blochwitz et
+  al., 2011) inform ACES's separation of timestamp, ordering, clock
+  authority, pacing, synchronization, and causality.
+- Vector clocks (Fidge, 1988; Mattern, 1989) and
+  [Schwarz and Mattern's causality-detection survey (*Distributed Computing*, 1994)](https://doi.org/10.1007/BF02277859)
+  ground the vector-clock ordering basis: Lamport's scalar clocks are
+  consistent with happened-before but cannot characterize it.
+- Transactional isolation theory grounds the shared-state isolation
+  vocabulary: the ANSI-level critique (Berenson et al., SIGMOD 1995),
+  [Adya's portable definitions (MIT PhD thesis, 1999)](http://pmg.csail.mit.edu/papers/adya-phd.pdf),
+  and [Cerone, Bernardi, and Gotsman's framework (CONCUR 2015)](https://doi.org/10.4230/LIPIcs.CONCUR.2015.58).
+  CRDTs (Shapiro, Preguiça, Baquero, and Zawirski, SSS 2011) ground merge
+  policies that claim convergence.
+- Timed automata (Alur and Dill, *Theoretical Computer Science*, 1994),
+  metric temporal logic (Koymans, *Real-Time Systems*, 1990; Maler and
+  Nickovic, 2004), and Allen's interval algebra (*CACM*, 1983) give the
+  canonical semantics behind ACES's deadline, dwell, cadence, latency, and
+  window contracts.
 - Halpern-Pearl structural causality informs ACES's treatment of attribution:
   a participant action followed by an alert is not automatically a causal
   explanation without an evidence basis.
