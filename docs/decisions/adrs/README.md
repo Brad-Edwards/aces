@@ -12,7 +12,11 @@ Each ADR includes:
 - **Status**: `proposed`, `accepted`, `deprecated`, or `superseded by ADR-XXX`
 - **Context**: The problem or situation driving the decision
 - **Decision**: What we chose and why
+- **Alternatives Considered**: Credible rejected options and why they were not
+  chosen
 - **Consequences**: Trade-offs (positive, negative, risks)
+
+Use [`TEMPLATE.md`](TEMPLATE.md) when drafting a new ADR.
 
 ## Principles
 
@@ -29,7 +33,9 @@ Each ADR includes:
 - `proposed` ADRs are still being decided and may change freely;
   `superseded`/`deprecated` ADRs leave the pinned set (the citable decision has
   moved to the replacing ADR).
-- ADRs are **numbered sequentially** and never reused.
+- ADRs are **numbered sequentially** in landing order and never reused. The ADR
+  date records when the decision was made; it may differ from the landing order
+  when a decision is backfilled or merged later.
 - ADRs are **versioned with code** and live in the repo.
 
 ## Index
@@ -37,6 +43,48 @@ Each ADR includes:
 ```{toctree}
 :hidden:
 
+TEMPLATE
+adr-000-use-adrs
+adr-001-scenario-description-language
+adr-002-declarative-sdl-objectives
+adr-003-workflows-targetable-subobjects-and-enum-variables
+adr-004-sdl-runtime-layer
+adr-005-control-flow-primitives
+adr-006-workflow-control-language-redesign
+adr-007-lightweight-formal-methods-policy
+adr-008-processor-layer-and-execution-artifact-boundaries
+adr-009-normative-artifact-authority-and-repository-structure
+adr-010-repository-realignment-order-and-compatibility-policy
+adr-011-narrow-end-to-end-mvp-validation
+adr-012-shared-concept-authority-and-aces-extension-discipline
+adr-013-participant-episode-lifecycle-boundaries
+adr-014-nox-as-canonical-verification-graph
+adr-015-sdl-processor-layering-and-source-file-size-cap
+adr-016-semantic-layer-scope-and-coverage-model
+adr-017-conversation-surface-hardening
+adr-018-classification-based-assurance-policy
+adr-019-normative-authority-boundary-manifest
+adr-020-declarative-participant-framing-boundaries
+adr-021-falsification-first-claim-evidence-gate
+adr-022-participant-behavior-and-interaction-semantics
+adr-023-container-image-build-provenance-surface
+adr-024-local-identity-inventory-surface
+adr-025-container-network-realization-surface
+adr-026-application-http-surface-inventory
+adr-027-container-init-reaper-runtime-surface
+adr-028-container-seccomp-security-options-surface
+adr-029-database-logical-state-runtime-surface
+adr-030-process-scoped-linux-capability-policy
+adr-031-ssh-server-configuration-surface
+adr-032-directory-domain-identity-runtime-surface
+adr-033-scenario-delivery-boundary-for-runtime-node-state
+adr-034-runtime-software-component-inventory
+adr-035-service-manager-unit-state-runtime-surface
+adr-036-sdl-processor-runtime-module-boundaries
+adr-037-runtime-file-service-and-filesystem-presence-semantics
+adr-038-runtime-mail-service-logical-state
+adr-039-dns-service-runtime-inventory
+adr-040-security-monitoring-manager-runtime-inventory
 adr-041-participant-implementation-manifest-and-provenance
 adr-042-network-sensor-runtime-monitoring
 adr-043-runtime-service-listener-surface
@@ -56,6 +104,7 @@ adr-056-runtime-observed-values-and-credential-posture
 adr-057-runtime-secret-name-classifier-boundaries
 adr-058-datastore-node-engine-provenance-and-endpoints
 adr-059-adr-amendment-policy-and-pin-gate
+adr-060-participant-backend-facing-contract-surface
 ```
 
 | ADR | Title | Status | Date |

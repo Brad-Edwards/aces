@@ -287,3 +287,9 @@ and redaction patterns.
 - If later APIs need draft or partial experiment records, they must introduce an
   explicit draft lifecycle surface rather than weakening these archival
   contracts.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-12 | #482 | Recorded that the ADR's decision date is 2026-05-26 and it landed with experiment-core PR #422 on 2026-06-05. |

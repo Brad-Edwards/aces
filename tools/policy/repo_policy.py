@@ -104,6 +104,7 @@ def evaluate_repo_policy(
     failures.extend(_check_module_boundaries(repo_root, policy, changed, check_set=check_set))
 
     if check_set == "full":
+        failures.extend(_check_adr_template(repo_root, changed))
         failures.extend(_check_adr_index(repo_root, policy, changed))
 
     if "CHANGELOG.md" in changed:
@@ -947,6 +948,44 @@ README_ROW_RE = re.compile(
     r"^\| \[(\d{3})\]\(([^)]+)\) \| (.+?) \| (.+?) \| (\d{4}-\d{2}-\d{2}) \|$",
     re.MULTILINE,
 )
+ADR_TEMPLATE_PATH = "docs/decisions/adrs/TEMPLATE.md"
+ADR_TEMPLATE_REQUIRED_SECTIONS = (
+    "Status",
+    "Date",
+    "Context",
+    "Decision",
+    "Alternatives Considered",
+    "Consequences",
+)
+ADR_TEMPLATE_HEADING_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
+
+
+def _check_adr_template(repo_root: Path, changed: list[str]) -> list[PolicyFailure]:
+    if not any(path.startswith("docs/decisions/adrs/") or path == "tools/policy/repo_policy.py" for path in changed):
+        return []
+
+    template = repo_root / ADR_TEMPLATE_PATH
+    if not template.exists():
+        return [
+            PolicyFailure(
+                "adr-template-missing",
+                "ADR template is missing",
+                ADR_TEMPLATE_PATH,
+            )
+        ]
+
+    text = template.read_text(encoding="utf-8")
+    headings = {match.group(1).strip() for match in ADR_TEMPLATE_HEADING_RE.finditer(text)}
+    missing = [section for section in ADR_TEMPLATE_REQUIRED_SECTIONS if section not in headings]
+    if missing:
+        return [
+            PolicyFailure(
+                "adr-template-section-missing",
+                f"ADR template is missing required section(s): {', '.join(missing)}",
+                ADR_TEMPLATE_PATH,
+            )
+        ]
+    return []
 
 
 def _check_adr_index(repo_root: Path, policy: dict, changed: list[str]) -> list[PolicyFailure]:
