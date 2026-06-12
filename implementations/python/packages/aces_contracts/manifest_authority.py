@@ -47,6 +47,10 @@ BACKEND_SUPPORTED_CONTRACT_IDS = (
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
     "participant-behavior-history-event-stream-v1",
+    "participant-lifecycle-event-v1",
+    "participant-observation-envelope-v1",
+    "participant-shared-state-record-v1",
+    "participant-outcome-report-v1",
 )
 
 PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS = (

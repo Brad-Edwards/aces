@@ -18,7 +18,11 @@
     "evaluation-history-event-stream-v1",
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
-    "participant-behavior-history-event-stream-v1"
+    "participant-behavior-history-event-stream-v1",
+    "participant-lifecycle-event-v1",
+    "participant-observation-envelope-v1",
+    "participant-shared-state-record-v1",
+    "participant-outcome-report-v1"
   ],
   "compatibility": {
     "processors": ["aces-reference-processor"]
@@ -111,6 +115,7 @@
         "temporal_contracts"
       ],
       "supported_interaction_features": ["contention", "coordination", "interference", "shared_state_change"],
+      "feature_support": [],
       "constraints": {}
     }
   }

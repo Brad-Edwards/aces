@@ -697,14 +697,34 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   and [OpenSpiel](https://arxiv.org/abs/1908.09453) inform the agent-facing
   interface vocabulary: actions, observations, rewards, resets, local histories,
   imperfect information, and multi-agent interaction.
-- POMDP, Dec-POMDP, POSG, and Markov-game literature is the theoretical lineage
-  behind ACES's insistence that participant-visible observations are not world
-  truth, and that multi-participant behavior cannot be reduced to a single
-  centralized state stream.
+- POMDP, Dec-POMDP, POSG, and Markov-game literature — with
+  [Bernstein, Givan, Immerman, and Zilberstein's complexity result](https://doi.org/10.1287/moor.27.4.819.297)
+  and [Oliehoek and Amato's Dec-POMDP monograph](https://doi.org/10.1007/978-3-319-28929-8)
+  as anchors — is the theoretical lineage behind ACES's insistence that
+  participant-visible observations are not world truth, and that
+  multi-participant behavior cannot be reduced to a single centralized state
+  stream. [Mean-field game theory](https://doi.org/10.1007/s11537-007-0657-8)
+  covers the population-limit regime ACES records as mean-field nodes.
+- Interpreted systems
+  ([Fagin, Halpern, Moses, Vardi](https://mitpress.mit.edu/9780262562003/reasoning-about-knowledge/)),
+  [dynamic epistemic logic](https://doi.org/10.1007/978-1-4020-5839-4), and
+  [Kuhn's extensive-form information sets](https://doi.org/10.1515/9781400881970-012)
+  are the formal lineage for participant information states, view transitions,
+  and perfect-recall claims.
+  [Goguen-Meseguer noninterference](https://doi.org/10.1109/SP.1982.10014) and
+  [Sabelfeld-Sands declassification](https://doi.org/10.3233/JCS-2009-0352)
+  ground the hidden-truth boundary and disclosure-rule semantics.
+- [STRIPS](https://doi.org/10.1016/0004-3702(71)90010-5),
+  [PDDL](https://doi.org/10.2200/S00900ED2V01Y201902AIM042),
+  [PDDL2.1](https://doi.org/10.1613/jair.1129), and the probabilistic planning
+  languages ([PPDDL](https://doi.org/10.1613/jair.1880),
+  [RDDL](https://users.cecs.anu.edu.au/~ssanner/IPPC_2011/RDDL.pdf)) are the
+  action-language lineage behind participant precondition/effect contracts.
 - [CybORG](https://arxiv.org/abs/2108.09118),
   [CyberBattleSim](https://www.microsoft.com/en-us/research/project/cyberbattlesim/),
-  and [CyGIL](https://arxiv.org/abs/2304.01244) are the cyber-agent environment
-  precedents. They show the value of explicit
+  [CyGIL](https://arxiv.org/abs/2109.03331), and CyGIL's
+  [unified emulation-simulation training environment](https://arxiv.org/abs/2304.01244)
+  are the cyber-agent environment precedents. They show the value of explicit
   action/observation/reward/episode interfaces, and also expose the
   sim-to-emulation gap that ACES must record through realization disclosure and
   evidence provenance.
@@ -759,7 +779,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 ## Runtime, Time, And Causality
 
 - [TENA](https://www.trmc.osd.mil/tena-about.html) and the
-  [IEEE High Level Architecture](https://standards.ieee.org/ieee/1516/3744/)
+  [IEEE High Level Architecture (IEEE Std 1516-2010)](https://standards.ieee.org/ieee/1516/3744/)
   are the main runtime/federation precedents for distributed exercise services,
   time management, and object publication.
 - [SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
@@ -767,9 +787,27 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 - Lamport logical clocks, HLA time management, Time Warp, DEVS, SimPy, ROS 2
   time, ns-3 realtime mode, and FMI inform ACES's separation of timestamp,
   ordering, clock authority, pacing, synchronization, and causality.
+- [Fidge](https://fileadmin.cs.lth.se/cs/Personal/Amr_Ergawy/dist-algos-papers/4.pdf)/[Mattern](https://www.vs.inf.ethz.ch/publ/papers/VirtTimeGlobStates.pdf)
+  vector time and the
+  [Schwarz-Mattern causality survey](https://doi.org/10.1007/BF02277859) are
+  the basis for vector-clock ordering claims: scalar Lamport clocks respect
+  causality one way, vector clocks characterize it.
+  [Winskel's event structures](https://doi.org/10.1007/3-540-17906-2_31) and
+  [Mazurkiewicz's trace theory](https://doi.org/10.1007/3-540-17906-2_30)
+  ground partial-order realized ordering with simultaneity groups.
+- [Allen's interval algebra](https://doi.org/10.1145/182.358434),
+  [Koymans' metric temporal logic](https://doi.org/10.1007/BF01995674), and
+  [Alur-Dill timed automata](https://doi.org/10.1016/0304-3975(94)90010-8)
+  are the formal temporal-contract lineage for schedules, deadlines, dwell,
+  and windows.
+- [Berenson et al.'s ANSI SQL isolation critique](https://doi.org/10.1145/223784.223785)
+  and [Adya's generalized isolation theory](https://pmg.csail.mit.edu/papers/adya-phd.pdf)
+  anchor the shared-state isolation-guarantee vocabulary.
 - Halpern-Pearl structural causality informs ACES's treatment of attribution:
   a participant action followed by an alert is not automatically a causal
   explanation without an evidence basis.
+  [Chockler-Halpern responsibility and blame](https://doi.org/10.1613/jair.1391)
+  extends this to graded multi-cause attribution.
 
 ## Adversary Emulation And Security Knowledge
 

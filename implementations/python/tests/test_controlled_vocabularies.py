@@ -14,6 +14,7 @@ from aces_contracts.controlled_vocabularies import (
 )
 from aces_contracts.vocabulary import (
     ConceptProvenanceCategory,
+    ParticipantFeatureSupportLevel,
     ProcessorFeature,
     RealizationSupportMode,
     WorkflowFeature,
@@ -90,6 +91,9 @@ def test_closed_enum_vocabularies_match_python_enums():
     }
     assert set(catalog.vocabularies["concept-provenance-categories"].terms) == {
         category.value for category in ConceptProvenanceCategory
+    }
+    assert set(catalog.vocabularies["participant-runtime-feature-support-levels"].terms) == {
+        level.value for level in ParticipantFeatureSupportLevel
     }
 
 

@@ -35,6 +35,19 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("backend-profile-v"):
         return schemas_dir / "profiles" / f"{name}.json"
+    if name in {
+        "participant-lifecycle-event-v1",
+        "participant-observation-envelope-v1",
+        "participant-shared-state-record-v1",
+        "participant-outcome-report-v1",
+    }:
+        return schemas_dir / "participant-runtime" / f"{name}.json"
+    if name in {
+        "participant-status-view-v1",
+        "participant-history-view-v1",
+        "participant-context-view-v1",
+    }:
+        return schemas_dir / "control-plane" / f"{name}.json"
     if name.startswith("experiment-"):
         return schemas_dir / "experiment-core" / f"{name}.json"
     if name.endswith("-plan-v1"):
