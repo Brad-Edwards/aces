@@ -83,6 +83,22 @@ def setup_policy_repo(tmp_path: Path) -> Path:
         "| --- | --- | --- | --- |\n"
         "| [001](adr-001-example.md) | Example ADR | Accepted | 2026-04-05 |\n",
     )
+    write_text(
+        adr_dir / "TEMPLATE.md",
+        "# ADR-NNN: Title\n\n"
+        "## Status\n\n"
+        "proposed\n\n"
+        "## Date\n\n"
+        "YYYY-MM-DD\n\n"
+        "## Context\n\n"
+        "What problem or situation is driving this decision?\n\n"
+        "## Decision\n\n"
+        "What did we choose, and why?\n\n"
+        "## Alternatives Considered\n\n"
+        "Which credible options were rejected, and why?\n\n"
+        "## Consequences\n\n"
+        "What are the positive, negative, and risk trade-offs?\n",
+    )
     for package in (
         "aces_sdl",
         "aces_processor",
@@ -234,6 +250,32 @@ def test_adr_index_accepts_legacy_inline_status_and_date_fields(tmp_path: Path) 
     )
 
     assert failures == []
+
+
+def test_adr_template_requires_alternatives_considered(tmp_path: Path) -> None:
+    repo_root = setup_policy_repo(tmp_path)
+    write_text(
+        repo_root / "docs" / "decisions" / "adrs" / "TEMPLATE.md",
+        "# ADR-NNN: Title\n\n"
+        "## Status\n\n"
+        "proposed\n\n"
+        "## Date\n\n"
+        "YYYY-MM-DD\n\n"
+        "## Context\n\n"
+        "Context.\n\n"
+        "## Decision\n\n"
+        "Decision.\n\n"
+        "## Consequences\n\n"
+        "Consequences.\n",
+    )
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        ["docs/decisions/adrs/TEMPLATE.md"],
+        structural_runner=structural_runner_stub,
+    )
+
+    assert [failure.rule_id for failure in failures] == ["adr-template-section-missing"]
 
 
 # ── ADR-015: SDL→processor layering rule ────────────────────────────────

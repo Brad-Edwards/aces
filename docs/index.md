@@ -136,7 +136,26 @@ decisions/adrs/adr-037-runtime-file-service-and-filesystem-presence-semantics
 decisions/adrs/adr-038-runtime-mail-service-logical-state
 decisions/adrs/adr-039-dns-service-runtime-inventory
 decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory
+decisions/adrs/adr-041-participant-implementation-manifest-and-provenance
+decisions/adrs/adr-042-network-sensor-runtime-monitoring
+decisions/adrs/adr-043-runtime-service-listener-surface
+decisions/adrs/adr-044-network-detection-engine-runtime-inventory
+decisions/adrs/adr-045-security-monitoring-detection-definition-semantics
+decisions/adrs/adr-046-app-authorization-runtime-inventory
+decisions/adrs/adr-047-scheduled-job-runtime-inventory
+decisions/adrs/adr-048-datastore-service-runtime-inventory
+decisions/adrs/adr-049-platform-application-runtime-inventory
+decisions/adrs/adr-050-forwarding-agent-runtime-inventory
+decisions/adrs/adr-051-orchestration-authority-runtime-inventory
+decisions/adrs/adr-052-typed-runtime-relationship-subtypes
+decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios
+decisions/adrs/adr-054-participant-runtime-observable-lifecycle
 decisions/adrs/adr-055-experiment-core-contract-boundary
+decisions/adrs/adr-056-runtime-observed-values-and-credential-posture
+decisions/adrs/adr-057-runtime-secret-name-classifier-boundaries
+decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints
+decisions/adrs/adr-059-adr-amendment-policy-and-pin-gate
+decisions/adrs/adr-060-participant-backend-facing-contract-surface
 decisions/sem-213-temporal-participant-preflight
 ```
 
