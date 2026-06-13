@@ -1,0 +1,267 @@
+# Classification-Based Assurance Fulfillment Map (ASR-505, review FM-1, issue #485)
+#
+# Companion to specs/formal/assurance-policy.yaml. The policy file defines the
+# FM0-FM3 ladder and the required artifact kinds per level (its self-description).
+# This file records, per classified formal-spec subsystem under specs/formal/,
+# whether each required artifact kind for that subsystem's FM level is actually
+# DELIVERED (a concrete, non-empty repo path) or explicitly WAIVED (an ISO date
+# plus at least one tracking reference). It makes ADR-018's "the policy cannot rot
+# silently" claim true for fulfillment, not just description: a subsystem can no
+# longer be classified FM3 forever with no artifacts and a green CI.
+#
+# Required reading:
+#   docs/decisions/adrs/adr-007-lightweight-formal-methods-policy.md  -- policy
+#   docs/decisions/adrs/adr-018-classification-based-assurance-policy.md  -- seam
+#   specs/formal/assurance-policy.yaml  -- the FM ladder and required artifacts
+#
+# Gated by tools/check_assurance_policy.py (nox -s policy / verify). Required
+# artifact kinds are DERIVED from assurance-policy.yaml by FM level -- do not
+# duplicate them here. Distinct from docs/explain/reference/fm-classification-
+# ledger.yaml, which is the per-change ADR classification record.
+
+fulfillment: classification-based-assurance-fulfillment
+
+policy_ref: specs/formal/assurance-policy.yaml
+
+adr_refs:
+  - ADR-007
+  - ADR-018
+
+# Registry of classified formal-spec subsystems. Every immediate subdirectory of
+# specs/formal/ carrying a README.md must appear here (the checker fails on any
+# that is absent), and each must carry exactly one fulfillment entry below.
+subsystems:
+  - id: workflows
+    path: specs/formal/workflows
+    fm_level: FM3
+  - id: planner
+    path: specs/formal/planner
+    fm_level: FM2
+  - id: assessment
+    path: specs/formal/assessment
+    fm_level: FM2
+  - id: objectives
+    path: specs/formal/objectives
+    fm_level: FM2
+  - id: experiment-core
+    path: specs/formal/experiment-core
+    fm_level: FM2
+  - id: runtime-contracts
+    path: specs/formal/runtime-contracts
+    fm_level: FM2
+  - id: participant-runtime
+    path: specs/formal/participant-runtime
+    fm_level: FM3
+  - id: participant-semantics
+    path: specs/formal/participant-semantics
+    fm_level: FM3
+  - id: realization
+    path: specs/formal/realization
+    fm_level: FM2
+
+# Fulfillment, keyed by subsystem id. delivered_artifacts name a concrete,
+# non-empty repo path that is the named kind of evidence. waived_artifacts record
+# a known gap with an ISO date and the tracking issue(s) under which it will be
+# closed.
+entries:
+  - subsystem: workflows
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/workflows/README.md
+      - kind: abstract_state_machine_model
+        path: specs/formal/workflows/state-machine.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_models.py
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/schemas/control-plane/workflow-result-envelope-v1.json
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        date: 2026-06-13
+        tracking:
+          - "#521"
+        rationale: >-
+          No property-based or differential test yet exercises the workflow
+          state-machine / result-envelope semantics; tracked for delivery.
+
+  - subsystem: planner
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/planner/dependency-ordering.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_semantics_planner.py
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/schemas/plans/orchestration-plan-v1.json
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_semantics_planner.py
+    waived_artifacts: []
+
+  - subsystem: assessment
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/assessment/pipeline-consistency.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_semantics_assessment.py
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/schemas/control-plane/evaluation-result-envelope-v1.json
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_fm2_semantics.py
+    waived_artifacts: []
+
+  - subsystem: objectives
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/objectives/window-consistency.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_semantics_objectives.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/packages/aces_sdl/objectives.py
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_semantics_objectives.py
+    waived_artifacts: []
+
+  - subsystem: experiment-core
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/experiment-core/README.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_contracts.py
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/schemas/experiment-core/experiment-task-v1.json
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        date: 2026-06-13
+        tracking:
+          - "#521"
+        rationale: >-
+          Contract validation in test_runtime_contracts.py is example-based; no
+          property-based or differential coverage of the EXP-701-705 contracts
+          yet; tracked for delivery.
+
+  - subsystem: runtime-contracts
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/runtime-contracts/README.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_contracts.py
+      - kind: typed_ir_or_contract_coverage
+        path: contracts/schemas/control-plane/workflow-result-envelope-v1.json
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        date: 2026-06-13
+        tracking:
+          - "#521"
+        rationale: >-
+          Portable result/evaluator envelope validation is example-based; no
+          property-based or differential coverage yet; tracked for delivery.
+
+  - subsystem: participant-runtime
+    # Design coverage only (RUN-305-308): the README is the documented invariant
+    # list, but the executable runtime, typed contracts, differential tests, and
+    # abstract state machine do not yet exist. Per the issue finding, those gaps
+    # are recorded as dated, tracked waivers rather than left invisible.
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/participant-runtime/README.md
+    waived_artifacts:
+      - kind: unit_tests
+        date: 2026-06-13
+        tracking:
+          - "#486"
+          - "#194"
+          - "#195"
+        rationale: >-
+          Participant-runtime is at design coverage, not implementation
+          coverage; no executable runtime tests yet.
+      - kind: typed_ir_or_contract_coverage
+        date: 2026-06-13
+        tracking:
+          - "#486"
+          - "#194"
+          - "#195"
+        rationale: >-
+          No typed runtime contract realizes the RUN-305-308 runtime model yet.
+      - kind: property_based_or_differential_tests
+        date: 2026-06-13
+        tracking:
+          - "#486"
+          - "#194"
+          - "#195"
+        rationale: >-
+          No property-based or differential coverage of the runtime model yet.
+      - kind: abstract_state_machine_model
+        date: 2026-06-13
+        tracking:
+          - "#486"
+          - "#194"
+          - "#195"
+        rationale: >-
+          The README defines the design but no executable abstract state-machine
+          model exists; #486 tracks the executable invariant oracle.
+
+  - subsystem: participant-semantics
+    # Design coverage only (SEM-208-215): same posture as participant-runtime.
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/participant-semantics/README.md
+    waived_artifacts:
+      - kind: unit_tests
+        date: 2026-06-13
+        tracking:
+          - "#487"
+        rationale: >-
+          Participant-semantics is at design coverage; no executable semantic
+          tests realize SEM-208-215 yet.
+      - kind: typed_ir_or_contract_coverage
+        date: 2026-06-13
+        tracking:
+          - "#487"
+        rationale: >-
+          No typed contract realizes the SEM-208-215 semantic model yet.
+      - kind: property_based_or_differential_tests
+        date: 2026-06-13
+        tracking:
+          - "#487"
+        rationale: >-
+          No property-based or differential coverage of the semantic model yet.
+      - kind: abstract_state_machine_model
+        date: 2026-06-13
+        tracking:
+          - "#487"
+        rationale: >-
+          No executable abstract model exists; #487 tracks the executable
+          invariant oracle (I1-I18) for the abstract model.
+
+  - subsystem: realization
+    # SEM-218 realization enforcement is in flight across #489/#490/#491; the
+    # explicitness/realization semantic boundary is documented, but the
+    # cross-stage enforcement and its tests are not yet delivered.
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/realization/explicitness-and-realization.md
+    waived_artifacts:
+      - kind: unit_tests
+        date: 2026-06-13
+        tracking:
+          - "#489"
+          - "#490"
+          - "#491"
+        rationale: >-
+          Realization enforcement (classifier, compiler emission, runtime gate)
+          is under construction; no executable enforcement tests yet.
+      - kind: typed_ir_or_contract_coverage
+        date: 2026-06-13
+        tracking:
+          - "#489"
+          - "#490"
+          - "#491"
+        rationale: >-
+          Typed realization-support emission and provenance fields land with
+          #490/#491; not yet delivered.
+      - kind: property_based_or_differential_tests
+        date: 2026-06-13
+        tracking:
+          - "#489"
+          - "#490"
+          - "#491"
+        rationale: >-
+          No property-based or differential coverage of the realization gate yet.
