@@ -10,12 +10,15 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from tools.check_assurance_policy import (  # noqa: E402
+    ADR_CLASSIFICATION_REQUIRED_FROM,
     ADR_POLICY_RELATIVE_PATH,
     ADR_REF,
     ADR_REFS,
+    ADR_TEMPLATE_RELATIVE_PATH,
     ASSURANCE_POLICY_RELATIVE_PATH,
     CANONICAL_LEVEL_IDS,
     CODING_STANDARDS_RELATIVE_PATH,
+    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
     FORMAL_OVERVIEW_RELATIVE_PATH,
     REQUIRED_CHANGE_CATEGORIES,
     REQUIREMENT_REF,
@@ -99,6 +102,44 @@ _GOOD_FORMAL_OVERVIEW = """# Formal Specifications
 | FM3 | Stateful / Control Semantics | FM2 + abstract state-machine model |
 """
 
+_GOOD_ADR_TEMPLATE = """# ADR-NNN: Title
+
+## Status
+
+proposed
+
+## Date
+
+YYYY-MM-DD
+
+## Classification
+
+Classification: FM<n>
+Required artifacts: <artifact kinds delivered or waived>
+Waivers: <none, or artifact kind plus rationale>
+
+## Context
+
+Describe the problem.
+
+## Decision
+
+State the decision.
+
+## Alternatives Considered
+
+List rejected options.
+
+## Consequences
+
+Record outcomes.
+"""
+
+_GOOD_EMPTY_LEDGER = """ledger: per-change-fm-classification
+policy_ref: specs/formal/assurance-policy.yaml
+entries: []
+"""
+
 
 def _seed_repo(
     tmp_path: Path,
@@ -107,8 +148,10 @@ def _seed_repo(
     adr_body: str | None = _GOOD_ADR,
     coding_standards_body: str | None = _GOOD_CODING_STANDARDS,
     formal_overview_body: str | None = _GOOD_FORMAL_OVERVIEW,
+    adr_template_body: str | None = _GOOD_ADR_TEMPLATE,
+    ledger_body: str | None = _GOOD_EMPTY_LEDGER,
 ) -> Path:
-    """Seed a temp repo skeleton with the policy YAML and the three referencing docs."""
+    """Seed a temp repo skeleton with the policy YAML and referencing docs."""
     policy_path = tmp_path / ASSURANCE_POLICY_RELATIVE_PATH
     policy_path.parent.mkdir(parents=True, exist_ok=True)
     policy_path.write_text(policy_body, encoding="utf-8")
@@ -128,6 +171,16 @@ def _seed_repo(
         fo_path.parent.mkdir(parents=True, exist_ok=True)
         fo_path.write_text(formal_overview_body, encoding="utf-8")
 
+    if adr_template_body is not None:
+        template_path = tmp_path / ADR_TEMPLATE_RELATIVE_PATH
+        template_path.parent.mkdir(parents=True, exist_ok=True)
+        template_path.write_text(adr_template_body, encoding="utf-8")
+
+    if ledger_body is not None:
+        ledger_path = tmp_path / FM_CLASSIFICATION_LEDGER_RELATIVE_PATH
+        ledger_path.parent.mkdir(parents=True, exist_ok=True)
+        ledger_path.write_text(ledger_body, encoding="utf-8")
+
     return tmp_path
 
 
@@ -135,6 +188,84 @@ def _flagged(failures, marker: str) -> bool:
     """Return True if some failure matches ``marker`` by rule id or substring of its render."""
     needle = marker.lower()
     return any(f.rule_id == marker or needle in f.render().lower() for f in failures)
+
+
+def _write(path: Path, text: str = "placeholder\n") -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _new_adr_body(
+    *,
+    classification: str | None = "FM1",
+    artifacts: str | None = "unit_tests",
+    waivers: str | None = "none",
+) -> str:
+    fields: list[str] = []
+    if classification is not None:
+        fields.append(f"Classification: {classification}")
+    if artifacts is not None:
+        fields.append(f"Required artifacts: {artifacts}")
+    if waivers is not None:
+        fields.append(f"Waivers: {waivers}")
+    classification_section = "\n".join(fields)
+    return f"""# ADR-{ADR_CLASSIFICATION_REQUIRED_FROM:03d}: New Semantic Surface
+
+## Status
+
+proposed
+
+## Date
+
+2026-06-12
+
+## Classification
+
+{classification_section}
+
+## Context
+
+This proposed ADR adds a semantic runtime surface.
+
+## Decision
+
+Record a semantic decision.
+
+## Alternatives Considered
+
+None.
+
+## Consequences
+
+The new decision is auditable.
+"""
+
+
+def _ledger_entry(
+    adr: str = "ADR-023",
+    *,
+    fm_level: str = "FM1",
+    include_unit_test: bool = True,
+) -> str:
+    delivered = [
+        f"      - kind: invariant_list\n        path: docs/decisions/adrs/adr-{adr[-3:]}-surface.md",
+    ]
+    if include_unit_test:
+        delivered.append(
+            "      - kind: unit_tests\n        path: implementations/python/tests/test_assurance_policy_surface.py"
+        )
+    return f"""  - adr: {adr}
+    surface: Example runtime surface
+    fm_level: {fm_level}
+    delivered_artifacts:
+{chr(10).join(delivered)}
+    waived_artifacts: []
+"""
+
+
+def _seed_runtime_surface(repo: Path, adr: str = "ADR-023") -> None:
+    _write(repo / f"docs/decisions/adrs/adr-{adr[-3:]}-surface.md", f"# {adr}: Surface\n")
+    _write(repo / "implementations/python/tests/test_assurance_policy_surface.py")
 
 
 # ----------------------------------------------------------------------------- #
@@ -793,6 +924,105 @@ def test_fm4_with_artifacts_not_superset_of_fm3_is_flagged(tmp_path: Path) -> No
     failures = evaluate_assurance_policy(_seed_repo(tmp_path, policy_body=body))
     assert _flagged(failures, "assurance-policy-proportionality")
     assert _flagged(failures, "FM4")
+
+
+# ----------------------------------------------------------------------------- #
+# ADR classification and per-change FM ledger.                                  #
+# ----------------------------------------------------------------------------- #
+
+
+def test_new_adr_without_classification_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+    _write(
+        repo / f"docs/decisions/adrs/adr-{ADR_CLASSIFICATION_REQUIRED_FROM:03d}-new-semantic-surface.md",
+        _new_adr_body(classification=None),
+    )
+
+    failures = evaluate_assurance_policy(repo)
+
+    assert _flagged(failures, "adr-classification-missing")
+
+
+def test_new_adr_with_unknown_fm_level_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+    _write(
+        repo / f"docs/decisions/adrs/adr-{ADR_CLASSIFICATION_REQUIRED_FROM:03d}-new-semantic-surface.md",
+        _new_adr_body(classification="FM9"),
+    )
+
+    failures = evaluate_assurance_policy(repo)
+
+    assert _flagged(failures, "adr-classification-level")
+    assert _flagged(failures, "FM9")
+
+
+def test_new_adr_missing_required_artifacts_line_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+    _write(
+        repo / f"docs/decisions/adrs/adr-{ADR_CLASSIFICATION_REQUIRED_FROM:03d}-new-semantic-surface.md",
+        _new_adr_body(artifacts=None),
+    )
+
+    failures = evaluate_assurance_policy(repo)
+
+    assert _flagged(failures, "adr-classification-artifacts")
+
+
+def test_adr_template_missing_classification_field_is_flagged(tmp_path: Path) -> None:
+    template = _GOOD_ADR_TEMPLATE.replace("Classification: FM<n>\n", "", 1)
+
+    failures = evaluate_assurance_policy(_seed_repo(tmp_path, adr_template_body=template))
+
+    assert _flagged(failures, "adr-template-classification")
+
+
+def test_ledger_missing_existing_runtime_surface_entry_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(
+        tmp_path,
+        ledger_body=(
+            f"ledger: per-change-fm-classification\npolicy_ref: {ASSURANCE_POLICY_RELATIVE_PATH}\nentries:\n"
+            f"{_ledger_entry('ADR-023')}"
+        ),
+    )
+    _seed_runtime_surface(repo, "ADR-023")
+    _seed_runtime_surface(repo, "ADR-024")
+
+    failures = evaluate_assurance_policy(repo)
+
+    assert _flagged(failures, "fm-classification-ledger-coverage")
+    assert _flagged(failures, "ADR-024")
+
+
+def test_ledger_fm_level_must_resolve_to_policy_yaml(tmp_path: Path) -> None:
+    repo = _seed_repo(
+        tmp_path,
+        ledger_body=(
+            f"ledger: per-change-fm-classification\npolicy_ref: {ASSURANCE_POLICY_RELATIVE_PATH}\nentries:\n"
+            f"{_ledger_entry(fm_level='FM9')}"
+        ),
+    )
+    _seed_runtime_surface(repo)
+
+    failures = evaluate_assurance_policy(repo)
+
+    assert _flagged(failures, "fm-classification-ledger-level")
+    assert _flagged(failures, "FM9")
+
+
+def test_ledger_required_artifacts_must_be_delivered_or_waived(tmp_path: Path) -> None:
+    repo = _seed_repo(
+        tmp_path,
+        ledger_body=(
+            f"ledger: per-change-fm-classification\npolicy_ref: {ASSURANCE_POLICY_RELATIVE_PATH}\nentries:\n"
+            f"{_ledger_entry(include_unit_test=False)}"
+        ),
+    )
+    _seed_runtime_surface(repo)
+
+    failures = evaluate_assurance_policy(repo)
+
+    assert _flagged(failures, "fm-classification-ledger-artifacts")
+    assert _flagged(failures, "unit_tests")
 
 
 # ----------------------------------------------------------------------------- #

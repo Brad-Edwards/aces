@@ -8,6 +8,12 @@ proposed
 
 YYYY-MM-DD
 
+## Classification
+
+Classification: FM<n>
+Required artifacts: <artifact kinds delivered or waived>
+Waivers: <none, or artifact kind plus rationale>
+
 ## Context
 
 Describe the problem, constraints, and forces that make an architectural
