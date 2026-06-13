@@ -17,7 +17,7 @@ requirements:
     - RUN-311
     - ADR-012
 sonarcloud:
-  project_key: aces-framework_aces-sdl
-  organization: KeplerOps
+  project_key: Brad-Edwards_aces
+  organization: brad-edwards
 rules:
   plan_rules: .gc/plan-rules.md
