@@ -31,6 +31,12 @@ The canonical mapping is
 which is the structural source of truth and gates CI via
 `tools/check_assurance_policy.py`.
 
+Whether each classified domain above actually fulfills the artifact kinds its FM
+level requires — delivered, or explicitly waived with an ISO date and tracking
+reference — is recorded per subsystem in
+[`specs/formal/assurance-fulfillment.yaml`](../../specs/formal/assurance-fulfillment.yaml)
+and gated by the same checker.
+
 | Level | Scope | Required artifacts |
 |-------|-------|--------------------|
 | FM0 | Structural (parsing, schema, local validation) | Unit tests |
