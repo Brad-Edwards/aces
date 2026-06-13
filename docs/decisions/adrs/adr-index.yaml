@@ -195,6 +195,10 @@ adrs:
   - id: ADR-055
     path: docs/decisions/adrs/adr-055-experiment-core-contract-boundary.md
     pin: 2e6666f2e066700df3dbf38d0592a2f24e062ad4f94d695113824f2ba73ff695
+    amendments:
+      - date: 2026-06-12
+        ref: "#482"
+        summary: "Recorded that the ADR's decision date is 2026-05-26 and it landed with experiment-core PR #422 on 2026-06-05."
   - id: ADR-056
     path: docs/decisions/adrs/adr-056-runtime-observed-values-and-credential-posture.md
     pin: 3aa602de53f7607cf531b4a9da3f58192eb87ad21ddd92846fd2ae2a7526a4c3

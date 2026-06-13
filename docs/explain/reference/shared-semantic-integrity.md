@@ -12,6 +12,13 @@ ADR-016 governs; every `SEM-2xx` implementation PR moves its construct family's
 row toward `active` there. The structural gate `tools/check_semantic_coverage.py`
 validates that table on every `nox` policy run.
 
+Per-change FM classifications for semantic and runtime-surface ADRs are
+recorded in the sibling
+[`fm-classification-ledger.yaml`](fm-classification-ledger.yaml) file. The
+assurance-policy gate validates that ledger against
+`specs/formal/assurance-policy.yaml`, including the ADR-023 through ADR-058
+runtime-surface backfill.
+
 `SEM-200` is broader than concept authority alone. It covers whether scenario
 constructs keep the same meaning across authoring, validation, instantiation,
 compilation, planning, execution, live observation, and post-run experiment
