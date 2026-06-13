@@ -2,7 +2,7 @@
 
 ## Status
 
-proposed
+accepted
 
 ## Date
 
@@ -171,3 +171,9 @@ field names; the `agents` section heading remains the publishing surface.
 - Introduce new control-plane authentication, authorization, logging, or
   persistence machinery.
 - Move schema authority away from the existing generated-contract pipeline.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-13 | #484 | Recorded acceptance of the implemented participant framing authoring surface. |

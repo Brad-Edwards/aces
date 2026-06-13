@@ -2,7 +2,7 @@
 
 ## Status
 
-proposed
+accepted
 
 ## Date
 
@@ -287,18 +287,18 @@ contracts, invariants, model/state-machine coverage, negative fixtures,
 backend-conformance fixtures, mapping-loss tests, leakage tests, and run/study
 provenance checks.
 
-## Cross-Issue Dependencies And Deferred Evidence
+## Cross-Issue Boundaries And Evidence Ownership
 
 The critical review for issue #71 identified several concerns that are broader
-than participant semantics. This ADR records them as dependencies or deferrals
-instead of claiming that SEM-208 through SEM-215 solve them alone.
+than participant semantics. This ADR records the ownership boundary for those
+concerns instead of claiming that SEM-208 through SEM-215 solve them alone.
 
 | Concern | Owning issue(s) | ADR-022 obligation |
 | ------- | --------------- | ------------------ |
 | Scenario/run/study provenance and comparability | #87, #89, #105, #106 | Require participant-semantics artifacts to name the provenance fields they consume or emit; do not define the whole study model here |
 | Observability and evidence-capture adequacy | #88, #127, #128, #170, #273 | Require observation/evidence contracts to disclose capture basis, loss, latency, redaction, and observer effects |
-| Benchmark hidden truth, gold standards, canaries, holdouts, and adjudication assets | #125, #328, #333, #166 | Treat these as information-boundary objects in participant views; defer asset lifecycle, corpus governance, and assurance protocols |
-| Trajectories, demonstrations, replay, and participant datasets | #124 and its spawned trajectory issues | Require participant histories and outcomes to be compatible with replay/evidence needs; defer corpus/dataset semantics |
+| Benchmark hidden truth, gold standards, canaries, holdouts, and adjudication assets | #125, #328, #333, #166 | Treat these as information-boundary objects in participant views; leave asset lifecycle, corpus governance, and assurance protocols with their owning issues |
+| Trajectories, demonstrations, replay, and participant datasets | #124 and its spawned trajectory issues | Require participant histories and outcomes to be compatible with replay/evidence needs; leave corpus/dataset semantics with their owning issues |
 | Fidelity, backend realization, and sim/emulation transfer disclosure | #100, #165, #177, #239, #335 | Require action/observation contracts to state realization profiles and weakened guarantees |
 | Machine-checkable semantic validation and evidence gates | #162, #168 | Require participant-specific invariants and negative fixtures; broader validation evidence remains under the falsification gates |
 | DSL language adequacy and author/reviewer evaluation | #346 | Treat expressiveness, ambiguity, usability, maintainability, and domain-expert reviewability as evidence claims outside #71 |
@@ -352,3 +352,9 @@ concerns as unverified claims.
 - [IEEE HLA 1516 family](https://standards.ieee.org/ieee/1516/3744/)
 - [Do Software Languages Engineers Evaluate their Languages?](https://arxiv.org/abs/1109.6794)
 - [SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-13 | #484 | Recorded acceptance-time ownership-boundary wording for cross-issue evidence concerns. |
