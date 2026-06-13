@@ -33,3 +33,8 @@ The canonical mapping from change classification to verification artifacts
 lives in `specs/formal/assurance-policy.yaml`, governed by
 `docs/decisions/adrs/adr-018-classification-based-assurance-policy.md` and
 gated by `tools/check_assurance_policy.py` (`nox -s policy`).
+
+Per-subsystem **fulfillment** — whether each classified domain above actually
+delivers (or explicitly, with an ISO date and tracking reference, waives) the
+artifact kinds its FM level requires — is recorded in
+`specs/formal/assurance-fulfillment.yaml` and gated by the same checker.

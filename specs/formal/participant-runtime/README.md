@@ -154,7 +154,9 @@ Required artifacts for future implementation:
 This document supplies the invariant list, abstract state-machine model,
 normalized vocabulary, conformance obligations, and structural examples for the
 design issue. Typed contracts, tests, evidence fixtures, and executable models
-belong to the spawned implementation issues.
+belong to the spawned implementation issues. Issue #486 delivers a bounded
+executable oracle for the named participant-runtime trace predicates listed in
+the implementation mapping below.
 
 ## V1 Traceability Criteria Matrix
 
@@ -5398,6 +5400,36 @@ Remaining artifacts not claimed by issue #192:
   records;
 - fixtures proving mismatched evidence digests and unsupported validity-threat
   omissions are rejected or downgraded.
+
+## Executable Invariant Oracle - Participant Runtime Trace Predicates
+
+Issue #486 delivers an executable abstract oracle for the participant-runtime
+trace predicates named by `ValidTrace(tr)`. The artifact is intentionally an
+assurance/test model for `ASR-505` and ADR-054 evidence; it does not implement
+the full RUN-306 lifecycle, RUN-307 shared-state model, or RUN-308 concurrent
+execution runtime surfaces.
+
+Implementation artifact:
+
+- `implementations/python/tests/test_participant_runtime_invariants.py`
+
+Bidirectional predicate mapping:
+
+| Spec predicate | Spec anchor | Oracle/test coverage |
+| --- | --- | --- |
+| `ValidTrace(tr)` | `Valid Trace Predicate` | `valid_trace`, `test_valid_trace_accepts_generated_valid_traces`, `test_valid_trace_rejects_targeted_mutations` |
+| `MonotoneSequence(tr)` | `Valid Trace Predicate` / predicate bullet | `monotone_sequence`, `test_monotone_sequence_accepts_generated_valid_traces`, `test_monotone_sequence_rejects_sequence_regression` |
+| `RevisionDiscipline(tr)` | `Valid Trace Predicate` / predicate bullet | `revision_discipline`, `test_revision_discipline_accepts_generated_valid_traces`, `test_revision_discipline_accepts_known_unknown_and_unsupported_write_support`, `test_revision_discipline_rejects_unknown_prior_revision`, `test_revision_discipline_rejects_invalid_disclosure_specific_writes` |
+| `OrderDiscipline(tr)` | `Valid Trace Predicate` / predicate bullet | `order_discipline`, `test_order_discipline_accepts_generated_valid_traces`, `test_order_discipline_accepts_supported_order_claim_strengths`, `test_order_discipline_rejects_wall_clock_causality`, `test_order_discipline_rejects_claim_without_declared_basis` |
+| `ConflictOK(j, tr)` | `Concurrent Participant Execution` conflict predicates | `conflict_ok`, `test_conflict_ok_accepts_generated_valid_traces`, `test_conflict_ok_accepts_supported_conflict_policy_variants`, `test_conflict_ok_rejects_undisclosed_concurrent_write_conflict`, `test_conflict_ok_rejects_invalid_policy_specific_records`, `test_conflict_ok_rejects_joint_action_witnesses_that_are_not_exact_permutations` |
+| `TimeManagementOK(tm, tr)` | `Concurrent Participant Execution` time-management predicates | `time_management_ok`, `test_time_management_ok_accepts_generated_valid_traces`, `test_time_management_ok_accepts_supported_time_mode_variants`, `test_time_management_ok_rejects_wall_clock_exact_time_claim`, `test_time_management_ok_rejects_invalid_mode_specific_contexts` |
+
+The test module maps back to these spec anchors in its module docstring and
+predicate docstrings. Its Hypothesis generator varies valid abstract traces
+across revision-support disclosures, order-claim strengths, conflict policies,
+and time-management modes. Its mutation helpers isolate sequence regression,
+revision violation, order violation, invalid conflict witnesses/policies, and
+time-domain violations as negative evidence.
 
 ## RUN-306 - Participant Decision And Execution Lifecycle
 
