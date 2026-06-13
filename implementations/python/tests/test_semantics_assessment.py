@@ -8,11 +8,14 @@ fail-closed issue reporting.
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
+from aces.core.sdl.parser import parse_sdl_file
 from aces.core.semantics.assessment import (
     ASSESSMENT_DEPENDENCY_ROLES,
     AssessmentDependencyRole,
+    AssessmentPipelineAnalysis,
     AssessmentResourceKind,
     analyze_assessment_pipeline,
     partition_assessment_dependencies,
@@ -40,6 +43,83 @@ def _goal(tlos: list[str]) -> SimpleNamespace:
 
 def _is_var(value: object) -> bool:
     return isinstance(value, str) and value.startswith("${") and value.endswith("}")
+
+
+def _write_assessment_scenario(path: Path, *, namespace: str = "") -> None:
+    prefix = f"{namespace}." if namespace else ""
+    path.write_text(
+        f"""
+name: {namespace or "assessment"}
+version: 1.0.0
+conditions:
+  {prefix}health:
+    command: /bin/true
+    interval: 15
+metrics:
+  {prefix}health-metric:
+    type: conditional
+    condition: {prefix}health
+    max-score: 7
+  {prefix}manual-metric:
+    type: manual
+    max-score: 5
+evaluations:
+  {prefix}readiness:
+    metrics: [{prefix}health-metric, {prefix}manual-metric]
+    min-score:
+      absolute: 10
+tlos:
+  {prefix}ready-tlo:
+    evaluation: {prefix}readiness
+goals:
+  {prefix}ready-goal:
+    tlos: [{prefix}ready-tlo]
+""",
+        encoding="utf-8",
+    )
+
+
+def _write_importing_root(path: Path, imported_name: str, *, namespace: str) -> None:
+    path.write_text(
+        f"""
+name: root
+imports:
+  - path: {imported_name}
+    namespace: {namespace}
+    version: 1.0.0
+""",
+        encoding="utf-8",
+    )
+
+
+def _assessment_analysis_from_file(path: Path) -> AssessmentPipelineAnalysis:
+    scenario = parse_sdl_file(path)
+    return analyze_assessment_pipeline(
+        conditions_by_name=scenario.conditions,
+        metrics_by_name=scenario.metrics,
+        evaluations_by_name=scenario.evaluations,
+        tlos_by_name=scenario.tlos,
+        goals_by_name=scenario.goals,
+    )
+
+
+def _assessment_reference_signature(analysis: AssessmentPipelineAnalysis) -> tuple[tuple[object, ...], ...]:
+    return tuple(
+        (
+            ref.raw,
+            ref.source_kind,
+            ref.source_name,
+            ref.target_kind,
+            ref.target_name,
+            ref.dependency_roles,
+            ref.namespace_path,
+        )
+        for ref in analysis.references
+    )
+
+
+def _strip_shared(name: str) -> str:
+    return name.removeprefix("shared.")
 
 
 class TestAssessmentPipelineSemantics:
@@ -203,6 +283,72 @@ class TestAssessmentPipelineSemantics:
             "tlo.evaluation-undeclared",
             "goal.tlo-undeclared",
         ]
+
+    def test_composition_ready_invariant_layout_variation_preserves_normalized_references_and_aggregation(
+        self, tmp_path: Path
+    ) -> None:
+        flat = tmp_path / "flat.yaml"
+        imported = tmp_path / "assessment-module.yaml"
+        root = tmp_path / "root.yaml"
+        _write_assessment_scenario(flat, namespace="shared")
+        _write_assessment_scenario(imported)
+        _write_importing_root(root, imported.name, namespace="shared")
+
+        flat_analysis = _assessment_analysis_from_file(flat)
+        imported_analysis = _assessment_analysis_from_file(root)
+
+        assert not flat_analysis.has_issues
+        assert not imported_analysis.has_issues
+        assert _assessment_reference_signature(imported_analysis) == _assessment_reference_signature(flat_analysis)
+        assert (
+            imported_analysis.evaluation_metric_totals
+            == flat_analysis.evaluation_metric_totals
+            == {"shared.readiness": 12}
+        )
+
+    def test_composition_ready_invariant_module_expansion_occurs_before_assessment_analysis(
+        self, tmp_path: Path
+    ) -> None:
+        imported = tmp_path / "assessment-module.yaml"
+        root = tmp_path / "root.yaml"
+        _write_assessment_scenario(imported)
+        _write_importing_root(root, imported.name, namespace="shared")
+
+        analysis = _assessment_analysis_from_file(root)
+
+        assert not analysis.has_issues
+        assert [ref.raw for ref in analysis.references] == [
+            "shared.health",
+            "shared.health-metric",
+            "shared.manual-metric",
+            "shared.readiness",
+            "shared.ready-tlo",
+        ]
+
+    def test_composition_ready_invariant_namespace_extends_identity_without_changing_kinds_roles_or_aggregation(
+        self, tmp_path: Path
+    ) -> None:
+        plain = tmp_path / "plain.yaml"
+        namespaced = tmp_path / "namespaced.yaml"
+        _write_assessment_scenario(plain)
+        _write_assessment_scenario(namespaced, namespace="shared")
+
+        plain_analysis = _assessment_analysis_from_file(plain)
+        namespaced_analysis = _assessment_analysis_from_file(namespaced)
+
+        assert [
+            (ref.source_kind, ref.target_kind, ref.dependency_roles, ref.namespace_path)
+            for ref in namespaced_analysis.references
+        ] == [
+            (ref.source_kind, ref.target_kind, ref.dependency_roles, ref.namespace_path)
+            for ref in plain_analysis.references
+        ]
+        assert [
+            (_strip_shared(ref.source_name), _strip_shared(ref.target_name)) for ref in namespaced_analysis.references
+        ] == [(ref.source_name, ref.target_name) for ref in plain_analysis.references]
+        assert list(namespaced_analysis.evaluation_metric_totals.values()) == list(
+            plain_analysis.evaluation_metric_totals.values()
+        )
 
 
 class TestAssessmentDependencyPartition:

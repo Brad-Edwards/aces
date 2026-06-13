@@ -75,4 +75,17 @@ shape before compiler/planner semantics run. Each resolved reference carries:
   - `implementations/python/packages/aces_processor/models.py`
 - differential and property tests:
   - `implementations/python/tests/test_semantics_objectives.py`
+    (`test_window_invariant_story_refs_must_resolve`,
+    `test_window_invariant_script_refs_must_resolve`,
+    `test_window_invariant_event_refs_must_resolve`,
+    `test_window_invariant_steps_must_use_workflow_step_syntax`,
+    `test_window_invariant_steps_require_workflow_window`,
+    `test_window_invariant_workflow_refs_must_resolve`,
+    `test_window_invariant_step_workflow_must_resolve`,
+    `test_window_invariant_step_name_must_resolve_within_workflow`,
+    `test_window_invariant_step_workflow_must_be_inside_workflow_window`,
+    `test_window_invariant_explicit_scripts_must_be_inside_story_window`,
+    `test_window_invariant_events_must_be_inside_reachable_script_window`,
+    `test_composition_ready_invariant_imported_window_analysis_uses_expanded_canonical_identities`,
+    `test_composition_ready_invariant_namespace_extends_window_identity_without_changing_kind_roles_or_ownership`)
   - `implementations/python/tests/test_fm2_semantics.py`

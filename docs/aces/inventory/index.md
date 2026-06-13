@@ -33,6 +33,7 @@ methodology owner.
 asset-inventory-methodology
 methodology-assurance-report
 scn010-expressivity-gap-analysis
+issue-516-redaction-boundary-preflight
 webapp-preflight
 kali-preflight
 ad-preflight
