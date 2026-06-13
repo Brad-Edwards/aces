@@ -46,8 +46,8 @@ The practical reproducibility standard is therefore:
 - every captured fact has either an ACES specification mapping or an ACES
   issue for the expressivity gap;
 - the capture can be rerun with non-commercial tooling on a local lab;
-- limits, time-sensitive scanner output, mutable tags, redactions, and
-  skipped steps are recorded plainly.
+- limits, time-sensitive scanner output, mutable tags, operator/out-of-scenario
+  withholding, and skipped steps are recorded plainly.
 
 This follows the computational reproducibility framing in Peng (2011),
 Goodman, Fanelli, and Ioannidis (2016), and Boettiger (2015): preserve
@@ -122,11 +122,24 @@ instead of pretending a local build recipe exists.
 
    Preserve container inspect, network inspect, volume inspect, process
    list, listeners, mounts, OS release, users/groups, working directory,
-   command/entrypoint, exposed ports, restart policy, resource limits, and
-   bind mounts. Redact secret values before evidence enters git unless the
-   scenario explicitly requires a participant-visible secret fixture to be
-   specified; in that case, store it through the repo's approved secret-fixture
-   mechanism rather than leaking live local secrets.
+   command/entrypoint, exposed ports, restart policy, resource limits, bind
+   mounts, and scenario-target secrets. Participant-discoverable target
+   credentials, password hashes, private keys, bearer tokens, generated service
+   secrets, config secrets, and other credential-shaped values are capture
+   facts and must not be redacted from source inventory bundles. For example,
+   Wazuh/OpenSearch Security `internal_users.yml` bcrypt hashes are target
+   configuration facts; replacing them with `<REDACTED-...>` corrupts the
+   inventory and prevents later ACES/APTL mapping from seeing the realized
+   system.
+
+   Operator/out-of-scenario secrets remain outside the capture boundary:
+   host SSH keys, cloud or CI tokens, maintainer credentials, local
+   control-plane secrets, workstation secrets, unrelated prior-run
+   transcripts, and accidental adjacent-environment material are not scenario
+   facts. Exclude them, or record the withheld scope and reason as a
+   first-class `capture-limits.txt` entry. Sanitized publication/export
+   bundles are separate derived views; they must not replace the authoritative
+   source inventory bundle.
 
 6. Capture package and dependency inventory.
 
@@ -283,8 +296,8 @@ The pass proved that the method can capture an upstream-image asset with:
   surfaces, and runtime process/listener baseline;
 - OS package inventory and Go module manifests visible in the image;
 - CycloneDX SBOM and Trivy vulnerability output;
-- evidence checksums and pytest validation for redaction, digest identity,
-  SBOM structure, and severity-count consistency.
+- evidence checksums and pytest validation for capture-boundary handling,
+  digest identity, SBOM structure, and severity-count consistency.
 
 This proof pass is not yet a full maximal-discovery pass because it mostly
 uses host-side Docker evidence plus a container runtime baseline. The next
