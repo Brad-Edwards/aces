@@ -2,7 +2,7 @@
 
 ## Status
 
-proposed
+accepted
 
 ## Date
 
@@ -134,9 +134,10 @@ sections or overloading `runtime`.
 
 ## Non-Goals
 
-- Implementing issue #364.
-- Updating `examples/scenarios/techvault.sdl.yaml`.
-- Building or inspecting images.
+- Building or inspecting images; issue #364 shipped the declarative
+  `Source.build` authoring surface only.
+- Adding further TechVault scenario parity beyond the source build-provenance
+  examples already used to validate issue #364.
 - Defining a backend build executor, Docker Compose authoring format, registry
   distribution service, or OCI module packaging policy.
 - Adding archival run-provenance contracts beyond the SDL expressivity needed

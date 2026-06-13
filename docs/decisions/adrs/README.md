@@ -129,10 +129,10 @@ adr-060-participant-backend-facing-contract-surface
 | [017](adr-017-conversation-surface-hardening.md) | Conversation Surface Hardening | accepted | 2026-05-17 |
 | [018](adr-018-classification-based-assurance-policy.md) | Canonical Mapping for the Classification-Based Assurance Policy | accepted | 2026-05-17 |
 | [019](adr-019-normative-authority-boundary-manifest.md) | Canonical Manifest for the Normative Artifact Authority Boundary | accepted | 2026-05-17 |
-| [020](adr-020-declarative-participant-framing-boundaries.md) | Declarative Participant Framing Boundaries | proposed | 2026-05-18 |
-| [021](adr-021-falsification-first-claim-evidence-gate.md) | Falsification-First Claim Evidence Gate | proposed | 2026-05-18 |
-| [022](adr-022-participant-behavior-and-interaction-semantics.md) | Participant Behavior and Interaction Semantics | proposed | 2026-05-18 |
-| [023](adr-023-container-image-build-provenance-surface.md) | Container Image Build Provenance Surface | proposed | 2026-05-21 |
+| [020](adr-020-declarative-participant-framing-boundaries.md) | Declarative Participant Framing Boundaries | accepted | 2026-05-18 |
+| [021](adr-021-falsification-first-claim-evidence-gate.md) | Falsification-First Claim Evidence Gate | accepted | 2026-05-18 |
+| [022](adr-022-participant-behavior-and-interaction-semantics.md) | Participant Behavior and Interaction Semantics | accepted | 2026-05-18 |
+| [023](adr-023-container-image-build-provenance-surface.md) | Container Image Build Provenance Surface | accepted | 2026-05-21 |
 | [024](adr-024-local-identity-inventory-surface.md) | Local Identity Inventory Surface | accepted | 2026-05-21 |
 | [025](adr-025-container-network-realization-surface.md) | Container Network Realization Surface | accepted | 2026-05-21 |
 | [026](adr-026-application-http-surface-inventory.md) | Application HTTP Surface Inventory | accepted | 2026-05-22 |
@@ -163,7 +163,7 @@ adr-060-participant-backend-facing-contract-surface
 | [051](adr-051-orchestration-authority-runtime-inventory.md) | Orchestration Authority Runtime Inventory | accepted | 2026-05-30 |
 | [052](adr-052-typed-runtime-relationship-subtypes.md) | Typed Runtime Relationship Subtypes | accepted | 2026-05-30 |
 | [053](adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) | SDL Module Composition for Inventory-Backed Scenarios | accepted | 2026-06-03 |
-| [054](adr-054-participant-runtime-observable-lifecycle.md) | Participant Runtime Observable Lifecycle | proposed | 2026-06-05 |
+| [054](adr-054-participant-runtime-observable-lifecycle.md) | Participant Runtime Observable Lifecycle | accepted | 2026-06-05 |
 | [055](adr-055-experiment-core-contract-boundary.md) | Experiment Core Contract Boundary | accepted | 2026-05-26 |
 | [056](adr-056-runtime-observed-values-and-credential-posture.md) | Runtime Observed Values and Credential Posture | accepted | 2026-06-05 |
 | [057](adr-057-runtime-secret-name-classifier-boundaries.md) | Runtime Scenario Value Realizability and Explicit Redaction | accepted | 2026-06-06 |

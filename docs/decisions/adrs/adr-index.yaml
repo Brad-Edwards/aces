@@ -64,6 +64,18 @@ adrs:
   - id: ADR-019
     path: docs/decisions/adrs/adr-019-normative-authority-boundary-manifest.md
     pin: 66b4ea3eb2482d6f8855462f4921c9cd7853ddb4c9adfaa21f311a07422f248b
+  - id: ADR-020
+    path: docs/decisions/adrs/adr-020-declarative-participant-framing-boundaries.md
+    pin: 4a5d146fc0ffd6da97af94e9f2d257a893de0ab7f63c709339d27f33178609d0
+  - id: ADR-021
+    path: docs/decisions/adrs/adr-021-falsification-first-claim-evidence-gate.md
+    pin: 3e6053efd262abdbc37c8804bb066466b4c968dc647bfc605c16b563f6639642
+  - id: ADR-022
+    path: docs/decisions/adrs/adr-022-participant-behavior-and-interaction-semantics.md
+    pin: 87557c92a82c413c0e9042a239735ad78b24e73516c58be2249e97159c5dea38
+  - id: ADR-023
+    path: docs/decisions/adrs/adr-023-container-image-build-provenance-surface.md
+    pin: 55aea7a6726bc8942f9df35f83f9d50c3a2e4ffaff091ea47c581f8ef5525133
   - id: ADR-024
     path: docs/decisions/adrs/adr-024-local-identity-inventory-surface.md
     pin: 74f1a3df1a7c0f8dc6f44ff006abe88b20b9444fa93a736ac20fca1ca800e665
@@ -192,6 +204,9 @@ adrs:
   - id: ADR-053
     path: docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md
     pin: e6eae89e31205274087e6c4e775744fba945091cddef1aa5dad3daad47921993
+  - id: ADR-054
+    path: docs/decisions/adrs/adr-054-participant-runtime-observable-lifecycle.md
+    pin: a20312d7eb9a82a2611cb16bbe9590f1e43389d4ed1ea4341ae773edb8529086
   - id: ADR-055
     path: docs/decisions/adrs/adr-055-experiment-core-contract-boundary.md
     pin: 2e6666f2e066700df3dbf38d0592a2f24e062ad4f94d695113824f2ba73ff695
