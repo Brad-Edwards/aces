@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 from hypothesis import given
 from hypothesis import strategies as st
 
+from aces.core.sdl.parser import parse_sdl_file
 from aces.core.semantics.assessment import AssessmentResourceKind
 from aces.core.semantics.objective_semantics import (
     OBJECTIVE_ACTOR_DEPENDENCY_ROLES,
@@ -29,6 +31,103 @@ from aces.core.semantics.objectives import (
 
 def _workflow(*step_names: str) -> SimpleNamespace:
     return SimpleNamespace(steps={name: object() for name in step_names})
+
+
+def _window_analysis(
+    *,
+    story_refs: list[str] | None = None,
+    script_refs: list[str] | None = None,
+    event_refs: list[str] | None = None,
+    workflow_refs: list[str] | None = None,
+    step_refs: list[str] | None = None,
+    stories_by_name: dict[str, object] | None = None,
+    scripts_by_name: dict[str, object] | None = None,
+    events_by_name: dict[str, object] | None = None,
+    workflows_by_name: dict[str, object] | None = None,
+):
+    return analyze_objective_window(
+        story_refs=list(story_refs or []),
+        script_refs=list(script_refs or []),
+        event_refs=list(event_refs or []),
+        workflow_refs=list(workflow_refs or []),
+        step_refs=list(step_refs or []),
+        stories_by_name=stories_by_name or {},
+        scripts_by_name=scripts_by_name or {},
+        events_by_name=events_by_name or {},
+        workflows_by_name=workflows_by_name or {},
+    )
+
+
+def _window_issue_codes(analysis) -> set[str]:
+    return {issue.code for issue in analysis.issues}
+
+
+def _write_objective_window_scenario(path: Path, *, namespace: str = "") -> None:
+    prefix = f"{namespace}." if namespace else ""
+    path.write_text(
+        f"""
+name: {namespace or "window"}
+version: 1.0.0
+conditions:
+  {prefix}health:
+    command: /bin/true
+    interval: 15
+entities:
+  {prefix}blue:
+    role: blue
+stories:
+  {prefix}intro:
+    scripts: [{prefix}timeline]
+scripts:
+  {prefix}timeline:
+    start-time: 0
+    end-time: 60
+    speed: 1
+    events:
+      {prefix}kickoff: 0
+events:
+  {prefix}kickoff: {{}}
+objectives:
+  {prefix}observe:
+    entity: {prefix}blue
+    success:
+      conditions: [{prefix}health]
+    window:
+      stories: [{prefix}intro]
+      scripts: [{prefix}timeline]
+      events: [{prefix}kickoff]
+      workflows: [{prefix}flow]
+      steps: [{prefix}flow.start]
+workflows:
+  {prefix}flow:
+    start: start
+    steps:
+      start:
+        type: objective
+        objective: {prefix}observe
+        on-success: finish
+      finish:
+        type: end
+""",
+        encoding="utf-8",
+    )
+
+
+def _write_importing_root(path: Path, imported_name: str, *, namespace: str) -> None:
+    path.write_text(
+        f"""
+name: root
+imports:
+  - path: {imported_name}
+    namespace: {namespace}
+    version: 1.0.0
+""",
+        encoding="utf-8",
+    )
+
+
+def _strip_shared(name: str) -> str:
+    return name.removeprefix("shared.")
 
 
 class TestObjectiveWindowSemantics:
@@ -91,6 +190,171 @@ class TestObjectiveWindowSemantics:
             "step-workflow-outside-window",
             "step-unbound",
         }
+
+    def test_window_invariant_story_refs_must_resolve(self) -> None:
+        analysis = _window_analysis(story_refs=["missing-story"])
+
+        assert _window_issue_codes(analysis) == {"story-unbound"}
+
+    def test_window_invariant_script_refs_must_resolve(self) -> None:
+        analysis = _window_analysis(script_refs=["missing-script"])
+
+        assert _window_issue_codes(analysis) == {"script-unbound"}
+
+    def test_window_invariant_event_refs_must_resolve(self) -> None:
+        analysis = _window_analysis(event_refs=["missing-event"])
+
+        assert _window_issue_codes(analysis) == {"event-unbound"}
+
+    def test_window_invariant_steps_must_use_workflow_step_syntax(self) -> None:
+        analysis = _window_analysis(
+            workflow_refs=["flow"],
+            step_refs=["bad-step-ref"],
+            workflows_by_name={"flow": _workflow("start")},
+        )
+
+        assert _window_issue_codes(analysis) == {"step-invalid-format"}
+
+    def test_window_invariant_steps_require_workflow_window(self) -> None:
+        analysis = _window_analysis(
+            step_refs=["flow.start"],
+            workflows_by_name={"flow": _workflow("start")},
+        )
+
+        assert "step-requires-workflow-window" in _window_issue_codes(analysis)
+
+    def test_window_invariant_workflow_refs_must_resolve(self) -> None:
+        analysis = _window_analysis(workflow_refs=["missing-flow"])
+
+        assert _window_issue_codes(analysis) == {"workflow-unbound"}
+
+    def test_window_invariant_step_workflow_must_resolve(self) -> None:
+        analysis = _window_analysis(
+            workflow_refs=["flow"],
+            step_refs=["missing-flow.start"],
+            workflows_by_name={"flow": _workflow("start")},
+        )
+
+        assert _window_issue_codes(analysis) == {"step-workflow-unbound"}
+
+    def test_window_invariant_step_name_must_resolve_within_workflow(self) -> None:
+        analysis = _window_analysis(
+            workflow_refs=["flow"],
+            step_refs=["flow.missing"],
+            workflows_by_name={"flow": _workflow("start")},
+        )
+
+        assert _window_issue_codes(analysis) == {"step-unbound"}
+
+    def test_window_invariant_step_workflow_must_be_inside_workflow_window(self) -> None:
+        analysis = _window_analysis(
+            workflow_refs=["flow"],
+            step_refs=["other.done"],
+            workflows_by_name={"flow": _workflow("start"), "other": _workflow("done")},
+        )
+
+        assert _window_issue_codes(analysis) == {"step-workflow-outside-window"}
+
+    def test_window_invariant_explicit_scripts_must_be_inside_story_window(self) -> None:
+        analysis = _window_analysis(
+            story_refs=["intro"],
+            script_refs=["side"],
+            stories_by_name={"intro": SimpleNamespace(scripts=["main"])},
+            scripts_by_name={"main": SimpleNamespace(events={}), "side": SimpleNamespace(events={})},
+        )
+
+        assert _window_issue_codes(analysis) == {"script-outside-window-stories"}
+
+    def test_window_invariant_events_must_be_inside_reachable_script_window(self) -> None:
+        analysis = _window_analysis(
+            script_refs=["timeline"],
+            event_refs=["cleanup"],
+            scripts_by_name={"timeline": SimpleNamespace(events={"kickoff": 10})},
+            events_by_name={"cleanup": SimpleNamespace()},
+        )
+
+        assert _window_issue_codes(analysis) == {"event-outside-window-scripts"}
+
+    def test_composition_ready_invariant_imported_window_analysis_uses_expanded_canonical_identities(
+        self, tmp_path: Path
+    ) -> None:
+        imported = tmp_path / "window-module.yaml"
+        root = tmp_path / "root.yaml"
+        _write_objective_window_scenario(imported)
+        _write_importing_root(root, imported.name, namespace="shared")
+        scenario = parse_sdl_file(root)
+
+        analysis = _analyze(
+            scenario.objectives,
+            entity_names=set(scenario.entities),
+            conditions_by_name=scenario.conditions,
+            stories_by_name=scenario.stories,
+            scripts_by_name=scenario.scripts,
+            events_by_name=scenario.events,
+            workflows_by_name=scenario.workflows,
+        )
+
+        assert not analysis.has_issues
+        assert {ref.canonical_name for ref in analysis.references_of_kind(ObjectiveReferenceKind.WINDOW)} == {
+            "shared.intro",
+            "shared.timeline",
+            "shared.kickoff",
+            "shared.flow",
+            "shared.flow.start",
+        }
+        window_step = [
+            ref
+            for ref in analysis.references_of_kind(ObjectiveReferenceKind.WINDOW)
+            if ref.window_reference_kind == ObjectiveWindowReferenceKind.WORKFLOW_STEP
+        ][0]
+        assert window_step.workflow_name == "shared.flow"
+        assert window_step.step_name == "start"
+
+    def test_composition_ready_invariant_namespace_extends_window_identity_without_changing_kind_roles_or_ownership(
+        self, tmp_path: Path
+    ) -> None:
+        plain = tmp_path / "plain.yaml"
+        namespaced = tmp_path / "namespaced.yaml"
+        _write_objective_window_scenario(plain)
+        _write_objective_window_scenario(namespaced, namespace="shared")
+        plain_scenario = parse_sdl_file(plain)
+        namespaced_scenario = parse_sdl_file(namespaced)
+
+        plain_window = plain_scenario.objectives["observe"].window
+        namespaced_window = namespaced_scenario.objectives["shared.observe"].window
+        plain_analysis = analyze_objective_window(
+            story_refs=plain_window.stories,
+            script_refs=plain_window.scripts,
+            event_refs=plain_window.events,
+            workflow_refs=plain_window.workflows,
+            step_refs=plain_window.steps,
+            stories_by_name=plain_scenario.stories,
+            scripts_by_name=plain_scenario.scripts,
+            events_by_name=plain_scenario.events,
+            workflows_by_name=plain_scenario.workflows,
+        )
+        namespaced_analysis = analyze_objective_window(
+            story_refs=namespaced_window.stories,
+            script_refs=namespaced_window.scripts,
+            event_refs=namespaced_window.events,
+            workflow_refs=namespaced_window.workflows,
+            step_refs=namespaced_window.steps,
+            stories_by_name=namespaced_scenario.stories,
+            scripts_by_name=namespaced_scenario.scripts,
+            events_by_name=namespaced_scenario.events,
+            workflows_by_name=namespaced_scenario.workflows,
+        )
+
+        assert [
+            (ref.reference_kind, ref.dependency_roles, ref.step_name, _strip_shared(ref.workflow_name or ""))
+            for ref in namespaced_analysis.references
+        ] == [
+            (ref.reference_kind, ref.dependency_roles, ref.step_name, ref.workflow_name or "")
+            for ref in plain_analysis.references
+        ]
+        assert [_strip_shared(ref.canonical_name) for ref in namespaced_analysis.references] == [
+            ref.canonical_name for ref in plain_analysis.references
+        ]
 
     @given(st.lists(st.sampled_from(["flow.start", "flow.branch"]), max_size=12))
     def test_workflow_step_normalization_is_stable(self, step_refs: list[str]):
