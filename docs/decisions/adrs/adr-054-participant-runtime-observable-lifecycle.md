@@ -663,3 +663,9 @@ plane.
 - Defining a full archival study-management system beyond the runtime fields
   needed to preserve participant history, shared-state evidence, and benchmark
   reproducibility claims.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-13 | #484 | Recorded acceptance-time non-goal wording for already-published RUN-305 and backend-facing contract subsets. |

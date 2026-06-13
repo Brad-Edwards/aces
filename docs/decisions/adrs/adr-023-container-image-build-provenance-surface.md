@@ -170,3 +170,9 @@ sections or overloading `runtime`.
   values enter diagnostics.
 - Overfitting to Dockerfile syntax could make future OCI/SBOM/provenance
   inputs look like incompatible second-class artifacts.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-13 | #484 | Recorded acceptance-time non-goal wording after the issue #364 Source.build surface shipped. |

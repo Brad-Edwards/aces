@@ -100,3 +100,9 @@ The first claim protocols are tracked as GitHub issues:
 
 - ASR-530: Claim Falsification And Evidence Gate
 - Issue #162: Claim falsification and evidence gate
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-13 | #484 | Recorded acceptance of the falsification-first claim evidence gate and its ASR-530/#162 linkage. |

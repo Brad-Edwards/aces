@@ -352,3 +352,9 @@ concerns as unverified claims.
 - [IEEE HLA 1516 family](https://standards.ieee.org/ieee/1516/3744/)
 - [Do Software Languages Engineers Evaluate their Languages?](https://arxiv.org/abs/1109.6794)
 - [SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-13 | #484 | Recorded acceptance-time ownership-boundary wording for cross-issue evidence concerns. |
