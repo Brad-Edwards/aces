@@ -23,6 +23,7 @@ matching the other policy gates (``check_repo_policy.py``,
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from collections.abc import Iterable
 from pathlib import Path
@@ -49,10 +50,18 @@ ASSURANCE_POLICY_RELATIVE_PATH = "specs/formal/assurance-policy.yaml"
 ADR_POLICY_RELATIVE_PATH = "docs/decisions/adrs/adr-007-lightweight-formal-methods-policy.md"
 CODING_STANDARDS_RELATIVE_PATH = "docs/explain/reference/coding-standards.md"
 FORMAL_OVERVIEW_RELATIVE_PATH = "docs/specs/formal.md"
+ADR_TEMPLATE_RELATIVE_PATH = "docs/decisions/adrs/TEMPLATE.md"
+ADR_DIRECTORY_RELATIVE_PATH = "docs/decisions/adrs"
+FM_CLASSIFICATION_LEDGER_RELATIVE_PATH = "docs/explain/reference/fm-classification-ledger.yaml"
 
 # The baseline canonical level ids. The YAML MAY add more levels (e.g. FM4),
 # but these four are the floor and must always be present.
 CANONICAL_LEVEL_IDS: tuple[str, ...] = ("FM0", "FM1", "FM2", "FM3")
+
+# ADR-060 existed before this gate. ADR-061 and later ADRs must carry the
+# explicit per-change FM classification record.
+ADR_CLASSIFICATION_REQUIRED_FROM = 61
+FM_LEDGER_RUNTIME_ADR_RANGE = range(23, 59)
 
 # The four words in the ASR-505 statement -- the validator pins each to a
 # specific level so reordering does not silently keep passing.
@@ -111,6 +120,11 @@ _LEVEL_SEQUENCE_FIELDS: tuple[str, ...] = (
     "prohibited_artifacts",
 )
 _FM0_PROHIBITED_ARTIFACTS: frozenset[str] = frozenset({"TLA+", "Alloy"})
+_ADR_FILE_RE = re.compile(r"^adr-(\d{3})-.+\.md$")
+_ADR_CLASSIFICATION_RE = re.compile(r"^Classification:\s*(FM\d+)\s*$", re.MULTILINE)
+_ADR_REQUIRED_ARTIFACTS_RE = re.compile(r"^Required artifacts:\s*(.+?)\s*$", re.MULTILINE)
+_ADR_WAIVERS_RE = re.compile(r"^Waivers:\s*(.+?)\s*$", re.MULTILINE)
+_LEDGER_VALUE = "per-change-fm-classification"
 
 # Human-readable phrasings for each YAML artifact slug. The drift guard
 # requires the union of required artifacts (across all levels in the YAML) to
@@ -499,6 +513,431 @@ def _required_artifact_union(levels: list[Any]) -> set[str]:
     return union
 
 
+def _level_ids(levels: list[Any]) -> set[str]:
+    """Return valid FM level ids from the canonical YAML."""
+    return {level["id"] for level in levels if isinstance(level, dict) and isinstance(level.get("id"), str)}
+
+
+def _required_artifacts_by_level(levels: list[Any]) -> dict[str, set[str]]:
+    """Return YAML-required artifact kinds per FM level."""
+    by_level: dict[str, set[str]] = {}
+    for level in levels:
+        if isinstance(level, dict) and isinstance(level.get("id"), str):
+            by_level[level["id"]] = set(_level_sequence(level, "required_artifacts"))
+    return by_level
+
+
+def _is_filled_field(value: str | None) -> bool:
+    """Return true when a template field has been replaced with a real value."""
+    if value is None:
+        return False
+    normalized = value.strip().lower()
+    if not normalized:
+        return False
+    if normalized in {"tbd", "todo", "none yet", "n/a"}:
+        return False
+    return "<" not in value and "..." not in value
+
+
+def _adr_number(path: Path) -> int | None:
+    match = _ADR_FILE_RE.match(path.name)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def _adr_id_from_number(number: int) -> str:
+    return f"ADR-{number:03d}"
+
+
+def _find_adr_path(repo_root: Path, adr_id: str) -> Path | None:
+    suffix = adr_id.removeprefix("ADR-")
+    if not suffix.isdigit():
+        return None
+    adr_dir = repo_root / ADR_DIRECTORY_RELATIVE_PATH
+    matches = sorted(adr_dir.glob(f"adr-{suffix}-*.md"))
+    return matches[0] if matches else None
+
+
+def _resolve_repo_path(repo_root: Path, relative_path: str) -> Path | None:
+    root = repo_root.resolve()
+    candidate = (root / relative_path).resolve()
+    if candidate == root or root in candidate.parents:
+        return candidate
+    return None
+
+
+def _check_adr_template_classification(repo_root: Path) -> list[PolicyFailure]:
+    template_path = repo_root / ADR_TEMPLATE_RELATIVE_PATH
+    if not template_path.is_file():
+        return [_fail("adr-template-classification", "ADR template is missing", ADR_TEMPLATE_RELATIVE_PATH)]
+    text = template_path.read_text(encoding="utf-8")
+    required_snippets = (
+        "## Classification",
+        "Classification: FM<n>",
+        "Required artifacts:",
+        "Waivers:",
+    )
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    if missing:
+        return [
+            _fail(
+                "adr-template-classification",
+                "ADR template is missing FM classification field(s): " + ", ".join(missing),
+                ADR_TEMPLATE_RELATIVE_PATH,
+            )
+        ]
+    return []
+
+
+def _check_new_adr_classifications(repo_root: Path, level_ids: set[str]) -> list[PolicyFailure]:
+    adr_dir = repo_root / ADR_DIRECTORY_RELATIVE_PATH
+    if not adr_dir.is_dir():
+        return []
+    failures: list[PolicyFailure] = []
+    for adr_path in sorted(adr_dir.glob("adr-*.md")):
+        number = _adr_number(adr_path)
+        if number is None or number < ADR_CLASSIFICATION_REQUIRED_FROM:
+            continue
+        rel_path = adr_path.relative_to(repo_root).as_posix()
+        text = adr_path.read_text(encoding="utf-8")
+        classification_matches = _ADR_CLASSIFICATION_RE.findall(text)
+        if len(classification_matches) != 1:
+            failures.append(
+                _fail(
+                    "adr-classification-missing",
+                    f"{_adr_id_from_number(number)} must contain exactly one 'Classification: FM<n>' field",
+                    rel_path,
+                )
+            )
+            continue
+        level_id = classification_matches[0]
+        if level_id not in level_ids:
+            failures.append(
+                _fail(
+                    "adr-classification-level",
+                    f"{_adr_id_from_number(number)} classification level {level_id} "
+                    f"is not defined in {ASSURANCE_POLICY_RELATIVE_PATH}",
+                    rel_path,
+                )
+            )
+        artifacts_match = _ADR_REQUIRED_ARTIFACTS_RE.search(text)
+        if not _is_filled_field(artifacts_match.group(1) if artifacts_match else None):
+            failures.append(
+                _fail(
+                    "adr-classification-artifacts",
+                    f"{_adr_id_from_number(number)} must name required artifacts delivered or waived",
+                    rel_path,
+                )
+            )
+        waivers_match = _ADR_WAIVERS_RE.search(text)
+        if not _is_filled_field(waivers_match.group(1) if waivers_match else None):
+            failures.append(
+                _fail(
+                    "adr-classification-waivers",
+                    f"{_adr_id_from_number(number)} must name waivers or explicitly say none",
+                    rel_path,
+                )
+            )
+    return failures
+
+
+def _runtime_adr_ids_present(repo_root: Path) -> set[str]:
+    adr_dir = repo_root / ADR_DIRECTORY_RELATIVE_PATH
+    if not adr_dir.is_dir():
+        return set()
+    present: set[str] = set()
+    for path in adr_dir.glob("adr-*.md"):
+        number = _adr_number(path)
+        if number in FM_LEDGER_RUNTIME_ADR_RANGE:
+            present.add(_adr_id_from_number(number))
+    return present
+
+
+def _check_ledger_artifact(
+    repo_root: Path,
+    entry_id: str,
+    artifact: Any,
+    valid_artifact_kinds: set[str],
+    index: int,
+) -> tuple[str | None, list[PolicyFailure]]:
+    path = FM_CLASSIFICATION_LEDGER_RELATIVE_PATH
+    if not isinstance(artifact, dict):
+        return None, [
+            _fail(
+                "fm-classification-ledger-artifact",
+                f"{entry_id} delivered_artifacts[{index}] must be a mapping",
+                path,
+            )
+        ]
+    kind = artifact.get("kind")
+    artifact_path = artifact.get("path")
+    failures: list[PolicyFailure] = []
+    if not isinstance(kind, str) or kind not in valid_artifact_kinds:
+        failures.append(
+            _fail(
+                "fm-classification-ledger-artifact",
+                f"{entry_id} delivered_artifacts[{index}].kind must be one of "
+                f"{sorted(valid_artifact_kinds)}; got {kind!r}",
+                path,
+            )
+        )
+    if not isinstance(artifact_path, str) or not artifact_path.strip():
+        failures.append(
+            _fail(
+                "fm-classification-ledger-artifact",
+                f"{entry_id} delivered_artifacts[{index}].path must be a non-empty repo-relative path",
+                path,
+            )
+        )
+    else:
+        resolved = _resolve_repo_path(repo_root, artifact_path)
+        if resolved is None:
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-artifact",
+                    f"{entry_id} delivered artifact path escapes the repo root: {artifact_path}",
+                    path,
+                )
+            )
+        elif not resolved.exists():
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-artifact",
+                    f"{entry_id} delivered artifact path does not exist: {artifact_path}",
+                    path,
+                )
+            )
+    return kind if isinstance(kind, str) else None, failures
+
+
+def _check_ledger_waiver(
+    entry_id: str,
+    waiver: Any,
+    valid_artifact_kinds: set[str],
+    index: int,
+) -> tuple[str | None, list[PolicyFailure]]:
+    path = FM_CLASSIFICATION_LEDGER_RELATIVE_PATH
+    if not isinstance(waiver, dict):
+        return None, [
+            _fail(
+                "fm-classification-ledger-waiver",
+                f"{entry_id} waived_artifacts[{index}] must be a mapping",
+                path,
+            )
+        ]
+    kind = waiver.get("kind")
+    rationale = waiver.get("rationale")
+    failures: list[PolicyFailure] = []
+    if not isinstance(kind, str) or kind not in valid_artifact_kinds:
+        failures.append(
+            _fail(
+                "fm-classification-ledger-waiver",
+                f"{entry_id} waived_artifacts[{index}].kind must be one of "
+                f"{sorted(valid_artifact_kinds)}; got {kind!r}",
+                path,
+            )
+        )
+    if not isinstance(rationale, str) or not rationale.strip():
+        failures.append(
+            _fail(
+                "fm-classification-ledger-waiver",
+                f"{entry_id} waived_artifacts[{index}].rationale must be non-empty",
+                path,
+            )
+        )
+    return kind if isinstance(kind, str) else None, failures
+
+
+def _check_fm_classification_ledger(repo_root: Path, levels: list[Any]) -> list[PolicyFailure]:
+    ledger_path = repo_root / FM_CLASSIFICATION_LEDGER_RELATIVE_PATH
+    if not ledger_path.is_file():
+        return [
+            _fail(
+                "fm-classification-ledger-missing",
+                f"FM classification ledger not found: {FM_CLASSIFICATION_LEDGER_RELATIVE_PATH}",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        ]
+    try:
+        raw = yaml.safe_load(ledger_path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        return [
+            _fail(
+                "fm-classification-ledger-parse",
+                f"failed to parse {FM_CLASSIFICATION_LEDGER_RELATIVE_PATH}: {exc}",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        ]
+    if not isinstance(raw, dict):
+        return [
+            _fail(
+                "fm-classification-ledger-shape",
+                f"{FM_CLASSIFICATION_LEDGER_RELATIVE_PATH} must be a YAML mapping at the top level",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        ]
+
+    failures: list[PolicyFailure] = []
+    if raw.get("ledger") != _LEDGER_VALUE:
+        failures.append(
+            _fail(
+                "fm-classification-ledger-field",
+                f"ledger field must be {_LEDGER_VALUE!r}",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        )
+    if raw.get("policy_ref") != ASSURANCE_POLICY_RELATIVE_PATH:
+        failures.append(
+            _fail(
+                "fm-classification-ledger-policy-ref",
+                f"policy_ref must be {ASSURANCE_POLICY_RELATIVE_PATH}",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        )
+
+    entries = raw.get("entries")
+    if not isinstance(entries, list):
+        return failures + [
+            _fail(
+                "fm-classification-ledger-field",
+                "entries must be a YAML list",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        ]
+
+    level_ids = _level_ids(levels)
+    required_by_level = _required_artifacts_by_level(levels)
+    valid_artifact_kinds = _required_artifact_union(levels)
+    seen: set[str] = set()
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-entry",
+                    f"entries[{index}] must be a mapping",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+            continue
+        adr = entry.get("adr")
+        entry_id = adr if isinstance(adr, str) else f"entries[{index}]"
+        if not isinstance(adr, str) or not re.fullmatch(r"ADR-\d{3}", adr):
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-entry",
+                    f"entries[{index}].adr must be an ADR-NNN id",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+        elif adr in seen:
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-duplicate",
+                    f"ledger contains duplicate entry for {adr}",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+        else:
+            seen.add(adr)
+            if _find_adr_path(repo_root, adr) is None:
+                failures.append(
+                    _fail(
+                        "fm-classification-ledger-entry",
+                        f"{adr} does not resolve to an ADR file under {ADR_DIRECTORY_RELATIVE_PATH}",
+                        FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                    )
+                )
+        surface = entry.get("surface")
+        if not isinstance(surface, str) or not surface.strip():
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-entry",
+                    f"{entry_id}.surface must be non-empty",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+        fm_level = entry.get("fm_level")
+        if not isinstance(fm_level, str) or fm_level not in level_ids:
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-level",
+                    f"{entry_id}.fm_level {fm_level!r} is not defined in {ASSURANCE_POLICY_RELATIVE_PATH}",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+            required = set()
+        else:
+            required = required_by_level.get(fm_level, set())
+
+        delivered = entry.get("delivered_artifacts")
+        if not isinstance(delivered, list):
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-artifact",
+                    f"{entry_id}.delivered_artifacts must be a YAML list",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+            delivered = []
+        delivered_kinds: set[str] = set()
+        for artifact_index, artifact in enumerate(delivered):
+            kind, artifact_failures = _check_ledger_artifact(
+                repo_root,
+                entry_id,
+                artifact,
+                valid_artifact_kinds,
+                artifact_index,
+            )
+            if kind is not None:
+                delivered_kinds.add(kind)
+            failures.extend(artifact_failures)
+
+        waived = entry.get("waived_artifacts", [])
+        if not isinstance(waived, list):
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-waiver",
+                    f"{entry_id}.waived_artifacts must be a YAML list when present",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+            waived = []
+        waived_kinds: set[str] = set()
+        for waiver_index, waiver in enumerate(waived):
+            kind, waiver_failures = _check_ledger_waiver(
+                entry_id,
+                waiver,
+                valid_artifact_kinds,
+                waiver_index,
+            )
+            if kind is not None:
+                waived_kinds.add(kind)
+            failures.extend(waiver_failures)
+
+        missing_required = sorted(required - delivered_kinds - waived_kinds)
+        if missing_required:
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-artifacts",
+                    f"{entry_id} ({fm_level}) must deliver or waive required artifact kind(s): {missing_required}",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+
+    missing = sorted(_runtime_adr_ids_present(repo_root) - seen)
+    if missing:
+        failures.append(
+            _fail(
+                "fm-classification-ledger-coverage",
+                f"ledger must cover existing runtime-surface ADRs {FM_LEDGER_RUNTIME_ADR_RANGE.start:03d}-"
+                f"{FM_LEDGER_RUNTIME_ADR_RANGE.stop - 1:03d}; missing: {missing}",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        )
+    return failures
+
+
 def _check_artifact_keyword_drift(
     repo_root: Path,
     doc_rel: str,
@@ -716,6 +1155,10 @@ def evaluate_assurance_policy(repo_root: Path) -> list[PolicyFailure]:
             required_artifacts,
         )
     )
+
+    failures.extend(_check_adr_template_classification(repo_root))
+    failures.extend(_check_new_adr_classifications(repo_root, _level_ids(levels)))
+    failures.extend(_check_fm_classification_ledger(repo_root, levels))
 
     return failures
 
