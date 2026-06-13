@@ -11,6 +11,10 @@ SKILL_PATHS = (
     CLAUDE_SKILL_DIR / "SKILL.md",
     CODEX_SKILL_DIR / "SKILL.md",
 )
+TEMPLATE_PATHS = (
+    CLAUDE_SKILL_DIR / "scripts" / "capture-container-evidence-template.sh",
+    CODEX_SKILL_DIR / "scripts" / "capture-container-evidence-template.sh",
+)
 GAP_SKILL_PATHS = (
     GAP_CLAUDE_SKILL_DIR / "SKILL.md",
     GAP_CODEX_SKILL_DIR / "SKILL.md",
@@ -119,6 +123,49 @@ def test_asset_inventory_skill_blocks_known_agent_failure_modes() -> None:
     ]
 
     assert not missing
+
+
+def test_asset_inventory_skill_preserves_scenario_target_secrets() -> None:
+    skills = [path.read_text(encoding="utf-8") for path in SKILL_PATHS]
+    required_terms = (
+        "scenario-target secrets",
+        "capture facts",
+        "must not be redacted",
+        "operator/out-of-scenario",
+        "internal_users.yml",
+        "bcrypt hashes",
+    )
+    stale_terms = (
+        "Hash and redact before committing",
+        "Participant-visible fixture secrets may be retained only",
+        "Do not place credentials, bearer tokens, private keys, generated service secrets",
+    )
+
+    missing = [
+        (path, term)
+        for path, skill in zip(SKILL_PATHS, skills, strict=True)
+        for term in required_terms
+        if term not in skill
+    ]
+    stale = [
+        (path, term) for path, skill in zip(SKILL_PATHS, skills, strict=True) for term in stale_terms if term in skill
+    ]
+
+    assert not missing
+    assert not stale
+
+
+def test_asset_inventory_container_template_preserves_target_values_by_default() -> None:
+    claude_template = TEMPLATE_PATHS[0].read_text(encoding="utf-8")
+    codex_template = TEMPLATE_PATHS[1].read_text(encoding="utf-8")
+
+    assert claude_template == codex_template
+    assert 'CAPTURE_BOUNDARY="${CAPTURE_BOUNDARY:-}"' in claude_template
+    assert "CAPTURE_BOUNDARY=scenario-target" in claude_template
+    assert 'OPERATOR_SECRET_NAME_REGEX="${OPERATOR_SECRET_NAME_REGEX:-}"' in claude_template
+    assert 'SECRET_NAME_REGEX="${SECRET_NAME_REGEX:-' not in claude_template
+    assert "preserves scenario-target values by default" in claude_template
+    assert "operator/out-of-scenario" in claude_template
 
 
 def test_gap_remediation_skill_is_cross_agent_and_discoverable_by_codex() -> None:

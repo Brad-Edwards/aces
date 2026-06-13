@@ -10,7 +10,8 @@ CONTAINER="${CONTAINER:-}"
 COMPOSE_FILE="${COMPOSE_FILE:-$ROOT/docker-compose.yml}"
 COMPOSE_SERVICE="${COMPOSE_SERVICE:-}"
 COMPOSE_PROFILES="${COMPOSE_PROFILES:-}"
-SECRET_NAME_REGEX="${SECRET_NAME_REGEX:-(token|secret|password|credential|cookie|session|private_key|api_key|jwt|flag_key)}"
+CAPTURE_BOUNDARY="${CAPTURE_BOUNDARY:-}"
+OPERATOR_SECRET_NAME_REGEX="${OPERATOR_SECRET_NAME_REGEX:-}"
 
 TRIVY_IMAGE="${TRIVY_IMAGE:-aquasec/trivy@sha256:be1190afcb28352bfddc4ddeb71470835d16462af68d310f9f4bca710961a41e}"
 SYFT_IMAGE="${SYFT_IMAGE:-anchore/syft@sha256:86fde6445b483d902fe011dd9f68c4987dd94e07da1e9edc004e3c2422650de6}"
@@ -26,12 +27,25 @@ require() {
   }
 }
 
+require_capture_boundary() {
+  if [[ "$CAPTURE_BOUNDARY" != "scenario-target" ]]; then
+    printf '%s\n' \
+      "Set CAPTURE_BOUNDARY=scenario-target after confirming this capture is scoped to participant-discoverable target state." \
+      "Use OPERATOR_SECRET_NAME_REGEX only for operator/out-of-scenario material that must be withheld." >&2
+    exit 2
+  fi
+}
+
 record_limit() {
   printf -- '- %s\n' "$*" >> "$OUT/capture-limits.txt"
 }
 
 redact_text_stream() {
-  awk -v secret_re="$SECRET_NAME_REGEX" '
+  if [[ -z "$OPERATOR_SECRET_NAME_REGEX" ]]; then
+    cat
+    return
+  fi
+  awk -v secret_re="$OPERATOR_SECRET_NAME_REGEX" '
     {
       for (i = 1; i <= NF; i++) {
         token = $i
@@ -57,7 +71,7 @@ redact_text_stream() {
 
 redact_env_jq='
   def redact_env($secret_re):
-    if contains("=") then
+    if (($secret_re | length) > 0) and contains("=") then
       capture("^(?<name>[^=]+)=(?<value>.*)$") as $m
       | if ($m.name | test($secret_re; "i")) then
           "\($m.name)=<REDACTED-\($m.name | gsub("_"; "-"))>"
@@ -69,28 +83,40 @@ redact_env_jq='
     end;
 
   def redact_sensitive_keys($secret_re):
-    walk(
-      if type == "object" then
-        with_entries(
-          if (.key | test($secret_re; "i")) then
-            .value = "<REDACTED>"
-          else
-            .
-          end
-        )
-      else
-        .
-      end
-    );
+    if ($secret_re | length) == 0 then
+      .
+    else
+      walk(
+        if type == "object" then
+          with_entries(
+            if (.key | test($secret_re; "i")) then
+              .value = "<REDACTED>"
+            else
+              .
+            end
+          )
+        else
+          .
+        end
+      )
+    end;
 '
 
 require docker
 require jq
 require sha256sum
+require_capture_boundary
 
 mkdir -p "$OUT"
 : > "$OUT/capture-limits.txt"
 date -u +"%Y-%m-%dT%H:%M:%SZ" > "$OUT/captured-at-utc.txt"
+
+# With CAPTURE_BOUNDARY=scenario-target, this template preserves scenario-target values by default.
+# Configure OPERATOR_SECRET_NAME_REGEX only after classifying a value as
+# operator/out-of-scenario material rather than target evidence.
+if [[ -n "$OPERATOR_SECRET_NAME_REGEX" ]]; then
+  record_limit "Operator/out-of-scenario values matching OPERATOR_SECRET_NAME_REGEX were withheld by the capture template; ledger must describe the boundary and evidence impact"
+fi
 
 docker version --format json | jq . > "$OUT/docker-version.json"
 if compose_version="$(docker compose version --format json 2>/dev/null)"; then
@@ -106,7 +132,7 @@ if [[ -n "$COMPOSE_SERVICE" && -f "$COMPOSE_FILE" ]]; then
     docker compose -f "$COMPOSE_FILE" config --format json
   fi | jq \
     --arg service "$COMPOSE_SERVICE" \
-    --arg secret_re "$SECRET_NAME_REGEX" '
+    --arg secret_re "$OPERATOR_SECRET_NAME_REGEX" '
       if ((.services // {}) | has($service) | not) then
         error("compose service not found: " + $service)
       else
@@ -115,7 +141,7 @@ if [[ -n "$COMPOSE_SERVICE" && -f "$COMPOSE_FILE" ]]; then
       | .environment = (
           (.environment // {})
           | with_entries(
-              if (.key | test($secret_re; "i")) then
+              if (($secret_re | length) > 0 and (.key | test($secret_re; "i"))) then
                 .value = ("<REDACTED-" + (.key | gsub("_"; "-")) + ">")
               else
                 .
@@ -129,7 +155,7 @@ fi
 
 if [[ -n "$CONTAINER" ]]; then
   docker inspect "$CONTAINER" \
-    | jq --arg secret_re "$SECRET_NAME_REGEX" \
+    | jq --arg secret_re "$OPERATOR_SECRET_NAME_REGEX" \
         "$redact_env_jq
         .[].Config.Env |= ((. // []) | map(redact_env(\$secret_re)))
         | redact_sensitive_keys(\$secret_re)" \
@@ -162,7 +188,7 @@ else
 fi
 
 docker image inspect "$IMAGE" \
-  | jq --arg secret_re "$SECRET_NAME_REGEX" "$redact_env_jq redact_sensitive_keys(\$secret_re)" \
+  | jq --arg secret_re "$OPERATOR_SECRET_NAME_REGEX" "$redact_env_jq redact_sensitive_keys(\$secret_re)" \
   > "$OUT/docker-inspect.image.json"
 docker history --no-trunc "$IMAGE" | redact_text_stream > "$OUT/docker-history.image.txt"
 

@@ -19,8 +19,12 @@ the issue phase marker, but the tool did not create a repo-local note file.
 - Reuse `docs/aces/inventory/asset-inventory-methodology.md`,
   `src/aptl/core/aces_inventory.py`, `src/aptl/cli/aces_inventory.py`, the
   existing webapp and db inventory bundles, and `docs/aces/parity-inventory.yaml`.
-- Redact AD administrator credentials, generated flags, Kerberos/Samba secret
-  material, Wazuh client keys, and private key contents from committed evidence.
+- Historical note: issue #516 supersedes the original blanket-redaction rule
+  for source inventory bundles. Preserve AD administrator credentials,
+  generated flags, Kerberos/Samba secret material, Wazuh client keys, and
+  private key contents when they are participant-discoverable scenario-target
+  facts; withhold only operator/out-of-scenario material and record that
+  boundary in `capture-limits.txt`.
 - Keep legacy `aptl.core.sdl` and `scenarios/*.yaml` functional until the
   downstream APTL ADR-035 cutover PR. This issue does not change backend
   runtime behavior or flip default scenario selection.

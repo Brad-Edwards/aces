@@ -2,7 +2,7 @@
 
 ## Status
 
-proposed
+accepted
 
 ## Date
 
@@ -648,8 +648,9 @@ plane.
 
 ## Non-Goals
 
-- Implementing participant runtime contracts, schemas, APIs, backends, or
-  storage.
+- Completing every participant runtime contract, schema, API, backend, or
+  storage surface beyond the subsets already published by the RUN-305 and
+  backend-facing contract work.
 - Adding new SDL participant syntax.
 - Replacing ADR-013 participant episode lifecycle semantics.
 - Replacing ADR-022 participant behavior and interaction semantics.
@@ -662,3 +663,9 @@ plane.
 - Defining a full archival study-management system beyond the runtime fields
   needed to preserve participant history, shared-state evidence, and benchmark
   reproducibility claims.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-13 | #484 | Recorded acceptance-time non-goal wording for already-published RUN-305 and backend-facing contract subsets. |
