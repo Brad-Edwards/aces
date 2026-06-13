@@ -48,8 +48,13 @@ What is missing:
 - no participant-local outcome interpretation layer relating action/episode
   outcomes to objectives, workflows, evaluations, rewards, and evidence
 
-The repository is therefore correctly at `partial` design coverage after this
-artifact, and not at implementation coverage.
+The repository therefore remains at `partial` participant-semantics coverage
+where runtime implementation slices are incomplete. Issue #487 adds
+`implementations/python/tests/test_participant_semantics_invariant_oracle.py`
+as the executable FM-2 assurance artifact for the abstract model invariants
+`I1` through `I18`: it is implementation evidence for the published invariant
+oracle, not a claim that every staged SEM-208 through SEM-215 runtime contract
+is complete.
 
 ## Primary-Source Review
 
@@ -634,6 +639,47 @@ examples, negative fixtures, and compiled contracts. Issue #346 tracks this as
 a dedicated DSL language-evaluation evidence gate; this document only records
 the participant-semantics obligation.
 
+## Executable Invariant Oracle
+
+`implementations/python/tests/test_participant_semantics_invariant_oracle.py`
+is the executable oracle for the abstract model above. The oracle defines a
+test-local `ParticipantProgression` model for episode, action, observation,
+attribution, outcome, realization, provenance, lifecycle, mapping-loss, and
+language-evaluation surfaces. Its `INVARIANTS` catalog maps each spec invariant
+to a stable heading in this document and to the predicate that executes it.
+
+The mapping is checked in both directions:
+
+- the test suite extracts this README's `### I*` headings and requires them to
+  match the oracle catalog exactly;
+- every catalog entry stores the corresponding spec heading and requirement
+  slice references;
+- Hypothesis-generated valid progressions must satisfy every cataloged
+  invariant;
+- each invariant has a targeted mutation factory that produces at least one
+  rejected counterexample.
+
+| Spec invariant | Oracle predicate |
+| --- | --- |
+| `I1` | `_i1_role_neutral` |
+| `I2` | `_i2_hidden_truth_boundary` |
+| `I3` | `_i3_observation_projection` |
+| `I4` | `_i4_fail_closed_action_applicability` |
+| `I5` | `_i5_explicit_side_effects` |
+| `I6` | `_i6_explicit_interaction_semantics` |
+| `I7` | `_i7_temporal_domain_separation` |
+| `I8` | `_i8_ordering_before_causality` |
+| `I9` | `_i9_evidence_labeled_attribution` |
+| `I10` | `_i10_outcome_layer_separation` |
+| `I11` | `_i11_realization_disclosure` |
+| `I12` | `_i12_fidelity_claim_separation` |
+| `I13` | `_i13_observation_apparatus_disclosure` |
+| `I14` | `_i14_external_mapping_loss_labels` |
+| `I15` | `_i15_run_and_study_provenance` |
+| `I16` | `_i16_content_and_contract_lifecycle` |
+| `I17` | `_i17_benchmark_leakage_and_holdout_discipline` |
+| `I18` | `_i18_language_evaluation_obligation` |
+
 ## SEM-208 - Participant Behavior Semantics
 
 `SEM-208` requires explicit semantics for participant actions, observations,
@@ -1018,13 +1064,21 @@ Implementation artifacts:
 
 The complete participant surface is `FM3`.
 
-Future implementation PRs should include:
+Delivered executable assurance artifact:
 
-- invariant lists for each child UID;
+- `implementations/python/tests/test_participant_semantics_invariant_oracle.py`
+  provides the FM-2 invariant oracle for `I1` through `I18`, including
+  property-based valid episode/action/observation/outcome progressions and
+  invariant-specific rejecting mutations.
+
+Future implementation PRs should still include:
+
+- child UID invariant refinements that specialize the abstract `I1` through
+  `I18` oracle for concrete runtime slices;
 - typed IR or published contracts for actions, observations, visibility,
   attribution, temporal clauses, and outcomes;
-- abstract state-machine coverage for episode/action/observation/outcome
-  progression;
+- runtime-integrated abstract state-machine coverage for
+  episode/action/observation/outcome progression;
 - machine-checkable action, observation, visibility, failure, temporal,
   attribution, and outcome semantics; prose-only definitions are insufficient
   for conformance;
