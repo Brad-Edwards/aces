@@ -48,15 +48,16 @@ methodology.
 - ACES SDL authority: sibling `../aces-sdl` parser/model documentation and
   the closed ACES #354 runtime-surface gap. Do not parse
   `techvault.sdl.yaml` with `aptl.core.sdl`.
-- Secret and evidence safety: ADR-029, `aptl.utils.redaction`, the existing
-  test pattern that blocks raw secret assignments, and redacted evidence files.
+- Secret and evidence safety: ADR-057, ADR-029, `aptl.utils.redaction`, the
+  existing test pattern for explicit redaction classifications, and source
+  evidence files that preserve participant-discoverable target facts.
 
 ## Security And Validation Gates
 
-- Evidence committed to git must redact operator/control-plane secrets. The
-  webapp's intentional participant-visible fixture secrets are allowed only
-  when they are scenario facts already present in checked-in source or Compose
-  configuration.
+- Evidence committed to git must preserve participant-discoverable
+  scenario-target facts, including target credentials and config secrets. Only
+  operator/control-plane or other out-of-scenario secrets are withheld, with
+  the boundary recorded in `capture-limits.txt`.
 - Runtime evidence must cite the command/source that produced each claim:
   Docker inspect/history/network/volume/top, in-container runtime baseline,
   package manifests, filesystem hashes, and scanner output when available.

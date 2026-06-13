@@ -20,8 +20,12 @@ For Docker/Compose/container-image captures, start by copying
 `scripts/capture-container-evidence-template.sh` and
 `scripts/normalize-syft-cyclonedx.jq` into the target bundle as runnable capture
 resources, then tailor the copied script for asset-specific source paths,
-filesystem manifests, and redaction names. Keep every evidence-affecting
-normalization in the script or a referenced jq file.
+filesystem manifests, and any explicit operator/out-of-scenario withholding
+rules. Set `CAPTURE_BOUNDARY=scenario-target` only after confirming the script
+is pointed at participant-discoverable target state, and set
+`OPERATOR_SECRET_NAME_REGEX` only for material classified outside that boundary.
+Keep every evidence-affecting normalization in the script or a referenced jq
+file.
 
 ## Inputs
 
@@ -47,10 +51,10 @@ Produce a bundle that validates with the current APTL reference ledger tooling:
 - `capture-evidence.sh` or equivalent committed capture commands, derived from
   the template for Docker/Compose assets when applicable;
 - `mapping-ledger.yaml` using the current reference ledger schema;
-- `evidence/` with raw or redacted evidence files;
+- `evidence/` with source evidence files;
 - `evidence/capture-limits.txt` with one first-class limit for every skipped
   required step, declined useful-optional step, contamination boundary, or
-  redaction that changes what was captured;
+  operator/out-of-scenario withholding that changes what was captured;
 - `evidence/captured-at-utc.txt`;
 - `evidence/evidence-sha256sums.txt` covering committed evidence files.
 
@@ -117,13 +121,26 @@ No `needs_gap_triage` row may remain at review time.
    intact and separate filesystem provenance is captured or the omission is
    recorded in `capture-limits.txt`.
 
-5. Hash and redact before committing.
+5. Preserve scenario-target secrets and withhold only operator material.
 
-   Follow ADR-029 redaction discipline. Do not place credentials, bearer
-   tokens, private keys, generated service secrets, cookies, session ids, or
-   operator-only values in evidence, logs, argv, tracebacks, issue comments, or
-   `mapping-ledger.yaml`. Participant-visible fixture secrets may be retained
-   only through the repo-approved secret-fixture classification.
+   Follow ADR-057 as the inventory boundary. Scenario-target secrets are
+   capture facts and must not be redacted from source inventory bundles when a
+   participant or in-range agent could discover them. This includes passwords,
+   hashes, private keys, tokens, generated range secrets, service config
+   secrets, and security product state required to realize or inspect the
+   target. The Wazuh/OpenSearch Security `internal_users.yml` bcrypt hashes
+   from APTL #341 are the canonical example: preserve them unredacted in the
+   source evidence bundle because they are target configuration facts.
+
+   Operator/out-of-scenario secrets remain outside the inventory boundary.
+   Host SSH keys, cloud or CI tokens, maintainer credentials, local
+   control-plane secrets, workstation secrets, and accidental adjacent
+   environment material must not be captured as scenario facts. Exclude them
+   or record a first-class `capture-limits.txt` entry describing the withheld
+   scope. ADR-029 still governs operator-secret handling in logs, argv,
+   tracebacks, issue comments, and other non-evidence surfaces.
+   Sanitized/public exports are separate derived views; do not replace source
+   evidence with `<REDACTED>` placeholders as the default safety mechanism.
 
 6. Build the ledger fact-by-fact.
 
@@ -200,7 +217,8 @@ Before returning:
 - every evidence file is referenced from `mapping-ledger.yaml`;
 - `capture-limits.txt` records skipped methodology steps as first-class
   limits;
-- no raw secrets or operator-only values are committed;
+- scenario-target secrets are preserved as source capture facts, while
+  operator/out-of-scenario material is excluded or recorded as a capture limit;
 - `aptl aces-inventory validate <asset-dir>` passes;
 - `aptl aces-inventory gaps <asset-dir>` has no unresolved
   `needs_gap_triage`;

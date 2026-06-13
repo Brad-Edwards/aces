@@ -73,11 +73,13 @@ asset-inventorying methodology.
 - **Inventory ledger:** every captured fact needs an existing
   `AcesSurface` mapping, caveat, or linked ACES issue in
   `mapping-ledger.yaml`. No `needs_gap_triage` rows should remain at review.
-- **Secret classification:** ADR-029 is canonical. Operator secrets, private
-  SSH keys, bearer tokens, cookies, generated service config, and arbitrary
-  prior run transcripts must not be committed unredacted. Intentional target
-  fixture credentials may be encoded only when they are participant-visible
-  scenario facts with an explicit `secret_fixture`-style classification.
+- **Secret classification:** ADR-057 is canonical for scenario-target values,
+  with ADR-029 still governing operator/control-plane handling. Preserve
+  participant-discoverable target credentials, keys, tokens, generated service
+  config, and hashes as source evidence. Withhold only operator secrets,
+  private host SSH keys, control-plane bearer tokens, cookies, and arbitrary
+  prior-run transcripts that are not facts of the Kali target; record the
+  boundary in `capture-limits.txt`.
 - **Kali capture data:** ADR-033 capture surfaces can contain full argv, hidden
   PTY input, raw pcap bytes, and prior experiment data. A non-empty
   `kali_captures` volume is evidence to account for, but it is not safe to
@@ -88,9 +90,10 @@ asset-inventorying methodology.
   `find_placeholder_env_values`. Do not add ACES-specific environment parsing
   for Kali. Compose `VICTIM_IP` and SSH `APTL_*` session env vars are
   different surfaces and must not be collapsed.
-- **OS/process exposure:** inventory capture commands must not place private
-  keys, passwords, hashes, tokens, or replayable IDs in argv, logs, or
-  exception text. Store command provenance, not secret-bearing command lines.
+- **OS/process exposure:** inventory capture commands must not place
+  operator/out-of-scenario private keys, passwords, hashes, tokens, or
+  replayable IDs in argv, logs, or exception text. Store command provenance,
+  not operator-secret command lines.
 - **Runtime isolation:** preserve ADR-033 non-contamination. No Wazuh agent,
   rsyslog forwarding, or red-to-SIEM pipe belongs in Kali evidence or future
   fixes unless a later ADR explicitly overrides ADR-033.
