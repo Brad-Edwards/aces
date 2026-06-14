@@ -187,6 +187,14 @@ The Python package currently declares its version in
 Release notes are collated from towncrier fragments in
 [`changelog.d/`](changelog.d/). Do not hand-edit `CHANGELOG.md`.
 
+Published JSON Schemas use versioned contract identifiers such as
+`sdl-authoring-input-v1`, but the suffix is not the same as a stability promise.
+The authoritative schema publication manifest records each schema's `draft` or
+`stable` stability class and canonical content hash. Current checked-in schemas
+are draft until a maintainer explicitly promotes them; stable breaking changes
+must mint a new schema version as described in
+[ADR-061](docs/decisions/adrs/adr-061-published-schema-evolution-policy.md).
+
 ## Maintainers
 
 - Brad Edwards — [Personal GitHub](https://github.com/Brad-Edwards), [PANW GitHub](https://github.com/Brad-Edwards-SecOps), [LinkedIn](https://www.linkedin.com/in/bradley-edwards-dev/)

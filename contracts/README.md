@@ -11,7 +11,15 @@ The goal of this bucket is organizational clarity:
 `schema-publication-manifest.json` is the authoritative publication inventory
 for the current machine-readable schema set. The contracts verification gate
 checks that every entry points at `contracts/schemas/`, that every listed schema
-exists, and that every JSON Schema file under `contracts/schemas/` is listed.
+exists, that every JSON Schema file under `contracts/schemas/` is listed, and
+that every entry records its stability class and canonical content hash.
+
+Current checked-in schemas are marked `draft` in the manifest. A `v1` or `v2`
+filename suffix identifies the schema lineage; it does not by itself promise a
+stable compatibility surface. Stable schema evolution is governed by
+[ADR-061](../docs/decisions/adrs/adr-061-published-schema-evolution-policy.md):
+additive changes may stay under the same suffix, while breaking changes require
+a new version suffix.
 
 These assets are intentionally language-neutral. Any conformance runners or
 implementation-specific validation helpers belong under `implementations/`,
