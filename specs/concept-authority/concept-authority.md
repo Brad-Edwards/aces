@@ -77,6 +77,7 @@ ecosystem-specific concerns.
 | `scenarios` | SDL scenarios, compositions, modules, and authoring constructs. |
 | `tasks-runs-studies` | Execution lifecycle, run records, and study organization. |
 | `episodes` | Participant runtime episode identity, lifecycle state, and history boundaries. |
+| `runtime-inventory` | Observed and declared runtime configuration state attached to scenario nodes. |
 | `apparatus-declarations` | Processor, backend, and participant-implementation manifests. |
 | `realization-and-disclosure` | Instantiation, planning, compilation, and realization artifacts. |
 | `provenance-and-evidence` | Run provenance records, evidence expectations, and audit artifacts. |
@@ -88,6 +89,17 @@ It covers participant-scoped episode identity, lifecycle state, reset/restart
 boundaries, and append-only episode history. Episode-bound behavior events,
 observables, actions, tools, artifacts, and evidence still bind to their
 narrower concept families when those records are the artifact's subject.
+
+The `runtime-inventory` family is native because observed node runtime state is
+an ACES extension over the cyber-domain authority, not a UCO object in its own
+right and not a task/run/study or apparatus declaration. It covers the typed
+runtime inventory carried under `nodes.*.runtime` — services, platforms,
+packages and software components, controls and security posture, filesystem and
+mounts, processes and scheduled jobs, and other node-scoped apparatus state.
+Individual inventory fields that denote a narrower cyber-domain object — an
+asset, identity, observable, tool, artifact, or relationship — still bind to
+that narrower family. Runtime inventory records the observed or declared state,
+never the actions or events that produce, change, or react to it.
 
 ## Extension Discipline
 
@@ -105,6 +117,40 @@ Each `native` family must declare:
 Native families must use these fields to state when an artifact should bind to
 the native family and when it should instead bind to a narrower adopted or
 adapted family from the shared authority.
+
+### Adding a Runtime Inventory Field or Family
+
+Runtime inventory is the largest extension surface, so the decision path for
+adding to it is explicit. A contributor can determine the required governance
+steps from this section and the machine-readable catalog alone:
+
+1. **Extend the existing runtime surface first.** A new observed node fact
+   should extend `RuntimeConfiguration` and register through the canonical
+   runtime service-family registry (`aces_sdl._runtime_service_families`)
+   instead of introducing a new top-level concept family. The
+   `runtime-inventory` family and the `nodes.*.runtime` reference model are the
+   shared seam for this surface.
+2. **Pass the cross-family invariant lint.** Every registered runtime service
+   family must satisfy the single structural invariant set enforced by
+   `implementations/python/tests/test_runtime_family_invariants.py` (the runtime
+   SDL cross-family consistency epic
+   [#439](https://github.com/Brad-Edwards/aces/issues/439) and children
+   #442 / #443 / #444): a `Runtime<Noun>` model class, a
+   `singular(collection_name) + "_id"` primary identifier, and a plural
+   typed-child container registered in the registry. A new family that violates
+   an invariant fails the suite immediately.
+3. **Keep observed values redaction-safe.** Values that can carry secrets must
+   route through the runtime redaction helpers (ADR-056 / ADR-057,
+   `aces_sdl.runtime_values`); raw credential material is unrepresentable on the
+   model surface.
+4. **Add controlled vocabulary, not free strings.** New enumerated terms belong
+   in `contracts/concept-authority/controlled-vocabularies-v1.json` (GOV-922),
+   not as artifact-local labels.
+5. **Promote to a new concept family only when warranted.** A genuinely new
+   concept that is not a runtime sub-surface requires an ADR, a catalog entry in
+   `concept-families-v1.json` declaring `extension_scope`, `relation_rules`, and
+   `non_ambiguity_constraints` (the discipline above), and a reference-model
+   entry when it has a recurrent SDL structure.
 
 ## Machine-Readable Catalog
 
