@@ -55,6 +55,24 @@ slice:
 - scenario events as action or event structures
 - scenario content as tool or artifact structures
 
+## Participant Episode Lineage
+
+Participant episodes are cataloged as the native `episodes` concept family
+rather than as an SDL reference model entry. The external lineage is the
+reinforcement-learning environment episode notion used by Gymnasium and
+OpenAI Gym: a bounded interaction sequence that starts after initialization or
+reset and ends at a terminal, timeout, or truncation boundary. ACES narrows
+that lineage to participant-runtime contracts by requiring stable
+`participant_address`, per-episode `episode_id`, explicit lifecycle state, and
+append-only state/history surfaces.
+
+The internal authority is
+[ADR-013](../../docs/decisions/adrs/adr-013-participant-episode-lifecycle-boundaries.md),
+which makes participant episode state its own processor/runtime contract
+surface and keeps it separate from workflow state, evaluation state,
+operation receipts, backend process restarts, tasks, runs, scenarios, and
+participant-local actions or observations.
+
 ## Machine-Readable Artifacts
 
 The JSON Schema for the catalog format is published at:
