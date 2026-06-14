@@ -558,9 +558,34 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
 
 def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) -> None:
     _sync_project(session)
+    arg_list = list(args)
+    schema_publication_args: list[str] = []
+    json_artifact_args: list[str] = []
+    index = 0
+    while index < len(arg_list):
+        arg = arg_list[index]
+        if arg == "--staged":
+            json_artifact_args.append(arg)
+            index += 1
+            continue
+        if arg == "--base-rev":
+            if index + 1 < len(arg_list):
+                base_rev = arg_list[index + 1]
+                schema_publication_args = ["--base-rev", base_rev]
+                json_artifact_args.extend(["--base-rev", base_rev])
+            index += 2
+            continue
+        if arg == "--requirement-uid":
+            index += 2
+            continue
+        if arg == "--skip-requirement" or arg.startswith("-"):
+            index += 1
+            continue
+        json_artifact_args.append(arg)
+        index += 1
     reporter.run(
         "contracts / schema publication manifest",
-        lambda: _run_project_python(session, "tools/check_schema_publication.py"),
+        lambda: _run_project_python(session, "tools/check_schema_publication.py", *schema_publication_args),
     )
     reporter.run(
         "contracts / generated schema drift",
@@ -568,7 +593,7 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
     )
     reporter.run(
         "contracts / json artifact validation",
-        lambda: _run_project_python(session, "tools/check_json_artifacts.py", *args),
+        lambda: _run_project_python(session, "tools/check_json_artifacts.py", *json_artifact_args),
     )
 
 
@@ -828,7 +853,7 @@ def verify(session: nox.Session) -> None:
         )
         _run_policy(session, reporter, *session.posargs)
         _run_lint(session, reporter)
-        _run_contracts(session, reporter)
+        _run_contracts(session, reporter, *session.posargs)
         _run_tests(session, reporter)
         _run_integration_tests(session, reporter)
         _run_docs(session, reporter)

@@ -439,6 +439,26 @@ enum introduced in a single-sentinel state fails the suite immediately. When a
 new enum is genuinely closed, it must carry neither sentinel; otherwise it must
 carry both.
 
+## Runtime required-profile guard convention
+
+Some runtime-family spines use an open enum-or-string discriminator to select a
+required profile from sibling structured fields. Those discriminators are not
+documentation-only claims: each documented required-profile discriminator must
+have a matching `require_profile_for_<field>` guard invoked by a registered
+Pydantic `mode="after"` model validator. This is the executable "cannot
+silently shallow-encode" guarantee for the current `data_model`,
+`platform_kind`, `agent_kind`, and `privilege_class` spines.
+
+The convention is enforced by
+`test_discriminated_runtime_spines_register_required_profile_guards` in
+`tests/test_runtime_family_invariants.py`. The lint discovers runtime-family
+models from `RuntimeConfiguration.model_fields`, identifies discriminator
+fields whose docs say they select a required profile and whose models carry
+sibling structured profile fields, and checks Pydantic's registered
+model-validator metadata for the corresponding guard call. A future runtime
+spine that declares the same required-profile discriminator shape but omits the
+guard fails the test suite.
+
 ## Static Semantic Invariants
 
 The validator is the main enforcement point for static SDL semantics, but not

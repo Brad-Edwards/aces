@@ -23,7 +23,7 @@ from tools.check_adr_immutability import (
 )
 from tools.check_generated_schemas import _extra_published_schema_paths
 from tools.check_json_artifacts import collect_validation_targets, should_run_full_validation
-from tools.check_schema_publication import validate_schema_publication_manifest
+from tools.check_schema_publication import schema_content_hash, validate_schema_publication_manifest
 from tools.gitleaks_tool import _checksums_asset_name, _release_asset_name, gitleaks_binary_path
 from tools.policy.common import PolicyFailure
 from tools.policy.repo_policy import evaluate_repo_policy
@@ -996,13 +996,50 @@ def setup_json_validation_repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def write_schema_publication_manifest(repo_root: Path, entries: list[dict[str, str]]) -> None:
+def write_schema_publication_manifest(
+    repo_root: Path,
+    entries: list[dict[str, Any]],
+    *,
+    fill_defaults: bool = True,
+) -> None:
     import json
+
+    normalized: list[dict[str, Any]] = []
+    for entry in entries:
+        normalized_entry = dict(entry)
+        if fill_defaults:
+            normalized_entry.setdefault("stability", "draft")
+            schema_path = normalized_entry.get("schema_path")
+            if "content_hash" not in normalized_entry and isinstance(schema_path, str):
+                path = repo_root / schema_path
+                normalized_entry["content_hash"] = schema_content_hash(path) if path.is_file() else "0" * 64
+        normalized.append(normalized_entry)
 
     write_text(
         repo_root / "contracts" / "schema-publication-manifest.json",
-        json.dumps({"schema_version": "schema-publication-manifest/v1", "schemas": entries}, indent=2) + "\n",
+        json.dumps(
+            {
+                "schema_version": "schema-publication-manifest/v1",
+                "hash_algorithm": "sha256",
+                "schemas": normalized,
+            },
+            indent=2,
+        )
+        + "\n",
     )
+
+
+def _published_schema(properties: dict[str, Any], *, required: list[str] | None = None) -> str:
+    import json
+
+    payload = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": False,
+        "properties": properties,
+        "required": required or [],
+    }
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def test_should_run_full_validation_for_schema_driver_paths() -> None:
@@ -1033,6 +1070,26 @@ def test_schema_publication_manifest_accepts_complete_current_schema_inventory(t
     )
 
     assert validate_schema_publication_manifest(repo_root) == []
+
+
+def test_schema_publication_manifest_requires_stability_and_content_hash(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    write_text(repo_root / "contracts" / "schemas" / "sdl" / "sdl-authoring-input-v1.json", "{}\n")
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "sdl-authoring-input-v1",
+                "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+            },
+        ],
+        fill_defaults=False,
+    )
+
+    assert validate_schema_publication_manifest(repo_root) == [
+        "schema manifest entry sdl-authoring-input-v1 stability must be one of: draft, stable",
+        "schema manifest entry sdl-authoring-input-v1 content_hash must be a 64-character sha256 hex digest",
+    ]
 
 
 def test_schema_publication_manifest_rejects_missing_published_schema_entry(tmp_path: Path) -> None:
@@ -1069,6 +1126,267 @@ def test_schema_publication_manifest_rejects_paths_outside_contract_schemas(tmp_
 
     assert validate_schema_publication_manifest(repo_root) == [
         "schema manifest path must be under contracts/schemas/: schemas/legacy.json"
+    ]
+
+
+def test_schema_publication_manifest_rejects_resolved_schema_path_escape(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    write_text(repo_root / "contracts" / "secret-v1.json", "{}\n")
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "secret-v1",
+                "schema_path": "contracts/schemas/../secret-v1.json",
+            },
+        ],
+    )
+
+    assert validate_schema_publication_manifest(repo_root) == [
+        "schema manifest path resolves outside contracts/schemas/: contracts/schemas/../secret-v1.json"
+    ]
+
+
+def test_schema_publication_manifest_allows_recorded_draft_schema_churn(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
+    write_text(schema_path, _published_schema({"name": {"type": "string"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "draft-contract-v1",
+                "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
+                "stability": "draft",
+            },
+        ],
+    )
+    _init_git_repo(repo_root)
+    _git_commit_all(repo_root, "base")
+
+    write_text(schema_path, _published_schema({"name": {"type": "integer"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "draft-contract-v1",
+                "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
+                "stability": "draft",
+            },
+        ],
+    )
+
+    assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == []
+
+
+def test_schema_publication_manifest_allows_stable_additive_schema_change(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "stable-contract-v1.json"
+    write_text(schema_path, _published_schema({"name": {"type": "string"}}, required=["name"]))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "stable-contract-v1",
+                "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
+                "stability": "stable",
+            },
+        ],
+    )
+    _init_git_repo(repo_root)
+    _git_commit_all(repo_root, "base")
+
+    write_text(
+        schema_path,
+        _published_schema({"name": {"type": "string"}, "display_name": {"type": "string"}}, required=["name"]),
+    )
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "stable-contract-v1",
+                "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
+                "stability": "stable",
+            },
+        ],
+    )
+
+    assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == []
+
+
+def test_schema_publication_manifest_allows_stable_enum_addition(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "stable-contract-v1.json"
+    write_text(schema_path, _published_schema({"kind": {"enum": ["alpha"], "type": "string"}}, required=["kind"]))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "stable-contract-v1",
+                "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
+                "stability": "stable",
+            },
+        ],
+    )
+    _init_git_repo(repo_root)
+    _git_commit_all(repo_root, "base")
+
+    write_text(
+        schema_path,
+        _published_schema({"kind": {"enum": ["alpha", "beta"], "type": "string"}}, required=["kind"]),
+    )
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "stable-contract-v1",
+                "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
+                "stability": "stable",
+            },
+        ],
+    )
+
+    assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == []
+
+
+def test_schema_publication_manifest_rejects_stable_default_change_without_version_bump(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "stable-contract-v1.json"
+    write_text(
+        schema_path,
+        _published_schema({"name": {"default": "alpha", "type": "string"}}, required=["name"]),
+    )
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "stable-contract-v1",
+                "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
+                "stability": "stable",
+            },
+        ],
+    )
+    _init_git_repo(repo_root)
+    _git_commit_all(repo_root, "base")
+
+    write_text(
+        schema_path,
+        _published_schema({"name": {"default": "beta", "type": "string"}}, required=["name"]),
+    )
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "stable-contract-v1",
+                "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
+                "stability": "stable",
+            },
+        ],
+    )
+
+    assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == [
+        "stable schema stable-contract-v1 changed incompatibly without a version bump: properties/name default changed"
+    ]
+
+
+def test_schema_publication_manifest_rejects_stable_breaking_schema_change_without_version_bump(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "stable-contract-v1.json"
+    write_text(schema_path, _published_schema({"name": {"type": "string"}}, required=["name"]))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "stable-contract-v1",
+                "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
+                "stability": "stable",
+            },
+        ],
+    )
+    _init_git_repo(repo_root)
+    _git_commit_all(repo_root, "base")
+
+    write_text(schema_path, _published_schema({"name": {"type": "integer"}}, required=["name"]))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "stable-contract-v1",
+                "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
+                "stability": "stable",
+            },
+        ],
+    )
+
+    assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == [
+        "stable schema stable-contract-v1 changed incompatibly without a version bump: properties/name schema changed"
+    ]
+
+
+def test_schema_publication_manifest_rejects_unreadable_base_manifest_for_stable_schema(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "stable-contract-v1.json"
+    write_text(schema_path, _published_schema({"name": {"type": "string"}}, required=["name"]))
+    write_text(repo_root / "contracts" / "schema-publication-manifest.json", "{not-json\n")
+    _init_git_repo(repo_root)
+    _git_commit_all(repo_root, "base")
+
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "stable-contract-v1",
+                "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
+                "stability": "stable",
+            },
+        ],
+    )
+
+    assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == [
+        "base schema publication manifest at HEAD is not valid JSON"
+    ]
+
+
+def test_schema_publication_manifest_rejects_missing_base_schema_for_stable_schema(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "stable-contract-v1",
+                "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
+                "stability": "stable",
+                "content_hash": "0" * 64,
+            },
+        ],
+        fill_defaults=False,
+    )
+    _init_git_repo(repo_root)
+    _git_commit_all(repo_root, "base")
+
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "stable-contract-v1.json"
+    write_text(schema_path, _published_schema({"name": {"type": "string"}}, required=["name"]))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "stable-contract-v1",
+                "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
+                "stability": "stable",
+            },
+        ],
+    )
+
+    assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == [
+        "base schema for stable-contract-v1 is missing at HEAD: contracts/schemas/sdl/stable-contract-v1.json"
     ]
 
 
