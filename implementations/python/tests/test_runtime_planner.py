@@ -66,11 +66,25 @@ def _limited_backend_manifest(
         version="0.0.1",
         supported_contract_versions=frozenset({"backend-manifest-v2"}),
         compatible_processors=frozenset({"aces-reference-processor"}),
+        # The manifest is limited in provisioner capability, not realization
+        # support: it declares full SEM-218 realization support so the
+        # realization gate is a no-op and these tests isolate the provisioner
+        # capability checks they target.
         realization_support=(
             RealizationSupportDeclaration(
                 domain="runtime-realization",
                 support_mode=RealizationSupportMode.CONSTRAINED,
-                supported_constraint_kinds=frozenset({"node-type"}),
+                supported_constraint_kinds=frozenset(
+                    {
+                        "node-type",
+                        "os-family",
+                        "content-type",
+                        "account-feature",
+                        "workflow-feature",
+                        "workflow-state-predicate",
+                    }
+                ),
+                supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
                 disclosure_kinds=frozenset({"runtime-snapshot-v1"}),
             ),
         ),

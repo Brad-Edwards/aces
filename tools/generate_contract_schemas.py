@@ -29,6 +29,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "reference-models-v1":
         return schemas_dir / "concept-authority" / f"{name}.json"
+    if name == "uco-alignment-v1":
+        return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "controlled-vocabularies-v1":
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name.startswith("semantic-profile-v"):

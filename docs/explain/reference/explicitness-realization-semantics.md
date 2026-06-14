@@ -123,6 +123,32 @@ additional exact requirement kinds for other artifact families; that should
 require adding governed terms and shared semantic checks, not rewriting planner
 or conformance call sites.
 
+## Part 2 Implementation Boundary
+
+The typed compiler emission and planner gate must preserve the classifier output
+as runtime-model metadata owned by `aces_processor.models.RuntimeModel` and
+emitted by `aces_processor.compiler`. The planner should consume that compiled
+metadata directly; it must not re-walk SDL YAML, rerun the classifier, infer
+exactness from backend capability failures, or treat the backend manifest as an
+author-intent source.
+
+Planner rejection belongs in the existing `aces_processor.planner.plan()` /
+`ExecutionPlan.diagnostics` path. Unsupported exact or constrained requirement
+kinds should be reported as stable `Diagnostic` objects that name the compiled
+resource address, SDL field path or equivalent field identifier, requirement
+kind, and missing `realization_support` capability. Do not introduce a
+SEM-218-specific exception hierarchy or throw from normal planning for this
+case.
+
+Keep realization-support matching as one manifest-bound helper over
+`BackendManifest.realization_support` / `RealizationSupportDeclaration`.
+`domain`, `supported_exact_requirement_kinds`, and
+`supported_constraint_kinds` are currently opaque non-empty strings, so the
+match is exact string membership plus support-mode compatibility. If compiled
+explicitness metadata is added to plan payloads or published contracts, it must
+go through the existing `ContractModel` / schema-generation path; otherwise keep
+it model-side like existing compiler provenance metadata.
+
 ## Gotchas And Anti-Patterns
 
 Avoid:
