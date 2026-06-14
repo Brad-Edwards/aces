@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from aces_sdl import VARIABLE_TOKEN_PATTERN
 from aces_sdl._runtime_service_families import collect_qualified_runtime_family_refs
 from aces_sdl.runtime_datastore import (
     RuntimeDatastoreCluster,
@@ -663,12 +664,25 @@ def test_mapping_and_template_refs_are_targetable() -> None:
     assert "nodes.indexer.runtime.datastore_services.wazuh-indexer.templates.wazuh-template" in refs
 
 
+def _string_branch(schema_name: str) -> dict:
+    """Shape of a free string subschema in the given published SDL schema.
+
+    The instantiated-scenario contract forbids unresolved ``${var}`` tokens in
+    string values (issue #500); the authoring contract still accepts them, so
+    the two schemas now differ on every string branch.
+    """
+    if schema_name == "instantiated-scenario-v1":
+        return {"type": "string", "not": {"pattern": VARIABLE_TOKEN_PATTERN}}
+    return {"type": "string"}
+
+
 def test_published_sdl_schemas_include_mapping_and_template_manifests() -> None:
     for schema_name in _PUBLISHED_SDL_SCHEMA_NAMES:
         schema_path = REPO_ROOT / "contracts" / "schemas" / "sdl" / f"{schema_name}.json"
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
         defs = schema["$defs"]
         service_properties = defs["RuntimeDatastoreService"]["properties"]
+        string_branch = _string_branch(schema_name)
 
         assert service_properties["mappings"]["items"]["$ref"] == "#/$defs/RuntimeDatastoreMapping"
         assert service_properties["templates"]["items"]["$ref"] == "#/$defs/RuntimeDatastoreTemplate"
@@ -679,11 +693,11 @@ def test_published_sdl_schemas_include_mapping_and_template_manifests() -> None:
         assert mapping_schema["required"] == ["mapping_id"]
         assert mapping_schema["properties"]["field_type_census"]["additionalProperties"]["anyOf"] == [
             {"type": "integer"},
-            {"type": "string"},
+            string_branch,
         ]
         assert mapping_schema["properties"]["date_detection"]["anyOf"] == [
             {"type": "boolean"},
-            {"type": "string"},
+            string_branch,
             {"type": "null"},
         ]
 
@@ -692,7 +706,7 @@ def test_published_sdl_schemas_include_mapping_and_template_manifests() -> None:
         assert set(template_schema["properties"]) == _DATASTORE_TEMPLATE_SCHEMA_FIELDS
         assert template_schema["required"] == ["template_id"]
         assert template_schema["properties"]["settings_summary"]["additionalProperties"]["anyOf"] == [
-            {"type": "string"},
+            string_branch,
             {"type": "integer"},
             {"type": "boolean"},
         ]

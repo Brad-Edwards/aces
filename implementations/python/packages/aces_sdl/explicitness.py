@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
 
 from pydantic import BaseModel
 
-from ._base import extract_variable_name
+from ._base import VARIABLE_TOKEN_RE, extract_variable_name
 from .variables import Variable
 
 __all__ = [
@@ -21,7 +20,6 @@ __all__ = [
     "derive_instantiated_explicitness",
 ]
 
-_VARIABLE_TOKEN_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_-]*)\}")
 _OPEN_ENUM_SENTINELS = frozenset({"unknown", "other"})
 _EXPLICITNESS_ORDER: dict[ExplicitnessClass, int] = {}
 
@@ -203,7 +201,7 @@ def _variable_names(value: object) -> tuple[str, ...]:
         if full_name is not None:
             names.append(full_name)
         else:
-            names.extend(dict.fromkeys(_VARIABLE_TOKEN_RE.findall(value)))
+            names.extend(dict.fromkeys(VARIABLE_TOKEN_RE.findall(value)))
     return tuple(names)
 
 

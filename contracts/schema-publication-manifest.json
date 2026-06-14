@@ -78,7 +78,11 @@
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "6849f6bf1353f2fb530b3fd4e62e854ff31d3e140fca23f975bdbc65390d62ef"
+      "content_hash": "fae2bab70f056a20a211b752f40e2886e1d3be9afa14c2d9d0722efc6be6e7ba",
+      "last_change": {
+        "summary": "Differentiate instantiated-scenario from authoring-input: the instantiated contract now rejects unresolved variable placeholders in string values (issue #500).",
+        "content_hash": "fae2bab70f056a20a211b752f40e2886e1d3be9afa14c2d9d0722efc6be6e7ba"
+      }
     },
     {
       "contract_id": "operation-receipt-v1",

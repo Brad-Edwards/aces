@@ -16,12 +16,31 @@ class SDLModel(BaseModel):
     )
 
 
-_VARIABLE_REF_RE = re.compile(r"^\$\{([A-Za-z_][A-Za-z0-9_-]*)\}$")
+_VARIABLE_NAME_PATTERN = r"[A-Za-z_][A-Za-z0-9_-]*"
+# Single source of truth for the ``${name}`` substitution token, shared by the
+# instantiation engine, SEM-218 explicitness analysis, the InstantiatedScenario
+# model validator, and the published instantiated-scenario JSON Schema
+# constraint (issue #500). The capturing group yields the variable name for
+# ``.findall`` / ``match.group(1)`` consumers. ``VARIABLE_TOKEN_RE`` matches a
+# token embedded anywhere in a string; ``_VARIABLE_REF_RE`` matches a
+# whole-string placeholder.
+VARIABLE_TOKEN_PATTERN = r"\$\{(" + _VARIABLE_NAME_PATTERN + r")\}"
+VARIABLE_TOKEN_RE = re.compile(VARIABLE_TOKEN_PATTERN)
+_VARIABLE_REF_RE = re.compile(r"^" + VARIABLE_TOKEN_PATTERN + r"$")
 
 
 def is_variable_ref(v: Any) -> bool:
     """Return whether ``v`` is a full ``${var_name}`` placeholder."""
     return isinstance(v, str) and _VARIABLE_REF_RE.fullmatch(v) is not None
+
+
+def contains_variable_token(v: Any) -> bool:
+    """Return whether ``v`` is a string containing any ``${name}`` token.
+
+    Unlike :func:`is_variable_ref` (whole-string placeholder only), this also
+    matches tokens embedded within a larger string, e.g. ``"host-${index}"``.
+    """
+    return isinstance(v, str) and VARIABLE_TOKEN_RE.search(v) is not None
 
 
 def extract_variable_name(v: str) -> str | None:

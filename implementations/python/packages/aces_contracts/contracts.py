@@ -11,6 +11,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
+from aces_sdl import VARIABLE_TOKEN_PATTERN
 from aces_sdl.participant_attribution_semantics import (
     ParticipantAttributionCandidateKind,
     ParticipantAttributionOrderingBasisKind,
@@ -364,6 +365,68 @@ def _attach_experiment_datetime_invariants(contract_id: str, json_schema: dict[s
         validator=validator,
         inputs=inputs,
     )
+
+
+_INSTANTIATION_INVARIANT_CONTRACT_ID = "instantiated-scenario-v1"
+_SCHEMA_MAP_KEYS = ("properties", "patternProperties", "$defs")
+_SCHEMA_SUBSCHEMA_KEYS = (
+    "additionalProperties",
+    "items",
+    "contains",
+    "anyOf",
+    "allOf",
+    "oneOf",
+    "prefixItems",
+)
+
+
+def _forbid_variable_tokens_in_strings(node: Any) -> None:
+    """Add a ``${name}``-rejecting constraint to every free string subschema.
+
+    Walks the JSON Schema applicator keywords and, on each subschema that
+    declares a scalar ``"type": "string"`` and is not a fixed ``enum`` / ``const``
+    value, forbids the SDL substitution token. Restricting to a scalar ``type``
+    (not a type-list) and skipping ``enum`` / ``const`` avoids the nullable-string
+    and fixed-value pitfalls; the ``${var}`` branch of every ``*_or_var`` field
+    (``InfraNode.count``, ``ACLRule.ports``, ``SimpleProperties.internal`` …) is a
+    bare ``{"type": "string"}`` branch, so it is covered. Mapping keys are not
+    substitution sites, so ``propertyNames`` is intentionally not constrained.
+    """
+    if isinstance(node, list):
+        for item in node:
+            _forbid_variable_tokens_in_strings(item)
+        return
+    if not isinstance(node, dict):
+        return
+    if node.get("type") == "string" and "enum" not in node and "const" not in node:
+        constraint = {"pattern": VARIABLE_TOKEN_PATTERN}
+        if "not" in node:
+            node.setdefault("allOf", []).append({"not": constraint})
+        else:
+            node["not"] = constraint
+    for key in _SCHEMA_MAP_KEYS:
+        child = node.get(key)
+        if isinstance(child, dict):
+            for sub in child.values():
+                _forbid_variable_tokens_in_strings(sub)
+    for key in _SCHEMA_SUBSCHEMA_KEYS:
+        if key in node:
+            _forbid_variable_tokens_in_strings(node[key])
+
+
+def _attach_instantiation_invariants(contract_id: str, json_schema: dict[str, Any]) -> None:
+    """Differentiate the instantiated-scenario contract from authoring-input.
+
+    The authoring (``Scenario``) and instantiated (``InstantiatedScenario``)
+    models share every field, so their generated schemas are identical apart
+    from metadata. An instantiated scenario is fully concrete, so the
+    instantiated schema additionally forbids unresolved ``${var}`` tokens in
+    string values — both whole-string placeholders and embedded tokens (issue
+    #500). The matching model-level invariant lives on ``InstantiatedScenario``.
+    """
+    if contract_id != _INSTANTIATION_INVARIANT_CONTRACT_ID:
+        return
+    _forbid_variable_tokens_in_strings(json_schema)
 
 
 def _schema_id_for_contract_id(contract_id: str) -> str:
@@ -5021,6 +5084,7 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "operation-status-v1": OperationStatusModel.model_json_schema(),
     }
     for contract_id, json_schema in bundle.items():
+        _attach_instantiation_invariants(contract_id, json_schema)
         _attach_experiment_datetime_invariants(contract_id, json_schema)
         _attach_json_schema_metadata(contract_id, json_schema)
         _attach_aces_semantic_profile(contract_id, json_schema)

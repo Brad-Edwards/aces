@@ -1,0 +1,4 @@
+{
+  "name": "concrete-scenario",
+  "description": "a fully concrete instantiated scenario with no unresolved references"
+}
