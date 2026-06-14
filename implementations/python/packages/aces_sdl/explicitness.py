@@ -114,15 +114,16 @@ class _ExplicitnessClassifier:
         self.errors: list[str] = []
 
     def visit(self, value: object, path: str) -> ExplicitnessRecord | None:
+        record: ExplicitnessRecord | None = None
         if isinstance(value, BaseModel):
-            return self._visit_model(value, path)
-        if isinstance(value, dict):
-            return self._visit_mapping(value, path)
-        if isinstance(value, list):
-            return self._visit_sequence(value, path)
-        if not path:
-            return None
-        return self._record_scalar(value, path)
+            record = self._visit_model(value, path)
+        elif isinstance(value, dict):
+            record = self._visit_mapping(value, path)
+        elif isinstance(value, list):
+            record = self._visit_sequence(value, path)
+        elif path:
+            record = self._record_scalar(value, path)
+        return record
 
     def _visit_model(self, model: BaseModel, path: str) -> ExplicitnessRecord | None:
         child_records: list[ExplicitnessRecord] = []
@@ -196,12 +197,14 @@ class _ExplicitnessClassifier:
 
 
 def _variable_names(value: object) -> tuple[str, ...]:
-    if not isinstance(value, str):
-        return ()
-    full_name = extract_variable_name(value)
-    if full_name is not None:
-        return (full_name,)
-    return tuple(dict.fromkeys(_VARIABLE_TOKEN_RE.findall(value)))
+    names: list[str] = []
+    if isinstance(value, str):
+        full_name = extract_variable_name(value)
+        if full_name is not None:
+            names.append(full_name)
+        else:
+            names.extend(dict.fromkeys(_VARIABLE_TOKEN_RE.findall(value)))
+    return tuple(names)
 
 
 def _variable_constraint_reason(variable_names: tuple[str, ...], variables: dict[str, Variable]) -> str:
@@ -231,26 +234,37 @@ def _weakest_class(classes: Iterable[ExplicitnessClass]) -> ExplicitnessClass:
 
 
 def _authored_paths(value: object) -> set[str]:
-    paths: set[str] = set()
+    collector = _AuthoredPathCollector()
+    collector.visit(value, "")
+    return collector.paths
 
-    def visit(nested: object, path: str) -> None:
+
+class _AuthoredPathCollector:
+    def __init__(self) -> None:
+        self.paths: set[str] = set()
+
+    def visit(self, value: object, path: str) -> None:
         if path:
-            paths.add(path)
-        if isinstance(nested, BaseModel):
-            for field_name in nested.__class__.model_fields:
-                if field_name not in nested.model_fields_set:
-                    continue
-                child_path = f"{path}.{field_name}" if path else field_name
-                visit(getattr(nested, field_name), child_path)
-            return
-        if isinstance(nested, dict):
-            for key, child in nested.items():
-                child_path = f"{path}.{key}" if path else str(key)
-                visit(child, child_path)
-            return
-        if isinstance(nested, list):
-            for index, child in enumerate(nested):
-                visit(child, f"{path}[{index}]")
+            self.paths.add(path)
+        if isinstance(value, BaseModel):
+            self._visit_model(value, path)
+        elif isinstance(value, dict):
+            self._visit_mapping(value, path)
+        elif isinstance(value, list):
+            self._visit_sequence(value, path)
 
-    visit(value, "")
-    return paths
+    def _visit_model(self, model: BaseModel, path: str) -> None:
+        for field_name in model.__class__.model_fields:
+            if field_name not in model.model_fields_set:
+                continue
+            child_path = f"{path}.{field_name}" if path else field_name
+            self.visit(getattr(model, field_name), child_path)
+
+    def _visit_mapping(self, value: dict[object, object], path: str) -> None:
+        for key, child in value.items():
+            child_path = f"{path}.{key}" if path else str(key)
+            self.visit(child, child_path)
+
+    def _visit_sequence(self, value: list[object], path: str) -> None:
+        for index, child in enumerate(value):
+            self.visit(child, f"{path}[{index}]")
