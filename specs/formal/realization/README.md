@@ -40,11 +40,12 @@ backend manifests carry `realization_support`.
 
 The spec's semantic boundary is normative immediately. End-to-end
 realization across the seven `SEM-200` lifecycle phases is staged: today
-the boundary is enforced at the authoring and validation phases through
-the apparatus contract layer (the shape gates on backend
-`RealizationSupportDeclaration` and the JSON-schema conditional gate,
-plus the asymmetric rejection of `realization_support` on processor
-manifests). Instantiation, compilation, planning, execution, and
+the boundary is enforced at the authoring, validation, and
+instantiation phases through the apparatus contract layer (the shape
+gates on backend `RealizationSupportDeclaration` and the JSON-schema
+conditional gate, plus the asymmetric rejection of `realization_support`
+on processor manifests), the SDL explicitness classifier, and
+instantiation downgrade metadata. Compilation, planning, execution, and
 observation responsibilities in the spec are normative but not yet
 realized end-to-end. The coverage row in
 `docs/explain/reference/shared-semantic-integrity.md` carries the
@@ -69,6 +70,10 @@ work the SEM-218 row tracks.
 - native concept family for realization semantics:
   `contracts/concept-authority/concept-families-v1.json`
   (`realization-and-disclosure`)
+- SDL classifier and instantiation downgrade:
+  `implementations/python/packages/aces_sdl/explicitness.py`,
+  `implementations/python/packages/aces_sdl/validator.py`,
+  `implementations/python/packages/aces_sdl/instantiate.py`
 - invalid fixtures evidencing fail-closed rejection:
   `contracts/fixtures/backend-manifest/backend-manifest-v2/invalid/hollow-realization-support.json`,
   `contracts/fixtures/backend-manifest/backend-manifest-v2/invalid/malformed-realization-support.json`,
@@ -85,6 +90,9 @@ work the SEM-218 row tracks.
 - `implementations/python/tests/test_runtime_contracts.py` — JSON-schema
   conditional gate for backend manifests and the assertion that the
   generated processor schema carries no `realization_support` property
+- `implementations/python/tests/test_sem_218_explicitness.py` —
+  classifier coverage for exact, constrained, and open SDL declarations,
+  instantiation downgrade, and unclassifiable variable diagnostics
 
 ## Notes
 

@@ -76,10 +76,18 @@ ecosystem-specific concerns.
 |--------|-------|
 | `scenarios` | SDL scenarios, compositions, modules, and authoring constructs. |
 | `tasks-runs-studies` | Execution lifecycle, run records, and study organization. |
+| `episodes` | Participant runtime episode identity, lifecycle state, and history boundaries. |
 | `apparatus-declarations` | Processor, backend, and participant-implementation manifests. |
 | `realization-and-disclosure` | Instantiation, planning, compilation, and realization artifacts. |
 | `provenance-and-evidence` | Run provenance records, evidence expectations, and audit artifacts. |
 | `time-and-apparatus` | Clocks, timing constraints, and apparatus-level concerns. |
+
+The `episodes` family is native because participant episode semantics are an
+ACES runtime boundary, not a UCO cyber object and not a task/run/study alias.
+It covers participant-scoped episode identity, lifecycle state, reset/restart
+boundaries, and append-only episode history. Episode-bound behavior events,
+observables, actions, tools, artifacts, and evidence still bind to their
+narrower concept families when those records are the artifact's subject.
 
 ## Extension Discipline
 
