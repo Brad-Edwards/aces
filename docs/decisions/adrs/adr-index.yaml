@@ -34,6 +34,10 @@ adrs:
   - id: ADR-009
     path: docs/decisions/adrs/adr-009-normative-artifact-authority-and-repository-structure.md
     pin: f7a74751a70e8d5d96266e2c45d94b1aafda832afe7b418df819de1cb1983fcc
+    amendments:
+      - date: 2026-06-14
+        ref: "#499"
+        summary: "Recorded the section 7 schema-authority milestone as reached (contracts/schemas/ normative; reference implementation proves compatibility; manifest change-ledger governs schema edits)."
   - id: ADR-010
     path: docs/decisions/adrs/adr-010-repository-realignment-order-and-compatibility-policy.md
     pin: 752d8577e900e9b6257ff0db362c275bf7b26e14162a892dcd9578cbd71717c3
