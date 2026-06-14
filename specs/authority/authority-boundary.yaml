@@ -35,6 +35,16 @@ authority_roots:
     authority: normative prose specifications
     family: prose
 
+  # The SDL authoring specification is explicitly registered as its own prose
+  # root for discoverability (the language-neutral SDL authority an independent
+  # implementation reads). It reuses the existing `prose` family rather than
+  # introducing a new authority family; it is a child of `specs/` and bears the
+  # same authority class.
+  - id: normative_sdl_prose
+    root: specs/sdl/
+    authority: normative SDL authoring specification
+    family: prose
+
   - id: normative_schemas
     root: contracts/schemas/
     authority: published JSON Schemas

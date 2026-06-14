@@ -60,6 +60,13 @@ explain/getting-started
 
 ```{toctree}
 :maxdepth: 2
+:caption: Maintainer Guide
+
+explain/releasing
+```
+
+```{toctree}
+:maxdepth: 2
 :caption: SDL Guide
 
 explain/sdl/index

@@ -1,0 +1,9 @@
+{
+  "name": "concrete-scenario",
+  "description": "deploy ${region} cluster",
+  "infrastructure": {
+    "net": {
+      "count": "${replicas}"
+    }
+  }
+}
