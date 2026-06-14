@@ -31,6 +31,7 @@ from .semantics.planner import (
     resource_dependency_cycles,
     resource_topological_order,
 )
+from .semantics.realization import realization_support_diagnostics
 
 
 def _planned_resource(address: str, domain: RuntimeDomain, resource_type: str, resource) -> PlannedResource:
@@ -951,6 +952,7 @@ def plan(
     diagnostics = [
         *model.diagnostics,
         *_validate_manifest(model, manifest),
+        *realization_support_diagnostics(model.realization_requirements, manifest),
         *_ordering_cycle_diagnostics(resources),
     ]
     actions, deleted_entries = _build_operations(resources, snapshot)
