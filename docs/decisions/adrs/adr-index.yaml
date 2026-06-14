@@ -253,3 +253,6 @@ adrs:
   - id: ADR-061
     path: docs/decisions/adrs/adr-061-published-schema-evolution-policy.md
     pin: 08849a676cdaaf21bd1ac425f552d6347032d3f545b9cb5618090d22c56cd5dd
+  - id: ADR-062
+    path: docs/decisions/adrs/adr-062-concept-authority-catalog-governance-gate.md
+    pin: b5a15b467977e433fbfff55a1de2b4744faada7dd54ea4806496e8293bedae91
