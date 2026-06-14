@@ -213,6 +213,12 @@
       "content_hash": "ca78369c63879f21cf57b3ee29e2015163dbdc6a17d496b22ea98b1bd0b38bce"
     },
     {
+      "contract_id": "uco-alignment-v1",
+      "schema_path": "contracts/schemas/concept-authority/uco-alignment-v1.json",
+      "stability": "draft",
+      "content_hash": "445ef9ba99cddaae2b3308a054d26dd968d194af1c2f98710151f2d5a747f5bf"
+    },
+    {
       "contract_id": "workflow-cancellation-request-v1",
       "schema_path": "contracts/schemas/control-plane/workflow-cancellation-request-v1.json",
       "stability": "draft",
