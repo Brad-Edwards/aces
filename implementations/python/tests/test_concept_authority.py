@@ -290,6 +290,26 @@ def test_authoritative_catalog_declares_episode_family():
         assert forbidden_synonym in non_ambiguity_constraints
 
 
+def test_authoritative_catalog_declares_runtime_inventory_family():
+    payload = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    model = ConceptFamilyCatalogModel.model_validate(payload)
+
+    runtime_family = model.families["runtime-inventory"]
+    assert runtime_family.provenance == ConceptProvenanceCategory.NATIVE
+    assert runtime_family.authority is None
+    assert runtime_family.authority_reference is None
+    assert "nodes.*.runtime" in runtime_family.extension_scope
+
+    relation_rules = " ".join(runtime_family.relation_rules).lower()
+    for related_concept in ("assets", "observables"):
+        assert related_concept in relation_rules
+
+    # Inventory fields are observed/declared node state, not actions or events.
+    non_ambiguity_constraints = " ".join(runtime_family.non_ambiguity_constraints).lower()
+    assert "action" in non_ambiguity_constraints
+    assert "event" in non_ambiguity_constraints
+
+
 def test_episode_contract_terms_have_catalog_family_anchor():
     catalog_payload = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
     vocabulary_payload = json.loads(CONTROLLED_VOCABULARY_PATH.read_text(encoding="utf-8"))

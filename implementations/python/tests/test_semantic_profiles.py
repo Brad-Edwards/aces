@@ -107,3 +107,15 @@ def test_reference_profile_declares_episode_family_for_runtime_exchange_and_exec
     for phase in (profile.exchange, profile.execution):
         assert set(phase.required_contracts) >= EPISODE_CONTRACTS
         assert "episodes" in phase.required_concept_families
+
+
+def test_reference_profile_declares_runtime_inventory_family_for_authoring():
+    profile = load_semantic_profile("reference-stack-v1")
+
+    assert "runtime-inventory" in profile.authoring.required_concept_families
+    assert "runtime-inventory" not in profile.processing.required_concept_families
+    assert "runtime-inventory" not in profile.execution.required_concept_families
+    # Authoring carries observed node runtime inventory under nodes.*.runtime but
+    # defines no governed binding surfaces, so coverage is recorded through
+    # required_concept_families without a required_binding.
+    assert profile.authoring.required_bindings == []

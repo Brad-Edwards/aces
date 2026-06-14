@@ -54,6 +54,8 @@ slice:
 - scenario conditions as observable structures
 - scenario events as action or event structures
 - scenario content as tool or artifact structures
+- node runtime inventory as observed runtime configuration state under
+  `nodes.*.runtime`
 
 ## Participant Episode Lineage
 
@@ -72,6 +74,23 @@ which makes participant episode state its own processor/runtime contract
 surface and keeps it separate from workflow state, evaluation state,
 operation receipts, backend process restarts, tasks, runs, scenarios, and
 participant-local actions or observations.
+
+## Node Runtime Inventory
+
+`nodes.*.runtime` is cataloged as the `scenario-node-runtime` reference model in
+the native `runtime-inventory` concept family. It is the largest recurrent SDL
+structure and the surface where new inventory fields are most often added, so it
+is anchored to the published `RuntimeConfiguration` definition
+(`#/$defs/RuntimeConfiguration`) in both `sdl-authoring-input-v1` and
+`instantiated-scenario-v1` rather than restated inline.
+
+The `runtime` node field is optional, so its published shape is a nullable
+`anyOf` of the `RuntimeConfiguration` reference and `null`. Reference-model
+binding resolution looks through that nullable-optional wrapper to the
+underlying definition, which lets optional surfaces participate as reference
+models while bindings still resolve to real published schema definitions. The
+governance decision path for adding a new runtime inventory field is documented
+under Extension Discipline in [concept-authority.md](./concept-authority.md).
 
 ## Machine-Readable Artifacts
 

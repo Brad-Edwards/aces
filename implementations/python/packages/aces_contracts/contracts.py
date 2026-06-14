@@ -4790,14 +4790,41 @@ def _resolve_schema_pointer(schema_root: dict[str, Any], pointer: str) -> dict[s
     return current
 
 
+def _collapse_nullable_optional_schema(schema_node: dict[str, Any]) -> dict[str, Any]:
+    """Collapse a nullable-optional ``anyOf`` wrapper to its single non-null branch.
+
+    Pydantic renders an optional reference field (``X | None``) as a two-member
+    ``anyOf`` whose branches are the referenced schema and ``{"type": "null"}``.
+    Reference-model bindings address the underlying structure, so the resolver
+    looks through that wrapper (for example ``nodes.*.runtime``, an optional
+    ``RuntimeConfiguration``). Anything that is not exactly this nullable-optional
+    shape is returned unchanged, so non-optional and non-reference schemas are
+    unaffected.
+    """
+    any_of = schema_node.get("anyOf")
+    if not isinstance(any_of, list) or len(any_of) != 2:
+        return schema_node
+    non_null = [branch for branch in any_of if not (isinstance(branch, dict) and branch.get("type") == "null")]
+    null_branches = [branch for branch in any_of if isinstance(branch, dict) and branch.get("type") == "null"]
+    if len(non_null) == 1 and len(null_branches) == 1 and isinstance(non_null[0], dict):
+        return non_null[0]
+    return schema_node
+
+
 def _resolve_ref_schema(schema_root: dict[str, Any], schema_node: dict[str, Any]) -> dict[str, Any]:
     current = schema_node
-    while "$ref" in current:
-        ref = current["$ref"]
-        if not isinstance(ref, str):
-            raise KeyError(ref)
-        current = _resolve_schema_pointer(schema_root, ref)
-    return current
+    while True:
+        if "$ref" in current:
+            ref = current["$ref"]
+            if not isinstance(ref, str):
+                raise KeyError(ref)
+            current = _resolve_schema_pointer(schema_root, ref)
+            continue
+        collapsed = _collapse_nullable_optional_schema(current)
+        if collapsed is not current:
+            current = collapsed
+            continue
+        return current
 
 
 def _resolve_instance_path_schema(schema_root: dict[str, Any], instance_path: str) -> dict[str, Any]:
