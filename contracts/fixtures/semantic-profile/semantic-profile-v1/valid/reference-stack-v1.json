@@ -42,6 +42,8 @@
       "processor-manifest-v2",
       "backend-manifest-v2",
       "runtime-snapshot-v1",
+      "participant-episode-state-envelope-v1",
+      "participant-episode-history-event-stream-v1",
       "workflow-result-envelope-v1",
       "workflow-history-event-stream-v1",
       "evaluation-result-envelope-v1",
@@ -53,6 +55,7 @@
       "actions-and-events",
       "apparatus-declarations",
       "assets",
+      "episodes",
       "identities",
       "observables",
       "provenance-and-evidence",
@@ -121,6 +124,8 @@
       "operation-receipt-v1",
       "operation-status-v1",
       "runtime-snapshot-v1",
+      "participant-episode-state-envelope-v1",
+      "participant-episode-history-event-stream-v1",
       "workflow-result-envelope-v1",
       "workflow-history-event-stream-v1",
       "evaluation-result-envelope-v1",
@@ -129,6 +134,7 @@
     "required_concept_families": [
       "actions-and-events",
       "assets",
+      "episodes",
       "identities",
       "observables",
       "tools-and-artifacts"
