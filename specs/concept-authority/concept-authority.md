@@ -38,6 +38,53 @@ Where SDL, manifests, contracts, provenance, and reports bind their declared
 meaning to canonical concepts. This layer prevents artifact-local strings
 from becoming de facto semantics.
 
+## Surface
+
+A **surface** is a named, bounded, contract-bearing scope of an ACES artifact
+or apparatus — owned by a single declaring authority — across which concept
+bindings, governed vocabularies, and conformance rules apply. "Surface" is the
+ecosystem's central organizing term: authoring (the SDL surface), processing
+and contracts (the contract, control-plane, and runtime surfaces), the
+apparatus (processor, backend, participant, live-execution, evidence, and
+provenance surfaces), and authority itself (normative-prose, schema, and
+governance-guidance surfaces) are all surfaces in this sense. A surface is not a
+file, a package, an endpoint, a schema, or a concept family; any of those may
+carry, realize, or sit within a surface, but the surface is the governed scope,
+not its container.
+
+A surface has three defining properties:
+
+- **Named and bounded** — it has an identity and an explicit edge; a fact is
+  either inside it or outside it.
+- **Singly owned** — exactly one declaring authority owns the meaning on the
+  surface, so artifact-local strings cannot become de facto semantics (the
+  Artifact Binding Layer above is where surfaces bind to canonical concepts).
+- **Contract-bearing** — the surface is the unit against which conformance,
+  parity, and governed vocabularies are defined.
+
+### One Surface Versus Two
+
+When two facts arise, the inventory program decides whether they belong to one
+surface or two using a single rule established by
+[ADR-033](../../docs/decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state.md):
+
+- Two facts belong to the **same surface** when they share the same semantic
+  boundary *and* the same typed owner.
+- They belong to **separate surfaces** when they sit at different semantic
+  boundaries — authored scenario intent, observed runtime state, source-artifact
+  and image provenance, and backend or host delivery mechanics are four distinct
+  boundaries — **even when the same real-world evidence supports both**.
+  Surfaces do not collapse into each other.
+
+Worked example (ADR-033): a container-side service listener, a host-published
+port binding, and an image-default exposed port are three different facts on
+three different surfaces, even though one inspection of a running container can
+produce all three. The shared evidence is not a reason to merge them; the
+differing semantic boundary is the reason to keep them apart.
+
+The [glossary](../../docs/explain/reference/glossary.md) carries a reference-aid
+entry for "surface" that points back to this normative definition.
+
 ## Provenance Categories
 
 Every concept family declares its provenance:
