@@ -246,3 +246,6 @@ adrs:
   - id: ADR-059
     path: docs/decisions/adrs/adr-059-adr-amendment-policy-and-pin-gate.md
     pin: dd089a4cd415280fb87d278b70537d4a1144d2f28198314a22031fc88eaf5ce2
+  - id: ADR-061
+    path: docs/decisions/adrs/adr-061-published-schema-evolution-policy.md
+    pin: 08849a676cdaaf21bd1ac425f552d6347032d3f545b9cb5618090d22c56cd5dd

@@ -1,157 +1,234 @@
 {
   "schema_version": "schema-publication-manifest/v1",
+  "hash_algorithm": "sha256",
   "schemas": [
     {
       "contract_id": "aces-semantic-invariants-v1",
-      "schema_path": "contracts/schemas/profiles/aces-semantic-invariants-v1.json"
+      "schema_path": "contracts/schemas/profiles/aces-semantic-invariants-v1.json",
+      "stability": "draft",
+      "content_hash": "e7b858c93b7ec763c361439b1d9c7cc3979a1d150ca64a7f41ebc12c050f5cff"
     },
     {
       "contract_id": "backend-manifest-v2",
-      "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json"
+      "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
+      "stability": "draft",
+      "content_hash": "da156411d9877ad75045569b47e3b98597b6dec23a827d176c1fc64d9532cc90"
     },
     {
       "contract_id": "backend-profile-v1",
-      "schema_path": "contracts/schemas/profiles/backend-profile-v1.json"
+      "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
+      "stability": "draft",
+      "content_hash": "1c9ffe10f1c2c420610d1353dc1406bb0e0d63001c4f6a32e1aca061b164af1d"
     },
     {
       "contract_id": "concept-families-v1",
-      "schema_path": "contracts/schemas/concept-authority/concept-families-v1.json"
+      "schema_path": "contracts/schemas/concept-authority/concept-families-v1.json",
+      "stability": "draft",
+      "content_hash": "5e75b2d14d9f2537f5bb2e172edccb8ab158671b587dc01abc7477aabf2a5a3a"
     },
     {
       "contract_id": "controlled-vocabularies-v1",
-      "schema_path": "contracts/schemas/concept-authority/controlled-vocabularies-v1.json"
+      "schema_path": "contracts/schemas/concept-authority/controlled-vocabularies-v1.json",
+      "stability": "draft",
+      "content_hash": "3c3b4e517c42bd3822a2b9bbc69dc359773ee79da24f67abd4cafe8b205be2b8"
     },
     {
       "contract_id": "evaluation-history-event-stream-v1",
-      "schema_path": "contracts/schemas/control-plane/evaluation-history-event-stream-v1.json"
+      "schema_path": "contracts/schemas/control-plane/evaluation-history-event-stream-v1.json",
+      "stability": "draft",
+      "content_hash": "f34f5e940e267a2f5cc449fafcc79b8d8da9f537fd0ec4fd296c7843278ed7f4"
     },
     {
       "contract_id": "evaluation-plan-v1",
-      "schema_path": "contracts/schemas/plans/evaluation-plan-v1.json"
+      "schema_path": "contracts/schemas/plans/evaluation-plan-v1.json",
+      "stability": "draft",
+      "content_hash": "eeff605ae19059eb23648c717438189758f22ea8a35510c4561aa6f5f469a573"
     },
     {
       "contract_id": "evaluation-result-envelope-v1",
-      "schema_path": "contracts/schemas/control-plane/evaluation-result-envelope-v1.json"
+      "schema_path": "contracts/schemas/control-plane/evaluation-result-envelope-v1.json",
+      "stability": "draft",
+      "content_hash": "a3a99913c8e2092fb39483e278d52be2f2a41c553a500b776d08a2500638c95d"
     },
     {
       "contract_id": "experiment-apparatus-context-v1",
-      "schema_path": "contracts/schemas/experiment-core/experiment-apparatus-context-v1.json"
+      "schema_path": "contracts/schemas/experiment-core/experiment-apparatus-context-v1.json",
+      "stability": "draft",
+      "content_hash": "6e1f9885835bc6b6e8af922f5624ef09084c2fc8992b2a7f8fdb4e078f6ae2c0"
     },
     {
       "contract_id": "experiment-run-v1",
-      "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json"
+      "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
+      "stability": "draft",
+      "content_hash": "ceeead6df3a0d71477221bba8d8ac64b5a5f234a315d7c695357b04101bbb155"
     },
     {
       "contract_id": "experiment-study-v1",
-      "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json"
+      "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
+      "stability": "draft",
+      "content_hash": "8065247bb9185692c7de922e60b88e49420a32f3e57300801c3218c629194fa6"
     },
     {
       "contract_id": "experiment-task-v1",
-      "schema_path": "contracts/schemas/experiment-core/experiment-task-v1.json"
+      "schema_path": "contracts/schemas/experiment-core/experiment-task-v1.json",
+      "stability": "draft",
+      "content_hash": "fcdbd1d6d1d455ef2f43360dd0408c006ac2d1cd6f6454f46f7ba63365e9a661"
     },
     {
       "contract_id": "instantiated-scenario-v1",
-      "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json"
+      "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
+      "stability": "draft",
+      "content_hash": "6849f6bf1353f2fb530b3fd4e62e854ff31d3e140fca23f975bdbc65390d62ef"
     },
     {
       "contract_id": "operation-receipt-v1",
-      "schema_path": "contracts/schemas/control-plane/operation-receipt-v1.json"
+      "schema_path": "contracts/schemas/control-plane/operation-receipt-v1.json",
+      "stability": "draft",
+      "content_hash": "07bdbdaf5def120d43500da30a7ea38b736fdce8125e2cdb62b5b6851bf90504"
     },
     {
       "contract_id": "operation-status-v1",
-      "schema_path": "contracts/schemas/control-plane/operation-status-v1.json"
+      "schema_path": "contracts/schemas/control-plane/operation-status-v1.json",
+      "stability": "draft",
+      "content_hash": "a4db430e1bef55cc954e9620fdd91897175baeab8d132088647642c02792f0ec"
     },
     {
       "contract_id": "orchestration-plan-v1",
-      "schema_path": "contracts/schemas/plans/orchestration-plan-v1.json"
+      "schema_path": "contracts/schemas/plans/orchestration-plan-v1.json",
+      "stability": "draft",
+      "content_hash": "9f132b651267f5cafa460879550a49eb18d735ab1e02b241e664ec6c73275bae"
     },
     {
       "contract_id": "participant-behavior-history-event-stream-v1",
-      "schema_path": "contracts/schemas/control-plane/participant-behavior-history-event-stream-v1.json"
+      "schema_path": "contracts/schemas/control-plane/participant-behavior-history-event-stream-v1.json",
+      "stability": "draft",
+      "content_hash": "4aeeaba0d4834a38bed72aca834733806fe8625d763b15e7d2dba764637f4234"
     },
     {
       "contract_id": "participant-context-view-v1",
-      "schema_path": "contracts/schemas/control-plane/participant-context-view-v1.json"
+      "schema_path": "contracts/schemas/control-plane/participant-context-view-v1.json",
+      "stability": "draft",
+      "content_hash": "ff2e5866bde73898ead051cd5cfb20d32168ad3f8a6f9775d8481c728c40c24b"
     },
     {
       "contract_id": "participant-episode-history-event-stream-v1",
-      "schema_path": "contracts/schemas/control-plane/participant-episode-history-event-stream-v1.json"
+      "schema_path": "contracts/schemas/control-plane/participant-episode-history-event-stream-v1.json",
+      "stability": "draft",
+      "content_hash": "9fb1a9b0edaf79987e66dd61a34d9c3d4f95f020424783778a2ba4f64eaa2272"
     },
     {
       "contract_id": "participant-episode-state-envelope-v1",
-      "schema_path": "contracts/schemas/control-plane/participant-episode-state-envelope-v1.json"
+      "schema_path": "contracts/schemas/control-plane/participant-episode-state-envelope-v1.json",
+      "stability": "draft",
+      "content_hash": "e442e8c17d47fa275855664db993b53c501f0fb04e82b661f5bbe9fcb68ae39c"
     },
     {
       "contract_id": "participant-history-view-v1",
-      "schema_path": "contracts/schemas/control-plane/participant-history-view-v1.json"
+      "schema_path": "contracts/schemas/control-plane/participant-history-view-v1.json",
+      "stability": "draft",
+      "content_hash": "380257f288c098c0b94e343dbeb6d51c5216c6b14d91543cc2c147dd06633435"
     },
     {
       "contract_id": "participant-implementation-manifest-v1",
-      "schema_path": "contracts/schemas/participant-implementation-manifest/participant-implementation-manifest-v1.json"
+      "schema_path": "contracts/schemas/participant-implementation-manifest/participant-implementation-manifest-v1.json",
+      "stability": "draft",
+      "content_hash": "93e30291adbc08b1969adb9b938f888b004d317ac864e90151d0f43a395948e4"
     },
     {
       "contract_id": "participant-implementation-provenance-v1",
-      "schema_path": "contracts/schemas/participant-implementation-provenance/participant-implementation-provenance-v1.json"
+      "schema_path": "contracts/schemas/participant-implementation-provenance/participant-implementation-provenance-v1.json",
+      "stability": "draft",
+      "content_hash": "a4c050fb2a53129148f7d2960a7cb06d36c4682483064734e505acda4677d7ec"
     },
     {
       "contract_id": "participant-lifecycle-event-v1",
-      "schema_path": "contracts/schemas/participant-runtime/participant-lifecycle-event-v1.json"
+      "schema_path": "contracts/schemas/participant-runtime/participant-lifecycle-event-v1.json",
+      "stability": "draft",
+      "content_hash": "769ac4f54a36ec7e6031f584595555f7e8faea41ce0bf05b656aaf33e413d5c6"
     },
     {
       "contract_id": "participant-observation-envelope-v1",
-      "schema_path": "contracts/schemas/participant-runtime/participant-observation-envelope-v1.json"
+      "schema_path": "contracts/schemas/participant-runtime/participant-observation-envelope-v1.json",
+      "stability": "draft",
+      "content_hash": "57c7ca12df146ce59b164551a5a87a2e72dd1f9b6644e3b0975b7da1a71e8d40"
     },
     {
       "contract_id": "participant-outcome-report-v1",
-      "schema_path": "contracts/schemas/participant-runtime/participant-outcome-report-v1.json"
+      "schema_path": "contracts/schemas/participant-runtime/participant-outcome-report-v1.json",
+      "stability": "draft",
+      "content_hash": "1b65d36136812ae18c80ba7822df69b0ca65b569fd4cc2e2bd6c1fd07e5e4abf"
     },
     {
       "contract_id": "participant-shared-state-record-v1",
-      "schema_path": "contracts/schemas/participant-runtime/participant-shared-state-record-v1.json"
+      "schema_path": "contracts/schemas/participant-runtime/participant-shared-state-record-v1.json",
+      "stability": "draft",
+      "content_hash": "a3ad56415946417bfbd19cd637886d8442a3e2be510212471e1fcb139cf241d1"
     },
     {
       "contract_id": "participant-status-view-v1",
-      "schema_path": "contracts/schemas/control-plane/participant-status-view-v1.json"
+      "schema_path": "contracts/schemas/control-plane/participant-status-view-v1.json",
+      "stability": "draft",
+      "content_hash": "aef73b7d52c99de2a51cb2a58de0e30c37fc7fb2af5627cd6241a6aad288d07c"
     },
     {
       "contract_id": "processor-manifest-v2",
-      "schema_path": "contracts/schemas/processor-manifest/processor-manifest-v2.json"
+      "schema_path": "contracts/schemas/processor-manifest/processor-manifest-v2.json",
+      "stability": "draft",
+      "content_hash": "f47537f72e1f607b634b0d1f9d8854cc8abd11e0edec7272549d4d910f38993e"
     },
     {
       "contract_id": "provisioning-plan-v1",
-      "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json"
+      "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
+      "stability": "draft",
+      "content_hash": "e200fb7e8e68f05eb61c35cc2f724882e3b8977df7f4d5ae97e70401a1a76e01"
     },
     {
       "contract_id": "reference-models-v1",
-      "schema_path": "contracts/schemas/concept-authority/reference-models-v1.json"
+      "schema_path": "contracts/schemas/concept-authority/reference-models-v1.json",
+      "stability": "draft",
+      "content_hash": "28ae8b46e4bcb4436a01adf3a70472b2f8ffc1fc8c13ff7ea8766492652f8267"
     },
     {
       "contract_id": "runtime-snapshot-v1",
-      "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json"
+      "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
+      "stability": "draft",
+      "content_hash": "189e1fe99a31e64853238cea4423942577ceb0a86d2edf72ccf7031b6b1d7361"
     },
     {
       "contract_id": "scenario-instantiation-request-v1",
-      "schema_path": "contracts/schemas/sdl/scenario-instantiation-request-v1.json"
+      "schema_path": "contracts/schemas/sdl/scenario-instantiation-request-v1.json",
+      "stability": "draft",
+      "content_hash": "72a4a1969bc39d551efd0be364804dcdfca7694eceb2a58c402a026d981cd470"
     },
     {
       "contract_id": "sdl-authoring-input-v1",
-      "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json"
+      "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+      "stability": "draft",
+      "content_hash": "805355fa8df9c0ca360f89c1379fb55052dcc176c83d80a0b8963096ffa38134"
     },
     {
       "contract_id": "semantic-profile-v1",
-      "schema_path": "contracts/schemas/profiles/semantic-profile-v1.json"
+      "schema_path": "contracts/schemas/profiles/semantic-profile-v1.json",
+      "stability": "draft",
+      "content_hash": "ca78369c63879f21cf57b3ee29e2015163dbdc6a17d496b22ea98b1bd0b38bce"
     },
     {
       "contract_id": "workflow-cancellation-request-v1",
-      "schema_path": "contracts/schemas/control-plane/workflow-cancellation-request-v1.json"
+      "schema_path": "contracts/schemas/control-plane/workflow-cancellation-request-v1.json",
+      "stability": "draft",
+      "content_hash": "89ab39ece6fb1473a0f967a50186b29e0c6581257db3ad113324b31d05401435"
     },
     {
       "contract_id": "workflow-history-event-stream-v1",
-      "schema_path": "contracts/schemas/control-plane/workflow-history-event-stream-v1.json"
+      "schema_path": "contracts/schemas/control-plane/workflow-history-event-stream-v1.json",
+      "stability": "draft",
+      "content_hash": "6fa5f0a9b87da0cc1582204dc1324c5d7ffa30c2171aba74aedbbda7e109c243"
     },
     {
       "contract_id": "workflow-result-envelope-v1",
-      "schema_path": "contracts/schemas/control-plane/workflow-result-envelope-v1.json"
+      "schema_path": "contracts/schemas/control-plane/workflow-result-envelope-v1.json",
+      "stability": "draft",
+      "content_hash": "7050c30c073fa690f17b17f43a1310e9200892ec8a6f5c0fa1efd790a2bfc442"
     }
   ]
 }
