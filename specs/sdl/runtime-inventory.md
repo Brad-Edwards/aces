@@ -1,0 +1,118 @@
+# Catalog 4 — Runtime-Family Index
+
+The runtime inventory is the node-scoped record of logical service state an SDL
+document declares for a node. This file is a normative **index**: it places the
+runtime inventory in the document, names each runtime family and its addressing
+shape, and states the invariants every family shares **once**. It deliberately
+**delegates** each family's per-field semantics to that family's ADR rather than
+restating them, so the authoring spec does not duplicate the runtime ADR
+sequence.
+
+## 1. Placement and boundary
+
+1. Runtime inventory lives under a node: `nodes.<node>.runtime.<collection>`. It
+   is **not** a top-level authoring section.
+2. The runtime layer records **logical service state** — what a service is and
+   how it is configured — not delivery mechanics. The scenario/delivery boundary
+   for runtime node state is fixed by
+   [ADR-033](../../docs/decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state.md);
+   the SDL/processor/runtime layering by
+   [ADR-004](../../docs/decisions/adrs/adr-004-sdl-runtime-layer.md) and
+   [ADR-036](../../docs/decisions/adrs/adr-036-sdl-processor-runtime-module-boundaries.md).
+3. Runtime-family elements and their children are addressed by the
+   nested runtime-family reference form
+   ([references.md §1](references.md)):
+   `nodes.<node>.runtime.<collection>.<id>[.<child-collection>.<child-id>…]`.
+
+## 2. Family index
+
+Each registered node-scoped runtime family has a stable key, a collection name
+under `runtime`, a primary `<noun>_id`, an addressable child-collection tree,
+and an owning ADR. The owning ADR is the normative authority for that family's
+fields, enums, and profiles; this index does not restate them.
+
+| Family key | `runtime.<collection>` | Primary id | Child collections (id) | Owning ADR |
+|------------|------------------------|------------|------------------------|-----------|
+| `service-listeners` | `service_listeners` | `service_listener_id` | — | [ADR-043](../../docs/decisions/adrs/adr-043-runtime-service-listener-surface.md) |
+| `applications` | `applications` | `application_id` | — | [ADR-026](../../docs/decisions/adrs/adr-026-application-http-surface-inventory.md) |
+| `database-services` | `database_services` | `database_service_id` | `databases` (`database_id`) | [ADR-029](../../docs/decisions/adrs/adr-029-database-logical-state-runtime-surface.md) |
+| `dns-services` | `dns_services` | `dns_service_id` | `zones` (`zone_id`) → `rrsets` (`rrset_id`) | [ADR-039](../../docs/decisions/adrs/adr-039-dns-service-runtime-inventory.md) |
+| `identity-authorities` | `identity_authorities` | `identity_authority_id` | `services`, `subjects`, `policies`, `relationships` | [ADR-032](../../docs/decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md) |
+| `file-services` | `file_services` | `file_service_id` | `shares`, `principals`, `access_rules`, `access_observations` | [ADR-037](../../docs/decisions/adrs/adr-037-runtime-file-service-and-filesystem-presence-semantics.md) |
+| `mail-services` | `mail_services` | `mail_service_id` | `components`, `listeners`, `domains`, `mailbox_stores`, `mailboxes`, `aliases`, `routing_rules`, `queues`, `settings` | [ADR-038](../../docs/decisions/adrs/adr-038-runtime-mail-service-logical-state.md) |
+| `network-sensors` | `network_sensors` | `network_sensor_id` | — | [ADR-042](../../docs/decisions/adrs/adr-042-network-sensor-runtime-monitoring.md) |
+| `network-detection-engines` | `network_detection_engines` | `network_detection_engine_id` | `rule_sources`, `network_sets`, `output_streams`, `control_channels` | [ADR-044](../../docs/decisions/adrs/adr-044-network-detection-engine-runtime-inventory.md) |
+| `security-monitoring-managers` | `security_monitoring_managers` | `security_monitoring_manager_id` | `listeners`, `components`, `agents`, `agent_groups`, `content_sets`, `detection_definitions`, `settings` | [ADR-040](../../docs/decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory.md), [ADR-045](../../docs/decisions/adrs/adr-045-security-monitoring-detection-definition-semantics.md) |
+| `ssh-servers` | `ssh_servers` | `ssh_server_id` | `match_rules` (`match_id`) | [ADR-031](../../docs/decisions/adrs/adr-031-ssh-server-configuration-surface.md) |
+| `app-authorizations` | `app_authorizations` | `app_authorization_id` | `principals`, `roles`, `permission_grants`, `role_mappings`, `tenants` | [ADR-046](../../docs/decisions/adrs/adr-046-app-authorization-runtime-inventory.md) |
+| `scheduled-jobs` | `scheduled_jobs` | `scheduled_job_id` | — | [ADR-047](../../docs/decisions/adrs/adr-047-scheduled-job-runtime-inventory.md) |
+| `datastore-services` | `datastore_services` | `datastore_service_id` | `nodes` (`node_id`) → `plugins`, `endpoints`; `partitions`, `templates`, `mappings`, `settings` | [ADR-048](../../docs/decisions/adrs/adr-048-datastore-service-runtime-inventory.md), [ADR-058](../../docs/decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints.md) |
+| `platform-applications` | `platform_applications` | `platform_application_id` | `organizations`, `tenants`, `content_objects`, `markings`, `upstream_bindings`, `connectors`, `settings` | [ADR-049](../../docs/decisions/adrs/adr-049-platform-application-runtime-inventory.md) |
+| `forwarding-agents` | `forwarding_agents` | `forwarding_agent_id` | `sources`, `transforms`, `ship_targets`, `reload_channels`, `settings` | [ADR-050](../../docs/decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md) |
+| `orchestration-authorities` | `orchestration_authorities` | `orchestration_authority_id` | `spawn_templates`, `realized_children` | [ADR-051](../../docs/decisions/adrs/adr-051-orchestration-authority-runtime-inventory.md) |
+
+The node-scoped `forwarding_agents` family is distinct from the scenario-level
+`forwarding_agents` authoring section ([sections.md](sections.md)); they share
+identity and invariants but occupy different document positions.
+
+### Other node-runtime surfaces
+
+A node's `runtime` also carries surfaces that are not ref-targetable families in
+the index above but follow the same invariants and are governed by their own
+ADRs: local identity
+([ADR-024](../../docs/decisions/adrs/adr-024-local-identity-inventory-surface.md)),
+container image provenance
+([ADR-023](../../docs/decisions/adrs/adr-023-container-image-build-provenance-surface.md)),
+software components
+([ADR-034](../../docs/decisions/adrs/adr-034-runtime-software-component-inventory.md)),
+service-manager units
+([ADR-035](../../docs/decisions/adrs/adr-035-service-manager-unit-state-runtime-surface.md)),
+and container init/reaper state
+([ADR-027](../../docs/decisions/adrs/adr-027-container-init-reaper-runtime-surface.md)).
+These authored identity surfaces are kept **separate** from one another:
+authored `accounts`, runtime local identity, application authorization, database
+roles, and participant identities are distinct models and MUST NOT be collapsed
+into one.
+
+## 3. Shared invariants
+
+The following invariants hold for every runtime family and child collection.
+They are stated here once; a family's ADR specifies the family's fields, but may
+not contradict these.
+
+1. **Identity (`<noun>_id`).** Every family element and every addressable child
+   element carries a stable `<noun>_id`. The id **MUST** be unique within its
+   collection and symbol-shaped (no whitespace or quoting that would make it
+   unaddressable in a qualified path; [document-model.md §6](document-model.md)).
+   References address elements by these ids ([references.md](references.md)).
+2. **Enum sentinels.** An open enum carries a closed core of well-defined values
+   plus the sentinels `unknown` and `other`, so an authored value can record
+   "not determined" or "outside the closed set" without widening the closed core.
+   A sentinel value is discriminator-neutral: it imposes no profile requirement.
+3. **Quantity normalisation.** A human-readable byte quantity (for example
+   `4 GiB`, `512 MB`) is normalised to a canonical byte count on a `_bytes`-style
+   field. The normalised count is the value's meaning; the authored spelling is a
+   convenience.
+4. **Required-profile guards.** Where a family is a discriminated union (for
+   example, a datastore's data-model spine), the discriminator value **requires**
+   the profile-specific fields for that value. A profile guard is fail-closed: a
+   discriminator that selects a profile without that profile's required fields is
+   an error ([diagnostics.md](diagnostics.md)). A discriminator set to a sentinel
+   (`unknown`/`other`) requires no profile.
+5. **Observed values and redaction.** Runtime inventory records observed posture,
+   not live secrets. An explicit `redacted` or `operator_secret` classification
+   **MUST** omit the raw value
+   ([ADR-056](../../docs/decisions/adrs/adr-056-runtime-observed-values-and-credential-posture.md),
+   [ADR-057](../../docs/decisions/adrs/adr-057-runtime-secret-name-classifier-boundaries.md)).
+   Name-based secret-classification heuristics are **advisory only**
+   ([diagnostics.md](diagnostics.md)); they never silently strip or rewrite a
+   value. A posture-only model **MUST NOT** gain raw-credential fields.
+
+## Extending the runtime-family index
+
+A new runtime family is added by: defining its model and published schema,
+authoring its owning ADR, registering it in the canonical family registry (key,
+collection, primary `<noun>_id`, child-ref tree), and adding one row to the index
+above. The shared invariants (§3) apply automatically; the nested runtime-family
+reference form ([references.md §1](references.md)) addresses its elements without
+bespoke prose. No second runtime-family registry exists or should be created.

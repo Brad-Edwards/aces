@@ -102,6 +102,17 @@ The valid and invalid fixture corpus for reference models is published under:
 
 `contracts/fixtures/concept-authority/reference-models-v1/`
 
+## UCO Alignment Evidence
+
+Reference models bind recurrent ACES structures to ACES concept families; they
+do not inherit UCO class structure. The concept-authority relationship behind
+the adopted and adapted cyber-domain families those models reference is recorded
+separately as machine-checkable evidence in
+`contracts/concept-authority/uco-alignment-v1.json` (schema `uco-alignment/v1`).
+That artifact pins the reviewed UCO version and maps each adopted and adapted
+family to the UCO object types it aligns to, enumerating adapted-family
+divergences explicitly. See [ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md).
+
 ## Relationship To Other Requirements
 
 - GOV-917: canonical concept authority

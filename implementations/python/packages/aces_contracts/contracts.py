@@ -73,6 +73,7 @@ from .versions import (
     RUNTIME_SNAPSHOT_SCHEMA_VERSION,
     SCENARIO_INSTANTIATION_REQUEST_SCHEMA_VERSION,
     SEMANTIC_PROFILE_SCHEMA_VERSION,
+    UCO_ALIGNMENT_SCHEMA_VERSION,
     WORKFLOW_CANCELLATION_REQUEST_SCHEMA_VERSION,
     WORKFLOW_STATE_SCHEMA_VERSION,
 )
@@ -4600,6 +4601,102 @@ class ReferenceModelCatalogModel(ContractModel):
         return json_schema
 
 
+_UCO_NAMESPACE_BASE = "https://ontology.unifiedcyberontology.org/uco/"
+UcoClassName = Annotated[str, Field(pattern=r"^[a-z][a-z0-9]*:[A-Z][A-Za-z0-9]*$")]
+
+
+class UcoAlignmentTypeModel(ContractModel):
+    uco_class: UcoClassName
+    iri: NonEmptyString
+    note: NonEmptyString
+
+    @model_validator(mode="after")
+    def _validate_canonical_iri(self) -> UcoAlignmentTypeModel:
+        prefix, _, local = self.uco_class.partition(":")
+        expected_iri = f"{_UCO_NAMESPACE_BASE}{prefix}/{local}"
+        if self.iri != expected_iri:
+            raise ValueError(
+                f"uco_type iri must equal the canonical UCO IRI {expected_iri} for class "
+                f"{self.uco_class!r}; got {self.iri!r}"
+            )
+        return self
+
+
+class UcoFamilyAlignmentModel(ContractModel):
+    concept_family: ConceptFamilyId
+    provenance: ConceptProvenanceCategory
+    uco_types: list[UcoAlignmentTypeModel] = Field(min_length=1)
+    divergences: list[NonEmptyString]
+
+    @model_validator(mode="after")
+    def _validate_family_alignment(self) -> UcoFamilyAlignmentModel:
+        if self.provenance == ConceptProvenanceCategory.NATIVE:
+            raise ValueError(f"uco alignment family {self.concept_family!r} must be adopted or adapted, not native")
+        if self.provenance == ConceptProvenanceCategory.ADAPTED and not self.divergences:
+            raise ValueError(
+                f"adapted uco alignment family {self.concept_family!r} must enumerate at least one divergence"
+            )
+        if self.provenance == ConceptProvenanceCategory.ADOPTED and self.divergences:
+            raise ValueError(
+                f"adopted uco alignment family {self.concept_family!r} must record an empty divergences list"
+            )
+        uco_classes = [uco_type.uco_class for uco_type in self.uco_types]
+        if len(uco_classes) != len(set(uco_classes)):
+            raise ValueError(f"uco alignment family {self.concept_family!r} must not repeat a uco_class")
+        return self
+
+
+class UcoAlignmentCatalogModel(ContractModel):
+    schema_version: Literal[UCO_ALIGNMENT_SCHEMA_VERSION] = UCO_ALIGNMENT_SCHEMA_VERSION
+    uco_version: NonEmptyString
+    uco_reference: NonEmptyString
+    review_scope: NonEmptyString
+    alignments: dict[NonEmptyString, UcoFamilyAlignmentModel] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _validate_alignment_catalog(self) -> UcoAlignmentCatalogModel:
+        for family_id, alignment in self.alignments.items():
+            if not family_id.strip():
+                raise ValueError("uco alignment family identifiers must be non-empty")
+            if alignment.concept_family != family_id:
+                raise ValueError(
+                    f"uco alignment entry key {family_id!r} must match its concept_family {alignment.concept_family!r}"
+                )
+
+        expected_provenance = _uco_cyber_concept_family_provenance()
+        actual_ids = set(self.alignments)
+        expected_ids = set(expected_provenance)
+        missing = expected_ids - actual_ids
+        unexpected = actual_ids - expected_ids
+        if missing or unexpected:
+            raise ValueError(
+                "uco alignment must cover exactly the adopted/adapted UCO concept families declared in "
+                f"concept-families-v1; missing: {sorted(missing)}; unexpected: {sorted(unexpected)}"
+            )
+
+        for family_id, alignment in self.alignments.items():
+            declared = expected_provenance[family_id]
+            if alignment.provenance.value != declared:
+                raise ValueError(
+                    f"uco alignment provenance for family {family_id!r} is "
+                    f"{alignment.provenance.value!r} but concept-families-v1 declares {declared!r}"
+                )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        alignments_schema = json_schema.get("properties", {}).get("alignments")
+        if isinstance(alignments_schema, dict):
+            alignments_schema.setdefault("propertyNames", {"minLength": 1})
+        return json_schema
+
+
 class ControlledVocabularyTermModel(ContractModel):
     title: NonEmptyString
     description: NonEmptyString
@@ -4759,6 +4856,26 @@ def _authoritative_concept_family_ids() -> frozenset[str]:
     payload = json.loads(catalog_path.read_text(encoding="utf-8"))
     catalog = ConceptFamilyCatalogModel.model_validate(payload)
     return frozenset(catalog.families)
+
+
+@lru_cache(maxsize=1)
+def _uco_cyber_concept_family_provenance() -> dict[str, str]:
+    """Map each adopted/adapted family whose authority is UCO to its provenance.
+
+    This is the single source of truth for UCO alignment coverage: the
+    ``uco-alignment-v1`` catalog must declare exactly these families, so the
+    cyber-domain family slice is never hard-coded in a second place.
+    """
+
+    catalog_path = _repo_root() / "contracts" / "concept-authority" / "concept-families-v1.json"
+    payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+    catalog = ConceptFamilyCatalogModel.model_validate(payload)
+    return {
+        family_id: family.provenance.value
+        for family_id, family in catalog.families.items()
+        if family.provenance in {ConceptProvenanceCategory.ADOPTED, ConceptProvenanceCategory.ADAPTED}
+        and family.authority == "UCO"
+    }
 
 
 @lru_cache(maxsize=1)
@@ -4975,6 +5092,7 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-implementation-provenance-v1": ParticipantImplementationProvenanceModel.model_json_schema(),
         "concept-families-v1": ConceptFamilyCatalogModel.model_json_schema(),
         "reference-models-v1": ReferenceModelCatalogModel.model_json_schema(),
+        "uco-alignment-v1": UcoAlignmentCatalogModel.model_json_schema(),
         "controlled-vocabularies-v1": ControlledVocabularyCatalogModel.model_json_schema(),
         "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
@@ -5174,6 +5292,10 @@ __all__ = [
     "SnapshotEntryModel",
     "SourcePipelineModel",
     "SourceStatusModel",
+    "UcoAlignmentCatalogModel",
+    "UcoAlignmentTypeModel",
+    "UcoFamilyAlignmentModel",
+    "UCO_ALIGNMENT_SCHEMA_VERSION",
     "WorkflowCancellationRequestModel",
     "WORKFLOW_CANCELLATION_REQUEST_SCHEMA_VERSION",
     "WorkflowExecutionStateModel",

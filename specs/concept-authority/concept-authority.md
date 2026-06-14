@@ -26,6 +26,13 @@ UCO (Unified Cyber Ontology) is the semantic authority for cyber-domain
 concept families. This is a concept-authority relationship, not an
 authoring-syntax or schema-structure requirement.
 
+The fidelity of this concept-authority relationship is recorded in the
+machine-checkable UCO alignment artifact
+`contracts/concept-authority/uco-alignment-v1.json` (schema `uco-alignment/v1`).
+It pins the reviewed UCO version and maps every adopted and adapted cyber-domain
+family to the UCO object types it aligns to, stating each adapted family's
+divergences explicitly so the alignment can be reviewed rather than assumed.
+
 ### 2. ACES Concept Layer
 
 Defines concepts that ACES needs beyond the cyber-domain authority. These

@@ -1,0 +1,124 @@
+{
+  "$defs": {
+    "ConceptProvenanceCategory": {
+      "description": "How a concept family relates to its authority source.",
+      "enum": [
+        "adopted",
+        "adapted",
+        "native"
+      ],
+      "title": "ConceptProvenanceCategory",
+      "type": "string"
+    },
+    "UcoAlignmentTypeModel": {
+      "additionalProperties": false,
+      "properties": {
+        "iri": {
+          "minLength": 1,
+          "title": "Iri",
+          "type": "string"
+        },
+        "note": {
+          "minLength": 1,
+          "title": "Note",
+          "type": "string"
+        },
+        "uco_class": {
+          "pattern": "^[a-z][a-z0-9]*:[A-Z][A-Za-z0-9]*$",
+          "title": "Uco Class",
+          "type": "string"
+        }
+      },
+      "required": [
+        "uco_class",
+        "iri",
+        "note"
+      ],
+      "title": "UcoAlignmentTypeModel",
+      "type": "object"
+    },
+    "UcoFamilyAlignmentModel": {
+      "additionalProperties": false,
+      "properties": {
+        "concept_family": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+          "title": "Concept Family",
+          "type": "string"
+        },
+        "divergences": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Divergences",
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/$defs/ConceptProvenanceCategory"
+        },
+        "uco_types": {
+          "items": {
+            "$ref": "#/$defs/UcoAlignmentTypeModel"
+          },
+          "minItems": 1,
+          "title": "Uco Types",
+          "type": "array"
+        }
+      },
+      "required": [
+        "concept_family",
+        "provenance",
+        "uco_types",
+        "divergences"
+      ],
+      "title": "UcoFamilyAlignmentModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/uco-alignment-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "alignments": {
+      "additionalProperties": {
+        "$ref": "#/$defs/UcoFamilyAlignmentModel"
+      },
+      "minProperties": 1,
+      "propertyNames": {
+        "minLength": 1
+      },
+      "title": "Alignments",
+      "type": "object"
+    },
+    "review_scope": {
+      "minLength": 1,
+      "title": "Review Scope",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "uco-alignment/v1",
+      "default": "uco-alignment/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "uco_reference": {
+      "minLength": 1,
+      "title": "Uco Reference",
+      "type": "string"
+    },
+    "uco_version": {
+      "minLength": 1,
+      "title": "Uco Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "uco_version",
+    "uco_reference",
+    "review_scope",
+    "alignments"
+  ],
+  "title": "UcoAlignmentCatalogModel",
+  "type": "object"
+}
