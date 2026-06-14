@@ -89,6 +89,16 @@ The valid and invalid fixture corpus for semantic profiles is published under:
 
 `contracts/fixtures/semantic-profile/semantic-profile-v1/`
 
+## UCO Alignment Evidence
+
+Semantic profiles compose ACES concept, contract, binding, and behavior
+assumptions; they are not UCO profiles and do not adopt UCO authoring syntax.
+The concept-authority relationship behind the adopted and adapted cyber-domain
+families a profile may require is recorded as machine-checkable evidence in
+`contracts/concept-authority/uco-alignment-v1.json` (schema `uco-alignment/v1`),
+which pins the reviewed UCO version and enumerates each adapted family's
+divergences. See [ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md).
+
 ## Relationship To Other Requirements
 
 - GOV-917: canonical concept authority
