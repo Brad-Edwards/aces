@@ -43,6 +43,10 @@ PROPERTY_SPECIAL_COMPATIBILITY_KEYS = {"default", "enum"}
 _MISSING = object()
 
 
+LAST_CHANGE_KEY = "last_change"
+REMOVED_SCHEMAS_KEY = "removed_schemas"
+
+
 @dataclass(frozen=True)
 class ManifestEntry:
     contract_id: str
@@ -50,6 +54,7 @@ class ManifestEntry:
     stability: str
     content_hash: str
     schema: Any
+    last_change: dict[str, Any] | None = None
 
 
 def _published_schema_paths(repo_root: Path) -> set[str]:
@@ -89,6 +94,38 @@ def _load_schema(path: Path, schema_path: str) -> tuple[Any | None, str | None]:
         return json.loads(path.read_text(encoding="utf-8")), None
     except json.JSONDecodeError as exc:
         return None, f"schema manifest path is not valid JSON: {schema_path}: {exc.msg}"
+
+
+def _validate_last_change(
+    contract_id: str, value: Any, entry_content_hash: str
+) -> tuple[list[str], dict[str, Any] | None]:
+    """Validate a manifest entry's optional ``last_change`` ledger block.
+
+    The block records the contract-facing rationale for the schema's current
+    content (ADR-009 section 7: schema changes are governed contract edits, not
+    regeneration side-effects). It must carry a non-empty ``summary`` and a
+    ``content_hash`` equal to the entry's canonical schema hash, so a stale
+    ledger (rationale left pointing at an older schema) cannot satisfy the gate.
+    """
+    if not isinstance(value, dict):
+        return [f"schema manifest entry {contract_id} last_change must be a JSON object"], None
+    failures: list[str] = []
+    summary = value.get("summary")
+    if not isinstance(summary, str) or not summary.strip():
+        failures.append(f"schema manifest entry {contract_id} last_change.summary must be a non-empty string")
+    change_hash = value.get("content_hash")
+    if not isinstance(change_hash, str) or not SHA256_RE.match(change_hash):
+        failures.append(
+            f"schema manifest entry {contract_id} last_change.content_hash must be a 64-character sha256 hex digest"
+        )
+    elif change_hash != entry_content_hash:
+        failures.append(
+            f"schema manifest entry {contract_id} last_change.content_hash {change_hash} does not match the schema "
+            f"content_hash {entry_content_hash}; record the ledger entry against the current schema content"
+        )
+    if failures:
+        return failures, None
+    return [], {"summary": summary, "content_hash": change_hash}
 
 
 def _git_show(repo_root: Path, gitref: str) -> str | None:
@@ -314,6 +351,123 @@ def _check_stable_schema_changes(
     return failures
 
 
+def _removal_ledger(payload: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    """Parse and validate the manifest's ``removed_schemas`` tombstone list.
+
+    A removed schema has no current ``schemas`` entry to carry a ``last_change``
+    block, so its contract-facing rationale is recorded as a tombstone keyed by
+    ``schema_path`` (ADR-009 section 7: a contract removal is a governed edit,
+    not a silent regeneration side-effect). Each tombstone must carry a
+    non-empty ``summary``; the ``schema_path`` is what links the tombstone back
+    to the schema that existed at ``base_rev``.
+    """
+    value = payload.get(REMOVED_SCHEMAS_KEY)
+    if value is None:
+        return {}, []
+    if not isinstance(value, list):
+        return {}, [f"schema manifest {REMOVED_SCHEMAS_KEY} must be a JSON array"]
+    failures: list[str] = []
+    tombstones: dict[str, dict[str, Any]] = {}
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            failures.append(f"schema manifest {REMOVED_SCHEMAS_KEY} entry {index} must be a JSON object")
+            continue
+        schema_path = item.get("schema_path")
+        if not isinstance(schema_path, str) or not schema_path:
+            failures.append(
+                f"schema manifest {REMOVED_SCHEMAS_KEY} entry {index} schema_path must be a non-empty string"
+            )
+            continue
+        summary = item.get("summary")
+        if not isinstance(summary, str) or not summary.strip():
+            failures.append(
+                f"schema manifest {REMOVED_SCHEMAS_KEY} entry {schema_path} summary must be a non-empty string"
+            )
+            continue
+        tombstones[schema_path] = item
+    return tombstones, failures
+
+
+def _check_change_ledger(
+    repo_root: Path,
+    current_entries: Iterable[ManifestEntry],
+    *,
+    base_rev: str,
+    base_entries: dict[str, dict[str, Any]] | None,
+    removal_tombstones: dict[str, dict[str, Any]],
+) -> list[str]:
+    """Require a contract-facing change-ledger entry whenever a published schema's
+    content changed relative to ``base_rev`` (or is newly published or removed).
+
+    The manifest ``last_change`` block is what turns a schema change into a
+    reviewed contract edit rather than a silent regeneration side-effect
+    (ADR-009 section 7). The per-entry shape check already rejects a stale or
+    malformed ledger; this gate adds the "a change must carry one at all" rule,
+    keyed by the same ``schema_path`` identity used elsewhere. Removals have no
+    current entry to inspect, so they are gated separately against the base
+    manifest and must carry a ``removed_schemas`` tombstone.
+    """
+    failures: list[str] = []
+    for entry in current_entries:
+        base_text = _git_show(repo_root, f"{base_rev}:{entry.schema_path}")
+        if base_text is not None:
+            try:
+                base_schema = json.loads(base_text)
+            except json.JSONDecodeError:
+                base_schema = None
+            if base_schema is not None and _schema_content_digest(base_schema) == entry.content_hash:
+                continue
+        if entry.last_change is None:
+            failures.append(
+                f"published schema {entry.contract_id} changed without a contract-facing change description; "
+                f"add a '{LAST_CHANGE_KEY}' entry (summary + current content_hash) to {MANIFEST_PATH.as_posix()} "
+                "recording why the contract changed"
+            )
+
+    failures.extend(
+        _check_removal_ledger(
+            current_entries,
+            base_entries=base_entries,
+            removal_tombstones=removal_tombstones,
+        )
+    )
+    return failures
+
+
+def _check_removal_ledger(
+    current_entries: Iterable[ManifestEntry],
+    *,
+    base_entries: dict[str, dict[str, Any]] | None,
+    removal_tombstones: dict[str, dict[str, Any]],
+) -> list[str]:
+    """Require a ``removed_schemas`` tombstone for every published schema that
+    existed at ``base_rev`` and is gone from the current manifest.
+
+    Without this, a PR can delete ``contracts/schemas/foo.json`` and drop its
+    manifest entry: the file-level Rego rule is satisfied because the manifest
+    was touched, and ``_check_change_ledger`` has no current entry to inspect,
+    so the removal lands without the contract-facing ledger this gate requires
+    for every other schema change (ADR-009 section 7).
+    """
+    if not base_entries:
+        return []
+    base_paths = {
+        base_path
+        for base_entry in base_entries.values()
+        if isinstance(base_path := base_entry.get("schema_path"), str) and base_path.startswith(SCHEMAS_PREFIX)
+    }
+    current_paths = {entry.schema_path for entry in current_entries}
+    failures: list[str] = []
+    for removed_path in sorted(base_paths - current_paths):
+        if removed_path not in removal_tombstones:
+            failures.append(
+                f"published schema {removed_path} was removed without a contract-facing removal description; "
+                f"add a '{REMOVED_SCHEMAS_KEY}' tombstone (schema_path + summary) to {MANIFEST_PATH.as_posix()} "
+                "recording why the contract was removed"
+            )
+    return failures
+
+
 def _safe_schema_path(repo_root: Path, schema_path: str) -> tuple[Path | None, str | None]:
     schemas_root = (repo_root / SCHEMAS_PREFIX).resolve()
     candidate = repo_root / schema_path
@@ -416,6 +570,12 @@ def validate_schema_publication_manifest(
                     f"schema manifest entry {contract_id} content_hash {content_hash} does not match "
                     f"canonical schema hash {actual_hash}"
                 )
+        parsed_last_change: dict[str, Any] | None = None
+        if isinstance(content_hash, str) and SHA256_RE.match(content_hash) and LAST_CHANGE_KEY in entry:
+            last_change_failures, parsed_last_change = _validate_last_change(
+                contract_id, entry[LAST_CHANGE_KEY], content_hash
+            )
+            failures.extend(last_change_failures)
         if stability in STABILITY_VALUES and isinstance(content_hash, str) and SHA256_RE.match(content_hash):
             validated_entries.append(
                 ManifestEntry(
@@ -424,6 +584,7 @@ def validate_schema_publication_manifest(
                     stability=stability,
                     content_hash=content_hash,
                     schema=schema,
+                    last_change=parsed_last_change,
                 )
             )
 
@@ -434,8 +595,26 @@ def validate_schema_publication_manifest(
         if path.startswith(SCHEMAS_PREFIX):
             failures.append(f"schema manifest references unpublished schema: {path}")
 
+    removal_tombstones, tombstone_failures = _removal_ledger(payload)
+    failures.extend(tombstone_failures)
+    for removed_path in sorted(removal_tombstones):
+        if removed_path in manifest_paths:
+            failures.append(
+                f"schema manifest {REMOVED_SCHEMAS_KEY} tombstone {removed_path} refers to a still-published schema"
+            )
+
     if not failures and base_rev:
         failures.extend(_check_stable_schema_changes(repo_root, validated_entries, base_rev=base_rev))
+        base_entries, _ = _load_base_manifest(repo_root, base_rev)
+        failures.extend(
+            _check_change_ledger(
+                repo_root,
+                validated_entries,
+                base_rev=base_rev,
+                base_entries=base_entries,
+                removal_tombstones=removal_tombstones,
+            )
+        )
 
     return failures
 
