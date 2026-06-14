@@ -13,14 +13,12 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from ._base import extract_variable_name
+from ._base import VARIABLE_TOKEN_RE, extract_variable_name
 from ._errors import SDLInstantiationError, SDLValidationError
 from .explicitness import derive_instantiated_explicitness
 from .scenario import InstantiatedScenario, Scenario
 from .validator import SemanticValidator
 from .variables import Variable, VariableType
-
-_VARIABLE_TOKEN_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_-]*)\}")
 
 JSONScalar = str | int | float | bool | None
 JSONLike = JSONScalar | list["JSONLike"] | dict[str, "JSONLike"]
@@ -112,7 +110,7 @@ def _substitute_value(
             return match.group(0)
         return str(variable_values[variable_name])
 
-    return _VARIABLE_TOKEN_RE.sub(replace_token, value)
+    return VARIABLE_TOKEN_RE.sub(replace_token, value)
 
 
 def _capture_node_variable_refs(

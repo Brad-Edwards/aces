@@ -10,9 +10,11 @@ Delivery-level concerns (Docker, Terraform, cloud APIs) are
 outside the SDL.
 """
 
+from collections.abc import Mapping
+
 from pydantic import Field, PrivateAttr, model_validator
 
-from ._base import SDLModel
+from ._base import VARIABLE_TOKEN_RE, SDLModel
 from .accounts import Account
 from .agents import Agent
 from .conditions import Condition
@@ -31,6 +33,25 @@ from .runtime_forwarding_agent import RuntimeForwardingAgent
 from .scoring import TLO, Evaluation, Goal, Metric
 from .variables import Variable
 from .vulnerabilities import Vulnerability
+
+
+def _collect_variable_tokens(value: object) -> list[str]:
+    """Return the names of every ``${name}`` token found in string *values*.
+
+    Mirrors ``instantiate._substitute_value``: every string is a substitution
+    site and mapping keys are not. An :class:`InstantiatedScenario` is fully
+    concrete, so no token may survive in any string value.
+    """
+    found: list[str] = []
+    if isinstance(value, Mapping):
+        for nested in value.values():
+            found.extend(_collect_variable_tokens(nested))
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            found.extend(_collect_variable_tokens(item))
+    elif isinstance(value, str):
+        found.extend(VARIABLE_TOKEN_RE.findall(value))
+    return found
 
 
 class ModuleDescriptor(SDLModel):
@@ -184,7 +205,19 @@ class Scenario(SDLModel):
 
 
 class InstantiatedScenario(Scenario):
-    """Scenario with all `${var}` references resolved to concrete values."""
+    """Scenario with all ``${var}`` references resolved to concrete values.
+
+    Unlike the authoring-input contract, an instantiated scenario MUST NOT
+    contain any unresolved ``${name}`` substitution token in any string value,
+    whether a whole-string placeholder (``"${os}"``) or embedded
+    (``"host-${index}"``). The invariant is enforced both by the model
+    validator below and by the published ``instantiated-scenario-v1`` JSON
+    Schema, which forbids the token in every string field. The schema is
+    marginally stricter than the runtime instantiation engine in one
+    pathological case: if a resolved variable *value* itself re-introduces a
+    literal ``${name}`` sequence (single-pass substitution does not re-scan
+    it), the schema and this validator treat it as non-concrete and reject it.
+    """
 
     _instantiation_parameters: dict[str, object] = PrivateAttr(default_factory=dict)
     _instantiation_profile: str | None = PrivateAttr(default=None)
@@ -221,6 +254,15 @@ class InstantiatedScenario(Scenario):
 
     def _set_node_variable_refs(self, refs: dict[str, dict[str, str | None]]) -> None:
         self._node_variable_refs = {name: dict(entry) for name, entry in refs.items()}
+
+    @model_validator(mode="after")
+    def _reject_unresolved_variable_references(self) -> "InstantiatedScenario":
+        payload = self.model_dump(mode="python", by_alias=True)
+        tokens = sorted(set(_collect_variable_tokens(payload)))
+        if tokens:
+            joined = ", ".join(tokens)
+            raise ValueError(f"InstantiatedScenario must not contain unresolved variable references: {joined}")
+        return self
 
 
 class ExpandedScenario(Scenario):

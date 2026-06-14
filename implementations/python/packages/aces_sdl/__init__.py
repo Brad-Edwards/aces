@@ -17,6 +17,7 @@ __all__ = [
     "SDLInstantiationError",
     "SDLParseError",
     "SDLValidationError",
+    "VARIABLE_TOKEN_PATTERN",
 ]
 
 
@@ -28,6 +29,8 @@ def __getattr__(name: str):
         "SDLValidationError",
     }:
         module = import_module("aces_sdl._errors")
+    elif name == "VARIABLE_TOKEN_PATTERN":
+        module = import_module("aces_sdl._base")
     elif name == "instantiate_scenario":
         module = import_module("aces_sdl.instantiate")
     elif name in {"parse_sdl", "parse_sdl_file"}:
