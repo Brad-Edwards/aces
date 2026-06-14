@@ -59,6 +59,18 @@ The reference stack profile is intentionally concrete. It is the first
 repo-owned semantic profile, not a promise that the ecosystem will forever use
 only one profile.
 
+The reference stack requires the native `episodes` concept family in the
+`exchange` and `execution` phases because those phases exchange and execute the
+participant episode state and episode history contracts. Authoring and
+processing do not require the family today: ADR-013 explicitly avoids adding
+SDL authoring syntax for episode semantics, and the reference processor does
+not publish participant episode state/history contracts as a processing
+capability. The profile therefore records episode coverage through
+`required_contracts` and `required_concept_families`, not through a
+`required_bindings` entry on `capabilities.supported_participant_contracts`;
+that manifest scope also contains implementation, behavior, and provenance
+contracts and is not an episode-only binding surface.
+
 ## Machine-Readable Artifacts
 
 The JSON Schema for semantic profiles is published at:
