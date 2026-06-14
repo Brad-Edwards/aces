@@ -15,6 +15,7 @@ from pydantic import ValidationError
 
 from ._base import extract_variable_name
 from ._errors import SDLInstantiationError, SDLValidationError
+from .explicitness import derive_instantiated_explicitness
 from .scenario import InstantiatedScenario, Scenario
 from .validator import SemanticValidator
 from .variables import Variable, VariableType
@@ -209,4 +210,8 @@ def instantiate_scenario(
     )
     instantiated._set_node_variable_refs(node_variable_refs)
     instantiated._set_module_variable_specs(module_variable_specs)
+    explicitness = derive_instantiated_explicitness(raw_scenario, instantiated)
+    if explicitness.errors:
+        raise SDLInstantiationError(list(explicitness.errors))
+    instantiated._set_explicitness(explicitness.records)
     return instantiated

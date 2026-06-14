@@ -48,14 +48,17 @@ is `partial`. What is *enforced today* is narrow and structural:
   non-realizing role is enforced structurally;
 - the closed-Pydantic SDL model boundary (`extra="forbid"`), which
   fails closed on unknown keys at points the schema does not designate
-  as realizable.
+  as realizable;
+- the SEM-218 classifier in `aces_sdl.explicitness`, invoked by
+  `SemanticValidator`, which tags authored SDL declarations as
+  *exact*, *constrained*, or *open* for downstream consumers;
+- the instantiation downgrade rule in `instantiate_scenario`, which
+  preserves authored explicitness metadata across parameter/default
+  substitution without promoting substituted concrete values to false
+  exact declarations.
 
 What is *normative but not yet realized*:
 
-- the SEM-218 classifier that tags each authored declaration as
-  *exact*, *constrained*, or *open* and that downstream stages would
-  consume — `SemanticValidator` does not carry that classifier today;
-- the substitution-downgrade rule in instantiation;
 - the typed compiler emission that preserves the exact / constrained /
   open class through to the planner;
 - the planner-side match of compiled exact-requirement-kinds against
@@ -251,9 +254,9 @@ implement end-to-end.
 
 | Phase | Responsibility | Status |
 | --- | --- | --- |
-| Authoring | Source of declarations. The authoring layer is the only authority that may classify a construct as exact, constrained, or open; downstream stages MUST treat that classification as immutable input. | normative (future) — closed Pydantic SDL models (`extra="forbid"`) and the apparatus-contract type system carry the structural shape today, but the SEM-218 classifier that tags each declaration with an exact / constrained / open class is staged work; until it lands, "authoring" is not a SEM-218-enforced phase. |
-| Validation | At the apparatus-contract layer: the shape gates on backend `RealizationSupportDeclaration` (I4 structural floor), the JSON-schema conditional gate, and `ProcessorManifestV2Model`'s asymmetric rejection of `realization_support` are enforced. At the SDL scenario layer: `SemanticValidator` enforces fail-closed validation on the *existing* closed SDL models, but does not yet classify SDL declarations by exact / constrained / open class. The classifier pass and the open-vs-exact validation rule on SDL scenarios are normative (future). | partial — apparatus-contract validation (manifest shape) is enforced; SDL-scenario SEM-218 validation (the classifier pass) is normative (future). |
-| Instantiation | Parameter and default substitution may resolve open concerns and constrained surfaces. Substitution MUST NOT downgrade an exact declaration into a constrained or open one, and MUST NOT introduce an exact declaration that the author did not write. The concrete scenario MUST be revalidated after substitution. | normative (future) |
+| Authoring | Source of declarations. The authoring layer is the only authority that may classify a construct as exact, constrained, or open; downstream stages MUST treat that classification as immutable input. | partial — closed Pydantic SDL models (`extra="forbid"`), the apparatus-contract type system, and the `aces_sdl.explicitness` classifier carry the exact / constrained / open classification for authored SDL declarations. |
+| Validation | At the apparatus-contract layer: the shape gates on backend `RealizationSupportDeclaration` (I4 structural floor), the JSON-schema conditional gate, and `ProcessorManifestV2Model`'s asymmetric rejection of `realization_support` are enforced. At the SDL scenario layer: `SemanticValidator` enforces fail-closed validation on the *existing* closed SDL models and attaches SEM-218 classifier output to the validated scenario. | partial — apparatus-contract validation (manifest shape) and SDL-scenario classifier output are enforced; compiler/planner/runtime consumers remain staged. |
+| Instantiation | Parameter and default substitution may resolve open concerns and constrained surfaces. Substitution MUST NOT downgrade an exact declaration into a constrained or open one, and MUST NOT introduce an exact declaration that the author did not write. The concrete scenario MUST be revalidated after substitution. | partial — `instantiate_scenario` revalidates after substitution and derives instantiated explicitness from the authored classification so substituted values do not become false exact declarations. |
 | Compilation | Lowers each declaration into a typed runtime requirement preserving class. Exact requirements carry their declared kind into the compiled representation; constrained requirements carry the typed constraint surface; open requirements are emitted as realizable slots tagged with the realization-and-disclosure family. | normative (future) |
 | Planning | Matches every compiled requirement against the candidate backend manifest. An unsupported exact-requirement-kind MUST cause plan rejection through a structured `Diagnostic` before deployment; an unsupported constraint-kind MUST cause the same outcome. An open realizable slot MAY be left for the backend only when its manifest declares matching support. | normative (future) |
 | Execution | Backend realizers honor the compiled class. A runtime adapter MUST NOT silently broaden an exact requirement, MUST NOT silently narrow an open realization beyond its declared constraints, and MUST surface incompatibilities through the existing runtime error envelope rather than approximate. | normative (future) |
@@ -288,9 +291,9 @@ realization status, are:
   rejection rule.
 - **Instantiation gate** — substitution MUST NOT downgrade an exact
   declaration; concrete scenarios MUST be revalidated after
-  substitution (I1). *Future*; the validation rerun exists today via
-  `instantiate_scenario`, but the explicit-vs-open invariant for
-  substitution is not separately enforced.
+  substitution (I1). *Enforced today* by `instantiate_scenario`,
+  `SDLInstantiationError`, and `aces_sdl.explicitness` deriving the
+  instantiated explicitness map from the pre-substitution authored map.
 - **Compiler / planner gate** — compiled exact-requirement-kinds MUST
   be matched against the selected backend's `realization_support`;
   unsupported kinds MUST cause `Diagnostic`-bearing rejection before
@@ -411,10 +414,11 @@ realization is staged work tracked under the SEM-218 coverage row.
   (`realization-and-disclosure` family is the native authority for what
   may be realized at all).
 - I1, I3 fail-closed authoring / validation —
+  `implementations/python/packages/aces_sdl/explicitness.py`,
   `implementations/python/packages/aces_sdl/validator.py`,
   `implementations/python/packages/aces_sdl/instantiate.py`
-  (closed-world validation, revalidation after substitution; the
-  explicit-vs-open substitution-downgrade rule is *future*).
+  (closed-world validation, classifier output on validated scenarios,
+  and substitution-downgrade metadata on instantiated scenarios).
 - I4 fail-closed evidence — invalid fixtures
   `contracts/fixtures/backend-manifest/backend-manifest-v2/invalid/hollow-realization-support.json`,
   `contracts/fixtures/backend-manifest/backend-manifest-v2/invalid/malformed-realization-support.json`,
@@ -441,11 +445,15 @@ realization is staged work tracked under the SEM-218 coverage row.
   JSON-schema conditional gate for backend manifests and the assertion
   that the generated processor schema has no `realization_support`
   property (I4 shape + scope).
+- `implementations/python/tests/test_sem_218_explicitness.py` —
+  SDL-scenario classifier output for representative exact,
+  constrained, and open declarations; instantiation substitution
+  downgrade; and unclassifiable variable diagnostics.
 
 Tests for the planner-gate match against `realization_support`, the
-substitution-downgrade rule, the runtime non-approximation envelope,
-and SEM-218 provenance fields are *future* and will land with the
-implementations they exercise.
+runtime non-approximation envelope, and SEM-218 runtime provenance
+fields are *future* and will land with the implementations they
+exercise.
 
 ## Non-Goals
 
