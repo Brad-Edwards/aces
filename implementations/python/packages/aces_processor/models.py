@@ -236,6 +236,10 @@ from aces_sdl.semantics.workflow import (
     WorkflowStepSemanticContract,
 )
 
+from aces_processor.semantics.realization import (
+    CompiledRealizationRequirement as CompiledRealizationRequirement,
+)
+
 _PARTICIPANT_ACTION_CONTRACT_PREFIX = "participant.action-contract."
 _PARTICIPANT_OBSERVATION_BOUNDARY_PREFIX = "participant.observation-boundary."
 _PARTICIPANT_OUTCOME_RULE_PREFIX = "participant.outcome-interpretation-rule."
@@ -4250,6 +4254,11 @@ class RuntimeModel:
     goals: dict[str, GoalRuntime] = field(default_factory=dict)
     objectives: dict[str, ObjectiveRuntime] = field(default_factory=dict)
     diagnostics: list[Diagnostic] = field(default_factory=list)
+    # SEM-218 typed compiler emission: each authored realization concern with
+    # its preserved explicitness class. Model-side metadata (like
+    # `node_variable_refs`); it never enters the backend-facing
+    # `resource_payload()` envelope. Consumed by the planner realization gate.
+    realization_requirements: tuple[CompiledRealizationRequirement, ...] = ()
 
 
 @dataclass(frozen=True)

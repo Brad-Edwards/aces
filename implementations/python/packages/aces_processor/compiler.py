@@ -10,6 +10,7 @@ from aces_backend_protocols.capabilities import (
 )
 from aces_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
 from aces_sdl.entities import flatten_entities
+from aces_sdl.explicitness import ExplicitnessClass
 from aces_sdl.instantiate import instantiate_scenario
 from aces_sdl.nodes import NodeType
 from aces_sdl.orchestration import WorkflowStepType
@@ -63,6 +64,11 @@ from .models import (
     WorkflowStepRuntime,
     WorkflowStepStatePredicateRuntime,
     WorkflowSwitchCaseRuntime,
+)
+from .semantics.realization import (
+    REALIZATION_DOMAIN,
+    CompiledRealizationRequirement,
+    resolve_realization_concern,
 )
 
 
@@ -2198,6 +2204,54 @@ def _node_variable_refs_by_address(
     return refs_by_address
 
 
+def _realization_requirement_address(scenario: InstantiatedScenario, field_path: str) -> str:
+    """Resolve the compiled resource address for a realization-concern path.
+
+    Falls back to the field path (an equivalent field identifier) when the
+    concern is not tied to a single compiled provisioning resource.
+    """
+
+    parts = field_path.split(".")
+    head, name = parts[0], parts[1]
+    if head == "nodes":
+        node = scenario.nodes.get(name)
+        if node is not None and node.type == NodeType.SWITCH:
+            return _network_address(name)
+        return _node_address(name)
+    if head == "content":
+        return _content_address(name)
+    return field_path
+
+
+def _compile_realization_requirements(
+    scenario: InstantiatedScenario,
+) -> tuple[CompiledRealizationRequirement, ...]:
+    """SEM-218 typed compiler emission: lower each authored realization concern
+    into a compiled requirement carrying its classifier explicitness class.
+
+    Open concerns are not gated and are not emitted; constrained and exact
+    concerns carry their concern kind for the planner realization gate.
+    """
+
+    requirements: list[CompiledRealizationRequirement] = []
+    for field_path, record in scenario.explicitness.items():
+        if record.classification is ExplicitnessClass.OPEN:
+            continue
+        concern_kind = resolve_realization_concern(field_path)
+        if concern_kind is None:
+            continue
+        requirements.append(
+            CompiledRealizationRequirement(
+                field_path=field_path,
+                address=_realization_requirement_address(scenario, field_path),
+                domain=REALIZATION_DOMAIN,
+                requirement_kind=concern_kind,
+                explicitness=record.classification,
+            )
+        )
+    return tuple(requirements)
+
+
 def compile_scenario_runtime_model(
     scenario: Scenario | InstantiatedScenario,
     *,
@@ -2284,4 +2338,5 @@ def compile_runtime_model(scenario: Scenario | InstantiatedScenario) -> RuntimeM
         goals=goals,
         objectives=objectives,
         diagnostics=diagnostics,
+        realization_requirements=_compile_realization_requirements(scenario),
     )
