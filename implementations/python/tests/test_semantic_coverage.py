@@ -253,6 +253,7 @@ def test_cli_returns_zero_when_clean(tmp_path: Path) -> None:
     assert main(["--repo-root", str(_seed_repo(tmp_path))]) == 0
 
 
+@pytest.mark.integration
 def test_repo_coverage_note_is_well_formed() -> None:
     """The real SEM-200 coverage note must pass the structural coverage gate."""
     assert evaluate_semantic_coverage(REPO_ROOT) == []
@@ -263,3 +264,211 @@ def test_constants_are_sane() -> None:
     assert set(VALID_STATUSES) == {"active", "partial", "planned"}
     assert COVERAGE_NOTE_RELATIVE_PATH.endswith("shared-semantic-integrity.md")
     assert ADR_RELATIVE_PATH.endswith("adr-016-semantic-layer-scope-and-coverage-model.md")
+
+
+# --------------------------------------------------------------------------- #
+# Integration check (#504): an active row's named test must import a realizing
+# module, and the named test functions must contain assertions. The seeded repo
+# below carries a real package tree, optional compat wrappers, and real test
+# bodies so the AST resolver has something to resolve.
+# --------------------------------------------------------------------------- #
+
+_INTEGRATION_NOTE = """# Shared Semantic Integrity
+
+Governed by ADR-016
+(../../decisions/adrs/adr-016-semantic-layer-scope-and-coverage-model.md).
+
+## Coverage Model
+
+| Construct family | Owning requirement(s) | Phases covered | Realizing artifacts | Status |
+| --- | --- | --- | --- | --- |
+{rows}
+
+## Non-Goals
+Nothing else.
+"""
+
+
+def _seed_integration_repo(tmp_path: Path, *, rows: str, files: dict[str, str]) -> Path:
+    """Seed a temp repo: coverage note + governing ADR + a real package/test tree."""
+    note_path = tmp_path / COVERAGE_NOTE_RELATIVE_PATH
+    note_path.parent.mkdir(parents=True, exist_ok=True)
+    note_path.write_text(_INTEGRATION_NOTE.format(rows=rows), encoding="utf-8")
+    adr_path = tmp_path / ADR_RELATIVE_PATH
+    adr_path.parent.mkdir(parents=True, exist_ok=True)
+    adr_path.write_text(_GOOD_ADR, encoding="utf-8")
+    for rel, content in files.items():
+        target = tmp_path / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+    return tmp_path
+
+
+_WIDGET_ROW = (
+    "| Widget | ABC-001 | validation | "
+    "`implementations/python/packages/widget/core.py`, "
+    "`implementations/python/tests/test_widget.py` | active |"
+)
+_WIDGET_CORE = "implementations/python/packages/widget/core.py"
+_WIDGET_INIT = "implementations/python/packages/widget/__init__.py"
+_WIDGET_TEST = "implementations/python/tests/test_widget.py"
+
+
+def _rule_ids(failures) -> set[str]:
+    return {f.rule_id for f in failures}
+
+
+def test_active_row_named_test_not_importing_module_fails(tmp_path: Path) -> None:
+    repo = _seed_integration_repo(
+        tmp_path,
+        rows=_WIDGET_ROW,
+        files={
+            _WIDGET_INIT: "",
+            _WIDGET_CORE: "VALUE = 1\n",
+            # imports nothing from widget.core — the hollow case
+            _WIDGET_TEST: "def test_widget():\n    assert True\n",
+        },
+    )
+    failures = evaluate_semantic_coverage(repo)
+    assert "coverage-test-integration" in _rule_ids(failures)
+
+
+def test_active_row_direct_import_passes(tmp_path: Path) -> None:
+    repo = _seed_integration_repo(
+        tmp_path,
+        rows=_WIDGET_ROW,
+        files={
+            _WIDGET_INIT: "",
+            _WIDGET_CORE: "VALUE = 1\n",
+            _WIDGET_TEST: "from widget.core import VALUE\n\ndef test_widget():\n    assert VALUE == 1\n",
+        },
+    )
+    assert evaluate_semantic_coverage(repo) == []
+
+
+def test_active_row_import_via_package_reexport_passes(tmp_path: Path) -> None:
+    repo = _seed_integration_repo(
+        tmp_path,
+        rows=_WIDGET_ROW,
+        files={
+            _WIDGET_INIT: "from widget.core import VALUE\n",
+            _WIDGET_CORE: "VALUE = 1\n",
+            # imports the symbol from the package, not the submodule
+            _WIDGET_TEST: "from widget import VALUE\n\ndef test_widget():\n    assert VALUE == 1\n",
+        },
+    )
+    assert "coverage-test-integration" not in _rule_ids(evaluate_semantic_coverage(repo))
+
+
+def test_active_row_import_via_relative_package_reexport_passes(tmp_path: Path) -> None:
+    # The idiomatic package-API form: ``__init__`` re-exports the symbol with a
+    # relative import (#504 review IMP-2 F1). The resolver must map the package
+    # symbol back to ``widget.core`` just as it does for the absolute form.
+    repo = _seed_integration_repo(
+        tmp_path,
+        rows=_WIDGET_ROW,
+        files={
+            _WIDGET_INIT: "from .core import VALUE\n",
+            _WIDGET_CORE: "VALUE = 1\n",
+            _WIDGET_TEST: "from widget import VALUE\n\ndef test_widget():\n    assert VALUE == 1\n",
+        },
+    )
+    assert "coverage-test-integration" not in _rule_ids(evaluate_semantic_coverage(repo))
+
+
+def test_active_row_import_via_relative_submodule_reexport_passes(tmp_path: Path) -> None:
+    # The ``from . import core`` submodule re-export form: the test reaches the
+    # submodule through the package namespace (``widget.core``).
+    repo = _seed_integration_repo(
+        tmp_path,
+        rows=_WIDGET_ROW,
+        files={
+            _WIDGET_INIT: "from . import core\n",
+            _WIDGET_CORE: "VALUE = 1\n",
+            _WIDGET_TEST: "from widget import core\n\ndef test_widget():\n    assert core.VALUE == 1\n",
+        },
+    )
+    assert "coverage-test-integration" not in _rule_ids(evaluate_semantic_coverage(repo))
+
+
+def test_active_row_import_via_compat_wrapper_passes(tmp_path: Path) -> None:
+    repo = _seed_integration_repo(
+        tmp_path,
+        rows=_WIDGET_ROW,
+        files={
+            _WIDGET_INIT: "",
+            _WIDGET_CORE: "VALUE = 1\n",
+            "implementations/python/src/aces/widget_compat.py": (
+                'from aces._compat import reexport as _reexport\n_reexport(globals(), "widget.core")\ndel _reexport\n'
+            ),
+            _WIDGET_TEST: ("from aces.widget_compat import VALUE\n\ndef test_widget():\n    assert VALUE == 1\n"),
+        },
+    )
+    assert "coverage-test-integration" not in _rule_ids(evaluate_semantic_coverage(repo))
+
+
+def test_stub_test_function_fails(tmp_path: Path) -> None:
+    repo = _seed_integration_repo(
+        tmp_path,
+        rows=_WIDGET_ROW,
+        files={
+            _WIDGET_INIT: "",
+            _WIDGET_CORE: "VALUE = 1\n",
+            # imports the module (integration ok) but asserts nothing
+            _WIDGET_TEST: "from widget.core import VALUE\n\ndef test_widget():\n    VALUE\n",
+        },
+    )
+    assert "coverage-stub-test" in _rule_ids(evaluate_semantic_coverage(repo))
+
+
+def test_pytest_raises_counts_as_assertion(tmp_path: Path) -> None:
+    repo = _seed_integration_repo(
+        tmp_path,
+        rows=_WIDGET_ROW,
+        files={
+            _WIDGET_INIT: "",
+            _WIDGET_CORE: "def boom():\n    raise ValueError\n",
+            _WIDGET_TEST: (
+                "import pytest\n"
+                "from widget.core import boom\n\n"
+                "def test_widget():\n"
+                "    with pytest.raises(ValueError):\n"
+                "        boom()\n"
+            ),
+        },
+    )
+    assert "coverage-stub-test" not in _rule_ids(evaluate_semantic_coverage(repo))
+
+
+def test_active_row_with_no_module_artifact_skips_integration(tmp_path: Path) -> None:
+    row = "| Doc only | ABC-001 | validation | `specs/doc.md`, `implementations/python/tests/test_doc.py` | active |"
+    repo = _seed_integration_repo(
+        tmp_path,
+        rows=row,
+        files={
+            "specs/doc.md": "doc\n",
+            "implementations/python/tests/test_doc.py": "def test_doc():\n    assert True\n",
+        },
+    )
+    failures = evaluate_semantic_coverage(repo)
+    assert "coverage-test-integration" not in _rule_ids(failures)
+    assert failures == []
+
+
+def test_report_mode_groups_families_by_status(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    rows = _WIDGET_ROW + "\n| Future thing | ABC-002 | — | — | planned |"
+    repo = _seed_integration_repo(
+        tmp_path,
+        rows=rows,
+        files={
+            _WIDGET_INIT: "",
+            _WIDGET_CORE: "VALUE = 1\n",
+            _WIDGET_TEST: "from widget.core import VALUE\n\ndef test_widget():\n    assert VALUE == 1\n",
+        },
+    )
+    assert main(["--report", "--repo-root", str(repo)]) == 0
+    out = capsys.readouterr().out
+    assert "active" in out
+    assert "planned" in out
+    assert "Widget" in out
+    assert "1/1" in out  # module coverage count surfaced

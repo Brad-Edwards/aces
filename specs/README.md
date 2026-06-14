@@ -28,6 +28,12 @@ hook).
 ## Subdirectories
 
 - `authority/` — the canonical authority-boundary manifest
+- `agent-guidance/` — the agent-usable governance-guidance profile
+  (AUT-811). It is machine-readable rather than prose, so the manifest
+  classifies `agent-guidance.yaml` as a `governance-guidance` artifact via
+  the `normative_artifact_families` block (see
+  [`authority/README.md`](authority/README.md)) rather than the default
+  `prose` family of the `specs/` root.
 - `concept-authority/` — concept-family and controlled-vocabulary
   authority artifacts (governed by ADR-012)
 - `formal/` — optional formal-methods artifacts for semantic and

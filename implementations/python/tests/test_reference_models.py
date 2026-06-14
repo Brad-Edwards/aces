@@ -83,3 +83,66 @@ def test_reference_model_rejects_missing_key_fields():
 
     with pytest.raises(ValidationError, match="key_fields"):
         ReferenceModelCatalogModel.model_validate(payload)
+
+
+def test_reference_model_catalog_declares_node_runtime_inventory():
+    catalog = load_reference_model_catalog()
+
+    runtime_model = catalog.models["scenario-node-runtime"]
+    assert runtime_model.concept_family == "runtime-inventory"
+    assert runtime_model.authoritative_schema.contract_id == "sdl-authoring-input-v1"
+    assert runtime_model.authoritative_schema.schema_pointer == "#/$defs/RuntimeConfiguration"
+    assert runtime_model.authoritative_schema.instance_path == "nodes.*.runtime"
+    assert [binding.contract_id for binding in runtime_model.reused_schemas] == ["instantiated-scenario-v1"]
+    assert "container" in runtime_model.key_fields
+
+
+def test_reference_model_binding_resolves_nullable_optional_instance_path():
+    # `nodes.*.runtime` is an optional node field (anyOf[RuntimeConfiguration, null]),
+    # so binding resolution must look through the nullable-optional wrapper. This is
+    # what lets the scenario-node-runtime reference model bind to a real definition.
+    from aces_contracts.contracts import (
+        ReferenceModelSchemaBindingModel,
+        _resolve_instance_path_schema,
+        _resolve_ref_schema,
+        _resolve_schema_pointer,
+        _validate_reference_model_schema_binding,
+        schema_bundle,
+    )
+
+    root = schema_bundle()["sdl-authoring-input-v1"]
+    pointer_schema = _resolve_ref_schema(root, _resolve_schema_pointer(root, "#/$defs/RuntimeConfiguration"))
+    instance_schema = _resolve_instance_path_schema(root, "nodes.*.runtime")
+    assert pointer_schema == instance_schema
+
+    binding = ReferenceModelSchemaBindingModel(
+        contract_id="sdl-authoring-input-v1",
+        schema_pointer="#/$defs/RuntimeConfiguration",
+        instance_path="nodes.*.runtime",
+    )
+    # Must not raise: the nullable-optional surface resolves to the real definition.
+    _validate_reference_model_schema_binding(
+        model_id="scenario-node-runtime",
+        binding_label="authoritative_schema",
+        binding=binding,
+        key_fields=["container"],
+    )
+
+
+def test_collapse_nullable_optional_schema_is_conservative():
+    from aces_contracts.contracts import _collapse_nullable_optional_schema, _resolve_ref_schema
+
+    ref_branch = {"$ref": "#/$defs/RuntimeConfiguration"}
+    nullable = {"anyOf": [ref_branch, {"type": "null"}], "default": None}
+    assert _collapse_nullable_optional_schema(nullable) is ref_branch
+
+    # Non-nullable and non-optional unions are returned unchanged.
+    plain = {"type": "object", "properties": {}}
+    assert _collapse_nullable_optional_schema(plain) is plain
+    union = {"anyOf": [{"type": "string"}, {"type": "integer"}]}
+    assert _collapse_nullable_optional_schema(union) is union
+
+    # The resolver follows the wrapper through to the referenced definition.
+    root = {"$defs": {"Thing": {"type": "object", "properties": {"x": {"type": "string"}}}}}
+    resolved = _resolve_ref_schema(root, {"anyOf": [{"$ref": "#/$defs/Thing"}, {"type": "null"}]})
+    assert resolved == root["$defs"]["Thing"]

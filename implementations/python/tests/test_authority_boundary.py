@@ -15,6 +15,7 @@ from tools.check_authority_boundary import (  # noqa: E402
     ADR_SEAM_REF,
     ADR_SOURCE_REF,
     AUTHORITY_BOUNDARY_RELATIVE_PATH,
+    CANONICAL_ARTIFACT_FAMILY_BINDING,
     CANONICAL_AUTHORITY_ROOT_IDS,
     CANONICAL_LEGACY_TOP_LEVEL_DIRS,
     CANONICAL_NON_NORMATIVE_ROOT_IDS,
@@ -91,6 +92,13 @@ schema_authority:
     - implementations/
   forbidden_schema_filename_suffixes:
     - .schema.json
+normative_artifact_families:
+  - id: agent_guidance_profile
+    artifact: specs/agent-guidance/agent-guidance.yaml
+    authority: agent-usable governance-guidance profile
+    family: governance-guidance
+    requirement_refs:
+      - AUT-811
 """
 
 # ADR-009 is immutable; the drift guard requires every authority-root token
@@ -207,6 +215,15 @@ def _seed_repo(
         specs_path = tmp_path / SPECS_README_RELATIVE_PATH
         specs_path.parent.mkdir(parents=True, exist_ok=True)
         specs_path.write_text(specs_readme, encoding="utf-8")
+
+    # The canonical `normative_artifact_families` entry in `_GOOD_POLICY`
+    # classifies specs/agent-guidance/agent-guidance.yaml, and the gate
+    # requires that artifact to exist on disk. Seed a minimal real file so the
+    # positive case clears the artifact-family existence check.
+    guidance_path = tmp_path / "specs" / "agent-guidance" / "agent-guidance.yaml"
+    guidance_path.parent.mkdir(parents=True, exist_ok=True)
+    if not guidance_path.exists():
+        guidance_path.write_text("profile: aces-agent-guidance\n", encoding="utf-8")
 
     for root in authority_roots:
         _materialise_root(tmp_path, root)
@@ -344,6 +361,18 @@ _TOP_LEVEL_FIELD_CASES = [
     # remove the entire block, not just the heading, to avoid an orphaned
     # mapping that fails YAML parsing instead of the field-missing check.
     ("schema_authority", _SCHEMA_AUTHORITY_BLOCK),
+    (
+        "normative_artifact_families",
+        (
+            "normative_artifact_families:\n"
+            "  - id: agent_guidance_profile\n"
+            "    artifact: specs/agent-guidance/agent-guidance.yaml\n"
+            "    authority: agent-usable governance-guidance profile\n"
+            "    family: governance-guidance\n"
+            "    requirement_refs:\n"
+            "      - AUT-811\n"
+        ),
+    ),
 ]
 
 
@@ -1134,6 +1163,161 @@ def test_invalid_forbidden_root_does_not_walk_unrelated_tree(tmp_path: Path) -> 
     assert not _flagged(failures, "authority-boundary-schema-misplaced"), (
         f"malformed forbidden root must not trigger a misplaced-schema walk; got: {[f.render() for f in failures]}"
     )
+
+
+# --------------------------------------------------------------------------- #
+# normative_artifact_families -- CA-4: a non-prose artifact (agent-guidance    #
+# AUT-811 profile) that lives inside the normative `specs/` root but carries a #
+# distinct `governance-guidance` family. The classification is declared in the #
+# manifest so the artifact's authority class is decidable from the manifest    #
+# alone, and pinned (CANONICAL_ARTIFACT_FAMILY_BINDING) against silent drift.  #
+# --------------------------------------------------------------------------- #
+
+
+_NAF_BLOCK = (
+    "normative_artifact_families:\n"
+    "  - id: agent_guidance_profile\n"
+    "    artifact: specs/agent-guidance/agent-guidance.yaml\n"
+    "    authority: agent-usable governance-guidance profile\n"
+    "    family: governance-guidance\n"
+    "    requirement_refs:\n"
+    "      - AUT-811\n"
+)
+
+
+def test_canonical_artifact_family_binding_pins_agent_guidance() -> None:
+    # The agent-guidance AUT-811 profile is the pinned governance-guidance
+    # artifact; a rename of the constant surfaces in the suite rather than
+    # silently relaxing the gate.
+    assert CANONICAL_ARTIFACT_FAMILY_BINDING == {
+        "specs/agent-guidance/agent-guidance.yaml": "governance-guidance",
+    }
+
+
+def test_missing_canonical_artifact_family_entry_is_flagged(tmp_path: Path) -> None:
+    # Drop the agent-guidance entry (leaving an empty block) — its authority
+    # class is no longer decidable from the manifest, which is exactly the
+    # ambiguity CA-4 closes.
+    body = _GOOD_POLICY.replace(_NAF_BLOCK, "normative_artifact_families: []\n", 1)
+    assert body != _GOOD_POLICY, "setup error: NAF block not found in _GOOD_POLICY"
+    failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
+    assert _flagged(failures, "authority-boundary-artifact-family-canonical-missing")
+    assert any("agent-guidance.yaml" in failure.message for failure in failures), (
+        f"expected the canonical artifact to be named; got: {[f.render() for f in failures]}"
+    )
+
+
+def test_artifact_family_relabel_is_flagged(tmp_path: Path) -> None:
+    # Relabelling the pinned artifact's family (governance-guidance → prose)
+    # must fail even though the entry is otherwise well-formed.
+    body = _GOOD_POLICY.replace("    family: governance-guidance\n", "    family: prose\n", 1)
+    failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
+    assert _flagged(failures, "authority-boundary-artifact-family-canonical-binding")
+
+
+def test_artifact_family_missing_required_field_is_flagged(tmp_path: Path) -> None:
+    # An entry missing `family` is a malformation, not a default.
+    body = _GOOD_POLICY.replace("    family: governance-guidance\n", "", 1)
+    failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
+    assert _flagged(failures, "authority-boundary-artifact-family-entry-field")
+
+
+def test_artifact_family_entry_must_be_mapping(tmp_path: Path) -> None:
+    body = _GOOD_POLICY.replace(_NAF_BLOCK, "normative_artifact_families:\n  - just-a-string\n", 1)
+    failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
+    assert _flagged(failures, "authority-boundary-artifact-family-entry-field")
+
+
+def test_artifact_family_non_list_value_is_rejected(tmp_path: Path) -> None:
+    body = _GOOD_POLICY.replace(_NAF_BLOCK, "normative_artifact_families: oops\n", 1)
+    failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
+    assert _flagged(failures, "authority-boundary-field-type")
+
+
+def test_artifact_family_duplicate_id_is_flagged(tmp_path: Path) -> None:
+    # A second entry reusing `agent_guidance_profile` as its id.
+    extra = (
+        "  - id: agent_guidance_profile\n"
+        "    artifact: specs/agent-guidance/agent-guidance.yaml\n"
+        "    authority: duplicate id\n"
+        "    family: governance-guidance\n"
+    )
+    body = _GOOD_POLICY.replace(_NAF_BLOCK, _NAF_BLOCK + extra, 1)
+    failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
+    assert _flagged(failures, "authority-boundary-artifact-family-duplicate")
+
+
+def test_artifact_family_path_not_on_disk_is_flagged(tmp_path: Path) -> None:
+    # A second, well-formed entry whose artifact does not exist on disk. The
+    # canonical agent-guidance entry stays intact so only the missing-file
+    # rule fires.
+    extra = (
+        "  - id: ghost_profile\n"
+        "    artifact: specs/agent-guidance/does-not-exist.yaml\n"
+        "    authority: ghost\n"
+        "    family: governance-guidance\n"
+    )
+    body = _GOOD_POLICY.replace(_NAF_BLOCK, _NAF_BLOCK + extra, 1)
+    failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
+    assert _flagged(failures, "authority-boundary-artifact-family-missing")
+    assert any("does-not-exist.yaml" in failure.render() for failure in failures), (
+        f"expected the missing artifact path to be named; got: {[f.render() for f in failures]}"
+    )
+
+
+def test_artifact_family_under_non_normative_root_is_flagged(tmp_path: Path) -> None:
+    # A classified artifact must live under a NORMATIVE authority root.
+    # Pointing one at docs/ (non-normative) must fail even when the file
+    # exists, because docs/ consumes authority and does not define it.
+    extra = (
+        "  - id: misplaced_profile\n"
+        "    artifact: docs/misplaced-guidance.yaml\n"
+        "    authority: misplaced\n"
+        "    family: governance-guidance\n"
+    )
+    body = _GOOD_POLICY.replace(_NAF_BLOCK, _NAF_BLOCK + extra, 1)
+    failures = evaluate_authority_boundary(
+        _seed_repo(
+            tmp_path,
+            policy_body=body,
+            extra_files={"docs/misplaced-guidance.yaml": "profile: x\n"},
+        )
+    )
+    assert _flagged(failures, "authority-boundary-artifact-family-non-normative")
+
+
+def test_artifact_family_absolute_path_is_flagged(tmp_path: Path) -> None:
+    extra = (
+        "  - id: abs_profile\n"
+        "    artifact: /abs/specs/agent-guidance/agent-guidance.yaml\n"
+        "    authority: abs\n"
+        "    family: governance-guidance\n"
+    )
+    body = _GOOD_POLICY.replace(_NAF_BLOCK, _NAF_BLOCK + extra, 1)
+    failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
+    assert _flagged(failures, "authority-boundary-artifact-family-path-shape")
+
+
+def test_artifact_family_traversal_path_is_flagged(tmp_path: Path) -> None:
+    extra = (
+        "  - id: escape_profile\n"
+        "    artifact: specs/../../escape.yaml\n"
+        "    authority: escape\n"
+        "    family: governance-guidance\n"
+    )
+    body = _GOOD_POLICY.replace(_NAF_BLOCK, _NAF_BLOCK + extra, 1)
+    failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
+    assert _flagged(failures, "authority-boundary-artifact-family-path-shape")
+
+
+def test_artifact_family_requirement_refs_must_be_string_list(tmp_path: Path) -> None:
+    body = _GOOD_POLICY.replace(
+        "    requirement_refs:\n      - AUT-811\n",
+        "    requirement_refs:\n      - 811\n",
+        1,
+    )
+    failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
+    assert _flagged(failures, "authority-boundary-artifact-family-entry-field")
 
 
 # --------------------------------------------------------------------------- #

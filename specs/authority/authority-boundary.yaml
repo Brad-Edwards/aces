@@ -95,11 +95,15 @@ legacy_top_level_dirs:
   - conformance
   - src
 
-# Schema authority direction: contracts/schemas/ owns published schemas and is
-# bound to the publication manifest. Generator drivers under tools/ and the
-# aces_contracts owning package emit into this root; they do not define
-# authority. Published schemas may not live anywhere else, and reference
-# implementations may not own schema files.
+# Schema authority direction (ADR-009 section 7): contracts/schemas/ owns the
+# hand-governed published schemas and is bound to the publication manifest.
+# The aces_contracts owning package and the generator drivers under tools/ are
+# the reference implementation; tools/check_generated_schemas.py only proves
+# that implementation generates an identical bundle (into a throwaway
+# directory) — it does not define authority and never overwrites the published
+# schemas. A schema change must carry a contract-facing change-ledger entry in
+# the publication manifest. Published schemas may not live anywhere else, and
+# reference implementations may not own schema files.
 schema_authority:
   normative_root: contracts/schemas/
   publication_manifest: contracts/schema-publication-manifest.json
@@ -107,3 +111,24 @@ schema_authority:
     - implementations/
   forbidden_schema_filename_suffixes:
     - .schema.json
+
+# Non-prose artifacts that live inside a normative authority root but carry a
+# distinct, more specific authority family — a governed "surface" in the
+# concept-authority sense (specs/concept-authority/concept-authority.md). The
+# `specs/` root's default family is `prose`; an entry here classifies one exact
+# file more specifically, so the artifact's authority class is decidable from
+# this manifest alone rather than inferred from its containing root.
+#
+# Most-specific rule: an artifact path is strictly more specific than any root
+# prefix, so an explicit `normative_artifact_families[].artifact` entry wins for
+# that exact file and the containing root supplies the default for every other
+# artifact — there is no parent/child ambiguity to resolve. Classifying the
+# next governed profile is a single entry here plus a focused test; nothing
+# else in the repo carries a parallel list.
+normative_artifact_families:
+  - id: agent_guidance_profile
+    artifact: specs/agent-guidance/agent-guidance.yaml
+    authority: agent-usable governance-guidance profile (AUT-811)
+    family: governance-guidance
+    requirement_refs:
+      - AUT-811

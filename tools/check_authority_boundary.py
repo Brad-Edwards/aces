@@ -94,6 +94,18 @@ CANONICAL_NON_NORMATIVE_ROOT_IDS: tuple[str, ...] = tuple(CANONICAL_NON_NORMATIV
 # bucket.
 CANONICAL_LEGACY_TOP_LEVEL_DIRS: tuple[str, ...] = ("schemas", "conformance", "src")
 
+# Canonical artifact-family bindings (CA-4): non-prose artifacts that live
+# inside a normative authority root but bear a distinct authority family —
+# a "surface" in the concept-authority sense (specs/concept-authority/
+# concept-authority.md). The `specs/` root's default family is `prose`; an
+# explicit `normative_artifact_families` entry classifies one exact file more
+# specifically, so the artifact's authority class is decidable from the
+# manifest alone. Pinned here the same way CANONICAL_AUTHORITY_ROOT_BINDING
+# pins roots, so the classification cannot be silently dropped or relabelled.
+CANONICAL_ARTIFACT_FAMILY_BINDING: dict[str, str] = {
+    "specs/agent-guidance/agent-guidance.yaml": "governance-guidance",
+}
+
 # Required top-level fields and per-entry fields. Used by both the YAML shape
 # check and the test fixture parametrisation.
 _REQUIRED_TOP_LEVEL_FIELDS: tuple[str, ...] = (
@@ -104,9 +116,11 @@ _REQUIRED_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "non_normative_roots",
     "legacy_top_level_dirs",
     "schema_authority",
+    "normative_artifact_families",
 )
 _REQUIRED_AUTHORITY_ROOT_FIELDS: tuple[str, ...] = ("id", "root", "authority", "family")
 _REQUIRED_NON_NORMATIVE_ROOT_FIELDS: tuple[str, ...] = ("id", "root", "note")
+_REQUIRED_ARTIFACT_FAMILY_FIELDS: tuple[str, ...] = ("id", "artifact", "authority", "family")
 _REQUIRED_SCHEMA_AUTHORITY_FIELDS: tuple[str, ...] = (
     "normative_root",
     "publication_manifest",
@@ -219,6 +233,14 @@ def _check_top_level_fields(raw: dict, source_path: str) -> list[PolicyFailure]:
             _fail(
                 "authority-boundary-field-type",
                 f"schema_authority must be a mapping; got {type(raw['schema_authority']).__name__}",
+                source_path,
+            )
+        )
+    if "normative_artifact_families" in raw and not isinstance(raw["normative_artifact_families"], list):
+        failures.append(
+            _fail(
+                "authority-boundary-field-type",
+                f"normative_artifact_families must be a list; got {type(raw['normative_artifact_families']).__name__}",
                 source_path,
             )
         )
@@ -632,6 +654,188 @@ def _check_schema_authority_block(raw: dict, source_path: str) -> list[PolicyFai
                         source_path,
                     )
                 )
+
+    return failures
+
+
+# --------------------------------------------------------------------------- #
+# Normative artifact-family classification (CA-4).                            #
+# --------------------------------------------------------------------------- #
+
+
+def _check_artifact_path_shape(artifact: str) -> str | None:
+    """Return why ``artifact`` is a malformed repo-relative file path, or None.
+
+    Mirrors ``_check_root_path_shape`` but for files: a classified artifact is a
+    concrete file, so it must NOT end with ``/`` (the root rule is inverted).
+    """
+    if not artifact:
+        return "must be a non-empty string"
+    if artifact.startswith("/"):
+        return f"must be a repo-relative path; got {artifact!r}"
+    if ".." in Path(artifact).parts:
+        return f"must not traverse parent directories; got {artifact!r}"
+    if artifact.endswith("/"):
+        return f"must be a file path, not a directory; got {artifact!r}"
+    return None
+
+
+def _check_normative_artifact_families(
+    repo_root: Path,
+    raw: dict,
+    authority_roots: list[dict],
+    non_normative_roots: list[dict],
+    source_path: str,
+) -> list[PolicyFailure]:
+    """Validate the ``normative_artifact_families`` block (CA-4).
+
+    Each entry classifies one non-prose artifact that lives inside a normative
+    authority root but bears a distinct authority family (a governed
+    "surface", per specs/concept-authority/concept-authority.md). The block is
+    the most-specific classification seam: because an artifact path is strictly
+    more specific than any root prefix, an explicit entry classifies that exact
+    file and the containing root supplies the default for everything else, so
+    there is no parent/child ambiguity. The canonical bindings are pinned so
+    the classification cannot be silently dropped or relabelled.
+    """
+    failures: list[PolicyFailure] = []
+    raw_entries = raw.get("normative_artifact_families")
+    if not isinstance(raw_entries, list):
+        return failures  # missing-field / type-level failure already reported
+
+    authority_prefixes = [entry["root"] for entry in authority_roots]
+    non_normative_prefixes = [entry["root"] for entry in non_normative_roots]
+
+    validated: list[dict] = []
+    seen_ids: set[str] = set()
+    for index, entry in enumerate(raw_entries):
+        if not isinstance(entry, dict):
+            failures.append(
+                _fail(
+                    "authority-boundary-artifact-family-entry-field",
+                    f"normative_artifact_families[{index}] must be a mapping; got {type(entry).__name__}",
+                    source_path,
+                )
+            )
+            continue
+
+        entry_ok = True
+        for field in _REQUIRED_ARTIFACT_FAMILY_FIELDS:
+            if field not in entry:
+                failures.append(
+                    _fail(
+                        "authority-boundary-artifact-family-entry-field",
+                        f"normative_artifact_families[{index}] is missing required field: {field}",
+                        source_path,
+                    )
+                )
+                entry_ok = False
+            elif not (_is_str(entry[field]) and entry[field]):
+                failures.append(
+                    _fail(
+                        "authority-boundary-artifact-family-entry-field",
+                        f"normative_artifact_families[{index}].{field} must be a non-empty string",
+                        source_path,
+                    )
+                )
+                entry_ok = False
+
+        # requirement_refs is optional, but when present it carries the same
+        # list-of-strings strictness as the top-level refs.
+        if "requirement_refs" in entry and _str_list(entry["requirement_refs"]) is None:
+            failures.append(
+                _fail(
+                    "authority-boundary-artifact-family-entry-field",
+                    f"normative_artifact_families[{index}].requirement_refs must be a list of strings",
+                    source_path,
+                )
+            )
+            entry_ok = False
+
+        if not entry_ok:
+            continue
+
+        entry_id = entry["id"]
+        if entry_id in seen_ids:
+            failures.append(
+                _fail(
+                    "authority-boundary-artifact-family-duplicate",
+                    f"normative_artifact_families[{index}].id '{entry_id}' is duplicated",
+                    source_path,
+                )
+            )
+        seen_ids.add(entry_id)
+
+        artifact = entry["artifact"]
+        shape_problem = _check_artifact_path_shape(artifact)
+        if shape_problem is not None:
+            failures.append(
+                _fail(
+                    "authority-boundary-artifact-family-path-shape",
+                    f"normative_artifact_families[{index}].artifact {shape_problem}",
+                    source_path,
+                )
+            )
+            continue
+
+        # A governed surface must live under a NORMATIVE authority root — it
+        # cannot be classified into a tree that only consumes authority.
+        if not any(artifact.startswith(prefix) for prefix in authority_prefixes):
+            under_non_normative = any(artifact.startswith(prefix) for prefix in non_normative_prefixes)
+            detail = (
+                "is under a non-normative root"
+                if under_non_normative
+                else "is not under any declared normative authority root"
+            )
+            failures.append(
+                _fail(
+                    "authority-boundary-artifact-family-non-normative",
+                    f"normative_artifact_families[{index}].artifact '{artifact}' {detail}",
+                    source_path,
+                )
+            )
+            continue
+
+        if not (repo_root / artifact).is_file():
+            failures.append(
+                _fail(
+                    "authority-boundary-artifact-family-missing",
+                    f"normative_artifact_families[{index}].artifact '{artifact}' does not exist on disk",
+                    source_path,
+                )
+            )
+            continue
+
+        validated.append({"id": entry_id, "artifact": artifact, "family": entry["family"]})
+
+    # Pin the canonical artifact-family bindings, mirroring the canonical-root
+    # binding floor: each must be present with its expected family.
+    by_artifact = {entry["artifact"]: entry for entry in validated}
+    for canon_artifact, canon_family in CANONICAL_ARTIFACT_FAMILY_BINDING.items():
+        entry = by_artifact.get(canon_artifact)
+        if entry is None:
+            failures.append(
+                _fail(
+                    "authority-boundary-artifact-family-canonical-missing",
+                    (
+                        f"normative_artifact_families is missing the canonical classification for "
+                        f"{canon_artifact} (expected family {canon_family!r})"
+                    ),
+                    source_path,
+                )
+            )
+            continue
+        if entry["family"] != canon_family:
+            failures.append(
+                _fail(
+                    "authority-boundary-artifact-family-canonical-binding",
+                    (
+                        f"normative_artifact_families entry for {canon_artifact} must declare "
+                        f"family={canon_family!r}; got {entry['family']!r}"
+                    ),
+                    source_path,
+                )
+            )
 
     return failures
 
@@ -1192,6 +1396,11 @@ def evaluate_authority_boundary(repo_root: Path) -> list[PolicyFailure]:
     non_normative_roots, non_normative_failures = _check_non_normative_roots(raw, AUTHORITY_BOUNDARY_RELATIVE_PATH)
     failures.extend(non_normative_failures)
     failures.extend(_check_schema_authority_block(raw, AUTHORITY_BOUNDARY_RELATIVE_PATH))
+    failures.extend(
+        _check_normative_artifact_families(
+            repo_root, raw, authority_roots, non_normative_roots, AUTHORITY_BOUNDARY_RELATIVE_PATH
+        )
+    )
 
     legacy_dirs = _str_list(raw.get("legacy_top_level_dirs")) or []
     # The YAML's legacy list must be a superset of the canonical floor that

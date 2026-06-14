@@ -9,7 +9,7 @@ test_legacy_root_is_blocked if {
     "check_set": "file-local",
     "policy": {
       "legacy_top_level_roots": ["schemas"],
-      "generated_contracts": {"generated_roots": [], "driver_paths": []},
+      "generated_contracts": {"generated_roots": []},
       "concept_authority": {"reserved_path_tokens": [], "allowed_paths": []},
       "source_roots": [],
       "changelog_path": "CHANGELOG.md",
@@ -22,7 +22,7 @@ test_legacy_root_is_blocked if {
 }
 
 
-test_generated_schema_edits_require_driver_changes if {
+test_schema_edit_requires_manifest_update if {
   failures := deny with input as {
     "changed": ["contracts/schemas/backend-manifest/backend-manifest-v2.json"],
     "check_set": "file-local",
@@ -30,7 +30,7 @@ test_generated_schema_edits_require_driver_changes if {
       "legacy_top_level_roots": [],
       "generated_contracts": {
         "generated_roots": ["contracts/schemas"],
-        "driver_paths": ["tools/generate_contract_schemas.py"],
+        "manifest_path": "contracts/schema-publication-manifest.json",
       },
       "concept_authority": {"reserved_path_tokens": [], "allowed_paths": []},
       "source_roots": [],
@@ -40,22 +40,42 @@ test_generated_schema_edits_require_driver_changes if {
   }
   count(failures) == 1
   some failure in failures
-  failure.rule_id == "generated-schema-direct-edit"
+  failure.rule_id == "schema-change-missing-manifest"
 }
 
 
-test_generated_schema_edits_pass_with_driver_change if {
+test_schema_edit_passes_with_manifest_update if {
   failures := deny with input as {
     "changed": [
       "contracts/schemas/backend-manifest/backend-manifest-v2.json",
-      "tools/generate_contract_schemas.py",
+      "contracts/schema-publication-manifest.json",
     ],
     "check_set": "file-local",
     "policy": {
       "legacy_top_level_roots": [],
       "generated_contracts": {
         "generated_roots": ["contracts/schemas"],
-        "driver_paths": ["tools/generate_contract_schemas.py"],
+        "manifest_path": "contracts/schema-publication-manifest.json",
+      },
+      "concept_authority": {"reserved_path_tokens": [], "allowed_paths": []},
+      "source_roots": [],
+      "changelog_path": "CHANGELOG.md",
+      "changelog_fragment_dir": "changelog.d",
+    },
+  }
+  count(failures) == 0
+}
+
+
+test_schema_readme_edit_does_not_require_manifest if {
+  failures := deny with input as {
+    "changed": ["contracts/schemas/README.md"],
+    "check_set": "file-local",
+    "policy": {
+      "legacy_top_level_roots": [],
+      "generated_contracts": {
+        "generated_roots": ["contracts/schemas"],
+        "manifest_path": "contracts/schema-publication-manifest.json",
       },
       "concept_authority": {"reserved_path_tokens": [], "allowed_paths": []},
       "source_roots": [],
@@ -73,7 +93,7 @@ test_reserved_concept_authority_paths_are_enforced if {
     "check_set": "file-local",
     "policy": {
       "legacy_top_level_roots": [],
-      "generated_contracts": {"generated_roots": [], "driver_paths": []},
+      "generated_contracts": {"generated_roots": []},
       "concept_authority": {
         "reserved_path_tokens": ["concept-authority"],
         "allowed_paths": ["docs/explain/reference/shared-concept-model.md"],
@@ -95,7 +115,7 @@ test_changelog_is_required_for_source_changes if {
     "check_set": "full",
     "policy": {
       "legacy_top_level_roots": [],
-      "generated_contracts": {"generated_roots": [], "driver_paths": []},
+      "generated_contracts": {"generated_roots": []},
       "concept_authority": {"reserved_path_tokens": [], "allowed_paths": []},
       "source_roots": ["implementations/python/packages"],
       "changelog_path": "CHANGELOG.md",
@@ -117,7 +137,7 @@ test_changelog_fragment_satisfies_source_changes if {
     "check_set": "full",
     "policy": {
       "legacy_top_level_roots": [],
-      "generated_contracts": {"generated_roots": [], "driver_paths": []},
+      "generated_contracts": {"generated_roots": []},
       "concept_authority": {"reserved_path_tokens": [], "allowed_paths": []},
       "source_roots": ["implementations/python/packages"],
       "changelog_path": "CHANGELOG.md",
@@ -137,7 +157,7 @@ test_changelog_readme_does_not_satisfy_source_changes if {
     "check_set": "full",
     "policy": {
       "legacy_top_level_roots": [],
-      "generated_contracts": {"generated_roots": [], "driver_paths": []},
+      "generated_contracts": {"generated_roots": []},
       "concept_authority": {"reserved_path_tokens": [], "allowed_paths": []},
       "source_roots": ["implementations/python/packages"],
       "changelog_path": "CHANGELOG.md",
@@ -156,7 +176,7 @@ test_file_local_mode_skips_changelog if {
     "check_set": "file-local",
     "policy": {
       "legacy_top_level_roots": [],
-      "generated_contracts": {"generated_roots": [], "driver_paths": []},
+      "generated_contracts": {"generated_roots": []},
       "concept_authority": {"reserved_path_tokens": [], "allowed_paths": []},
       "source_roots": ["implementations/python/packages"],
       "changelog_path": "CHANGELOG.md",

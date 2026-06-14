@@ -71,6 +71,14 @@ capability. The profile therefore records episode coverage through
 that manifest scope also contains implementation, behavior, and provenance
 contracts and is not an episode-only binding surface.
 
+The reference stack requires the native `runtime-inventory` concept family in
+the `authoring` phase because SDL authoring and instantiation carry observed
+node runtime inventory under `nodes.*.runtime` in the `sdl-authoring-input-v1`
+and `instantiated-scenario-v1` contracts. As with the other authoring families,
+the profile records this through `required_concept_families` only: `authoring`
+does not define governed `required_bindings` surfaces, so runtime-inventory
+coverage is not expressed as a binding.
+
 ## Machine-Readable Artifacts
 
 The JSON Schema for semantic profiles is published at:
