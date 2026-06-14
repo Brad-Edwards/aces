@@ -558,9 +558,15 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
 
 def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) -> None:
     _sync_project(session)
+    arg_list = list(args)
+    schema_publication_args: list[str] = []
+    if "--base-rev" in arg_list:
+        base_index = arg_list.index("--base-rev")
+        if base_index + 1 < len(arg_list):
+            schema_publication_args = ["--base-rev", arg_list[base_index + 1]]
     reporter.run(
         "contracts / schema publication manifest",
-        lambda: _run_project_python(session, "tools/check_schema_publication.py"),
+        lambda: _run_project_python(session, "tools/check_schema_publication.py", *schema_publication_args),
     )
     reporter.run(
         "contracts / generated schema drift",
@@ -828,7 +834,7 @@ def verify(session: nox.Session) -> None:
         )
         _run_policy(session, reporter, *session.posargs)
         _run_lint(session, reporter)
-        _run_contracts(session, reporter)
+        _run_contracts(session, reporter, *session.posargs)
         _run_tests(session, reporter)
         _run_integration_tests(session, reporter)
         _run_docs(session, reporter)

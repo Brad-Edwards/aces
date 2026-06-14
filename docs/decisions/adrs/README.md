@@ -105,6 +105,7 @@ adr-057-runtime-secret-name-classifier-boundaries
 adr-058-datastore-node-engine-provenance-and-endpoints
 adr-059-adr-amendment-policy-and-pin-gate
 adr-060-participant-backend-facing-contract-surface
+adr-061-published-schema-evolution-policy
 ```
 
 | ADR | Title | Status | Date |
@@ -170,3 +171,4 @@ adr-060-participant-backend-facing-contract-surface
 | [058](adr-058-datastore-node-engine-provenance-and-endpoints.md) | Datastore Node Engine Provenance and Endpoints | accepted | 2026-06-07 |
 | [059](adr-059-adr-amendment-policy-and-pin-gate.md) | ADR Amendment Policy and Acceptance-Content Pin Gate | accepted | 2026-06-10 |
 | [060](adr-060-participant-backend-facing-contract-surface.md) | Participant Backend-Facing Contract Surface | proposed | 2026-06-11 |
+| [061](adr-061-published-schema-evolution-policy.md) | Published Schema Evolution Policy | accepted | 2026-06-14 |
