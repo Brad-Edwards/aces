@@ -1001,6 +1001,7 @@ def write_schema_publication_manifest(
     entries: list[dict[str, Any]],
     *,
     fill_defaults: bool = True,
+    removed_schemas: list[dict[str, Any]] | None = None,
 ) -> None:
     import json
 
@@ -1015,17 +1016,17 @@ def write_schema_publication_manifest(
                 normalized_entry["content_hash"] = schema_content_hash(path) if path.is_file() else "0" * 64
         normalized.append(normalized_entry)
 
+    document: dict[str, Any] = {
+        "schema_version": "schema-publication-manifest/v1",
+        "hash_algorithm": "sha256",
+        "schemas": normalized,
+    }
+    if removed_schemas is not None:
+        document["removed_schemas"] = removed_schemas
+
     write_text(
         repo_root / "contracts" / "schema-publication-manifest.json",
-        json.dumps(
-            {
-                "schema_version": "schema-publication-manifest/v1",
-                "hash_algorithm": "sha256",
-                "schemas": normalized,
-            },
-            indent=2,
-        )
-        + "\n",
+        json.dumps(document, indent=2) + "\n",
     )
 
 
@@ -1172,6 +1173,10 @@ def test_schema_publication_manifest_allows_recorded_draft_schema_churn(tmp_path
                 "contract_id": "draft-contract-v1",
                 "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
                 "stability": "draft",
+                "last_change": {
+                    "summary": "Retype name to integer for the draft contract.",
+                    "content_hash": schema_content_hash(schema_path),
+                },
             },
         ],
     )
@@ -1207,6 +1212,10 @@ def test_schema_publication_manifest_allows_stable_additive_schema_change(tmp_pa
                 "contract_id": "stable-contract-v1",
                 "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
                 "stability": "stable",
+                "last_change": {
+                    "summary": "Add optional display_name property.",
+                    "content_hash": schema_content_hash(schema_path),
+                },
             },
         ],
     )
@@ -1242,6 +1251,10 @@ def test_schema_publication_manifest_allows_stable_enum_addition(tmp_path: Path)
                 "contract_id": "stable-contract-v1",
                 "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
                 "stability": "stable",
+                "last_change": {
+                    "summary": "Add enum value beta to kind.",
+                    "content_hash": schema_content_hash(schema_path),
+                },
             },
         ],
     )
@@ -1282,6 +1295,10 @@ def test_schema_publication_manifest_rejects_stable_default_change_without_versi
                 "contract_id": "stable-contract-v1",
                 "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
                 "stability": "stable",
+                "last_change": {
+                    "summary": "Change default value of name.",
+                    "content_hash": schema_content_hash(schema_path),
+                },
             },
         ],
     )
@@ -1318,6 +1335,10 @@ def test_schema_publication_manifest_rejects_stable_breaking_schema_change_witho
                 "contract_id": "stable-contract-v1",
                 "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
                 "stability": "stable",
+                "last_change": {
+                    "summary": "Retype name to integer.",
+                    "content_hash": schema_content_hash(schema_path),
+                },
             },
         ],
     )
@@ -1381,6 +1402,10 @@ def test_schema_publication_manifest_rejects_missing_base_schema_for_stable_sche
                 "contract_id": "stable-contract-v1",
                 "schema_path": "contracts/schemas/sdl/stable-contract-v1.json",
                 "stability": "stable",
+                "last_change": {
+                    "summary": "Publish the stable contract.",
+                    "content_hash": schema_content_hash(schema_path),
+                },
             },
         ],
     )
@@ -1388,6 +1413,321 @@ def test_schema_publication_manifest_rejects_missing_base_schema_for_stable_sche
     assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == [
         "base schema for stable-contract-v1 is missing at HEAD: contracts/schemas/sdl/stable-contract-v1.json"
     ]
+
+
+def test_schema_publication_manifest_accepts_valid_last_change_ledger(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
+    write_text(schema_path, _published_schema({"name": {"type": "string"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "draft-contract-v1",
+                "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
+                "stability": "draft",
+                "last_change": {
+                    "summary": "Initial draft of the authoring contract.",
+                    "content_hash": schema_content_hash(schema_path),
+                },
+            },
+        ],
+    )
+
+    assert validate_schema_publication_manifest(repo_root) == []
+
+
+def test_schema_publication_manifest_rejects_last_change_without_summary(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
+    write_text(schema_path, _published_schema({"name": {"type": "string"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "draft-contract-v1",
+                "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
+                "stability": "draft",
+                "last_change": {"content_hash": schema_content_hash(schema_path)},
+            },
+        ],
+    )
+
+    failures = validate_schema_publication_manifest(repo_root)
+    assert any("last_change.summary" in failure for failure in failures)
+
+
+def test_schema_publication_manifest_rejects_last_change_hash_mismatch(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
+    write_text(schema_path, _published_schema({"name": {"type": "string"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "draft-contract-v1",
+                "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
+                "stability": "draft",
+                "last_change": {"summary": "stale ledger entry", "content_hash": "0" * 64},
+            },
+        ],
+    )
+
+    failures = validate_schema_publication_manifest(repo_root)
+    assert any("last_change.content_hash" in failure and "does not match" in failure for failure in failures)
+
+
+def test_schema_publication_manifest_requires_ledger_when_schema_changes(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
+    write_text(schema_path, _published_schema({"name": {"type": "string"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "draft-contract-v1",
+                "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
+                "stability": "draft",
+            },
+        ],
+    )
+    _init_git_repo(repo_root)
+    _git_commit_all(repo_root, "base")
+
+    # Schema content changes vs base, manifest hash bumps, but no contract-facing
+    # ledger entry records why — the process gate must reject this.
+    write_text(schema_path, _published_schema({"name": {"type": "integer"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "draft-contract-v1",
+                "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
+                "stability": "draft",
+            },
+        ],
+    )
+
+    failures = validate_schema_publication_manifest(repo_root, base_rev="HEAD")
+    assert any("contract-facing change description" in failure for failure in failures)
+
+
+def test_schema_publication_manifest_accepts_changed_schema_with_current_ledger(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
+    write_text(schema_path, _published_schema({"name": {"type": "string"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "draft-contract-v1",
+                "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
+                "stability": "draft",
+            },
+        ],
+    )
+    _init_git_repo(repo_root)
+    _git_commit_all(repo_root, "base")
+
+    write_text(schema_path, _published_schema({"name": {"type": "integer"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "draft-contract-v1",
+                "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
+                "stability": "draft",
+                "last_change": {
+                    "summary": "Retype name to integer per contract review.",
+                    "content_hash": schema_content_hash(schema_path),
+                },
+            },
+        ],
+    )
+
+    assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == []
+
+
+def test_schema_publication_manifest_requires_ledger_for_new_schema(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    existing = repo_root / "contracts" / "schemas" / "sdl" / "existing-contract-v1.json"
+    write_text(existing, _published_schema({"name": {"type": "string"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "existing-contract-v1",
+                "schema_path": "contracts/schemas/sdl/existing-contract-v1.json",
+                "stability": "draft",
+            },
+        ],
+    )
+    _init_git_repo(repo_root)
+    _git_commit_all(repo_root, "base")
+
+    new_schema = repo_root / "contracts" / "schemas" / "sdl" / "new-contract-v1.json"
+    write_text(new_schema, _published_schema({"id": {"type": "string"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "existing-contract-v1",
+                "schema_path": "contracts/schemas/sdl/existing-contract-v1.json",
+                "stability": "draft",
+            },
+            {
+                "contract_id": "new-contract-v1",
+                "schema_path": "contracts/schemas/sdl/new-contract-v1.json",
+                "stability": "draft",
+            },
+        ],
+    )
+
+    failures = validate_schema_publication_manifest(repo_root, base_rev="HEAD")
+    assert any("new-contract-v1" in failure and "contract-facing change description" in failure for failure in failures)
+
+
+def test_schema_publication_manifest_unchanged_schema_needs_no_ledger(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
+    write_text(schema_path, _published_schema({"name": {"type": "string"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "draft-contract-v1",
+                "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
+                "stability": "draft",
+            },
+        ],
+    )
+    _init_git_repo(repo_root)
+    _git_commit_all(repo_root, "base")
+
+    # No schema change vs base: an existing entry without a ledger stays valid,
+    # so the gate never forces backfilling ledgers onto unchanged schemas.
+    assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == []
+
+
+def _seed_two_schema_repo(repo_root: Path) -> None:
+    keep = repo_root / "contracts" / "schemas" / "sdl" / "keep-contract-v1.json"
+    drop = repo_root / "contracts" / "schemas" / "sdl" / "drop-contract-v1.json"
+    write_text(keep, _published_schema({"name": {"type": "string"}}))
+    write_text(drop, _published_schema({"id": {"type": "string"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "drop-contract-v1",
+                "schema_path": "contracts/schemas/sdl/drop-contract-v1.json",
+                "stability": "draft",
+            },
+            {
+                "contract_id": "keep-contract-v1",
+                "schema_path": "contracts/schemas/sdl/keep-contract-v1.json",
+                "stability": "draft",
+            },
+        ],
+    )
+    _init_git_repo(repo_root)
+    _git_commit_all(repo_root, "base")
+    # Delete the published schema and drop its manifest entry.
+    drop.unlink()
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "keep-contract-v1",
+                "schema_path": "contracts/schemas/sdl/keep-contract-v1.json",
+                "stability": "draft",
+            },
+        ],
+    )
+
+
+def test_schema_publication_manifest_requires_tombstone_for_removed_schema(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    _seed_two_schema_repo(repo_root)
+
+    # Removing the file and its manifest entry without a tombstone bypasses the
+    # contract-facing ledger the gate requires for every other schema change.
+    failures = validate_schema_publication_manifest(repo_root, base_rev="HEAD")
+    assert any(
+        "drop-contract-v1.json" in failure and "removed without a contract-facing removal description" in failure
+        for failure in failures
+    )
+
+
+def test_schema_publication_manifest_accepts_removed_schema_with_tombstone(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    _seed_two_schema_repo(repo_root)
+
+    # The tombstone records why the contract was removed; the gate is satisfied.
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "keep-contract-v1",
+                "schema_path": "contracts/schemas/sdl/keep-contract-v1.json",
+                "stability": "draft",
+            },
+        ],
+        removed_schemas=[
+            {
+                "schema_path": "contracts/schemas/sdl/drop-contract-v1.json",
+                "summary": "Retired per contract review; superseded by keep-contract-v1.",
+            },
+        ],
+    )
+
+    assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == []
+
+
+def test_schema_publication_manifest_rejects_tombstone_without_summary(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    _seed_two_schema_repo(repo_root)
+
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "keep-contract-v1",
+                "schema_path": "contracts/schemas/sdl/keep-contract-v1.json",
+                "stability": "draft",
+            },
+        ],
+        removed_schemas=[{"schema_path": "contracts/schemas/sdl/drop-contract-v1.json"}],
+    )
+
+    failures = validate_schema_publication_manifest(repo_root, base_rev="HEAD")
+    assert any("removed_schemas" in failure and "summary must be a non-empty string" in failure for failure in failures)
+
+
+def test_schema_publication_manifest_rejects_tombstone_for_published_schema(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
+    write_text(schema_path, _published_schema({"name": {"type": "string"}}))
+    write_schema_publication_manifest(
+        repo_root,
+        [
+            {
+                "contract_id": "draft-contract-v1",
+                "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
+                "stability": "draft",
+            },
+        ],
+        removed_schemas=[
+            {
+                "schema_path": "contracts/schemas/sdl/draft-contract-v1.json",
+                "summary": "Tombstone contradicts a still-published schema.",
+            },
+        ],
+    )
+    _init_git_repo(repo_root)
+    _git_commit_all(repo_root, "base")
+
+    failures = validate_schema_publication_manifest(repo_root, base_rev="HEAD")
+    assert any("removed_schemas tombstone" in failure and "still-published schema" in failure for failure in failures)
 
 
 def test_collect_validation_targets_includes_only_schema_governed_artifacts(tmp_path: Path) -> None:
@@ -1452,7 +1792,37 @@ def test_extra_published_schema_paths_detects_stale_generated_files(tmp_path: Pa
     ) == ["backend-manifest/backend-manifest-v1.json"]
 
 
-def test_check_generated_schemas_main_rejects_stale_extra_schema_files(
+def _install_fake_schema_generator(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    repo_root: Path,
+    schemas_root: Path,
+    generated: dict[str, str],
+) -> None:
+    """Install a fake ``tools.generate_contract_schemas`` whose
+    ``write_schema_bundle`` emits ``generated`` (rel_path -> content) into
+    whatever directory it is given, and repoint ``check_generated_schemas`` at a
+    temp repo. The reference bundle is written into a throwaway directory so the
+    check can prove the implementation matches the published normative schemas
+    (ADR-009 §7) without overwriting them."""
+    fake_generator = types.ModuleType("tools.generate_contract_schemas")
+
+    def _write_schema_bundle(schemas_dir: Path) -> None:
+        for rel_path, content in generated.items():
+            target = schemas_dir / rel_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+
+    fake_generator.write_schema_bundle = _write_schema_bundle
+
+    monkeypatch.setattr(check_generated_schemas, "REPO_ROOT", repo_root)
+    monkeypatch.setattr(check_generated_schemas, "SCHEMAS_ROOT", schemas_root)
+    monkeypatch.setattr(check_generated_schemas, "PYTHON_ROOT", repo_root / "implementations" / "python")
+    monkeypatch.setattr(sys, "argv", ["check_generated_schemas.py"])
+    monkeypatch.setitem(sys.modules, "tools.generate_contract_schemas", fake_generator)
+
+
+def test_check_generated_schemas_rejects_stale_extra_schema_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1461,23 +1831,61 @@ def test_check_generated_schemas_main_rejects_stale_extra_schema_files(
     write_text(schemas_root / "backend-manifest" / "backend-manifest-v2.json", "{}\n")
     write_text(schemas_root / "backend-manifest" / "backend-manifest-v1.json", "{}\n")
 
-    fake_generator = types.ModuleType("tools.generate_contract_schemas")
-    fake_generator.main = lambda: None
-    fake_generator._schema_output_path = lambda root, name: root / "backend-manifest" / f"{name}.json"
-    fake_contracts = types.ModuleType("aces_contracts.contracts")
-    fake_contracts.schema_bundle = lambda: {"backend-manifest-v2": {}}
-    fake_package = types.ModuleType("aces_contracts")
-    fake_package.contracts = fake_contracts
-
-    monkeypatch.setattr(check_generated_schemas, "REPO_ROOT", repo_root)
-    monkeypatch.setattr(check_generated_schemas, "SCHEMAS_ROOT", schemas_root)
-    monkeypatch.setattr(check_generated_schemas, "PYTHON_ROOT", repo_root / "implementations" / "python")
-    monkeypatch.setattr(sys, "argv", ["check_generated_schemas.py"])
-    monkeypatch.setitem(sys.modules, "tools.generate_contract_schemas", fake_generator)
-    monkeypatch.setitem(sys.modules, "aces_contracts", fake_package)
-    monkeypatch.setitem(sys.modules, "aces_contracts.contracts", fake_contracts)
+    # The reference bundle produces only v2; the published v1 is an extra
+    # normative schema the reference implementation no longer generates.
+    _install_fake_schema_generator(
+        monkeypatch,
+        repo_root=repo_root,
+        schemas_root=schemas_root,
+        generated={"backend-manifest/backend-manifest-v2.json": "{}\n"},
+    )
 
     assert check_generated_schemas.main() == 1
+
+
+def test_check_generated_schemas_reports_drift_without_mutating_published(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo_root = tmp_path
+    schemas_root = repo_root / "contracts" / "schemas"
+    published = schemas_root / "backend-manifest" / "backend-manifest-v2.json"
+    published_content = '{\n  "x": 2\n}\n'
+    write_text(published, published_content)
+
+    # Reference implementation generates different bytes than the published
+    # normative schema: drift must be reported AND the published authority must
+    # not be overwritten by the compatibility proof (ADR-009 §7).
+    _install_fake_schema_generator(
+        monkeypatch,
+        repo_root=repo_root,
+        schemas_root=schemas_root,
+        generated={"backend-manifest/backend-manifest-v2.json": '{\n  "x": 1\n}\n'},
+    )
+
+    assert check_generated_schemas.main() == 1
+    assert published.read_text(encoding="utf-8") == published_content
+
+
+def test_check_generated_schemas_passes_when_reference_matches_published(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo_root = tmp_path
+    schemas_root = repo_root / "contracts" / "schemas"
+    content = '{\n  "x": 1\n}\n'
+    published = schemas_root / "backend-manifest" / "backend-manifest-v2.json"
+    write_text(published, content)
+
+    _install_fake_schema_generator(
+        monkeypatch,
+        repo_root=repo_root,
+        schemas_root=schemas_root,
+        generated={"backend-manifest/backend-manifest-v2.json": content},
+    )
+
+    assert check_generated_schemas.main() == 0
+    assert published.read_text(encoding="utf-8") == content
 
 
 # --- ADR acceptance-content pin gate (ADR-059 / GOV-941) ----------------------

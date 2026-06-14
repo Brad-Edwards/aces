@@ -89,9 +89,12 @@ guidance:
       audience: [contributor]
       surfaces: [specs, contracts, implementations, docs]
       statement: >-
-        New ecosystem authority belongs in approved authority roots. Do not
-        hand-edit generated schemas or add implementation-owned normative
-        contracts.
+        New ecosystem authority belongs in approved authority roots. Published
+        schemas under contracts/schemas/ are the hand-governed normative
+        authority (ADR-009 section 7); the reference implementation only proves
+        compatibility with them. Do not relocate schema authority into
+        implementation models or generated output, and do not add
+        implementation-owned normative contracts.
       source_refs:
         - .gc/plan-rules.md
         - specs/authority/authority-boundary.yaml
