@@ -18,6 +18,7 @@ from .agents import Agent
 from .conditions import Condition
 from .content import Content
 from .entities import Entity
+from .explicitness import ExplicitnessRecord
 from .features import Feature
 from .infrastructure import InfraNode
 from .nodes import Node
@@ -139,6 +140,7 @@ class Scenario(SDLModel):
     # Inner mapping shape mirrors `InstantiatedScenario._node_variable_refs`.
     _module_variable_specs: dict[str, dict[str, object]] = PrivateAttr(default_factory=dict)
     _module_node_variable_refs: dict[str, dict[str, str | None]] = PrivateAttr(default_factory=dict)
+    _explicitness: dict[str, ExplicitnessRecord] = PrivateAttr(default_factory=dict)
 
     @property
     def advisories(self) -> list[str]:
@@ -155,6 +157,14 @@ class Scenario(SDLModel):
 
     def _set_semantic_validated(self, validated: bool) -> None:
         self._semantic_validated = bool(validated)
+
+    @property
+    def explicitness(self) -> dict[str, ExplicitnessRecord]:
+        """SEM-218 explicitness records keyed by SDL model path."""
+        return dict(self._explicitness)
+
+    def _set_explicitness(self, explicitness: dict[str, ExplicitnessRecord]) -> None:
+        self._explicitness = dict(explicitness)
 
     @property
     def module_variable_specs(self) -> dict[str, dict[str, object]]:
