@@ -1344,6 +1344,7 @@ def test_evaluate_authority_boundary_real_repo_is_clean() -> None:
 # --------------------------------------------------------------------------- #
 
 
+@pytest.mark.integration
 def test_specs_sdl_prose_root_is_registered_in_real_manifest() -> None:
     import yaml
 
