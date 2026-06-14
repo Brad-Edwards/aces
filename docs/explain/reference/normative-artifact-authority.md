@@ -71,10 +71,14 @@ but it still passes through these gates:
 - Publication validation: every published schema must be listed once in
   `contracts/schema-publication-manifest.json`, and every manifest entry must
   point under `contracts/schemas/`.
-- Generated-schema drift validation: changes that affect `schema_bundle()` or
-  generator inputs must regenerate schemas and pass
-  `tools/check_generated_schemas.py`; do not hand-edit
-  `contracts/schemas/`.
+- Schema authority direction (ADR-009 §7): the published schemas under
+  `contracts/schemas/` are the hand-governed normative authority. A contract
+  change is an edit to the published schema plus a contract-facing change-ledger
+  entry in `contracts/schema-publication-manifest.json` (`last_change` for an
+  added or modified schema; a `removed_schemas` tombstone for a deletion);
+  `tools/check_generated_schemas.py` proves the reference implementation
+  (`schema_bundle()`) still generates an identical bundle (into a throwaway
+  directory — it never overwrites the published authority).
 - Requirement governance: changed governed paths must carry the `ASR-517`
   context through the branch name or `ACES_REQUIREMENT_UID`, and Ground Control
   traceability must stay aligned.
@@ -112,8 +116,12 @@ Avoid:
 - collapsing concept authority, artifact schema authority, backend capability
   profiles, and semantic profiles into one generic "profile" or "runtime"
   bucket
-- editing `contracts/schemas/` directly instead of changing the generator
-  inputs and regenerating
+- changing or removing a published schema under `contracts/schemas/` without
+  recording a contract-facing change-ledger entry (`last_change`, or a
+  `removed_schemas` tombstone for a deletion) in
+  `contracts/schema-publication-manifest.json`, or treating a generator/Python
+  edit as authorization for a schema change (the published schema is the
+  authority; the generator only proves compatibility)
 - adding new authority-bearing artifacts anywhere other than `specs/` (for
   normative prose) or `contracts/` (for normative machine-readable
   artifacts). `docs/`, `implementations/`, `examples/`, `research/`,

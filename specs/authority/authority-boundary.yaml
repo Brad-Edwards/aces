@@ -95,11 +95,15 @@ legacy_top_level_dirs:
   - conformance
   - src
 
-# Schema authority direction: contracts/schemas/ owns published schemas and is
-# bound to the publication manifest. Generator drivers under tools/ and the
-# aces_contracts owning package emit into this root; they do not define
-# authority. Published schemas may not live anywhere else, and reference
-# implementations may not own schema files.
+# Schema authority direction (ADR-009 section 7): contracts/schemas/ owns the
+# hand-governed published schemas and is bound to the publication manifest.
+# The aces_contracts owning package and the generator drivers under tools/ are
+# the reference implementation; tools/check_generated_schemas.py only proves
+# that implementation generates an identical bundle (into a throwaway
+# directory) — it does not define authority and never overwrites the published
+# schemas. A schema change must carry a contract-facing change-ledger entry in
+# the publication manifest. Published schemas may not live anywhere else, and
+# reference implementations may not own schema files.
 schema_authority:
   normative_root: contracts/schemas/
   publication_manifest: contracts/schema-publication-manifest.json
