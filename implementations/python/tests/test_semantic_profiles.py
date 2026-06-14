@@ -17,6 +17,10 @@ PROFILE_PATH = REPO_ROOT / "contracts" / "profiles" / "semantic" / "reference-st
 FIXTURES_ROOT = REPO_ROOT / "contracts" / "fixtures" / "semantic-profile" / "semantic-profile-v1"
 VALID_DIR = FIXTURES_ROOT / "valid"
 INVALID_DIR = FIXTURES_ROOT / "invalid"
+EPISODE_CONTRACTS = {
+    "participant-episode-history-event-stream-v1",
+    "participant-episode-state-envelope-v1",
+}
 
 
 def _binding_set(bindings: object) -> set[tuple[str, str]]:
@@ -92,3 +96,14 @@ def test_stub_backend_satisfies_execution_profile():
 
     assert required_contracts <= manifest.supported_contract_versions
     assert required_bindings <= _binding_set(manifest.concept_bindings)
+
+
+def test_reference_profile_declares_episode_family_for_runtime_exchange_and_execution():
+    profile = load_semantic_profile("reference-stack-v1")
+
+    assert "episodes" not in profile.authoring.required_concept_families
+    assert "episodes" not in profile.processing.required_concept_families
+
+    for phase in (profile.exchange, profile.execution):
+        assert set(phase.required_contracts) >= EPISODE_CONTRACTS
+        assert "episodes" in phase.required_concept_families
