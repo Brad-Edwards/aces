@@ -17,6 +17,7 @@ from ._base import extract_variable_name, is_variable_ref
 from ._errors import SDLValidationError
 from ._runtime_service_families import collect_qualified_runtime_family_refs
 from .entities import flatten_entities
+from .explicitness import classify_scenario_explicitness
 from .infrastructure import SimpleProperties
 from .nodes import MAX_NODE_NAME_LENGTH, NodeType
 from .orchestration import Workflow, WorkflowPredicate, WorkflowStep, WorkflowStepType
@@ -630,6 +631,7 @@ class SemanticValidator:
         self._verify_workflows()
         self._verify_participant_outcomes()
         self._verify_variables()
+        self._verify_explicitness()
         self._collect_advisories()
 
         if self._errors:
@@ -3967,6 +3969,12 @@ class SemanticValidator:
                     self._err(f"Undefined variable '{variable_name}' referenced at '{path}'")
 
         visit(self._s, "")
+
+    def _verify_explicitness(self) -> None:
+        result = classify_scenario_explicitness(self._s)
+        self._s._set_explicitness(result.records)
+        for error in result.errors:
+            self._err(error)
 
     def _all_named_elements(self) -> set[str]:
         """Collect all named element keys across all scenario sections."""
