@@ -8,7 +8,6 @@ import re
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
-from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from aces_sdl.participant_attribution_semantics import (
@@ -35,6 +34,7 @@ from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler, StrictI
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
+from .corpus import CONCEPT_AUTHORITY, corpus_family_root
 from .manifest_authority import (
     BACKEND_SUPPORTED_CONTRACT_IDS,
     PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
@@ -4753,13 +4753,9 @@ class SemanticProfileModel(ContractModel):
         return self
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
-
-
 @lru_cache(maxsize=1)
 def _authoritative_concept_family_ids() -> frozenset[str]:
-    catalog_path = _repo_root() / "contracts" / "concept-authority" / "concept-families-v1.json"
+    catalog_path = corpus_family_root(CONCEPT_AUTHORITY) / "concept-families-v1.json"
     payload = json.loads(catalog_path.read_text(encoding="utf-8"))
     catalog = ConceptFamilyCatalogModel.model_validate(payload)
     return frozenset(catalog.families)

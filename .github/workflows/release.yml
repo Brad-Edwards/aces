@@ -1,0 +1,100 @@
+name: Release
+
+# Cut a release by pushing a version tag, e.g. `git tag v0.3.0 && git push origin v0.3.0`.
+# Builds the corpus-bundled wheel + sdist and publishes a GitHub Release with the
+# artifacts attached, so downstream backends can pin a real version instead of a
+# `dev` commit SHA. See docs/explain/releasing.md for the full runbook.
+#
+# Release integrity (issue #537 codex review):
+#   * The only trigger is a `v*` tag push — there is no `workflow_dispatch`, so a
+#     manual run can never publish a Release named after a branch from untagged
+#     code.
+#   * The build job checks the tag commit is reachable from the protected default
+#     branch (`main`) BEFORE it runs any repository-controlled build code
+#     (`uv build` runs the hatch build hook), and checks out with
+#     `persist-credentials: false` so no write-scoped token sits in the git config
+#     while that build code executes.
+#   * Publishing happens in a separate job that only consumes the already-built
+#     artifacts. The `contents: write` token is scoped to that job alone and is
+#     used only by `gh release create`, so tag-controlled build hooks never run in
+#     a context that holds the write token.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify the tag is reachable from the protected default branch
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          tag_sha="$(git rev-parse HEAD)"
+          if ! git merge-base --is-ancestor "${tag_sha}" origin/main; then
+            echo "::error::tag ${GITHUB_REF_NAME} (${tag_sha}) is not reachable from origin/main; refusing to build or publish a release from unreviewed code"
+            exit 1
+          fi
+          echo "tag ${GITHUB_REF_NAME} (${tag_sha}) is an ancestor of origin/main"
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8
+      - name: Build wheel + sdist
+        run: uv build --out-dir dist implementations/python
+      - name: Verify the contract corpus is bundled in the wheel
+        run: |
+          python - <<'PY'
+          import glob
+          import sys
+          import zipfile
+
+          wheels = glob.glob("dist/aces_sdl-*.whl")
+          if len(wheels) != 1:
+              sys.exit(f"expected exactly one wheel, found {wheels}")
+          names = zipfile.ZipFile(wheels[0]).namelist()
+          required = [
+              "aces_contracts/_corpus/profiles/backend/provisioning-only.json",
+              "aces_contracts/_corpus/fixtures/",
+              "aces_contracts/_corpus/concept-authority/controlled-vocabularies-v1.json",
+              "aces_contracts/_corpus/schemas/",
+          ]
+          missing = [r for r in required if not any(n == r or n.startswith(r) for n in names)]
+          if missing:
+              sys.exit(f"wheel is missing corpus payload: {missing}")
+          print(f"corpus payload present: {sum(n.startswith('aces_contracts/_corpus/') for n in names)} files")
+          PY
+      - name: Upload built artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-dist
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download built artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-dist
+          path: dist
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes

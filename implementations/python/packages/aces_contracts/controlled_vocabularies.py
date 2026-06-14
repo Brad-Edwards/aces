@@ -9,14 +9,11 @@ from functools import lru_cache
 from pathlib import Path
 
 from .contracts import ControlledVocabularyCatalogModel
-
-
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
+from .corpus import CONCEPT_AUTHORITY, corpus_family_root
 
 
 def controlled_vocabulary_catalog_path() -> Path:
-    return _repo_root() / "contracts" / "concept-authority" / "controlled-vocabularies-v1.json"
+    return corpus_family_root(CONCEPT_AUTHORITY) / "controlled-vocabularies-v1.json"
 
 
 @lru_cache(maxsize=1)
