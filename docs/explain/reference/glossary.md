@@ -164,6 +164,12 @@ published schemas, source code, and ADRs.
 : The contract and fixture discipline used to check that backend-facing
   declarations and results satisfy published ACES contracts.
 
+**Surface**
+: A named, bounded, contract-bearing scope of an ACES artifact or apparatus to
+  which governed vocabularies and concept bindings apply. The normative
+  definition, including the one-surface-versus-two decision rule, lives in
+  `specs/concept-authority/concept-authority.md`.
+
 **Apparatus**
 : The processor, backend, participant, live execution, evidence, and provenance
   surfaces around an authored scenario.
