@@ -1332,3 +1332,29 @@ def test_artifact_family_requirement_refs_must_be_string_list(tmp_path: Path) ->
 def test_evaluate_authority_boundary_real_repo_is_clean() -> None:
     failures = evaluate_authority_boundary(REPO_ROOT)
     assert failures == [], "\n".join(failure.render() for failure in failures)
+
+
+# --------------------------------------------------------------------------- #
+# SDL authoring spec registration (issue #498 / review CT-6).                 #
+# The structural checker fires `root-empty`/`root-missing` only when an        #
+# authority root is *registered* but absent; it does not, on its own, prove    #
+# that the SDL authoring spec stays registered. Removing both the manifest     #
+# entry and the directory would leave a valid manifest with the SDL authoring  #
+# authority silently dropped. This test pins the registration directly.        #
+# --------------------------------------------------------------------------- #
+
+
+def test_specs_sdl_prose_root_is_registered_in_real_manifest() -> None:
+    import yaml
+
+    manifest = yaml.safe_load((REPO_ROOT / AUTHORITY_BOUNDARY_RELATIVE_PATH).read_text(encoding="utf-8"))
+    sdl_entries = [entry for entry in manifest["authority_roots"] if entry.get("root") == "specs/sdl/"]
+    assert sdl_entries, "specs/sdl/ must be registered as an authority root in the authority-boundary manifest"
+    assert all(entry.get("family") == "prose" for entry in sdl_entries), (
+        f"specs/sdl/ must be registered with family 'prose'; got {[entry.get('family') for entry in sdl_entries]}"
+    )
+
+    sdl_dir = REPO_ROOT / "specs" / "sdl"
+    assert sdl_dir.is_dir(), "specs/sdl/ must exist on disk"
+    real_artifacts = [path for path in sdl_dir.iterdir() if path.name != ".keep"]
+    assert real_artifacts, "specs/sdl/ must contain at least one specification artifact"

@@ -36,5 +36,8 @@ hook).
   `prose` family of the `specs/` root.
 - `concept-authority/` — concept-family and controlled-vocabulary
   authority artifacts (governed by ADR-012)
+- `sdl/` — the language-neutral normative SDL authoring specification
+  (the catalog set the published `contracts/schemas/sdl/` schemas must
+  agree with; governed by ADR-001 and ADR-009)
 - `formal/` — optional formal-methods artifacts for semantic and
   stateful subsystems (governed by ADR-007 and ADR-018)
