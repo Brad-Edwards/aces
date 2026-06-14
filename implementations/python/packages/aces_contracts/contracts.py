@@ -4867,7 +4867,7 @@ def _uco_cyber_concept_family_provenance() -> dict[str, str]:
     cyber-domain family slice is never hard-coded in a second place.
     """
 
-    catalog_path = _repo_root() / "contracts" / "concept-authority" / "concept-families-v1.json"
+    catalog_path = corpus_family_root(CONCEPT_AUTHORITY) / "concept-families-v1.json"
     payload = json.loads(catalog_path.read_text(encoding="utf-8"))
     catalog = ConceptFamilyCatalogModel.model_validate(payload)
     return {

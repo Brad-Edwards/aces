@@ -92,6 +92,13 @@ def test_reference_model_loader_routes_through_seam():
     assert reference_model_catalog_path() == (corpus_family_root("concept-authority") / "reference-models-v1.json")
 
 
+def test_uco_alignment_loader_routes_through_seam():
+    from aces_contracts.corpus import corpus_family_root
+    from aces_contracts.uco_alignment import uco_alignment_catalog_path
+
+    assert uco_alignment_catalog_path() == (corpus_family_root("concept-authority") / "uco-alignment-v1.json")
+
+
 def test_fixtures_root_routes_through_seam():
     from aces_conformance.conformance import fixtures_root
     from aces_contracts.corpus import corpus_family_root
@@ -106,6 +113,7 @@ def test_fixtures_root_routes_through_seam():
         "aces_contracts.semantic_profiles",
         "aces_contracts.controlled_vocabularies",
         "aces_contracts.reference_models",
+        "aces_contracts.uco_alignment",
         "aces_contracts.contracts",
         "aces_conformance.conformance",
     ],
