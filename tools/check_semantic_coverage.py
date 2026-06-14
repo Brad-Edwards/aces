@@ -25,12 +25,28 @@ here. What is enforced:
 * an ``active`` row names at least one lifecycle phase, at least one existing
   *non-test* realizing artifact, and at least one existing
   ``implementations/python/tests/test_*.py`` test;
+* for an ``active`` row that names importable Python realizing modules, at least
+  one of its named tests actually *imports* one of those modules — existence is
+  not integration (#504). The resolver recognizes direct submodule imports,
+  ``from package import submodule``, the ``aces.*`` compatibility wrappers, and
+  package re-exports written either absolutely (``from pkg.core import name``) or
+  with the idiomatic relative form (``from .core import name``); a bare
+  ``import aces_sdl`` does not count as evidence for every ``aces_sdl.*``
+  artifact. The check is
+  row-level: one resolvable import across the row's named tests satisfies it;
+* every ``test_*`` function in an ``active`` row's named test files contains at
+  least one assertion (``assert``, ``pytest.raises``/``warns``, an ``assert*``
+  call, ...) — a zero-assertion stub test is not coverage (#504);
 * a ``partial`` row names at least one lifecycle phase and at least one existing
   *non-test* realizing artifact;
 * a ``planned`` row names no phases and no artifacts (if it has artifacts it is
   at least ``partial``);
 * ADR-016 still exists and still references the coverage note by its repo-relative
   (or ADR-relative) path, so the ADR↔note linkage cannot silently rot.
+
+``--report`` prints a read-only inventory (families by status with per-row test
+and realization-module-coverage counts) and never gates; it surfaces thin
+coverage without changing pass/fail semantics.
 
 Failures use ``tools.policy.common.PolicyFailure`` and the CLI honours ``--json``
 and the shared ``tools/policy/exceptions.yaml`` waiver mechanism, like the other
@@ -40,6 +56,7 @@ and the shared ``tools/policy/exceptions.yaml`` waiver mechanism, like the other
 from __future__ import annotations
 
 import argparse
+import ast
 import os
 import re
 import sys
@@ -114,6 +131,19 @@ _SEPARATOR_CELL_RE = re.compile(r"^:?-{2,}:?$")
 _BACKTICK_SPAN_RE = re.compile(r"`([^`]+)`")
 
 _EXPECTED_COLUMNS = 5
+
+# Source roots used by the import-integration resolver (#504). Realization
+# artifacts that are importable Python live under the packages root; the
+# ``aces.*`` compatibility wrappers live under the src root.
+_PACKAGES_ROOT = "implementations/python/packages"
+_COMPAT_SRC_ROOT = "implementations/python/src"
+# Names the ``aces._compat`` re-export helper is imported as (``reexport`` or the
+# conventional ``_reexport`` alias).
+_REEXPORT_FUNCS: frozenset[str] = frozenset({"reexport", "_reexport"})
+# A ``test_*`` function counts as asserting if it contains an ``assert`` statement
+# or calls anything whose name carries one of these hints (``pytest.raises``,
+# ``self.assertEqual``, ``pytest.fail``, ``assert_*`` helpers, ...).
+_ASSERTION_NAME_HINTS: tuple[str, ...] = ("assert", "raises", "warns", "deprecated_call", "fail", "xfail")
 
 
 class CoverageParseError(ValueError):
@@ -386,6 +416,274 @@ def _check_adr_links_note(repo_root: Path) -> list[PolicyFailure]:
     return []
 
 
+# --------------------------------------------------------------------------- #
+# Import-integration resolver (#504).
+#
+# A row's ``active`` status claims its named tests cover the construct. The
+# structural gate can prove a weaker, useful fact from the filesystem: at least
+# one named test *imports* one of the row's realizing Python modules. The
+# resolver maps a realizing artifact path to its canonical module and normalizes
+# the imports a test actually makes — recognizing direct submodule imports,
+# ``from package import submodule``, the ``aces.*`` compatibility wrappers, and
+# explicit ``from M import name`` package re-exports — so an honest indirect
+# import still counts. It deliberately does NOT import or execute any module, and
+# a bare ``import aces_sdl`` is not treated as evidence for every ``aces_sdl.*``
+# artifact. Dynamic ``__getattr__`` re-exports in a canonical package ``__init__``
+# are not resolved; those symbols remain reachable through the compat wrappers
+# (which are resolved), and the gate is row-level so one resolvable import per
+# row suffices.
+# --------------------------------------------------------------------------- #
+
+
+def _safe_parse(path: Path) -> ast.Module | None:
+    try:
+        return ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError, ValueError):
+        return None
+
+
+def _module_name_under(root: Path, file: Path) -> str:
+    parts = list(file.relative_to(root).with_suffix("").parts)
+    if parts and parts[-1] == "__init__":
+        parts = parts[:-1]
+    return ".".join(parts)
+
+
+def _resolve_relative_module(pkg: str, level: int, module: str | None) -> str | None:
+    """Resolve a relative ``ImportFrom`` (``from .core import X``) inside an
+    ``__init__.py`` to the absolute dotted module it names.
+
+    ``pkg`` is the importing ``__init__``'s own package (``__init__`` already
+    stripped by :func:`_module_name_under`), so ``__package__ == pkg`` and the
+    anchor for ``level`` is ``pkg`` itself: ``level`` 1 stays in ``pkg``, each
+    further level climbs one parent. Returns ``None`` if the import climbs above
+    the known root (an out-of-tree target we cannot map).
+    """
+    base_parts = pkg.split(".") if pkg else []
+    ascend = level - 1
+    if ascend > len(base_parts):
+        return None
+    anchor = base_parts[: len(base_parts) - ascend]
+    tail = module.split(".") if module else []
+    parts = anchor + tail
+    return ".".join(parts) if parts else None
+
+
+def _reexport_target(tree: ast.Module) -> str | None:
+    """The canonical module a compat wrapper re-exports, from ``reexport(globals(), "...")``."""
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id in _REEXPORT_FUNCS
+            and len(node.args) == 2
+            and isinstance(node.args[1], ast.Constant)
+            and isinstance(node.args[1].value, str)
+        ):
+            return node.args[1].value
+    return None
+
+
+@dataclass(frozen=True)
+class _ImportResolver:
+    """Maps test imports to the canonical modules they reach. The single extension
+    seam: new source roots, wrappers, or package exports extend the two maps
+    without touching row validation."""
+
+    compat_to_canonical: dict[str, str]
+    package_symbol_to_module: dict[str, str]
+
+    def normalize(self, module: str) -> str:
+        return self.compat_to_canonical.get(module, module)
+
+    def imported_modules(self, tree: ast.Module) -> set[str]:
+        reached: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    reached.add(self.normalize(alias.name))
+            elif isinstance(node, ast.ImportFrom):
+                if node.level or not node.module:
+                    continue  # relative imports are not used by the test suite
+                reached.add(self.normalize(node.module))
+                for alias in node.names:
+                    full = f"{node.module}.{alias.name}"
+                    if full in self.package_symbol_to_module:
+                        reached.add(self.package_symbol_to_module[full])
+                    else:
+                        reached.add(self.normalize(full))
+        return reached
+
+
+def _build_import_resolver(repo_root: Path) -> _ImportResolver:
+    compat: dict[str, str] = {}
+    symbols: dict[str, str] = {}
+    src_root = repo_root / _COMPAT_SRC_ROOT
+    pkg_root = repo_root / _PACKAGES_ROOT
+    aces_root = src_root / "aces"
+
+    if aces_root.is_dir():
+        for file in sorted(aces_root.rglob("*.py")):
+            tree = _safe_parse(file)
+            if tree is None:
+                continue
+            target = _reexport_target(tree)
+            if target:
+                compat[_module_name_under(src_root, file)] = target
+
+    init_files: list[tuple[Path, Path]] = []
+    if aces_root.is_dir():
+        init_files += [(f, src_root) for f in aces_root.rglob("__init__.py")]
+    if pkg_root.is_dir():
+        init_files += [(f, pkg_root) for f in pkg_root.rglob("__init__.py")]
+    for file, root in init_files:
+        tree = _safe_parse(file)
+        if tree is None:
+            continue
+        pkg = _module_name_under(root, file)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ImportFrom):
+                continue
+            if not node.level:
+                # ``from package.module import name`` re-export.
+                if not node.module:
+                    continue
+                source_module = node.module
+            elif node.module:
+                # Relative ``from .core import name`` re-export — the idiomatic
+                # package-API form. Resolve against the importing ``__init__``.
+                source_module = _resolve_relative_module(pkg, node.level, node.module)
+            else:
+                # Relative ``from . import submodule`` re-export: each name is a
+                # submodule, resolved individually below.
+                source_module = None
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                if source_module is None:
+                    target = _resolve_relative_module(pkg, node.level, alias.name)
+                else:
+                    target = source_module
+                if target is None:
+                    continue
+                symbols[f"{pkg}.{alias.name}"] = compat.get(target, target)
+    return _ImportResolver(compat, symbols)
+
+
+def _artifact_module(token: str) -> str | None:
+    """Canonical importable module name for a realizing artifact path, or None."""
+    prefix = f"{_PACKAGES_ROOT}/"
+    if not token.startswith(prefix) or not token.endswith(".py"):
+        return None
+    parts = token[len(prefix) : -len(".py")].split("/")
+    if parts and parts[-1] == "__init__":
+        parts = parts[:-1]
+    return ".".join(parts) if parts else None
+
+
+def _row_realization_modules(row: CoverageRow) -> list[str]:
+    """The importable realizing modules a row names (excludes test files and prose)."""
+    modules: list[str] = []
+    for token in row.artifacts:
+        if _is_test_path(token):
+            continue
+        module = _artifact_module(token)
+        if module:
+            modules.append(module)
+    return modules
+
+
+def _row_test_files(row: CoverageRow) -> list[str]:
+    return [token for token in row.artifacts if _is_test_path(token)]
+
+
+def _row_imported_modules(repo_root: Path, row: CoverageRow, resolver: _ImportResolver) -> set[str]:
+    reached: set[str] = set()
+    for rel in _row_test_files(row):
+        resolved = _resolve_within(repo_root, rel)
+        if resolved is None or not resolved.is_file():
+            continue  # a missing/escaping test path is already flagged by _check_artifacts
+        tree = _safe_parse(resolved)
+        if tree is not None:
+            reached |= resolver.imported_modules(tree)
+    return reached
+
+
+def _check_row_test_integration(repo_root: Path, row: CoverageRow, resolver: _ImportResolver) -> list[PolicyFailure]:
+    """For an ``active`` row, require at least one named test to import a realizing module."""
+    modules = _row_realization_modules(row)
+    if not modules:
+        return []  # spec/doc-only realization: nothing importable to require
+    if _row_imported_modules(repo_root, row, resolver) & set(modules):
+        return []
+    where = f"row '{row.family}' (line {row.line_no})"
+    return [
+        _fail(
+            "coverage-test-integration",
+            f"{where}: status 'active' requires at least one named test to import a realizing module "
+            f"({', '.join(modules)}); the named tests import none of them — existence without integration",
+            COVERAGE_NOTE_RELATIVE_PATH,
+        )
+    ]
+
+
+def _iter_test_functions(tree: ast.Module) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
+    """Module-level and ``Test*``-class test functions, matching pytest collection."""
+    found: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test"):
+            found.append(node)
+        elif isinstance(node, ast.ClassDef) and node.name.startswith("Test"):
+            found += [
+                sub
+                for sub in node.body
+                if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)) and sub.name.startswith("test")
+            ]
+    return found
+
+
+def _call_name(call: ast.Call) -> str | None:
+    target = call.func
+    if isinstance(target, ast.Attribute):
+        return target.attr
+    if isinstance(target, ast.Name):
+        return target.id
+    return None
+
+
+def _function_has_assertion(func: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    for node in ast.walk(func):
+        if isinstance(node, ast.Assert):
+            return True
+        if isinstance(node, ast.Call):
+            name = _call_name(node)
+            if name and any(hint in name.lower() for hint in _ASSERTION_NAME_HINTS):
+                return True
+    return False
+
+
+def _check_stub_tests(repo_root: Path, test_rel: str) -> list[PolicyFailure]:
+    """Flag ``test_*`` functions with no assertion in a named test file (#504)."""
+    resolved = _resolve_within(repo_root, test_rel)
+    if resolved is None or not resolved.is_file():
+        return []
+    tree = _safe_parse(resolved)
+    if tree is None:
+        return []
+    failures: list[PolicyFailure] = []
+    for func in _iter_test_functions(tree):
+        if not _function_has_assertion(func):
+            failures.append(
+                _fail(
+                    "coverage-stub-test",
+                    f"test function '{func.name}' (line {func.lineno}) has no assertion "
+                    f"(no assert / pytest.raises / assert*); a zero-assertion test is not coverage",
+                    test_rel,
+                )
+            )
+    return failures
+
+
 def evaluate_semantic_coverage(repo_root: Path, note_relative_path: str | None = None) -> list[PolicyFailure]:
     """Return the list of structural failures for the SEM-200 coverage model (empty = OK)."""
     rel = note_relative_path or COVERAGE_NOTE_RELATIVE_PATH
@@ -405,9 +703,51 @@ def evaluate_semantic_coverage(repo_root: Path, note_relative_path: str | None =
         failures.append(_fail("coverage-model-empty", "Coverage Model table has no rows", rel))
         return failures
 
+    resolver = _build_import_resolver(repo_root)
+    active_test_files: set[str] = set()
     for row in rows:
         failures.extend(_check_row(repo_root, row))
+        if row.status == "active":
+            failures.extend(_check_row_test_integration(repo_root, row, resolver))
+            active_test_files.update(_row_test_files(row))
+    for test_rel in sorted(active_test_files):
+        failures.extend(_check_stub_tests(repo_root, test_rel))
     return failures
+
+
+def build_coverage_report(repo_root: Path, note_relative_path: str | None = None) -> str:
+    """Render a read-only coverage report: families grouped by status, with per-row
+    named-test and realization-module-coverage counts (#504). Never gates."""
+    rel = note_relative_path or COVERAGE_NOTE_RELATIVE_PATH
+    note_path = repo_root / rel
+    if not note_path.is_file():
+        return f"coverage note not found: {rel}"
+    try:
+        rows = parse_coverage_rows(note_path.read_text(encoding="utf-8"))
+    except CoverageParseError as exc:
+        return f"coverage note unparseable: {exc}"
+
+    resolver = _build_import_resolver(repo_root)
+    lines = ["Semantic coverage report (SEM-200, ADR-016)", ""]
+    for status in VALID_STATUSES:
+        group = [row for row in rows if row.status == status]
+        lines.append(f"## {status} ({len(group)})")
+        for row in sorted(group, key=lambda r: r.family.lower()):
+            modules = _row_realization_modules(row)
+            tests = _row_test_files(row)
+            if modules:
+                reached = _row_imported_modules(repo_root, row, resolver)
+                covered = sum(1 for module in modules if module in reached)
+                marker = "  THIN" if covered == 0 else ""
+                module_note = f"modules {covered}/{len(modules)} imported{marker}"
+            else:
+                module_note = "no importable modules"
+            owners = ", ".join(row.owners) or "—"
+            lines.append(
+                f"  - {row.family} [{owners}]: {len(tests)} test(s), {len(row.phases)} phase(s), {module_note}"
+            )
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -424,11 +764,19 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="Repo-relative path to the coverage note (defaults to the canonical location).",
     )
     parser.add_argument("--json", action="store_true", help="Emit JSON failures.")
+    parser.add_argument(
+        "--report",
+        action="store_true",
+        help="Print a read-only coverage report (families by status, test/module counts) and exit 0.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.report:
+        print(build_coverage_report(args.repo_root, args.note_path))
+        return 0
     failures = evaluate_semantic_coverage(args.repo_root, args.note_path)
     exceptions_file = args.repo_root / "tools" / "policy" / "exceptions.yaml"
     if exceptions_file.is_file():
