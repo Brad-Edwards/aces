@@ -367,8 +367,9 @@ def _attach_experiment_datetime_invariants(contract_id: str, json_schema: dict[s
     )
 
 
+_DEFS_KEY = "$defs"
 _INSTANTIATION_INVARIANT_CONTRACT_ID = "instantiated-scenario-v1"
-_SCHEMA_MAP_KEYS = ("properties", "patternProperties", "$defs")
+_SCHEMA_MAP_KEYS = ("properties", "patternProperties", _DEFS_KEY)
 _SCHEMA_SUBSCHEMA_KEYS = (
     "additionalProperties",
     "items",
@@ -380,38 +381,52 @@ _SCHEMA_SUBSCHEMA_KEYS = (
 )
 
 
-def _forbid_variable_tokens_in_strings(node: Any) -> None:
-    """Add a ``${name}``-rejecting constraint to every free string subschema.
+def _apply_string_token_constraint(node: dict[str, Any]) -> None:
+    """Forbid the ``${name}`` token on a single free string subschema.
 
-    Walks the JSON Schema applicator keywords and, on each subschema that
-    declares a scalar ``"type": "string"`` and is not a fixed ``enum`` / ``const``
-    value, forbids the SDL substitution token. Restricting to a scalar ``type``
-    (not a type-list) and skipping ``enum`` / ``const`` avoids the nullable-string
-    and fixed-value pitfalls; the ``${var}`` branch of every ``*_or_var`` field
-    (``InfraNode.count``, ``ACLRule.ports``, ``SimpleProperties.internal`` …) is a
-    bare ``{"type": "string"}`` branch, so it is covered. Mapping keys are not
-    substitution sites, so ``propertyNames`` is intentionally not constrained.
+    Targets scalar ``"type": "string"`` only, skipping fixed ``enum`` / ``const``
+    values, which avoids the nullable-string and fixed-value pitfalls. The
+    ``${var}`` branch of every ``*_or_var`` field (``InfraNode.count``,
+    ``ACLRule.ports``, ``SimpleProperties.internal`` …) is a bare
+    ``{"type": "string"}`` branch, so it is covered.
     """
+    if node.get("type") != "string" or "enum" in node or "const" in node:
+        return
+    constraint = {"pattern": VARIABLE_TOKEN_PATTERN}
+    if "not" in node:
+        node.setdefault("allOf", []).append({"not": constraint})
+    else:
+        node["not"] = constraint
+
+
+def _child_subschemas(node: dict[str, Any]) -> list[Any]:
+    """Return the applicator subschemas reachable from ``node``.
+
+    Mapping keys are not substitution sites, so ``propertyNames`` is
+    intentionally excluded.
+    """
+    children: list[Any] = []
+    for key in _SCHEMA_MAP_KEYS:
+        child = node.get(key)
+        if isinstance(child, dict):
+            children.extend(child.values())
+    for key in _SCHEMA_SUBSCHEMA_KEYS:
+        if key in node:
+            children.append(node[key])
+    return children
+
+
+def _forbid_variable_tokens_in_strings(node: object) -> None:
+    """Recursively forbid the ``${var}`` token on every free string subschema."""
     if isinstance(node, list):
         for item in node:
             _forbid_variable_tokens_in_strings(item)
         return
     if not isinstance(node, dict):
         return
-    if node.get("type") == "string" and "enum" not in node and "const" not in node:
-        constraint = {"pattern": VARIABLE_TOKEN_PATTERN}
-        if "not" in node:
-            node.setdefault("allOf", []).append({"not": constraint})
-        else:
-            node["not"] = constraint
-    for key in _SCHEMA_MAP_KEYS:
-        child = node.get(key)
-        if isinstance(child, dict):
-            for sub in child.values():
-                _forbid_variable_tokens_in_strings(sub)
-    for key in _SCHEMA_SUBSCHEMA_KEYS:
-        if key in node:
-            _forbid_variable_tokens_in_strings(node[key])
+    _apply_string_token_constraint(node)
+    for child in _child_subschemas(node):
+        _forbid_variable_tokens_in_strings(child)
 
 
 def _attach_instantiation_invariants(contract_id: str, json_schema: dict[str, Any]) -> None:
@@ -495,7 +510,7 @@ class AcesSemanticInvariantProfileReferenceModel(ContractModel):
 
 def _aces_semantic_invariant_profile_schema_for_bundle() -> dict[str, Any]:
     json_schema = AcesSemanticInvariantProfileModel.model_json_schema()
-    json_schema.setdefault("$defs", {})["AcesSemanticInvariantProfileReferenceModel"] = (
+    json_schema.setdefault(_DEFS_KEY, {})["AcesSemanticInvariantProfileReferenceModel"] = (
         AcesSemanticInvariantProfileReferenceModel.model_json_schema()
     )
     return json_schema
@@ -5016,7 +5031,7 @@ def _backend_profile_schema_for_bundle() -> dict[str, Any]:
 
 def _event_stream_schema(title: str, item_schema: dict[str, Any]) -> dict[str, Any]:
     item_schema = dict(item_schema)
-    defs = item_schema.pop("$defs", None)
+    defs = item_schema.pop(_DEFS_KEY, None)
     schema = {
         _JSON_SCHEMA_KEY: _JSON_SCHEMA_DRAFT_2020_12,
         "title": title,
@@ -5024,7 +5039,7 @@ def _event_stream_schema(title: str, item_schema: dict[str, Any]) -> dict[str, A
         "items": item_schema,
     }
     if defs:
-        schema["$defs"] = defs
+        schema[_DEFS_KEY] = defs
     return schema
 
 

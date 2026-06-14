@@ -34,7 +34,7 @@ def is_variable_ref(v: Any) -> bool:
     return isinstance(v, str) and _VARIABLE_REF_RE.fullmatch(v) is not None
 
 
-def contains_variable_token(v: Any) -> bool:
+def contains_variable_token(v: object) -> bool:
     """Return whether ``v`` is a string containing any ``${name}`` token.
 
     Unlike :func:`is_variable_ref` (whole-string placeholder only), this also
