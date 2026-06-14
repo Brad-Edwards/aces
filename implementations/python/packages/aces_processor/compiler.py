@@ -2215,12 +2215,9 @@ def _realization_requirement_address(scenario: InstantiatedScenario, field_path:
     head, name = parts[0], parts[1]
     if head == "nodes":
         node = scenario.nodes.get(name)
-        if node is not None and node.type == NodeType.SWITCH:
-            return _network_address(name)
-        return _node_address(name)
-    if head == "content":
-        return _content_address(name)
-    return field_path
+        is_switch = node is not None and node.type == NodeType.SWITCH
+        return _network_address(name) if is_switch else _node_address(name)
+    return _content_address(name) if head == "content" else field_path
 
 
 def _compile_realization_requirements(
