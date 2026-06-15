@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import shutil
 import textwrap
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -261,7 +262,7 @@ def test_module_exports_are_enforced_for_importers(tmp_path: Path):
         """,
     )
 
-    with pytest.raises(SDLValidationError):
+    with pytest.raises(SDLValidationError, match=r"Metric 'uptime' references undefined condition 'shared\.health'"):
         parse_sdl_file(root)
 
 
@@ -321,6 +322,44 @@ def test_sdl_resolve_and_verify_detect_lockfile_drift(tmp_path: Path):
 
     _local_module(tmp_path / "shared.yaml", version="1.2.4")
     stale = runner.invoke(app, ["sdl", "verify-imports", str(root)])
+    assert stale.exit_code != 0
+    assert "stale" in stale.output.lower()
+
+
+def test_local_import_lockfile_is_checkout_independent(tmp_path: Path):
+    # Author the scenario under one absolute checkout path, with the imported
+    # module in a subdirectory so the persisted identity is a multi-segment
+    # relative path rather than a bare filename.
+    checkout_a = tmp_path / "checkout_a"
+    _local_module(checkout_a / "nodes" / "shared.yaml")
+    root_a = _root_import(
+        checkout_a / "root.yaml",
+        "source: local:nodes/shared.yaml\n            namespace: shared",
+    )
+    runner = CliRunner()
+
+    resolve_result = runner.invoke(app, ["sdl", "resolve", str(root_a)])
+    assert resolve_result.exit_code == 0, resolve_result.output
+
+    # Acceptance: `resolve` writes no absolute machine paths for local: imports.
+    lock_text = (checkout_a / LOCKFILE_NAME).read_text(encoding="utf-8")
+    assert str(checkout_a) not in lock_text
+    lockfile = load_lockfile(checkout_a)
+    assert lockfile is not None
+    record = lockfile.imports[0]
+    assert not Path(record.resolved_source).is_absolute()
+    assert record.resolved_source == "nodes/shared.yaml"
+
+    # Acceptance: `verify-imports` passes on a checkout at a different absolute
+    # path than the one that generated the lock.
+    checkout_b = tmp_path / "checkout_b"
+    shutil.copytree(checkout_a, checkout_b)
+    verify = runner.invoke(app, ["sdl", "verify-imports", str(checkout_b / "root.yaml")])
+    assert verify.exit_code == 0, verify.output
+
+    # ...and still fails when the imported content actually changes.
+    _local_module(checkout_b / "nodes" / "shared.yaml", version="1.2.4")
+    stale = runner.invoke(app, ["sdl", "verify-imports", str(checkout_b / "root.yaml")])
     assert stale.exit_code != 0
     assert "stale" in stale.output.lower()
 
