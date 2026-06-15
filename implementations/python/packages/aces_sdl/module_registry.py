@@ -6,6 +6,7 @@ import base64
 import hashlib
 import io
 import json
+import os
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -343,6 +344,22 @@ def _validate_digest_pin(actual_digest: str, expected_digest: str, *, source: st
         raise SDLParseError(f"Digest mismatch for import '{source}': {expected_digest!r} != {actual_digest!r}")
 
 
+def _local_resolved_source(import_path: Path, base_dir: Path) -> str:
+    """Persisted lock identity for a ``local:`` import (issue #551).
+
+    The lockfile is committed and verified across machines and CI, so a local
+    import's ``resolved_source`` must be a checkout-independent identity rather
+    than an absolute, machine-specific path. Express it relative to the SDL base
+    directory using POSIX separators so the same lockfile verifies on any
+    checkout. ``ResolvedModule.root_file`` remains the absolute runtime ``Path``
+    used for reads, digesting, parsing, and cycle detection; this is the single
+    normalization seam for persisted local lock identity (OCI imports keep their
+    registry/digest identity).
+    """
+    relative = os.path.relpath(import_path, base_dir.resolve())
+    return Path(relative).as_posix()
+
+
 def resolve_import(
     import_decl: ImportDecl,
     *,
@@ -414,7 +431,7 @@ def resolve_import(
             import_decl=import_decl,
             module_descriptor=descriptor,
             root_file=import_path,
-            resolved_source=str(import_path),
+            resolved_source=_local_resolved_source(import_path, base_dir),
             content_digest=content_digest,
             export_hash=_descriptor_digest(descriptor.exports),
         )
