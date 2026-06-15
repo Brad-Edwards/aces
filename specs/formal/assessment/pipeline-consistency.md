@@ -101,7 +101,7 @@ addresses.
 
 - shared semantic source of truth:
   `implementations/python/packages/aces_sdl/semantics/assessment.py`
-- validator checks: `implementations/python/packages/aces_sdl/validator.py`
+- validator checks: `implementations/python/packages/aces_sdl/validator/`
 - compiled runtime references, contracts, and ordering/refresh derivation:
   - `implementations/python/packages/aces_processor/compiler.py`
   - `implementations/python/packages/aces_processor/models.py`

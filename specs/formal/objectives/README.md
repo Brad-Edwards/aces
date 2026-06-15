@@ -41,7 +41,7 @@ target-resolution, success-interpretation, and dependency-ordering semantics
   `implementations/python/packages/aces_sdl/semantics/objectives.py`
   (`analyze_objective_window`)
 - authoring models: `implementations/python/packages/aces_sdl/objectives.py`
-- semantic validation: `implementations/python/packages/aces_sdl/validator.py`
+- semantic validation: `implementations/python/packages/aces_sdl/validator/`
   (`_verify_objectives`)
 - compiled runtime objective resource, addresses, diagnostics, and
   ordering/refresh derivation:

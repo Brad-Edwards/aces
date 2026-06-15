@@ -158,7 +158,7 @@ places container network realization facts under `Node.runtime`, and
 separates host publication from services and image exposed ports.
 Implementation evidence appears in
 `implementations/python/packages/aces_sdl/runtime_network.py` and validator
-references around `implementations/python/packages/aces_sdl/validator.py:683`.
+references around `implementations/python/packages/aces_sdl/validator/`.
 
 **Suspect exclusion or scope language:** Host port bindings, aliases, endpoint
 IDs, DNS names, and backend driver/IPAM details can look like Docker or
@@ -208,7 +208,7 @@ puts SSH server configuration under node runtime; lines around
 `AcceptEnv`, `ForceCommand`, and `Match` rules as participant-observable sshd
 policy. Implementation evidence appears in
 `implementations/python/packages/aces_sdl/runtime_ssh_server.py` and
-`implementations/python/packages/aces_sdl/validator.py:831`.
+`implementations/python/packages/aces_sdl/validator/`.
 
 **Suspect exclusion or scope language:** `sshd_config`, wrapper commands, and
 accepted environment names can look like backend or process implementation
@@ -261,7 +261,7 @@ redactable `ExecStart`, optional same-node service ref). Implementation
 evidence appears in
 `implementations/python/packages/aces_sdl/runtime_service_units.py` and the
 new validator hook in
-`implementations/python/packages/aces_sdl/validator.py:832`.
+`implementations/python/packages/aces_sdl/validator/`.
 
 **Suspect exclusion or scope language:** `systemctl` output, unit-file text,
 journal excerpts, and Docker/container-host configuration adjacency can look
@@ -447,7 +447,7 @@ owns `mounts`, `filesystem_inventory`, `container`, `network`,
 `linux_capabilities`, `local_identity`, `identity_authorities`,
 `applications`, `database_services`, `ssh_servers`, and
 `software_components`;
-`implementations/python/packages/aces_sdl/validator.py` adds runtime
+`implementations/python/packages/aces_sdl/validator/` adds runtime
 application, database, identity authority, SSH, network, and capability
 cross-checks; tests in `implementations/python/tests/test_sdl_models.py`,
 `test_runtime_models.py`, `test_sdl_parser.py`, `test_sdl_validator.py`, and
