@@ -6,14 +6,11 @@ import json
 from pathlib import Path
 
 from .contracts import UcoAlignmentCatalogModel
-
-
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
+from .corpus import CONCEPT_AUTHORITY, corpus_family_root
 
 
 def uco_alignment_catalog_path() -> Path:
-    return _repo_root() / "contracts" / "concept-authority" / "uco-alignment-v1.json"
+    return corpus_family_root(CONCEPT_AUTHORITY) / "uco-alignment-v1.json"
 
 
 def load_uco_alignment_catalog() -> UcoAlignmentCatalogModel:

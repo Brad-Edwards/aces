@@ -67,7 +67,7 @@ tests, rather than a prose rewrite. The catalogs are:
 | [`references.md`](references.md) | **2. Reference-resolution catalog** | Reference forms (bare, qualified, nested runtime-family, workflow-step, module-composed), the resolution algorithm, the fail-closed ambiguity rule, and the cross-section reference-edge catalog. |
 | [`variables-and-instantiation.md`](variables-and-instantiation.md) | **3. Variable / instantiation catalog** | Variable types, defaults, `allowed_values`, `${…}` substitution, the instantiation algorithm, and post-instantiation exclusions. |
 | [`runtime-inventory.md`](runtime-inventory.md) | **4. Runtime-family index** | The node-scoped runtime-inventory index — family key, collection name, primary `<noun>_id`, child-ref collections, owning ADR — and the shared invariants stated once, delegating per-field semantics to the family ADRs. |
-| [`diagnostics.md`](diagnostics.md) | — | The parse / semantic-validation / instantiation diagnostic stages and the error-vs-advisory boundary, documented by reference. |
+| [`diagnostics.md`](diagnostics.md) | — | The parse / semantic-validation / instantiation diagnostic stages and the normative error-vs-advisory classification criterion. |
 
 ## Acceptance-question map
 
@@ -94,6 +94,6 @@ instantiation, the runtime-inventory index, and the diagnostic boundary.
 Out of scope: delivery-level concerns (container, infrastructure-as-code, and
 cloud-API mechanics), processor and backend execution contracts, and the
 per-field semantics of each runtime family (owned by the family ADRs and indexed
-here). Defining the precise normative classification of individual
-error-vs-advisory cases is deferred to the review IMP-3 work; this specification
-documents the existing boundary and does not redefine it.
+here). The normative error-vs-advisory classification criterion is stated in
+[`diagnostics.md` §5](diagnostics.md) (resolving review IMP-3); the
+classification of an individual condition follows from that criterion.

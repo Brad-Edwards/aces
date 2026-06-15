@@ -6,14 +6,11 @@ import json
 from pathlib import Path
 
 from .contracts import ReferenceModelCatalogModel
-
-
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
+from .corpus import CONCEPT_AUTHORITY, corpus_family_root
 
 
 def reference_model_catalog_path() -> Path:
-    return _repo_root() / "contracts" / "concept-authority" / "reference-models-v1.json"
+    return corpus_family_root(CONCEPT_AUTHORITY) / "reference-models-v1.json"
 
 
 def load_reference_model_catalog() -> ReferenceModelCatalogModel:

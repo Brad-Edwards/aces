@@ -38,6 +38,7 @@ concept_authority:
     - contracts/fixtures/concept-authority
     - docs/explain/reference/shared-concept-model.md
     - docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md
+    - docs/decisions/adrs/adr-062-concept-authority-catalog-governance-gate.md
     - implementations/python/tests/test_concept_authority.py
     - implementations/python/packages/aces_contracts
     - implementations/python/packages/aces_backend_protocols

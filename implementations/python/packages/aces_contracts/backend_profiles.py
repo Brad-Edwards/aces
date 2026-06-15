@@ -18,6 +18,7 @@ from typing import Annotated, Literal
 from pydantic import Field, WithJsonSchema, model_validator
 
 from .contracts import ContractModel
+from .corpus import PROFILES, corpus_family_root
 from .manifest_authority import (
     BACKEND_SUPPORTED_CONTRACT_IDS,
     validate_backend_supported_contract_versions,
@@ -27,12 +28,8 @@ from .versions import BACKEND_PROFILE_SCHEMA_VERSION
 _BACKEND_PROFILE_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
-
-
 def backend_profiles_root() -> Path:
-    return _repo_root() / "contracts" / "profiles" / "backend"
+    return corpus_family_root(PROFILES) / "backend"
 
 
 def _validate_backend_profile_id(profile_id: str) -> None:

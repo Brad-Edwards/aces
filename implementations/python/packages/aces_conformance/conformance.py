@@ -37,6 +37,7 @@ from aces_contracts.contracts import (
     WorkflowHistoryEventModel,
     schema_bundle,
 )
+from aces_contracts.corpus import FIXTURES, corpus_family_root
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.evaluation import EvaluationExecutionState
 from aces_contracts.participant_episode import (
@@ -177,12 +178,8 @@ _EVENT_STREAM_VALIDATORS: dict[str, tuple[type, str]] = {
 }
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
-
-
 def fixtures_root() -> Path:
-    return _repo_root() / "contracts" / "fixtures"
+    return corpus_family_root(FIXTURES)
 
 
 def profiles_root() -> Path:
