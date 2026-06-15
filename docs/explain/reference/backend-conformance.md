@@ -28,6 +28,11 @@ fixture, or profile model.
   JSON by hand.
 - CLI entry points belong in the Typer-based `aces_cli` surface unless a
   compatibility wrapper is retained only as a thin delegate.
+- End-to-end proof tests for backend conformance should exercise the public
+  runner or CLI against a full backend profile and the published fixture corpus;
+  seeded-corruption tests should mutate a temporary copy of one existing
+  required fixture and expect the shared conformance diagnostics to name the
+  contract and validation failure.
 
 ## Cross-Cutting Concerns
 
@@ -38,6 +43,9 @@ Reuse these existing surfaces before adding anything new:
   runtime envelope models, plan models, and history event models
 - contract publication inventory: `schema_bundle()` and
   `contracts/schema-publication-manifest.json`
+- contract-corpus resolution: `aces_contracts.corpus.corpus_family_root()` with
+  the `FIXTURES` and `PROFILES` family constants, so source checkouts and
+  packaged installs resolve the same published corpus through one seam
 - backend contract authority:
   `aces_contracts.manifest_authority.BACKEND_SUPPORTED_CONTRACT_IDS` and
   `validate_backend_supported_contract_versions()`
@@ -64,6 +72,13 @@ The conformance path touches these gates:
 - JSON parsing: load only local fixture/profile files selected by explicit
   roots or canonical repo roots; do not fetch remote fixtures or execute fixture
   content.
+- Corpus path resolution: default fixture/profile roots must flow through
+  `aces_contracts.corpus`; tests may pass explicit temporary override roots for
+  mutated corpora, but loaders must not reintroduce `Path(__file__).parents[N]`
+  repo-root heuristics.
+- Profile id and path validation: profile ids must pass the backend-profile id
+  grammar before path construction, and any caller-supplied `profiles_root`
+  resolution must remain confined to that root.
 - Contract shape validation: all fixture, manifest, plan, status, result,
   history, and snapshot payloads must pass the existing Pydantic contract models
   and closed-world `extra="forbid"` behavior.
@@ -86,6 +101,8 @@ The conformance path touches these gates:
 - Error-envelope leakage: report failures as `Diagnostic` values with stable
   codes and messages; do not surface raw tracebacks, environment variables,
   bearer tokens, credentials, or backend-private object representations.
+  Proof tests should assert stable `Diagnostic.code`, `contract_name`, and
+  structured addresses rather than exact Pydantic prose.
 - Host/OS exposure: CLI options may accept profile names and local roots, but
   must not require secrets or bearer tokens in process argv. Live-target
   authentication belongs in headers or process-local configuration that is not
@@ -130,7 +147,10 @@ Avoid:
   profile artifacts exist
 - accepting `backend-manifest-v1` or legacy conformance paths as current
   defaults
-- editing `contracts/schemas/` directly instead of generator inputs
+- changing `contracts/schemas/` without the
+  `contracts/schema-publication-manifest.json` change ledger, or changing only
+  reference implementation models while leaving the published schema authority
+  untouched
 - validating fixtures with ad hoc JSON key checks when contract models already
   exist
 - adding a conformance-specific exception hierarchy, logging stack, schema
@@ -138,6 +158,11 @@ Avoid:
 - leaking backend exception strings that may include secrets into diagnostics
 - making invalid fixtures multi-concern when a single-concern fixture can prove
   the same contract rule
+- proving only an empty-root failure; issue `#502` needs a realistic pass over
+  the canonical corpus and a seeded violation in a temporary copy of a required
+  contract fixture
+- mutating source fixtures in place, relying on exact validator prose, or
+  broadening the test into unrelated profile, schema, or live-backend behavior
 
 ## Authority and CLI
 
