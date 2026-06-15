@@ -77,6 +77,7 @@ explain/sdl/agent-guidance
 explain/sdl/validation
 explain/sdl/precedents
 explain/sdl/lineage
+explain/sdl/related-work-comparison
 explain/sdl/scenario-delivery-drift-audit
 explain/sdl/complex-scenarios
 explain/sdl/limitations
@@ -164,6 +165,7 @@ decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints
 decisions/adrs/adr-059-adr-amendment-policy-and-pin-gate
 decisions/adrs/adr-060-participant-backend-facing-contract-surface
 decisions/sem-213-temporal-participant-preflight
+decisions/issue-508-related-work-comparison-preflight
 ```
 
 ```{toctree}
@@ -199,6 +201,7 @@ lessons/README
 migration/README
 research/experiment-core/index
 research/primary/index
+research/related-work-comparison/index
 ```
 
 ```{toctree}

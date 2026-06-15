@@ -140,6 +140,10 @@ uv run aces-mcp
 - [MITRE CALDERA](https://github.com/mitre/caldera)
 - [Atomic Red Team](https://github.com/redcanaryco/atomic-red-team)
 
+For a dimension-by-dimension comparison against these systems — what ACES
+expresses that they do not, and where they still lead ACES — see
+[Related-Work Comparison](docs/explain/sdl/related-work-comparison.md).
+
 ## Documentation
 
 The documentation source is under [`docs/`](docs/). Important entry points:
