@@ -7,7 +7,9 @@ the same problem.
 
 This page is a short map of the main influences. It is not a compatibility
 claim, and it is not an exhaustive bibliography. For element-level provenance,
-see [Design Precedents](precedents.md).
+see [Design Precedents](precedents.md). For a dimension-by-dimension comparison
+against precedent systems, including where those systems lead ACES, see
+[Related-Work Comparison](related-work-comparison.md).
 
 ## Specification Surface
 
@@ -99,7 +101,10 @@ Russo/Costa/Armando, Swiler, Oberkampf/Roy, and Sargent are citable proceedings,
 technical-report, or book sources; Garg et al. is used as a current survey
 preprint rather than as settled normative authority. The working Zotero library
 tracks these identity-authority references under `aces-sdl-identity-authority`
-and the adjacent V&V subset under `adjacent-vv-lineage`.
+and the adjacent V&V subset under `adjacent-vv-lineage`; because that library is
+private, the Garg et al. preprint citation is also snapshotted in-repo under
+[`docs/research/primary/`](../../research/primary/literature/cyber-range-scenario-survey.md)
+so the reference is verifiable from the repository alone.
 
 The design deliberately keeps provider-stable identifiers as data rather than
 as ACES reference identity. AD SIDs/objectGUIDs, LDAP DNs/entryUUIDs, SCIM
@@ -109,10 +114,12 @@ the portable ACES references are stable `*_id` symbols scoped by the scenario
 and authority. Within one authority those ids share a single local namespace,
 so an id cannot be reused across service, subject, policy, relationship, and
 authority records. This matches the verification/validation posture in the
-cyber-range literature (for example Russo/Costa/Armando on
-[scenario validation](https://doi.org/10.1109/NCA.2018.8548324), Garg et al.
-on the TechRxiv preprint
-[scenario-design/execution survey](https://doi.org/10.36227/techrxiv.175942879.94813577/v1),
+cyber-range literature (for example Russo, Costa, and Armando's
+[Scenario Design and Validation for Next Generation Cyber Ranges](https://doi.org/10.1109/NCA.2018.8548324)
+(IEEE NCA 2018), and Garg, Boualouache, Imeri, and Roth's
+[A Survey of Cyber Range Training Exercise Scenario Description, Generation, and Execution](https://doi.org/10.36227/techrxiv.175942879.94813577/v1)
+(TechRxiv preprint, 2025 — snapshotted in-repo at
+[docs/research/primary](../../research/primary/literature/cyber-range-scenario-survey.md)),
 and Swiler plus Oberkampf/Roy/Sargent on
 [cyber-emulation V&V](https://doi.org/10.2172/1897016),
 [scientific-computing V&V](https://doi.org/10.1017/CBO9780511760396), and
@@ -809,12 +816,44 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   [Chockler-Halpern responsibility and blame](https://doi.org/10.1613/jair.1391)
   extends this to graded multi-cause attribution.
 
+### Cyber DEM And Cyber FOM: Adopted And Out Of Scope
+
+[SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
+(SISO-STD-025-2023) and the
+[Cyber FOM](https://www.sisostandards.org/news/690125/Publication-of-Cyber-FOM-and-SIRL-Users-Guide.htm)
+(SISO-STD-025.3-2024) are distinct artifacts and are treated as distinct here.
+Cyber DEM is a runtime data-exchange model: a shared ontology of cyber objects
+(Device, System, Service, Network, Data) and typed effect/event types for
+exchanging cyber conditions between simulators. The Cyber FOM is the HLA
+federation object model derived from it.
+
+- **Adopted as precedent.** Cyber DEM's typed cyber-object and directed
+  relationship vocabulary, and its attack/defend/recon effect taxonomy, are
+  precedent for ACES treating typed relationships
+  ([ADR-052](../../decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md))
+  and observed runtime objects as first-class. ACES adopts the *concept* of a
+  typed cyber-object vocabulary, not the Cyber DEM object set or its identifiers.
+- **Out of scope.** ACES does not adopt Cyber DEM as its scenario model or the
+  Cyber FOM as its backend contract. Cyber DEM is consumed at runtime by
+  federates; ACES keeps an authored scenario surface separate from any runtime
+  exchange model, and does not treat HLA federation conformance as equivalent to
+  ACES backend conformance.
+- **Where it leads ACES.** Because the Cyber FOM inherits IEEE 1516 HLA time
+  management and multi-vendor federation, it is more mature than ACES on
+  federated time and standardized interoperability. ACES's time-authoring
+  surface is partial and explicitly incomplete. This is detailed in the
+  [Related-Work Comparison](related-work-comparison.md).
+
 ## Adversary Emulation And Security Knowledge
 
 - [MITRE ATT&CK](https://www.mitre.org/news-insights/publication/mitre-attck-design-and-philosophy),
   MITRE CALDERA, Atomic Red Team, and OpenC2 are adversary-emulation and
   command/response precedents. ACES treats them as behavior and execution
   sources that scenarios may bind to, not as replacements for the SDL.
+  From OpenC2 specifically, ACES borrows the command/response principle — an
+  action requested against a target with a status-bearing response — but does
+  not adopt OpenC2's action/target/argument payload structures as SDL or
+  runtime-contract schema.
 - OCSF is the preferred lineage for normalized security event and finding
   structure. ACES uses that style for observations and evidence without making
   raw telemetry equal to participant-visible state.
