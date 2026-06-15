@@ -755,6 +755,21 @@ def _semantic_diagnostics(contract_name: str, payload: Any) -> list[Diagnostic]:
     return _runtime_snapshot_semantic_diagnostics(payload)
 
 
+def _fixture_case_diagnostics(contract_name: str, payload: object) -> list[Diagnostic]:
+    """Schema-gate first; only run semantic analysis on a schema-valid payload.
+
+    Semantic checks (for example ``_runtime_snapshot_semantic_diagnostics``)
+    deserialize the payload through its closed-world contract model and assume it
+    is already schema-valid. Running them on a schema-invalid fixture would raise
+    instead of reporting a diagnostic, so a schema failure short-circuits.
+    """
+
+    schema_diagnostics = _validate_payload(contract_name, payload)
+    if schema_diagnostics:
+        return schema_diagnostics
+    return _semantic_diagnostics(contract_name, payload)
+
+
 def run_fixture_suite(
     *,
     profile: BackendProfileSelector,
@@ -791,10 +806,7 @@ def run_fixture_suite(
 
         for path in sorted(valid_dir.glob("*.json")):
             payload = _load_json(path)
-            case_diagnostics = [
-                *_validate_payload(contract_name, payload),
-                *_semantic_diagnostics(contract_name, payload),
-            ]
+            case_diagnostics = _fixture_case_diagnostics(contract_name, payload)
             cases.append(
                 ConformanceCaseResult(
                     name=path.stem,
@@ -808,10 +820,7 @@ def run_fixture_suite(
         if invalid_dir.exists():
             for path in sorted(invalid_dir.glob("*.json")):
                 payload = _load_json(path)
-                case_diagnostics = [
-                    *_validate_payload(contract_name, payload),
-                    *_semantic_diagnostics(contract_name, payload),
-                ]
+                case_diagnostics = _fixture_case_diagnostics(contract_name, payload)
                 cases.append(
                     ConformanceCaseResult(
                         name=path.stem,

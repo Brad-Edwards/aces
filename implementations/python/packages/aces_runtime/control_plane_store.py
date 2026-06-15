@@ -10,9 +10,12 @@ from typing import Any, Protocol
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import RuntimeDomain
 from aces_contracts.runtime_state import (
+    ExplicitnessClass,
+    ExplicitnessProvenance,
     OperationReceipt,
     OperationState,
     OperationStatus,
+    RealizationProvenanceEntry,
     RuntimeSnapshot,
     RuntimeSnapshotEnvelope,
     SnapshotEntry,
@@ -92,6 +95,17 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
             participant_address: list(events)
             for participant_address, events in snapshot.participant_behavior_history.items()
         },
+        "realization_provenance": [
+            {
+                "address": entry.address,
+                "field_path": entry.field_path,
+                "domain": entry.domain,
+                "requirement_kind": entry.requirement_kind,
+                "explicitness": entry.explicitness.value,
+                "provenance": entry.provenance.value,
+            }
+            for entry in snapshot.realization_provenance
+        ],
         "metadata": dict(snapshot.metadata),
     }
 
@@ -128,6 +142,20 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
             participant_address: list(events)
             for participant_address, events in payload.get("participant_behavior_history", {}).items()
         },
+        realization_provenance=tuple(
+            RealizationProvenanceEntry(
+                address=str(item.get("address", "")),
+                field_path=str(item.get("field_path", "")),
+                domain=str(item.get("domain", "")),
+                requirement_kind=str(item.get("requirement_kind", "")),
+                explicitness=ExplicitnessClass(str(item.get("explicitness", ExplicitnessClass.EXACT.value))),
+                provenance=ExplicitnessProvenance(
+                    str(item.get("provenance", ExplicitnessProvenance.AUTHOR_DECLARED.value))
+                ),
+            )
+            for item in payload.get("realization_provenance", [])
+            if isinstance(item, dict)
+        ),
         metadata=dict(payload.get("metadata", {})),
     )
 
