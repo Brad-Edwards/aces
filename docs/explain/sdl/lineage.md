@@ -7,7 +7,9 @@ the same problem.
 
 This page is a short map of the main influences. It is not a compatibility
 claim, and it is not an exhaustive bibliography. For element-level provenance,
-see [Design Precedents](precedents.md).
+see [Design Precedents](precedents.md). For a dimension-by-dimension comparison
+against precedent systems, including where those systems lead ACES, see
+[Related-Work Comparison](related-work-comparison.md).
 
 ## Specification Surface
 
@@ -808,6 +810,34 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   explanation without an evidence basis.
   [Chockler-Halpern responsibility and blame](https://doi.org/10.1613/jair.1391)
   extends this to graded multi-cause attribution.
+
+### Cyber DEM And Cyber FOM: Adopted And Out Of Scope
+
+[SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
+(SISO-STD-025-2023) and the
+[Cyber FOM](https://www.sisostandards.org/news/690125/Publication-of-Cyber-FOM-and-SIRL-Users-Guide.htm)
+(SISO-STD-025.3-2024) are distinct artifacts and are treated as distinct here.
+Cyber DEM is a runtime data-exchange model: a shared ontology of cyber objects
+(Device, System, Service, Network, Data) and typed effect/event types for
+exchanging cyber conditions between simulators. The Cyber FOM is the HLA
+federation object model derived from it.
+
+- **Adopted as precedent.** Cyber DEM's typed cyber-object and directed
+  relationship vocabulary, and its attack/defend/recon effect taxonomy, are
+  precedent for ACES treating typed relationships
+  ([ADR-052](../../decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md))
+  and observed runtime objects as first-class. ACES adopts the *concept* of a
+  typed cyber-object vocabulary, not the Cyber DEM object set or its identifiers.
+- **Out of scope.** ACES does not adopt Cyber DEM as its scenario model or the
+  Cyber FOM as its backend contract. Cyber DEM is consumed at runtime by
+  federates; ACES keeps an authored scenario surface separate from any runtime
+  exchange model, and does not treat HLA federation conformance as equivalent to
+  ACES backend conformance.
+- **Where it leads ACES.** Because the Cyber FOM inherits IEEE 1516 HLA time
+  management and multi-vendor federation, it is more mature than ACES on
+  federated time and standardized interoperability. ACES's time-authoring
+  surface is partial and explicitly incomplete. This is detailed in the
+  [Related-Work Comparison](related-work-comparison.md).
 
 ## Adversary Emulation And Security Knowledge
 
