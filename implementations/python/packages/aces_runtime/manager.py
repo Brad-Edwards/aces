@@ -206,6 +206,8 @@ class RuntimeManager:
             state.working_snapshot,
             address="runtime.apply.provisioning",
             snapshot=state.working_snapshot,
+            realization_requirements=execution_plan.model.realization_requirements,
+            realization_plan=execution_plan.provisioning,
         )
         self._record_phase_result(state, provision_result)
         if not provision_result.success:

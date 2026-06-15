@@ -176,12 +176,14 @@ This note is implementation guidance for the SEM-218 normative spec at
 It does not itself add SDL syntax, define exact-requirement-kinds, or
 change manifest payloads — those are governed by the spec and by the
 controlled-vocabulary / reference-model authorities. The PR that
-introduced the spec also promoted the SEM-218 row in the SEM-200
-coverage table to `partial` and transitioned the requirement from
-`DRAFT` to `ACTIVE` in Ground Control; the staged work that lifts the
-row from `partial` to `active` (the SEM-218 classifier in
-`SemanticValidator`, the typed compiler emission, the planner gate, the
-runtime non-approximation envelope, the SEM-218 provenance fields) is
-tracked under the SEM-218 coverage row and is the subject of follow-on
-`/implement` runs. Treat the prose above as architecture guidance for
-that staged work; treat the spec as the binding contract.
+introduced the spec promoted the SEM-218 row in the SEM-200 coverage
+table to `partial` and transitioned the requirement from `DRAFT` to
+`ACTIVE` in Ground Control. The staged work that lifted the row from
+`partial` to `active` — the SEM-218 classifier in `SemanticValidator`,
+the typed compiler emission, the planner gate, the runtime
+non-approximation gate (`aces_processor.semantics.realization`, invoked
+from the `aces_runtime` adapter boundary), and the
+SEM-218 `realization_provenance` fields on the runtime snapshot envelope —
+is now complete, and the coverage row reads `active`. Treat the prose
+above as architecture guidance for that work; treat the spec as the
+binding contract.

@@ -185,6 +185,26 @@
       "title": "EvaluationResultStateModel",
       "type": "object"
     },
+    "ExplicitnessClass": {
+      "description": "SEM-218 author-intent class for a declaration.",
+      "enum": [
+        "exact",
+        "constrained",
+        "open"
+      ],
+      "title": "ExplicitnessClass",
+      "type": "string"
+    },
+    "ExplicitnessProvenance": {
+      "description": "Where the classified value came from in the SDL lifecycle.",
+      "enum": [
+        "author-declared",
+        "processor-derived",
+        "backend-realized"
+      ],
+      "title": "ExplicitnessProvenance",
+      "type": "string"
+    },
     "OutcomeInterpretationSourceLayer": {
       "description": "Semantic layers that may feed a SEM-215 interpretation rule.",
       "enum": [
@@ -1588,6 +1608,48 @@
       "title": "ParticipantTimeDomain",
       "type": "string"
     },
+    "RealizationProvenanceEntryModel": {
+      "additionalProperties": false,
+      "description": "SEM-218 invariant I5: provenance for one realized realization concern.\n\nDistinguishes ``author-declared`` / ``processor-derived`` / ``backend-realized``\norigins for a realized concern recorded on the snapshot's result / history\nsurfaces. Carries field-path and kind references only (never the realized\nvalue, per the SEM-218 host-exposure gate). Kept distinct from ADR-054\nlifecycle ``phase_realization`` and API-407 participant feature support.",
+      "properties": {
+        "address": {
+          "minLength": 1,
+          "title": "Address",
+          "type": "string"
+        },
+        "domain": {
+          "minLength": 1,
+          "title": "Domain",
+          "type": "string"
+        },
+        "explicitness": {
+          "$ref": "#/$defs/ExplicitnessClass"
+        },
+        "field_path": {
+          "minLength": 1,
+          "title": "Field Path",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/ExplicitnessProvenance"
+        },
+        "requirement_kind": {
+          "minLength": 1,
+          "title": "Requirement Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "field_path",
+        "domain",
+        "requirement_kind",
+        "explicitness",
+        "provenance"
+      ],
+      "title": "RealizationProvenanceEntryModel",
+      "type": "object"
+    },
     "SnapshotEntryModel": {
       "additionalProperties": false,
       "properties": {
@@ -1908,6 +1970,13 @@
       },
       "title": "Participant Episode Results",
       "type": "object"
+    },
+    "realization_provenance": {
+      "items": {
+        "$ref": "#/$defs/RealizationProvenanceEntryModel"
+      },
+      "title": "Realization Provenance",
+      "type": "array"
     },
     "schema_version": {
       "const": "runtime-snapshot/v1",
