@@ -6,7 +6,10 @@ from collections.abc import Callable, Iterable
 from copy import deepcopy
 
 from aces_contracts.diagnostics import Diagnostic
-from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
+from aces_contracts.planning import ProvisioningPlan
+from aces_contracts.runtime_state import ApplyResult, RealizationProvenanceEntry, RuntimeSnapshot
+from aces_processor.models import CompiledRealizationRequirement
+from aces_processor.planner import realization_disclosure
 
 from .diagnostics import _failure_diagnostic
 from .evaluation_result_contracts import evaluation_result_contract_diagnostics
@@ -45,6 +48,8 @@ def _call_backend_apply(
     *args: object,
     address: str,
     snapshot: RuntimeSnapshot,
+    realization_requirements: tuple[CompiledRealizationRequirement, ...] = (),
+    realization_plan: ProvisioningPlan | None = None,
 ) -> ApplyResult:
     baseline_snapshot = deepcopy(snapshot)
     backend_snapshot = deepcopy(snapshot)
@@ -62,12 +67,39 @@ def _call_backend_apply(
             contract_diagnostics = _snapshot_contract_diagnostics(result.snapshot)
             if not contract_diagnostics:
                 contract_diagnostics = _snapshot_transition_contract_diagnostics(baseline_snapshot, result.snapshot)
-            apply_result = (
-                ApplyResult(success=False, snapshot=baseline_snapshot, diagnostics=contract_diagnostics)
-                if contract_diagnostics
-                else result
-            )
+            realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
+            if not contract_diagnostics and realization_requirements and realization_plan is not None:
+                # SEM-218 I2 non-approximation gate + I5 provenance disclosure.
+                contract_diagnostics, realization_provenance = realization_disclosure(
+                    realization_requirements,
+                    realization_plan,
+                    result.snapshot,
+                )
+            if contract_diagnostics:
+                apply_result = ApplyResult(success=False, snapshot=baseline_snapshot, diagnostics=contract_diagnostics)
+            elif realization_provenance:
+                apply_result = _with_realization_provenance(result, realization_provenance)
+            else:
+                apply_result = result
     return apply_result
+
+
+def _with_realization_provenance(
+    result: ApplyResult,
+    provenance: tuple[RealizationProvenanceEntry, ...],
+) -> ApplyResult:
+    """Attach the SEM-218 provenance ledger to a successful apply's snapshot."""
+
+    return ApplyResult(
+        success=result.success,
+        snapshot=result.snapshot.with_entries(
+            dict(result.snapshot.entries),
+            realization_provenance=provenance,
+        ),
+        diagnostics=result.diagnostics,
+        changed_addresses=result.changed_addresses,
+        details=result.details,
+    )
 
 
 def _backend_call_failed(address: str, exc: Exception) -> Diagnostic:

@@ -196,7 +196,11 @@
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "189e1fe99a31e64853238cea4423942577ceb0a86d2edf72ccf7031b6b1d7361"
+      "content_hash": "348a25b49e30081797164f77cb344dbf27e85007fcf5d9e93c2e57e33795074a",
+      "last_change": {
+        "summary": "Add SEM-218 realization_provenance ledger (RealizationProvenanceEntryModel) to the runtime snapshot envelope: per-concern author-declared/processor-derived/backend-realized provenance for realized realization concerns, enforcing invariant I5 (issue #491).",
+        "content_hash": "348a25b49e30081797164f77cb344dbf27e85007fcf5d9e93c2e57e33795074a"
+      }
     },
     {
       "contract_id": "scenario-instantiation-request-v1",

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from aces_sdl import VARIABLE_TOKEN_PATTERN
+from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 from aces_sdl.participant_attribution_semantics import (
     ParticipantAttributionCandidateKind,
     ParticipantAttributionOrderingBasisKind,
@@ -1370,6 +1371,24 @@ class SnapshotEntryModel(ContractModel):
     status: str = "ready"
 
 
+class RealizationProvenanceEntryModel(ContractModel):
+    """SEM-218 invariant I5: provenance for one realized realization concern.
+
+    Distinguishes ``author-declared`` / ``processor-derived`` / ``backend-realized``
+    origins for a realized concern recorded on the snapshot's result / history
+    surfaces. Carries field-path and kind references only (never the realized
+    value, per the SEM-218 host-exposure gate). Kept distinct from ADR-054
+    lifecycle ``phase_realization`` and API-407 participant feature support.
+    """
+
+    address: NonEmptyString
+    field_path: NonEmptyString
+    domain: NonEmptyString
+    requirement_kind: NonEmptyString
+    explicitness: ExplicitnessClass
+    provenance: ExplicitnessProvenance
+
+
 class RuntimeSnapshotEnvelopeModel(ContractModel):
     """Published envelope for a live runtime snapshot.
 
@@ -1393,6 +1412,7 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     participant_episode_results: dict[str, ParticipantEpisodeStateModel] = Field(default_factory=dict)
     participant_episode_history: dict[str, list[ParticipantEpisodeHistoryEventModel]] = Field(default_factory=dict)
     participant_behavior_history: dict[str, list[ParticipantBehaviorHistoryEventModel]] = Field(default_factory=dict)
+    realization_provenance: list[RealizationProvenanceEntryModel] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -5358,6 +5378,7 @@ __all__ = [
     "ProvisionerCapabilitiesModel",
     "ProvisioningPlanModel",
     "RawDataIntegrityModel",
+    "RealizationProvenanceEntryModel",
     "RealizationSupportDeclarationModel",
     "RealizationSupportMode",
     "ReferenceModelCatalogModel",

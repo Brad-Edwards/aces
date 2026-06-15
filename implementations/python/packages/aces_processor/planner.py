@@ -31,6 +31,7 @@ from .semantics.planner import (
     resource_dependency_cycles,
     resource_topological_order,
 )
+from .semantics.realization import realization_disclosure as realization_disclosure
 from .semantics.realization import realization_support_diagnostics
 
 

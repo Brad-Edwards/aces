@@ -24,15 +24,22 @@ from dataclasses import dataclass
 
 from aces_backend_protocols.capabilities import BackendManifest
 from aces_contracts.diagnostics import Diagnostic, Severity
-from aces_sdl.explicitness import ExplicitnessClass
+from aces_contracts.planning import ChangeAction, ProvisioningPlan
+from aces_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
+from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 __all__ = [
+    "CONCERN_PAYLOAD_PATH",
     "EXACT_REQUIREMENT_KIND",
     "REALIZATION_DOMAIN",
     "CompiledRealizationRequirement",
+    "realization_disclosure",
     "realization_support_diagnostics",
     "resolve_realization_concern",
 ]
+
+_BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
+_MISSING_CONCERN_VALUE = object()
 
 # The single coarse realization domain string already published by backend
 # manifests (see ``aces_backend_stubs.stubs``). Kept opaque per the SEM-218
@@ -54,6 +61,18 @@ _CONCERN_KIND_BY_PATH: dict[tuple[str, str], str] = {
     ("nodes", "os"): "os-family",
     ("nodes", "type"): "node-type",
     ("content", "type"): "content-type",
+}
+
+# Where each realization concern's realized value lives inside the backend's
+# provisioning resource payload (``resource_payload``). The runtime
+# non-approximation gate uses this to locate the value the backend realized for
+# an exact concern and compare it against the author declaration. Mirrors the
+# concern set in ``_CONCERN_KIND_BY_PATH``; a concern absent here is not gated at
+# runtime (no published payload slot to compare).
+CONCERN_PAYLOAD_PATH: dict[str, tuple[str, ...]] = {
+    "os-family": ("os_family",),
+    "node-type": ("node_type",),
+    "content-type": ("spec", "type"),
 }
 
 
@@ -151,3 +170,106 @@ def realization_support_diagnostics(
                     )
                 )
     return diagnostics
+
+
+def realization_disclosure(
+    requirements: tuple[CompiledRealizationRequirement, ...],
+    declared_plan: ProvisioningPlan,
+    returned_snapshot: RuntimeSnapshot,
+) -> tuple[list[Diagnostic], tuple[RealizationProvenanceEntry, ...]]:
+    """SEM-218 runtime non-approximation gate (I2) + provenance disclosure (I5).
+
+    Compares each compiled realization concern's author-declared value (from the
+    provisioning plan the processor emitted) against the value the backend
+    realized in its returned snapshot. For an exact concern, a backend that
+    realizes a *different* value — or *omits* the value entirely (a returned
+    snapshot with no entry for the resource, or an entry missing the concern
+    field) — is a silent approximation and yields a rejecting
+    ``runtime.backend-contract-invalid`` diagnostic. Absent *backend* evidence is
+    not a non-event: an exact declaration the backend never realized is exactly
+    the I2 failure this gate exists to catch. This is the spec's Execution-phase
+    non-approximation rule.
+
+    Absent *plan-side* evidence is different and is not a backend fault: when the
+    plan declares no provisioning op for the resource, removes it (a ``DELETE``
+    op — expected absence), or carries no value for the concern, there is no
+    author baseline for this run to enforce, so the requirement is skipped.
+
+    Every honoured/realized concern is recorded as a
+    ``RealizationProvenanceEntry``: ``author-declared`` when the backend honoured
+    the declaration, ``backend-realized`` when it realized a different value for
+    a constrained surface. Diagnostics and entries name the field path and kind
+    only, never the realized value (SEM-218 host-exposure gate).
+
+    This is the runtime sibling of ``realization_support_diagnostics``: the
+    planner gate rejects an unrealizable exact requirement before deployment;
+    this gate rejects a backend that realized one dishonestly. The runtime
+    adapter (``aces_runtime``) invokes it at the backend-call boundary.
+    """
+
+    diagnostics: list[Diagnostic] = []
+    provenance: list[RealizationProvenanceEntry] = []
+    declared_ops = {op.address: op for op in declared_plan.operations}
+    for requirement in requirements:
+        path = CONCERN_PAYLOAD_PATH.get(requirement.requirement_kind)
+        if path is None:
+            continue
+        op = declared_ops.get(requirement.address)
+        if op is None or op.action is ChangeAction.DELETE:
+            # No realization is owed: the plan declares no op for this resource,
+            # or it removes it (expected absence). Not a backend contract fault.
+            continue
+        declared_value = _concern_value(op.payload, path)
+        if declared_value is _MISSING_CONCERN_VALUE:
+            # The plan op carries no value for this concern, so there is no author
+            # baseline to enforce (an upstream processor invariant, not a backend
+            # contract). Nothing to gate or disclose.
+            continue
+        entry = returned_snapshot.entries.get(requirement.address)
+        realized_value = _concern_value(entry.payload, path) if entry is not None else _MISSING_CONCERN_VALUE
+        honoured = realized_value == declared_value
+        if requirement.explicitness is ExplicitnessClass.EXACT and not honoured:
+            # The backend realized the exact concern with a different value or
+            # omitted it entirely; both are forbidden silent approximation (I2).
+            diagnostics.append(_silent_approximation_diagnostic(requirement))
+            continue
+        if realized_value is _MISSING_CONCERN_VALUE:
+            # A non-exact concern the backend left unrealized: nothing to disclose.
+            continue
+        provenance.append(
+            RealizationProvenanceEntry(
+                address=requirement.address,
+                field_path=requirement.field_path,
+                domain=requirement.domain,
+                requirement_kind=requirement.requirement_kind,
+                explicitness=requirement.explicitness,
+                provenance=(
+                    ExplicitnessProvenance.AUTHOR_DECLARED if honoured else ExplicitnessProvenance.BACKEND_REALIZED
+                ),
+            )
+        )
+    return diagnostics, tuple(provenance)
+
+
+def _silent_approximation_diagnostic(requirement: CompiledRealizationRequirement) -> Diagnostic:
+    return Diagnostic(
+        code=_BACKEND_CONTRACT_INVALID,
+        domain=requirement.domain,
+        address=requirement.address,
+        message=(
+            f"Backend did not realize the exact '{requirement.requirement_kind}' requirement at "
+            f"'{requirement.field_path}' as the author declared it (the realized value is absent "
+            f"or differs); silent approximation or omission of an exact declaration is forbidden "
+            f"(SEM-218 I2)."
+        ),
+        severity=Severity.ERROR,
+    )
+
+
+def _concern_value(payload: dict[str, object], path: tuple[str, ...]) -> object:
+    current: object = payload
+    for key in path:
+        if not isinstance(current, dict) or key not in current:
+            return _MISSING_CONCERN_VALUE
+        current = current[key]
+    return current
