@@ -12,13 +12,21 @@
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "da156411d9877ad75045569b47e3b98597b6dec23a827d176c1fc64d9532cc90"
+      "content_hash": "da156411d9877ad75045569b47e3b98597b6dec23a827d176c1fc64d9532cc90",
+      "last_change": {
+        "summary": "Extended the backend manifest with the participant backend-facing runtime capability surface (API-407 manifest extension; ADR-060, issue #76).",
+        "content_hash": "da156411d9877ad75045569b47e3b98597b6dec23a827d176c1fc64d9532cc90"
+      }
     },
     {
       "contract_id": "backend-profile-v1",
       "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
       "stability": "draft",
-      "content_hash": "1c9ffe10f1c2c420610d1353dc1406bb0e0d63001c4f6a32e1aca061b164af1d"
+      "content_hash": "1c9ffe10f1c2c420610d1353dc1406bb0e0d63001c4f6a32e1aca061b164af1d",
+      "last_change": {
+        "summary": "Added the participant backend-facing contract identifiers (lifecycle-event, observation-envelope, shared-state-record, outcome-report) to the backend profile contract vocabulary (ADR-060, issue #76).",
+        "content_hash": "1c9ffe10f1c2c420610d1353dc1406bb0e0d63001c4f6a32e1aca061b164af1d"
+      }
     },
     {
       "contract_id": "concept-families-v1",
@@ -106,13 +114,21 @@
       "contract_id": "participant-behavior-history-event-stream-v1",
       "schema_path": "contracts/schemas/control-plane/participant-behavior-history-event-stream-v1.json",
       "stability": "draft",
-      "content_hash": "4aeeaba0d4834a38bed72aca834733806fe8625d763b15e7d2dba764637f4234"
+      "content_hash": "4aeeaba0d4834a38bed72aca834733806fe8625d763b15e7d2dba764637f4234",
+      "last_change": {
+        "summary": "Revised the participant behavior-history event-stream contract as part of the backend-facing contract family publication (ADR-060, issue #76).",
+        "content_hash": "4aeeaba0d4834a38bed72aca834733806fe8625d763b15e7d2dba764637f4234"
+      }
     },
     {
       "contract_id": "participant-context-view-v1",
       "schema_path": "contracts/schemas/control-plane/participant-context-view-v1.json",
       "stability": "draft",
-      "content_hash": "ff2e5866bde73898ead051cd5cfb20d32168ad3f8a6f9775d8481c728c40c24b"
+      "content_hash": "ff2e5866bde73898ead051cd5cfb20d32168ad3f8a6f9775d8481c728c40c24b",
+      "last_change": {
+        "summary": "Initial publication of the participant context-view control-plane contract: the participant-visible context projection in the backend-facing contract family (ADR-060, issue #76).",
+        "content_hash": "ff2e5866bde73898ead051cd5cfb20d32168ad3f8a6f9775d8481c728c40c24b"
+      }
     },
     {
       "contract_id": "participant-episode-history-event-stream-v1",
@@ -130,7 +146,11 @@
       "contract_id": "participant-history-view-v1",
       "schema_path": "contracts/schemas/control-plane/participant-history-view-v1.json",
       "stability": "draft",
-      "content_hash": "380257f288c098c0b94e343dbeb6d51c5216c6b14d91543cc2c147dd06633435"
+      "content_hash": "380257f288c098c0b94e343dbeb6d51c5216c6b14d91543cc2c147dd06633435",
+      "last_change": {
+        "summary": "Initial publication of the participant history-view control-plane contract: the participant-local interaction-history projection in the backend-facing contract family (ADR-060, issue #76).",
+        "content_hash": "380257f288c098c0b94e343dbeb6d51c5216c6b14d91543cc2c147dd06633435"
+      }
     },
     {
       "contract_id": "participant-implementation-manifest-v1",
@@ -148,31 +168,51 @@
       "contract_id": "participant-lifecycle-event-v1",
       "schema_path": "contracts/schemas/participant-runtime/participant-lifecycle-event-v1.json",
       "stability": "draft",
-      "content_hash": "769ac4f54a36ec7e6031f584595555f7e8faea41ce0bf05b656aaf33e413d5c6"
+      "content_hash": "769ac4f54a36ec7e6031f584595555f7e8faea41ce0bf05b656aaf33e413d5c6",
+      "last_change": {
+        "summary": "Initial publication of the participant lifecycle-event runtime contract: episode/lifecycle event records in the backend-facing contract family (ADR-060, issue #76).",
+        "content_hash": "769ac4f54a36ec7e6031f584595555f7e8faea41ce0bf05b656aaf33e413d5c6"
+      }
     },
     {
       "contract_id": "participant-observation-envelope-v1",
       "schema_path": "contracts/schemas/participant-runtime/participant-observation-envelope-v1.json",
       "stability": "draft",
-      "content_hash": "57c7ca12df146ce59b164551a5a87a2e72dd1f9b6644e3b0975b7da1a71e8d40"
+      "content_hash": "57c7ca12df146ce59b164551a5a87a2e72dd1f9b6644e3b0975b7da1a71e8d40",
+      "last_change": {
+        "summary": "Initial publication of the participant observation-envelope runtime contract: the participant observation payload envelope in the backend-facing contract family (ADR-060, issue #76).",
+        "content_hash": "57c7ca12df146ce59b164551a5a87a2e72dd1f9b6644e3b0975b7da1a71e8d40"
+      }
     },
     {
       "contract_id": "participant-outcome-report-v1",
       "schema_path": "contracts/schemas/participant-runtime/participant-outcome-report-v1.json",
       "stability": "draft",
-      "content_hash": "1b65d36136812ae18c80ba7822df69b0ca65b569fd4cc2e2bd6c1fd07e5e4abf"
+      "content_hash": "1b65d36136812ae18c80ba7822df69b0ca65b569fd4cc2e2bd6c1fd07e5e4abf",
+      "last_change": {
+        "summary": "Initial publication of the participant outcome-report runtime contract: participant outcome reporting in the backend-facing contract family (ADR-060, issue #76).",
+        "content_hash": "1b65d36136812ae18c80ba7822df69b0ca65b569fd4cc2e2bd6c1fd07e5e4abf"
+      }
     },
     {
       "contract_id": "participant-shared-state-record-v1",
       "schema_path": "contracts/schemas/participant-runtime/participant-shared-state-record-v1.json",
       "stability": "draft",
-      "content_hash": "a3ad56415946417bfbd19cd637886d8442a3e2be510212471e1fcb139cf241d1"
+      "content_hash": "a3ad56415946417bfbd19cd637886d8442a3e2be510212471e1fcb139cf241d1",
+      "last_change": {
+        "summary": "Initial publication of the participant shared-state-record runtime contract: shared-state records in the backend-facing contract family (ADR-060, issue #76).",
+        "content_hash": "a3ad56415946417bfbd19cd637886d8442a3e2be510212471e1fcb139cf241d1"
+      }
     },
     {
       "contract_id": "participant-status-view-v1",
       "schema_path": "contracts/schemas/control-plane/participant-status-view-v1.json",
       "stability": "draft",
-      "content_hash": "aef73b7d52c99de2a51cb2a58de0e30c37fc7fb2af5627cd6241a6aad288d07c"
+      "content_hash": "aef73b7d52c99de2a51cb2a58de0e30c37fc7fb2af5627cd6241a6aad288d07c",
+      "last_change": {
+        "summary": "Initial publication of the participant status-view control-plane contract: the participant status/lifecycle projection in the backend-facing contract family (ADR-060, issue #76).",
+        "content_hash": "aef73b7d52c99de2a51cb2a58de0e30c37fc7fb2af5627cd6241a6aad288d07c"
+      }
     },
     {
       "contract_id": "processor-manifest-v2",
@@ -212,7 +252,11 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "805355fa8df9c0ca360f89c1379fb55052dcc176c83d80a0b8963096ffa38134"
+      "content_hash": "805355fa8df9c0ca360f89c1379fb55052dcc176c83d80a0b8963096ffa38134",
+      "last_change": {
+        "summary": "Extended the SDL authoring-input scenario schema for the DSL-132/DSL-141 runtime datastore-node surface: per-node engine provenance, listener topology, datastore cardinality, and structured index/template mapping manifests.",
+        "content_hash": "805355fa8df9c0ca360f89c1379fb55052dcc176c83d80a0b8963096ffa38134"
+      }
     },
     {
       "contract_id": "semantic-profile-v1",
