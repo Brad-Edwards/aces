@@ -12,39 +12,51 @@ from ..scenario import Scenario
 from ..semantics.assessment import AssessmentIssue, analyze_assessment_pipeline
 from ._support import _topological_sort
 
+# Renders an assessment-pipeline issue (machine-readable code from
+# ``aces_sdl.semantics.assessment``) into the authoring-error string. Keyed by
+# issue code so a new code is a new line here rather than a new conditional.
+_ASSESSMENT_ISSUE_RENDERERS = {
+    "metric.condition-undeclared": (lambda i: f"Metric '{i.resource_name}' references undefined condition '{i.ref}'"),
+    "metric.condition-multiply-scored": (lambda i: f"Condition '{i.resource_name}' is referenced by multiple metrics"),
+    "evaluation.metric-undeclared": (lambda i: f"Evaluation '{i.resource_name}' references undefined metric '{i.ref}'"),
+    "evaluation.min-score-exceeds-metric-total": (
+        lambda i: (
+            f"Evaluation '{i.resource_name}' absolute min-score "
+            f"({i.observed}) exceeds sum of "
+            f"metric max-scores ({i.limit})"
+        )
+    ),
+    "tlo.evaluation-undeclared": (lambda i: f"TLO '{i.resource_name}' references undefined evaluation '{i.ref}'"),
+    "goal.tlo-undeclared": (lambda i: f"Goal '{i.resource_name}' references undefined TLO '{i.ref}'"),
+}
+
 
 class _SectionsMixin:
     def _verify_variables(self) -> None:
         defined = set(self._s.variables.keys())
+        self._check_variable_refs(self._s, "", defined)
 
-        def visit(value: object, path: str) -> None:
-            if isinstance(value, BaseModel):
-                for field_name in value.__class__.model_fields:
-                    if isinstance(value, Scenario) and field_name == "variables":
-                        continue
-                    child = getattr(value, field_name)
-                    child_path = f"{path}.{field_name}" if path else field_name
-                    visit(child, child_path)
-                return
+    def _check_variable_refs(self, value: object, path: str, defined: set[str]) -> None:
+        if isinstance(value, BaseModel):
+            self._check_model_variable_refs(value, path, defined)
+        elif isinstance(value, dict):
+            for key, child in value.items():
+                self._check_variable_refs(child, f"{path}.{key}" if path else str(key), defined)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                self._check_variable_refs(child, f"{path}[{index}]", defined)
+        elif self._is_unresolved_var(value):
+            variable_name = extract_variable_name(value)
+            if variable_name and variable_name not in defined:
+                self._err(f"Undefined variable '{variable_name}' referenced at '{path}'")
 
-            if isinstance(value, dict):
-                for key, child in value.items():
-                    child_path = f"{path}.{key}" if path else str(key)
-                    visit(child, child_path)
-                return
-
-            if isinstance(value, list):
-                for index, child in enumerate(value):
-                    child_path = f"{path}[{index}]"
-                    visit(child, child_path)
-                return
-
-            if self._is_unresolved_var(value):
-                variable_name = extract_variable_name(value)
-                if variable_name and variable_name not in defined:
-                    self._err(f"Undefined variable '{variable_name}' referenced at '{path}'")
-
-        visit(self._s, "")
+    def _check_model_variable_refs(self, value: BaseModel, path: str, defined: set[str]) -> None:
+        for field_name in value.__class__.model_fields:
+            if isinstance(value, Scenario) and field_name == "variables":
+                continue
+            child = getattr(value, field_name)
+            child_path = f"{path}.{field_name}" if path else field_name
+            self._check_variable_refs(child, child_path, defined)
 
     def _verify_explicitness(self) -> None:
         result = classify_scenario_explicitness(self._s)
@@ -61,7 +73,10 @@ class _SectionsMixin:
         return set(self._named_ref_index(targetable=True).keys())
 
     def _verify_features(self) -> None:
-        # Check vulnerability references
+        self._verify_feature_vulnerability_refs()
+        self._verify_feature_dependency_cycles()
+
+    def _verify_feature_vulnerability_refs(self) -> None:
         for name, feat in self._s.features.items():
             for vuln_name in feat.vulnerabilities:
                 if self._is_unresolved_var(vuln_name):
@@ -69,7 +84,7 @@ class _SectionsMixin:
                 if vuln_name not in self._s.vulnerabilities:
                     self._err(f"Feature '{name}' references undefined vulnerability '{vuln_name}'")
 
-        # Check dependency references and detect cycles
+    def _verify_feature_dependency_cycles(self) -> None:
         dep_graph: dict[str, list[str]] = {}
         for name, feat in self._s.features.items():
             dep_graph[name] = []
@@ -80,7 +95,6 @@ class _SectionsMixin:
                     self._err(f"Feature '{name}' depends on undefined feature '{dep}'")
                 else:
                     dep_graph[name].append(dep)
-
         if dep_graph and _topological_sort(dep_graph) is None:
             self._err("Feature dependency graph contains a cycle")
 
@@ -111,81 +125,58 @@ class _SectionsMixin:
 
     @staticmethod
     def _format_assessment_issue(issue: AssessmentIssue) -> str:
-        name, ref = issue.resource_name, issue.ref
-        if issue.code == "metric.condition-undeclared":
-            return f"Metric '{name}' references undefined condition '{ref}'"
-        if issue.code == "metric.condition-multiply-scored":
-            return f"Condition '{name}' is referenced by multiple metrics"
-        if issue.code == "evaluation.metric-undeclared":
-            return f"Evaluation '{name}' references undefined metric '{ref}'"
-        if issue.code == "evaluation.min-score-exceeds-metric-total":
-            return (
-                f"Evaluation '{name}' absolute min-score "
-                f"({issue.observed}) exceeds sum of "
-                f"metric max-scores ({issue.limit})"
-            )
-        if issue.code == "tlo.evaluation-undeclared":
-            return f"TLO '{name}' references undefined evaluation '{ref}'"
-        if issue.code == "goal.tlo-undeclared":
-            return f"Goal '{name}' references undefined TLO '{ref}'"
-        raise AssertionError(f"unhandled assessment-pipeline issue code: {issue.code}")
+        renderer = _ASSESSMENT_ISSUE_RENDERERS.get(issue.code)
+        if renderer is None:
+            raise AssertionError(f"unhandled assessment-pipeline issue code: {issue.code}")
+        return renderer(issue)
 
     def _verify_entities(self) -> None:
-        flat = flatten_entities(self._s.entities)
+        for name, entity in flatten_entities(self._s.entities).items():
+            self._verify_entity_refs(name, entity)
 
-        def check_entity(name: str, entity: "Entity") -> None:
-            for tlo_name in entity.tlos:
-                if self._is_unresolved_var(tlo_name):
-                    continue
-                if tlo_name not in self._s.tlos:
-                    self._err(f"Entity '{name}' references undefined TLO '{tlo_name}'")
-            for vuln_name in entity.vulnerabilities:
-                if self._is_unresolved_var(vuln_name):
-                    continue
-                if vuln_name not in self._s.vulnerabilities:
-                    self._err(f"Entity '{name}' references undefined vulnerability '{vuln_name}'")
-            for event_name in entity.events:
-                if self._is_unresolved_var(event_name):
-                    continue
-                if event_name not in self._s.events:
-                    self._err(f"Entity '{name}' references undefined event '{event_name}'")
-
-        for name, entity in flat.items():
-            check_entity(name, entity)
+    def _verify_entity_refs(self, name: str, entity: object) -> None:
+        self._verify_membership_refs(
+            entity.tlos, self._s.tlos, lambda ref: f"Entity '{name}' references undefined TLO '{ref}'"
+        )
+        self._verify_membership_refs(
+            entity.vulnerabilities,
+            self._s.vulnerabilities,
+            lambda ref: f"Entity '{name}' references undefined vulnerability '{ref}'",
+        )
+        self._verify_membership_refs(
+            entity.events, self._s.events, lambda ref: f"Entity '{name}' references undefined event '{ref}'"
+        )
 
     def _verify_injects(self) -> None:
         flat_names = self._all_entity_names()
-
         for name, inject in self._s.injects.items():
-            if (
-                inject.from_entity
-                and not self._is_unresolved_var(inject.from_entity)
-                and inject.from_entity not in flat_names
-            ):
-                self._err(f"Inject '{name}' from_entity '{inject.from_entity}' is not a defined entity")
-            for to_name in inject.to_entities:
-                if self._is_unresolved_var(to_name):
-                    continue
-                if to_name not in flat_names:
-                    self._err(f"Inject '{name}' to_entity '{to_name}' is not a defined entity")
-            for tlo_name in inject.tlos:
-                if self._is_unresolved_var(tlo_name):
-                    continue
-                if tlo_name not in self._s.tlos:
-                    self._err(f"Inject '{name}' references undefined TLO '{tlo_name}'")
+            self._verify_inject_refs(name, inject, flat_names)
+
+    def _verify_inject_refs(self, name: str, inject: object, flat_names: set[str]) -> None:
+        if (
+            inject.from_entity
+            and not self._is_unresolved_var(inject.from_entity)
+            and inject.from_entity not in flat_names
+        ):
+            self._err(f"Inject '{name}' from_entity '{inject.from_entity}' is not a defined entity")
+        self._verify_membership_refs(
+            inject.to_entities, flat_names, lambda ref: f"Inject '{name}' to_entity '{ref}' is not a defined entity"
+        )
+        self._verify_membership_refs(
+            inject.tlos, self._s.tlos, lambda ref: f"Inject '{name}' references undefined TLO '{ref}'"
+        )
 
     def _verify_events(self) -> None:
         for name, event in self._s.events.items():
-            for cond_name in event.conditions:
-                if self._is_unresolved_var(cond_name):
-                    continue
-                if cond_name not in self._s.conditions:
-                    self._err(f"Event '{name}' references undefined condition '{cond_name}'")
-            for inj_name in event.injects:
-                if self._is_unresolved_var(inj_name):
-                    continue
-                if inj_name not in self._s.injects:
-                    self._err(f"Event '{name}' references undefined inject '{inj_name}'")
+            self._verify_event_refs(name, event)
+
+    def _verify_event_refs(self, name: str, event: object) -> None:
+        self._verify_membership_refs(
+            event.conditions, self._s.conditions, lambda ref: f"Event '{name}' references undefined condition '{ref}'"
+        )
+        self._verify_membership_refs(
+            event.injects, self._s.injects, lambda ref: f"Event '{name}' references undefined inject '{ref}'"
+        )
 
     def _verify_scripts(self) -> None:
         for name, script in self._s.scripts.items():

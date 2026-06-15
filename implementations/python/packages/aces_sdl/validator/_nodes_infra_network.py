@@ -18,119 +18,110 @@ class _NodesInfraNetworkMixin:
         for name, node in self._s.nodes.items():
             if len(name) > MAX_NODE_NAME_LENGTH:
                 self._err(f"Node '{name}' name exceeds 35 characters")
-
-            for feat_name, role_name in node.features.items():
-                if feat_name not in self._s.features:
-                    self._err(f"Node '{name}' references undefined feature '{feat_name}'")
-                if role_name and not self._is_unresolved_var(role_name) and role_name not in node.roles:
-                    self._err(f"Node '{name}' feature '{feat_name}' references undefined role '{role_name}'")
-
-            for cond_name, role_name in node.conditions.items():
-                if cond_name not in self._s.conditions:
-                    self._err(f"Node '{name}' references undefined condition '{cond_name}'")
-                if role_name and not self._is_unresolved_var(role_name) and role_name not in node.roles:
-                    self._err(f"Node '{name}' condition '{cond_name}' references undefined role '{role_name}'")
-
-            for inj_name, role_name in node.injects.items():
-                if inj_name not in self._s.injects:
-                    self._err(f"Node '{name}' references undefined inject '{inj_name}'")
-                if role_name and not self._is_unresolved_var(role_name) and role_name not in node.roles:
-                    self._err(f"Node '{name}' inject '{inj_name}' references undefined role '{role_name}'")
-
+            self._verify_node_ref_role_map(name, node, node.features, self._s.features, kind="feature")
+            self._verify_node_ref_role_map(name, node, node.conditions, self._s.conditions, kind="condition")
+            self._verify_node_ref_role_map(name, node, node.injects, self._s.injects, kind="inject")
             for vuln_name in node.vulnerabilities:
                 if self._is_unresolved_var(vuln_name):
                     continue
                 if vuln_name not in self._s.vulnerabilities:
                     self._err(f"Node '{name}' references undefined vulnerability '{vuln_name}'")
 
+    def _verify_node_ref_role_map(
+        self, name: str, node: object, mapping: dict[str, str], valid: object, *, kind: str
+    ) -> None:
+        for ref_name, role_name in mapping.items():
+            if ref_name not in valid:
+                self._err(f"Node '{name}' references undefined {kind} '{ref_name}'")
+            if role_name and not self._is_unresolved_var(role_name) and role_name not in node.roles:
+                self._err(f"Node '{name}' {kind} '{ref_name}' references undefined role '{role_name}'")
+
     def _verify_infrastructure(self) -> None:
         for name, infra in self._s.infrastructure.items():
             if name not in self._s.nodes:
                 self._err(f"Infrastructure '{name}' does not match any defined node")
+            self._verify_infra_links(name, infra)
+            self._verify_infra_dependencies(name, infra)
+            self._verify_infra_count(name, infra)
+            self._verify_infra_property_ips(name, infra)
+            self._verify_infra_acls(name, infra)
 
-            for link in infra.links:
-                if self._is_unresolved_var(link):
+    def _verify_infra_links(self, name: str, infra: object) -> None:
+        for link in infra.links:
+            if self._is_unresolved_var(link):
+                continue
+            if link not in self._s.infrastructure:
+                self._err(f"Infrastructure '{name}' links to undefined '{link}'")
+            elif not self._is_switch_node(link):
+                self._err(f"Infrastructure '{name}' link '{link}' must reference a switch/network entry")
+
+    def _verify_infra_dependencies(self, name: str, infra: object) -> None:
+        for dep in infra.dependencies:
+            if self._is_unresolved_var(dep):
+                continue
+            if dep not in self._s.infrastructure:
+                self._err(f"Infrastructure '{name}' depends on undefined '{dep}'")
+
+    def _verify_infra_count(self, name: str, infra: object) -> None:
+        # Switch nodes cannot have count > 1.
+        if name not in self._s.nodes:
+            return
+        node = self._s.nodes[name]
+        if node.type == NodeType.SWITCH and isinstance(infra.count, int) and infra.count > 1:
+            self._err(f"Switch node '{name}' cannot have count > 1")
+        if node.type == NodeType.VM and node.conditions and isinstance(infra.count, int) and infra.count > 1:
+            self._err(f"Node '{name}' has conditions and cannot have count > 1")
+
+    def _verify_infra_property_ips(self, name: str, infra: object) -> None:
+        # Validate complex-properties IP assignments within their linked CIDR.
+        if not isinstance(infra.properties, list):
+            return
+        for prop_entry in infra.properties:
+            for link_name, ip_str in prop_entry.items():
+                self._verify_property_ip(name, infra, link_name, ip_str)
+
+    def _verify_property_ip(self, name: str, infra: object, link_name: str, ip_str: str) -> None:
+        if self._is_unresolved_var(link_name):
+            return
+        if link_name not in infra.links:
+            self._err(f"Infrastructure '{name}' property references unlinked node '{link_name}'")
+        if not self._is_switch_node(link_name):
+            self._err(f"Infrastructure '{name}' property link '{link_name}' must reference a switch/network entry")
+            return
+        linked_infra = self._s.infrastructure.get(link_name)
+        if linked_infra is None or not isinstance(linked_infra.properties, SimpleProperties):
+            if linked_infra is not None:
+                self._err(
+                    f"Infrastructure '{name}' property link '{link_name}' must reference a network with CIDR properties"
+                )
+            return
+        cidr = linked_infra.properties.cidr
+        if not self._is_unresolved_var(ip_str) and not self._is_unresolved_var(cidr):
+            self._verify_property_ip_in_cidr(name, link_name, ip_str, cidr)
+
+    def _verify_property_ip_in_cidr(self, name: str, link_name: str, ip_str: str, cidr: str) -> None:
+        try:
+            net = ip_network(cidr, strict=False)
+        except ValueError:
+            self._err(f"Infrastructure '{link_name}' has invalid CIDR {cidr}")
+            return
+        try:
+            addr = ip_address(ip_str)
+        except ValueError:
+            self._err(f"Infrastructure '{name}' has invalid IP assignment '{ip_str}' for link '{link_name}'")
+            return
+        if addr not in net:
+            self._err(f"Infrastructure '{name}' IP {ip_str} not within '{link_name}' CIDR {cidr}")
+
+    def _verify_infra_acls(self, name: str, infra: object) -> None:
+        for acl in infra.acls:
+            for ref in (acl.from_net, acl.to_net):
+                if self._is_unresolved_var(ref):
                     continue
-                if link not in self._s.infrastructure:
-                    self._err(f"Infrastructure '{name}' links to undefined '{link}'")
-                elif not self._is_switch_node(link):
-                    self._err(f"Infrastructure '{name}' link '{link}' must reference a switch/network entry")
-
-            for dep in infra.dependencies:
-                if self._is_unresolved_var(dep):
-                    continue
-                if dep not in self._s.infrastructure:
-                    self._err(f"Infrastructure '{name}' depends on undefined '{dep}'")
-
-            # Switch nodes cannot have count > 1
-            if name in self._s.nodes:
-                if self._s.nodes[name].type == NodeType.SWITCH and isinstance(infra.count, int) and infra.count > 1:
-                    self._err(f"Switch node '{name}' cannot have count > 1")
-                if (
-                    self._s.nodes[name].type == NodeType.VM
-                    and self._s.nodes[name].conditions
-                    and isinstance(infra.count, int)
-                    and infra.count > 1
-                ):
-                    self._err(f"Node '{name}' has conditions and cannot have count > 1")
-
-            # Validate complex properties IP within linked CIDR
-            if isinstance(infra.properties, list):
-                for prop_entry in infra.properties:
-                    for link_name, ip_str in prop_entry.items():
-                        if self._is_unresolved_var(link_name):
-                            continue
-                        if link_name not in infra.links:
-                            self._err(f"Infrastructure '{name}' property references unlinked node '{link_name}'")
-                        if not self._is_switch_node(link_name):
-                            self._err(
-                                f"Infrastructure '{name}' property link "
-                                f"'{link_name}' must reference a switch/network entry"
-                            )
-                            continue
-                        # Check IP is within the linked node's CIDR
-                        linked_infra = self._s.infrastructure.get(link_name)
-                        if linked_infra is None:
-                            continue
-                        if not isinstance(linked_infra.properties, SimpleProperties):
-                            self._err(
-                                f"Infrastructure '{name}' property link "
-                                f"'{link_name}' must reference a network with CIDR "
-                                "properties"
-                            )
-                            continue
-                        if self._is_unresolved_var(ip_str):
-                            continue
-                        if self._is_unresolved_var(linked_infra.properties.cidr):
-                            continue
-                        try:
-                            net = ip_network(linked_infra.properties.cidr, strict=False)
-                        except ValueError:
-                            self._err(f"Infrastructure '{link_name}' has invalid CIDR {linked_infra.properties.cidr}")
-                            continue
-                        try:
-                            addr = ip_address(ip_str)
-                        except ValueError:
-                            self._err(
-                                f"Infrastructure '{name}' has invalid IP assignment '{ip_str}' for link '{link_name}'"
-                            )
-                            continue
-                        if addr not in net:
-                            self._err(
-                                f"Infrastructure '{name}' IP {ip_str} "
-                                f"not within '{link_name}' CIDR "
-                                f"{linked_infra.properties.cidr}"
-                            )
-
-            # Validate ACL network references
-            for acl in infra.acls:
-                for ref in (acl.from_net, acl.to_net):
-                    if self._is_unresolved_var(ref):
-                        continue
-                    if ref and ref not in self._s.infrastructure:
-                        self._err(f"Infrastructure '{name}' ACL references undefined network '{ref}'")
-                    elif ref and not self._is_switch_node(ref):
-                        self._err(f"Infrastructure '{name}' ACL reference '{ref}' must point to a switch/network entry")
+                if ref and ref not in self._s.infrastructure:
+                    self._err(f"Infrastructure '{name}' ACL references undefined network '{ref}'")
+                elif ref and not self._is_switch_node(ref):
+                    self._err(f"Infrastructure '{name}' ACL reference '{ref}' must point to a switch/network entry")
 
     def _verify_runtime_network(self) -> None:
         """Validate observed runtime network endpoints against declared topology.
@@ -176,7 +167,8 @@ class _NodesInfraNetworkMixin:
             try:
                 addr = ip_address(value)
             except ValueError:
-                continue  # malformed addresses are reported by the model-level validator
+                # malformed addresses are reported by the model-level validator
+                continue
             if addr.version == network.version and addr not in network:
                 self._err(
                     f"Node '{node_name}' runtime network endpoint {label} {value} "
@@ -307,10 +299,7 @@ class _NodesInfraNetworkMixin:
                 field_name="file_refs",
                 observed_paths=observed_paths,
             )
-        for network_set in engine.network_sets:
-            set_label = f"{owner_label} network_set '{network_set.set_id}'"
-            for network_ref in network_set.network_refs:
-                self._verify_network_detection_network_ref(set_label, network_ref)
+        self._verify_detection_network_sets(owner_label, engine)
         for stream in engine.output_streams:
             self._verify_dns_file_refs(
                 f"{owner_label} output_stream '{stream.stream_id}'",
@@ -318,6 +307,17 @@ class _NodesInfraNetworkMixin:
                 field_name="path",
                 observed_paths=observed_paths,
             )
+        self._verify_detection_control_channels(node_name, owner_label, engine, service_names, observed_paths)
+
+    def _verify_detection_network_sets(self, owner_label: str, engine: object) -> None:
+        for network_set in engine.network_sets:
+            set_label = f"{owner_label} network_set '{network_set.set_id}'"
+            for network_ref in network_set.network_refs:
+                self._verify_network_detection_network_ref(set_label, network_ref)
+
+    def _verify_detection_control_channels(
+        self, node_name: str, owner_label: str, engine: object, service_names: set[str], observed_paths: set[str]
+    ) -> None:
         for channel in engine.control_channels:
             channel_label = f"{owner_label} control_channel '{channel.channel_id}'"
             self._verify_owned_service_ref(

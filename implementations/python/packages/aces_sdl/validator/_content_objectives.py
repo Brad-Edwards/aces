@@ -3,6 +3,8 @@
 Part of the SemanticValidator mixin composition; see __init__.py.
 """
 
+from collections.abc import Callable
+
 from ..semantics.objective_semantics import (
     AssessmentResourceCatalog,
     ObjectiveIssue,
@@ -194,74 +196,88 @@ class _ContentObjectivesMixin:
     def _verify_agents(self) -> None:
         flat_entity_names = self._all_entity_names()
         service_names = {service.name for node in self._s.nodes.values() for service in node.services if service.name}
-
         for name, agent in self._s.agents.items():
-            if agent.entity and not self._is_unresolved_var(agent.entity) and agent.entity not in flat_entity_names:
-                self._err(f"Agent '{name}' references undefined entity '{agent.entity}'")
-            for acct_name in agent.starting_accounts:
-                if self._is_unresolved_var(acct_name):
-                    continue
-                if acct_name not in self._s.accounts:
-                    self._err(f"Agent '{name}' starting_account '{acct_name}' not in accounts section")
-            for subnet in agent.allowed_subnets:
-                if self._is_unresolved_var(subnet):
-                    continue
-                if subnet not in self._s.infrastructure:
-                    self._err(f"Agent '{name}' allowed_subnet '{subnet}' not in infrastructure section")
-                elif not self._is_switch_node(subnet):
-                    self._err(f"Agent '{name}' allowed_subnet '{subnet}' must reference a switch/network entry")
-            if agent.initial_knowledge:
-                for host in agent.initial_knowledge.hosts:
-                    if self._is_unresolved_var(host):
-                        continue
-                    if host not in self._s.nodes:
-                        self._err(f"Agent '{name}' initial_knowledge host '{host}' not in nodes section")
-                    elif not self._is_vm_node(host):
-                        self._err(f"Agent '{name}' initial_knowledge host '{host}' must reference a VM node")
-                for subnet in agent.initial_knowledge.subnets:
-                    if self._is_unresolved_var(subnet):
-                        continue
-                    if subnet not in self._s.infrastructure:
-                        self._err(f"Agent '{name}' initial_knowledge subnet '{subnet}' not in infrastructure section")
-                    elif not self._is_switch_node(subnet):
-                        self._err(
-                            f"Agent '{name}' initial_knowledge subnet '{subnet}' must reference a switch/network entry"
-                        )
-                for service_name in agent.initial_knowledge.services:
-                    if self._is_unresolved_var(service_name):
-                        continue
-                    if service_name not in service_names:
-                        self._err(
-                            f"Agent '{name}' initial_knowledge service '{service_name}' not in node service names"
-                        )
-                for acct_name in agent.initial_knowledge.accounts:
-                    if self._is_unresolved_var(acct_name):
-                        continue
-                    if acct_name not in self._s.accounts:
-                        self._err(f"Agent '{name}' initial_knowledge account '{acct_name}' not in accounts section")
-            for cond_name in agent.starting_conditions:
-                if self._is_unresolved_var(cond_name):
-                    continue
-                # ADR-020 §6 publishes starting_conditions as accepting bare
-                # (`health`) or section-qualified (`conditions.health`)
-                # references. Strip the `conditions.` prefix when present so
-                # both forms resolve against the same dict.
-                bare_name = cond_name.removeprefix("conditions.")
-                if bare_name not in self._s.conditions:
-                    self._err(f"Agent '{name}' starting_condition '{cond_name}' not in conditions section")
-            for anchor in agent.authority_anchors:
-                if self._is_unresolved_var(anchor):
-                    continue
-                self._validate_named_ref(
-                    anchor,
-                    owner_label=f"Agent '{name}'",
-                    ref_label="authority_anchor",
-                    targetable=False,
-                )
-            for scope in agent.operating_scope:
-                if self._is_unresolved_var(scope):
-                    continue
-                self._validate_operating_scope_ref(scope, owner_label=f"Agent '{name}'")
+            self._verify_agent(name, agent, flat_entity_names, service_names)
+
+    def _verify_agent(self, name: str, agent: object, flat_entity_names: set[str], service_names: set[str]) -> None:
+        label = f"Agent '{name}'"
+        if agent.entity and not self._is_unresolved_var(agent.entity) and agent.entity not in flat_entity_names:
+            self._err(f"{label} references undefined entity '{agent.entity}'")
+        self._verify_membership_refs(
+            agent.starting_accounts,
+            self._s.accounts,
+            lambda ref: f"{label} starting_account '{ref}' not in accounts section",
+        )
+        self._verify_agent_subnet_refs(
+            agent.allowed_subnets,
+            undefined=lambda ref: f"{label} allowed_subnet '{ref}' not in infrastructure section",
+            not_switch=lambda ref: f"{label} allowed_subnet '{ref}' must reference a switch/network entry",
+        )
+        if agent.initial_knowledge:
+            self._verify_agent_initial_knowledge(name, agent.initial_knowledge, service_names)
+        self._verify_agent_starting_conditions(label, agent)
+        for anchor in agent.authority_anchors:
+            if not self._is_unresolved_var(anchor):
+                self._validate_named_ref(anchor, owner_label=label, ref_label="authority_anchor", targetable=False)
+        for scope in agent.operating_scope:
+            if not self._is_unresolved_var(scope):
+                self._validate_operating_scope_ref(scope, owner_label=label)
+
+    def _verify_membership_refs(self, refs: list[str], valid: object, error_msg: Callable[[str], str]) -> None:
+        for ref in refs:
+            if not self._is_unresolved_var(ref) and ref not in valid:
+                self._err(error_msg(ref))
+
+    def _verify_agent_subnet_refs(
+        self, refs: list[str], *, undefined: Callable[[str], str], not_switch: Callable[[str], str]
+    ) -> None:
+        for subnet in refs:
+            if self._is_unresolved_var(subnet):
+                continue
+            if subnet not in self._s.infrastructure:
+                self._err(undefined(subnet))
+            elif not self._is_switch_node(subnet):
+                self._err(not_switch(subnet))
+
+    def _verify_agent_starting_conditions(self, label: str, agent: object) -> None:
+        for cond_name in agent.starting_conditions:
+            if self._is_unresolved_var(cond_name):
+                continue
+            # ADR-020 §6 publishes starting_conditions as accepting bare
+            # (`health`) or section-qualified (`conditions.health`)
+            # references. Strip the `conditions.` prefix when present so
+            # both forms resolve against the same dict.
+            bare_name = cond_name.removeprefix("conditions.")
+            if bare_name not in self._s.conditions:
+                self._err(f"{label} starting_condition '{cond_name}' not in conditions section")
+
+    def _verify_agent_initial_knowledge(self, name: str, initial_knowledge: object, service_names: set[str]) -> None:
+        label = f"Agent '{name}'"
+        self._verify_agent_ik_hosts(label, initial_knowledge)
+        self._verify_agent_subnet_refs(
+            initial_knowledge.subnets,
+            undefined=lambda ref: f"{label} initial_knowledge subnet '{ref}' not in infrastructure section",
+            not_switch=lambda ref: f"{label} initial_knowledge subnet '{ref}' must reference a switch/network entry",
+        )
+        self._verify_membership_refs(
+            initial_knowledge.services,
+            service_names,
+            lambda ref: f"{label} initial_knowledge service '{ref}' not in node service names",
+        )
+        self._verify_membership_refs(
+            initial_knowledge.accounts,
+            self._s.accounts,
+            lambda ref: f"{label} initial_knowledge account '{ref}' not in accounts section",
+        )
+
+    def _verify_agent_ik_hosts(self, label: str, initial_knowledge: object) -> None:
+        for host in initial_knowledge.hosts:
+            if self._is_unresolved_var(host):
+                continue
+            if host not in self._s.nodes:
+                self._err(f"{label} initial_knowledge host '{host}' not in nodes section")
+            elif not self._is_vm_node(host):
+                self._err(f"{label} initial_knowledge host '{host}' must reference a VM node")
 
     def _verify_participant_behavior(self) -> None:
         analysis = analyze_participant_behavior(
@@ -339,24 +355,21 @@ class _ContentObjectivesMixin:
 
     @staticmethod
     def _format_objective_issue(issue: ObjectiveIssue) -> str:
-        try:
-            renderer = _OBJECTIVE_ISSUE_RENDERERS[issue.code]
-        except KeyError:  # pragma: no cover - defensive: a new code without a renderer
-            raise AssertionError(f"unhandled objective-semantics issue code: {issue.code}") from None
+        renderer = _OBJECTIVE_ISSUE_RENDERERS.get(issue.code)
+        if renderer is None:
+            raise AssertionError(f"unhandled objective-semantics issue code: {issue.code}")
         return renderer(issue)
 
     @staticmethod
     def _format_participant_behavior_issue(issue: ParticipantBehaviorIssue) -> str:
-        try:
-            renderer = _PARTICIPANT_BEHAVIOR_ISSUE_RENDERERS[issue.code]
-        except KeyError:  # pragma: no cover - defensive: a new code without a renderer
-            raise AssertionError(f"unhandled participant-behavior issue code: {issue.code}") from None
+        renderer = _PARTICIPANT_BEHAVIOR_ISSUE_RENDERERS.get(issue.code)
+        if renderer is None:
+            raise AssertionError(f"unhandled participant-behavior issue code: {issue.code}")
         return renderer(issue)
 
     @staticmethod
     def _format_participant_outcome_issue(issue: ParticipantOutcomeIssue) -> str:
-        try:
-            renderer = _PARTICIPANT_OUTCOME_ISSUE_RENDERERS[issue.code]
-        except KeyError:  # pragma: no cover - defensive: a new code without a renderer
-            raise AssertionError(f"unhandled participant-outcome issue code: {issue.code}") from None
+        renderer = _PARTICIPANT_OUTCOME_ISSUE_RENDERERS.get(issue.code)
+        if renderer is None:
+            raise AssertionError(f"unhandled participant-outcome issue code: {issue.code}")
         return renderer(issue)

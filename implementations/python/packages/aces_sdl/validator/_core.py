@@ -26,7 +26,8 @@ class _ValidatorCore:
     def _warn(self, msg: str) -> None:
         self._warnings.append(msg)
 
-    def _is_unresolved_var(self, value: object) -> bool:
+    @staticmethod
+    def _is_unresolved_var(value: object) -> bool:
         return is_variable_ref(value)
 
     def _node_type(self, node_name: str) -> NodeType | None:
@@ -50,7 +51,8 @@ class _ValidatorCore:
                     refs.add(f"nodes.{node_name}.services.{service.name}")
         return refs
 
-    def _split_node_service_ref(self, ref: object) -> tuple[str, str] | None:
+    @staticmethod
+    def _split_node_service_ref(ref: object) -> tuple[str, str] | None:
         """Split ``nodes.<node>.services.<service>`` into node/service parts.
 
         Node names may contain dots (for example ``wazuh.manager``), so service
@@ -224,6 +226,12 @@ class _ValidatorCore:
             index[infra_name].add(canonical)
             index[canonical].add(canonical)
 
+        self._add_operating_scope_service_aliases(index)
+        self._add_operating_scope_content_aliases(index)
+
+        return {alias: set(candidates) for alias, candidates in index.items()}
+
+    def _add_operating_scope_service_aliases(self, index: dict[str, set[str]]) -> None:
         # Services: qualified `nodes.<vm>.services.<svc>` refs plus bare
         # service names. The service-ref helper only emits names declared
         # on VM nodes (a service on a switch is meaningless), so no extra
@@ -234,6 +242,7 @@ class _ValidatorCore:
             if tail:
                 index[tail].add(ref)
 
+    def _add_operating_scope_content_aliases(self, index: dict[str, set[str]]) -> None:
         # Content: sections and items keep the unrestricted aliasing from
         # the targetable index; ADR-020 does not split content by sub-type.
         for content_name in self._s.content:
@@ -247,8 +256,6 @@ class _ValidatorCore:
                 canonical = f"content.{content_name}.items.{item.name}"
                 index[item.name].add(canonical)
                 index[canonical].add(canonical)
-
-        return {alias: set(candidates) for alias, candidates in index.items()}
 
     def _validate_operating_scope_ref(self, ref: str, *, owner_label: str) -> None:
         """Validate ``operating_scope`` against the spatial/resource index."""
@@ -359,7 +366,8 @@ class _ValidatorCore:
                     "supplies defaults."
                 )
 
-    def _split_runtime_ref(self, ref: object, *, surface: str) -> tuple[str, str] | None:
+    @staticmethod
+    def _split_runtime_ref(ref: object, *, surface: str) -> tuple[str, str] | None:
         """Split ``nodes.<node>.runtime.<surface>.<rest>`` into (node, rest).
 
         Module composition rewrites the node segment to a dotted namespaced
@@ -375,6 +383,19 @@ class _ValidatorCore:
             return None
         return head, tail
 
+    def _node_runtime(self, node_name: str) -> object | None:
+        """Return the ``runtime`` surface for ``node_name``, or None."""
+        node = self._s.nodes.get(node_name)
+        return getattr(node, "runtime", None) if node is not None else None
+
+    @staticmethod
+    def _database_service_id_from_tail(tail: str) -> str | None:
+        """Service id from a ``<svc_id>`` (1 part) or ``<svc_id>.databases.<db_id>`` (3) tail."""
+        tail_parts = tail.split(".")
+        if len(tail_parts) == 1 or (len(tail_parts) == 3 and tail_parts[1] == "databases"):
+            return tail_parts[0]
+        return None
+
     def _resolve_database_service_ref(self, ref: object) -> object | None:
         """Resolve a qualified ``nodes.<node>.runtime.database_services.<id>`` ref.
 
@@ -386,20 +407,11 @@ class _ValidatorCore:
         if split is None:
             return None
         node_name, tail = split
-        tail_parts = tail.split(".")
-        # tail is ``<svc_id>`` (1 part) or ``<svc_id>.databases.<db_id>`` (3).
-        if len(tail_parts) == 1 or (len(tail_parts) == 3 and tail_parts[1] == "databases"):
-            svc_id = tail_parts[0]
-        else:
+        svc_id = self._database_service_id_from_tail(tail)
+        runtime = self._node_runtime(node_name)
+        if svc_id is None or runtime is None:
             return None
-        node = self._s.nodes.get(node_name)
-        runtime = getattr(node, "runtime", None) if node is not None else None
-        if runtime is None:
-            return None
-        for dbsvc in runtime.database_services:
-            if dbsvc.database_service_id == svc_id:
-                return dbsvc
-        return None
+        return next((s for s in runtime.database_services if s.database_service_id == svc_id), None)
 
     def _resolve_application_ref(self, ref: object) -> object | None:
         """Resolve a qualified ``nodes.<node>.runtime.applications.<id>`` ref.
@@ -412,13 +424,7 @@ class _ValidatorCore:
         if split is None:
             return None
         node_name, tail = split
-        if "." in tail:
+        runtime = self._node_runtime(node_name)
+        if "." in tail or runtime is None:
             return None
-        node = self._s.nodes.get(node_name)
-        runtime = getattr(node, "runtime", None) if node is not None else None
-        if runtime is None:
-            return None
-        for application in runtime.applications:
-            if application.application_id == tail:
-                return application
-        return None
+        return next((a for a in runtime.applications if a.application_id == tail), None)

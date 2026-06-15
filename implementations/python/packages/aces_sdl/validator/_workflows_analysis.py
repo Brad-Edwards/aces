@@ -5,6 +5,7 @@ Part of the SemanticValidator mixin composition; see __init__.py.
 
 from ..orchestration import Workflow, WorkflowPredicate, WorkflowStep, WorkflowStepType
 from ..semantics.workflow import workflow_step_semantic_contract
+from ._support import _AvailableStateContext, _CompensationState, _WorkflowBuildState
 
 
 class _WorkflowAnalysisMixin:
@@ -16,7 +17,12 @@ class _WorkflowAnalysisMixin:
         workflow_steps: dict[str, WorkflowStep],
     ) -> list[str]:
         """Validate all references within a workflow predicate."""
-        step_refs: list[str] = []
+        self._validate_predicate_section_refs(workflow_name, step_name, predicate)
+        return self._validate_predicate_step_states(workflow_name, step_name, predicate, workflow_steps)
+
+    def _validate_predicate_section_refs(
+        self, workflow_name: str, step_name: str, predicate: WorkflowPredicate
+    ) -> None:
         predicate_sections = (
             ("condition", predicate.conditions, self._s.conditions),
             ("metric", predicate.metrics, self._s.metrics),
@@ -35,6 +41,15 @@ class _WorkflowAnalysisMixin:
                         f"'{step_name}' references undefined "
                         f"{label} '{ref}' in predicate"
                     )
+
+    def _validate_predicate_step_states(
+        self,
+        workflow_name: str,
+        step_name: str,
+        predicate: WorkflowPredicate,
+        workflow_steps: dict[str, WorkflowStep],
+    ) -> list[str]:
+        step_refs: list[str] = []
         for step_state in predicate.steps:
             if self._is_unresolved_var(step_state.step):
                 continue
@@ -73,7 +88,8 @@ class _WorkflowAnalysisMixin:
             step_refs.append(step_state.step)
         return step_refs
 
-    def _is_executable_workflow_step(self, step: WorkflowStep) -> bool:
+    @staticmethod
+    def _is_executable_workflow_step(step: WorkflowStep) -> bool:
         return workflow_step_semantic_contract(step.type.value).state_observable
 
     def _validate_workflow_target_ref(
@@ -84,9 +100,7 @@ class _WorkflowAnalysisMixin:
         target: str,
         workflow_steps: dict[str, WorkflowStep],
     ) -> str | None:
-        if not target:
-            return None
-        if self._is_unresolved_var(target):
+        if not target or self._is_unresolved_var(target):
             return None
         if target not in workflow_steps:
             self._err(f"Workflow '{workflow_name}' step '{step_name}' {field_name} step '{target}' is not defined")
@@ -104,31 +118,15 @@ class _WorkflowAnalysisMixin:
     ) -> bool:
         if node == join:
             return True
-        if node in memo:
-            return memo[node]
-        if node in visiting:
-            return False
-
-        visiting.add(node)
-        successors = graph.get(node, [])
-        if not successors:
-            visiting.remove(node)
-            memo[node] = False
-            return False
-
-        result = all(
-            self._all_paths_reach_join(
-                successor,
-                join,
-                graph,
-                memo=memo,
-                visiting=visiting,
+        if node not in memo and node not in visiting:
+            visiting.add(node)
+            successors = graph.get(node, [])
+            memo[node] = bool(successors) and all(
+                self._all_paths_reach_join(successor, join, graph, memo=memo, visiting=visiting)
+                for successor in successors
             )
-            for successor in successors
-        )
-        visiting.remove(node)
-        memo[node] = result
-        return result
+            visiting.discard(node)
+        return memo.get(node, False)
 
     def _branch_guaranteed_states(
         self,
@@ -142,14 +140,25 @@ class _WorkflowAnalysisMixin:
     ) -> set[str]:
         if node == join:
             return set()
-
         key = (node, join)
-        if key in memo:
-            return set(memo[key])
-        if key in visiting:
-            return set()
+        if key not in memo and key not in visiting:
+            visiting.add(key)
+            memo[key] = self._branch_guaranteed_states_uncached(
+                node, join, graph, workflow_steps, memo=memo, visiting=visiting
+            )
+            visiting.discard(key)
+        return set(memo.get(key, set()))
 
-        visiting.add(key)
+    def _branch_guaranteed_states_uncached(
+        self,
+        node: str,
+        join: str,
+        graph: dict[str, list[str]],
+        workflow_steps: dict[str, WorkflowStep],
+        *,
+        memo: dict[tuple[str, str], set[str]],
+        visiting: set[tuple[str, str]],
+    ) -> set[str]:
         successors = graph.get(node, [])
         guaranteed_after: set[str] = set()
         if successors:
@@ -172,42 +181,15 @@ class _WorkflowAnalysisMixin:
                 )
             if successor_sets:
                 guaranteed_after = set.intersection(*successor_sets)
-
         result = set(guaranteed_after)
         step = workflow_steps[node]
         if self._is_executable_workflow_step(step):
             result.add(node)
-
-        visiting.remove(key)
-        memo[key] = set(result)
         return result
 
-    def _edge_available_state(
-        self,
-        step_name: str,
-        successor: str,
-        workflow_steps: dict[str, WorkflowStep],
-        graph: dict[str, list[str]],
-        predecessors: dict[str, set[str]],
-        start: str,
-        join_targets: dict[str, list[str]],
-        *,
-        available_memo: dict[str, set[str]],
-        branch_memo: dict[tuple[str, str], set[str]],
-        visiting: set[str],
-    ) -> set[str]:
-        available = self._available_step_state_before(
-            step_name,
-            workflow_steps,
-            graph,
-            predecessors,
-            start,
-            join_targets,
-            available_memo=available_memo,
-            branch_memo=branch_memo,
-            visiting=visiting,
-        )
-        step = workflow_steps[step_name]
+    def _edge_available_state(self, step_name: str, successor: str, ctx: _AvailableStateContext) -> set[str]:
+        available = self._available_step_state_before(step_name, ctx)
+        step = ctx.workflow_steps[step_name]
         if step.type in {
             WorkflowStepType.OBJECTIVE,
             WorkflowStepType.RETRY,
@@ -216,81 +198,46 @@ class _WorkflowAnalysisMixin:
             available.add(step_name)
         return available
 
-    def _available_step_state_before(
-        self,
-        step_name: str,
-        workflow_steps: dict[str, WorkflowStep],
-        graph: dict[str, list[str]],
-        predecessors: dict[str, set[str]],
-        start: str,
-        join_targets: dict[str, list[str]],
-        *,
-        available_memo: dict[str, set[str]],
-        branch_memo: dict[tuple[str, str], set[str]],
-        visiting: set[str],
-    ) -> set[str]:
-        if step_name in available_memo:
-            return set(available_memo[step_name])
-        if step_name in visiting:
+    def _available_step_state_before(self, step_name: str, ctx: _AvailableStateContext) -> set[str]:
+        if step_name in ctx.available_memo:
+            return set(ctx.available_memo[step_name])
+        if step_name in ctx.visiting:
             return set()
 
-        visiting.add(step_name)
-        step = workflow_steps[step_name]
-
-        if step_name == start:
-            result = set()
-        elif step.type == WorkflowStepType.JOIN and join_targets.get(step_name):
-            owner = join_targets[step_name][0]
-            result = self._available_step_state_before(
-                owner,
-                workflow_steps,
-                graph,
-                predecessors,
-                start,
-                join_targets,
-                available_memo=available_memo,
-                branch_memo=branch_memo,
-                visiting=visiting,
-            )
-            result.add(owner)
-            owner_step = workflow_steps[owner]
-            for branch in owner_step.branches:
-                if branch not in workflow_steps:
-                    continue
-                result.update(
-                    self._branch_guaranteed_states(
-                        branch,
-                        step_name,
-                        graph,
-                        workflow_steps,
-                        memo=branch_memo,
-                        visiting=set(),
-                    )
-                )
+        ctx.visiting.add(step_name)
+        step = ctx.workflow_steps[step_name]
+        if step_name == ctx.start:
+            result: set[str] = set()
+        elif step.type == WorkflowStepType.JOIN and ctx.join_targets.get(step_name):
+            result = self._join_available_state(step_name, ctx)
         else:
-            incoming_states: list[set[str]] = []
-            for predecessor in predecessors.get(step_name, set()):
-                if predecessor not in workflow_steps:
-                    continue
-                incoming_states.append(
-                    self._edge_available_state(
-                        predecessor,
-                        step_name,
-                        workflow_steps,
-                        graph,
-                        predecessors,
-                        start,
-                        join_targets,
-                        available_memo=available_memo,
-                        branch_memo=branch_memo,
-                        visiting=visiting,
-                    )
-                )
-            result = set.intersection(*incoming_states) if incoming_states else set()
-
-        visiting.remove(step_name)
-        available_memo[step_name] = set(result)
+            result = self._incoming_available_state(step_name, ctx)
+        ctx.visiting.remove(step_name)
+        ctx.available_memo[step_name] = set(result)
         return result
+
+    def _join_available_state(self, step_name: str, ctx: _AvailableStateContext) -> set[str]:
+        owner = ctx.join_targets[step_name][0]
+        result = self._available_step_state_before(owner, ctx)
+        result.add(owner)
+        owner_step = ctx.workflow_steps[owner]
+        for branch in owner_step.branches:
+            if branch not in ctx.workflow_steps:
+                continue
+            result.update(
+                self._branch_guaranteed_states(
+                    branch, step_name, ctx.graph, ctx.workflow_steps, memo=ctx.branch_memo, visiting=set()
+                )
+            )
+        return result
+
+    def _incoming_available_state(self, step_name: str, ctx: _AvailableStateContext) -> set[str]:
+        incoming_states: list[set[str]] = []
+        for predecessor in ctx.predecessors.get(step_name, set()):
+            if predecessor not in ctx.workflow_steps:
+                continue
+            incoming_states.append(self._edge_available_state(predecessor, step_name, ctx))
+        return set.intersection(*incoming_states) if incoming_states else set()
 
     def _verify_step_terminator_and_compensation(
         self,
@@ -299,10 +246,8 @@ class _WorkflowAnalysisMixin:
         step_name: str,
         step: WorkflowStep,
         workflow: Workflow,
-        graph: dict[str, list[str]],
-        workflow_compensation_graph: dict[str, set[str]],
-        compensation_target_workflows: set[str],
-        workflows_with_compensation_steps: set[str],
+        build: _WorkflowBuildState,
+        comp: _CompensationState,
     ) -> None:
         """Shared validation for `on-success`/`on-failure` and `compensate_with`.
 
@@ -315,17 +260,11 @@ class _WorkflowAnalysisMixin:
             ("on-success", step.on_success),
             ("on-failure", step.on_failure),
         ):
-            resolved = self._validate_workflow_target_ref(
-                workflow_name,
-                step_name,
-                field_name,
-                target,
-                workflow.steps,
-            )
+            resolved = self._validate_workflow_target_ref(workflow_name, step_name, field_name, target, workflow.steps)
             if resolved is not None:
-                graph[step_name].append(resolved)
+                build.graph[step_name].append(resolved)
         if step.compensate_with:
-            workflows_with_compensation_steps.add(workflow_name)
+            comp.workflows_with_compensation.add(workflow_name)
             if not self._is_unresolved_var(step.compensate_with) and step.compensate_with not in self._s.workflows:
                 self._err(
                     f"Workflow '{workflow_name}' step '{step_name}' "
@@ -333,5 +272,5 @@ class _WorkflowAnalysisMixin:
                     f"'{step.compensate_with}'"
                 )
             elif not self._is_unresolved_var(step.compensate_with):
-                workflow_compensation_graph.setdefault(workflow_name, set()).add(step.compensate_with)
-                compensation_target_workflows.add(step.compensate_with)
+                comp.compensation_graph.setdefault(workflow_name, set()).add(step.compensate_with)
+                comp.compensation_targets.add(step.compensate_with)

@@ -108,7 +108,7 @@ class _RelationshipsMixin:
         self._check_forwarding_edge_role_agreement(edge, ship_targets, agent_id, label)
 
     def _check_forwarding_edge_protocol_agreement(
-        self, edge: object, ship_targets: list, agent_id: str, label: str
+        self, edge: object, ship_targets: list[object], agent_id: str, label: str
     ) -> None:
         # The edge ``protocol`` is a free string; agreement is asserted only
         # against ship_target protocols that are concrete enum members. If no
@@ -126,7 +126,7 @@ class _RelationshipsMixin:
             )
 
     def _check_forwarding_edge_role_agreement(
-        self, edge: object, ship_targets: list, agent_id: str, label: str
+        self, edge: object, ship_targets: list[object], agent_id: str, label: str
     ) -> None:
         # An ``agent_event_ingestion`` listener role requires a ship_target with
         # an ingestion endpoint; an ``agent_enrollment`` role requires one with
@@ -194,34 +194,41 @@ class _RelationshipsMixin:
         node_name = self._node_name_of_platform_application(engine)
         if node_name is None:
             return
-        node = self._s.nodes.get(node_name)
-        runtime = getattr(node, "runtime", None) if node is not None else None
-        authorizations = list(getattr(runtime, "app_authorizations", []))
-        authorization_ref = getattr(engine, "authorization_ref", "")
-        if authorization_ref and not self._is_unresolved_var(authorization_ref):
-            authorizations = [
-                authorization
-                for authorization in authorizations
-                if getattr(authorization, "app_authorization_id", "") == authorization_ref
-            ]
-            if not authorizations:
-                # The runtime platform application validator reports the bad
-                # authorization_ref; avoid emitting a misleading principal-scope
-                # error from this relationship pass as well.
-                return
+        authorizations = self._engine_authorizations(node_name, engine)
+        if authorizations is None:
+            # The runtime platform application validator reports the bad
+            # authorization_ref; avoid emitting a misleading principal-scope
+            # error from this relationship pass as well.
+            return
         principal_ids = {
             principal.principal_id for authorization in authorizations for principal in authorization.principals
         }
         if ref not in principal_ids:
-            scope = (
-                f"authorization '{authorization_ref}'"
-                if authorization_ref and not self._is_unresolved_var(authorization_ref)
-                else "an app_authorization principal"
-            )
             self._err(
                 f"{label} service_integration auth_principal_ref '{ref}' does not resolve to "
-                f"{scope} on the engine application's node '{node_name}'"
+                f"{self._auth_principal_scope(engine)} on the engine application's node '{node_name}'"
             )
+
+    def _engine_authorizations(self, node_name: str, engine: object) -> list[object] | None:
+        """App authorizations on the engine's node, filtered by ``authorization_ref``.
+
+        Returns None when a concrete ``authorization_ref`` matches no authorization
+        (the platform-application validator reports that; this pass suppresses it).
+        """
+        node = self._s.nodes.get(node_name)
+        runtime = getattr(node, "runtime", None) if node is not None else None
+        authorizations = list(getattr(runtime, "app_authorizations", []))
+        authorization_ref = getattr(engine, "authorization_ref", "")
+        if not authorization_ref or self._is_unresolved_var(authorization_ref):
+            return authorizations
+        filtered = [a for a in authorizations if getattr(a, "app_authorization_id", "") == authorization_ref]
+        return filtered or None
+
+    def _auth_principal_scope(self, engine: object) -> str:
+        authorization_ref = getattr(engine, "authorization_ref", "")
+        if authorization_ref and not self._is_unresolved_var(authorization_ref):
+            return f"authorization '{authorization_ref}'"
+        return "an app_authorization principal"
 
     def _node_name_of_platform_application(self, application: object) -> str | None:
         for node_name, node in self._s.nodes.items():
@@ -305,21 +312,45 @@ class _RelationshipsMixin:
             )
             return
         node_name, service_name = resolved
+        node = self._proxy_upstream_node(
+            node_name,
+            service_ref,
+            upstream_node_ref=upstream_node_ref,
+            relationship_target=relationship_target,
+            label=label,
+            context=context,
+            field_name=field_name,
+        )
+        if node is None:
+            return
+        if service_name not in self._node_service_names(node):
+            self._err(
+                f"{label} {context} {field_name} '{service_ref}' does not resolve to a service on node '{node_name}'"
+            )
+
+    def _proxy_upstream_node(
+        self,
+        node_name: str,
+        service_ref: str,
+        *,
+        upstream_node_ref: str,
+        relationship_target: str,
+        label: str,
+        context: str,
+        field_name: str,
+    ) -> object | None:
         expected_node_name = upstream_node_ref or self._node_name_from_relationship_target(relationship_target)
         if expected_node_name and node_name != expected_node_name:
             self._err(
                 f"{label} {context} {field_name} '{service_ref}' must reference a service "
                 f"on upstream node '{expected_node_name}'"
             )
-            return
+            return None
         node = self._s.nodes.get(node_name)
         if node is None:
             self._err(f"{label} {context} upstream service node '{node_name}' does not resolve to a defined node")
-            return
-        if service_name not in self._node_service_names(node):
-            self._err(
-                f"{label} {context} {field_name} '{service_ref}' does not resolve to a service on node '{node_name}'"
-            )
+            return None
+        return node
 
     def _resolve_upstream_service_ref(
         self,
@@ -347,9 +378,12 @@ class _RelationshipsMixin:
             return None
         if target in self._s.nodes:
             return target
+        return self._node_name_from_qualified_target(target)
+
+    def _node_name_from_qualified_target(self, target: str) -> str | None:
         service_split = self._split_node_service_ref(target)
         if service_split is not None:
-            node_name, _service_name = service_split
+            node_name = service_split[0]
             return node_name if node_name in self._s.nodes else None
         if target.startswith(_NODES_PREFIX):
             node_name, sep, _tail = target[len(_NODES_PREFIX) :].partition(".runtime.")

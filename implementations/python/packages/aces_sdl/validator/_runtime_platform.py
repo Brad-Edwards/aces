@@ -85,11 +85,7 @@ class _RuntimePlatformMixin:
         service_names: set[str],
         observed_paths: set[str],
     ) -> None:
-        component_ids = {component.component_id for component in manager.components}
-        agent_ids = {agent.agent_id for agent in manager.agents}
-        group_ids = {group.group_id for group in manager.agent_groups}
-        content_set_ids = {content_set.content_id for content_set in manager.content_sets}
-        definition_ids = {definition.definition_id for definition in manager.detection_definitions}
+        ids = self._security_monitoring_local_ids(manager)
         for listener in manager.listeners:
             self._verify_owned_service_ref(
                 node_name,
@@ -97,6 +93,32 @@ class _RuntimePlatformMixin:
                 service_names,
                 owner_label=f"{owner_label} listener '{listener.listener_id}'",
             )
+        self._verify_sm_agent_groups(manager, owner_label, ids, observed_paths)
+        self._verify_sm_agents(manager, owner_label, ids)
+        for content_set in manager.content_sets:
+            self._verify_dns_file_refs(
+                f"{owner_label} content_set '{content_set.content_id}'",
+                getattr(content_set, "file_refs", []),
+                field_name="file_refs",
+                observed_paths=observed_paths,
+            )
+        for definition in manager.detection_definitions:
+            self._verify_sm_definition(definition, owner_label, ids, observed_paths)
+        self._verify_sm_settings(manager, owner_label, ids, observed_paths)
+
+    @staticmethod
+    def _security_monitoring_local_ids(manager: object) -> dict[str, set[str]]:
+        return {
+            "component": {component.component_id for component in manager.components},
+            "agent": {agent.agent_id for agent in manager.agents},
+            "group": {group.group_id for group in manager.agent_groups},
+            "content_set": {content_set.content_id for content_set in manager.content_sets},
+            "definition": {definition.definition_id for definition in manager.detection_definitions},
+        }
+
+    def _verify_sm_agent_groups(
+        self, manager: object, owner_label: str, ids: dict[str, set[str]], observed_paths: set[str]
+    ) -> None:
         for group in manager.agent_groups:
             group_label = f"{owner_label} agent_group '{group.group_id}'"
             self._verify_dns_file_refs(
@@ -108,83 +130,85 @@ class _RuntimePlatformMixin:
             for member_ref in group.member_refs:
                 self._verify_security_monitoring_local_ref(
                     member_ref,
-                    agent_ids,
+                    ids["agent"],
                     owner_label=group_label,
                     field_name="member_ref",
                     target_label="agent",
                 )
+
+    def _verify_sm_agents(self, manager: object, owner_label: str, ids: dict[str, set[str]]) -> None:
         for agent in manager.agents:
             agent_label = f"{owner_label} agent '{agent.agent_id}'"
             for group_ref in agent.group_refs:
                 self._verify_security_monitoring_local_ref(
                     group_ref,
-                    group_ids,
+                    ids["group"],
                     owner_label=agent_label,
                     field_name="group_ref",
                     target_label="agent group",
                 )
-        for content_set in manager.content_sets:
-            self._verify_dns_file_refs(
-                f"{owner_label} content_set '{content_set.content_id}'",
-                getattr(content_set, "file_refs", []),
-                field_name="file_refs",
-                observed_paths=observed_paths,
-            )
-        for definition in manager.detection_definitions:
-            definition_label = f"{owner_label} detection_definition '{definition.definition_id}'"
-            self._verify_security_monitoring_local_ref(
-                getattr(definition, "content_set_ref", ""),
-                content_set_ids,
+
+    def _verify_sm_definition(
+        self, definition: object, owner_label: str, ids: dict[str, set[str]], observed_paths: set[str]
+    ) -> None:
+        definition_label = f"{owner_label} detection_definition '{definition.definition_id}'"
+        self._verify_security_monitoring_local_ref(
+            getattr(definition, "content_set_ref", ""),
+            ids["content_set"],
+            owner_label=definition_label,
+            field_name="content_set_ref",
+            target_label="content set",
+        )
+        self._verify_dns_file_refs(
+            definition_label,
+            [definition.source_file_ref] if definition.source_file_ref else [],
+            field_name="source_file_ref",
+            observed_paths=observed_paths,
+        )
+        self._verify_dns_file_refs(
+            definition_label,
+            getattr(definition, "evidence_refs", []),
+            field_name="evidence_refs",
+            observed_paths=observed_paths,
+        )
+        for field_name, refs in (
+            ("if_sid_ref", getattr(definition, "if_sid_refs", [])),
+            ("if_matched_sid_ref", getattr(definition, "if_matched_sid_refs", [])),
+            ("parent_definition_ref", getattr(definition, "parent_definition_refs", [])),
+        ):
+            for ref in refs:
+                self._verify_security_monitoring_local_ref(
+                    ref,
+                    ids["definition"],
+                    owner_label=definition_label,
+                    field_name=field_name,
+                    target_label="detection definition",
+                )
+        source_artifact_ref = getattr(definition, "source_artifact_ref", "")
+        if source_artifact_ref and not self._is_unresolved_var(source_artifact_ref):
+            self._validate_named_ref(
+                source_artifact_ref,
                 owner_label=definition_label,
-                field_name="content_set_ref",
-                target_label="content set",
+                ref_label="source_artifact_ref",
             )
-            self._verify_dns_file_refs(
-                definition_label,
-                [definition.source_file_ref] if definition.source_file_ref else [],
-                field_name="source_file_ref",
-                observed_paths=observed_paths,
+        for target_ref in getattr(definition, "target_refs", []):
+            if self._is_unresolved_var(target_ref):
+                continue
+            self._validate_named_ref(
+                target_ref,
+                owner_label=definition_label,
+                ref_label="target_ref",
+                targetable=True,
             )
-            self._verify_dns_file_refs(
-                definition_label,
-                getattr(definition, "evidence_refs", []),
-                field_name="evidence_refs",
-                observed_paths=observed_paths,
-            )
-            for field_name, refs in (
-                ("if_sid_ref", getattr(definition, "if_sid_refs", [])),
-                ("if_matched_sid_ref", getattr(definition, "if_matched_sid_refs", [])),
-                ("parent_definition_ref", getattr(definition, "parent_definition_refs", [])),
-            ):
-                for ref in refs:
-                    self._verify_security_monitoring_local_ref(
-                        ref,
-                        definition_ids,
-                        owner_label=definition_label,
-                        field_name=field_name,
-                        target_label="detection definition",
-                    )
-            source_artifact_ref = getattr(definition, "source_artifact_ref", "")
-            if source_artifact_ref and not self._is_unresolved_var(source_artifact_ref):
-                self._validate_named_ref(
-                    source_artifact_ref,
-                    owner_label=definition_label,
-                    ref_label="source_artifact_ref",
-                )
-            for target_ref in getattr(definition, "target_refs", []):
-                if self._is_unresolved_var(target_ref):
-                    continue
-                self._validate_named_ref(
-                    target_ref,
-                    owner_label=definition_label,
-                    ref_label="target_ref",
-                    targetable=True,
-                )
+
+    def _verify_sm_settings(
+        self, manager: object, owner_label: str, ids: dict[str, set[str]], observed_paths: set[str]
+    ) -> None:
         for setting in manager.settings:
             setting_label = f"{owner_label} setting '{setting.setting_id}'"
             self._verify_security_monitoring_local_ref(
                 getattr(setting, "component_ref", ""),
-                component_ids,
+                ids["component"],
                 owner_label=setting_label,
                 field_name="component_ref",
                 target_label="component",
@@ -289,23 +313,28 @@ class _RuntimePlatformMixin:
         content_object_ids = {obj.content_object_id for obj in application.content_objects}
         marking_ids = {marking.marking_id for marking in application.markings}
         for content_object in application.content_objects:
-            object_label = f"{owner_label} content_object '{content_object.content_object_id}'"
-            for reference in content_object.references:
-                if self._is_unresolved_var(reference):
-                    continue
-                if reference not in content_object_ids:
-                    self._err(
-                        f"{object_label} reference '{reference}' does not resolve to a "
-                        f"content_object in the platform application"
-                    )
-            for marking_ref in content_object.marking_refs:
-                if self._is_unresolved_var(marking_ref):
-                    continue
-                if marking_ref not in marking_ids:
-                    self._err(
-                        f"{object_label} marking_ref '{marking_ref}' does not resolve to a "
-                        f"marking in the platform application"
-                    )
+            self._verify_platform_content_object(content_object, owner_label, content_object_ids, marking_ids)
+
+    def _verify_platform_content_object(
+        self, content_object: object, owner_label: str, content_object_ids: set[str], marking_ids: set[str]
+    ) -> None:
+        object_label = f"{owner_label} content_object '{content_object.content_object_id}'"
+        for reference in content_object.references:
+            if self._is_unresolved_var(reference):
+                continue
+            if reference not in content_object_ids:
+                self._err(
+                    f"{object_label} reference '{reference}' does not resolve to a "
+                    f"content_object in the platform application"
+                )
+        for marking_ref in content_object.marking_refs:
+            if self._is_unresolved_var(marking_ref):
+                continue
+            if marking_ref not in marking_ids:
+                self._err(
+                    f"{object_label} marking_ref '{marking_ref}' does not resolve to a "
+                    f"marking in the platform application"
+                )
 
     @staticmethod
     def _node_app_authorization_ids(runtime: object) -> set[str]:
@@ -392,17 +421,15 @@ class _RuntimePlatformMixin:
                 self._err(f"{owner_label} target_node_ref '{node_ref}' does not resolve to a defined node")
                 return
 
-        if service_ref and not self._is_unresolved_var(service_ref):
-            if not node_ref:
-                self._err(
-                    f"{owner_label} target_service_ref '{service_ref}' requires target_node_ref because "
-                    "scenario-level forwarding agents have no owning node"
-                )
-                return
-            if self._is_unresolved_var(node_ref):
-                return
-            if resolved_node is None:
-                return
+        if not service_ref or self._is_unresolved_var(service_ref):
+            return
+        if not node_ref:
+            self._err(
+                f"{owner_label} target_service_ref '{service_ref}' requires target_node_ref because "
+                "scenario-level forwarding agents have no owning node"
+            )
+            return
+        if not self._is_unresolved_var(node_ref) and resolved_node is not None:
             if service_ref not in self._node_service_names(resolved_node):
                 self._err(
                     f"{owner_label} target_service_ref '{service_ref}' does not resolve to a service "

@@ -100,22 +100,28 @@ class _RuntimeServicesMixin:
     ) -> object | None:
         if not ref or self._is_unresolved_var(ref):
             return None
-        service_name = ref
-        if ref.startswith(_NODES_PREFIX):
-            split = self._split_node_service_ref(ref)
-            if split is None:
-                self._err(
-                    f"{owner_label} service ref '{ref}' must be a bare service name or 'nodes.<node>.services.<name>'"
-                )
-                return None
-            ref_node_name, service_name = split
-            if ref_node_name != node_name:
-                self._err(f"{owner_label} service ref '{ref}' must reference a service on the same node")
-                return None
+        service_name = self._owned_service_name(node_name, ref, owner_label=owner_label)
+        if service_name is None:
+            return None
         service = services_by_name.get(service_name)
         if service is None:
             self._err(f"{owner_label} references undefined service '{service_name}'")
         return service
+
+    def _owned_service_name(self, node_name: str, ref: str, *, owner_label: str) -> str | None:
+        """Resolve a bare or ``nodes.<node>.services.<name>`` ref to a same-node service name."""
+        if not ref.startswith(_NODES_PREFIX):
+            return ref
+        split = self._split_node_service_ref(ref)
+        if split is not None and split[0] == node_name:
+            return split[1]
+        if split is None:
+            self._err(
+                f"{owner_label} service ref '{ref}' must be a bare service name or 'nodes.<node>.services.<name>'"
+            )
+        else:
+            self._err(f"{owner_label} service ref '{ref}' must reference a service on the same node")
+        return None
 
     def _verify_route_upstream_target(self, node_name: str, application: object, route: object) -> None:
         target = getattr(route, "upstream_target", None)
@@ -450,7 +456,8 @@ class _RuntimeServicesMixin:
                 continue
             self._check_override_subject_names(node_name, overrides, observed)
 
-    def _capability_overrides_for(self, node: object) -> list[object]:
+    @staticmethod
+    def _capability_overrides_for(node: object) -> list[object]:
         runtime = getattr(node, "runtime", None)
         if runtime is None:
             return []
