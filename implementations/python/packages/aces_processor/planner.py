@@ -31,8 +31,9 @@ from .semantics.planner import (
     resource_dependency_cycles,
     resource_topological_order,
 )
-from .semantics.realization import realization_disclosure as realization_disclosure
-from .semantics.realization import realization_support_diagnostics
+from .semantics.realization import realization_disclosure, realization_support_diagnostics
+
+__all__ = ["plan", "realization_disclosure", "snapshot_delete_order"]
 
 
 def _planned_resource(address: str, domain: RuntimeDomain, resource_type: str, resource) -> PlannedResource:

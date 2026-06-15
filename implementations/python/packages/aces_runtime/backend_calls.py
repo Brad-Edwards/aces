@@ -57,31 +57,52 @@ def _call_backend_apply(
     try:
         result = method(*backend_args)
     except Exception as exc:
-        apply_result = _failed_apply_result(baseline_snapshot, _backend_call_failed(address, exc))
-    else:
-        invalid_message = _apply_result_contract_violation(result, address)
-        if invalid_message is not None:
-            apply_result = _failed_apply_result(baseline_snapshot, _backend_contract_invalid(address, invalid_message))
-        else:
-            assert isinstance(result, ApplyResult)
-            contract_diagnostics = _snapshot_contract_diagnostics(result.snapshot)
-            if not contract_diagnostics:
-                contract_diagnostics = _snapshot_transition_contract_diagnostics(baseline_snapshot, result.snapshot)
-            realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
-            if not contract_diagnostics and realization_requirements and realization_plan is not None:
-                # SEM-218 I2 non-approximation gate + I5 provenance disclosure.
-                contract_diagnostics, realization_provenance = realization_disclosure(
-                    realization_requirements,
-                    realization_plan,
-                    result.snapshot,
-                )
-            if contract_diagnostics:
-                apply_result = ApplyResult(success=False, snapshot=baseline_snapshot, diagnostics=contract_diagnostics)
-            elif realization_provenance:
-                apply_result = _with_realization_provenance(result, realization_provenance)
-            else:
-                apply_result = result
-    return apply_result
+        return _failed_apply_result(baseline_snapshot, _backend_call_failed(address, exc))
+    return _finalize_backend_apply(
+        result,
+        address=address,
+        baseline_snapshot=baseline_snapshot,
+        realization_requirements=realization_requirements,
+        realization_plan=realization_plan,
+    )
+
+
+def _finalize_backend_apply(
+    result: object,
+    *,
+    address: str,
+    baseline_snapshot: RuntimeSnapshot,
+    realization_requirements: tuple[CompiledRealizationRequirement, ...],
+    realization_plan: ProvisioningPlan | None,
+) -> ApplyResult:
+    """Validate a backend's apply result and gate its realized snapshot.
+
+    Rejects (returning the baseline snapshot, ``success=False``) on a malformed
+    result, a snapshot-contract violation, or a SEM-218 non-approximation
+    violation; otherwise returns the backend result, augmented with the
+    realization-provenance ledger when the gate disclosed one.
+    """
+
+    invalid_message = _apply_result_contract_violation(result, address)
+    if invalid_message is not None:
+        return _failed_apply_result(baseline_snapshot, _backend_contract_invalid(address, invalid_message))
+    assert isinstance(result, ApplyResult)
+    contract_diagnostics = _snapshot_contract_diagnostics(result.snapshot)
+    if not contract_diagnostics:
+        contract_diagnostics = _snapshot_transition_contract_diagnostics(baseline_snapshot, result.snapshot)
+    realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
+    if not contract_diagnostics and realization_requirements and realization_plan is not None:
+        # SEM-218 I2 non-approximation gate + I5 provenance disclosure.
+        contract_diagnostics, realization_provenance = realization_disclosure(
+            realization_requirements,
+            realization_plan,
+            result.snapshot,
+        )
+    if contract_diagnostics:
+        return ApplyResult(success=False, snapshot=baseline_snapshot, diagnostics=contract_diagnostics)
+    if realization_provenance:
+        return _with_realization_provenance(result, realization_provenance)
+    return result
 
 
 def _with_realization_provenance(

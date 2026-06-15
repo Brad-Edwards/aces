@@ -24,7 +24,7 @@ from dataclasses import dataclass
 
 from aces_backend_protocols.capabilities import BackendManifest
 from aces_contracts.diagnostics import Diagnostic, Severity
-from aces_contracts.planning import ChangeAction, ProvisioningPlan
+from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp
 from aces_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
 from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
@@ -211,44 +211,68 @@ def realization_disclosure(
     provenance: list[RealizationProvenanceEntry] = []
     declared_ops = {op.address: op for op in declared_plan.operations}
     for requirement in requirements:
-        path = CONCERN_PAYLOAD_PATH.get(requirement.requirement_kind)
-        if path is None:
-            continue
-        op = declared_ops.get(requirement.address)
-        if op is None or op.action is ChangeAction.DELETE:
-            # No realization is owed: the plan declares no op for this resource,
-            # or it removes it (expected absence). Not a backend contract fault.
-            continue
-        declared_value = _concern_value(op.payload, path)
-        if declared_value is _MISSING_CONCERN_VALUE:
-            # The plan op carries no value for this concern, so there is no author
-            # baseline to enforce (an upstream processor invariant, not a backend
-            # contract). Nothing to gate or disclose.
-            continue
-        entry = returned_snapshot.entries.get(requirement.address)
-        realized_value = _concern_value(entry.payload, path) if entry is not None else _MISSING_CONCERN_VALUE
-        honoured = realized_value == declared_value
-        if requirement.explicitness is ExplicitnessClass.EXACT and not honoured:
-            # The backend realized the exact concern with a different value or
-            # omitted it entirely; both are forbidden silent approximation (I2).
-            diagnostics.append(_silent_approximation_diagnostic(requirement))
-            continue
-        if realized_value is _MISSING_CONCERN_VALUE:
-            # A non-exact concern the backend left unrealized: nothing to disclose.
-            continue
-        provenance.append(
-            RealizationProvenanceEntry(
-                address=requirement.address,
-                field_path=requirement.field_path,
-                domain=requirement.domain,
-                requirement_kind=requirement.requirement_kind,
-                explicitness=requirement.explicitness,
-                provenance=(
-                    ExplicitnessProvenance.AUTHOR_DECLARED if honoured else ExplicitnessProvenance.BACKEND_REALIZED
-                ),
-            )
-        )
+        diagnostic, entry = _evaluate_realization(requirement, declared_ops, returned_snapshot)
+        if diagnostic is not None:
+            diagnostics.append(diagnostic)
+        if entry is not None:
+            provenance.append(entry)
     return diagnostics, tuple(provenance)
+
+
+def _evaluate_realization(
+    requirement: CompiledRealizationRequirement,
+    declared_ops: dict[str, ProvisionOp],
+    returned_snapshot: RuntimeSnapshot,
+) -> tuple[Diagnostic | None, RealizationProvenanceEntry | None]:
+    """Gate one compiled requirement against its realized value.
+
+    Returns ``(diagnostic, entry)`` where at most one is non-None: a diagnostic
+    for an exact requirement the backend realized dishonestly, or a provenance
+    entry for a located realized concern. Both are None when there is no author
+    baseline to enforce (no plan op / a ``DELETE`` op / no declared value) or
+    when a non-exact concern was left unrealized.
+    """
+
+    path = CONCERN_PAYLOAD_PATH.get(requirement.requirement_kind)
+    if path is None:
+        return None, None
+    op = declared_ops.get(requirement.address)
+    # No realization is owed when the plan declares no op for this resource or
+    # removes it (a DELETE op — expected absence); neither is a backend fault.
+    if op is None or op.action is ChangeAction.DELETE:
+        return None, None
+    declared_value = _concern_value(op.payload, path)
+    if declared_value is _MISSING_CONCERN_VALUE:
+        # The plan op carries no value for this concern: no author baseline to
+        # enforce (an upstream processor invariant, not a backend contract).
+        return None, None
+    snapshot_entry = returned_snapshot.entries.get(requirement.address)
+    realized_value = (
+        _concern_value(snapshot_entry.payload, path) if snapshot_entry is not None else _MISSING_CONCERN_VALUE
+    )
+    honoured = realized_value == declared_value
+    if requirement.explicitness is ExplicitnessClass.EXACT and not honoured:
+        # The backend realized the exact concern with a different value or omitted
+        # it entirely; both are forbidden silent approximation (I2).
+        return _silent_approximation_diagnostic(requirement), None
+    if realized_value is _MISSING_CONCERN_VALUE:
+        # A non-exact concern the backend left unrealized: nothing to disclose.
+        return None, None
+    return None, _realization_provenance_entry(requirement, honoured)
+
+
+def _realization_provenance_entry(
+    requirement: CompiledRealizationRequirement,
+    honoured: bool,
+) -> RealizationProvenanceEntry:
+    return RealizationProvenanceEntry(
+        address=requirement.address,
+        field_path=requirement.field_path,
+        domain=requirement.domain,
+        requirement_kind=requirement.requirement_kind,
+        explicitness=requirement.explicitness,
+        provenance=(ExplicitnessProvenance.AUTHOR_DECLARED if honoured else ExplicitnessProvenance.BACKEND_REALIZED),
+    )
 
 
 def _silent_approximation_diagnostic(requirement: CompiledRealizationRequirement) -> Diagnostic:

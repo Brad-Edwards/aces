@@ -758,7 +758,7 @@ def _semantic_diagnostics(contract_name: str, payload: Any) -> list[Diagnostic]:
     return _runtime_snapshot_semantic_diagnostics(payload)
 
 
-def _fixture_case_diagnostics(contract_name: str, payload: Any) -> list[Diagnostic]:
+def _fixture_case_diagnostics(contract_name: str, payload: object) -> list[Diagnostic]:
     """Schema-gate first; only run semantic analysis on a schema-valid payload.
 
     Semantic checks (for example ``_runtime_snapshot_semantic_diagnostics``)
