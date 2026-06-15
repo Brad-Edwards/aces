@@ -101,7 +101,10 @@ Russo/Costa/Armando, Swiler, Oberkampf/Roy, and Sargent are citable proceedings,
 technical-report, or book sources; Garg et al. is used as a current survey
 preprint rather than as settled normative authority. The working Zotero library
 tracks these identity-authority references under `aces-sdl-identity-authority`
-and the adjacent V&V subset under `adjacent-vv-lineage`.
+and the adjacent V&V subset under `adjacent-vv-lineage`; because that library is
+private, the Garg et al. preprint citation is also snapshotted in-repo under
+[`docs/research/primary/`](../../research/primary/literature/cyber-range-scenario-survey.md)
+so the reference is verifiable from the repository alone.
 
 The design deliberately keeps provider-stable identifiers as data rather than
 as ACES reference identity. AD SIDs/objectGUIDs, LDAP DNs/entryUUIDs, SCIM
@@ -111,10 +114,12 @@ the portable ACES references are stable `*_id` symbols scoped by the scenario
 and authority. Within one authority those ids share a single local namespace,
 so an id cannot be reused across service, subject, policy, relationship, and
 authority records. This matches the verification/validation posture in the
-cyber-range literature (for example Russo/Costa/Armando on
-[scenario validation](https://doi.org/10.1109/NCA.2018.8548324), Garg et al.
-on the TechRxiv preprint
-[scenario-design/execution survey](https://doi.org/10.36227/techrxiv.175942879.94813577/v1),
+cyber-range literature (for example Russo, Costa, and Armando's
+[Scenario Design and Validation for Next Generation Cyber Ranges](https://doi.org/10.1109/NCA.2018.8548324)
+(IEEE NCA 2018), and Garg, Boualouache, Imeri, and Roth's
+[A Survey of Cyber Range Training Exercise Scenario Description, Generation, and Execution](https://doi.org/10.36227/techrxiv.175942879.94813577/v1)
+(TechRxiv preprint, 2025 — snapshotted in-repo at
+[docs/research/primary](../../research/primary/literature/cyber-range-scenario-survey.md)),
 and Swiler plus Oberkampf/Roy/Sargent on
 [cyber-emulation V&V](https://doi.org/10.2172/1897016),
 [scientific-computing V&V](https://doi.org/10.1017/CBO9780511760396), and
@@ -845,6 +850,10 @@ federation object model derived from it.
   MITRE CALDERA, Atomic Red Team, and OpenC2 are adversary-emulation and
   command/response precedents. ACES treats them as behavior and execution
   sources that scenarios may bind to, not as replacements for the SDL.
+  From OpenC2 specifically, ACES borrows the command/response principle — an
+  action requested against a target with a status-bearing response — but does
+  not adopt OpenC2's action/target/argument payload structures as SDL or
+  runtime-contract schema.
 - OCSF is the preferred lineage for normalized security event and finding
   structure. ACES uses that style for observations and evidence without making
   raw telemetry equal to participant-visible state.

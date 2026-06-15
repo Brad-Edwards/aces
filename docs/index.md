@@ -200,6 +200,7 @@ specs/formal
 lessons/README
 migration/README
 research/experiment-core/index
+research/primary/index
 research/related-work-comparison/index
 ```
 

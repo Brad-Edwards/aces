@@ -1,4 +1,4 @@
-# SCN-010 Expressivity Gap Analysis — Final Peer-Review Report
+# SCN-010 Expressivity Gap Analysis — Final Architect-Review Report
 ## ACES SDL runtime surface coverage for the 16 remaining APTL containers
 
 ---
@@ -32,7 +32,18 @@ The reference exemplar is `aptl/docs/aces/inventory/wazuh.manager/` (README + ma
 
 ### 2.3 Derivation and adversarial filtering
 
-Gaps were derived per-container by enumerating defining logical state (the `defining_state` corpus), testing each fact against the *closest* existing runtime surface field-by-field, and recording inadequacy only where the existing surface's **shape** cannot carry the fact (not merely "no instance authored yet"). Every candidate was then put through an adversarial challenge panel that asked six falsifiable questions: *is it a real gap; is it expressible today (cite the exact field that would carry it); is it a local optimization; is the grounding primary-literature-sufficient; does it meet parity depth; and what required revisions or rejections follow.* The verdicts are incorporated below: where a panel said `confirm`, the surface stands; where `revise`, the required revisions are applied (e.g. `data_model` and `agent_kind` reclassified OPEN; `scheduled_jobs` hollowed to cadence-only; the `event` schedule member dropped; `owner_kind` collapsed into a derived tier); where a candidate would have been expressible today, it is recorded as a **rejected candidate** in §4.6 to strengthen credibility.
+Gaps were derived per-container by enumerating defining logical state (the `defining_state` corpus), testing each fact against the *closest* existing runtime surface field-by-field, and recording inadequacy only where the existing surface's **shape** cannot carry the fact (not merely "no instance authored yet"). Every candidate was then put through an adversarial challenge rubric of six falsifiable questions: *is it a real gap; is it expressible today (cite the exact field that would carry it); is it a local optimization; is the grounding primary-literature-sufficient; does it meet parity depth; and what required revisions or rejections follow.* The verdicts are incorporated below: where the rubric returned `confirm`, the surface stands; where `revise`, the required revisions are applied (e.g. `data_model` and `agent_kind` reclassified OPEN; `scheduled_jobs` hollowed to cadence-only; the `event` schedule member dropped; `owner_kind` collapsed into a derived tier); where a candidate would have been expressible today, it is recorded as a **rejected candidate** in §4.6 to strengthen credibility.
+
+**Review model and its limits.** The "adversarial challenge" above is an
+architect-guided adversarial self-review, not an external review panel. A single
+author (the architect) applied the fixed six-question rubric to each candidate
+gap and recorded a `confirm`, `revise`, or `reject` verdict; `revise` verdicts
+were reconciled by applying the stated revision inline, and `reject` verdicts are
+listed as rejected candidates in §4.6. There were no independent external
+reviewers — "rubric" and "verdict" name the self-applied questions and their
+outcomes, not the judgement of a separate body. This report is therefore
+architect self-review held to a peer-review-grade standard; it has not been
+independently peer reviewed.
 
 All load-bearing code claims in this report were re-verified against the live tree:
 - `DatabaseObjectType` is closed to `database | schema | table` (`runtime_database_vocab.py:89–94` — even narrower than the gap text's "view" claim).
@@ -124,7 +135,7 @@ Each confirmed/revised gap below states what cannot be typed, why the closest ex
 
 ### 4.6 Rejected candidate-gaps (expressible today — confirmation-folds)
 
-Recording these strengthens peer-review credibility by proving the parity lens cuts **against over-building** too:
+Recording these strengthens the analysis's credibility by proving the parity lens cuts **against over-building** too:
 
 - **Suricata standalone IDS** — *expressible today* via `network_detection_engines` (`RuntimeNetworkDetectionRuleSource.generated_by` + `THREAT_INTEL` kind at `runtime_network_detection.py:89,215`, output_streams `eve_json`, control_channels `rule_reload`, network_sets) + `network_sensors` (capture posture). Its defining state *is* detection-engine state, typed field-for-field. **Not a gap.**
 - **`misp-db`** — *expressible today* via `database_services`: `DatabaseEngine.MARIADB → DatabaseProtocol.MYSQL` (`runtime_database_vocab.py:28,123`), Database/Schema/Table/Role/Grant/Settings tree fits a genuine relational engine (the exact opposite of the Redis-as-relational mismatch). **Not a gap** — relational→datastore fold deferred as named coherence debt.
@@ -233,7 +244,7 @@ After this work the entire runtime surface (old + new) is describable by **one s
 8. **Registry.** Every family registers through `_runtime_service_families.py` with `collection_name`/`id_field`/`child_refs`; export-name uniqueness holds.
 9. **Decomposition.** Same fact-shape → one guarded family; different shape → peer family; orthogonal recurring fact → referenced shared primitive; inter-node detail → relationship subtype; matching existing shape → named fold.
 
-This survives expert review because the cohesion is **structural and executable, not aspirational**: ~10 candidate one-off families collapse to 2 guarded spines + 3 primitives + 1 forwarder family + 3 relationship subtypes; the highest-recurrence gap (app-internal RBAC, 8+ sites) is typed once; the `require_profile_for_<discriminator>` guards make over-abstraction *fail* (Redis-as-relational, MISP-as-counts, SOAR-as-object-list cannot pass); the named folds prove the gate is not over-applied; and the `#442` narrative is corrected to the verifiable codebase reality. The lint is the peer-review-survival proof made testable.
+This is built to survive expert review because the cohesion is **structural and executable, not aspirational**: ~10 candidate one-off families collapse to 2 guarded spines + 3 primitives + 1 forwarder family + 3 relationship subtypes; the highest-recurrence gap (app-internal RBAC, 8+ sites) is typed once; the `require_profile_for_<discriminator>` guards make over-abstraction *fail* (Redis-as-relational, MISP-as-counts, SOAR-as-object-list cannot pass); the named folds prove the gate is not over-applied; and the `#442` narrative is corrected to the verifiable codebase reality. The lint makes that cohesion claim testable rather than asserted.
 
 ---
 
