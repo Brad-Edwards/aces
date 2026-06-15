@@ -234,12 +234,11 @@ def _evaluate_realization(
     """
 
     path = CONCERN_PAYLOAD_PATH.get(requirement.requirement_kind)
-    if path is None:
-        return None, None
     op = declared_ops.get(requirement.address)
-    # No realization is owed when the plan declares no op for this resource or
-    # removes it (a DELETE op — expected absence); neither is a backend fault.
-    if op is None or op.action is ChangeAction.DELETE:
+    # No realization is owed when the concern is unmapped, the plan declares no op
+    # for this resource, or it removes it (a DELETE op — expected absence); none is
+    # a backend fault, so there is no baseline to gate or disclose.
+    if path is None or op is None or op.action is ChangeAction.DELETE:
         return None, None
     declared_value = _concern_value(op.payload, path)
     if declared_value is _MISSING_CONCERN_VALUE:
@@ -251,14 +250,17 @@ def _evaluate_realization(
         _concern_value(snapshot_entry.payload, path) if snapshot_entry is not None else _MISSING_CONCERN_VALUE
     )
     honoured = realized_value == declared_value
+    diagnostic: Diagnostic | None = None
+    entry: RealizationProvenanceEntry | None = None
     if requirement.explicitness is ExplicitnessClass.EXACT and not honoured:
         # The backend realized the exact concern with a different value or omitted
         # it entirely; both are forbidden silent approximation (I2).
-        return _silent_approximation_diagnostic(requirement), None
-    if realized_value is _MISSING_CONCERN_VALUE:
-        # A non-exact concern the backend left unrealized: nothing to disclose.
-        return None, None
-    return None, _realization_provenance_entry(requirement, honoured)
+        diagnostic = _silent_approximation_diagnostic(requirement)
+    elif realized_value is not _MISSING_CONCERN_VALUE:
+        # A located realized concern: disclose its provenance. (A non-exact concern
+        # the backend left unrealized falls through with nothing to disclose.)
+        entry = _realization_provenance_entry(requirement, honoured)
+    return diagnostic, entry
 
 
 def _realization_provenance_entry(

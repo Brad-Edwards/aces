@@ -100,9 +100,7 @@ def _finalize_backend_apply(
         )
     if contract_diagnostics:
         return ApplyResult(success=False, snapshot=baseline_snapshot, diagnostics=contract_diagnostics)
-    if realization_provenance:
-        return _with_realization_provenance(result, realization_provenance)
-    return result
+    return _with_realization_provenance(result, realization_provenance) if realization_provenance else result
 
 
 def _with_realization_provenance(
