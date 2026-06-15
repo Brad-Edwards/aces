@@ -38,7 +38,7 @@ capabilities, the concept-authority stack).
   `min-score` shorthand; `Condition` command-xor-source):
   - `implementations/python/packages/aces_sdl/scoring.py`
   - `implementations/python/packages/aces_sdl/conditions.py`
-- semantic validation: `implementations/python/packages/aces_sdl/validator.py`
+- semantic validation: `implementations/python/packages/aces_sdl/validator/`
   (`_verify_assessment_pipeline`)
 - compiled runtime addresses, contracts, and ordering/refresh derivation:
   - `implementations/python/packages/aces_processor/compiler.py`

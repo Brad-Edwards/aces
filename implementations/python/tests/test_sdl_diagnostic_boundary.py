@@ -23,17 +23,29 @@ pass.
 from __future__ import annotations
 
 import ast
-import inspect
+from pathlib import Path
 
 import aces_sdl.validator as validator_module
 
 
-def _validator_class_node(source: str) -> ast.ClassDef:
+def _all_class_methods(source: str) -> dict[str, ast.AST]:
+    """Collect every method from every class in ``source``.
+
+    The reference ``SemanticValidator`` is composed from per-seam mixin classes
+    split across the ``aces_sdl.validator`` package (issue #42), so the boundary
+    lint aggregates methods across all classes in the source rather than a single
+    ``SemanticValidator`` ClassDef. Method names are unique across the mixins, so
+    a flat name->node map faithfully reconstructs the composed method set.
+    """
     tree = ast.parse(source)
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ClassDef) and node.name == "SemanticValidator":
-            return node
-    raise AssertionError("SemanticValidator class definition not found in source")
+    methods: dict[str, ast.AST] = {}
+    for cls in ast.walk(tree):
+        if not isinstance(cls, ast.ClassDef):
+            continue
+        for node in cls.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                methods[node.name] = node
+    return methods
 
 
 def _calls_self_method(func: ast.AST, name: str) -> bool:
@@ -74,8 +86,7 @@ def find_advisory_boundary_violations(source: str) -> set[str]:
     short ``<kind>:<method>`` key so a failure names the offending site.
     """
 
-    cls = _validator_class_node(source)
-    methods = {node.name: node for node in cls.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    methods = _all_class_methods(source)
     violations: set[str] = set()
 
     for name, func in methods.items():
@@ -120,9 +131,15 @@ def find_advisory_boundary_violations(source: str) -> set[str]:
 
 
 def test_validator_advisory_error_channels_are_separated() -> None:
-    """The live ``SemanticValidator`` honours the diagnostics.md boundary."""
+    """The live ``SemanticValidator`` honours the diagnostics.md boundary.
 
-    source = inspect.getsource(validator_module)
+    ``aces_sdl.validator`` is a package (issue #42), so concatenate every
+    module's source and let the lint aggregate methods across the mixin classes
+    that compose ``SemanticValidator``.
+    """
+
+    package_dir = Path(validator_module.__file__).parent
+    source = "\n".join(path.read_text() for path in sorted(package_dir.glob("*.py")))
     assert find_advisory_boundary_violations(source) == set()
 
 

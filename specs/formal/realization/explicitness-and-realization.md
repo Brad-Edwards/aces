@@ -100,7 +100,7 @@ extend these rather than introduce parallel registries:
   `contracts/concept-authority/concept-families-v1.json`
   (`realization-and-disclosure`)
 - shared SDL static semantics:
-  `implementations/python/packages/aces_sdl/validator.py`
+  `implementations/python/packages/aces_sdl/validator/`
   (`SemanticValidator`, `SDLValidationError`)
 - instantiation and revalidation:
   `implementations/python/packages/aces_sdl/instantiate.py`
@@ -421,7 +421,7 @@ invariant I1–I5 is enforced by named code.
   may be realized at all).
 - I1, I3 fail-closed authoring / validation —
   `implementations/python/packages/aces_sdl/explicitness.py`,
-  `implementations/python/packages/aces_sdl/validator.py`,
+  `implementations/python/packages/aces_sdl/validator/`,
   `implementations/python/packages/aces_sdl/instantiate.py`
   (closed-world validation, classifier output on validated scenarios,
   and substitution-downgrade metadata on instantiated scenarios).
