@@ -198,6 +198,7 @@ specs/formal
 lessons/README
 migration/README
 research/experiment-core/index
+research/primary/index
 ```
 
 ```{toctree}
