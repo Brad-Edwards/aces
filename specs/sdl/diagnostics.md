@@ -2,9 +2,9 @@
 
 This file documents the SDL diagnostic boundary: the stages at which a document
 is checked, the fail-closed error semantics, and the distinction between a fatal
-**error** and a non-fatal **advisory**. It documents the **existing** boundary by
-reference; it does not introduce a new diagnostic mechanism, and it does not
-re-decide the classification of individual cases (see §5).
+**error** and a non-fatal **advisory**. It states the normative criterion that
+classifies a condition as an error or an advisory (§5); it does not introduce a
+new diagnostic mechanism, and it does not reclassify any existing condition.
 
 ## 1. Diagnostic stages
 
@@ -79,18 +79,51 @@ Existing advisory conditions, documented here by reference (not redefined):
 > scenario's advisory list and the language-service diagnostics, separately from
 > the error channel.*
 
-## 5. Coordination with review IMP-3
+## 5. Classification criterion
 
-The precise, case-by-case normative classification of which specific conditions
-are errors and which are advisories — and any change to where the line falls —
-is the subject of the review **IMP-3** work. This specification:
+This section states the normative rule that decides whether a condition is an
+**error** or an **advisory**. It resolves the classification deferred by review
+**IMP-3**: the boundary is single-sourced here, and the classification of an
+individual condition follows from this criterion rather than from each pass's
+implementation.
 
-- states the **principle** (errors are fatal and fail-closed; advisories are
-  non-fatal and not optional errors) and the **stages** at which checks run;
-- documents the **existing** advisory conditions by reference; and
-- **does not** re-decide individual classifications or introduce new ones.
+The criterion is **meaning preservation**:
 
-A future change that moves a condition between the error and advisory channels, or
-that adds a new diagnostic category, **MUST** be coordinated with IMP-3 and
+1. A condition is an **error** if and only if it affects the *meaning* of the SDL
+   document — whether the document denotes a well-defined scenario at all. The
+   meaning-affecting categories are: structural shape and closure (the §1 stage-1
+   checks, including unknown-key rejection); cross-section reference resolution
+   ([references.md](references.md)); identifier uniqueness; reference ambiguity;
+   dependency and control-flow acyclicity; control-flow reachability,
+   convergence, and "known-before-evaluation" visibility; required-profile guards
+   on discriminated runtime spines ([runtime-inventory.md](runtime-inventory.md));
+   variable binding, type, and constraint checks at instantiation
+   ([variables-and-instantiation.md §3](variables-and-instantiation.md)); and
+   explicit-redaction enforcement ([runtime-inventory.md §3](runtime-inventory.md)).
+   A document that violates one of these has no single well-defined meaning, so
+   the stage **MUST** fail closed (§3).
+2. A condition is an **advisory** if and only if the document still has a single
+   well-defined meaning and the condition reports a *deployability* or *quality*
+   heuristic that does not change what the scenario means — for example, a
+   construct a backend may be unable to realise without defaults, or a non-binding
+   observation an author may wish to review. Advisories are non-fatal (§4).
+
+**Borderline rule.** SDL diagnostics are fail-closed, so the default for a
+condition whose classification is genuinely unclear is **error**. A condition is
+classified as an advisory **only** when it is clearly a deployability or quality
+heuristic that leaves SDL meaning intact; if a violation could leave the
+document's meaning undefined, or if two conforming tools could legitimately
+disagree about whether the document is valid, it is an error. This rule is
+directional with §4: it governs how a *new* condition is classified, while §4
+forbids re-labelling an *already-classified* condition to change its severity.
+
+The existing conditions in §4 are consistent with this criterion. "VM without
+resources" and the name-based secret heuristic are deployability/quality
+heuristics that leave meaning intact, so they are advisories; reference
+resolution, uniqueness, acyclicity, ambiguity, required-profile guards, and
+explicit redaction are meaning-affecting, so they are errors.
+
+A future change that moves a condition between the error and advisory channels,
+or that adds a new diagnostic category, **MUST** apply this criterion and be
 reflected here, in the published schemas, and in the reference implementation
 together, so the boundary stays single-sourced.
