@@ -106,7 +106,11 @@ scenario = parse_sdl(yaml_string, skip_semantic_validation=True)
 
 Use `parse_sdl_file(...)` for SDL that uses top-level `imports:`. Import
 expansion is file-backed and deterministic, so in-memory `parse_sdl(...)`
-rejects module/import composition by design.
+rejects module/import composition by design. This determinism is witnessed by
+`implementations/python/tests/test_pipeline_determinism.py`, which runs the
+`parse → instantiate → compile` pipeline twice over representative scenarios
+(including a module-import scenario) and under varied `PYTHONHASHSEED`, and
+asserts the compiled output is byte-identical.
 
 Top-level composition supports:
 
