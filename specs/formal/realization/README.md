@@ -72,7 +72,7 @@ work the SEM-218 row tracks.
   (`realization-and-disclosure`)
 - SDL classifier and instantiation downgrade:
   `implementations/python/packages/aces_sdl/explicitness.py`,
-  `implementations/python/packages/aces_sdl/validator.py`,
+  `implementations/python/packages/aces_sdl/validator/`,
   `implementations/python/packages/aces_sdl/instantiate.py`
 - invalid fixtures evidencing fail-closed rejection:
   `contracts/fixtures/backend-manifest/backend-manifest-v2/invalid/hollow-realization-support.json`,

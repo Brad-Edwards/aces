@@ -172,7 +172,7 @@ Avoid:
 - authoring models (closed Pydantic shape; `agent` xor `entity`; non-empty
   `success`): `implementations/python/packages/aces_sdl/objectives.py`
 - semantic validation:
-  `implementations/python/packages/aces_sdl/validator.py` (`_verify_objectives`,
+  `implementations/python/packages/aces_sdl/validator/` (`_verify_objectives`,
   rendering the issue codes back onto the authoring-error strings)
 - compiled runtime objective resource, canonical addresses, diagnostics, and
   ordering/refresh derivation:

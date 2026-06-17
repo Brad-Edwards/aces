@@ -166,6 +166,7 @@ decisions/adrs/adr-059-adr-amendment-policy-and-pin-gate
 decisions/adrs/adr-060-participant-backend-facing-contract-surface
 decisions/sem-213-temporal-participant-preflight
 decisions/issue-508-related-work-comparison-preflight
+decisions/issue-42-validator-package-split-preflight
 ```
 
 ```{toctree}

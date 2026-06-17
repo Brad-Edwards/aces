@@ -8,7 +8,6 @@
 files:
   - implementations/python/packages/aces_processor/models.py
   - implementations/python/packages/aces_processor/compiler.py
-  - implementations/python/packages/aces_sdl/validator.py
   - implementations/python/packages/aces_contracts/contracts.py
   - implementations/python/packages/aces_processor/planner.py
   - implementations/python/packages/aces_conformance/conformance.py
