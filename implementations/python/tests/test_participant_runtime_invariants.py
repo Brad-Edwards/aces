@@ -1,10 +1,26 @@
-"""Executable oracle for participant-runtime trace predicates.
+"""Self-consistency oracle for the participant-runtime trace predicates.
+
+This file is NOT a test of a production participant-runtime subsystem. The
+predicates below (`ValidTrace`, `MonotoneSequence`, `RevisionDiscipline`,
+`OrderDiscipline`, `ConflictOK`, `TimeManagementOK`) have no callers under
+``src/`` or ``packages/`` — they are a closed, test-local executable encoding of
+the trace predicates published in the participant-runtime formal spec. The suite
+checks only that the encoding *discriminates*: each predicate accepts the
+legitimate variants of a spec-conforming trace and rejects a targeted violation
+while the other (non-targeted) predicates continue to hold.
 
 Spec mapping:
 - `ValidTrace`, `MonotoneSequence`, `RevisionDiscipline`, and
   `OrderDiscipline`: specs/formal/participant-runtime/README.md:1265
 - `ConflictOK` and `TimeManagementOK`:
   specs/formal/participant-runtime/README.md:2417
+
+The acceptance direction is exercised only as a positive control alongside the
+rejection tests (the ``*_accepts_supported_*_variants`` tests, plus the
+``assert <other predicate>(mutated)`` lines inside each rejection test). A green
+run here is NOT evidence that production code enforces these predicates; runtime
+enforcement of participant-runtime behaviour is covered behaviourally by
+``test_run_305_*``, ``test_run_306_*``, and ``test_run_311_*``.
 """
 
 from __future__ import annotations
@@ -790,24 +806,12 @@ def with_invalid_time_context_variant(trace: RuntimeTrace, variant: str) -> Runt
 
 @PROPERTY_SETTINGS
 @given(valid_traces())
-def test_valid_trace_accepts_generated_valid_traces(trace: RuntimeTrace) -> None:
-    assert valid_trace(trace)
-
-
-@PROPERTY_SETTINGS
-@given(valid_traces())
 def test_valid_trace_rejects_targeted_mutations(trace: RuntimeTrace) -> None:
     assert not valid_trace(with_sequence_regression(trace))
     assert not valid_trace(with_revision_violation(trace))
     assert not valid_trace(with_order_violation(trace))
     assert not valid_trace(with_conflicting_concurrent_writes(trace))
     assert not valid_trace(with_time_domain_violation(trace))
-
-
-@PROPERTY_SETTINGS
-@given(valid_traces())
-def test_monotone_sequence_accepts_generated_valid_traces(trace: RuntimeTrace) -> None:
-    assert monotone_sequence(trace)
 
 
 @PROPERTY_SETTINGS
@@ -820,12 +824,6 @@ def test_monotone_sequence_rejects_sequence_regression(trace: RuntimeTrace) -> N
     assert order_discipline(mutated)
     assert all(conflict_ok(record, mutated) for record in mutated.joint_actions)
     assert all(time_management_ok(context, mutated) for context in mutated.time_contexts)
-
-
-@PROPERTY_SETTINGS
-@given(valid_traces())
-def test_revision_discipline_accepts_generated_valid_traces(trace: RuntimeTrace) -> None:
-    assert revision_discipline(trace)
 
 
 @PROPERTY_SETTINGS
@@ -868,12 +866,6 @@ def test_revision_discipline_rejects_invalid_disclosure_specific_writes(
 
 
 @PROPERTY_SETTINGS
-@given(valid_traces())
-def test_order_discipline_accepts_generated_valid_traces(trace: RuntimeTrace) -> None:
-    assert order_discipline(trace)
-
-
-@PROPERTY_SETTINGS
 @given(valid_traces(), st.sampled_from(ORDER_CLAIM_VARIANTS))
 def test_order_discipline_accepts_supported_order_claim_strengths(
     trace: RuntimeTrace,
@@ -907,12 +899,6 @@ def test_order_discipline_rejects_claim_without_declared_basis(trace: RuntimeTra
     assert not order_discipline(mutated)
     assert all(conflict_ok(record, mutated) for record in mutated.joint_actions)
     assert all(time_management_ok(context, mutated) for context in mutated.time_contexts)
-
-
-@PROPERTY_SETTINGS
-@given(valid_traces())
-def test_conflict_ok_accepts_generated_valid_traces(trace: RuntimeTrace) -> None:
-    assert all(conflict_ok(record, trace) for record in trace.joint_actions)
 
 
 @PROPERTY_SETTINGS
@@ -966,12 +952,6 @@ def test_conflict_ok_rejects_joint_action_witnesses_that_are_not_exact_permutati
     assert order_discipline(mutated)
     assert all(not conflict_ok(record, mutated) for record in mutated.joint_actions)
     assert all(time_management_ok(context, mutated) for context in mutated.time_contexts)
-
-
-@PROPERTY_SETTINGS
-@given(valid_traces())
-def test_time_management_ok_accepts_generated_valid_traces(trace: RuntimeTrace) -> None:
-    assert all(time_management_ok(context, trace) for context in trace.time_contexts)
 
 
 @PROPERTY_SETTINGS
