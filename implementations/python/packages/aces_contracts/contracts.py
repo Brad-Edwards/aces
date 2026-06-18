@@ -1236,6 +1236,46 @@ class ParticipantStatusViewModel(ContractModel):
         return self
 
 
+def _check_history_record_scope_binding(
+    key: str,
+    value: object,
+    path: str,
+    *,
+    participant_address: str,
+    episode_id: str,
+) -> None:
+    """Raise if a nested record scope key conflicts with the history view scope."""
+    if not isinstance(value, str):
+        return
+    if key == "participant_address" and value != participant_address:
+        raise ValueError(f"{path}.{key} '{value}' does not match the view participant_address '{participant_address}'")
+    if key == "episode_id" and value != episode_id:
+        raise ValueError(f"{path}.{key} '{value}' does not match the view episode_id '{episode_id}'")
+
+
+def _walk_history_record_scope(
+    node: object,
+    path: str,
+    *,
+    participant_address: str,
+    episode_id: str,
+) -> None:
+    """Recursively bind nested recorded-contract scope to the history view scope."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            _check_history_record_scope_binding(
+                key, value, path, participant_address=participant_address, episode_id=episode_id
+            )
+            _walk_history_record_scope(
+                value, f"{path}.{key}", participant_address=participant_address, episode_id=episode_id
+            )
+    elif isinstance(node, list):
+        for index, item in enumerate(node):
+            _walk_history_record_scope(
+                item, f"{path}[{index}]", participant_address=participant_address, episode_id=episode_id
+            )
+
+
 class ParticipantHistoryViewModel(ContractModel):
     """API-408 retrieval projection of participant episode/behavior history."""
 
@@ -1270,29 +1310,17 @@ class ParticipantHistoryViewModel(ContractModel):
         through those subrecords.
         """
 
-        def _walk(node: object, path: str) -> None:
-            if isinstance(node, dict):
-                for key, value in node.items():
-                    if key == "participant_address" and isinstance(value, str) and value != self.participant_address:
-                        raise ValueError(
-                            f"{path}.{key} '{value}' does not match the view "
-                            f"participant_address '{self.participant_address}'"
-                        )
-                    if key == "episode_id" and isinstance(value, str) and value != self.episode_id:
-                        raise ValueError(
-                            f"{path}.{key} '{value}' does not match the view episode_id '{self.episode_id}'"
-                        )
-                    _walk(value, f"{path}.{key}")
-            elif isinstance(node, list):
-                for index, item in enumerate(node):
-                    _walk(item, f"{path}[{index}]")
-
         for field_name, events in (
             ("episode_history", self.episode_history),
             ("behavior_history", self.behavior_history),
         ):
             for index, event in enumerate(events):
-                _walk(event.model_dump(mode="python"), f"{field_name}[{index}]")
+                _walk_history_record_scope(
+                    event.model_dump(mode="python"),
+                    f"{field_name}[{index}]",
+                    participant_address=self.participant_address,
+                    episode_id=self.episode_id,
+                )
         return self
 
     @classmethod

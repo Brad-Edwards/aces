@@ -6,8 +6,10 @@ from ._content_objectives import _ContentObjectivesMixin
 from ._core import _ValidatorCore
 from ._nodes_infra_network import _NodesInfraNetworkMixin
 from ._relationships import _RelationshipsMixin
+from ._relationships_proxy import _RelationshipsProxyMixin
 from ._runtime_identity_data import _RuntimeIdentityDataMixin
 from ._runtime_mail import _RuntimeMailMixin
+from ._runtime_orchestration import _RuntimeOrchestrationMixin
 from ._runtime_platform import _RuntimePlatformMixin
 from ._runtime_services import _RuntimeServicesMixin
 from ._sections import _SectionsMixin
@@ -22,8 +24,10 @@ class SemanticValidator(
     _RuntimeServicesMixin,
     _RuntimeIdentityDataMixin,
     _RuntimePlatformMixin,
+    _RuntimeOrchestrationMixin,
     _RuntimeMailMixin,
     _RelationshipsMixin,
+    _RelationshipsProxyMixin,
     _ContentObjectivesMixin,
     _WorkflowAnalysisMixin,
     _WorkflowVerifyMixin,
