@@ -15,12 +15,14 @@ from aces_contracts.contracts import (
     ParticipantHistoryViewBehaviorEventModel,
     ParticipantHistoryViewEpisodeEventModel,
     ParticipantHistoryViewModel,
+    ParticipantJointActionRecordModel,
     ParticipantLifecycleEventModel,
     ParticipantObservationEnvelopeModel,
     ParticipantOutcomeReportModel,
     ParticipantSharedStateRecordModel,
     ParticipantStatusViewEpisodeStateModel,
     ParticipantStatusViewModel,
+    ParticipantTimeManagementContextModel,
     schema_bundle,
 )
 from jsonschema import Draft202012Validator
@@ -33,6 +35,8 @@ PARTICIPANT_RUNTIME_FIXTURE_MODELS = {
     "participant-lifecycle-event-v1": ParticipantLifecycleEventModel,
     "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel,
     "participant-shared-state-record-v1": ParticipantSharedStateRecordModel,
+    "participant-joint-action-record-v1": ParticipantJointActionRecordModel,
+    "participant-time-management-context-v1": ParticipantTimeManagementContextModel,
     "participant-outcome-report-v1": ParticipantOutcomeReportModel,
 }
 CONTROL_PLANE_VIEW_FIXTURE_MODELS = {
@@ -425,3 +429,22 @@ def test_participant_shared_state_record_rejects_unknown_conflict_policy():
 
     with pytest.raises(ValidationError, match="conflict_policy"):
         ParticipantSharedStateRecordModel.model_validate(payload)
+
+
+def test_participant_joint_action_record_rejects_implicit_last_writer_wins():
+    payload = _valid_fixture("participant-joint-action-record-v1")
+    payload["conflict_class"] = "none"
+    payload["conflict_policy"] = "none"
+    payload["realized_order"] = []
+
+    with pytest.raises(ValidationError, match="conflict_class"):
+        ParticipantJointActionRecordModel.model_validate(payload)
+
+
+def test_participant_time_management_context_rejects_timestamp_only_exact_claim():
+    payload = _valid_fixture("participant-time-management-context-v1")
+    payload["basis"] = "wall_clock_only"
+    payload["claim_strength"] = "exact"
+
+    with pytest.raises(ValidationError, match="wall_clock_only"):
+        ParticipantTimeManagementContextModel.model_validate(payload)

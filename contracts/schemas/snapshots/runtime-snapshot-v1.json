@@ -1259,6 +1259,580 @@
       "title": "ParticipantInteractionClass",
       "type": "string"
     },
+    "ParticipantJointActionAccessSetModel": {
+      "additionalProperties": false,
+      "description": "Read/write footprint for one member event in a joint action record.",
+      "properties": {
+        "evidence_stream_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Stream Refs",
+          "type": "array"
+        },
+        "exclusive_resource_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Exclusive Resource Refs",
+          "type": "array"
+        },
+        "member_event_ref": {
+          "minLength": 1,
+          "title": "Member Event Ref",
+          "type": "string"
+        },
+        "shared_state_read_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Shared State Read Refs",
+          "type": "array"
+        },
+        "shared_state_write_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Shared State Write Refs",
+          "type": "array"
+        },
+        "visibility_effect_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Visibility Effect Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "member_event_ref"
+      ],
+      "title": "ParticipantJointActionAccessSetModel",
+      "type": "object"
+    },
+    "ParticipantJointActionRecordModel": {
+      "additionalProperties": false,
+      "description": "RUN-308 joint action / concurrency record over behavior events.",
+      "properties": {
+        "access_sets": {
+          "items": {
+            "$ref": "#/$defs/ParticipantJointActionAccessSetModel"
+          },
+          "minItems": 1,
+          "title": "Access Sets",
+          "type": "array"
+        },
+        "actor_ref": {
+          "minLength": 1,
+          "title": "Actor Ref",
+          "type": "string"
+        },
+        "atomicity_scope": {
+          "enum": [
+            "single_object",
+            "multi_object",
+            "coordination_interval",
+            "unsupported"
+          ],
+          "title": "Atomicity Scope",
+          "type": "string"
+        },
+        "authorization_scope": {
+          "minLength": 1,
+          "title": "Authorization Scope",
+          "type": "string"
+        },
+        "clock_authority": {
+          "minLength": 1,
+          "title": "Clock Authority",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "conflict_class": {
+          "enum": [
+            "none",
+            "read_write",
+            "write_write",
+            "unsupported"
+          ],
+          "title": "Conflict Class",
+          "type": "string"
+        },
+        "conflict_policy": {
+          "enum": [
+            "none",
+            "coordinate",
+            "serialize",
+            "reject",
+            "retry",
+            "withhold",
+            "merge",
+            "rollback",
+            "disclose_weak_guarantee",
+            "unsupported"
+          ],
+          "title": "Conflict Policy",
+          "type": "string"
+        },
+        "episode_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Episode Id"
+        },
+        "event_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EventClassificationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event_id": {
+          "minLength": 1,
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "minLength": 1,
+          "title": "Event Type",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "exact_concurrency_claim": {
+          "default": false,
+          "title": "Exact Concurrency Claim",
+          "type": "boolean"
+        },
+        "extension_policy": {
+          "minLength": 1,
+          "title": "Extension Policy",
+          "type": "string"
+        },
+        "fairness_policy_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fairness Policy Ref"
+        },
+        "granular_markings": {
+          "additionalProperties": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Granular Markings",
+          "type": "object"
+        },
+        "ingested_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Ingested At",
+          "type": "string"
+        },
+        "isolation_guarantee": {
+          "enum": [
+            "none",
+            "serializable",
+            "snapshot",
+            "causal",
+            "unsupported"
+          ],
+          "title": "Isolation Guarantee",
+          "type": "string"
+        },
+        "joint_action_set_id": {
+          "minLength": 1,
+          "title": "Joint Action Set Id",
+          "type": "string"
+        },
+        "logical_order_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Logical Order Ref"
+        },
+        "marking_definition_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Marking Definition Refs",
+          "type": "array"
+        },
+        "markings": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Markings",
+          "type": "array"
+        },
+        "member_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Member Event Refs",
+          "type": "array"
+        },
+        "object_marking_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Object Marking Refs",
+          "type": "array"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "ordering_basis": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Ordering Basis",
+          "type": "string"
+        },
+        "participant_address": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participant Address"
+        },
+        "participant_observation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Participant Observation Refs",
+          "type": "array"
+        },
+        "predecessor_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Predecessor Event Refs",
+          "type": "array"
+        },
+        "producer_ref": {
+          "minLength": 1,
+          "title": "Producer Ref",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "raw_data_integrity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RawDataIntegrityModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "realized_order": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Realized Order",
+          "type": "array"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "redaction_policy_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Redaction Policy Ref"
+        },
+        "retry_limit": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retry Limit"
+        },
+        "rollback_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Rollback Event Refs",
+          "type": "array"
+        },
+        "schema_name": {
+          "minLength": 1,
+          "title": "Schema Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "minLength": 1,
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence_number": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence Number"
+        },
+        "simultaneity_group_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simultaneity Group Ref"
+        },
+        "source_pipeline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourcePipelineModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_raw_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Raw Ref"
+        },
+        "source_record_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Record Ref"
+        },
+        "source_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceStatusModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_system_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source System Ref"
+        },
+        "temporal_context": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temporal Context"
+        },
+        "time_management_context_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Time Management Context Ref"
+        },
+        "timeout_policy_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout Policy Ref"
+        },
+        "unsupported_disclosure": {
+          "default": false,
+          "title": "Unsupported Disclosure",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_name",
+        "schema_version",
+        "event_type",
+        "extension_policy",
+        "occurred_at",
+        "recorded_at",
+        "ingested_at",
+        "clock_authority",
+        "ordering_basis",
+        "actor_ref",
+        "producer_ref",
+        "authorization_scope",
+        "joint_action_set_id",
+        "member_event_refs",
+        "access_sets",
+        "conflict_class",
+        "conflict_policy",
+        "isolation_guarantee",
+        "atomicity_scope"
+      ],
+      "title": "ParticipantJointActionRecordModel",
+      "type": "object"
+    },
     "ParticipantLifecycleOperationState": {
       "description": "RUN-306 operation states for execution-attempt records.",
       "enum": [
@@ -2346,6 +2920,456 @@
       "title": "ParticipantTimeDomain",
       "type": "string"
     },
+    "ParticipantTimeManagementContextModel": {
+      "additionalProperties": false,
+      "description": "RUN-308 time-management basis for concurrent or distributed runtime claims.",
+      "properties": {
+        "actor_ref": {
+          "minLength": 1,
+          "title": "Actor Ref",
+          "type": "string"
+        },
+        "advance_by": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Advance By"
+        },
+        "authorization_scope": {
+          "minLength": 1,
+          "title": "Authorization Scope",
+          "type": "string"
+        },
+        "backend_serialized": {
+          "default": false,
+          "title": "Backend Serialized",
+          "type": "boolean"
+        },
+        "basis": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Basis",
+          "type": "string"
+        },
+        "claim_strength": {
+          "enum": [
+            "display",
+            "bounded",
+            "exact",
+            "unsupported"
+          ],
+          "title": "Claim Strength",
+          "type": "string"
+        },
+        "clock_authority": {
+          "minLength": 1,
+          "title": "Clock Authority",
+          "type": "string"
+        },
+        "clock_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clock Ref"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "context_id": {
+          "minLength": 1,
+          "title": "Context Id",
+          "type": "string"
+        },
+        "episode_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Episode Id"
+        },
+        "event_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EventClassificationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event_id": {
+          "minLength": 1,
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "minLength": 1,
+          "title": "Event Type",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "extension_policy": {
+          "minLength": 1,
+          "title": "Extension Policy",
+          "type": "string"
+        },
+        "granular_markings": {
+          "additionalProperties": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Granular Markings",
+          "type": "object"
+        },
+        "ingested_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Ingested At",
+          "type": "string"
+        },
+        "logical_order_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Logical Order Ref"
+        },
+        "lookahead": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lookahead"
+        },
+        "marking_definition_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Marking Definition Refs",
+          "type": "array"
+        },
+        "markings": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Markings",
+          "type": "array"
+        },
+        "mode": {
+          "enum": [
+            "display",
+            "pacing",
+            "lookahead",
+            "rollback",
+            "devs",
+            "fmi",
+            "backend_serialized",
+            "unsupported"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "object_marking_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Object Marking Refs",
+          "type": "array"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "ordering_basis": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Ordering Basis",
+          "type": "string"
+        },
+        "participant_address": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participant Address"
+        },
+        "predecessor_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Predecessor Event Refs",
+          "type": "array"
+        },
+        "producer_ref": {
+          "minLength": 1,
+          "title": "Producer Ref",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "raw_data_integrity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RawDataIntegrityModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "redaction_policy_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Redaction Policy Ref"
+        },
+        "rollback_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Rollback Event Refs",
+          "type": "array"
+        },
+        "schema_name": {
+          "minLength": 1,
+          "title": "Schema Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "minLength": 1,
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence_number": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence Number"
+        },
+        "source_pipeline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourcePipelineModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_raw_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Raw Ref"
+        },
+        "source_record_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Record Ref"
+        },
+        "source_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceStatusModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_system_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source System Ref"
+        },
+        "temporal_context": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temporal Context"
+        },
+        "unsupported_disclosure": {
+          "default": false,
+          "title": "Unsupported Disclosure",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_name",
+        "schema_version",
+        "event_type",
+        "extension_policy",
+        "occurred_at",
+        "recorded_at",
+        "ingested_at",
+        "clock_authority",
+        "ordering_basis",
+        "actor_ref",
+        "producer_ref",
+        "authorization_scope",
+        "context_id",
+        "mode",
+        "claim_strength",
+        "basis"
+      ],
+      "title": "ParticipantTimeManagementContextModel",
+      "type": "object"
+    },
     "RawDataIntegrityModel": {
       "additionalProperties": false,
       "description": "Hash, size, and truncation facts for raw data behind a runtime claim.",
@@ -2945,6 +3969,13 @@
       "title": "Evaluation Results",
       "type": "object"
     },
+    "joint_action_records": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParticipantJointActionRecordModel"
+      },
+      "title": "Joint Action Records",
+      "type": "object"
+    },
     "metadata": {
       "additionalProperties": true,
       "title": "Metadata",
@@ -3022,6 +4053,13 @@
         "$ref": "#/$defs/ParticipantSharedStateRecordModel"
       },
       "title": "Shared State Records",
+      "type": "object"
+    },
+    "time_management_contexts": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParticipantTimeManagementContextModel"
+      },
+      "title": "Time Management Contexts",
       "type": "object"
     }
   },

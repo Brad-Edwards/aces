@@ -40,6 +40,7 @@ from aces_contracts.contracts import (
 from aces_contracts.corpus import FIXTURES, corpus_family_root
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.evaluation import EvaluationExecutionState
+from aces_contracts.participant_concurrency import iter_participant_concurrency_snapshot_violations
 from aces_contracts.participant_episode import (
     ParticipantEpisodeExecutionState,
     ParticipantEpisodeHistoryEvent,
@@ -441,6 +442,13 @@ def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
             state_address: [record.model_dump(mode="json") for record in records]
             for state_address, records in validated.shared_state_history.items()
         },
+        joint_action_records={
+            record_id: record.model_dump(mode="json") for record_id, record in validated.joint_action_records.items()
+        },
+        time_management_contexts={
+            context_id: context.model_dump(mode="json")
+            for context_id, context in validated.time_management_contexts.items()
+        },
         metadata=dict(validated.metadata),
     )
 
@@ -728,6 +736,19 @@ def _shared_state_snapshot_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagno
     ]
 
 
+def _participant_concurrency_snapshot_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic]:
+    return [
+        _diagnostic(_SEMANTIC_INVALID_DIAGNOSTIC_CODE, address, message)
+        for address, message in iter_participant_concurrency_snapshot_violations(
+            snapshot.joint_action_records,
+            snapshot.time_management_contexts,
+            participant_behavior_history=snapshot.participant_behavior_history,
+            shared_state_records=snapshot.shared_state_records,
+            shared_state_history=snapshot.shared_state_history,
+        )
+    ]
+
+
 def _runtime_snapshot_semantic_diagnostics(payload: Any) -> list[Diagnostic]:
     snapshot = _snapshot_from_envelope(payload)
     return [
@@ -736,6 +757,7 @@ def _runtime_snapshot_semantic_diagnostics(payload: Any) -> list[Diagnostic]:
         *_participant_episode_snapshot_diagnostics(snapshot),
         *_participant_behavior_snapshot_diagnostics(snapshot),
         *_shared_state_snapshot_diagnostics(snapshot),
+        *_participant_concurrency_snapshot_diagnostics(snapshot),
     ]
 
 
@@ -1282,6 +1304,8 @@ def _live_target_cases(
             state_address: list(records)
             for state_address, records in control_plane.snapshot.shared_state_history.items()
         },
+        "joint_action_records": dict(control_plane.snapshot.joint_action_records),
+        "time_management_contexts": dict(control_plane.snapshot.time_management_contexts),
         "metadata": dict(control_plane.snapshot.metadata),
     }
     snapshot_diags = [
