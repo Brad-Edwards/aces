@@ -103,11 +103,9 @@ def _history_record_rewrite_violations(
 
 def _reserved_metadata_key_violations(metadata: object) -> list[Violation]:
     violations: list[Violation] = []
-    if metadata is None:
-        pass
-    elif not isinstance(metadata, Mapping):
+    if metadata is not None and not isinstance(metadata, Mapping):
         violations.append((_METADATA_KEY, "RuntimeSnapshot.metadata must be a mapping"))
-    else:
+    elif isinstance(metadata, Mapping):
         for key in sorted(_RESERVED_RUNTIME_STATE_KEYS.intersection(str(item) for item in metadata)):
             violations.append(
                 (
@@ -207,7 +205,10 @@ def _shared_state_record_violations(
             violations.append(
                 (
                     locator,
-                    f"shared state record outer key {expected_address!r} does not match state_address {state_address!r}",
+                    (
+                        f"shared state record outer key {expected_address!r} "
+                        f"does not match state_address {state_address!r}"
+                    ),
                 )
             )
 
