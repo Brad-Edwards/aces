@@ -198,10 +198,10 @@
       "contract_id": "participant-shared-state-record-v1",
       "schema_path": "contracts/schemas/participant-runtime/participant-shared-state-record-v1.json",
       "stability": "draft",
-      "content_hash": "a3ad56415946417bfbd19cd637886d8442a3e2be510212471e1fcb139cf241d1",
+      "content_hash": "8de5075b682a2ef7f7bf9d18f9dcb51667f2efeb496f283d0bb54b9bb0ffd38b",
       "last_change": {
-        "summary": "Initial publication of the participant shared-state-record runtime contract: shared-state records in the backend-facing contract family (ADR-060, issue #76).",
-        "content_hash": "a3ad56415946417bfbd19cd637886d8442a3e2be510212471e1fcb139cf241d1"
+        "summary": "Require participant shared-state records and accesses to carry revision or digest markers for RUN-307 version discipline.",
+        "content_hash": "8de5075b682a2ef7f7bf9d18f9dcb51667f2efeb496f283d0bb54b9bb0ffd38b"
       }
     },
     {
@@ -236,10 +236,10 @@
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "348a25b49e30081797164f77cb344dbf27e85007fcf5d9e93c2e57e33795074a",
+      "content_hash": "530cb86899355de624465c1c37723f923a69e85ecb40ef3f01f2d8bc013019a3",
       "last_change": {
-        "summary": "Add SEM-218 realization_provenance ledger (RealizationProvenanceEntryModel) to the runtime snapshot envelope: per-concern author-declared/processor-derived/backend-realized provenance for realized realization concerns, enforcing invariant I5 (issue #491).",
-        "content_hash": "348a25b49e30081797164f77cb344dbf27e85007fcf5d9e93c2e57e33795074a"
+        "summary": "Add first-class shared_state_records and shared_state_history fields to the runtime snapshot envelope for RUN-307 shared operational state.",
+        "content_hash": "530cb86899355de624465c1c37723f923a69e85ecb40ef3f01f2d8bc013019a3"
       }
     },
     {

@@ -8,6 +8,10 @@ from aces_contracts.participant_behavior import (
     iter_participant_runtime_history_transition_violations,
 )
 from aces_contracts.participant_episode import iter_participant_episode_snapshot_violations
+from aces_contracts.participant_shared_state import (
+    iter_participant_shared_state_history_transition_violations,
+    iter_participant_shared_state_snapshot_violations,
+)
 from aces_contracts.runtime_state import RuntimeSnapshot
 
 from .diagnostics import _failure_diagnostic
@@ -55,6 +59,12 @@ def participant_runtime_state_contract_diagnostics(
             participant_episode_history=snapshot.participant_episode_history,
             metadata=snapshot.metadata,
         ),
+        *iter_participant_shared_state_snapshot_violations(
+            snapshot.shared_state_records,
+            snapshot.shared_state_history,
+            participant_behavior_history=snapshot.participant_behavior_history,
+            metadata=snapshot.metadata,
+        ),
     ]
     return [
         _failure_diagnostic("runtime.backend-contract-invalid", address, message) for address, message in violations
@@ -74,5 +84,11 @@ def participant_runtime_history_transition_diagnostics(
             next_snapshot.participant_episode_history,
             previous_snapshot.participant_behavior_history,
             next_snapshot.participant_behavior_history,
+        )
+    ] + [
+        _failure_diagnostic("runtime.backend-contract-invalid", address, message)
+        for address, message in iter_participant_shared_state_history_transition_violations(
+            previous_snapshot.shared_state_history,
+            next_snapshot.shared_state_history,
         )
     ]

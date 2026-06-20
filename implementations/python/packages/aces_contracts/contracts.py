@@ -1091,6 +1091,52 @@ class ParticipantSharedStateAccessModel(ContractModel):
     atomic_group_ref: NonEmptyString | None = None
     evidence_refs: list[NonEmptyString] = Field(default_factory=list)
 
+    @model_validator(mode="after")
+    def _validate_revision_markers(self) -> ParticipantSharedStateAccessModel:
+        if self.access_kind in {"read", "read_write"} and self.read_revision is None and self.read_digest is None:
+            raise ValueError("shared state read access requires read_revision or read_digest")
+        if self.access_kind in {"write", "read_write"} and self.write_revision is None and self.write_digest is None:
+            raise ValueError("shared state write access requires write_revision or write_digest")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {
+                        "properties": {"access_kind": {"enum": ["read", "read_write"]}},
+                        "required": ["access_kind"],
+                    },
+                    "then": {
+                        "anyOf": [
+                            {"required": ["read_revision"], "properties": {"read_revision": {"type": "string"}}},
+                            {"required": ["read_digest"], "properties": {"read_digest": {"type": "string"}}},
+                        ]
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"access_kind": {"enum": ["write", "read_write"]}},
+                        "required": ["access_kind"],
+                    },
+                    "then": {
+                        "anyOf": [
+                            {"required": ["write_revision"], "properties": {"write_revision": {"type": "string"}}},
+                            {"required": ["write_digest"], "properties": {"write_digest": {"type": "string"}}},
+                        ]
+                    },
+                },
+            ]
+        )
+        return json_schema
+
 
 class ParticipantSharedStateRecordModel(ParticipantRuntimeBaseEnvelopeModel):
     """RUN-307 versioned shared operational state-change report."""
@@ -1106,6 +1152,28 @@ class ParticipantSharedStateRecordModel(ParticipantRuntimeBaseEnvelopeModel):
     provenance: NonEmptyString
     value_ref: NonEmptyString | None = None
     accesses: list[ParticipantSharedStateAccessModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_revision_marker(self) -> ParticipantSharedStateRecordModel:
+        if self.revision is None and self.digest is None:
+            raise ValueError("participant shared state record requires revision or digest")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("anyOf", []).extend(
+            [
+                {"required": ["revision"], "properties": {"revision": {"type": "string"}}},
+                {"required": ["digest"], "properties": {"digest": {"type": "string"}}},
+            ]
+        )
+        return json_schema
 
 
 class ParticipantOutcomeReportSourceModel(ContractModel):
@@ -1440,6 +1508,8 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     participant_episode_results: dict[str, ParticipantEpisodeStateModel] = Field(default_factory=dict)
     participant_episode_history: dict[str, list[ParticipantEpisodeHistoryEventModel]] = Field(default_factory=dict)
     participant_behavior_history: dict[str, list[ParticipantBehaviorHistoryEventModel]] = Field(default_factory=dict)
+    shared_state_records: dict[str, ParticipantSharedStateRecordModel] = Field(default_factory=dict)
+    shared_state_history: dict[str, list[ParticipantSharedStateRecordModel]] = Field(default_factory=dict)
     realization_provenance: list[RealizationProvenanceEntryModel] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
