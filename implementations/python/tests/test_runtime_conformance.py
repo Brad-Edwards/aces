@@ -19,6 +19,12 @@ from aces.core.runtime.conformance import (
 )
 from aces.core.runtime.registry import RuntimeTarget
 
+API_406_CARRIER_CONTRACTS = {
+    "participant-lifecycle-event-v1",
+    "participant-observation-envelope-v1",
+    "participant-shared-state-record-v1",
+}
+
 
 def test_fixture_suite_passes_for_orchestration_evaluation_profile():
     report = run_fixture_suite(profile=BackendCapabilityProfile.ORCHESTRATION_EVALUATION)
@@ -59,6 +65,46 @@ def test_target_conformance_passes_for_stub_target():
                 f"Live participant probe case {case.name!r} must succeed for the stub backend; "
                 f"diagnostics: {[diag.message for diag in case.diagnostics]}"
             )
+
+
+def test_full_remote_control_plane_profile_requires_api_406_carriers():
+    contracts = required_contracts(BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE)
+
+    assert contracts >= API_406_CARRIER_CONTRACTS
+    assert {
+        "runtime-snapshot-v1",
+        "participant-episode-state-envelope-v1",
+        "participant-episode-history-event-stream-v1",
+        "participant-behavior-history-event-stream-v1",
+    } <= contracts
+
+
+def test_fixture_suite_validates_api_406_carrier_fixtures(tmp_path: Path):
+    backend_dir = tmp_path / "backend"
+    backend_dir.mkdir()
+    (backend_dir / "provisioning-only.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "backend-profile/v1",
+                "profile": "provisioning-only",
+                "required_contracts": sorted(API_406_CARRIER_CONTRACTS),
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = run_fixture_suite(
+        profile=BackendCapabilityProfile.PROVISIONING_ONLY,
+        profiles_root=backend_dir,
+    )
+
+    assert report.passed is True
+    assert {case.contract_name for case in report.cases} == API_406_CARRIER_CONTRACTS
+    assert any(case.valid is False for case in report.cases)
+    assert all(
+        diagnostic.code != "conformance.contract-unknown" for case in report.cases for diagnostic in case.diagnostics
+    )
 
 
 def test_profile_is_inferred_as_full_when_manifest_declares_participant_runtime():
@@ -701,6 +747,9 @@ def test_target_conformance_fails_when_declared_contracts_do_not_cover_profile_r
         "participant-behavior-history-event-stream-v1",
         "participant-episode-history-event-stream-v1",
         "participant-episode-state-envelope-v1",
+        "participant-lifecycle-event-v1",
+        "participant-observation-envelope-v1",
+        "participant-shared-state-record-v1",
         "provisioning-plan-v1",
         "runtime-snapshot-v1",
         "workflow-history-event-stream-v1",
