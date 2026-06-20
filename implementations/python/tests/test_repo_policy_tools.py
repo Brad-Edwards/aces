@@ -106,6 +106,7 @@ def setup_policy_repo(tmp_path: Path) -> Path:
         "aces_backend_protocols",
         "aces_backend_stubs",
         "aces_reference_backend",
+        "aces_reference_simulation_backend",
         "aces_conformance",
         "aces_cli",
         "aces_mcp",
@@ -1149,6 +1150,7 @@ def test_schema_publication_manifest_rejects_resolved_schema_path_escape(tmp_pat
     ]
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_allows_recorded_draft_schema_churn(tmp_path: Path) -> None:
     repo_root = tmp_path
     schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
@@ -1185,6 +1187,7 @@ def test_schema_publication_manifest_allows_recorded_draft_schema_churn(tmp_path
     assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == []
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_allows_stable_additive_schema_change(tmp_path: Path) -> None:
     repo_root = tmp_path
     schema_path = repo_root / "contracts" / "schemas" / "sdl" / "stable-contract-v1.json"
@@ -1224,6 +1227,7 @@ def test_schema_publication_manifest_allows_stable_additive_schema_change(tmp_pa
     assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == []
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_allows_stable_enum_addition(tmp_path: Path) -> None:
     repo_root = tmp_path
     schema_path = repo_root / "contracts" / "schemas" / "sdl" / "stable-contract-v1.json"
@@ -1263,6 +1267,7 @@ def test_schema_publication_manifest_allows_stable_enum_addition(tmp_path: Path)
     assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == []
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_rejects_stable_default_change_without_version_bump(
     tmp_path: Path,
 ) -> None:
@@ -1309,6 +1314,7 @@ def test_schema_publication_manifest_rejects_stable_default_change_without_versi
     ]
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_rejects_stable_breaking_schema_change_without_version_bump(
     tmp_path: Path,
 ) -> None:
@@ -1349,6 +1355,7 @@ def test_schema_publication_manifest_rejects_stable_breaking_schema_change_witho
     ]
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_rejects_unreadable_base_manifest_for_stable_schema(
     tmp_path: Path,
 ) -> None:
@@ -1375,6 +1382,7 @@ def test_schema_publication_manifest_rejects_unreadable_base_manifest_for_stable
     ]
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_rejects_missing_base_schema_for_stable_schema(
     tmp_path: Path,
 ) -> None:
@@ -1478,6 +1486,7 @@ def test_schema_publication_manifest_rejects_last_change_hash_mismatch(tmp_path:
     assert any("last_change.content_hash" in failure and "does not match" in failure for failure in failures)
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_requires_ledger_when_schema_changes(tmp_path: Path) -> None:
     repo_root = tmp_path
     schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
@@ -1513,6 +1522,7 @@ def test_schema_publication_manifest_requires_ledger_when_schema_changes(tmp_pat
     assert any("contract-facing change description" in failure for failure in failures)
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_accepts_changed_schema_with_current_ledger(tmp_path: Path) -> None:
     repo_root = tmp_path
     schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
@@ -1549,6 +1559,7 @@ def test_schema_publication_manifest_accepts_changed_schema_with_current_ledger(
     assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == []
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_requires_ledger_for_new_schema(tmp_path: Path) -> None:
     repo_root = tmp_path
     existing = repo_root / "contracts" / "schemas" / "sdl" / "existing-contract-v1.json"
@@ -1588,6 +1599,7 @@ def test_schema_publication_manifest_requires_ledger_for_new_schema(tmp_path: Pa
     assert any("new-contract-v1" in failure and "contract-facing change description" in failure for failure in failures)
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_unchanged_schema_needs_no_ledger(tmp_path: Path) -> None:
     repo_root = tmp_path
     schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
@@ -1646,6 +1658,7 @@ def _seed_two_schema_repo(repo_root: Path) -> None:
     )
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_requires_tombstone_for_removed_schema(tmp_path: Path) -> None:
     repo_root = tmp_path
     _seed_two_schema_repo(repo_root)
@@ -1659,6 +1672,7 @@ def test_schema_publication_manifest_requires_tombstone_for_removed_schema(tmp_p
     )
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_accepts_removed_schema_with_tombstone(tmp_path: Path) -> None:
     repo_root = tmp_path
     _seed_two_schema_repo(repo_root)
@@ -1684,6 +1698,7 @@ def test_schema_publication_manifest_accepts_removed_schema_with_tombstone(tmp_p
     assert validate_schema_publication_manifest(repo_root, base_rev="HEAD") == []
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_rejects_tombstone_without_summary(tmp_path: Path) -> None:
     repo_root = tmp_path
     _seed_two_schema_repo(repo_root)
@@ -1704,6 +1719,7 @@ def test_schema_publication_manifest_rejects_tombstone_without_summary(tmp_path:
     assert any("removed_schemas" in failure and "summary must be a non-empty string" in failure for failure in failures)
 
 
+@pytest.mark.integration
 def test_schema_publication_manifest_rejects_tombstone_for_published_schema(tmp_path: Path) -> None:
     repo_root = tmp_path
     schema_path = repo_root / "contracts" / "schemas" / "sdl" / "draft-contract-v1.json"
@@ -1768,11 +1784,8 @@ def test_collect_validation_targets_runs_full_scan_when_schema_drivers_change(tm
     assert any(target.path == "contracts/concept-authority/concept-families-v1.json" for target in targets)
 
 
-def test_gitleaks_release_asset_names_match_platform_conventions(monkeypatch) -> None:
-    monkeypatch.setattr("platform.system", lambda: "Linux")
-    monkeypatch.setattr("platform.machine", lambda: "x86_64")
-
-    assert _release_asset_name("8.30.1") == "gitleaks_8.30.1_linux_x64.tar.gz"
+def test_gitleaks_release_asset_names_match_platform_conventions() -> None:
+    assert _release_asset_name("8.30.1", system="Linux", machine="x86_64") == "gitleaks_8.30.1_linux_x64.tar.gz"
     assert _checksums_asset_name("8.30.1") == "gitleaks_8.30.1_checksums.txt"
 
 
@@ -2074,6 +2087,7 @@ def test_adr_pin_gate_missing_manifest_fails_cleanly(tmp_path: Path) -> None:
     assert _rule_ids(failures) == ["adr-manifest-malformed"]
 
 
+@pytest.mark.integration
 def test_adr_pin_gate_base_rev_flags_pin_bump_without_amendment(tmp_path: Path) -> None:
     adr_dir = _adr_dir(tmp_path)
     original = _make_adr(adr_dir, "001")
@@ -2089,6 +2103,7 @@ def test_adr_pin_gate_base_rev_flags_pin_bump_without_amendment(tmp_path: Path) 
     assert _rule_ids(failures) == ["adr-amendment-unrecorded"]
 
 
+@pytest.mark.integration
 def test_adr_pin_gate_base_rev_accepts_recorded_amendment(tmp_path: Path) -> None:
     adr_dir = _adr_dir(tmp_path)
     original = _make_adr(adr_dir, "001")
@@ -2121,6 +2136,7 @@ def test_adr_pin_gate_base_rev_accepts_recorded_amendment(tmp_path: Path) -> Non
     assert evaluate_adr_immutability(tmp_path, base_rev="HEAD") == []
 
 
+@pytest.mark.integration
 def test_adr_pin_gate_base_rev_allows_supersession(tmp_path: Path) -> None:
     adr_dir = _adr_dir(tmp_path)
     original = _make_adr(adr_dir, "001")
@@ -2137,6 +2153,7 @@ def test_adr_pin_gate_base_rev_allows_supersession(tmp_path: Path) -> None:
     assert evaluate_adr_immutability(tmp_path, base_rev="HEAD") == []
 
 
+@pytest.mark.integration
 def test_adr_pin_gate_staged_flags_pin_bump_without_amendment(tmp_path: Path) -> None:
     # The pre-commit invocation: ``staged=True`` compares the git *index*
     # (``git show :<path>``) against HEAD, a distinct code path from ``base_rev``
@@ -2156,6 +2173,7 @@ def test_adr_pin_gate_staged_flags_pin_bump_without_amendment(tmp_path: Path) ->
     assert _rule_ids(failures) == ["adr-amendment-unrecorded"]
 
 
+@pytest.mark.integration
 def test_adr_pin_gate_staged_accepts_recorded_amendment(tmp_path: Path) -> None:
     # A staged edit that records its amendment (and bumps the pin) passes — proving
     # the staged branch does not over-fire on legitimately recorded changes.
@@ -2190,6 +2208,7 @@ def test_adr_pin_gate_staged_accepts_recorded_amendment(tmp_path: Path) -> None:
     assert evaluate_adr_immutability(tmp_path, staged=True) == []
 
 
+@pytest.mark.integration
 def test_adr_pin_gate_staged_sources_head_text_from_index_not_disk(tmp_path: Path) -> None:
     # Pins down that ``head_text`` in the staged branch comes from the git *index*
     # (``git show :<path>``), not the working tree. We stage an unrecorded ADR edit
@@ -2267,6 +2286,7 @@ def test_canonical_content_detects_boundary_blank_line_edits() -> None:
     assert canonical_content(base) == canonical_content(trailing_blank)
 
 
+@pytest.mark.integration
 def test_adr_pin_gate_base_rev_flags_boundary_blank_line_edit(tmp_path: Path) -> None:
     adr_dir = _adr_dir(tmp_path)
     original = _make_adr(adr_dir, "001")
@@ -2283,6 +2303,7 @@ def test_adr_pin_gate_base_rev_flags_boundary_blank_line_edit(tmp_path: Path) ->
     assert _rule_ids(failures) == ["adr-amendment-unrecorded"]
 
 
+@pytest.mark.integration
 def test_real_repo_adr_index_is_green() -> None:
     """The committed adr-index.yaml must pin every accepted ADR honestly so the
     gate starts (and stays) green on the real corpus."""

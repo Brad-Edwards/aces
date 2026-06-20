@@ -19,9 +19,15 @@ def _release_base_url(version: str = GITLEAKS_VERSION) -> str:
     return f"https://github.com/gitleaks/gitleaks/releases/download/v{version}"
 
 
-def _release_asset_name(version: str = GITLEAKS_VERSION) -> str:
-    system = platform.system()
-    machine = platform.machine().lower()
+def _release_asset_name(
+    version: str = GITLEAKS_VERSION,
+    *,
+    system: str | None = None,
+    machine: str | None = None,
+) -> str:
+    resolved_system = system if system is not None else platform.system()
+    resolved_machine = machine if machine is not None else platform.machine()
+    machine_name = resolved_machine.lower()
     arch_map = {
         "x86_64": "x64",
         "amd64": "x64",
@@ -32,12 +38,12 @@ def _release_asset_name(version: str = GITLEAKS_VERSION) -> str:
         "Linux": "linux",
         "Darwin": "darwin",
     }
-    arch = arch_map.get(machine)
-    platform_name = platform_map.get(system)
+    arch = arch_map.get(machine_name)
+    platform_name = platform_map.get(resolved_system)
     if arch is None:
-        raise RuntimeError(f"unsupported gitleaks architecture: {machine}")
+        raise RuntimeError(f"unsupported gitleaks architecture: {machine_name}")
     if platform_name is None:
-        raise RuntimeError(f"unsupported gitleaks platform: {system}")
+        raise RuntimeError(f"unsupported gitleaks platform: {resolved_system}")
     return f"gitleaks_{version}_{platform_name}_{arch}.tar.gz"
 
 

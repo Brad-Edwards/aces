@@ -19,6 +19,8 @@ themselves normative specifications or ADRs.
   - Architecture guardrails for `SEM-200` shared semantic integrity work
 - [backend-conformance.md](backend-conformance.md)
   - Architecture guardrails for `ASR-502` backend conformance work
+- [reference-simulation-backend.md](reference-simulation-backend.md)
+  - Implementer-facing guide for the `RUN-315` reference simulation backend
 - [normative-artifact-authority.md](normative-artifact-authority.md)
   - Architecture guardrails for `ASR-517` normative authority-boundary work
 - [assessment-semantics.md](assessment-semantics.md)
