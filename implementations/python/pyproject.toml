@@ -47,6 +47,7 @@ packages = [
     "packages/aces_contracts",
     "packages/aces_backend_protocols",
     "packages/aces_backend_stubs",
+    "packages/aces_reference_backend",
     "packages/aces_cli",
     "packages/aces_conformance",
     "packages/aces_mcp",
@@ -78,8 +79,9 @@ pythonpath = ["src", "packages", "tests"]
 markers = [
     "fuzz: property-based fuzz tests (run with: pytest -m fuzz)",
     "integration: integration-style tests that read the real repo on disk (run with: pytest -m integration)",
+    "docker: opt-in tests that require a real container runtime (run with: pytest -m docker / nox -s integration_docker)",
 ]
-addopts = "-m 'not fuzz and not integration'"
+addopts = "-m 'not fuzz and not integration and not docker'"
 
 [tool.coverage.run]
 source = [
@@ -87,6 +89,7 @@ source = [
     "aces_contracts",
     "aces_backend_protocols",
     "aces_backend_stubs",
+    "aces_reference_backend",
     "aces_cli",
     "aces_conformance",
     "aces_mcp",
@@ -97,6 +100,12 @@ source = [
 
 [tool.coverage.report]
 show_missing = true
+exclude_also = [
+    # The reference backend's OCI subprocess leaf (RUN-314): real container
+    # IO, exercised only by the opt-in docker integration tests, never in the
+    # hermetic suite.
+    "def _default_runner",
+]
 
 [tool.coverage.xml]
 output = "coverage.xml"

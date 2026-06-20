@@ -700,6 +700,13 @@ def _run_integration_tests(session: nox.Session, reporter: SessionReporter) -> N
     )
 
 
+def _run_docker_integration_tests(session: nox.Session, reporter: SessionReporter) -> None:
+    reporter.run(
+        "tests / pytest docker integration",
+        lambda: _run_pytest(session, "-m", "docker", "-v"),
+    )
+
+
 def _run_docs(session: nox.Session, reporter: SessionReporter) -> None:
     _sync_project(session)
     docs_dir = REPO_ROOT / "docs"
@@ -789,6 +796,22 @@ def integration(session: nox.Session) -> None:
     try:
         _sync_project(session)
         _run_integration_tests(session, reporter)
+    finally:
+        reporter.summary()
+
+
+@nox.session(name="integration_docker")
+def integration_docker(session: nox.Session) -> None:
+    """Run the opt-in container-runtime integration tests (`docker` marker).
+
+    Requires a real container runtime (docker/podman). The tests self-skip
+    cleanly when no runtime is available. This session is intentionally NOT
+    wired into `verify`, so the canonical verification graph stays hermetic.
+    """
+    reporter = SessionReporter(session, "integration_docker")
+    try:
+        _sync_project(session)
+        _run_docker_integration_tests(session, reporter)
     finally:
         reporter.summary()
 

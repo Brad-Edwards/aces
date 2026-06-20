@@ -256,3 +256,6 @@ adrs:
   - id: ADR-062
     path: docs/decisions/adrs/adr-062-concept-authority-catalog-governance-gate.md
     pin: b5a15b467977e433fbfff55a1de2b4744faada7dd54ea4806496e8293bedae91
+  - id: ADR-063
+    path: docs/decisions/adrs/adr-063-reference-emulation-backend.md
+    pin: 7c82b434119b802f8acc7c23148811316b21754fac39798b5790ff5e65bb2415
