@@ -41,6 +41,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         "participant-lifecycle-event-v1",
         "participant-observation-envelope-v1",
         "participant-shared-state-record-v1",
+        "participant-joint-action-record-v1",
+        "participant-time-management-context-v1",
         "participant-outcome-report-v1",
     }:
         return schemas_dir / "participant-runtime" / f"{name}.json"
