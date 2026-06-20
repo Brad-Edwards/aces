@@ -914,6 +914,32 @@ ParticipantRuntimeConflictPolicy = Literal[
     "disclose_weak_guarantee",
     "unsupported",
 ]
+ParticipantRuntimeConflictClass = Literal["none", "read_write", "write_write", "unsupported"]
+ParticipantRuntimeJointActionConflictPolicy = Literal[
+    "none",
+    "coordinate",
+    "serialize",
+    "reject",
+    "retry",
+    "withhold",
+    "merge",
+    "rollback",
+    "disclose_weak_guarantee",
+    "unsupported",
+]
+ParticipantRuntimeIsolationGuarantee = Literal["none", "serializable", "snapshot", "causal", "unsupported"]
+ParticipantRuntimeAtomicityScope = Literal["single_object", "multi_object", "coordination_interval", "unsupported"]
+ParticipantRuntimeTimeManagementMode = Literal[
+    "display",
+    "pacing",
+    "lookahead",
+    "rollback",
+    "devs",
+    "fmi",
+    "backend_serialized",
+    "unsupported",
+]
+ParticipantRuntimeTimeClaimStrength = Literal["display", "bounded", "exact", "unsupported"]
 
 
 class EventClassificationModel(ContractModel):
@@ -1174,6 +1200,144 @@ class ParticipantSharedStateRecordModel(ParticipantRuntimeBaseEnvelopeModel):
             ]
         )
         return json_schema
+
+
+class ParticipantJointActionAccessSetModel(ContractModel):
+    """Read/write footprint for one member event in a joint action record."""
+
+    member_event_ref: NonEmptyString
+    shared_state_read_refs: list[NonEmptyString] = Field(default_factory=list)
+    shared_state_write_refs: list[NonEmptyString] = Field(default_factory=list)
+    exclusive_resource_refs: list[NonEmptyString] = Field(default_factory=list)
+    visibility_effect_refs: list[NonEmptyString] = Field(default_factory=list)
+    evidence_stream_refs: list[NonEmptyString] = Field(default_factory=list)
+
+
+def _exact_string_permutation(values: list[str], expected: set[str]) -> bool:
+    return len(values) == len(expected) and set(values) == expected
+
+
+def _joint_action_actual_conflict(access_sets: list[ParticipantJointActionAccessSetModel]) -> str:
+    read_write_conflict = False
+    for left_index, left in enumerate(access_sets):
+        left_reads = set(left.shared_state_read_refs)
+        left_writes = set(left.shared_state_write_refs) | {f"resource:{ref}" for ref in left.exclusive_resource_refs}
+        for right in access_sets[left_index + 1 :]:
+            right_reads = set(right.shared_state_read_refs)
+            right_writes = set(right.shared_state_write_refs) | {
+                f"resource:{ref}" for ref in right.exclusive_resource_refs
+            }
+            if left_writes & right_writes:
+                return "write_write"
+            if (left_writes & right_reads) or (left_reads & right_writes):
+                read_write_conflict = True
+    return "read_write" if read_write_conflict else "none"
+
+
+class ParticipantJointActionRecordModel(ParticipantRuntimeBaseEnvelopeModel):
+    """RUN-308 joint action / concurrency record over behavior events."""
+
+    joint_action_set_id: NonEmptyString
+    member_event_refs: list[NonEmptyString] = Field(min_length=1)
+    access_sets: list[ParticipantJointActionAccessSetModel] = Field(min_length=1)
+    conflict_class: ParticipantRuntimeConflictClass
+    conflict_policy: ParticipantRuntimeJointActionConflictPolicy
+    isolation_guarantee: ParticipantRuntimeIsolationGuarantee
+    atomicity_scope: ParticipantRuntimeAtomicityScope
+    realized_order: list[NonEmptyString] = Field(default_factory=list)
+    simultaneity_group_ref: NonEmptyString | None = None
+    time_management_context_ref: NonEmptyString | None = None
+    participant_observation_refs: list[NonEmptyString] = Field(default_factory=list)
+    rollback_event_refs: list[NonEmptyString] = Field(default_factory=list)
+    retry_limit: NonNegativeInteger | None = None
+    timeout_policy_ref: NonEmptyString | None = None
+    fairness_policy_ref: NonEmptyString | None = None
+    unsupported_disclosure: bool = False
+    exact_concurrency_claim: bool = False
+
+    @model_validator(mode="after")
+    def _validate_joint_action_record(self) -> ParticipantJointActionRecordModel:
+        member_refs = list(self.member_event_refs)
+        member_ref_set = set(member_refs)
+        if len(member_refs) != len(member_ref_set):
+            raise ValueError("joint action member_event_refs must be unique")
+
+        access_event_refs = [access.member_event_ref for access in self.access_sets]
+        if not _exact_string_permutation(access_event_refs, member_ref_set):
+            raise ValueError("joint action access_sets must cover member_event_refs exactly once")
+
+        if self.realized_order and not _exact_string_permutation(self.realized_order, member_ref_set):
+            raise ValueError("joint action realized_order must be an exact permutation of member_event_refs")
+
+        if self.unsupported_disclosure and self.exact_concurrency_claim:
+            raise ValueError("unsupported concurrency disclosure cannot carry an exact concurrency claim")
+        if self.exact_concurrency_claim and self.time_management_context_ref is None:
+            raise ValueError("exact concurrency claims require time_management_context_ref")
+
+        if self.conflict_policy == "unsupported":
+            if not self.unsupported_disclosure or self.exact_concurrency_claim:
+                raise ValueError("unsupported conflict_policy requires unsupported_disclosure and no exact claim")
+            return self
+
+        actual_conflict = _joint_action_actual_conflict(self.access_sets)
+        if not self.unsupported_disclosure and self.conflict_class != actual_conflict:
+            raise ValueError("joint action conflict_class must match declared access-set conflicts")
+        if self.conflict_class == "none" and actual_conflict != "none":
+            raise ValueError("joint action conflict_class cannot be none when access sets conflict")
+        if self.isolation_guarantee == "serializable" and not self.realized_order:
+            raise ValueError("serializable joint action isolation requires realized_order")
+        if self.conflict_policy == "serialize" and not self.realized_order:
+            raise ValueError("serialize conflict_policy requires realized_order")
+        if self.conflict_policy == "retry" and (self.retry_limit is None or not self.rollback_event_refs):
+            raise ValueError("retry conflict_policy requires retry_limit and rollback_event_refs")
+        if self.conflict_policy == "none" and actual_conflict != "none":
+            raise ValueError("none conflict_policy is only valid when access sets do not conflict")
+        if (
+            self.atomicity_scope == "multi_object"
+            and actual_conflict != "none"
+            and not (self.realized_order or self.rollback_event_refs)
+        ):
+            raise ValueError("multi_object conflicting joint actions require realized_order or rollback_event_refs")
+        return self
+
+
+class ParticipantTimeManagementContextModel(ParticipantRuntimeBaseEnvelopeModel):
+    """RUN-308 time-management basis for concurrent or distributed runtime claims."""
+
+    context_id: NonEmptyString
+    mode: ParticipantRuntimeTimeManagementMode
+    claim_strength: ParticipantRuntimeTimeClaimStrength
+    basis: ParticipantRuntimeOrderingBasis
+    clock_ref: NonEmptyString | None = None
+    lookahead: NonNegativeInteger | None = None
+    advance_by: PositiveInteger | None = None
+    rollback_event_refs: list[NonEmptyString] = Field(default_factory=list)
+    unsupported_disclosure: bool = False
+    backend_serialized: bool = False
+
+    @model_validator(mode="after")
+    def _validate_time_management_context(self) -> ParticipantTimeManagementContextModel:
+        if self.unsupported_disclosure and self.claim_strength == "exact":
+            raise ValueError("unsupported time-management disclosure cannot carry an exact claim")
+        if self.basis == "wall_clock_only" and self.claim_strength != "display":
+            raise ValueError("wall_clock_only time basis supports display claims only")
+        if self.claim_strength in {"bounded", "exact"} and self.clock_ref is None:
+            raise ValueError("bounded or exact time-management claims require clock_ref")
+        if self.mode == "backend_serialized" and (
+            not self.backend_serialized or self.basis != "serialized_backend_order" or self.clock_ref is None
+        ):
+            raise ValueError("backend_serialized mode requires serialized_backend_order basis and clock_ref")
+        if self.mode == "lookahead" and self.lookahead is None:
+            raise ValueError("lookahead mode requires lookahead")
+        if self.mode == "pacing" and self.advance_by is None:
+            raise ValueError("pacing mode requires advance_by")
+        if self.mode == "rollback" and not self.rollback_event_refs:
+            raise ValueError("rollback mode requires rollback_event_refs")
+        if self.mode in {"devs", "fmi"} and (self.clock_ref is None or self.basis == "wall_clock_only"):
+            raise ValueError("devs and fmi modes require a non-wall-clock basis and clock_ref")
+        if self.mode == "unsupported" and not self.unsupported_disclosure:
+            raise ValueError("unsupported time-management mode requires unsupported_disclosure")
+        return self
 
 
 class ParticipantOutcomeReportSourceModel(ContractModel):
@@ -1510,6 +1674,8 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     participant_behavior_history: dict[str, list[ParticipantBehaviorHistoryEventModel]] = Field(default_factory=dict)
     shared_state_records: dict[str, ParticipantSharedStateRecordModel] = Field(default_factory=dict)
     shared_state_history: dict[str, list[ParticipantSharedStateRecordModel]] = Field(default_factory=dict)
+    joint_action_records: dict[str, ParticipantJointActionRecordModel] = Field(default_factory=dict)
+    time_management_contexts: dict[str, ParticipantTimeManagementContextModel] = Field(default_factory=dict)
     realization_provenance: list[RealizationProvenanceEntryModel] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -5323,6 +5489,8 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_json_schema(),
         "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_json_schema(),
         "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_json_schema(),
+        "participant-joint-action-record-v1": ParticipantJointActionRecordModel.model_json_schema(),
+        "participant-time-management-context-v1": ParticipantTimeManagementContextModel.model_json_schema(),
         "participant-outcome-report-v1": ParticipantOutcomeReportModel.model_json_schema(),
         "participant-status-view-v1": ParticipantStatusViewModel.model_json_schema(),
         "participant-history-view-v1": ParticipantHistoryViewModel.model_json_schema(),
@@ -5445,6 +5613,8 @@ __all__ = [
     "ParticipantImplementationManifestModel",
     "ParticipantImplementationProvenanceModel",
     "ParticipantImplementationSelectionModel",
+    "ParticipantJointActionAccessSetModel",
+    "ParticipantJointActionRecordModel",
     "ParticipantLifecycleEventModel",
     "ParticipantObservationEnvelopeModel",
     "ParticipantObservationLossDescriptorModel",
@@ -5462,6 +5632,7 @@ __all__ = [
     "ParticipantStatusViewEpisodeStateModel",
     "ParticipantStatusViewModel",
     "ParticipantTemporalRuntimeContextModel",
+    "ParticipantTimeManagementContextModel",
     "VIEW_SCOPE_PROJECTED_FIELDS",
     "PlanOperationModel",
     "ProcessorFeature",

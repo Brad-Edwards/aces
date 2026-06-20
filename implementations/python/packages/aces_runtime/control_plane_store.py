@@ -99,6 +99,8 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
         "shared_state_history": {
             state_address: list(records) for state_address, records in snapshot.shared_state_history.items()
         },
+        "joint_action_records": dict(snapshot.joint_action_records),
+        "time_management_contexts": dict(snapshot.time_management_contexts),
         "realization_provenance": [
             {
                 "address": entry.address,
@@ -150,6 +152,8 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
         shared_state_history={
             state_address: list(records) for state_address, records in payload.get("shared_state_history", {}).items()
         },
+        joint_action_records=dict(payload.get("joint_action_records", {})),
+        time_management_contexts=dict(payload.get("time_management_contexts", {})),
         realization_provenance=tuple(
             RealizationProvenanceEntry(
                 address=str(item.get("address", "")),

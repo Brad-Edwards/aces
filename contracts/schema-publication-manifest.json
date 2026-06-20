@@ -12,20 +12,20 @@
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "da156411d9877ad75045569b47e3b98597b6dec23a827d176c1fc64d9532cc90",
+      "content_hash": "7698fe1c5350d56917663b9642c563a8ea0cb633fd42f15b8e585dd75017a92b",
       "last_change": {
-        "summary": "Extended the backend manifest with the participant backend-facing runtime capability surface (API-407 manifest extension; ADR-060, issue #76).",
-        "content_hash": "da156411d9877ad75045569b47e3b98597b6dec23a827d176c1fc64d9532cc90"
+        "summary": "Added the RUN-308 participant joint-action and time-management contract identifiers to backend-supported contract declarations.",
+        "content_hash": "7698fe1c5350d56917663b9642c563a8ea0cb633fd42f15b8e585dd75017a92b"
       }
     },
     {
       "contract_id": "backend-profile-v1",
       "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
       "stability": "draft",
-      "content_hash": "1c9ffe10f1c2c420610d1353dc1406bb0e0d63001c4f6a32e1aca061b164af1d",
+      "content_hash": "52476744039a9ef398de1c7b0ecac5eceb47e6b7ebde93c3d69dab9f0928d06a",
       "last_change": {
-        "summary": "Added the participant backend-facing contract identifiers (lifecycle-event, observation-envelope, shared-state-record, outcome-report) to the backend profile contract vocabulary (ADR-060, issue #76).",
-        "content_hash": "1c9ffe10f1c2c420610d1353dc1406bb0e0d63001c4f6a32e1aca061b164af1d"
+        "summary": "Added the RUN-308 participant joint-action and time-management contract identifiers to the backend profile contract vocabulary.",
+        "content_hash": "52476744039a9ef398de1c7b0ecac5eceb47e6b7ebde93c3d69dab9f0928d06a"
       }
     },
     {
@@ -165,6 +165,16 @@
       "content_hash": "a4c050fb2a53129148f7d2960a7cb06d36c4682483064734e505acda4677d7ec"
     },
     {
+      "contract_id": "participant-joint-action-record-v1",
+      "schema_path": "contracts/schemas/participant-runtime/participant-joint-action-record-v1.json",
+      "stability": "draft",
+      "content_hash": "bfd0f43f8b19f3658d71ca81520c481aa447f0486eee669edfc4521d0cdbd1a8",
+      "last_change": {
+        "summary": "Initial publication of the RUN-308 participant joint-action runtime contract: membership, access-set, conflict, isolation, and realized-order evidence.",
+        "content_hash": "bfd0f43f8b19f3658d71ca81520c481aa447f0486eee669edfc4521d0cdbd1a8"
+      }
+    },
+    {
       "contract_id": "participant-lifecycle-event-v1",
       "schema_path": "contracts/schemas/participant-runtime/participant-lifecycle-event-v1.json",
       "stability": "draft",
@@ -215,6 +225,16 @@
       }
     },
     {
+      "contract_id": "participant-time-management-context-v1",
+      "schema_path": "contracts/schemas/participant-runtime/participant-time-management-context-v1.json",
+      "stability": "draft",
+      "content_hash": "e4711ff9a4674697fb8aed40af863ea0327ad31824ef0a8f07d182ccfa9f28a1",
+      "last_change": {
+        "summary": "Initial publication of the RUN-308 participant time-management context contract: clock, ordering, lookahead, pacing, rollback, and backend-serialization basis.",
+        "content_hash": "e4711ff9a4674697fb8aed40af863ea0327ad31824ef0a8f07d182ccfa9f28a1"
+      }
+    },
+    {
       "contract_id": "processor-manifest-v2",
       "schema_path": "contracts/schemas/processor-manifest/processor-manifest-v2.json",
       "stability": "draft",
@@ -236,10 +256,10 @@
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "530cb86899355de624465c1c37723f923a69e85ecb40ef3f01f2d8bc013019a3",
+      "content_hash": "cb6a599ef5137bcc5954ffd4f451167562186112c7595ec20b50eb94b97e1550",
       "last_change": {
-        "summary": "Add first-class shared_state_records and shared_state_history fields to the runtime snapshot envelope for RUN-307 shared operational state.",
-        "content_hash": "530cb86899355de624465c1c37723f923a69e85ecb40ef3f01f2d8bc013019a3"
+        "summary": "Added first-class joint_action_records and time_management_contexts fields to the runtime snapshot envelope for RUN-308 concurrent participant execution.",
+        "content_hash": "cb6a599ef5137bcc5954ffd4f451167562186112c7595ec20b50eb94b97e1550"
       }
     },
     {

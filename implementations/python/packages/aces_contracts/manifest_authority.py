@@ -50,6 +50,8 @@ BACKEND_SUPPORTED_CONTRACT_IDS = (
     "participant-lifecycle-event-v1",
     "participant-observation-envelope-v1",
     "participant-shared-state-record-v1",
+    "participant-joint-action-record-v1",
+    "participant-time-management-context-v1",
     "participant-outcome-report-v1",
 )
 
