@@ -73,6 +73,8 @@ class RuntimeSnapshot:
     participant_behavior_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     shared_state_records: dict[str, dict[str, Any]] = field(default_factory=dict)
     shared_state_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    joint_action_records: dict[str, dict[str, Any]] = field(default_factory=dict)
+    time_management_contexts: dict[str, dict[str, Any]] = field(default_factory=dict)
     # SEM-218 invariant I5: per-concern provenance for realized realization
     # concerns recorded across this snapshot's result / history surfaces.
     realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
@@ -129,6 +131,16 @@ class RuntimeSnapshot:
                 "shared_state_history",
                 self.shared_state_history,
             ),
+            joint_action_records=_mapping_update(
+                updates,
+                "joint_action_records",
+                self.joint_action_records,
+            ),
+            time_management_contexts=_mapping_update(
+                updates,
+                "time_management_contexts",
+                self.time_management_contexts,
+            ),
             realization_provenance=_provenance_update(
                 updates,
                 "realization_provenance",
@@ -148,6 +160,8 @@ _SNAPSHOT_UPDATE_KEYS = {
     "participant_behavior_history",
     "shared_state_records",
     "shared_state_history",
+    "joint_action_records",
+    "time_management_contexts",
     "realization_provenance",
     "metadata",
 }

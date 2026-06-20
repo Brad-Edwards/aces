@@ -81,6 +81,8 @@ def create_stub_manifest(
         supported_contract_versions.discard("participant-lifecycle-event-v1")
         supported_contract_versions.discard("participant-observation-envelope-v1")
         supported_contract_versions.discard("participant-shared-state-record-v1")
+        supported_contract_versions.discard("participant-joint-action-record-v1")
+        supported_contract_versions.discard("participant-time-management-context-v1")
         supported_contract_versions.discard("participant-outcome-report-v1")
     concept_bindings = (
         ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),

@@ -30,6 +30,15 @@ _PARTICIPANT_BEHAVIOR_CONTRACTS = frozenset(
         "runtime-snapshot-v1",
     }
 )
+_PARTICIPANT_INTERACTION_CONTRACTS = frozenset(
+    {
+        "participant-behavior-history-event-stream-v1",
+        "participant-shared-state-record-v1",
+        "participant-joint-action-record-v1",
+        "participant-time-management-context-v1",
+        "runtime-snapshot-v1",
+    }
+)
 
 PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
     PARTICIPANT_RUNTIME_ROLE_SCOPE: {
@@ -51,10 +60,10 @@ PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
         "temporal_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
     },
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE: {
-        "contention": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "coordination": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "interference": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "shared_state_change": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "contention": _PARTICIPANT_INTERACTION_CONTRACTS,
+        "coordination": _PARTICIPANT_INTERACTION_CONTRACTS,
+        "interference": _PARTICIPANT_INTERACTION_CONTRACTS,
+        "shared_state_change": _PARTICIPANT_INTERACTION_CONTRACTS,
     },
 }
 """Minimum published contract surfaces needed to make API-405 claims checkable.
