@@ -49,7 +49,6 @@ from aces_contracts.participant_episode import (
 from aces_contracts.planning import RuntimeDomain
 from aces_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope, SnapshotEntry
 from aces_contracts.workflow import WorkflowExecutionState
-from aces_processor.compiler import compile_runtime_model
 from aces_processor.models import (
     ParticipantActionContractRuntime,
     ParticipantBehaviorHistoryEvent,
@@ -57,7 +56,7 @@ from aces_processor.models import (
     iter_participant_behavior_history_violations,
     iter_participant_behavior_joint_action_violations,
 )
-from aces_processor.planner import plan
+from aces_processor.reference import run_reference_processor
 from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.registry import RuntimeTarget
 from aces_runtime.result_contracts import (
@@ -1215,7 +1214,7 @@ def _live_target_cases(
             """
         )
     )
-    execution_plan = plan(compile_runtime_model(scenario), target.manifest)
+    execution_plan = run_reference_processor(scenario, target.manifest).execution_plan
     control_plane = RuntimeControlPlane(target)
     control_plane.submit_provisioning(execution_plan.provisioning)
     if target.orchestrator is not None:
