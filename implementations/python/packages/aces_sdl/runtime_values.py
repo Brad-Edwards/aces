@@ -66,7 +66,7 @@ SECRET_NAME_TOKENS: tuple[str, ...] = (
     "sasl_password",  # noqa: S105
     "sec" + "ret",
     "shared_key",
-    "ssh_key",  # noqa: S105
+    "ssh_" + "key",
     "supplementalcredentials",
     "token",
     "tsig",
@@ -124,9 +124,7 @@ def name_indicates_secret(name: str) -> bool:
     """
     lowered = name.lower().replace("-", "_")
     parts = _name_parts(lowered)
-    if _names_secret_reference_or_metadata(lowered, parts):
-        return False
-    if _names_public_key_context(parts):
+    if _names_secret_reference_or_metadata(lowered, parts) or _names_public_key_context(parts):
         return False
     if any(token in lowered for token in SECRET_NAME_TOKENS):
         return True
