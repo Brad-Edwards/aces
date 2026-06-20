@@ -107,6 +107,7 @@ adr-059-adr-amendment-policy-and-pin-gate
 adr-060-participant-backend-facing-contract-surface
 adr-061-published-schema-evolution-policy
 adr-062-concept-authority-catalog-governance-gate
+adr-063-reference-emulation-backend
 ```
 
 | ADR | Title | Status | Date |
@@ -174,3 +175,4 @@ adr-062-concept-authority-catalog-governance-gate
 | [060](adr-060-participant-backend-facing-contract-surface.md) | Participant Backend-Facing Contract Surface | proposed | 2026-06-11 |
 | [061](adr-061-published-schema-evolution-policy.md) | Published Schema Evolution Policy | accepted | 2026-06-14 |
 | [062](adr-062-concept-authority-catalog-governance-gate.md) | Concept-Authority Catalog Governance Gate | accepted | 2026-06-14 |
+| [063](adr-063-reference-emulation-backend.md) | Reference Emulation Backend | accepted | 2026-06-20 |

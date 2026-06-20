@@ -75,6 +75,32 @@ jobs:
       - name: Run fuzz session
         run: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s fuzz
 
+  # Opt-in, non-blocking, runtime-gated container integration tests (RUN-314).
+  # Kept out of the hermetic `verify` graph; the `docker` marker tests self-skip
+  # when no runtime is present, and this whole job never fails the build.
+  integration-docker:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8
+      - name: Probe for a container runtime
+        id: runtime
+        run: |
+          if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "No container runtime available; skipping docker integration session."
+          fi
+      - name: Run docker integration session
+        if: steps.runtime.outputs.available == 'true'
+        run: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s integration_docker
+
   sonar:
     runs-on: ubuntu-latest
     needs: [verify]
