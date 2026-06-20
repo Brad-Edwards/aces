@@ -1,8 +1,27 @@
-"""Executable invariant oracle for the participant-semantics abstract model.
+"""Self-consistency oracle for the participant-semantics formal model.
 
-The oracle intentionally stays test-local. It executes the published invariants
-from ``specs/formal/participant-semantics/README.md`` without introducing a
-runtime participant-semantics subsystem.
+This file is NOT a test of any production participant-semantics subsystem — no
+such runtime subsystem exists, and the invariant predicates below have no
+callers under ``src/`` or ``packages/``. It is a closed, test-local executable
+encoding of the invariants published in
+``specs/formal/participant-semantics/README.md`` (I1-I18), and it checks two
+things about that encoding:
+
+* **Spec sync** — the catalog of invariant IDs and their spec section headings
+  stay in lock-step with the spec document
+  (``test_oracle_and_spec_headings_map_both_directions``).
+* **Discrimination** — each invariant predicate actually separates a
+  spec-conforming progression from a targeted violation.
+  ``test_canonical_progression_satisfies_all_invariants`` is the positive
+  control and ``test_each_invariant_rejects_its_targeted_mutation`` is the
+  negative control. Because the fixtures and predicates are co-authored, the
+  acceptance-direction check is a positive control for the mutation test, not
+  evidence of production coverage.
+
+Runtime *enforcement* of participant semantics is covered behaviourally
+elsewhere (``test_sem_211_*`` … ``test_sem_218_*``, which drive the real
+parser/compiler/validator engines). A green run here does not mean participant
+semantics are implemented.
 """
 
 from __future__ import annotations
@@ -13,8 +32,6 @@ from pathlib import Path
 from typing import TypeVar
 
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
 
 SPEC_PATH = Path(__file__).resolve().parents[3] / "specs/formal/participant-semantics/README.md"
 
@@ -395,65 +412,6 @@ def canonical_progression() -> ParticipantProgression:
     )
 
 
-@st.composite
-def participant_progressions(draw) -> ParticipantProgression:
-    state = canonical_progression()
-    participant_count = draw(st.integers(min_value=2, max_value=4))
-    participants = tuple(
-        Participant(
-            participant_id=f"participant-{index}",
-            implementation_type=draw(st.sampled_from(IMPLEMENTATION_TYPES)),
-            semantic_profile="participant-semantics-v1",
-        )
-        for index in range(participant_count)
-    )
-    side_effects = frozenset(
-        draw(
-            st.lists(
-                st.sampled_from(["detection_effect", "visibility_effect", "evidence_effect"]),
-                min_size=1,
-                max_size=3,
-                unique=True,
-            )
-        )
-    )
-    actual_side_effects = frozenset(draw(st.lists(st.sampled_from(sorted(side_effects)), min_size=1)))
-    action = replace(
-        state.actions[0],
-        participant_id=participants[0].participant_id,
-        declared_side_effect_classes=side_effects,
-        actual_side_effect_classes=actual_side_effects,
-        interaction_classes=frozenset(
-            draw(st.lists(st.sampled_from(sorted(INTERACTION_CLASSES)), min_size=1, unique=True))
-        ),
-        time_domain=draw(st.sampled_from(["episode_step", "scenario_time", "simulation_time", "backend_time"])),
-        clock_authority=draw(st.sampled_from(["scenario-clock", "sim-clock", "backend-clock"])),
-    )
-    observation = replace(
-        state.observations[0],
-        participant_id=participants[0].participant_id,
-        latency_domain=action.time_domain,
-        visible_refs=frozenset(
-            draw(st.lists(st.sampled_from(["asset.public-host", "asset.public-service"]), min_size=1))
-        ),
-    )
-    fidelity_claim = replace(
-        state.fidelity_claim,
-        semantic_portability_claimed=draw(st.booleans()),
-        fidelity_equivalence_claimed=draw(st.booleans()),
-        portability_claim_implies_fidelity=False,
-    )
-    language_evaluation = replace(state.language_evaluation, concrete_syntax_declared=draw(st.booleans()))
-    return replace(
-        state,
-        participants=participants,
-        actions=(action,),
-        observations=(observation,),
-        fidelity_claim=fidelity_claim,
-        language_evaluation=language_evaluation,
-    )
-
-
 def _i1_role_neutral(state: ParticipantProgression) -> bool:
     profiles = {participant.semantic_profile for participant in state.participants}
     known_implementations = all(
@@ -800,10 +758,6 @@ INVARIANTS = (
 )
 
 
-def test_invariant_catalog_covers_i1_through_i18() -> None:
-    assert [invariant.invariant_id for invariant in INVARIANTS] == [f"I{index}" for index in range(1, 19)]
-
-
 def test_oracle_and_spec_headings_map_both_directions() -> None:
     spec_text = SPEC_PATH.read_text(encoding="utf-8")
     spec_headings = {
@@ -827,24 +781,12 @@ def test_each_invariant_rejects_its_targeted_mutation(invariant: Invariant) -> N
 
 
 def test_canonical_progression_satisfies_all_invariants() -> None:
+    # Positive control. The canonical progression must satisfy every predicate so
+    # that test_each_invariant_rejects_its_targeted_mutation proves a real
+    # True -> False flip rather than a vacuous False -> False. This is not
+    # evidence of production coverage; nothing under src/ or packages/ consumes
+    # these predicates.
     state = canonical_progression()
 
     for invariant in INVARIANTS:
         assert invariant.predicate(state), invariant.invariant_id
-
-
-@settings(max_examples=50, deadline=None)
-@given(state=participant_progressions())
-def test_generated_valid_progressions_satisfy_all_invariants(state: ParticipantProgression) -> None:
-    for invariant in INVARIANTS:
-        assert invariant.predicate(state), invariant.invariant_id
-
-
-@settings(max_examples=25, deadline=None)
-@given(base_state=participant_progressions())
-@pytest.mark.parametrize("invariant", INVARIANTS, ids=lambda invariant: invariant.invariant_id)
-def test_generated_targeted_mutations_are_rejected(
-    invariant: Invariant,
-    base_state: ParticipantProgression,
-) -> None:
-    assert not invariant.predicate(invariant.mutate(base_state)), invariant.invariant_id
