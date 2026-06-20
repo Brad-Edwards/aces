@@ -30,7 +30,8 @@ class ReferenceProvisioner:
     def __init__(self, driver: DeploymentDriver) -> None:
         self._driver = driver
 
-    def validate(self, plan: ProvisioningPlan) -> list[Diagnostic]:
+    @staticmethod
+    def validate(plan: ProvisioningPlan) -> list[Diagnostic]:
         realization = interpret_provisioning_plan(plan)
         return list(realization.diagnostics)
 

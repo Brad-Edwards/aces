@@ -154,21 +154,28 @@ def _container_spec(
 
 
 def _image_ref(payload: Mapping[str, object]) -> str:
-    spec = payload.get("spec")
-    if isinstance(spec, Mapping):
-        node = spec.get("node")
-        if isinstance(node, Mapping):
-            source = node.get("source")
-            if isinstance(source, str) and source:
-                return source
-            if isinstance(source, Mapping):
-                name = source.get("name")
-                if isinstance(name, str) and name:
-                    return name
+    source = _node_source(payload)
+    if source:
+        return source
     os_family = payload.get("os_family")
     if isinstance(os_family, str) and os_family:
         return f"aces-reference/{os_family}"
     return "aces-reference/base"
+
+
+def _node_source(payload: Mapping[str, object]) -> str | None:
+    """Return the authored container image source for a node, if any."""
+
+    spec = payload.get("spec")
+    node = spec.get("node") if isinstance(spec, Mapping) else None
+    source = node.get("source") if isinstance(node, Mapping) else None
+    if isinstance(source, str) and source:
+        return source
+    if isinstance(source, Mapping):
+        name = source.get("name")
+        if isinstance(name, str) and name:
+            return name
+    return None
 
 
 def _placement(resource: PlannedResource, payload: Mapping[str, object]) -> PlacementRealization:

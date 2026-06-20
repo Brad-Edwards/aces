@@ -100,6 +100,12 @@ source = [
 
 [tool.coverage.report]
 show_missing = true
+exclude_also = [
+    # The reference backend's OCI subprocess leaf (RUN-314): real container
+    # IO, exercised only by the opt-in docker integration tests, never in the
+    # hermetic suite.
+    "def _default_runner",
+]
 
 [tool.coverage.xml]
 output = "coverage.xml"

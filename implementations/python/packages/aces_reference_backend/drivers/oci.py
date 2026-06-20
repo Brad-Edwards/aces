@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import subprocess
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from aces_contracts.diagnostics import Diagnostic, Severity
 
@@ -39,11 +40,57 @@ _DOMAIN = "runtime"
 _ALLOWED_RUNTIMES = frozenset({"docker", "podman"})
 _DEFAULT_TIMEOUT_SECONDS = 120
 
+_CODE_TIMEOUT = "reference-backend.driver.timeout"
+_CODE_RUNTIME_UNAVAILABLE = "reference-backend.driver.runtime-unavailable"
+_CODE_COMMAND_FAILED = "reference-backend.driver.command-failed"
+_CODE_IMAGE_NOT_ALLOWED = "reference-backend.driver.image-not-allowed"
+
+_KIND_TO_CODE = {
+    "timeout": _CODE_TIMEOUT,
+    "runtime-missing": _CODE_RUNTIME_UNAVAILABLE,
+    "command-failed": _CODE_COMMAND_FAILED,
+}
+
 Runner = Callable[..., subprocess.CompletedProcess]
 
 
-def _default_runner(argv: list[str], **kwargs) -> subprocess.CompletedProcess:  # pragma: no cover - IO leaf
+def _default_runner(argv: list[str], **kwargs) -> subprocess.CompletedProcess:
+    # The real subprocess call is the impure IO leaf; tests inject a fake
+    # runner, and coverage excludes this function (see pyproject exclude_also).
     return subprocess.run(argv, **kwargs)
+
+
+@dataclass(frozen=True)
+class ImageTrustPolicy:
+    """Operator policy deciding which container images may be realized.
+
+    A plan author controls ``spec.image_ref`` (via ``node.source``) and ``run``
+    pulls+executes it; fixed argv stops shell injection but is not an image
+    trust boundary. Only the operator ``default_image``, an explicit
+    ``allowed_images`` entry, or a digest-pinned ref (``...@sha256:...``) is
+    permitted, so plan submission cannot become arbitrary-image code execution.
+    """
+
+    default_image: str | None = None
+    allowed_images: tuple[str, ...] = ()
+    allow_digest_pinned: bool = True
+
+    def image_for(self, image_ref: str) -> str:
+        # A configured default overrides the synthesized ``aces-reference/*``
+        # placeholder so an image-less plan can still realize against a registry.
+        if self.default_image and image_ref.startswith("aces-reference/"):
+            return self.default_image
+        return image_ref
+
+    def permits(self, image: str) -> bool:
+        if self.default_image is not None and image == self.default_image:
+            return True
+        if image in self.allowed_images:
+            return True
+        return self.allow_digest_pinned and "@sha256:" in image
+
+
+_DEFAULT_IMAGE_POLICY = ImageTrustPolicy()
 
 
 class OciDeploymentDriver:
@@ -57,9 +104,7 @@ class OciDeploymentDriver:
         runner: Runner | None = None,
         timeout_seconds: int = _DEFAULT_TIMEOUT_SECONDS,
         keep_alive: tuple[str, ...] = ("sleep", "3600"),
-        default_image: str | None = None,
-        allowed_images: tuple[str, ...] = (),
-        allow_digest_pinned: bool = True,
+        image_policy: ImageTrustPolicy = _DEFAULT_IMAGE_POLICY,
     ) -> None:
         if runtime not in _ALLOWED_RUNTIMES:
             raise ValueError(f"Unsupported container runtime; allowed: {sorted(_ALLOWED_RUNTIMES)}.")
@@ -72,35 +117,12 @@ class OciDeploymentDriver:
         self._runner = runner or _default_runner
         self._timeout = timeout_seconds
         self._keep_alive = tuple(keep_alive)
-        self._default_image = default_image
-        # Operator image-trust policy. A plan author controls spec.image_ref
-        # (via node.source), and `run` pulls+executes it; fixed argv stops shell
-        # injection but is not an image trust boundary. By default only the
-        # operator-configured default_image, an explicit allowlist entry, or a
-        # digest-pinned ref (`...@sha256:...`) may be realized, so plan
-        # submission cannot turn into arbitrary-image code execution.
-        self._allowed_images = frozenset(allowed_images)
-        self._allow_digest_pinned = allow_digest_pinned
+        self._image_policy = image_policy
         self._realized: set[str] = set()
         # ACES address -> the runtime object name realize() used, so destroy()
         # removes exactly what was created even when a payload pinned an
         # explicit name that differs from the address's last segment.
         self._names: dict[str, str] = {}
-
-    def _image_for(self, image_ref: str) -> str:
-        # An image source configured through the registry/driver seam overrides
-        # the synthesized ``aces-reference/*`` placeholder so a portable plan
-        # that did not pin an image can still realize against a real registry.
-        if self._default_image and image_ref.startswith("aces-reference/"):
-            return self._default_image
-        return image_ref
-
-    def _image_allowed(self, image: str) -> bool:
-        if self._default_image is not None and image == self._default_image:
-            return True
-        if image in self._allowed_images:
-            return True
-        return self._allow_digest_pinned and "@sha256:" in image
 
     def _label_args(self) -> list[str]:
         return ["--label", f"aces.workspace={self._workspace}"]
@@ -124,9 +146,8 @@ class OciDeploymentDriver:
             return False, "timeout"
         except FileNotFoundError:
             return False, "runtime-missing"
-        if completed.returncode != 0:
-            return False, "command-failed"
-        return True, None
+        kind = None if completed.returncode == 0 else "command-failed"
+        return kind is None, kind
 
     def realize(
         self,
@@ -147,8 +168,8 @@ class OciDeploymentDriver:
                 diagnostics.append(self._failure(spec.address, kind))
         container_handles: list[ContainerHandle] = []
         for spec in containers:
-            image = self._image_for(spec.image_ref)
-            if not self._image_allowed(image):
+            image = self._image_policy.image_for(spec.image_ref)
+            if not self._image_policy.permits(image):
                 diagnostics.append(self._image_rejected(spec.address))
                 continue
             argv = [
@@ -249,28 +270,22 @@ class OciDeploymentDriver:
     def realized_addresses(self) -> frozenset[str]:
         return frozenset(self._realized)
 
-    def _failure(self, address: str, kind: str | None) -> Diagnostic:
-        code = {
-            "timeout": "reference-backend.driver.timeout",
-            "runtime-missing": "reference-backend.driver.runtime-unavailable",
-            "command-failed": "reference-backend.driver.command-failed",
-        }.get(kind or "command-failed", "reference-backend.driver.command-failed")
+    @staticmethod
+    def _failure(address: str, kind: str | None) -> Diagnostic:
+        code = _KIND_TO_CODE.get(kind or "command-failed", _CODE_COMMAND_FAILED)
         message = {
-            "reference-backend.driver.timeout": (
-                f"Container runtime operation for '{address}' exceeded the bounded timeout."
-            ),
-            "reference-backend.driver.runtime-unavailable": (f"Container runtime is unavailable for '{address}'."),
-            "reference-backend.driver.command-failed": (
-                f"Container runtime operation for '{address}' did not succeed."
-            ),
+            _CODE_TIMEOUT: f"Container runtime operation for '{address}' exceeded the bounded timeout.",
+            _CODE_RUNTIME_UNAVAILABLE: f"Container runtime is unavailable for '{address}'.",
+            _CODE_COMMAND_FAILED: f"Container runtime operation for '{address}' did not succeed.",
         }[code]
         return Diagnostic(code=code, domain=_DOMAIN, address=address, message=message, severity=Severity.ERROR)
 
-    def _image_rejected(self, address: str) -> Diagnostic:
+    @staticmethod
+    def _image_rejected(address: str) -> Diagnostic:
         # The rejected image ref is plan-controlled; keep it out of the message
         # so the diagnostic never echoes attacker-chosen content.
         return Diagnostic(
-            code="reference-backend.driver.image-not-allowed",
+            code=_CODE_IMAGE_NOT_ALLOWED,
             domain=_DOMAIN,
             address=address,
             message=(

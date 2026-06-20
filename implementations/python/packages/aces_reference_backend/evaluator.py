@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from aces_contracts.planning import ChangeAction, EvaluationPlan, RuntimeDomain
+from aces_contracts.planning import ChangeAction, EvaluationOp, EvaluationPlan, RuntimeDomain
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
 from aces_contracts.versions import EVALUATION_STATE_SCHEMA_VERSION
 
@@ -64,7 +64,7 @@ class ReferenceEvaluator:
         )
 
     @staticmethod
-    def _result_payload(op, now: str) -> dict[str, object]:
+    def _result_payload(op: EvaluationOp, now: str) -> dict[str, object]:
         result_contract = op.payload.get("result_contract", {})
         if not isinstance(result_contract, dict):
             result_contract = {}

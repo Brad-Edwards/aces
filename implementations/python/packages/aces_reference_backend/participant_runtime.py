@@ -26,6 +26,8 @@ from aces_contracts.participant_episode import (
 )
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 
+_EMPTY_ADDRESS_MSG = "participant_address must be non-empty"
+
 _TERMINAL_EVENT_FOR_REASON: dict[ParticipantEpisodeTerminalReason, ParticipantEpisodeHistoryEventType] = {
     ParticipantEpisodeTerminalReason.COMPLETED: ParticipantEpisodeHistoryEventType.EPISODE_COMPLETED,
     ParticipantEpisodeTerminalReason.TIMED_OUT: ParticipantEpisodeHistoryEventType.EPISODE_TIMED_OUT,
@@ -53,7 +55,7 @@ class ReferenceParticipantRuntime:
     ) -> ApplyResult:
         address = request.participant_address
         if not address:
-            return self._reject(snapshot, "participant_address must be non-empty", address)
+            return self._reject(snapshot, _EMPTY_ADDRESS_MSG, address)
         if address in snapshot.participant_episode_results:
             return self._reject(
                 snapshot,
@@ -122,7 +124,7 @@ class ReferenceParticipantRuntime:
 
     def _new_episode(
         self,
-        request,
+        request: ParticipantEpisodeResetRequest | ParticipantEpisodeRestartRequest,
         snapshot: RuntimeSnapshot,
         *,
         control_action: ParticipantEpisodeControlAction,
@@ -132,15 +134,10 @@ class ReferenceParticipantRuntime:
         wrong_state_message: str,
     ) -> ApplyResult:
         address = request.participant_address
-        if not address:
-            return self._reject(snapshot, "participant_address must be non-empty", address)
-        current_state = self._current_state(snapshot, address)
-        if current_state is None:
-            return self._reject(snapshot, no_episode_message.format(address=address), address)
+        current_state = self._live_predecessor(snapshot, address, no_episode_message)
         if isinstance(current_state, ApplyResult):
             return current_state
-        is_terminated = current_state.status == ParticipantEpisodeStatus.TERMINATED
-        if require_terminated != is_terminated:
+        if (current_state.status == ParticipantEpisodeStatus.TERMINATED) != require_terminated:
             return self._reject(snapshot, wrong_state_message.format(address=address), address)
         now = _now_iso()
         new_episode_id = request.episode_id or self._allocate_episode_id(address)
@@ -184,11 +181,9 @@ class ReferenceParticipantRuntime:
         snapshot: RuntimeSnapshot,
     ) -> ApplyResult:
         address = request.participant_address
-        if not address:
-            return self._reject(snapshot, "participant_address must be non-empty", address)
-        current_state = self._current_state(snapshot, address)
-        if current_state is None:
-            return self._reject(snapshot, f"cannot terminate participant {address!r}: no live episode", address)
+        current_state = self._live_predecessor(
+            snapshot, address, "cannot terminate participant {address!r}: no live episode"
+        )
         if isinstance(current_state, ApplyResult):
             return current_state
         if current_state.status == ParticipantEpisodeStatus.TERMINATED:
@@ -232,14 +227,23 @@ class ReferenceParticipantRuntime:
     def history(self) -> dict[str, list[dict[str, object]]]:
         return {address: list(events) for address, events in self._history.items()}
 
-    def _current_state(
+    def _live_predecessor(
         self,
         snapshot: RuntimeSnapshot,
         address: str,
-    ) -> ParticipantEpisodeExecutionState | ApplyResult | None:
-        current = snapshot.participant_episode_results.get(address)
+        no_episode_message: str,
+    ) -> ParticipantEpisodeExecutionState | ApplyResult:
+        """Resolve the participant's current episode state, or an error result.
+
+        Collapses the empty-address, no-live-episode, and invalid-payload guards
+        into a single resolver so the reset/restart/terminate callers each keep
+        one error-return path plus their own state-specific check.
+        """
+
+        current = snapshot.participant_episode_results.get(address) if address else None
         if current is None:
-            return None
+            message = _EMPTY_ADDRESS_MSG if not address else no_episode_message.format(address=address)
+            return self._reject(snapshot, message, address)
         try:
             return ParticipantEpisodeExecutionState.from_payload(current)
         except (TypeError, ValueError) as exc:
@@ -274,7 +278,8 @@ class ReferenceParticipantRuntime:
             changed_addresses=[address],
         )
 
-    def _reject(self, snapshot: RuntimeSnapshot, message: str, address: str) -> ApplyResult:
+    @staticmethod
+    def _reject(snapshot: RuntimeSnapshot, message: str, address: str) -> ApplyResult:
         diagnostic = Diagnostic(
             code="runtime.participant-runtime.rejected",
             domain="runtime",

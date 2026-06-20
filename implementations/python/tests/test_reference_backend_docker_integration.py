@@ -15,7 +15,7 @@ import textwrap
 
 import pytest
 from aces_reference_backend import create_reference_backend_target
-from aces_reference_backend.drivers.oci import OciDeploymentDriver
+from aces_reference_backend.drivers.oci import ImageTrustPolicy, OciDeploymentDriver
 
 from aces.core.runtime.conformance import (
     BackendCapabilityProfile,
@@ -87,7 +87,7 @@ def test_real_container_provision_inventory_and_teardown(container_runtime: str)
     driver = OciDeploymentDriver(
         runtime=container_runtime,
         workspace=workspace,
-        allowed_images=(_IMAGE,),
+        image_policy=ImageTrustPolicy(allowed_images=(_IMAGE,)),
     )
     target = create_reference_backend_target(driver=driver)
 
@@ -111,7 +111,7 @@ def test_real_driver_conformance_passes(container_runtime: str):
     driver = OciDeploymentDriver(
         runtime=container_runtime,
         workspace="aces-ref-it-conf",
-        default_image=_IMAGE,
+        image_policy=ImageTrustPolicy(default_image=_IMAGE),
     )
     target = create_reference_backend_target(driver=driver)
 

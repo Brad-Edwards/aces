@@ -6,7 +6,7 @@ import subprocess
 
 import pytest
 from aces_reference_backend.driver import ContainerSpec, NetworkSpec
-from aces_reference_backend.drivers.oci import OciDeploymentDriver
+from aces_reference_backend.drivers.oci import ImageTrustPolicy, OciDeploymentDriver
 
 
 class _Recorder:
@@ -35,7 +35,7 @@ def _driver(recorder: _Recorder) -> OciDeploymentDriver:
         runtime="docker",
         workspace="aces-ref-test",
         runner=recorder,
-        allowed_images=("img", "aces-reference/linux", "pinned-img"),
+        image_policy=ImageTrustPolicy(allowed_images=("img", "aces-reference/linux", "pinned-img")),
     )
 
 
@@ -115,7 +115,7 @@ def test_oci_no_tokens_in_argv():
         runtime="docker",
         workspace="aces-ref-test",
         runner=recorder,
-        allowed_images=("img",),
+        image_policy=ImageTrustPolicy(allowed_images=("img",)),
     )
 
     driver.realize(
@@ -138,7 +138,7 @@ def test_oci_timeout_becomes_diagnostic_not_raise():
         runtime="docker",
         workspace="aces-ref-test",
         runner=_timeout_runner,
-        allowed_images=("img",),
+        image_policy=ImageTrustPolicy(allowed_images=("img",)),
     )
 
     result = driver.realize(
@@ -252,7 +252,9 @@ def test_oci_rolls_back_realized_resources_on_partial_failure():
             return subprocess.CompletedProcess(args=argv, returncode=rc, stdout="", stderr="")
 
     runner = _FailContainer()
-    driver = OciDeploymentDriver(runtime="docker", workspace="ws", runner=runner, allowed_images=("img",))
+    driver = OciDeploymentDriver(
+        runtime="docker", workspace="ws", runner=runner, image_policy=ImageTrustPolicy(allowed_images=("img",))
+    )
 
     result = driver.realize(
         networks=(NetworkSpec(address="provision.network.lan", name="lan"),),
