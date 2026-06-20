@@ -55,6 +55,31 @@ the code, environment, parameters, and artifacts needed to assess a
 computational claim, without overstating that the result is an independent
 scientific replication.
 
+## Requirement Alignment
+
+This methodology is support for the ACES requirements that govern apparatus,
+provenance, realized-form disclosure, replay, and realization honesty. It does
+not replace those requirements or define final SDL syntax. Its role is to make
+the evidence and gap trail explicit enough for those requirement surfaces to
+consume:
+
+- `EXP-704` apparatus context: record discovery vantages, tool agents, backend
+  identity, runtime identities, and capture limits.
+- `EXP-712` reproducibility and replay: preserve rerunnable commands,
+  immutable artifact identifiers, scanner/tool versions, checksums, and known
+  non-claims.
+- `EXP-720` canonical run provenance: separate entities, activities, agents,
+  and evidence artifacts so later run records can cite the inventory.
+- `EXP-722` realized-form disclosure: capture realized runtime state even when
+  it differs from authored intent or backend defaults.
+- `ASR-519` realization honesty: force explicit mappings, caveats, and gap
+  issues instead of silent approximation or evidence-only claims.
+- `DSL-115` and follow-on DSL gap work: route missing SDL expressivity to ACES
+  issue records with evidence and checked surfaces.
+
+The reusable downstream issue skeleton for applying this method lives in
+`docs/aces/inventory/asset-inventory-issue-template.md`.
+
 ## Evidence Model
 
 Each asset is described across five layers:

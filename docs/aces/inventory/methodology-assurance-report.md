@@ -71,7 +71,8 @@ later issues must not silently carry them into final claims:
 - The Trivy SBOM and vulnerability outputs are scanner state tied to tool,
   database, advisory, and capture time. They are not permanent ground truth.
 - The ledger proves mapping accountability, not semantic completeness of ACES.
-  ACES #354 remains a blocker for typed runtime configuration surfaces.
+  ACES #354 added the first typed runtime configuration surfaces, but later
+  captures may still expose additional SDL gaps that need their own issues.
 - Correspondence checks are planned. Final encoding issues must implement them
   by comparing ACES/source-package content against fresh realized evidence.
 

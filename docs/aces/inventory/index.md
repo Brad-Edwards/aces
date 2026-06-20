@@ -12,6 +12,9 @@ Use these documents as the ACES authority:
 - [Methodology assurance report](methodology-assurance-report.md) records the
   DevOps, supply-chain, reproducible-research, and verification/validation
   basis for the method.
+- [Reference asset-inventory issue template](asset-inventory-issue-template.md)
+  is the vendorable GitHub issue skeleton downstream backends can copy into
+  their own `.github/ISSUE_TEMPLATE/` trees.
 - [SCN-010 expressivity gap analysis](scn010-expressivity-gap-analysis.md)
   is the peer-review-grade analysis of the ACES SDL runtime-surface
   expressivity gaps found while holding the 16 remaining APTL TechVault
@@ -32,6 +35,7 @@ methodology owner.
 
 asset-inventory-methodology
 methodology-assurance-report
+asset-inventory-issue-template
 scn010-expressivity-gap-analysis
 issue-516-redaction-boundary-preflight
 webapp-preflight
