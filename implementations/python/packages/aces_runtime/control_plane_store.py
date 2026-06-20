@@ -95,6 +95,10 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
             participant_address: list(events)
             for participant_address, events in snapshot.participant_behavior_history.items()
         },
+        "shared_state_records": dict(snapshot.shared_state_records),
+        "shared_state_history": {
+            state_address: list(records) for state_address, records in snapshot.shared_state_history.items()
+        },
         "realization_provenance": [
             {
                 "address": entry.address,
@@ -141,6 +145,10 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
         participant_behavior_history={
             participant_address: list(events)
             for participant_address, events in payload.get("participant_behavior_history", {}).items()
+        },
+        shared_state_records=dict(payload.get("shared_state_records", {})),
+        shared_state_history={
+            state_address: list(records) for state_address, records in payload.get("shared_state_history", {}).items()
         },
         realization_provenance=tuple(
             RealizationProvenanceEntry(

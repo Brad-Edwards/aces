@@ -100,6 +100,8 @@ _RESERVED_RUNTIME_STATE_KEYS = frozenset(
         "participant_episode_results",
         "participant_episode_history",
         "participant_behavior_history",
+        "shared_state_records",
+        "shared_state_history",
     }
 )
 _REQUIRED_BEHAVIOR_EVENT_FIELDS = (
