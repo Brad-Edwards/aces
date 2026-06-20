@@ -8,6 +8,10 @@ from pathlib import Path
 import pytest
 from aces_conformance.conformance import _semantic_diagnostics
 from aces_contracts.contracts import ParticipantSharedStateRecordModel, schema_bundle
+from aces_contracts.participant_shared_state import (
+    iter_participant_shared_state_history_transition_violations,
+    iter_participant_shared_state_snapshot_violations,
+)
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 from aces_runtime.backend_calls import _call_backend_apply
 from jsonschema import Draft202012Validator
@@ -44,6 +48,14 @@ def _fixture_record(**overrides: object) -> dict[str, object]:
     payload = json.loads(fixture_path.read_text(encoding="utf-8"))
     payload.update(overrides)
     return payload
+
+
+def _record_for(state_address: str, **overrides: object) -> dict[str, object]:
+    record = _fixture_record(state_address=state_address)
+    for access in record["accesses"]:
+        access["state_address"] = state_address
+    record.update(overrides)
+    return record
 
 
 def _state_update_event(**overrides: object) -> dict[str, object]:
@@ -149,6 +161,110 @@ def test_runtime_snapshot_semantics_reject_unresolved_shared_state_ref() -> None
     )
 
     assert any("shared_state_refs" in item.message and STATE_ADDRESS in item.message for item in diagnostics)
+
+
+def test_shared_state_semantics_reject_invalid_container_shapes() -> None:
+    assert list(iter_participant_shared_state_snapshot_violations({}, {})) == []
+
+    violations = list(iter_participant_shared_state_snapshot_violations([], [], metadata=[]))
+    messages = [message for _, message in violations]
+
+    assert "RuntimeSnapshot.metadata must be a mapping" in messages
+    assert "shared_state_records must be a mapping" in messages
+    assert "shared_state_history must be a mapping" in messages
+
+
+def test_shared_state_semantics_reject_invalid_record_shapes_and_accesses() -> None:
+    records: dict[object, object] = {
+        "": _record_for(STATE_ADDRESS),
+        "not.mapping": "invalid",
+        "missing.scope": _record_for("missing.scope", state_scope=None),
+        "outer.key": _record_for("inner.key"),
+        "no.version": _record_for("no.version", revision=None, digest=None),
+        "bad.accesses": _record_for("bad.accesses", accesses="invalid"),
+        "access.not.mapping": _record_for("access.not.mapping", accesses=["invalid"]),
+        "access.no.address": _record_for(
+            "access.no.address",
+            accesses=[{"access_kind": "read", "read_revision": "rev1"}],
+        ),
+        "access.mismatch": _record_for(
+            "access.mismatch",
+            accesses=[{"state_address": "other.address", "access_kind": "read", "read_revision": "rev1"}],
+        ),
+        "access.bad.kind": _record_for(
+            "access.bad.kind",
+            accesses=[{"state_address": "access.bad.kind", "access_kind": "observe"}],
+        ),
+        "access.no.read": _record_for(
+            "access.no.read",
+            accesses=[{"state_address": "access.no.read", "access_kind": "read"}],
+        ),
+        "access.no.write": _record_for(
+            "access.no.write",
+            accesses=[{"state_address": "access.no.write", "access_kind": "write"}],
+        ),
+    }
+
+    messages = [
+        message
+        for _, message in iter_participant_shared_state_snapshot_violations(
+            records,
+            {},
+        )
+    ]
+
+    expected_messages = [
+        "shared_state_records keys must be non-empty strings",
+        "shared state record must be a mapping",
+        "shared state record is missing required fields: state_scope",
+        "shared state record outer key 'outer.key' does not match state_address 'inner.key'",
+        "shared state record requires revision or digest",
+        "shared state record accesses must be a list",
+        "shared state access must be a mapping",
+        "shared state access state_address must be a non-empty string",
+        "shared state access state_address 'other.address' does not match record state_address",
+        "shared state access_kind 'observe' is not supported",
+        "shared state read access requires read_revision or read_digest",
+        "shared state write access requires write_revision or write_digest",
+    ]
+    for expected in expected_messages:
+        assert expected in messages
+
+
+def test_shared_state_semantics_reject_invalid_history_shapes() -> None:
+    history: dict[object, object] = {
+        "": [_record_for(STATE_ADDRESS)],
+        "not.list": "invalid",
+        "bad.record": ["invalid"],
+    }
+
+    messages = [
+        message
+        for _, message in iter_participant_shared_state_snapshot_violations(
+            {},
+            history,
+        )
+    ]
+
+    assert "shared_state_history keys must be non-empty strings" in messages
+    assert "shared_state_history entries must be lists" in messages
+    assert "shared state history record must be a mapping" in messages
+
+
+def test_shared_state_history_transition_rejects_removed_or_shrunk_history() -> None:
+    original = _fixture_record()
+    second = _fixture_record(revision="rev9")
+
+    removed = list(iter_participant_shared_state_history_transition_violations({STATE_ADDRESS: [original]}, {}))
+    shrunk = list(
+        iter_participant_shared_state_history_transition_violations(
+            {STATE_ADDRESS: [original, second]},
+            {STATE_ADDRESS: [original]},
+        )
+    )
+
+    assert any("history was removed" in message for _, message in removed)
+    assert any("history shrank from 2 to 1 records" in message for _, message in shrunk)
 
 
 def test_backend_apply_rejects_shared_state_in_metadata() -> None:
