@@ -11,6 +11,9 @@ This directory holds the formal artifacts for portable runtime result contracts.
 - backend participant capability declarations
 - manager-side validation of backend workflow results
 - manager-side validation of backend evaluator results
+- participant backend-facing contract surface (API-405/406/407/408/411): see
+  [participant-backend-contracts.md](participant-backend-contracts.md),
+  governed by ADR-060
 
 ## API-405 - Backend Participant Capability Declarations
 

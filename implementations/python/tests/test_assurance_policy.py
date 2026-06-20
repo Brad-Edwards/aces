@@ -1,21 +1,27 @@
 from __future__ import annotations
 
+import datetime
 import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from tools.check_assurance_policy import (  # noqa: E402
+    ADR_CLASSIFICATION_REQUIRED_FROM,
     ADR_POLICY_RELATIVE_PATH,
     ADR_REF,
     ADR_REFS,
+    ADR_TEMPLATE_RELATIVE_PATH,
+    ASSURANCE_FULFILLMENT_RELATIVE_PATH,
     ASSURANCE_POLICY_RELATIVE_PATH,
     CANONICAL_LEVEL_IDS,
     CODING_STANDARDS_RELATIVE_PATH,
+    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
     FORMAL_OVERVIEW_RELATIVE_PATH,
     REQUIRED_CHANGE_CATEGORIES,
     REQUIREMENT_REF,
@@ -99,6 +105,57 @@ _GOOD_FORMAL_OVERVIEW = """# Formal Specifications
 | FM3 | Stateful / Control Semantics | FM2 + abstract state-machine model |
 """
 
+_GOOD_ADR_TEMPLATE = """# ADR-NNN: Title
+
+## Status
+
+proposed
+
+## Date
+
+YYYY-MM-DD
+
+## Classification
+
+Classification: FM<n>
+Required artifacts: <artifact kinds delivered or waived>
+Waivers: <none, or artifact kind plus rationale>
+
+## Context
+
+Describe the problem.
+
+## Decision
+
+State the decision.
+
+## Alternatives Considered
+
+List rejected options.
+
+## Consequences
+
+Record outcomes.
+"""
+
+_GOOD_EMPTY_LEDGER = """ledger: per-change-fm-classification
+policy_ref: specs/formal/assurance-policy.yaml
+entries: []
+"""
+
+# A temp repo seeded by `_seed_repo` has no `specs/formal/<domain>/` directories,
+# so the classified-subsystem registry and the fulfillment map are both empty and
+# the gate is clean. Tests that exercise the fulfillment check seed their own
+# domain directories and pass an explicit `fulfillment_body`.
+_GOOD_EMPTY_FULFILLMENT = """fulfillment: classification-based-assurance-fulfillment
+policy_ref: specs/formal/assurance-policy.yaml
+adr_refs:
+  - ADR-007
+  - ADR-018
+subsystems: []
+entries: []
+"""
+
 
 def _seed_repo(
     tmp_path: Path,
@@ -107,8 +164,11 @@ def _seed_repo(
     adr_body: str | None = _GOOD_ADR,
     coding_standards_body: str | None = _GOOD_CODING_STANDARDS,
     formal_overview_body: str | None = _GOOD_FORMAL_OVERVIEW,
+    adr_template_body: str | None = _GOOD_ADR_TEMPLATE,
+    ledger_body: str | None = _GOOD_EMPTY_LEDGER,
+    fulfillment_body: str | None = _GOOD_EMPTY_FULFILLMENT,
 ) -> Path:
-    """Seed a temp repo skeleton with the policy YAML and the three referencing docs."""
+    """Seed a temp repo skeleton with the policy YAML and referencing docs."""
     policy_path = tmp_path / ASSURANCE_POLICY_RELATIVE_PATH
     policy_path.parent.mkdir(parents=True, exist_ok=True)
     policy_path.write_text(policy_body, encoding="utf-8")
@@ -128,6 +188,21 @@ def _seed_repo(
         fo_path.parent.mkdir(parents=True, exist_ok=True)
         fo_path.write_text(formal_overview_body, encoding="utf-8")
 
+    if adr_template_body is not None:
+        template_path = tmp_path / ADR_TEMPLATE_RELATIVE_PATH
+        template_path.parent.mkdir(parents=True, exist_ok=True)
+        template_path.write_text(adr_template_body, encoding="utf-8")
+
+    if ledger_body is not None:
+        ledger_path = tmp_path / FM_CLASSIFICATION_LEDGER_RELATIVE_PATH
+        ledger_path.parent.mkdir(parents=True, exist_ok=True)
+        ledger_path.write_text(ledger_body, encoding="utf-8")
+
+    if fulfillment_body is not None:
+        fulfillment_path = tmp_path / ASSURANCE_FULFILLMENT_RELATIVE_PATH
+        fulfillment_path.parent.mkdir(parents=True, exist_ok=True)
+        fulfillment_path.write_text(fulfillment_body, encoding="utf-8")
+
     return tmp_path
 
 
@@ -135,6 +210,84 @@ def _flagged(failures, marker: str) -> bool:
     """Return True if some failure matches ``marker`` by rule id or substring of its render."""
     needle = marker.lower()
     return any(f.rule_id == marker or needle in f.render().lower() for f in failures)
+
+
+def _write(path: Path, text: str = "placeholder\n") -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _new_adr_body(
+    *,
+    classification: str | None = "FM1",
+    artifacts: str | None = "unit_tests",
+    waivers: str | None = "none",
+) -> str:
+    fields: list[str] = []
+    if classification is not None:
+        fields.append(f"Classification: {classification}")
+    if artifacts is not None:
+        fields.append(f"Required artifacts: {artifacts}")
+    if waivers is not None:
+        fields.append(f"Waivers: {waivers}")
+    classification_section = "\n".join(fields)
+    return f"""# ADR-{ADR_CLASSIFICATION_REQUIRED_FROM:03d}: New Semantic Surface
+
+## Status
+
+proposed
+
+## Date
+
+2026-06-12
+
+## Classification
+
+{classification_section}
+
+## Context
+
+This proposed ADR adds a semantic runtime surface.
+
+## Decision
+
+Record a semantic decision.
+
+## Alternatives Considered
+
+None.
+
+## Consequences
+
+The new decision is auditable.
+"""
+
+
+def _ledger_entry(
+    adr: str = "ADR-023",
+    *,
+    fm_level: str = "FM1",
+    include_unit_test: bool = True,
+) -> str:
+    delivered = [
+        f"      - kind: invariant_list\n        path: docs/decisions/adrs/adr-{adr[-3:]}-surface.md",
+    ]
+    if include_unit_test:
+        delivered.append(
+            "      - kind: unit_tests\n        path: implementations/python/tests/test_assurance_policy_surface.py"
+        )
+    return f"""  - adr: {adr}
+    surface: Example runtime surface
+    fm_level: {fm_level}
+    delivered_artifacts:
+{chr(10).join(delivered)}
+    waived_artifacts: []
+"""
+
+
+def _seed_runtime_surface(repo: Path, adr: str = "ADR-023") -> None:
+    _write(repo / f"docs/decisions/adrs/adr-{adr[-3:]}-surface.md", f"# {adr}: Surface\n")
+    _write(repo / "implementations/python/tests/test_assurance_policy_surface.py")
 
 
 # ----------------------------------------------------------------------------- #
@@ -796,6 +949,105 @@ def test_fm4_with_artifacts_not_superset_of_fm3_is_flagged(tmp_path: Path) -> No
 
 
 # ----------------------------------------------------------------------------- #
+# ADR classification and per-change FM ledger.                                  #
+# ----------------------------------------------------------------------------- #
+
+
+def test_new_adr_without_classification_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+    _write(
+        repo / f"docs/decisions/adrs/adr-{ADR_CLASSIFICATION_REQUIRED_FROM:03d}-new-semantic-surface.md",
+        _new_adr_body(classification=None),
+    )
+
+    failures = evaluate_assurance_policy(repo)
+
+    assert _flagged(failures, "adr-classification-missing")
+
+
+def test_new_adr_with_unknown_fm_level_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+    _write(
+        repo / f"docs/decisions/adrs/adr-{ADR_CLASSIFICATION_REQUIRED_FROM:03d}-new-semantic-surface.md",
+        _new_adr_body(classification="FM9"),
+    )
+
+    failures = evaluate_assurance_policy(repo)
+
+    assert _flagged(failures, "adr-classification-level")
+    assert _flagged(failures, "FM9")
+
+
+def test_new_adr_missing_required_artifacts_line_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path)
+    _write(
+        repo / f"docs/decisions/adrs/adr-{ADR_CLASSIFICATION_REQUIRED_FROM:03d}-new-semantic-surface.md",
+        _new_adr_body(artifacts=None),
+    )
+
+    failures = evaluate_assurance_policy(repo)
+
+    assert _flagged(failures, "adr-classification-artifacts")
+
+
+def test_adr_template_missing_classification_field_is_flagged(tmp_path: Path) -> None:
+    template = _GOOD_ADR_TEMPLATE.replace("Classification: FM<n>\n", "", 1)
+
+    failures = evaluate_assurance_policy(_seed_repo(tmp_path, adr_template_body=template))
+
+    assert _flagged(failures, "adr-template-classification")
+
+
+def test_ledger_missing_existing_runtime_surface_entry_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(
+        tmp_path,
+        ledger_body=(
+            f"ledger: per-change-fm-classification\npolicy_ref: {ASSURANCE_POLICY_RELATIVE_PATH}\nentries:\n"
+            f"{_ledger_entry('ADR-023')}"
+        ),
+    )
+    _seed_runtime_surface(repo, "ADR-023")
+    _seed_runtime_surface(repo, "ADR-024")
+
+    failures = evaluate_assurance_policy(repo)
+
+    assert _flagged(failures, "fm-classification-ledger-coverage")
+    assert _flagged(failures, "ADR-024")
+
+
+def test_ledger_fm_level_must_resolve_to_policy_yaml(tmp_path: Path) -> None:
+    repo = _seed_repo(
+        tmp_path,
+        ledger_body=(
+            f"ledger: per-change-fm-classification\npolicy_ref: {ASSURANCE_POLICY_RELATIVE_PATH}\nentries:\n"
+            f"{_ledger_entry(fm_level='FM9')}"
+        ),
+    )
+    _seed_runtime_surface(repo)
+
+    failures = evaluate_assurance_policy(repo)
+
+    assert _flagged(failures, "fm-classification-ledger-level")
+    assert _flagged(failures, "FM9")
+
+
+def test_ledger_required_artifacts_must_be_delivered_or_waived(tmp_path: Path) -> None:
+    repo = _seed_repo(
+        tmp_path,
+        ledger_body=(
+            f"ledger: per-change-fm-classification\npolicy_ref: {ASSURANCE_POLICY_RELATIVE_PATH}\nentries:\n"
+            f"{_ledger_entry(include_unit_test=False)}"
+        ),
+    )
+    _seed_runtime_surface(repo)
+
+    failures = evaluate_assurance_policy(repo)
+
+    assert _flagged(failures, "fm-classification-ledger-artifacts")
+    assert _flagged(failures, "unit_tests")
+
+
+# ----------------------------------------------------------------------------- #
 # Real-repo invariant -- the actual checked-in YAML and docs must be clean.     #
 # ----------------------------------------------------------------------------- #
 
@@ -803,3 +1055,617 @@ def test_fm4_with_artifacts_not_superset_of_fm3_is_flagged(tmp_path: Path) -> No
 def test_real_repo_assurance_policy_is_clean() -> None:
     failures = evaluate_assurance_policy(REPO_ROOT)
     assert failures == []
+
+
+# --------------------------------------------------------------------------- #
+# Assurance fulfillment map (issue #485). Per classified formal-spec           #
+# subsystem, every required artifact kind for its FM level must be delivered   #
+# (a concrete non-empty repo path) or waived (ISO date + tracking ref).        #
+# --------------------------------------------------------------------------- #
+
+
+def _seed_classified_domain(repo: Path, domain: str) -> None:
+    """Create specs/formal/<domain>/README.md so the coverage scan classifies it."""
+    _write(repo / "specs" / "formal" / domain / "README.md", f"# {domain}\n\nInvariants under study.\n")
+
+
+def _fulfillment_body(
+    *,
+    subsystems: list,
+    entries: list,
+    fulfillment: str = "classification-based-assurance-fulfillment",
+    policy_ref: str = ASSURANCE_POLICY_RELATIVE_PATH,
+    adr_refs=("ADR-007", "ADR-018"),
+) -> str:
+    return yaml.safe_dump(
+        {
+            "fulfillment": fulfillment,
+            "policy_ref": policy_ref,
+            "adr_refs": list(adr_refs),
+            "subsystems": subsystems,
+            "entries": entries,
+        },
+        sort_keys=False,
+    )
+
+
+def _reg(sub_id: str, path: str, fm_level: str = "FM1") -> dict:
+    return {"id": sub_id, "path": path, "fm_level": fm_level}
+
+
+def _entry(subsystem: str, *, delivered=(), waived=()) -> dict:
+    return {
+        "subsystem": subsystem,
+        "delivered_artifacts": [{"kind": k, "path": p} for k, p in delivered],
+        "waived_artifacts": [dict(w) for w in waived],
+    }
+
+
+def _seed_demo_repo(tmp_path: Path) -> Path:
+    """Repo with one classified FM1 domain 'demo' and a real unit-test file."""
+    repo = _seed_repo(tmp_path, fulfillment_body=None)
+    _seed_classified_domain(repo, "demo")
+    _write(repo / "implementations/python/tests/test_demo.py", "def test_x():\n    assert True\n")
+    return repo
+
+
+_DEMO_DELIVERED = (
+    ("invariant_list", "specs/formal/demo/README.md"),
+    ("unit_tests", "implementations/python/tests/test_demo.py"),
+)
+
+
+def _write_fulfillment(repo: Path, body: str) -> None:
+    (repo / ASSURANCE_FULFILLMENT_RELATIVE_PATH).write_text(body, encoding="utf-8")
+
+
+def test_good_single_domain_fulfillment_is_clean(tmp_path: Path) -> None:
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[_entry("demo", delivered=_DEMO_DELIVERED)],
+        ),
+    )
+    assert evaluate_assurance_policy(repo) == []
+
+
+def test_fulfillment_missing_file_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path, fulfillment_body=None)
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-missing")
+
+
+def test_fulfillment_unparseable_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path, fulfillment_body="fulfillment: [unclosed\n")
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-parse")
+
+
+def test_fulfillment_non_mapping_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path, fulfillment_body="- a\n- b\n")
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-shape")
+
+
+def test_fulfillment_wrong_marker_field_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path, fulfillment_body=_fulfillment_body(subsystems=[], entries=[], fulfillment="wrong"))
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-field")
+
+
+def test_fulfillment_wrong_policy_ref_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path, fulfillment_body=_fulfillment_body(subsystems=[], entries=[], policy_ref="wrong.yaml"))
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-field")
+
+
+def test_fulfillment_missing_adr_ref_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path, fulfillment_body=_fulfillment_body(subsystems=[], entries=[], adr_refs=("ADR-007",)))
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-field")
+
+
+def test_classified_subsystem_absent_from_registry_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path, fulfillment_body=None)
+    _seed_classified_domain(repo, "demo")
+    _write_fulfillment(repo, _fulfillment_body(subsystems=[], entries=[]))
+    failures = evaluate_assurance_policy(repo)
+    assert _flagged(failures, "assurance-fulfillment-coverage")
+    assert _flagged(failures, "demo")
+
+
+def test_registry_subsystem_without_entry_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(repo, _fulfillment_body(subsystems=[_reg("demo", "specs/formal/demo")], entries=[]))
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-entry-missing")
+
+
+def test_entry_for_unknown_subsystem_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path, fulfillment_body=None)
+    _write_fulfillment(repo, _fulfillment_body(subsystems=[], entries=[_entry("ghost")]))
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-entry-unknown")
+
+
+def test_registry_fm_level_must_resolve_to_policy_yaml(tmp_path: Path) -> None:
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM9")],
+            entries=[_entry("demo", delivered=_DEMO_DELIVERED)],
+        ),
+    )
+    failures = evaluate_assurance_policy(repo)
+    assert _flagged(failures, "assurance-fulfillment-level")
+    assert _flagged(failures, "FM9")
+
+
+def test_registry_path_must_exist_as_formal_domain(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path, fulfillment_body=None)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[_entry("demo")],
+        ),
+    )
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-subsystem")
+
+
+def test_registry_path_escaping_repo_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_repo(tmp_path, fulfillment_body=None)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "../outside", "FM1")],
+            entries=[_entry("demo")],
+        ),
+    )
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-subsystem")
+
+
+def test_registry_path_outside_specs_formal_is_flagged(tmp_path: Path) -> None:
+    # A directory that exists and carries a README but lives outside
+    # specs/formal/<domain>/ is NOT a classified formal subsystem; the registry
+    # must reject it rather than accept any repo dir that happens to hold a README.
+    repo = _seed_demo_repo(tmp_path)
+    _write(repo / "docs" / "notes" / "README.md", "# not a formal domain\n")
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[
+                _reg("demo", "specs/formal/demo", "FM1"),
+                _reg("rogue", "docs/notes", "FM1"),
+            ],
+            entries=[
+                _entry("demo", delivered=_DEMO_DELIVERED),
+                _entry("rogue", delivered=_DEMO_DELIVERED),
+            ],
+        ),
+    )
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-subsystem")
+
+
+def test_registry_nested_specs_formal_path_is_flagged(tmp_path: Path) -> None:
+    # Only immediate specs/formal/<domain>/ directories are classified subsystems;
+    # a deeper nested path under a domain is not a registry-valid domain path.
+    repo = _seed_demo_repo(tmp_path)
+    _write(repo / "specs" / "formal" / "demo" / "sub" / "README.md", "# nested\n")
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo/sub", "FM1")],
+            entries=[_entry("demo", delivered=_DEMO_DELIVERED)],
+        ),
+    )
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-subsystem")
+
+
+def test_registry_duplicate_path_alias_is_flagged(tmp_path: Path) -> None:
+    # Two registry entries pointing at the same formal-domain directory is an
+    # alias that would let one domain be double-counted; it must be rejected.
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[
+                _reg("demo", "specs/formal/demo", "FM1"),
+                _reg("demo-alias", "specs/formal/demo", "FM1"),
+            ],
+            entries=[
+                _entry("demo", delivered=_DEMO_DELIVERED),
+                _entry("demo-alias", delivered=_DEMO_DELIVERED),
+            ],
+        ),
+    )
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-subsystem")
+
+
+def test_registry_duplicate_subsystem_id_is_flagged(tmp_path: Path) -> None:
+    # Two registry entries sharing the same `id` (each pointing at a distinct
+    # classified domain) is ambiguous: only the first would bind in the registry
+    # map, silently shadowing the second. The `seen_ids` duplicate-id check must
+    # reject it; without this case that check would be dead to the suite.
+    repo = _seed_demo_repo(tmp_path)
+    _seed_classified_domain(repo, "other")
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[
+                _reg("demo", "specs/formal/demo", "FM1"),
+                _reg("demo", "specs/formal/other", "FM1"),
+            ],
+            entries=[_entry("demo", delivered=_DEMO_DELIVERED)],
+        ),
+    )
+    failures = evaluate_assurance_policy(repo)
+    assert _flagged(failures, "assurance-fulfillment-subsystem")
+    assert any("duplicate subsystem id" in failure.message for failure in failures), (
+        f"expected a duplicate-subsystem-id failure, got {[failure.render() for failure in failures]}"
+    )
+
+
+def test_delivered_path_missing_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[
+                _entry(
+                    "demo",
+                    delivered=(
+                        ("invariant_list", "specs/formal/demo/README.md"),
+                        ("unit_tests", "implementations/python/tests/test_missing.py"),
+                    ),
+                )
+            ],
+        ),
+    )
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-artifact")
+
+
+def test_delivered_path_escaping_repo_is_flagged(tmp_path: Path) -> None:
+    # A delivered-artifact path that escapes the repo root must be rejected by
+    # the `safe_repo_path` boundary, NOT by the "does not exist" branch. The
+    # escape target is a real file OUTSIDE the repo root, so a naive
+    # `Path(path).is_file()` check would accept it and silently count the kind
+    # as delivered; only a genuine escape guard rejects it. This mirrors the
+    # subsystem-path escape test for the delivered-artifact code path.
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _seed_demo_repo(repo)
+    outside = tmp_path / "outside.py"
+    outside.write_text("def test_x():\n    assert True\n", encoding="utf-8")
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[
+                _entry(
+                    "demo",
+                    delivered=(
+                        ("invariant_list", "specs/formal/demo/README.md"),
+                        ("unit_tests", "../outside.py"),
+                    ),
+                )
+            ],
+        ),
+    )
+    failures = evaluate_assurance_policy(repo)
+    assert _flagged(failures, "assurance-fulfillment-artifact")
+    assert any("escapes the repo root" in failure.message for failure in failures), (
+        f"expected a delivered-path escape failure, got {[failure.render() for failure in failures]}"
+    )
+    # The escaping path must not count as delivered, so the required kind is left
+    # unsatisfied -- proving the escape was rejected, not merely accepted-but-noted.
+    assert _flagged(failures, "assurance-fulfillment-artifacts")
+    assert _flagged(failures, "unit_tests")
+
+
+def test_delivered_empty_path_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_demo_repo(tmp_path)
+    (repo / "specs/formal/demo/empty.md").write_text("", encoding="utf-8")
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[
+                _entry(
+                    "demo",
+                    delivered=(
+                        ("invariant_list", "specs/formal/demo/empty.md"),
+                        ("unit_tests", "implementations/python/tests/test_demo.py"),
+                    ),
+                )
+            ],
+        ),
+    )
+    failures = evaluate_assurance_policy(repo)
+    assert _flagged(failures, "assurance-fulfillment-artifact")
+    assert _flagged(failures, "empty")
+
+
+def test_delivered_unknown_kind_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[
+                _entry(
+                    "demo",
+                    delivered=(
+                        ("invariant_list", "specs/formal/demo/README.md"),
+                        ("unit_tests", "implementations/python/tests/test_demo.py"),
+                        ("bogus_kind", "specs/formal/demo/README.md"),
+                    ),
+                )
+            ],
+        ),
+    )
+    failures = evaluate_assurance_policy(repo)
+    assert _flagged(failures, "assurance-fulfillment-artifact")
+    assert _flagged(failures, "bogus_kind")
+
+
+def test_waiver_missing_date_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[
+                _entry(
+                    "demo",
+                    delivered=(("invariant_list", "specs/formal/demo/README.md"),),
+                    waived=({"kind": "unit_tests", "tracking": ["#1"], "rationale": "pending"},),
+                )
+            ],
+        ),
+    )
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-waiver")
+
+
+def test_waiver_missing_tracking_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[
+                _entry(
+                    "demo",
+                    delivered=(("invariant_list", "specs/formal/demo/README.md"),),
+                    waived=({"kind": "unit_tests", "date": "2026-06-13", "rationale": "pending"},),
+                )
+            ],
+        ),
+    )
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-waiver")
+
+
+def test_waiver_empty_tracking_list_is_flagged(tmp_path: Path) -> None:
+    # An explicitly empty `tracking: []` list (distinct from an absent key) must
+    # be rejected: the contract requires at least one tracking reference. Without
+    # this case, weakening the guard from "≥1 ref" to "key present" would go
+    # undetected.
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[
+                _entry(
+                    "demo",
+                    delivered=(("invariant_list", "specs/formal/demo/README.md"),),
+                    waived=({"kind": "unit_tests", "date": "2026-06-13", "tracking": [], "rationale": "pending"},),
+                )
+            ],
+        ),
+    )
+    failures = evaluate_assurance_policy(repo)
+    assert _flagged(failures, "assurance-fulfillment-waiver")
+    # The empty-tracking waiver does not count, so the required kind stays unmet.
+    assert _flagged(failures, "assurance-fulfillment-artifacts")
+    assert _flagged(failures, "unit_tests")
+
+
+def test_waiver_missing_rationale_is_flagged(tmp_path: Path) -> None:
+    # A waiver that supplies a valid date and tracking ref but omits the
+    # rationale must be rejected: an unjustified waiver may not silently satisfy
+    # a required artifact kind. Without this case the `rationale_ok` guard in
+    # `_check_fulfillment_waived` could be removed undetected.
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[
+                _entry(
+                    "demo",
+                    delivered=(("invariant_list", "specs/formal/demo/README.md"),),
+                    waived=({"kind": "unit_tests", "date": "2026-06-13", "tracking": ["#1"]},),
+                )
+            ],
+        ),
+    )
+    failures = evaluate_assurance_policy(repo)
+    assert _flagged(failures, "assurance-fulfillment-waiver")
+    # The unjustified waiver does not count, so the required kind is unsatisfied.
+    assert _flagged(failures, "assurance-fulfillment-artifacts")
+    assert _flagged(failures, "unit_tests")
+
+
+def test_required_kind_neither_delivered_nor_waived_is_flagged(tmp_path: Path) -> None:
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[_entry("demo", delivered=(("invariant_list", "specs/formal/demo/README.md"),))],
+        ),
+    )
+    failures = evaluate_assurance_policy(repo)
+    assert _flagged(failures, "assurance-fulfillment-artifacts")
+    assert _flagged(failures, "unit_tests")
+
+
+def test_dated_tracked_waiver_satisfies_required_kind(tmp_path: Path) -> None:
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[
+                _entry(
+                    "demo",
+                    delivered=(("invariant_list", "specs/formal/demo/README.md"),),
+                    waived=(
+                        {
+                            "kind": "unit_tests",
+                            "date": "2026-06-13",
+                            "tracking": ["#1"],
+                            "rationale": "executable tests pending",
+                        },
+                    ),
+                )
+            ],
+        ),
+    )
+    assert evaluate_assurance_policy(repo) == []
+
+
+def test_native_yaml_date_waiver_is_accepted(tmp_path: Path) -> None:
+    # An unquoted YAML date (`date: 2026-06-13`) parses to datetime.date, not a
+    # string; the gate must accept it rather than force every author to quote.
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[
+                _entry(
+                    "demo",
+                    delivered=(("invariant_list", "specs/formal/demo/README.md"),),
+                    waived=(
+                        {
+                            "kind": "unit_tests",
+                            "date": datetime.date(2026, 6, 13),
+                            "tracking": ["#1"],
+                            "rationale": "executable tests pending",
+                        },
+                    ),
+                )
+            ],
+        ),
+    )
+    assert evaluate_assurance_policy(repo) == []
+
+
+def test_native_yaml_timestamp_waiver_is_flagged(tmp_path: Path) -> None:
+    # A YAML timestamp scalar (`date: 2026-06-13 10:30:00`) parses to
+    # datetime.datetime, a subclass of datetime.date. The waiver contract requires
+    # a date-only YYYY-MM-DD value, so a wall-clock timestamp must be rejected
+    # rather than slip through the date subclass check.
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[
+                _entry(
+                    "demo",
+                    delivered=(("invariant_list", "specs/formal/demo/README.md"),),
+                    waived=(
+                        {
+                            "kind": "unit_tests",
+                            "date": datetime.datetime(2026, 6, 13, 10, 30, 0),
+                            "tracking": ["#1"],
+                            "rationale": "executable tests pending",
+                        },
+                    ),
+                )
+            ],
+        ),
+    )
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-waiver")
+
+
+def test_waiver_with_impossible_calendar_date_is_flagged(tmp_path: Path) -> None:
+    # A string date that matches the YYYY-MM-DD shape but is not a real calendar
+    # date (month 13, day 45) must be rejected -- a shape match alone must not
+    # satisfy the waiver-date contract.
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[
+                _entry(
+                    "demo",
+                    delivered=(("invariant_list", "specs/formal/demo/README.md"),),
+                    waived=(
+                        {
+                            "kind": "unit_tests",
+                            "date": "2025-13-45",
+                            "tracking": ["#1"],
+                            "rationale": "executable tests pending",
+                        },
+                    ),
+                )
+            ],
+        ),
+    )
+    failures = evaluate_assurance_policy(repo)
+    # The impossible date fails the waiver-date contract, so the waiver does not
+    # count and the required kind is left unsatisfied.
+    assert _flagged(failures, "assurance-fulfillment-waiver")
+    assert _flagged(failures, "assurance-fulfillment-artifacts")
+
+
+def test_waiver_with_invalid_day_of_month_is_flagged(tmp_path: Path) -> None:
+    # 2025-02-30 is shape-valid but not a real date; it must be rejected.
+    repo = _seed_demo_repo(tmp_path)
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("demo", "specs/formal/demo", "FM1")],
+            entries=[
+                _entry(
+                    "demo",
+                    delivered=(("invariant_list", "specs/formal/demo/README.md"),),
+                    waived=(
+                        {
+                            "kind": "unit_tests",
+                            "date": "2025-02-30",
+                            "tracking": ["#1"],
+                            "rationale": "executable tests pending",
+                        },
+                    ),
+                )
+            ],
+        ),
+    )
+    assert _flagged(evaluate_assurance_policy(repo), "assurance-fulfillment-waiver")
+
+
+def test_fm3_domain_requires_abstract_state_machine_model(tmp_path: Path) -> None:
+    # An FM3 domain that does not deliver or waive abstract_state_machine_model
+    # (an FM3-only required kind derived from the policy YAML) fails.
+    repo = _seed_repo(tmp_path, fulfillment_body=None)
+    _seed_classified_domain(repo, "stateful")
+    _write(repo / "implementations/python/tests/test_stateful.py", "def test_x():\n    assert True\n")
+    _write(repo / "contracts/schemas/stateful-v1.json", "{}\n")
+    delivered = (
+        ("invariant_list", "specs/formal/stateful/README.md"),
+        ("unit_tests", "implementations/python/tests/test_stateful.py"),
+        ("typed_ir_or_contract_coverage", "contracts/schemas/stateful-v1.json"),
+        ("property_based_or_differential_tests", "implementations/python/tests/test_stateful.py"),
+    )
+    _write_fulfillment(
+        repo,
+        _fulfillment_body(
+            subsystems=[_reg("stateful", "specs/formal/stateful", "FM3")],
+            entries=[_entry("stateful", delivered=delivered)],
+        ),
+    )
+    failures = evaluate_assurance_policy(repo)
+    assert _flagged(failures, "assurance-fulfillment-artifacts")
+    assert _flagged(failures, "abstract_state_machine_model")

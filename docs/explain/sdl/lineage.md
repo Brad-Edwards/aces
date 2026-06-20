@@ -7,7 +7,9 @@ the same problem.
 
 This page is a short map of the main influences. It is not a compatibility
 claim, and it is not an exhaustive bibliography. For element-level provenance,
-see [Design Precedents](precedents.md).
+see [Design Precedents](precedents.md). For a dimension-by-dimension comparison
+against precedent systems, including where those systems lead ACES, see
+[Related-Work Comparison](related-work-comparison.md).
 
 ## Specification Surface
 
@@ -99,7 +101,10 @@ Russo/Costa/Armando, Swiler, Oberkampf/Roy, and Sargent are citable proceedings,
 technical-report, or book sources; Garg et al. is used as a current survey
 preprint rather than as settled normative authority. The working Zotero library
 tracks these identity-authority references under `aces-sdl-identity-authority`
-and the adjacent V&V subset under `adjacent-vv-lineage`.
+and the adjacent V&V subset under `adjacent-vv-lineage`; because that library is
+private, the Garg et al. preprint citation is also snapshotted in-repo under
+[`docs/research/primary/`](../../research/primary/literature/cyber-range-scenario-survey.md)
+so the reference is verifiable from the repository alone.
 
 The design deliberately keeps provider-stable identifiers as data rather than
 as ACES reference identity. AD SIDs/objectGUIDs, LDAP DNs/entryUUIDs, SCIM
@@ -109,10 +114,12 @@ the portable ACES references are stable `*_id` symbols scoped by the scenario
 and authority. Within one authority those ids share a single local namespace,
 so an id cannot be reused across service, subject, policy, relationship, and
 authority records. This matches the verification/validation posture in the
-cyber-range literature (for example Russo/Costa/Armando on
-[scenario validation](https://doi.org/10.1109/NCA.2018.8548324), Garg et al.
-on the TechRxiv preprint
-[scenario-design/execution survey](https://doi.org/10.36227/techrxiv.175942879.94813577/v1),
+cyber-range literature (for example Russo, Costa, and Armando's
+[Scenario Design and Validation for Next Generation Cyber Ranges](https://doi.org/10.1109/NCA.2018.8548324)
+(IEEE NCA 2018), and Garg, Boualouache, Imeri, and Roth's
+[A Survey of Cyber Range Training Exercise Scenario Description, Generation, and Execution](https://doi.org/10.36227/techrxiv.175942879.94813577/v1)
+(TechRxiv preprint, 2025 — snapshotted in-repo at
+[docs/research/primary](../../research/primary/literature/cyber-range-scenario-survey.md)),
 and Swiler plus Oberkampf/Roy/Sargent on
 [cyber-emulation V&V](https://doi.org/10.2172/1897016),
 [scientific-computing V&V](https://doi.org/10.1017/CBO9780511760396), and
@@ -209,9 +216,10 @@ Portable ACES references are stable `security_monitoring_manager_id`, `listener_
 `setting_id` symbols. Native manager identifiers, daemon names, file names,
 ruleset ids, rule ids, decoder names, agent labels, and API ids are preserved
 as observed data or evidence when needed, but they are not automatically ACES
-reference identity. Secret-bearing manager settings such as passwords,
-enrollment secrets, API tokens, shared keys, keytabs, or private keys must be
-redacted or operator-secret classified and must omit raw values.
+reference identity. Manager settings such as passwords, enrollment secrets, API
+tokens, shared keys, keytabs, or private keys may be scenario values; explicit
+`redacted`/`operator_secret` classifications omit raw values when the author
+marks a value withheld.
 
 The resulting model follows the same V&V posture as the DNS, mail, database,
 file-service, and identity-authority surfaces: state which manager concepts
@@ -387,7 +395,10 @@ irreducibly-relational `runtime.database_services` cannot shape. Its defining
 addition is the open `data_model` discriminator paired with a
 `require_profile_for_data_model` guard that makes each data model's defining
 geometry (search shard/replica counts, wide-column replication, key-value
-persistence) executable rather than optional.
+persistence, and bounded search-index mapping manifests) executable rather than
+optional. Search-index mappings and templates are captured as bounded manifests
+with counts, summaries, digests, refs, and evidence pointers rather than as raw
+backend JSON bodies.
 
 ACES relies on prior work in four ways:
 
@@ -422,8 +433,23 @@ ACES relies on prior work in four ways:
   and [SP 800-209](https://csrc.nist.gov/publications/detail/sp/800-209/final)
   (storage security), with [RFC 8446](https://www.rfc-editor.org/rfc/rfc8446)
   (TLS 1.3) and [RFC 5280](https://www.rfc-editor.org/rfc/rfc5280) (PKIX), frame
-  the transport-security posture and secret-bearing setting redaction; raw key
-  material and credentials are never stored.
+  the transport-security posture and explicit redaction classifications. Raw
+  key material and credentials may be scenario-realization facts when they
+  belong to the synthetic range; out-of-scenario operator secrets remain
+  outside SDL inventory.
+
+The node-scoped extension (SCN-010 DSL-141,
+[ADR-058](../../decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints.md))
+closes the `wazuh.indexer` parity gap (Brad-Edwards/aptl#341) that ADR-048 left
+at the node level: typed engine provenance (version, build hash, build type),
+JVM/process memory posture (initial/maximum heap bytes, `mlockall`), a per-node
+engine-plugin inventory with per-plugin version, and a product-neutral
+client/peer endpoint inventory. The Elasticsearch/OpenSearch
+[Nodes Info API](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-info.html)
+reports each of these per node; the client/peer listener split is structural
+across the search-cluster tech class (OpenSearch http/transport, Cassandra
+native/internode, Redis client/cluster-bus), which is why ACES types an
+engine-neutral `role` taxonomy rather than engine-named address fields.
 
 ## Security-Platform Application Semantics
 
@@ -517,8 +543,9 @@ ACES relies on prior work in four ways:
   [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) show the
   recurring source/transform/ship/buffer facts ACES preserves (tailed inputs,
   pipelines, exporters, back-pressure queues). These are implementation lineage,
-  not schema authority; enrollment identities and secret-bearing settings are
-  never stored as raw values.
+  not schema authority; enrollment identities carry only their closed
+  classification lattice, while forwarding settings use explicit redaction
+  classifications rather than name-derived omission.
 
 ## Container-Spawn Orchestration-Authority Semantics
 
@@ -677,14 +704,34 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   and [OpenSpiel](https://arxiv.org/abs/1908.09453) inform the agent-facing
   interface vocabulary: actions, observations, rewards, resets, local histories,
   imperfect information, and multi-agent interaction.
-- POMDP, Dec-POMDP, POSG, and Markov-game literature is the theoretical lineage
-  behind ACES's insistence that participant-visible observations are not world
-  truth, and that multi-participant behavior cannot be reduced to a single
-  centralized state stream.
+- POMDP, Dec-POMDP, POSG, and Markov-game literature — with
+  [Bernstein, Givan, Immerman, and Zilberstein's complexity result](https://doi.org/10.1287/moor.27.4.819.297)
+  and [Oliehoek and Amato's Dec-POMDP monograph](https://doi.org/10.1007/978-3-319-28929-8)
+  as anchors — is the theoretical lineage behind ACES's insistence that
+  participant-visible observations are not world truth, and that
+  multi-participant behavior cannot be reduced to a single centralized state
+  stream. [Mean-field game theory](https://doi.org/10.1007/s11537-007-0657-8)
+  covers the population-limit regime ACES records as mean-field nodes.
+- Interpreted systems
+  ([Fagin, Halpern, Moses, Vardi](https://mitpress.mit.edu/9780262562003/reasoning-about-knowledge/)),
+  [dynamic epistemic logic](https://doi.org/10.1007/978-1-4020-5839-4), and
+  [Kuhn's extensive-form information sets](https://doi.org/10.1515/9781400881970-012)
+  are the formal lineage for participant information states, view transitions,
+  and perfect-recall claims.
+  [Goguen-Meseguer noninterference](https://doi.org/10.1109/SP.1982.10014) and
+  [Sabelfeld-Sands declassification](https://doi.org/10.3233/JCS-2009-0352)
+  ground the hidden-truth boundary and disclosure-rule semantics.
+- [STRIPS](https://doi.org/10.1016/0004-3702(71)90010-5),
+  [PDDL](https://doi.org/10.2200/S00900ED2V01Y201902AIM042),
+  [PDDL2.1](https://doi.org/10.1613/jair.1129), and the probabilistic planning
+  languages ([PPDDL](https://doi.org/10.1613/jair.1880),
+  [RDDL](https://users.cecs.anu.edu.au/~ssanner/IPPC_2011/RDDL.pdf)) are the
+  action-language lineage behind participant precondition/effect contracts.
 - [CybORG](https://arxiv.org/abs/2108.09118),
   [CyberBattleSim](https://www.microsoft.com/en-us/research/project/cyberbattlesim/),
-  and [CyGIL](https://arxiv.org/abs/2304.01244) are the cyber-agent environment
-  precedents. They show the value of explicit
+  [CyGIL](https://arxiv.org/abs/2109.03331), and CyGIL's
+  [unified emulation-simulation training environment](https://arxiv.org/abs/2304.01244)
+  are the cyber-agent environment precedents. They show the value of explicit
   action/observation/reward/episode interfaces, and also expose the
   sim-to-emulation gap that ACES must record through realization disclosure and
   evidence provenance.
@@ -739,7 +786,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 ## Runtime, Time, And Causality
 
 - [TENA](https://www.trmc.osd.mil/tena-about.html) and the
-  [IEEE High Level Architecture](https://standards.ieee.org/ieee/1516/3744/)
+  [IEEE High Level Architecture (IEEE Std 1516-2010)](https://standards.ieee.org/ieee/1516/3744/)
   are the main runtime/federation precedents for distributed exercise services,
   time management, and object publication.
 - [SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
@@ -747,9 +794,55 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 - Lamport logical clocks, HLA time management, Time Warp, DEVS, SimPy, ROS 2
   time, ns-3 realtime mode, and FMI inform ACES's separation of timestamp,
   ordering, clock authority, pacing, synchronization, and causality.
+- [Fidge](https://fileadmin.cs.lth.se/cs/Personal/Amr_Ergawy/dist-algos-papers/4.pdf)/[Mattern](https://www.vs.inf.ethz.ch/publ/papers/VirtTimeGlobStates.pdf)
+  vector time and the
+  [Schwarz-Mattern causality survey](https://doi.org/10.1007/BF02277859) are
+  the basis for vector-clock ordering claims: scalar Lamport clocks respect
+  causality one way, vector clocks characterize it.
+  [Winskel's event structures](https://doi.org/10.1007/3-540-17906-2_31) and
+  [Mazurkiewicz's trace theory](https://doi.org/10.1007/3-540-17906-2_30)
+  ground partial-order realized ordering with simultaneity groups.
+- [Allen's interval algebra](https://doi.org/10.1145/182.358434),
+  [Koymans' metric temporal logic](https://doi.org/10.1007/BF01995674), and
+  [Alur-Dill timed automata](https://doi.org/10.1016/0304-3975(94)90010-8)
+  are the formal temporal-contract lineage for schedules, deadlines, dwell,
+  and windows.
+- [Berenson et al.'s ANSI SQL isolation critique](https://doi.org/10.1145/223784.223785)
+  and [Adya's generalized isolation theory](https://pmg.csail.mit.edu/papers/adya-phd.pdf)
+  anchor the shared-state isolation-guarantee vocabulary.
 - Halpern-Pearl structural causality informs ACES's treatment of attribution:
   a participant action followed by an alert is not automatically a causal
   explanation without an evidence basis.
+  [Chockler-Halpern responsibility and blame](https://doi.org/10.1613/jair.1391)
+  extends this to graded multi-cause attribution.
+
+### Cyber DEM And Cyber FOM: Adopted And Out Of Scope
+
+[SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
+(SISO-STD-025-2023) and the
+[Cyber FOM](https://www.sisostandards.org/news/690125/Publication-of-Cyber-FOM-and-SIRL-Users-Guide.htm)
+(SISO-STD-025.3-2024) are distinct artifacts and are treated as distinct here.
+Cyber DEM is a runtime data-exchange model: a shared ontology of cyber objects
+(Device, System, Service, Network, Data) and typed effect/event types for
+exchanging cyber conditions between simulators. The Cyber FOM is the HLA
+federation object model derived from it.
+
+- **Adopted as precedent.** Cyber DEM's typed cyber-object and directed
+  relationship vocabulary, and its attack/defend/recon effect taxonomy, are
+  precedent for ACES treating typed relationships
+  ([ADR-052](../../decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md))
+  and observed runtime objects as first-class. ACES adopts the *concept* of a
+  typed cyber-object vocabulary, not the Cyber DEM object set or its identifiers.
+- **Out of scope.** ACES does not adopt Cyber DEM as its scenario model or the
+  Cyber FOM as its backend contract. Cyber DEM is consumed at runtime by
+  federates; ACES keeps an authored scenario surface separate from any runtime
+  exchange model, and does not treat HLA federation conformance as equivalent to
+  ACES backend conformance.
+- **Where it leads ACES.** Because the Cyber FOM inherits IEEE 1516 HLA time
+  management and multi-vendor federation, it is more mature than ACES on
+  federated time and standardized interoperability. ACES's time-authoring
+  surface is partial and explicitly incomplete. This is detailed in the
+  [Related-Work Comparison](related-work-comparison.md).
 
 ## Adversary Emulation And Security Knowledge
 
@@ -757,6 +850,10 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   MITRE CALDERA, Atomic Red Team, and OpenC2 are adversary-emulation and
   command/response precedents. ACES treats them as behavior and execution
   sources that scenarios may bind to, not as replacements for the SDL.
+  From OpenC2 specifically, ACES borrows the command/response principle — an
+  action requested against a target with a status-bearing response — but does
+  not adopt OpenC2's action/target/argument payload structures as SDL or
+  runtime-contract schema.
 - OCSF is the preferred lineage for normalized security event and finding
   structure. ACES uses that style for observations and evidence without making
   raw telemetry equal to participant-visible state.

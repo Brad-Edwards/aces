@@ -13,7 +13,6 @@ than the portable SDL model.
 """
 
 import ipaddress
-from collections.abc import Iterable
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
@@ -26,7 +25,6 @@ from .runtime_dns_records import (
     DnsSrvRdata,
     _dns_name_or_var,
     _parse_port_or_var,
-    _require_non_empty,
 )
 from .runtime_dns_vocab import (
     DnsForwarderTransport,
@@ -48,6 +46,8 @@ from .runtime_values import (
     enforce_observed_value_redaction,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
+    reject_duplicates,
+    require_non_empty,
     require_symbol,
 )
 
@@ -81,12 +81,13 @@ _REDACTED_SENSITIVITIES = (
     RuntimeSensitivityClassification.REDACTED,
     RuntimeSensitivityClassification.OPERATOR_SECRET,
 )
+_DUPLICATE_DNS_TEMPLATE = "Duplicate DNS {label} '{value}' in {container_label}"
 
 
 def _policy_selector_or_var(value: str, *, field_name: str) -> str:
     if is_variable_ref(value):
         return value
-    _require_non_empty(value, field_name=field_name)
+    require_non_empty(value, field_name=field_name)
     if any(ch.isspace() for ch in value):
         raise ValueError(f"{field_name} must not contain whitespace")
     try:
@@ -98,16 +99,6 @@ def _policy_selector_or_var(value: str, *, field_name: str) -> str:
         # BIND/CoreDNS-style ACL labels such as "trusted" are allowed data.
         pass
     return value
-
-
-def _reject_duplicates(values: Iterable[object], *, label: str, container_label: str) -> None:
-    seen: set[object] = set()
-    for value in values:
-        if value is None or value == "":
-            continue
-        if value in seen:
-            raise ValueError(f"Duplicate DNS {label} '{value}' in {container_label}")
-        seen.add(value)
 
 
 class DnsForwarder(SDLModel):
@@ -227,7 +218,7 @@ class DnsDynamicUpdatePolicy(SDLModel):
     @classmethod
     def validate_key_names(cls, v: list[str]) -> list[str]:
         for item in v:
-            _require_non_empty(item, field_name="dynamic update key_names")
+            require_non_empty(item, field_name="dynamic update key_names")
         if len(v) != len(set(v)):
             raise ValueError("Duplicate DNS dynamic update key_names entry")
         return v
@@ -245,7 +236,7 @@ class DnsRuntimeSetting(SDLModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="DNS setting name")
+        return require_non_empty(v, field_name="DNS setting name")
 
     @field_validator("value_classification", mode="before")
     @classmethod
@@ -264,11 +255,9 @@ class DnsRuntimeSetting(SDLModel):
     def validate_redacted_value(self) -> "DnsRuntimeSetting":
         enforce_observed_value_redaction(
             owner_label=f"DNS setting '{self.name}'",
-            name=self.name,
             value=self.value,
             classification=self.value_classification,
             redacted_classifications=_REDACTED_SENSITIVITIES,
-            classification_field="value_classification",
         )
         return self
 
@@ -329,10 +318,11 @@ class DnsZone(SDLModel):
 
     @model_validator(mode="after")
     def validate_zone(self) -> "DnsZone":
-        _reject_duplicates(
+        reject_duplicates(
             (rrset.rrset_id for rrset in self.rrsets),
             label="rrset_id",
             container_label=f"zone '{self.zone_id}'",
+            duplicate_template=_DUPLICATE_DNS_TEMPLATE,
         )
         seen_bindings: set[tuple[str, str, str]] = set()
         for rrset in self.rrsets:
@@ -400,14 +390,16 @@ class RuntimeDnsService(SDLModel):
 
     @model_validator(mode="after")
     def validate_service(self) -> "RuntimeDnsService":
-        _reject_duplicates(
+        reject_duplicates(
             (zone.zone_id for zone in self.zones),
             label="zone_id",
             container_label=f"DNS service '{self.dns_service_id}'",
+            duplicate_template=_DUPLICATE_DNS_TEMPLATE,
         )
-        _reject_duplicates(
+        reject_duplicates(
             (setting.name for setting in self.settings),
             label="setting",
             container_label=f"DNS service '{self.dns_service_id}'",
+            duplicate_template=_DUPLICATE_DNS_TEMPLATE,
         )
         return self

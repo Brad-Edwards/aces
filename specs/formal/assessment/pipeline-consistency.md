@@ -101,7 +101,7 @@ addresses.
 
 - shared semantic source of truth:
   `implementations/python/packages/aces_sdl/semantics/assessment.py`
-- validator checks: `implementations/python/packages/aces_sdl/validator.py`
+- validator checks: `implementations/python/packages/aces_sdl/validator/`
 - compiled runtime references, contracts, and ordering/refresh derivation:
   - `implementations/python/packages/aces_processor/compiler.py`
   - `implementations/python/packages/aces_processor/models.py`
@@ -110,4 +110,7 @@ addresses.
   - `implementations/python/packages/aces_processor/semantics/planner.py`
 - differential and cross-stage tests:
   - `implementations/python/tests/test_semantics_assessment.py`
+    (`test_composition_ready_invariant_layout_variation_preserves_normalized_references_and_aggregation`,
+    `test_composition_ready_invariant_module_expansion_occurs_before_assessment_analysis`,
+    `test_composition_ready_invariant_namespace_extends_identity_without_changing_kinds_roles_or_aggregation`)
   - `implementations/python/tests/test_fm2_semantics.py`

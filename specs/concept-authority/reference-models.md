@@ -54,6 +54,43 @@ slice:
 - scenario conditions as observable structures
 - scenario events as action or event structures
 - scenario content as tool or artifact structures
+- node runtime inventory as observed runtime configuration state under
+  `nodes.*.runtime`
+
+## Participant Episode Lineage
+
+Participant episodes are cataloged as the native `episodes` concept family
+rather than as an SDL reference model entry. The external lineage is the
+reinforcement-learning environment episode notion used by Gymnasium and
+OpenAI Gym: a bounded interaction sequence that starts after initialization or
+reset and ends at a terminal, timeout, or truncation boundary. ACES narrows
+that lineage to participant-runtime contracts by requiring stable
+`participant_address`, per-episode `episode_id`, explicit lifecycle state, and
+append-only state/history surfaces.
+
+The internal authority is
+[ADR-013](../../docs/decisions/adrs/adr-013-participant-episode-lifecycle-boundaries.md),
+which makes participant episode state its own processor/runtime contract
+surface and keeps it separate from workflow state, evaluation state,
+operation receipts, backend process restarts, tasks, runs, scenarios, and
+participant-local actions or observations.
+
+## Node Runtime Inventory
+
+`nodes.*.runtime` is cataloged as the `scenario-node-runtime` reference model in
+the native `runtime-inventory` concept family. It is the largest recurrent SDL
+structure and the surface where new inventory fields are most often added, so it
+is anchored to the published `RuntimeConfiguration` definition
+(`#/$defs/RuntimeConfiguration`) in both `sdl-authoring-input-v1` and
+`instantiated-scenario-v1` rather than restated inline.
+
+The `runtime` node field is optional, so its published shape is a nullable
+`anyOf` of the `RuntimeConfiguration` reference and `null`. Reference-model
+binding resolution looks through that nullable-optional wrapper to the
+underlying definition, which lets optional surfaces participate as reference
+models while bindings still resolve to real published schema definitions. The
+governance decision path for adding a new runtime inventory field is documented
+under Extension Discipline in [concept-authority.md](./concept-authority.md).
 
 ## Machine-Readable Artifacts
 
@@ -64,6 +101,17 @@ The JSON Schema for the catalog format is published at:
 The valid and invalid fixture corpus for reference models is published under:
 
 `contracts/fixtures/concept-authority/reference-models-v1/`
+
+## UCO Alignment Evidence
+
+Reference models bind recurrent ACES structures to ACES concept families; they
+do not inherit UCO class structure. The concept-authority relationship behind
+the adopted and adapted cyber-domain families those models reference is recorded
+separately as machine-checkable evidence in
+`contracts/concept-authority/uco-alignment-v1.json` (schema `uco-alignment/v1`).
+That artifact pins the reviewed UCO version and maps each adopted and adapted
+family to the UCO object types it aligns to, enumerating adapted-family
+divergences explicitly. See [ADR-012](../../docs/decisions/adrs/adr-012-shared-concept-authority-and-aces-extension-discipline.md).
 
 ## Relationship To Other Requirements
 

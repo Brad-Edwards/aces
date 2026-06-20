@@ -185,6 +185,26 @@
       "title": "EvaluationResultStateModel",
       "type": "object"
     },
+    "ExplicitnessClass": {
+      "description": "SEM-218 author-intent class for a declaration.",
+      "enum": [
+        "exact",
+        "constrained",
+        "open"
+      ],
+      "title": "ExplicitnessClass",
+      "type": "string"
+    },
+    "ExplicitnessProvenance": {
+      "description": "Where the classified value came from in the SDL lifecycle.",
+      "enum": [
+        "author-declared",
+        "processor-derived",
+        "backend-realized"
+      ],
+      "title": "ExplicitnessProvenance",
+      "type": "string"
+    },
     "OutcomeInterpretationSourceLayer": {
       "description": "Semantic layers that may feed a SEM-215 interpretation rule.",
       "enum": [
@@ -448,6 +468,18 @@
       ],
       "title": "ParticipantActionResultModel",
       "type": "object"
+    },
+    "ParticipantAdmissionDisposition": {
+      "description": "RUN-306 selection/admission disposition values.",
+      "enum": [
+        "admitted",
+        "rejected",
+        "withheld",
+        "unknown",
+        "not_applicable"
+      ],
+      "title": "ParticipantAdmissionDisposition",
+      "type": "string"
     },
     "ParticipantAttributionCandidateKind": {
       "description": "Portable candidate classes for participant attribution edges.",
@@ -740,6 +772,17 @@
           "default": null,
           "title": "Actor Provenance"
         },
+        "admission_disposition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantAdmissionDisposition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "attribution_edges": {
           "items": {
             "$ref": "#/$defs/ParticipantAttributionEdgeModel"
@@ -795,6 +838,17 @@
           "default": null,
           "title": "Joint Action Set Id"
         },
+        "lifecycle_phase": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantRuntimeLifecyclePhase"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "observation_boundary_address": {
           "anyOf": [
             {
@@ -819,6 +873,30 @@
           ],
           "default": null
         },
+        "operation_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Ref"
+        },
+        "operation_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantLifecycleOperationState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "outcome_interpretations": {
           "items": {
             "$ref": "#/$defs/ParticipantOutcomeInterpretationRecordModel"
@@ -830,6 +908,17 @@
           "minLength": 1,
           "title": "Participant Address",
           "type": "string"
+        },
+        "phase_realization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantPhaseRealization"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "post_state_digest": {
           "anyOf": [
@@ -1105,6 +1194,24 @@
       "title": "ParticipantInteractionClass",
       "type": "string"
     },
+    "ParticipantLifecycleOperationState": {
+      "description": "RUN-306 operation states for execution-attempt records.",
+      "enum": [
+        "submitted",
+        "acknowledged",
+        "running",
+        "blocked",
+        "completed",
+        "partial",
+        "failed",
+        "timed_out",
+        "cancelled",
+        "unknown",
+        "unsupported"
+      ],
+      "title": "ParticipantLifecycleOperationState",
+      "type": "string"
+    },
     "ParticipantObservationDetailsModel": {
       "additionalProperties": false,
       "properties": {
@@ -1357,6 +1464,20 @@
       "title": "ParticipantOutcomeTargetRecordModel",
       "type": "object"
     },
+    "ParticipantPhaseRealization": {
+      "description": "RUN-306 realization modes for an observable lifecycle phase.",
+      "enum": [
+        "observed",
+        "runtime_mediated",
+        "externally_supplied",
+        "opaque",
+        "unknown",
+        "not_applicable",
+        "unsupported"
+      ],
+      "title": "ParticipantPhaseRealization",
+      "type": "string"
+    },
     "ParticipantPreconditionClass": {
       "description": "SEM-211 precondition classes for participant action applicability.",
       "enum": [
@@ -1370,6 +1491,18 @@
         "realization"
       ],
       "title": "ParticipantPreconditionClass",
+      "type": "string"
+    },
+    "ParticipantRuntimeLifecyclePhase": {
+      "description": "RUN-306 observable participant runtime lifecycle phases.",
+      "enum": [
+        "intent_or_proposal",
+        "selection_or_admission",
+        "execution_attempt",
+        "observation_emission",
+        "state_update_commit"
+      ],
+      "title": "ParticipantRuntimeLifecyclePhase",
       "type": "string"
     },
     "ParticipantTemporalEventPoint": {
@@ -1474,6 +1607,48 @@
       ],
       "title": "ParticipantTimeDomain",
       "type": "string"
+    },
+    "RealizationProvenanceEntryModel": {
+      "additionalProperties": false,
+      "description": "SEM-218 invariant I5: provenance for one realized realization concern.\n\nDistinguishes ``author-declared`` / ``processor-derived`` / ``backend-realized``\norigins for a realized concern recorded on the snapshot's result / history\nsurfaces. Carries field-path and kind references only (never the realized\nvalue, per the SEM-218 host-exposure gate). Kept distinct from ADR-054\nlifecycle ``phase_realization`` and API-407 participant feature support.",
+      "properties": {
+        "address": {
+          "minLength": 1,
+          "title": "Address",
+          "type": "string"
+        },
+        "domain": {
+          "minLength": 1,
+          "title": "Domain",
+          "type": "string"
+        },
+        "explicitness": {
+          "$ref": "#/$defs/ExplicitnessClass"
+        },
+        "field_path": {
+          "minLength": 1,
+          "title": "Field Path",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/ExplicitnessProvenance"
+        },
+        "requirement_kind": {
+          "minLength": 1,
+          "title": "Requirement Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "field_path",
+        "domain",
+        "requirement_kind",
+        "explicitness",
+        "provenance"
+      ],
+      "title": "RealizationProvenanceEntryModel",
+      "type": "object"
     },
     "SnapshotEntryModel": {
       "additionalProperties": false,
@@ -1795,6 +1970,13 @@
       },
       "title": "Participant Episode Results",
       "type": "object"
+    },
+    "realization_provenance": {
+      "items": {
+        "$ref": "#/$defs/RealizationProvenanceEntryModel"
+      },
+      "title": "Realization Provenance",
+      "type": "array"
     },
     "schema_version": {
       "const": "runtime-snapshot/v1",

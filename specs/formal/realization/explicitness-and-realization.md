@@ -33,9 +33,9 @@ boundary. Those are governed elsewhere.
 
 The semantic boundary defined in §"Required Semantics" is normative
 immediately on landing. Its enforcement across the seven `SEM-200`
-lifecycle phases is staged. The current realization, recorded in the
+lifecycle phases is now complete. The current realization, recorded in the
 SEM-200 coverage table at `docs/explain/reference/shared-semantic-integrity.md`,
-is `partial`. What is *enforced today* is narrow and structural:
+is `active`. What is *enforced today* spans authoring through observation:
 
 - the apparatus-contract shape gates on backend
   `RealizationSupportDeclaration` (the `EXACT_ONLY` ⇒ no constraint
@@ -48,28 +48,36 @@ is `partial`. What is *enforced today* is narrow and structural:
   non-realizing role is enforced structurally;
 - the closed-Pydantic SDL model boundary (`extra="forbid"`), which
   fails closed on unknown keys at points the schema does not designate
-  as realizable.
+  as realizable;
+- the SEM-218 classifier in `aces_sdl.explicitness`, invoked by
+  `SemanticValidator`, which tags authored SDL declarations as
+  *exact*, *constrained*, or *open* for downstream consumers;
+- the instantiation downgrade rule in `instantiate_scenario`, which
+  preserves authored explicitness metadata across parameter/default
+  substitution without promoting substituted concrete values to false
+  exact declarations;
+- the typed compiler emission in `compile_runtime_model`, which lowers
+  each authored realization concern into a `CompiledRealizationRequirement`
+  on the `RuntimeModel` preserving its exact / constrained / open class;
+- the planner realization-support gate in `aces_processor.planner.plan`,
+  which matches each compiled exact / constrained requirement kind against
+  the selected backend's `realization_support` and rejects an unsupported
+  kind with a structured `Diagnostic` before deployment;
+- the runtime non-approximation gate on backend adapters in
+  `aces_processor.semantics.realization.realization_disclosure` (invoked from
+  `aces_runtime.backend_calls._call_backend_apply`, the runtime adapter
+  boundary), which compares each realized exact concern against the author
+  declaration and rejects a silent approximation with a
+  `runtime.backend-contract-invalid` diagnostic before the backend snapshot is
+  accepted into runtime state;
+- the SEM-218 provenance ledger (`realization_provenance`) on the runtime
+  snapshot envelope, which records each realized concern with its explicitness
+  class and author-declared / processor-derived / backend-realized origin.
 
-What is *normative but not yet realized*:
-
-- the SEM-218 classifier that tags each authored declaration as
-  *exact*, *constrained*, or *open* and that downstream stages would
-  consume — `SemanticValidator` does not carry that classifier today;
-- the substitution-downgrade rule in instantiation;
-- the typed compiler emission that preserves the exact / constrained /
-  open class through to the planner;
-- the planner-side match of compiled exact-requirement-kinds against
-  the selected backend's `realization_support` (the planner currently
-  checks concrete provisioner / orchestrator / evaluator capability
-  fields and does not consult `realization_support`);
-- the runtime non-approximation gate on backend adapters;
-- the SEM-218 provenance fields on snapshot / result / history /
-  evidence envelopes.
-
-The spec is the source of truth for those rules; the implementation
-work that closes each gap is tracked under the SEM-218 coverage row in
-`shared-semantic-integrity.md` and is staged across follow-on
-`/implement` runs.
+With those last two enforcement points realized, every `SEM-200` lifecycle
+phase boundary is now enforced by named, tested code; no rule in this spec
+remains normative-but-unrealized. The SEM-200 coverage row in
+`shared-semantic-integrity.md` records the realization as `active`.
 
 ## Canonical Inputs
 
@@ -92,7 +100,7 @@ extend these rather than introduce parallel registries:
   `contracts/concept-authority/concept-families-v1.json`
   (`realization-and-disclosure`)
 - shared SDL static semantics:
-  `implementations/python/packages/aces_sdl/validator.py`
+  `implementations/python/packages/aces_sdl/validator/`
   (`SemanticValidator`, `SDLValidationError`)
 - instantiation and revalidation:
   `implementations/python/packages/aces_sdl/instantiate.py`
@@ -211,11 +219,10 @@ by `RealizationSupportDeclaration.__post_init__` and
 planner-side matching of compiled exact-requirement-kinds against the
 selected backend's `realization_support` — by which an unsupported
 exact requirement causes plan rejection before deployment — is
-normative for the planner phase but is **not yet realized** by the
-`aces_processor.planner._validate_manifest` path, which today checks
-concrete provisioner / orchestrator / evaluator capability fields only.
-Closing that gap is implementation work that the SEM-218 coverage row
-tracks; the rule itself is binding under this spec.
+realized by the realization-support gate in `aces_processor.planner.plan`
+(over the compiled `RuntimeModel.realization_requirements`), alongside the
+concrete provisioner / orchestrator / evaluator capability checks in
+`_validate_manifest`. The rule is binding under this spec.
 
 **I5 — Provenance is preserved.** Values that enter snapshots, results,
 history, or evidence envelopes MUST be recorded with provenance
@@ -245,19 +252,18 @@ contracts is staged work tracked under the SEM-218 coverage row.
 The seven canonical `SEM-200` lifecycle phases interact with the
 invariants as follows. The list is normative for the phase boundary, not
 for the engineering layout of any one phase. The **Status** column
-records what is enforced in the repository today; rows marked *normative
-(future)* state binding rules that the realizing code does not yet
-implement end-to-end.
+records what is enforced in the repository today; every phase boundary is
+now enforced by named, tested code.
 
 | Phase | Responsibility | Status |
 | --- | --- | --- |
-| Authoring | Source of declarations. The authoring layer is the only authority that may classify a construct as exact, constrained, or open; downstream stages MUST treat that classification as immutable input. | normative (future) — closed Pydantic SDL models (`extra="forbid"`) and the apparatus-contract type system carry the structural shape today, but the SEM-218 classifier that tags each declaration with an exact / constrained / open class is staged work; until it lands, "authoring" is not a SEM-218-enforced phase. |
-| Validation | At the apparatus-contract layer: the shape gates on backend `RealizationSupportDeclaration` (I4 structural floor), the JSON-schema conditional gate, and `ProcessorManifestV2Model`'s asymmetric rejection of `realization_support` are enforced. At the SDL scenario layer: `SemanticValidator` enforces fail-closed validation on the *existing* closed SDL models, but does not yet classify SDL declarations by exact / constrained / open class. The classifier pass and the open-vs-exact validation rule on SDL scenarios are normative (future). | partial — apparatus-contract validation (manifest shape) is enforced; SDL-scenario SEM-218 validation (the classifier pass) is normative (future). |
-| Instantiation | Parameter and default substitution may resolve open concerns and constrained surfaces. Substitution MUST NOT downgrade an exact declaration into a constrained or open one, and MUST NOT introduce an exact declaration that the author did not write. The concrete scenario MUST be revalidated after substitution. | normative (future) |
-| Compilation | Lowers each declaration into a typed runtime requirement preserving class. Exact requirements carry their declared kind into the compiled representation; constrained requirements carry the typed constraint surface; open requirements are emitted as realizable slots tagged with the realization-and-disclosure family. | normative (future) |
-| Planning | Matches every compiled requirement against the candidate backend manifest. An unsupported exact-requirement-kind MUST cause plan rejection through a structured `Diagnostic` before deployment; an unsupported constraint-kind MUST cause the same outcome. An open realizable slot MAY be left for the backend only when its manifest declares matching support. | normative (future) |
-| Execution | Backend realizers honor the compiled class. A runtime adapter MUST NOT silently broaden an exact requirement, MUST NOT silently narrow an open realization beyond its declared constraints, and MUST surface incompatibilities through the existing runtime error envelope rather than approximate. | normative (future) |
-| Observation | Realized values land in plan, result, snapshot, history, and evidence surfaces with provenance per I5. Realization choices are observation data, not private backend state. | normative (future) |
+| Authoring | Source of declarations. The authoring layer is the only authority that may classify a construct as exact, constrained, or open; downstream stages MUST treat that classification as immutable input. | partial — closed Pydantic SDL models (`extra="forbid"`), the apparatus-contract type system, and the `aces_sdl.explicitness` classifier carry the exact / constrained / open classification for authored SDL declarations. |
+| Validation | At the apparatus-contract layer: the shape gates on backend `RealizationSupportDeclaration` (I4 structural floor), the JSON-schema conditional gate, and `ProcessorManifestV2Model`'s asymmetric rejection of `realization_support` are enforced. At the SDL scenario layer: `SemanticValidator` enforces fail-closed validation on the *existing* closed SDL models and attaches SEM-218 classifier output to the validated scenario. | partial — apparatus-contract validation (manifest shape) and SDL-scenario classifier output are enforced; the compiler, planner, and runtime consumers of that output are realized (see those rows), and only the per-field SDL classification authority for the remaining concerns stays staged. |
+| Instantiation | Parameter and default substitution may resolve open concerns and constrained surfaces. Substitution MUST NOT downgrade an exact declaration into a constrained or open one, and MUST NOT introduce an exact declaration that the author did not write. The concrete scenario MUST be revalidated after substitution. | partial — `instantiate_scenario` revalidates after substitution and derives instantiated explicitness from the authored classification so substituted values do not become false exact declarations. |
+| Compilation | Lowers each declaration into a typed runtime requirement preserving class. Exact requirements carry their declared kind into the compiled representation; constrained requirements carry the typed constraint surface; open requirements are emitted as realizable slots tagged with the realization-and-disclosure family. | partial — `compile_runtime_model` emits `CompiledRealizationRequirement` metadata on the `RuntimeModel` preserving the exact / constrained / open class for the authored realization concerns the planner validates; per-field designation for the remaining concerns stays staged. |
+| Planning | Matches every compiled requirement against the candidate backend manifest. An unsupported exact-requirement-kind MUST cause plan rejection through a structured `Diagnostic` before deployment; an unsupported constraint-kind MUST cause the same outcome. An open realizable slot MAY be left for the backend only when its manifest declares matching support. | partial — `aces_processor.planner.plan` matches each compiled exact / constrained requirement kind against the backend's `realization_support` and emits a rejecting `Diagnostic` for an unsupported kind; the Execution-phase runtime non-approximation gate it hands off to is realized in `aces_processor.semantics.realization` (invoked from the `aces_runtime` adapter boundary). |
+| Execution | Backend realizers honor the compiled class. A runtime adapter MUST NOT silently broaden an exact requirement, MUST NOT silently narrow an open realization beyond its declared constraints, and MUST surface incompatibilities through the existing runtime error envelope rather than approximate. | active — the runtime non-approximation gate `aces_processor.semantics.realization.realization_disclosure` (invoked from `aces_runtime.backend_calls._call_backend_apply`) compares each realized exact concern against the author declaration and rejects a silent approximation with a `runtime.backend-contract-invalid` diagnostic before the backend snapshot is accepted. |
+| Observation | Realized values land in plan, result, snapshot, history, and evidence surfaces with provenance per I5. Realization choices are observation data, not private backend state. | active — realized concerns are recorded on the runtime snapshot envelope's `realization_provenance` ledger with their explicitness class and author-declared / processor-derived / backend-realized origin; the snapshot is the aggregate observation surface that carries result and history data. |
 
 ## Cross-Cutting Gates
 
@@ -288,26 +294,30 @@ realization status, are:
   rejection rule.
 - **Instantiation gate** — substitution MUST NOT downgrade an exact
   declaration; concrete scenarios MUST be revalidated after
-  substitution (I1). *Future*; the validation rerun exists today via
-  `instantiate_scenario`, but the explicit-vs-open invariant for
-  substitution is not separately enforced.
+  substitution (I1). *Enforced today* by `instantiate_scenario`,
+  `SDLInstantiationError`, and `aces_sdl.explicitness` deriving the
+  instantiated explicitness map from the pre-substitution authored map.
 - **Compiler / planner gate** — compiled exact-requirement-kinds MUST
   be matched against the selected backend's `realization_support`;
   unsupported kinds MUST cause `Diagnostic`-bearing rejection before
-  deployment (I1, I2, I4). *Future*; the planner currently checks
-  concrete provisioner / orchestrator / evaluator capability fields
-  and does not consult `realization_support`.
+  deployment (I1, I2, I4). *Enforced today* by the typed compiler
+  emission on `RuntimeModel.realization_requirements` and the
+  realization-support gate in `aces_processor.planner.plan`.
 - **Error-envelope gate** — unsupported exact requirements and
   forbidden approximations MUST be surfaced through stable validation
-  errors or structured diagnostics (I1, I2). *Partial*; the shape-gate
-  errors surface today; the unsupported-exact-kind diagnostic surface
-  is future work bound to the compiler / planner gap above.
+  errors or structured diagnostics (I1, I2). *Enforced today*; the
+  shape-gate errors and the planner's
+  `realization.unsupported-exact-requirement` /
+  `realization.unsupported-constraint-requirement` diagnostics surface
+  unsupported kinds before deployment.
 - **Persistence and observation gate** — values entering snapshots,
   results, history, and evidence MUST carry provenance distinguishing
   author-declared, processor-derived, and backend-realized origins (I5).
-  *Future*; runtime contracts carry plan / result / snapshot data
-  today, but the SEM-218-specific provenance fields are not yet
-  realized.
+  *Enforced today* by the `realization_provenance` ledger on the runtime
+  snapshot envelope (`RealizationProvenanceEntry` /
+  `RealizationProvenanceEntryModel`), which records each realized concern's
+  explicitness class and origin and round-trips through the control-plane
+  snapshot serializers.
 - **Host / OS exposure gate** — exact values, credentials, and backend
   tokens MUST NOT be passed through process argv, logs, audit details,
   diagnostics, JSON fixtures, or semantic-profile artifacts when they
@@ -385,9 +395,8 @@ A SEM-218 realization MUST NOT:
 
 ## Implementation Mapping
 
-The rules above are realized today by these existing surfaces. Lines
-marked *(future)* state where a binding rule is normative but its
-realization is staged work tracked under the SEM-218 coverage row.
+The rules above are realized today by these existing surfaces; every
+invariant I1–I5 is enforced by named code.
 
 - I4 shape floor (backend manifests) — apparatus contract:
   `implementations/python/packages/aces_contracts/apparatus.py`
@@ -411,22 +420,37 @@ realization is staged work tracked under the SEM-218 coverage row.
   (`realization-and-disclosure` family is the native authority for what
   may be realized at all).
 - I1, I3 fail-closed authoring / validation —
-  `implementations/python/packages/aces_sdl/validator.py`,
+  `implementations/python/packages/aces_sdl/explicitness.py`,
+  `implementations/python/packages/aces_sdl/validator/`,
   `implementations/python/packages/aces_sdl/instantiate.py`
-  (closed-world validation, revalidation after substitution; the
-  explicit-vs-open substitution-downgrade rule is *future*).
+  (closed-world validation, classifier output on validated scenarios,
+  and substitution-downgrade metadata on instantiated scenarios).
 - I4 fail-closed evidence — invalid fixtures
   `contracts/fixtures/backend-manifest/backend-manifest-v2/invalid/hollow-realization-support.json`,
   `contracts/fixtures/backend-manifest/backend-manifest-v2/invalid/malformed-realization-support.json`,
   `contracts/fixtures/processor-manifest/processor-manifest-v2/invalid/hollow-realization-support.json`,
   `contracts/fixtures/processor-manifest/processor-manifest-v2/invalid/malformed-realization-support.json`.
-- I1, I2, I4 planner gate — *future*; today
-  `aces_processor.planner._validate_manifest` checks concrete
-  provisioner / orchestrator / evaluator capability fields and does
-  not consult `realization_support`.
-- I2, I5 runtime envelopes — *future*; runtime plan / result /
-  snapshot / history contracts exist, but SEM-218-specific provenance
-  fields are not yet added.
+- I1, I2, I4 typed compiler emission + planner gate —
+  `aces_processor.compiler._compile_realization_requirements` emits
+  `RuntimeModel.realization_requirements`, and
+  `aces_processor.semantics.realization.realization_support_diagnostics`
+  (called from `aces_processor.planner.plan`) matches them against the
+  backend's `realization_support`, rejecting unsupported kinds with a
+  `Diagnostic`.
+- I2 runtime non-approximation gate —
+  `aces_processor.semantics.realization.realization_disclosure` (re-exported
+  through `aces_processor.planner`), invoked from
+  `aces_runtime.backend_calls._call_backend_apply`, compares each realized
+  exact concern against the author declaration and rejects a silent
+  approximation with a `runtime.backend-contract-invalid` diagnostic before the
+  backend snapshot is accepted.
+- I5 runtime provenance — the `realization_provenance` ledger
+  (`RealizationProvenanceEntry` in
+  `implementations/python/packages/aces_contracts/runtime_state.py`, published as
+  `RealizationProvenanceEntryModel` on the `runtime-snapshot-v1` envelope)
+  records each realized concern's explicitness class and author-declared /
+  processor-derived / backend-realized origin, and round-trips through the
+  control-plane snapshot serializers.
 
 ## Tests
 
@@ -441,11 +465,19 @@ realization is staged work tracked under the SEM-218 coverage row.
   JSON-schema conditional gate for backend manifests and the assertion
   that the generated processor schema has no `realization_support`
   property (I4 shape + scope).
-
-Tests for the planner-gate match against `realization_support`, the
-substitution-downgrade rule, the runtime non-approximation envelope,
-and SEM-218 provenance fields are *future* and will land with the
-implementations they exercise.
+- `implementations/python/tests/test_sem_218_explicitness.py` —
+  SDL-scenario classifier output for representative exact,
+  constrained, and open declarations; instantiation substitution
+  downgrade; and unclassifiable variable diagnostics.
+- `implementations/python/tests/test_sem_218_realization.py` —
+  typed compiler emission preserving the class through compilation,
+  and the planner realization-support gate rejecting an unsupported
+  exact or constrained requirement kind.
+- `implementations/python/tests/test_sem_218_runtime_realization.py` —
+  the runtime non-approximation gate rejecting a silently-weakened exact
+  realization (I2), the `realization_provenance` ledger recorded for honoured
+  concerns (I5), the rejection diagnostic naming the field path and kind but
+  not the value, and the ledger's round-trip through snapshot persistence.
 
 ## Non-Goals
 

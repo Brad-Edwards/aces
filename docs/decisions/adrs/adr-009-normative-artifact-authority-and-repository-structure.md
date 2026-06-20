@@ -217,3 +217,9 @@ they were independent normative authority.
 - If code generation remains one-way from Python into schemas, the ecosystem
   will still be coupled to the reference stack in practice even if the folder
   names improve.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-14 | #499 | Section 7 milestone recorded as reached: `contracts/schemas/` is the hand-governed normative authority, `tools/check_generated_schemas.py` is repurposed to prove the reference implementation generates an identical bundle without overwriting the published schemas, and a manifest change-ledger (`schema-publication-manifest.json` `last_change` for added/modified schemas and `removed_schemas` tombstones for deletions) plus the `schema-change-missing-manifest` policy rule govern schema edits. Remaining: optional code generation *from* the normative schemas into implementation bindings, and incidental per-feature/historical doc language that describes the former generation direction. This amendment records the milestone only; the decision text above is unchanged.

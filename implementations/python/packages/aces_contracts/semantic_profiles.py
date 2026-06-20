@@ -6,14 +6,11 @@ import json
 from pathlib import Path
 
 from .contracts import SemanticProfileModel
-
-
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
+from .corpus import PROFILES, corpus_family_root
 
 
 def semantic_profiles_root() -> Path:
-    return _repo_root() / "contracts" / "profiles" / "semantic"
+    return corpus_family_root(PROFILES) / "semantic"
 
 
 def semantic_profile_path(profile_id: str) -> Path:

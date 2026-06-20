@@ -944,7 +944,7 @@
     },
     "DatabaseSetting": {
       "additionalProperties": false,
-      "description": "An observed database runtime setting with provenance and sensitivity.\n\nSettings that may carry credentials, hashes, connection strings, or\noperator-only values must omit their raw ``value`` and classify it as\n``redacted``/``operator_secret`` (ADR-029 \u00a75).",
+      "description": "An observed database runtime setting with provenance and sensitivity.\n\nExplicit ``redacted``/``operator_secret`` classifications omit raw values;\ncredential-shaped names remain scenario content unless the author marks the\nvalue withheld.",
       "properties": {
         "description": {
           "default": "",
@@ -5336,7 +5336,7 @@
     },
     "RuntimeApplicationExposedField": {
       "additionalProperties": false,
-      "description": "A route-visible fixture secret or intentionally exposed diagnostic field.\n\nThe sensitivity vocabulary is shared with the rest of the runtime surface.\nA ``redacted`` or ``operator_secret`` field must omit its raw ``value``;\nonly intentionally participant-visible ``secret_fixture``/``plain`` material\nis safe to record.",
+      "description": "A route-visible fixture secret or intentionally exposed diagnostic field.\n\nThe sensitivity vocabulary is shared with the rest of the runtime surface.\nA ``redacted`` or ``operator_secret`` field must omit its raw ``value``.\nOther values, including credential-shaped fixture facts, are scenario\ncontent needed for range realization and participant observation.",
       "properties": {
         "description": {
           "default": "",
@@ -6543,7 +6543,7 @@
     },
     "RuntimeDatastoreCluster": {
       "additionalProperties": false,
-      "description": "The single observed cluster posture of a datastore service.\n\nCaptures the cluster-identity facts a search/wide-column cluster exposes:\nhealth, discovery mode, partitioner, and native protocol version.",
+      "description": "The single observed cluster posture of a datastore service.\n\nCaptures the cluster-identity facts a search/wide-column cluster exposes:\nnative UUID, aggregate cardinality and size, shard totals, health,\ndiscovery mode, partitioner, and native protocol version.",
       "properties": {
         "cluster_id": {
           "title": "Cluster Id",
@@ -6558,6 +6558,21 @@
           "default": "",
           "title": "Discovery Mode",
           "type": "string"
+        },
+        "doc_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Doc Count"
         },
         "health": {
           "default": "",
@@ -6574,9 +6589,74 @@
           "title": "Native Protocol Version",
           "type": "string"
         },
+        "node_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Node Count"
+        },
         "partitioner": {
           "default": "",
           "title": "Partitioner",
+          "type": "string"
+        },
+        "shard_primaries": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shard Primaries"
+        },
+        "shard_total": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shard Total"
+        },
+        "store_size_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Store Size Bytes"
+        },
+        "uuid": {
+          "default": "",
+          "title": "Uuid",
           "type": "string"
         }
       },
@@ -6615,6 +6695,36 @@
       "title": "RuntimeDatastoreEngine",
       "type": "string"
     },
+    "RuntimeDatastoreEnginePlugin": {
+      "additionalProperties": false,
+      "description": "An engine extension/plugin/module installed on a datastore node.\n\nPer-node installed-capability inventory (OpenSearch plugins, Redis modules,\n\u2026). Carries the per-plugin ``version`` the name-only service-level list could\nnot. ``plugin_id`` is a stable symbol; ``name`` is the observed engine name.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "plugin_id": {
+          "title": "Plugin Id",
+          "type": "string"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plugin_id"
+      ],
+      "title": "RuntimeDatastoreEnginePlugin",
+      "type": "object"
+    },
     "RuntimeDatastoreEvictionPolicy": {
       "description": "A key-value eviction policy.\n\nOPEN taxonomy: carries both ``unknown`` and ``other``. Covers Redis\n``maxmemory-policy`` values.",
       "enum": [
@@ -6632,19 +6742,187 @@
       "title": "RuntimeDatastoreEvictionPolicy",
       "type": "string"
     },
+    "RuntimeDatastoreMapping": {
+      "additionalProperties": false,
+      "description": "A bounded manifest of an observed search-index mapping/schema.\n\nCarries schema geometry and digest/evidence facts, never the raw\nOpenSearch/Elasticsearch ``_mapping`` response body.",
+      "properties": {
+        "date_detection": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Date Detection"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "dynamic_policy": {
+          "default": "",
+          "title": "Dynamic Policy",
+          "type": "string"
+        },
+        "dynamic_template_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dynamic Template Count"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "field_type_census": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "title": "Field Type Census",
+          "type": "object"
+        },
+        "leaf_field_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Leaf Field Count"
+        },
+        "mapping_id": {
+          "title": "Mapping Id",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "partition_ref": {
+          "default": "",
+          "title": "Partition Ref",
+          "type": "string"
+        },
+        "schema_digest": {
+          "default": "",
+          "title": "Schema Digest",
+          "type": "string"
+        },
+        "top_level_field_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top Level Field Count"
+        }
+      },
+      "required": [
+        "mapping_id"
+      ],
+      "title": "RuntimeDatastoreMapping",
+      "type": "object"
+    },
     "RuntimeDatastoreNode": {
       "additionalProperties": false,
-      "description": "An observed node participating in a datastore cluster.",
+      "description": "An observed node participating in a datastore cluster.\n\nBeyond cluster membership and roles, a node carries product-neutral engine\nprovenance (version, build hash/type), JVM/process memory posture (initial\nand maximum heap byte bounds, memory-lock state), a typed per-node engine\nplugin inventory, and typed published endpoints (client vs peer listeners).\nAll are observed runtime facts \u2014 never host policy or software-component\nidentity (ADR-058 amending ADR-048).",
       "properties": {
-        "address": {
+        "build_hash": {
           "default": "",
-          "title": "Address",
+          "title": "Build Hash",
+          "type": "string"
+        },
+        "build_type": {
+          "default": "",
+          "title": "Build Type",
           "type": "string"
         },
         "description": {
           "default": "",
           "title": "Description",
           "type": "string"
+        },
+        "endpoints": {
+          "items": {
+            "$ref": "#/$defs/RuntimeDatastoreNodeEndpoint"
+          },
+          "title": "Endpoints",
+          "type": "array"
+        },
+        "engine_version": {
+          "default": "",
+          "title": "Engine Version",
+          "type": "string"
+        },
+        "heap_init_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heap Init Bytes"
+        },
+        "heap_max_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heap Max Bytes"
         },
         "is_coordinator": {
           "anyOf": [
@@ -6661,6 +6939,21 @@
           "default": null,
           "title": "Is Coordinator"
         },
+        "memory_locked": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Memory Locked"
+        },
         "name": {
           "default": "",
           "title": "Name",
@@ -6669,6 +6962,13 @@
         "node_id": {
           "title": "Node Id",
           "type": "string"
+        },
+        "plugins": {
+          "items": {
+            "$ref": "#/$defs/RuntimeDatastoreEnginePlugin"
+          },
+          "title": "Plugins",
+          "type": "array"
         },
         "roles": {
           "items": {
@@ -6691,6 +6991,74 @@
       "title": "RuntimeDatastoreNode",
       "type": "object"
     },
+    "RuntimeDatastoreNodeEndpoint": {
+      "additionalProperties": false,
+      "description": "An observed published listener on a datastore node.\n\nProduct-neutral node listener topology: ``role`` distinguishes the\nparticipant-facing ``client`` listener from the inter-node ``peer`` listener\nwithout encoding engine-native names. ``address`` and ``port`` stay split,\nmatching every other runtime listener surface. A node endpoint records\npublished topology, not proof of an OS bind or host publication (ADR-058).",
+      "properties": {
+        "address": {
+          "default": "",
+          "title": "Address",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "endpoint_id": {
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Port"
+        },
+        "protocol": {
+          "default": "",
+          "title": "Protocol",
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeDatastoreNodeEndpointRole"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "unknown",
+          "title": "Role"
+        }
+      },
+      "required": [
+        "endpoint_id"
+      ],
+      "title": "RuntimeDatastoreNodeEndpoint",
+      "type": "object"
+    },
+    "RuntimeDatastoreNodeEndpointRole": {
+      "description": "The role a datastore node's published listener fulfils.\n\nOPEN taxonomy: carries both ``unknown`` and ``other``. ``client`` is the\nparticipant/application-facing listener (OpenSearch ``http``, Cassandra\nnative/CQL, Redis client); ``peer`` is the inter-node/cluster listener\n(OpenSearch ``transport``, Cassandra internode, Redis cluster-bus).\nEngine-native listener names are intentionally not modelled \u2014 the datastore\nspine stays product-neutral (ADR-048, ADR-058).",
+      "enum": [
+        "client",
+        "peer",
+        "unknown",
+        "other"
+      ],
+      "title": "RuntimeDatastoreNodeEndpointRole",
+      "type": "string"
+    },
     "RuntimeDatastoreNodeRole": {
       "description": "A role a cluster node fulfils.\n\nOPEN taxonomy: carries both ``unknown`` and ``other``. Covers OpenSearch\n``cluster_manager``/``data``/``ingest``/``ml`` roles and Cassandra\n``coordinator``/``seed`` roles uniformly.",
       "enum": [
@@ -6709,8 +7077,13 @@
     },
     "RuntimeDatastorePartition": {
       "additionalProperties": false,
-      "description": "An observed partition primitive (index / keyspace / logical_db / family).\n\nCarries the geometry that differentiates one datastore data model from\nanother: shard/replica counts for a search index, replication strategy +\nfactor + per-DC factor map for a wide-column keyspace, and a datatype census\nfor a key-value logical database.",
+      "description": "An observed partition primitive (index / keyspace / logical_db / family).\n\nCarries the geometry that differentiates one datastore data model from\nanother: native partition/index UUID, shard/replica and document counts for\na search index, replication strategy + factor + per-DC factor map for a\nwide-column keyspace, and a datatype census for a key-value logical\ndatabase.",
       "properties": {
+        "creation_timestamp": {
+          "default": "",
+          "title": "Creation Timestamp",
+          "type": "string"
+        },
         "datatype_census": {
           "additionalProperties": {
             "anyOf": [
@@ -6729,6 +7102,36 @@
           "default": "",
           "title": "Description",
           "type": "string"
+        },
+        "doc_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Doc Count"
+        },
+        "doc_count_deleted": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Doc Count Deleted"
         },
         "durable_writes": {
           "anyOf": [
@@ -6765,6 +7168,11 @@
         "name": {
           "default": "",
           "title": "Name",
+          "type": "string"
+        },
+        "open_closed_status": {
+          "default": "",
+          "title": "Open Closed Status",
           "type": "string"
         },
         "partition_id": {
@@ -6841,6 +7249,26 @@
           ],
           "default": null,
           "title": "Shard Count"
+        },
+        "store_size_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Store Size Bytes"
+        },
+        "uuid": {
+          "default": "",
+          "title": "Uuid",
+          "type": "string"
         }
       },
       "required": [
@@ -6999,13 +7427,6 @@
           "default": "unknown",
           "title": "Engine"
         },
-        "engine_plugins": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Engine Plugins",
-          "type": "array"
-        },
         "ingest_pipelines": {
           "items": {
             "type": "string"
@@ -7022,7 +7443,7 @@
         },
         "mappings": {
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/RuntimeDatastoreMapping"
           },
           "title": "Mappings",
           "type": "array"
@@ -7090,7 +7511,7 @@
         },
         "templates": {
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/RuntimeDatastoreTemplate"
           },
           "title": "Templates",
           "type": "array"
@@ -7120,7 +7541,7 @@
     },
     "RuntimeDatastoreSetting": {
       "additionalProperties": false,
-      "description": "An observed datastore runtime setting with scope, provenance, and class.\n\nSettings that may carry credentials, hashes, or operator-only values must\nomit their raw ``value`` and classify it as ``redacted`` / ``operator_secret``\n\u2014 enforced via the shared ``name_indicates_secret`` helper even when the\nsubmitter left ``classification`` at its default.",
+      "description": "An observed datastore runtime setting with scope, provenance, and class.\n\nExplicit ``redacted`` / ``operator_secret`` classifications omit raw values;\nnames that look credential-bearing remain scenario content unless the\nauthor marks the value withheld.",
       "properties": {
         "classification": {
           "anyOf": [
@@ -7208,6 +7629,72 @@
       ],
       "title": "RuntimeDatastoreSettingScope",
       "type": "string"
+    },
+    "RuntimeDatastoreTemplate": {
+      "additionalProperties": false,
+      "description": "A bounded manifest of an observed index template body.\n\nThe template captures patterns, selected settings, optional mapping linkage,\ndigest, and evidence refs without embedding the backend's raw template JSON.",
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "index_patterns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Index Patterns",
+          "type": "array"
+        },
+        "mapping_ref": {
+          "default": "",
+          "title": "Mapping Ref",
+          "type": "string"
+        },
+        "name": {
+          "default": "",
+          "title": "Name",
+          "type": "string"
+        },
+        "settings_summary": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "title": "Settings Summary",
+          "type": "object"
+        },
+        "template_digest": {
+          "default": "",
+          "title": "Template Digest",
+          "type": "string"
+        },
+        "template_id": {
+          "title": "Template Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "template_id"
+      ],
+      "title": "RuntimeDatastoreTemplate",
+      "type": "object"
     },
     "RuntimeDatastoreTransportSecurity": {
       "additionalProperties": false,
@@ -8636,7 +9123,7 @@
     },
     "RuntimeForwardingSetting": {
       "additionalProperties": false,
-      "description": "An observed forwarding-agent runtime setting with provenance and class.\n\nSettings that may carry credentials or operator-only values must omit their\nraw ``value`` and classify it ``redacted`` / ``operator_secret`` \u2014 enforced\nvia the shared ``name_indicates_secret`` helper even when the submitter left\n``classification`` at its default.",
+      "description": "An observed forwarding-agent runtime setting with provenance and class.\n\nExplicit ``redacted`` / ``operator_secret`` classifications omit raw values;\ncredential-shaped names remain scenario content unless the author marks the\nvalue withheld.",
       "properties": {
         "classification": {
           "anyOf": [
@@ -12881,7 +13368,7 @@
     },
     "RuntimePlatformApplicationSetting": {
       "additionalProperties": false,
-      "description": "An observed platform setting with provenance and sensitivity.\n\nSettings whose name signals secret content must omit their raw ``value``\nand classify it as ``redacted`` / ``operator_secret``.",
+      "description": "An observed platform setting with provenance and sensitivity.\n\nExplicitly redacted/operator-secret settings must omit their raw ``value``.\nA setting name does not by itself redact SDL scenario content.",
       "properties": {
         "classification": {
           "anyOf": [

@@ -5,7 +5,14 @@ import re
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
+from .adr import (
+    normalize_adr_status as _normalize_adr_status,
+)
+from .adr import (
+    parse_adr_file as _parse_adr_file,
+)
 from .common import PolicyFailure, load_yaml, path_matches_prefix
+from .common import safe_repo_path as _safe_repo_path
 from .conftest_tool import run_conftest_policy
 
 StructuralPolicyRunner = Callable[[dict], list[PolicyFailure]]
@@ -97,6 +104,7 @@ def evaluate_repo_policy(
     failures.extend(_check_module_boundaries(repo_root, policy, changed, check_set=check_set))
 
     if check_set == "full":
+        failures.extend(_check_adr_template(repo_root, changed))
         failures.extend(_check_adr_index(repo_root, policy, changed))
 
     if "CHANGELOG.md" in changed:
@@ -159,23 +167,6 @@ def _str_list_ok(value: object, *, allow_empty: bool) -> bool:
     if not value and not allow_empty:
         return False
     return all(_is_str(item) for item in value)
-
-
-def _safe_repo_path(repo_root: Path, rel_path: str) -> Path | None:
-    """Resolve ``rel_path`` against ``repo_root`` and return the resolved
-    path only if it stays inside the repository. Returns None for absolute
-    paths, parent-traversal segments, or symlinks that resolve outside the
-    repo. This guards every place the policy reads a path that ultimately
-    comes from PR-controlled config or the changed-file list."""
-    candidate = Path(rel_path)
-    if candidate.is_absolute() or any(part == ".." for part in candidate.parts):
-        return None
-    try:
-        resolved = (repo_root / candidate).resolve()
-        resolved.relative_to(repo_root.resolve())
-    except (ValueError, OSError):
-        return None
-    return resolved
 
 
 def _validate_oversized_config(
@@ -949,50 +940,52 @@ def _check_changelog_versioned(repo_root: Path) -> list[PolicyFailure]:
     return []
 
 
-ADR_HEADER_RE = re.compile(r"^# ADR-(\d{3}): (.+)$", re.MULTILINE)
+# ADR-file parsing (header regex, status/date extraction, status normalisation)
+# lives in ``tools/policy/adr.py`` and is imported above so this README↔index
+# check and the ADR pin gate (ADR-059) parse ADRs identically. ``README_ROW_RE``
+# stays here because it parses the README index table, not an ADR file.
 README_ROW_RE = re.compile(
     r"^\| \[(\d{3})\]\(([^)]+)\) \| (.+?) \| (.+?) \| (\d{4}-\d{2}-\d{2}) \|$",
     re.MULTILINE,
 )
+ADR_TEMPLATE_PATH = "docs/decisions/adrs/TEMPLATE.md"
+ADR_TEMPLATE_REQUIRED_SECTIONS = (
+    "Status",
+    "Date",
+    "Context",
+    "Decision",
+    "Alternatives Considered",
+    "Consequences",
+)
+ADR_TEMPLATE_HEADING_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
 
 
-def _parse_adr_file(path: Path) -> tuple[str, str, str, str]:
-    text = path.read_text(encoding="utf-8")
-    header = ADR_HEADER_RE.search(text)
-    if not header:
-        raise ValueError(f"{path} is missing ADR header")
-    status = _normalize_adr_status(_extract_markdown_section(text, "Status"))
-    date = _extract_markdown_section(text, "Date")
-    return header.group(1), header.group(2).strip(), status.strip(), date.strip()
+def _check_adr_template(repo_root: Path, changed: list[str]) -> list[PolicyFailure]:
+    if not any(path.startswith("docs/decisions/adrs/") or path == "tools/policy/repo_policy.py" for path in changed):
+        return []
 
+    template = repo_root / ADR_TEMPLATE_PATH
+    if not template.exists():
+        return [
+            PolicyFailure(
+                "adr-template-missing",
+                "ADR template is missing",
+                ADR_TEMPLATE_PATH,
+            )
+        ]
 
-def _extract_markdown_section(text: str, section: str) -> str:
-    marker = f"## {section}"
-    start = text.find(marker)
-    if start != -1:
-        body = text[start + len(marker) :]
-        body = body.lstrip()
-        next_header = body.find("\n## ")
-        if next_header != -1:
-            body = body[:next_header]
-        return body.strip().splitlines()[0].strip()
-
-    legacy_marker = re.search(rf"^\*\*{re.escape(section)}:\*\*\s*(.+)$", text, re.MULTILINE)
-    if legacy_marker:
-        return legacy_marker.group(1).strip()
-
-    raise ValueError(f"missing {section} section")
-
-
-def _normalize_adr_status(status: str) -> str:
-    normalized = " ".join(status.split())
-    lowered = normalized.lower()
-    if lowered in {"accepted", "proposed", "deprecated"}:
-        return lowered
-    superseded = re.fullmatch(r"superseded by (adr-\d{3})", lowered)
-    if superseded:
-        return f"superseded by {superseded.group(1).upper()}"
-    return normalized
+    text = template.read_text(encoding="utf-8")
+    headings = {match.group(1).strip() for match in ADR_TEMPLATE_HEADING_RE.finditer(text)}
+    missing = [section for section in ADR_TEMPLATE_REQUIRED_SECTIONS if section not in headings]
+    if missing:
+        return [
+            PolicyFailure(
+                "adr-template-section-missing",
+                f"ADR template is missing required section(s): {', '.join(missing)}",
+                ADR_TEMPLATE_PATH,
+            )
+        ]
+    return []
 
 
 def _check_adr_index(repo_root: Path, policy: dict, changed: list[str]) -> list[PolicyFailure]:

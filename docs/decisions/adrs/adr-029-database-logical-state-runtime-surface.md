@@ -286,3 +286,9 @@ database schema elsewhere.
 - Overfitting to PostgreSQL would make the ACES surface poor at representing
   other SQL engines, embedded databases, document stores, or scanner-observed
   database surfaces.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-05-30 | d0b4332 | Corrected the runtime field reference `runtime.process` to `runtime.processes` during the DSL-139 family reconciliation. |

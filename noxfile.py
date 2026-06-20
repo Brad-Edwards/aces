@@ -26,6 +26,7 @@ TARGETED_POLICY_TESTS = [
     "implementations/python/tests/test_semantic_coverage.py",
     "implementations/python/tests/test_assurance_policy.py",
     "implementations/python/tests/test_authority_boundary.py",
+    "implementations/python/tests/test_concept_authority_governance.py",
     "implementations/python/tests/test_agent_guidance_policy.py",
     "implementations/python/tests/test_example_library_policy.py",
 ]
@@ -484,6 +485,12 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
         ),
     )
     repo_args, requirement_args, skip_requirement = _split_policy_session_args(list(args))
+    arg_list = list(args)
+    adr_pin_args: list[str] = []
+    if "--base-rev" in arg_list:
+        base_index = arg_list.index("--base-rev")
+        if base_index + 1 < len(arg_list):
+            adr_pin_args = ["--base-rev", arg_list[base_index + 1]]
     reporter.run(
         "policy / repo policy",
         lambda: _run_project_python(session, "tools/check_repo_policy.py", *repo_args),
@@ -512,11 +519,19 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
             "skipped on staged check; runs on push and verify",
         )
         reporter.skip(
+            "policy / concept authority governance",
+            "skipped on staged check; runs on push and verify",
+        )
+        reporter.skip(
             "policy / agent guidance profile",
             "skipped on staged check; runs on push and verify",
         )
         reporter.skip(
             "policy / example library catalog",
+            "skipped on staged check; runs on push and verify",
+        )
+        reporter.skip(
+            "policy / ADR acceptance-content pin",
             "skipped on staged check; runs on push and verify",
         )
     else:
@@ -533,6 +548,10 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
             lambda: _run_project_python(session, "tools/check_authority_boundary.py"),
         )
         reporter.run(
+            "policy / concept authority governance",
+            lambda: _run_project_python(session, "tools/check_concept_authority_governance.py"),
+        )
+        reporter.run(
             "policy / agent guidance profile",
             lambda: _run_project_python(session, "tools/check_agent_guidance.py"),
         )
@@ -540,13 +559,42 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
             "policy / example library catalog",
             lambda: _run_project_python(session, "tools/check_example_library.py"),
         )
+        reporter.run(
+            "policy / ADR acceptance-content pin",
+            lambda: _run_project_python(session, "tools/check_adr_immutability.py", *adr_pin_args),
+        )
 
 
 def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) -> None:
     _sync_project(session)
+    arg_list = list(args)
+    schema_publication_args: list[str] = []
+    json_artifact_args: list[str] = []
+    index = 0
+    while index < len(arg_list):
+        arg = arg_list[index]
+        if arg == "--staged":
+            json_artifact_args.append(arg)
+            index += 1
+            continue
+        if arg == "--base-rev":
+            if index + 1 < len(arg_list):
+                base_rev = arg_list[index + 1]
+                schema_publication_args = ["--base-rev", base_rev]
+                json_artifact_args.extend(["--base-rev", base_rev])
+            index += 2
+            continue
+        if arg == "--requirement-uid":
+            index += 2
+            continue
+        if arg == "--skip-requirement" or arg.startswith("-"):
+            index += 1
+            continue
+        json_artifact_args.append(arg)
+        index += 1
     reporter.run(
         "contracts / schema publication manifest",
-        lambda: _run_project_python(session, "tools/check_schema_publication.py"),
+        lambda: _run_project_python(session, "tools/check_schema_publication.py", *schema_publication_args),
     )
     reporter.run(
         "contracts / generated schema drift",
@@ -554,7 +602,7 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
     )
     reporter.run(
         "contracts / json artifact validation",
-        lambda: _run_project_python(session, "tools/check_json_artifacts.py", *args),
+        lambda: _run_project_python(session, "tools/check_json_artifacts.py", *json_artifact_args),
     )
 
 
@@ -814,7 +862,7 @@ def verify(session: nox.Session) -> None:
         )
         _run_policy(session, reporter, *session.posargs)
         _run_lint(session, reporter)
-        _run_contracts(session, reporter)
+        _run_contracts(session, reporter, *session.posargs)
         _run_tests(session, reporter)
         _run_integration_tests(session, reporter)
         _run_docs(session, reporter)

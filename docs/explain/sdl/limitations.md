@@ -51,10 +51,15 @@ recurring scheduled-job cadence and run-state (closed interval/cron/calendar
 recurrence plus observed last/next run and last result, cadence-only -
 [ADR-047](../../decisions/adrs/adr-047-scheduled-job-runtime-inventory.md)),
 non-relational datastore logical state (search/wide-column/key-value clusters,
-partitions with shard/replica or replication geometry, key-value persistence
-posture, transport security, and settings, with an executable required-profile
-guard and internal RBAC delegated via `authorization_ref` -
-[ADR-048](../../decisions/adrs/adr-048-datastore-service-runtime-inventory.md)),
+structured index mapping/template manifests, partitions with shard/replica or
+replication geometry, key-value persistence posture, transport security, and
+settings, plus per-node engine provenance — version/
+build hash/build type, heap byte bounds, mlockall, a typed per-plugin-versioned
+plugin inventory, and a product-neutral client/peer endpoint inventory (published
+topology, not OS-bind or host-publication proof) - with an executable
+required-profile guard and internal RBAC delegated via `authorization_ref` -
+[ADR-048](../../decisions/adrs/adr-048-datastore-service-runtime-inventory.md),
+[ADR-058](../../decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints.md)),
 security-platform application runtime inventory (threat-intel/SOAR/analyzer/
 case-management/dashboard kinds, bounded parsed content-object manifests,
 releasability markings, upstream bindings, connectors, and settings, with an
@@ -196,3 +201,30 @@ ACES mirrors full BIND, CoreDNS, PowerDNS, NSD, Knot, provider API, passive
 DNS, or telemetry schemas.
 
 Property-based fuzz testing (Hypothesis) has run 1,050+ random inputs through the parser with zero unhandled crashes.
+
+## Research Corpus and Verification Scope
+
+The SDL lineage and precedent documents cite external work at two distinct
+evidence levels, and the distinction is load-bearing:
+
+- **Primary-source-verified** — standards, specifications, peer-reviewed papers,
+  and technical reports cited by a resolvable DOI or maintainer URL that a
+  reader can check directly. These carry lineage and terminology weight.
+- **Secondary or current-research** — preprints, surveys-in-progress, vendor
+  pages, and project manuals. These may explain terminology or motivate a
+  concern but are **not** treated as settled normative authority, and they are
+  labelled as such at the point of citation (for example, the TechRxiv
+  cyber-range scenario survey cited in [lineage.md](lineage.md) is identified as
+  a preprint).
+
+The project's working citation corpus lives in a local, gitignored `research/`
+tree — the non-normative `research_notes` root in
+[`authority-boundary.yaml`](../../../specs/authority/authority-boundary.yaml) —
+so it is not part of the published repository. References that would otherwise
+be verifiable only from that private corpus or a private Zotero library are
+snapshotted as repo-tracked citation metadata under
+[`docs/research/primary/`](../../research/primary/index.md), so every cited
+claim is checkable from the repository alone. The experiment-core research log
+applies the same discipline — published sources only, preprints excluded as
+primary evidence (see its "Source Rule" in
+[`2026-05-26-search-log.md`](../../research/experiment-core/2026-05-26-search-log.md)).

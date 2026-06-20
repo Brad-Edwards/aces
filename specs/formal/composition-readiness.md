@@ -29,9 +29,17 @@ It does lock the semantic preconditions those features must respect.
 ## Current Implementation Hooks
 
 - objective/window references already carry a namespace-extensible path slot in
-  `implementations/python/packages/aces_processor/semantics/objectives.py`
+  `implementations/python/packages/aces_sdl/semantics/objectives.py`
 - planner identity handling is already defined in terms of canonical compiled
   addresses in `implementations/python/packages/aces_processor/semantics/planner.py`
+- named regression tests pin the layout/namespace invariants:
+  - assessment pipeline: `implementations/python/tests/test_semantics_assessment.py`
+    (`test_composition_ready_invariant_layout_variation_preserves_normalized_references_and_aggregation`,
+    `test_composition_ready_invariant_module_expansion_occurs_before_assessment_analysis`,
+    `test_composition_ready_invariant_namespace_extends_identity_without_changing_kinds_roles_or_aggregation`)
+  - objective windows: `implementations/python/tests/test_semantics_objectives.py`
+    (`test_composition_ready_invariant_imported_window_analysis_uses_expanded_canonical_identities`,
+    `test_composition_ready_invariant_namespace_extends_window_identity_without_changing_kind_roles_or_ownership`)
 
 These hooks are intended to let module/import work land later without
 redefining FM2 semantics.

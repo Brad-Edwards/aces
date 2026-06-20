@@ -19,6 +19,8 @@ key-value store that recur across the corpus. Those nodes already fit adjacent
 ACES surfaces for package identity, processes, filesystem evidence, network
 attachment, and transport listeners, but no surface carries the datastore facts
 that matter to participants and downstream inventory consumers: search
+cluster identity, per-index identity, document cardinality, deleted-document
+cardinality, store size in bytes, creation timestamp, open/closed status,
 shard/replica geometry, wide-column replication strategy/factor, and key-value
 persistence posture.
 
@@ -57,7 +59,9 @@ open `unknown` / `other` / `relational` tail imposes no profile, but each
 concrete structural data model requires its defining geometry:
 
 - `search_index` requires at least one `partition` with `kind: index` carrying
-  shard/replica counts.
+  shard/replica counts. Search-index clusters and partitions may also carry
+  native UUIDs, aggregate and per-index document counts, deleted-document counts,
+  byte-normalized store sizes, creation timestamps, and open/closed status.
 - `wide_column` requires at least one `keyspace` partition with a concrete
   replication strategy and a replication factor.
 - `key_value` requires a `persistence` profile and rejects relational /
@@ -67,10 +71,24 @@ concrete structural data model requires its defining geometry:
 
 The service owns single nested postures (`cluster`, `persistence`,
 `transport_security`) and id-bearing child collections (`nodes`, `partitions`,
-`settings`); `templates`, `aliases`, `mappings`, `lifecycle_policies`,
-`ingest_pipelines`, `pubsub_channels`, `queues_streams`, `engine_plugins`, and
-`backup_targets` are bare reference-name lists. Secret-bearing settings omit
-their raw value and classify `redacted` / `operator_secret`.
+`templates`, `mappings`, and `settings`). `templates` and `mappings` are bounded
+manifests rather than raw engine payloads: templates carry index patterns,
+selected settings, optional mapping refs, digests, and evidence refs; mappings
+carry partition refs, field-count/type census, dynamic policy, dynamic-template
+count, date-detection posture, schema digests, and evidence refs. `aliases`,
+`lifecycle_policies`, `ingest_pipelines`, `pubsub_channels`, `queues_streams`,
+`engine_plugins`, and `backup_targets` remain bare reference-name lists.
+Secret-bearing settings omit their raw value and classify `redacted` /
+`operator_secret`.
+
+`cluster` records the service-local ACES `cluster_id` plus optional native
+cluster `uuid`, observed `node_count`, aggregate `doc_count`,
+`store_size_bytes`, `shard_total`, and `shard_primaries`. `partitions` record
+the service-local ACES `partition_id` plus optional native partition/index
+`uuid`, `doc_count`, `doc_count_deleted`, `store_size_bytes`,
+`creation_timestamp`, and `open_closed_status`. These are participant-observed
+facts, not reference identities; ACES refs continue to target the stable
+`cluster_id` / `partition_id` values.
 
 ### 4. Keep datastore inventory targetable but not executable
 
@@ -80,6 +98,8 @@ qualified refs:
 - `nodes.<node>.runtime.datastore_services.<datastore_service_id>`
 - `nodes.<node>.runtime.datastore_services.<datastore_service_id>.nodes.<node_id>`
 - `nodes.<node>.runtime.datastore_services.<datastore_service_id>.partitions.<partition_id>`
+- `nodes.<node>.runtime.datastore_services.<datastore_service_id>.templates.<template_id>`
+- `nodes.<node>.runtime.datastore_services.<datastore_service_id>.mappings.<mapping_id>`
 - `nodes.<node>.runtime.datastore_services.<datastore_service_id>.settings.<setting_id>`
 
 These refs are inventory targets. They do not imply query execution, indexing,
@@ -89,16 +109,20 @@ replication, or persistence behavior.
 
 - Parser/model gate: stable service and child ids are concrete symbols. Enum
   fields are normalized through the single runtime enum-parse helper. Duplicate
-  service ids and duplicate service-local child ids fail early.
+  service ids and duplicate service-local child ids fail early. Count and byte
+  fields accept only non-negative integers or `${var}` placeholders.
 - Required-profile gate: the `require_profile_for_data_model` guard fails an
-  under-populated `search_index` / `wide_column` / `key_value` instance.
+  under-populated `search_index` / `wide_column` / `key_value` instance. A
+  concrete `search_index` also requires at least one structured mapping manifest
+  so index schema inventory cannot collapse to a name-only partition.
 - Semantic validation gate: the owning `service` ref resolves to a same-node
   binding; a non-empty, non-variable `authorization_ref` resolves to a same-node
   `app_authorization`.
 - Relationship/reference gate: service and child qualified refs resolve in
   generic relationships and survive module import namespacing.
-- Secret/payload gate: raw key material, credentials, and secret-bearing setting
-  values stay out of SDL model data.
+- Secret/payload gate: raw key material, credentials, secret-bearing setting
+  values, and raw `_mapping` / `_template` response bodies stay out of SDL model
+  data; bounded manifests retain digests and evidence refs instead.
 - Contract/schema gate: published schemas are regenerated from Python model
   sources; generated JSON schemas are not edited by hand.
 
@@ -109,6 +133,10 @@ replication, or persistence behavior.
   config blobs, or prose-only relationships.
 - Do not embed principals, roles, or grants here; internal RBAC is delegated to
   `runtime.app_authorizations` via `authorization_ref`.
+- Do not use `datatype_census` as a search-index document-count field; it
+  remains a key-value datatype census.
+- Do not preserve native store-size prose such as `92.4mb`; normalize observed
+  store sizes to bytes before authoring SDL.
 - Do not make OpenSearch, Cassandra, or Redis the schema authority. They
   motivate the surface; the SDL model remains product-neutral.
 
@@ -149,3 +177,10 @@ replication, or persistence behavior.
 - [Scenario/Delivery Boundary for Runtime Node State](adr-033-scenario-delivery-boundary-for-runtime-node-state.md)
 - [Lineage and Prior Work](../../explain/sdl/lineage.md) and
   [Design Precedents](../../explain/sdl/precedents.md)
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-07 | e782722 | Added structured datastore mapping manifests. |
+| 2026-06-07 | adf63e5 | Added datastore cardinality fields. |

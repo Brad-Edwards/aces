@@ -8,9 +8,10 @@ import re
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
-from pathlib import Path
 from typing import Annotated, Any, Literal
 
+from aces_sdl import VARIABLE_TOKEN_PATTERN
+from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 from aces_sdl.participant_attribution_semantics import (
     ParticipantAttributionCandidateKind,
     ParticipantAttributionOrderingBasisKind,
@@ -35,6 +36,7 @@ from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler, StrictI
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
+from .corpus import CONCEPT_AUTHORITY, corpus_family_root
 from .manifest_authority import (
     BACKEND_SUPPORTED_CONTRACT_IDS,
     PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
@@ -47,8 +49,13 @@ from .manifest_authority import (
     validate_processor_supported_sdl_versions,
 )
 from .participant_behavior import (
+    ParticipantAdmissionDisposition,
     ParticipantBehaviorHistoryEventType,
+    ParticipantLifecycleOperationState,
     ParticipantObservationStatus,
+    ParticipantPhaseRealization,
+    ParticipantRuntimeLifecyclePhase,
+    participant_lifecycle_field_violation_messages,
 )
 from .versions import (
     BACKEND_MANIFEST_V2_SCHEMA_VERSION,
@@ -68,12 +75,14 @@ from .versions import (
     RUNTIME_SNAPSHOT_SCHEMA_VERSION,
     SCENARIO_INSTANTIATION_REQUEST_SCHEMA_VERSION,
     SEMANTIC_PROFILE_SCHEMA_VERSION,
+    UCO_ALIGNMENT_SCHEMA_VERSION,
     WORKFLOW_CANCELLATION_REQUEST_SCHEMA_VERSION,
     WORKFLOW_STATE_SCHEMA_VERSION,
 )
 from .vocabulary import (
     ConceptFamilyId,
     ConceptProvenanceCategory,
+    ParticipantFeatureSupportLevel,
     ProcessorFeature,
     RealizationSupportMode,
     WorkflowFeature,
@@ -113,6 +122,7 @@ PrefixedDigestString = Annotated[
 NonNegativeInteger = Annotated[int, Field(ge=0)]
 PositiveInteger = Annotated[int, Field(ge=1)]
 UnitIntervalFloat = Annotated[float, Field(gt=0, le=1)]
+ClosedUnitIntervalFloat = Annotated[float, Field(ge=0, le=1)]
 SemanticProfileId = Annotated[str, Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*-v[0-9]+$")]
 SemanticAssumptionId = Annotated[str, Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")]
 ReferenceModelId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")]
@@ -359,6 +369,83 @@ def _attach_experiment_datetime_invariants(contract_id: str, json_schema: dict[s
     )
 
 
+_DEFS_KEY = "$defs"
+_INSTANTIATION_INVARIANT_CONTRACT_ID = "instantiated-scenario-v1"
+_SCHEMA_MAP_KEYS = ("properties", "patternProperties", _DEFS_KEY)
+_SCHEMA_SUBSCHEMA_KEYS = (
+    "additionalProperties",
+    "items",
+    "contains",
+    "anyOf",
+    "allOf",
+    "oneOf",
+    "prefixItems",
+)
+
+
+def _apply_string_token_constraint(node: dict[str, Any]) -> None:
+    """Forbid the ``${name}`` token on a single free string subschema.
+
+    Targets scalar ``"type": "string"`` only, skipping fixed ``enum`` / ``const``
+    values, which avoids the nullable-string and fixed-value pitfalls. The
+    ``${var}`` branch of every ``*_or_var`` field (``InfraNode.count``,
+    ``ACLRule.ports``, ``SimpleProperties.internal`` …) is a bare
+    ``{"type": "string"}`` branch, so it is covered.
+    """
+    if node.get("type") != "string" or "enum" in node or "const" in node:
+        return
+    constraint = {"pattern": VARIABLE_TOKEN_PATTERN}
+    if "not" in node:
+        node.setdefault("allOf", []).append({"not": constraint})
+    else:
+        node["not"] = constraint
+
+
+def _child_subschemas(node: dict[str, Any]) -> list[Any]:
+    """Return the applicator subschemas reachable from ``node``.
+
+    Mapping keys are not substitution sites, so ``propertyNames`` is
+    intentionally excluded.
+    """
+    children: list[Any] = []
+    for key in _SCHEMA_MAP_KEYS:
+        child = node.get(key)
+        if isinstance(child, dict):
+            children.extend(child.values())
+    for key in _SCHEMA_SUBSCHEMA_KEYS:
+        if key in node:
+            children.append(node[key])
+    return children
+
+
+def _forbid_variable_tokens_in_strings(node: object) -> None:
+    """Recursively forbid the ``${var}`` token on every free string subschema."""
+    if isinstance(node, list):
+        for item in node:
+            _forbid_variable_tokens_in_strings(item)
+        return
+    if not isinstance(node, dict):
+        return
+    _apply_string_token_constraint(node)
+    for child in _child_subschemas(node):
+        _forbid_variable_tokens_in_strings(child)
+
+
+def _attach_instantiation_invariants(contract_id: str, json_schema: dict[str, Any]) -> None:
+    """Differentiate the instantiated-scenario contract from authoring-input.
+
+    The authoring (``Scenario``) and instantiated (``InstantiatedScenario``)
+    models share every field, so their generated schemas are identical apart
+    from metadata. An instantiated scenario is fully concrete, so the
+    instantiated schema additionally forbids unresolved ``${var}`` tokens in
+    string values — both whole-string placeholders and embedded tokens (issue
+    #500). The matching model-level invariant lives on ``InstantiatedScenario``.
+    """
+    if contract_id != _INSTANTIATION_INVARIANT_CONTRACT_ID:
+        return
+    _forbid_variable_tokens_in_strings(json_schema)
+
+
 def _schema_id_for_contract_id(contract_id: str) -> str:
     if contract_id == "aces-semantic-invariants-v1":
         return _ACES_SEMANTIC_INVARIANT_PROFILE_URI
@@ -425,7 +512,7 @@ class AcesSemanticInvariantProfileReferenceModel(ContractModel):
 
 def _aces_semantic_invariant_profile_schema_for_bundle() -> dict[str, Any]:
     json_schema = AcesSemanticInvariantProfileModel.model_json_schema()
-    json_schema.setdefault("$defs", {})["AcesSemanticInvariantProfileReferenceModel"] = (
+    json_schema.setdefault(_DEFS_KEY, {})["AcesSemanticInvariantProfileReferenceModel"] = (
         AcesSemanticInvariantProfileReferenceModel.model_json_schema()
     )
     return json_schema
@@ -744,6 +831,11 @@ class ParticipantBehaviorHistoryEventModel(ContractModel):
     observation_boundary_address: NonEmptyString | None = None
     observation_status: ParticipantObservationStatus | None = None
     actor_provenance: NonEmptyString | None = None
+    lifecycle_phase: ParticipantRuntimeLifecyclePhase | None = None
+    phase_realization: ParticipantPhaseRealization | None = None
+    admission_disposition: ParticipantAdmissionDisposition | None = None
+    operation_ref: NonEmptyString | None = None
+    operation_state: ParticipantLifecycleOperationState | None = None
     state_transition_kind: NonEmptyString | None = None
     post_state_digest: NonEmptyString | None = None
     joint_action_set_id: NonEmptyString | None = None
@@ -756,6 +848,519 @@ class ParticipantBehaviorHistoryEventModel(ContractModel):
     outcome_interpretations: list[ParticipantOutcomeInterpretationRecordModel] = Field(default_factory=list)
     temporal_contexts: list[ParticipantTemporalRuntimeContextModel] = Field(default_factory=list)
     details: ParticipantObservationDetailsModel = Field(default_factory=ParticipantObservationDetailsModel)
+
+    @model_validator(mode="after")
+    def _validate_lifecycle_fields(self) -> ParticipantBehaviorHistoryEventModel:
+        messages = participant_lifecycle_field_violation_messages(
+            event_type=self.event_type,
+            lifecycle_phase=self.lifecycle_phase,
+            phase_realization=self.phase_realization,
+            admission_disposition=self.admission_disposition,
+            operation_ref=self.operation_ref,
+            operation_state=self.operation_state,
+        )
+        if messages:
+            raise ValueError(messages[0])
+        return self
+
+
+ParticipantRuntimeOrderingBasis = Literal[
+    "total_order",
+    "partial_order",
+    "simultaneous",
+    "serialized_backend_order",
+    "simulation_tick",
+    "control_plane_order",
+    "logical_clock",
+    "vector_clock",
+    "wall_clock_only",
+    "unknown",
+    "unsupported",
+]
+ParticipantRuntimeMappingLoss = Literal[
+    "none",
+    "private_apparatus_detail",
+    "source_fields_omitted",
+    "semantics_approximated",
+    "redacted_by_policy",
+    "temporal_detail_collapsed",
+    "unknown",
+    "unsupported",
+]
+ParticipantRuntimeInformationGuarantee = Literal[
+    "observation_only",
+    "history_consistent",
+    "perfect_recall",
+    "lossy_projection",
+    "unknown",
+    "unsupported",
+]
+ParticipantRuntimeDeliveryBasis = Literal[
+    "emission_is_delivery",
+    "runtime_delivery",
+    "participant_acknowledgement",
+    "external_delivery",
+    "unknown",
+    "unsupported",
+]
+ParticipantRuntimeConflictPolicy = Literal[
+    "coordinate",
+    "serialize",
+    "reject",
+    "retry",
+    "withhold",
+    "merge",
+    "rollback",
+    "disclose_weak_guarantee",
+    "unsupported",
+]
+
+
+class EventClassificationModel(ContractModel):
+    """ACES-native normalized event classification tuple (ADR-054)."""
+
+    category_uid: int
+    category_name: NonEmptyString
+    class_uid: int
+    class_name: NonEmptyString
+    activity_id: int
+    activity_name: NonEmptyString
+    type_uid: int
+    type_name: NonEmptyString
+    severity_id: int
+    severity: NonEmptyString
+
+
+class SourceStatusModel(ContractModel):
+    """Normalized source status claim for one participant runtime record."""
+
+    status_id: int
+    status: NonEmptyString
+    status_code: NonEmptyString
+    status_detail: NonEmptyString
+    source_status_label: NonEmptyString
+    source_status_mapping: NonEmptyString
+
+
+class SourcePipelineModel(ContractModel):
+    """Source product, identity, and pipeline-time facts for a mapped record."""
+
+    product_ref: NonEmptyString
+    product_version: NonEmptyString | None = None
+    log_provider: NonEmptyString | None = None
+    log_source: NonEmptyString | None = None
+    log_name: NonEmptyString | None = None
+    original_event_uid: NonEmptyString | None = None
+    original_time: Rfc3339DateTimeString | None = None
+    processed_time: Rfc3339DateTimeString | None = None
+    logged_time: Rfc3339DateTimeString | None = None
+    transmit_time: Rfc3339DateTimeString | None = None
+    correlation_uid: NonEmptyString | None = None
+    sequence: NonNegativeInteger | None = None
+
+
+class RawDataIntegrityModel(ContractModel):
+    """Hash, size, and truncation facts for raw data behind a runtime claim."""
+
+    raw_data_hash: PrefixedDigestString | None = None
+    raw_data_hash_algorithm: NonEmptyString | None = None
+    raw_data_size: NonNegativeInteger | None = None
+    raw_data_is_truncated: bool | None = None
+    raw_data_untruncated_size: NonNegativeInteger | None = None
+
+
+class ParticipantRuntimeBaseEnvelopeModel(ContractModel):
+    """Shared ADR-054 base envelope for participant-runtime family carriers.
+
+    Every published carrier in the ``participant-runtime`` family embeds this
+    envelope exactly once: identity, classification and source status,
+    participant/episode scoping, the three distinct timestamps with clock
+    authority, ordering, actor/source refs, raw-data integrity, confidence,
+    provenance/evidence refs, and the marking surface. No carrier redefines
+    local identity, versioning, marking, or extension semantics.
+    """
+
+    event_id: NonEmptyString
+    schema_name: NonEmptyString
+    schema_version: NonEmptyString
+    event_type: NonEmptyString
+    extension_policy: NonEmptyString
+    event_classification: EventClassificationModel | None = None
+    source_status: SourceStatusModel | None = None
+    participant_address: NonEmptyString | None = None
+    episode_id: NonEmptyString | None = None
+    sequence_number: NonNegativeInteger | None = None
+    occurred_at: Rfc3339DateTimeString
+    recorded_at: Rfc3339DateTimeString
+    ingested_at: Rfc3339DateTimeString
+    clock_authority: NonEmptyString
+    temporal_context: NonEmptyString | None = None
+    ordering_basis: ParticipantRuntimeOrderingBasis
+    logical_order_ref: NonEmptyString | None = None
+    predecessor_event_refs: list[NonEmptyString] = Field(default_factory=list)
+    actor_ref: NonEmptyString
+    producer_ref: NonEmptyString
+    source_system_ref: NonEmptyString | None = None
+    source_record_ref: NonEmptyString | None = None
+    source_raw_ref: NonEmptyString | None = None
+    source_pipeline: SourcePipelineModel | None = None
+    raw_data_integrity: RawDataIntegrityModel | None = None
+    confidence: ClosedUnitIntervalFloat | None = None
+    provenance_refs: list[NonEmptyString] = Field(default_factory=list)
+    evidence_refs: list[NonEmptyString] = Field(default_factory=list)
+    marking_definition_refs: list[NonEmptyString] = Field(default_factory=list)
+    object_marking_refs: list[NonEmptyString] = Field(default_factory=list)
+    markings: list[NonEmptyString] = Field(default_factory=list)
+    granular_markings: dict[NonEmptyString, list[NonEmptyString]] = Field(default_factory=dict)
+    redaction_policy_ref: NonEmptyString | None = None
+    authorization_scope: NonEmptyString
+
+
+class ParticipantLifecycleEventModel(ParticipantRuntimeBaseEnvelopeModel):
+    """RUN-306 lifecycle boundary record for one participant action event."""
+
+    phase: ParticipantRuntimeLifecyclePhase
+    phase_realization: ParticipantPhaseRealization
+    admission_disposition: ParticipantAdmissionDisposition | None = None
+    operation_ref: NonEmptyString | None = None
+    action_ref: NonEmptyString | None = None
+    action_contract_ref: NonEmptyString | None = None
+    command_ref: NonEmptyString | None = None
+    actor_provenance: NonEmptyString
+    action_validity_basis_ref: NonEmptyString | None = None
+    observation_refs: list[NonEmptyString] = Field(default_factory=list)
+    shared_state_read_refs: list[NonEmptyString] = Field(default_factory=list)
+    shared_state_write_refs: list[NonEmptyString] = Field(default_factory=list)
+    emitted_state_update_refs: list[NonEmptyString] = Field(default_factory=list)
+    attribution_edge_refs: list[NonEmptyString] = Field(default_factory=list)
+    outcome_interpretation_refs: list[NonEmptyString] = Field(default_factory=list)
+    joint_action_set_ref: NonEmptyString | None = None
+    source_status_label: NonEmptyString | None = None
+    mapping_loss: ParticipantRuntimeMappingLoss | None = None
+    mapping_loss_detail: NonEmptyString | None = None
+
+
+class ParticipantObservationLossDescriptorModel(ContractModel):
+    """Declared projection-loss facts for one participant-visible observation."""
+
+    kind: NonEmptyString
+    fields_redacted: list[NonEmptyString] = Field(default_factory=list)
+
+
+class ParticipantObservationStochasticContextModel(ContractModel):
+    """Seed and randomization-policy references behind one observation."""
+
+    seed_ref: NonEmptyString | None = None
+    randomization_policy_ref: NonEmptyString | None = None
+
+
+class ParticipantObservationEnvelopeModel(ParticipantRuntimeBaseEnvelopeModel):
+    """SEM-210 participant-visible observation record with explicit guarantees."""
+
+    observation_ref: NonEmptyString
+    phase_ref: NonEmptyString | None = None
+    visibility_projection_ref: NonEmptyString
+    information_guarantee: ParticipantRuntimeInformationGuarantee
+    delivery_basis: ParticipantRuntimeDeliveryBasis
+    delivery_point_ref: NonEmptyString | None = None
+    delivered_at: Rfc3339DateTimeString | None = None
+    action_observation_history_ref: NonEmptyString | None = None
+    information_state_ref: NonEmptyString | None = None
+    hidden_state_refs: list[NonEmptyString] = Field(default_factory=list)
+    centralized_state_refs: list[NonEmptyString] = Field(default_factory=list)
+    loss_descriptor: ParticipantObservationLossDescriptorModel | None = None
+    stochastic_context: ParticipantObservationStochasticContextModel | None = None
+    noise_model_ref: NonEmptyString | None = None
+    reconstruction_algorithm_ref: NonEmptyString | None = None
+    reconstruction_proof_ref: NonEmptyString | None = None
+    belief_support_ref: NonEmptyString | None = None
+    redacted_field_refs: list[NonEmptyString] = Field(default_factory=list)
+
+
+class ParticipantSharedStateAccessModel(ContractModel):
+    """RUN-307 read/write access record over one shared-state address."""
+
+    state_address: NonEmptyString
+    access_kind: Literal["read", "write", "read_write"]
+    read_revision: NonEmptyString | None = None
+    write_revision: NonEmptyString | None = None
+    read_digest: PrefixedDigestString | None = None
+    write_digest: PrefixedDigestString | None = None
+    snapshot_ref: NonEmptyString | None = None
+    access_purpose: NonEmptyString
+    atomic_group_ref: NonEmptyString | None = None
+    evidence_refs: list[NonEmptyString] = Field(default_factory=list)
+
+
+class ParticipantSharedStateRecordModel(ParticipantRuntimeBaseEnvelopeModel):
+    """RUN-307 versioned shared operational state-change report."""
+
+    state_address: NonEmptyString
+    state_scope: NonEmptyString
+    state_kind: NonEmptyString
+    revision: NonEmptyString | None = None
+    digest: PrefixedDigestString | None = None
+    predecessor_revision_refs: list[NonEmptyString] = Field(default_factory=list)
+    conflict_policy: ParticipantRuntimeConflictPolicy
+    visibility_projection_basis: NonEmptyString | None = None
+    provenance: NonEmptyString
+    value_ref: NonEmptyString | None = None
+    accesses: list[ParticipantSharedStateAccessModel] = Field(default_factory=list)
+
+
+class ParticipantOutcomeReportSourceModel(ContractModel):
+    """SEM-215 grounding source for one participant outcome report."""
+
+    source_kind: Literal["action_result", "episode_status", "evidence"]
+    source_ref: NonEmptyString
+
+
+class ParticipantOutcomeReportStateRelationshipModel(ContractModel):
+    """Declared relationship between an outcome report and downstream state."""
+
+    relationship_kind: Literal["scenario_state", "workflow_state", "objective_window", "evaluation_input"]
+    target_ref: NonEmptyString
+    relationship_basis: Literal["declared", "interpretation_rule"]
+
+
+class ParticipantOutcomeReportModel(ParticipantRuntimeBaseEnvelopeModel):
+    """SEM-215 outcome interpretation report.
+
+    The carrier deliberately has no score, reward, or objective-success
+    field: reward and return remain ADR-054 step signals, and objective and
+    evaluation results remain their own contract surfaces.
+    """
+
+    outcome_id: NonEmptyString
+    interpretation_rule_ref: NonEmptyString
+    outcome_sources: list[ParticipantOutcomeReportSourceModel] = Field(min_length=1)
+    state_relationships: list[ParticipantOutcomeReportStateRelationshipModel] = Field(default_factory=list)
+
+
+class ParticipantStatusViewEpisodeStateModel(ContractModel):
+    """Scope-projected episode state embedded in API-408 status views.
+
+    The view carries `participant_address` and `episode_id` once at the top
+    level; the embedded record cannot restate them, so a nested record scoped
+    to another participant or episode is structurally unrepresentable.
+    """
+
+    state_schema_version: Literal[PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION] = PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION
+    sequence_number: int
+    status: str
+    terminal_reason: str | None = None
+    initialized_at: str
+    updated_at: str
+    terminated_at: str | None = None
+    last_control_action: str
+    previous_episode_id: str | None = None
+
+
+class ParticipantHistoryViewEpisodeEventModel(ContractModel):
+    """Scope-projected episode history event embedded in API-408 history views."""
+
+    event_type: str
+    timestamp: str
+    sequence_number: int
+    terminal_reason: str | None = None
+    control_action: str | None = None
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class ParticipantHistoryViewBehaviorEventModel(ContractModel):
+    """Scope-projected behavior history event embedded in API-408 history views."""
+
+    event_type: ParticipantBehaviorHistoryEventType
+    timestamp: NonEmptyString
+    action_instance_id: NonEmptyString
+    action_contract_address: NonEmptyString | None = None
+    observation_boundary_address: NonEmptyString | None = None
+    observation_status: ParticipantObservationStatus | None = None
+    actor_provenance: NonEmptyString | None = None
+    lifecycle_phase: ParticipantRuntimeLifecyclePhase | None = None
+    phase_realization: ParticipantPhaseRealization | None = None
+    admission_disposition: ParticipantAdmissionDisposition | None = None
+    operation_ref: NonEmptyString | None = None
+    operation_state: ParticipantLifecycleOperationState | None = None
+    state_transition_kind: NonEmptyString | None = None
+    post_state_digest: NonEmptyString | None = None
+    joint_action_set_id: NonEmptyString | None = None
+    realized_order: StrictInt | None = Field(default=None, ge=0)
+    interaction_class: ParticipantInteractionClass | None = None
+    interaction_ref: NonEmptyString | None = None
+    shared_state_refs: list[NonEmptyString] = Field(default_factory=list)
+    action_result: ParticipantActionResultModel | None = None
+    attribution_edges: list[ParticipantAttributionEdgeModel] = Field(default_factory=list)
+    outcome_interpretations: list[ParticipantOutcomeInterpretationRecordModel] = Field(default_factory=list)
+    temporal_contexts: list[ParticipantTemporalRuntimeContextModel] = Field(default_factory=list)
+    details: ParticipantObservationDetailsModel = Field(default_factory=ParticipantObservationDetailsModel)
+
+    @model_validator(mode="after")
+    def _validate_lifecycle_fields(self) -> ParticipantHistoryViewBehaviorEventModel:
+        messages = participant_lifecycle_field_violation_messages(
+            event_type=self.event_type,
+            lifecycle_phase=self.lifecycle_phase,
+            phase_realization=self.phase_realization,
+            admission_disposition=self.admission_disposition,
+            operation_ref=self.operation_ref,
+            operation_state=self.operation_state,
+        )
+        if messages:
+            raise ValueError(messages[0])
+        return self
+
+
+VIEW_SCOPE_PROJECTED_FIELDS: tuple[str, ...] = ("participant_address", "episode_id")
+"""Recorded-contract fields carried once at the view level and removed from
+records embedded in API-408 retrieval projections."""
+
+
+class ParticipantStatusViewModel(ContractModel):
+    """API-408 retrieval projection of one participant's episode status."""
+
+    view_id: NonEmptyString
+    participant_address: NonEmptyString
+    episode_id: NonEmptyString | None = None
+    generated_at: Rfc3339DateTimeString
+    source_snapshot_ref: NonEmptyString
+    episode_state: ParticipantStatusViewEpisodeStateModel | None = None
+    open_operation_refs: list[NonEmptyString] = Field(default_factory=list)
+    visibility_projection_ref: NonEmptyString
+    marking_definition_refs: list[NonEmptyString] = Field(default_factory=list)
+    redaction_policy_ref: NonEmptyString | None = None
+
+    @model_validator(mode="after")
+    def _validate_episode_scope(self) -> ParticipantStatusViewModel:
+        if self.episode_state is not None and self.episode_id is None:
+            raise ValueError("episode_id is required when episode_state is embedded")
+        return self
+
+
+def _check_history_record_scope_binding(
+    key: str,
+    value: object,
+    path: str,
+    *,
+    participant_address: str,
+    episode_id: str,
+) -> None:
+    """Raise if a nested record scope key conflicts with the history view scope."""
+    if not isinstance(value, str):
+        return
+    if key == "participant_address" and value != participant_address:
+        raise ValueError(f"{path}.{key} '{value}' does not match the view participant_address '{participant_address}'")
+    if key == "episode_id" and value != episode_id:
+        raise ValueError(f"{path}.{key} '{value}' does not match the view episode_id '{episode_id}'")
+
+
+def _walk_history_record_scope(
+    node: object,
+    path: str,
+    *,
+    participant_address: str,
+    episode_id: str,
+) -> None:
+    """Recursively bind nested recorded-contract scope to the history view scope."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            _check_history_record_scope_binding(
+                key, value, path, participant_address=participant_address, episode_id=episode_id
+            )
+            _walk_history_record_scope(
+                value, f"{path}.{key}", participant_address=participant_address, episode_id=episode_id
+            )
+    elif isinstance(node, list):
+        for index, item in enumerate(node):
+            _walk_history_record_scope(
+                item, f"{path}[{index}]", participant_address=participant_address, episode_id=episode_id
+            )
+
+
+class ParticipantHistoryViewModel(ContractModel):
+    """API-408 retrieval projection of participant episode/behavior history."""
+
+    view_id: NonEmptyString
+    participant_address: NonEmptyString
+    episode_id: NonEmptyString
+    generated_at: Rfc3339DateTimeString
+    source_snapshot_ref: NonEmptyString
+    episode_history: list[ParticipantHistoryViewEpisodeEventModel] = Field(default_factory=list)
+    behavior_history: list[ParticipantHistoryViewBehaviorEventModel] = Field(default_factory=list)
+    visibility_projection_ref: NonEmptyString
+    redaction_policy_ref: NonEmptyString | None = None
+    completeness: Literal["complete", "truncated", "filtered"]
+    completeness_basis: NonEmptyString | None = None
+    marking_definition_refs: list[NonEmptyString] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_completeness_basis(self) -> ParticipantHistoryViewModel:
+        if self.completeness != "complete" and self.completeness_basis is None:
+            raise ValueError("completeness_basis is required when completeness is not 'complete'")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_nested_record_scope(self) -> ParticipantHistoryViewModel:
+        """Recursively bind nested recorded-contract scope to the view scope.
+
+        The direct embedded event shapes are scope-projected, but behavior
+        events cite recorded semantic records (action results and their
+        preconditions, attribution edges, outcome interpretations) that carry
+        their own `participant_address`/`episode_id`. A one-participant view
+        must not smuggle records scoped to another participant or episode
+        through those subrecords.
+        """
+
+        for field_name, events in (
+            ("episode_history", self.episode_history),
+            ("behavior_history", self.behavior_history),
+        ):
+            for index, event in enumerate(events):
+                _walk_history_record_scope(
+                    event.model_dump(mode="python"),
+                    f"{field_name}[{index}]",
+                    participant_address=self.participant_address,
+                    episode_id=self.episode_id,
+                )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {
+                    "properties": {"completeness": {"enum": ["truncated", "filtered"]}},
+                    "required": ["completeness"],
+                },
+                "then": {
+                    "required": ["completeness_basis"],
+                    "properties": {"completeness_basis": {"type": "string", "minLength": 1}},
+                },
+            }
+        )
+        return json_schema
+
+
+class ParticipantContextViewModel(ContractModel):
+    """API-408 derived operational context view (reference-and-provenance only)."""
+
+    view_id: NonEmptyString
+    participant_address: NonEmptyString
+    episode_id: NonEmptyString | None = None
+    generated_at: Rfc3339DateTimeString
+    source_snapshot_ref: NonEmptyString
+    view_ref: NonEmptyString
+    derived_from_refs: list[NonEmptyString] = Field(min_length=1)
+    derivation_basis_ref: NonEmptyString | None = None
+    payload_ref: NonEmptyString | None = None
+    visibility_projection_ref: NonEmptyString
+    marking_definition_refs: list[NonEmptyString] = Field(default_factory=list)
+    redaction_policy_ref: NonEmptyString | None = None
 
 
 class PlanOperationModel(ContractModel):
@@ -794,6 +1399,24 @@ class SnapshotEntryModel(ContractModel):
     status: str = "ready"
 
 
+class RealizationProvenanceEntryModel(ContractModel):
+    """SEM-218 invariant I5: provenance for one realized realization concern.
+
+    Distinguishes ``author-declared`` / ``processor-derived`` / ``backend-realized``
+    origins for a realized concern recorded on the snapshot's result / history
+    surfaces. Carries field-path and kind references only (never the realized
+    value, per the SEM-218 host-exposure gate). Kept distinct from ADR-054
+    lifecycle ``phase_realization`` and API-407 participant feature support.
+    """
+
+    address: NonEmptyString
+    field_path: NonEmptyString
+    domain: NonEmptyString
+    requirement_kind: NonEmptyString
+    explicitness: ExplicitnessClass
+    provenance: ExplicitnessProvenance
+
+
 class RuntimeSnapshotEnvelopeModel(ContractModel):
     """Published envelope for a live runtime snapshot.
 
@@ -817,6 +1440,7 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     participant_episode_results: dict[str, ParticipantEpisodeStateModel] = Field(default_factory=dict)
     participant_episode_history: dict[str, list[ParticipantEpisodeHistoryEventModel]] = Field(default_factory=dict)
     participant_behavior_history: dict[str, list[ParticipantBehaviorHistoryEventModel]] = Field(default_factory=dict)
+    realization_provenance: list[RealizationProvenanceEntryModel] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -1127,6 +1751,75 @@ class ProcessorCapabilitiesV2Model(ContractModel):
         return json_schema
 
 
+_PARTICIPANT_FEATURE_SUPPORT_VOCABULARY_IDS = (
+    "participant-runtime-behavior-features",
+    "participant-runtime-interaction-features",
+)
+
+
+def _validate_participant_feature_support_term(feature: str) -> None:
+    from .controlled_vocabularies import load_controlled_vocabulary_catalog
+
+    catalog = load_controlled_vocabulary_catalog()
+    for vocabulary_id in _PARTICIPANT_FEATURE_SUPPORT_VOCABULARY_IDS:
+        definition = catalog.vocabularies[vocabulary_id]
+        if feature in definition.terms:
+            return
+        if definition.extension_pattern is not None and re.fullmatch(definition.extension_pattern, feature):
+            return
+    joined = ", ".join(_PARTICIPANT_FEATURE_SUPPORT_VOCABULARY_IDS)
+    raise ValueError(
+        f"feature_support feature '{feature}' is not a governed term of {joined} "
+        "and does not match the governed extension pattern"
+    )
+
+
+class ParticipantFeatureSupportModel(ContractModel):
+    """API-407 per-feature participant runtime support declaration."""
+
+    feature: NonEmptyString
+    support_level: ParticipantFeatureSupportLevel
+    constraint_refs: list[NonEmptyString] = Field(default_factory=list)
+    disclosure_refs: list[NonEmptyString] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_feature_support_declaration(self) -> ParticipantFeatureSupportModel:
+        _validate_participant_feature_support_term(self.feature)
+        _validate_unique_string_values("constraint_refs", self.constraint_refs)
+        _validate_unique_string_values("disclosure_refs", self.disclosure_refs)
+        if self.support_level != ParticipantFeatureSupportLevel.EXACT and not self.disclosure_refs:
+            raise ValueError(
+                f"feature_support entry '{self.feature}' declares support_level "
+                f"'{self.support_level.value}' below 'exact' and must carry at least one disclosure_refs entry"
+            )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        below_exact = [
+            level.value for level in ParticipantFeatureSupportLevel if level != ParticipantFeatureSupportLevel.EXACT
+        ]
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {
+                    "properties": {"support_level": {"enum": below_exact}},
+                    "required": ["support_level"],
+                },
+                "then": {
+                    "required": ["disclosure_refs"],
+                    "properties": {"disclosure_refs": {"minItems": 1}},
+                },
+            }
+        )
+        return json_schema
+
+
 class ParticipantRuntimeCapabilitiesModel(ContractModel):
     """Participant-episode lifecycle capability block (RUN-311).
 
@@ -1155,6 +1848,7 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
         min_length=1,
         json_schema_extra={"uniqueItems": True},
     )
+    feature_support: list[ParticipantFeatureSupportModel] = Field(default_factory=list)
     constraints: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -1174,6 +1868,19 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
             "capabilities.participant_runtime.supported_interaction_features",
             self.supported_interaction_features,
         )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_api_407_feature_support(self) -> ParticipantRuntimeCapabilitiesModel:
+        _validate_unique_string_values("feature_support", [entry.feature for entry in self.feature_support])
+        supported_features = set(self.supported_behavior_features) | set(self.supported_interaction_features)
+        for entry in self.feature_support:
+            declared_unsupported = entry.support_level == ParticipantFeatureSupportLevel.UNSUPPORTED
+            if declared_unsupported and entry.feature in supported_features:
+                raise ValueError(
+                    f"feature_support entry '{entry.feature}' declares support_level 'unsupported' but the "
+                    "feature is declared in supported_behavior_features or supported_interaction_features"
+                )
         return self
 
 
@@ -4020,6 +4727,102 @@ class ReferenceModelCatalogModel(ContractModel):
         return json_schema
 
 
+_UCO_NAMESPACE_BASE = "https://ontology.unifiedcyberontology.org/uco/"
+UcoClassName = Annotated[str, Field(pattern=r"^[a-z][a-z0-9]*:[A-Z][A-Za-z0-9]*$")]
+
+
+class UcoAlignmentTypeModel(ContractModel):
+    uco_class: UcoClassName
+    iri: NonEmptyString
+    note: NonEmptyString
+
+    @model_validator(mode="after")
+    def _validate_canonical_iri(self) -> UcoAlignmentTypeModel:
+        prefix, _, local = self.uco_class.partition(":")
+        expected_iri = f"{_UCO_NAMESPACE_BASE}{prefix}/{local}"
+        if self.iri != expected_iri:
+            raise ValueError(
+                f"uco_type iri must equal the canonical UCO IRI {expected_iri} for class "
+                f"{self.uco_class!r}; got {self.iri!r}"
+            )
+        return self
+
+
+class UcoFamilyAlignmentModel(ContractModel):
+    concept_family: ConceptFamilyId
+    provenance: ConceptProvenanceCategory
+    uco_types: list[UcoAlignmentTypeModel] = Field(min_length=1)
+    divergences: list[NonEmptyString]
+
+    @model_validator(mode="after")
+    def _validate_family_alignment(self) -> UcoFamilyAlignmentModel:
+        if self.provenance == ConceptProvenanceCategory.NATIVE:
+            raise ValueError(f"uco alignment family {self.concept_family!r} must be adopted or adapted, not native")
+        if self.provenance == ConceptProvenanceCategory.ADAPTED and not self.divergences:
+            raise ValueError(
+                f"adapted uco alignment family {self.concept_family!r} must enumerate at least one divergence"
+            )
+        if self.provenance == ConceptProvenanceCategory.ADOPTED and self.divergences:
+            raise ValueError(
+                f"adopted uco alignment family {self.concept_family!r} must record an empty divergences list"
+            )
+        uco_classes = [uco_type.uco_class for uco_type in self.uco_types]
+        if len(uco_classes) != len(set(uco_classes)):
+            raise ValueError(f"uco alignment family {self.concept_family!r} must not repeat a uco_class")
+        return self
+
+
+class UcoAlignmentCatalogModel(ContractModel):
+    schema_version: Literal[UCO_ALIGNMENT_SCHEMA_VERSION] = UCO_ALIGNMENT_SCHEMA_VERSION
+    uco_version: NonEmptyString
+    uco_reference: NonEmptyString
+    review_scope: NonEmptyString
+    alignments: dict[NonEmptyString, UcoFamilyAlignmentModel] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _validate_alignment_catalog(self) -> UcoAlignmentCatalogModel:
+        for family_id, alignment in self.alignments.items():
+            if not family_id.strip():
+                raise ValueError("uco alignment family identifiers must be non-empty")
+            if alignment.concept_family != family_id:
+                raise ValueError(
+                    f"uco alignment entry key {family_id!r} must match its concept_family {alignment.concept_family!r}"
+                )
+
+        expected_provenance = _uco_cyber_concept_family_provenance()
+        actual_ids = set(self.alignments)
+        expected_ids = set(expected_provenance)
+        missing = expected_ids - actual_ids
+        unexpected = actual_ids - expected_ids
+        if missing or unexpected:
+            raise ValueError(
+                "uco alignment must cover exactly the adopted/adapted UCO concept families declared in "
+                f"concept-families-v1; missing: {sorted(missing)}; unexpected: {sorted(unexpected)}"
+            )
+
+        for family_id, alignment in self.alignments.items():
+            declared = expected_provenance[family_id]
+            if alignment.provenance.value != declared:
+                raise ValueError(
+                    f"uco alignment provenance for family {family_id!r} is "
+                    f"{alignment.provenance.value!r} but concept-families-v1 declares {declared!r}"
+                )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        alignments_schema = json_schema.get("properties", {}).get("alignments")
+        if isinstance(alignments_schema, dict):
+            alignments_schema.setdefault("propertyNames", {"minLength": 1})
+        return json_schema
+
+
 class ControlledVocabularyTermModel(ContractModel):
     title: NonEmptyString
     description: NonEmptyString
@@ -4173,16 +4976,32 @@ class SemanticProfileModel(ContractModel):
         return self
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
-
-
 @lru_cache(maxsize=1)
 def _authoritative_concept_family_ids() -> frozenset[str]:
-    catalog_path = _repo_root() / "contracts" / "concept-authority" / "concept-families-v1.json"
+    catalog_path = corpus_family_root(CONCEPT_AUTHORITY) / "concept-families-v1.json"
     payload = json.loads(catalog_path.read_text(encoding="utf-8"))
     catalog = ConceptFamilyCatalogModel.model_validate(payload)
     return frozenset(catalog.families)
+
+
+@lru_cache(maxsize=1)
+def _uco_cyber_concept_family_provenance() -> dict[str, str]:
+    """Map each adopted/adapted family whose authority is UCO to its provenance.
+
+    This is the single source of truth for UCO alignment coverage: the
+    ``uco-alignment-v1`` catalog must declare exactly these families, so the
+    cyber-domain family slice is never hard-coded in a second place.
+    """
+
+    catalog_path = corpus_family_root(CONCEPT_AUTHORITY) / "concept-families-v1.json"
+    payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+    catalog = ConceptFamilyCatalogModel.model_validate(payload)
+    return {
+        family_id: family.provenance.value
+        for family_id, family in catalog.families.items()
+        if family.provenance in {ConceptProvenanceCategory.ADOPTED, ConceptProvenanceCategory.ADAPTED}
+        and family.authority == "UCO"
+    }
 
 
 @lru_cache(maxsize=1)
@@ -4210,14 +5029,41 @@ def _resolve_schema_pointer(schema_root: dict[str, Any], pointer: str) -> dict[s
     return current
 
 
+def _collapse_nullable_optional_schema(schema_node: dict[str, Any]) -> dict[str, Any]:
+    """Collapse a nullable-optional ``anyOf`` wrapper to its single non-null branch.
+
+    Pydantic renders an optional reference field (``X | None``) as a two-member
+    ``anyOf`` whose branches are the referenced schema and ``{"type": "null"}``.
+    Reference-model bindings address the underlying structure, so the resolver
+    looks through that wrapper (for example ``nodes.*.runtime``, an optional
+    ``RuntimeConfiguration``). Anything that is not exactly this nullable-optional
+    shape is returned unchanged, so non-optional and non-reference schemas are
+    unaffected.
+    """
+    any_of = schema_node.get("anyOf")
+    if not isinstance(any_of, list) or len(any_of) != 2:
+        return schema_node
+    non_null = [branch for branch in any_of if not (isinstance(branch, dict) and branch.get("type") == "null")]
+    null_branches = [branch for branch in any_of if isinstance(branch, dict) and branch.get("type") == "null"]
+    if len(non_null) == 1 and len(null_branches) == 1 and isinstance(non_null[0], dict):
+        return non_null[0]
+    return schema_node
+
+
 def _resolve_ref_schema(schema_root: dict[str, Any], schema_node: dict[str, Any]) -> dict[str, Any]:
     current = schema_node
-    while "$ref" in current:
-        ref = current["$ref"]
-        if not isinstance(ref, str):
-            raise KeyError(ref)
-        current = _resolve_schema_pointer(schema_root, ref)
-    return current
+    while True:
+        if "$ref" in current:
+            ref = current["$ref"]
+            if not isinstance(ref, str):
+                raise KeyError(ref)
+            current = _resolve_schema_pointer(schema_root, ref)
+            continue
+        collapsed = _collapse_nullable_optional_schema(current)
+        if collapsed is not current:
+            current = collapsed
+            continue
+        return current
 
 
 def _resolve_instance_path_schema(schema_root: dict[str, Any], instance_path: str) -> dict[str, Any]:
@@ -4346,7 +5192,7 @@ def _backend_profile_schema_for_bundle() -> dict[str, Any]:
 
 def _event_stream_schema(title: str, item_schema: dict[str, Any]) -> dict[str, Any]:
     item_schema = dict(item_schema)
-    defs = item_schema.pop("$defs", None)
+    defs = item_schema.pop(_DEFS_KEY, None)
     schema = {
         _JSON_SCHEMA_KEY: _JSON_SCHEMA_DRAFT_2020_12,
         "title": title,
@@ -4354,7 +5200,7 @@ def _event_stream_schema(title: str, item_schema: dict[str, Any]) -> dict[str, A
         "items": item_schema,
     }
     if defs:
-        schema["$defs"] = defs
+        schema[_DEFS_KEY] = defs
     return schema
 
 
@@ -4372,6 +5218,7 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-implementation-provenance-v1": ParticipantImplementationProvenanceModel.model_json_schema(),
         "concept-families-v1": ConceptFamilyCatalogModel.model_json_schema(),
         "reference-models-v1": ReferenceModelCatalogModel.model_json_schema(),
+        "uco-alignment-v1": UcoAlignmentCatalogModel.model_json_schema(),
         "controlled-vocabularies-v1": ControlledVocabularyCatalogModel.model_json_schema(),
         "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
@@ -4403,10 +5250,18 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
             "ParticipantBehaviorHistoryEventStream",
             ParticipantBehaviorHistoryEventModel.model_json_schema(),
         ),
+        "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_json_schema(),
+        "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_json_schema(),
+        "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_json_schema(),
+        "participant-outcome-report-v1": ParticipantOutcomeReportModel.model_json_schema(),
+        "participant-status-view-v1": ParticipantStatusViewModel.model_json_schema(),
+        "participant-history-view-v1": ParticipantHistoryViewModel.model_json_schema(),
+        "participant-context-view-v1": ParticipantContextViewModel.model_json_schema(),
         "operation-receipt-v1": OperationReceiptModel.model_json_schema(),
         "operation-status-v1": OperationStatusModel.model_json_schema(),
     }
     for contract_id, json_schema in bundle.items():
+        _attach_instantiation_invariants(contract_id, json_schema)
         _attach_experiment_datetime_invariants(contract_id, json_schema)
         _attach_json_schema_metadata(contract_id, json_schema)
         _attach_aces_semantic_profile(contract_id, json_schema)
@@ -4488,6 +5343,7 @@ __all__ = [
     "EvaluationResultStateModel",
     "EVALUATION_STATE_SCHEMA_VERSION",
     "EvaluatorCapabilitiesModel",
+    "EventClassificationModel",
     "InstantiationRequestModel",
     "OPERATION_SCHEMA_VERSION",
     "OperationReceiptModel",
@@ -4505,19 +5361,38 @@ __all__ = [
     "ParticipantAttributionEvidenceBasisModel",
     "ParticipantAttributionOrderingBasisModel",
     "ParticipantBehaviorHistoryEventModel",
+    "ParticipantContextViewModel",
     "ParticipantEpisodeHistoryEventModel",
     "ParticipantEpisodeStateModel",
     "ParticipantExposurePolicyModel",
+    "ParticipantFeatureSupportLevel",
+    "ParticipantFeatureSupportModel",
+    "ParticipantHistoryViewBehaviorEventModel",
+    "ParticipantHistoryViewEpisodeEventModel",
+    "ParticipantHistoryViewModel",
     "ParticipantImplementationCapabilitiesModel",
     "ParticipantImplementationCompatibilityModel",
     "ParticipantImplementationManifestModel",
     "ParticipantImplementationProvenanceModel",
     "ParticipantImplementationSelectionModel",
+    "ParticipantLifecycleEventModel",
+    "ParticipantObservationEnvelopeModel",
+    "ParticipantObservationLossDescriptorModel",
+    "ParticipantObservationStochasticContextModel",
     "ParticipantOutcomeInterpretationRecordModel",
+    "ParticipantOutcomeReportModel",
+    "ParticipantOutcomeReportSourceModel",
+    "ParticipantOutcomeReportStateRelationshipModel",
     "ParticipantOutcomeSourceRecordModel",
     "ParticipantOutcomeTargetRecordModel",
+    "ParticipantRuntimeBaseEnvelopeModel",
     "ParticipantRuntimeCapabilitiesModel",
+    "ParticipantSharedStateAccessModel",
+    "ParticipantSharedStateRecordModel",
+    "ParticipantStatusViewEpisodeStateModel",
+    "ParticipantStatusViewModel",
     "ParticipantTemporalRuntimeContextModel",
+    "VIEW_SCOPE_PROJECTED_FIELDS",
     "PlanOperationModel",
     "ProcessorFeature",
     "PROCESSOR_MANIFEST_V2_SCHEMA_VERSION",
@@ -4526,6 +5401,8 @@ __all__ = [
     "ProcessorCapabilitiesV2Model",
     "ProvisionerCapabilitiesModel",
     "ProvisioningPlanModel",
+    "RawDataIntegrityModel",
+    "RealizationProvenanceEntryModel",
     "RealizationSupportDeclarationModel",
     "RealizationSupportMode",
     "ReferenceModelCatalogModel",
@@ -4541,6 +5418,12 @@ __all__ = [
     "SemanticProfileModel",
     "SemanticProfilePhaseModel",
     "SnapshotEntryModel",
+    "SourcePipelineModel",
+    "SourceStatusModel",
+    "UcoAlignmentCatalogModel",
+    "UcoAlignmentTypeModel",
+    "UcoFamilyAlignmentModel",
+    "UCO_ALIGNMENT_SCHEMA_VERSION",
     "WorkflowCancellationRequestModel",
     "WORKFLOW_CANCELLATION_REQUEST_SCHEMA_VERSION",
     "WorkflowExecutionStateModel",

@@ -2,7 +2,7 @@
 
 ## Status
 
-proposed
+accepted
 
 ## Date
 
@@ -44,14 +44,19 @@ stochastic, or not reported to ACES at all.
 
 The design therefore needs a runtime-observable lifecycle, not a required
 participant-internal loop. The primary lineage reinforces that boundary:
-Gymnasium, PettingZoo, OpenSpiel, CybORG, CyberBattleSim, and CyGIL expose
-actions, observations, rewards or returns, legal-action spaces or masks,
-termination/truncation, episode control, possible/live/active-agent and
-current-actor state, chance nodes, mean-field updates, and multi-agent
-interaction without requiring access to private agent internals. OpenSpiel's
-information-state discipline
-reinforces that observation, action-observation history, and perfect recall are
-separate claims. Lamport clocks, HLA time management, Time Warp, DEVS, and FMI
+Gymnasium, PettingZoo, CybORG, CyberBattleSim, and CyGIL expose actions,
+observations, rewards or returns, action masks, termination/truncation,
+episode control, and possible/live/active-agent and current-actor state
+without requiring access to private agent internals; OpenSpiel additionally
+exposes legal-action surfaces, explicit chance nodes, mean-field game states,
+and the information-state discipline that keeps observation,
+action-observation history, and perfect recall separate claims. The
+underlying theory predates these frameworks — chance moves and perfect
+recall are extensive-form game theory (Kuhn), information states over local
+histories are runs-and-systems epistemics (Fagin, Halpern, Moses, and
+Vardi), and mean-field interaction is mean-field game theory (Huang, Caines,
+and Malhamé; Lasry and Lions). Lamport clocks, vector clocks (Fidge;
+Mattern; Schwarz and Mattern), HLA time management, Time Warp, DEVS, and FMI
 separate timestamp, ordering, causality, pacing, synchronization, lookahead,
 rollback, and realization. OCSF, STIX, CACAO, OpenC2, and CALDERA show that
 portable event and command semantics need typed envelopes, identity,
@@ -643,8 +648,9 @@ plane.
 
 ## Non-Goals
 
-- Implementing participant runtime contracts, schemas, APIs, backends, or
-  storage.
+- Completing every participant runtime contract, schema, API, backend, or
+  storage surface beyond the subsets already published by the RUN-305 and
+  backend-facing contract work.
 - Adding new SDL participant syntax.
 - Replacing ADR-013 participant episode lifecycle semantics.
 - Replacing ADR-022 participant behavior and interaction semantics.
@@ -657,3 +663,9 @@ plane.
 - Defining a full archival study-management system beyond the runtime fields
   needed to preserve participant history, shared-state evidence, and benchmark
   reproducibility claims.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-13 | #484 | Recorded acceptance-time non-goal wording for already-published RUN-305 and backend-facing contract subsets. |

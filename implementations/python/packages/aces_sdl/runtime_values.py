@@ -9,6 +9,7 @@ from typing import Any
 from ._base import (
     is_variable_ref,
     parse_bool_or_var,
+    parse_enum_or_var,
 )
 
 _BYTE_UNITS = {
@@ -30,14 +31,11 @@ _RAM_PATTERN = re.compile(
 _RAM_MIN_BYTES_ERROR = "RAM must be >= 1 byte"
 _WINDOWS_NAMED_PIPE_PREFIXES = ("\\\\.\\pipe\\", "\\\\?\\pipe\\")
 
-# Identifier-shape tokens used to detect secret-bearing setting names, not
-# secrets themselves; the string-concatenation / ``noqa: S105`` markers silence
-# bandit without dressing each line up as actual credential material. This is
-# the de-duplicated union of every per-family token set that previously drifted
-# across runtime_database, runtime_dns, runtime_directory_identity,
-# runtime_mail_service, and runtime_security_monitoring. A setting whose name
-# matches one of these may not carry a raw value regardless of how the submitter
-# classified it.
+# Identifier-shape tokens used to identify names that may benefit from advisory
+# sensitivity defaults. They are not a validation rule: SDL values are scenario
+# realization facts unless the author explicitly classifies them as withheld.
+# The string-concatenation / ``noqa: S105`` markers silence bandit without
+# dressing each line up as actual credential material.
 SECRET_NAME_TOKENS: tuple[str, ...] = (
     "access_key",
     "access_token",  # noqa: S105
@@ -63,31 +61,74 @@ SECRET_NAME_TOKENS: tuple[str, ...] = (
     "privatekey",
     "pwd",
     "refresh_token",  # noqa: S105
+    "rndc.key",
     "sasl_passwd",
     "sasl_password",  # noqa: S105
     "sec" + "ret",
     "shared_key",
+    "ssh_" + "key",
     "supplementalcredentials",
     "token",
     "tsig",
+    "update_key",
 )
-# Whole-word parts (alnum-split) that independently mark a name as secret-bearing
-# even when no token is a substring (sourced from runtime_dns).
+# Whole alphanumeric parts that can conservatively mark compound names as
+# credential-like for advisory consumers. Reference, metadata, and public-key
+# context exclusions below keep this from labeling key fingerprints, key-file
+# paths, or scalar key facts as credential material.
 SECRET_NAME_PARTS: frozenset[str] = frozenset({"key"})
+SECRET_NAME_REFERENCE_PARTS: frozenset[str] = frozenset(
+    {
+        "file",
+        "filepath",
+        "filename",
+        "fingerprint",
+        "path",
+    }
+)
+SECRET_NAME_METADATA_PARTS: frozenset[str] = frozenset(
+    {
+        "bits",
+        "bytes",
+        "count",
+        "len",
+        "length",
+        "size",
+    }
+)
+PUBLIC_KEY_CONTEXT_PARTS: frozenset[str] = frozenset({"gpg", "pgp", "public"})
+
+
+def _name_parts(normalized_name: str) -> tuple[str, ...]:
+    return tuple(part for part in re.split(r"[^a-z0-9]+", normalized_name) if part)
+
+
+def _names_secret_reference_or_metadata(normalized_name: str, parts: tuple[str, ...]) -> bool:
+    if not parts:
+        return False
+    if parts[-1] in SECRET_NAME_REFERENCE_PARTS | SECRET_NAME_METADATA_PARTS:
+        return True
+    return normalized_name.endswith("keyfile")
+
+
+def _names_public_key_context(parts: tuple[str, ...]) -> bool:
+    return len(parts) >= 2 and parts[-1] == "key" and parts[-2] in PUBLIC_KEY_CONTEXT_PARTS
 
 
 def name_indicates_secret(name: str) -> bool:
-    """Return whether a setting name suggests secret-bearing content.
+    """Return whether a setting name looks credential-bearing.
 
-    A name is secret-bearing when any :data:`SECRET_NAME_TOKENS` entry is a
-    substring (after lowercasing and normalizing ``-`` to ``_``) or when its
-    alphanumeric-split parts intersect :data:`SECRET_NAME_PARTS`.
+    This helper is advisory. It does not impose raw-value omission: SDL runtime
+    values are scenario content unless their explicit classification says they
+    are withheld.
     """
     lowered = name.lower().replace("-", "_")
+    parts = _name_parts(lowered)
+    if _names_secret_reference_or_metadata(lowered, parts) or _names_public_key_context(parts):
+        return False
     if any(token in lowered for token in SECRET_NAME_TOKENS):
         return True
-    parts = frozenset(part for part in re.split(r"[^a-z0-9]+", lowered) if part)
-    return bool(parts & SECRET_NAME_PARTS)
+    return bool(frozenset(parts) & SECRET_NAME_PARTS)
 
 
 def _has_raw_value(value: object) -> bool:
@@ -109,36 +150,21 @@ def _classification_in(value: object, candidates: Iterable[object]) -> bool:
     return any(value == candidate or value_label == _classification_label(candidate) for candidate in candidates)
 
 
-def _format_classification_set(values: Iterable[object]) -> str:
-    labels = tuple(_classification_label(value) for value in values)
-    if not labels:
-        return "a permitted classification"
-    if len(labels) == 1:
-        return f"'{labels[0]}'"
-    if len(labels) == 2:
-        return f"'{labels[0]}' or '{labels[1]}'"
-    return ", ".join(f"'{label}'" for label in labels[:-1]) + f", or '{labels[-1]}'"
-
-
 def enforce_observed_value_redaction(
     *,
     owner_label: str,
-    name: object,
     value: object,
     classification: object,
     redacted_classifications: tuple[object, ...],
-    classification_field: str,
     raw_value_label: str = "raw value",
-    secret_name_classifications: tuple[object, ...] | None = None,
-    raw_secret_name_classifications: tuple[object, ...] = (),
     redacted_raw_message: str | None = None,
 ) -> None:
-    """Validate the shared runtime observed-value secret/redaction invariant.
+    """Validate explicit redaction classifications for runtime observed values.
 
-    The helper covers only the common policy: a redacted/operator-secret
-    classification omits raw data, and a concrete secret-bearing name may carry
-    raw data only for explicitly allowed fixture classifications. Family models
-    still own their ids, scopes, refs, provenance enums, and closed lattices.
+    SDL runtime values are scenario-realization facts. A name that resembles a
+    secret does not by itself force omission; only an explicit redacted or
+    operator-secret classification withholds raw data. Family models still own
+    their ids, scopes, refs, provenance enums, and closed lattices.
     """
     has_raw = _has_raw_value(value)
     if has_raw and _classification_in(classification, redacted_classifications):
@@ -147,18 +173,6 @@ def enforce_observed_value_redaction(
         raise ValueError(
             f"{owner_label} classified '{_classification_label(classification)}' must omit its {raw_value_label}"
         )
-    if isinstance(name, str) and not is_variable_ref(name) and name_indicates_secret(name):
-        if has_raw:
-            if _classification_in(classification, raw_secret_name_classifications):
-                return
-            raise ValueError(f"{owner_label} carries a secret-bearing name and must omit its {raw_value_label}")
-        if is_variable_ref(classification):
-            return
-        allowed = secret_name_classifications or redacted_classifications
-        if not _classification_in(classification, allowed):
-            expected = _format_classification_set(allowed)
-            raise ValueError(f"{owner_label} carries a secret-bearing name; {classification_field} must be {expected}")
-        return
 
 
 def require_symbol(value: str, *, field_name: str) -> str:
@@ -212,18 +226,7 @@ def control_interface_path_or_var(value: str, *, field_name: str) -> str:
 
 
 def parse_runtime_enum_or_var(value: Any, enum_cls: type[Enum], *, field_name: str):
-    if value is None or is_variable_ref(value):
-        return value
-    if isinstance(value, enum_cls):
-        return value
-    if isinstance(value, str):
-        normalized = value.lower().replace("-", "_")
-        try:
-            return enum_cls(normalized)
-        except ValueError as e:
-            allowed = ", ".join(member.value for member in enum_cls)
-            raise ValueError(f"{field_name} must be one of: {allowed}") from e
-    raise ValueError(f"{field_name} must be a string")
+    return parse_enum_or_var(value, enum_cls, field_name=field_name)
 
 
 def parse_optional_bool_or_var(value: Any, *, field_name: str) -> bool | str | None:
@@ -238,8 +241,37 @@ def coerce_string_list(value: Any):
     return value
 
 
+def require_non_empty(value: str, *, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} must be a non-empty string")
+    return value
+
+
 def validate_absolute_paths(values: list[str], *, field_name: str) -> list[str]:
     return [absolute_path_or_var(value, field_name=field_name) for value in values]
+
+
+def reject_duplicates(
+    values: Iterable[object],
+    *,
+    label: str,
+    container_label: str,
+    duplicate_template: str = "Duplicate {label} '{value}' in {container_label}",
+    skip_empty: bool = True,
+) -> None:
+    """Raise on the first repeated value in ``values``.
+
+    Most runtime child-id checks ignore optional empty refs, while a few service
+    namespaces validate all values. ``skip_empty`` keeps that policy explicit at
+    each call site.
+    """
+    seen: set[object] = set()
+    for value in values:
+        if skip_empty and (value is None or value == ""):
+            continue
+        if value in seen:
+            raise ValueError(duplicate_template.format(label=label, value=value, container_label=container_label))
+        seen.add(value)
 
 
 def parse_ram(value: str | int) -> int | str:

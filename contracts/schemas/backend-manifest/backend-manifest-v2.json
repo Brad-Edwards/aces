@@ -300,6 +300,81 @@
       "title": "OrchestratorCapabilitiesModel",
       "type": "object"
     },
+    "ParticipantFeatureSupportLevel": {
+      "description": "ADR-054 guarantee-strength scale for per-feature participant runtime support.",
+      "enum": [
+        "unsupported",
+        "disclosed_weak",
+        "bounded",
+        "exact"
+      ],
+      "title": "ParticipantFeatureSupportLevel",
+      "type": "string"
+    },
+    "ParticipantFeatureSupportModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "support_level": {
+                "enum": [
+                  "unsupported",
+                  "disclosed_weak",
+                  "bounded"
+                ]
+              }
+            },
+            "required": [
+              "support_level"
+            ]
+          },
+          "then": {
+            "properties": {
+              "disclosure_refs": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "disclosure_refs"
+            ]
+          }
+        }
+      ],
+      "description": "API-407 per-feature participant runtime support declaration.",
+      "properties": {
+        "constraint_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Constraint Refs",
+          "type": "array"
+        },
+        "disclosure_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Disclosure Refs",
+          "type": "array"
+        },
+        "feature": {
+          "minLength": 1,
+          "title": "Feature",
+          "type": "string"
+        },
+        "support_level": {
+          "$ref": "#/$defs/ParticipantFeatureSupportLevel"
+        }
+      },
+      "required": [
+        "feature",
+        "support_level"
+      ],
+      "title": "ParticipantFeatureSupportModel",
+      "type": "object"
+    },
     "ParticipantRuntimeCapabilitiesModel": {
       "additionalProperties": false,
       "description": "Participant-episode lifecycle capability block (RUN-311).\n\nA backend that declares this block advertises that it implements\nthe full participant episode control surface on the\n``ParticipantRuntime`` protocol: ``initialize`` / ``reset`` /\n``restart`` / ``terminate`` plus ``status`` / ``results`` /\n``history``. Consumers of the manifest can infer the\n``FULL_REMOTE_CONTROL_PLANE`` conformance profile from this block.\n\nAPI-405 support dimensions live here because they are backend apparatus\nclaims: which participant roles, behavior features, and interaction\nfeatures this participant runtime can actually realize.",
@@ -310,6 +385,13 @@
           },
           "title": "Constraints",
           "type": "object"
+        },
+        "feature_support": {
+          "items": {
+            "$ref": "#/$defs/ParticipantFeatureSupportModel"
+          },
+          "title": "Feature Support",
+          "type": "array"
         },
         "name": {
           "minLength": 1,
@@ -677,7 +759,11 @@
           "evaluation-history-event-stream-v1",
           "participant-episode-state-envelope-v1",
           "participant-episode-history-event-stream-v1",
-          "participant-behavior-history-event-stream-v1"
+          "participant-behavior-history-event-stream-v1",
+          "participant-lifecycle-event-v1",
+          "participant-observation-envelope-v1",
+          "participant-shared-state-record-v1",
+          "participant-outcome-report-v1"
         ],
         "minLength": 1,
         "type": "string"

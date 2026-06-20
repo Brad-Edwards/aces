@@ -30,6 +30,7 @@ from .runtime_values import (
     coerce_string_list,
     parse_optional_bool_or_var,
     parse_runtime_enum_or_var,
+    require_non_empty,
     require_symbol,
 )
 
@@ -183,12 +184,6 @@ class RuntimeFileServiceAccessOutcome(str, Enum):
     OTHER = "other"
 
 
-def _require_non_empty(value: str, *, field_name: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{field_name} must be a non-empty string")
-    return value
-
-
 def _reject_duplicate_local_ref_ids(service: "RuntimeFileService") -> None:
     seen: dict[str, str] = {}
     entries: list[tuple[str, str]] = [("file_service_id", service.file_service_id)]
@@ -232,7 +227,7 @@ class RuntimeFileServiceShare(SDLModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="share name")
+        return require_non_empty(v, field_name="share name")
 
     @field_validator("kind", mode="before")
     @classmethod
@@ -300,7 +295,7 @@ class RuntimeFileServicePrincipal(SDLModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        return _require_non_empty(v, field_name="principal name")
+        return require_non_empty(v, field_name="principal name")
 
     @field_validator("kind", mode="before")
     @classmethod
@@ -359,7 +354,7 @@ class RuntimeFileServiceAccessRule(SDLModel):
     @field_validator("subject_ref", "resource_ref")
     @classmethod
     def validate_refs(cls, v: str, info: ValidationInfo) -> str:
-        return _require_non_empty(v, field_name=info.field_name)
+        return require_non_empty(v, field_name=info.field_name)
 
     @field_validator("action", mode="before")
     @classmethod
@@ -401,7 +396,7 @@ class RuntimeFileServiceAccessObservation(SDLModel):
     @field_validator("subject_ref", "resource_ref")
     @classmethod
     def validate_refs(cls, v: str, info: ValidationInfo) -> str:
-        return _require_non_empty(v, field_name=info.field_name)
+        return require_non_empty(v, field_name=info.field_name)
 
     @field_validator("action", mode="before")
     @classmethod

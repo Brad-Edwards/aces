@@ -140,6 +140,10 @@ uv run aces-mcp
 - [MITRE CALDERA](https://github.com/mitre/caldera)
 - [Atomic Red Team](https://github.com/redcanaryco/atomic-red-team)
 
+For a dimension-by-dimension comparison against these systems — what ACES
+expresses that they do not, and where they still lead ACES — see
+[Related-Work Comparison](docs/explain/sdl/related-work-comparison.md).
+
 ## Documentation
 
 The documentation source is under [`docs/`](docs/). Important entry points:
@@ -186,6 +190,14 @@ The Python package currently declares its version in
 [`implementations/python/pyproject.toml`](implementations/python/pyproject.toml).
 Release notes are collated from towncrier fragments in
 [`changelog.d/`](changelog.d/). Do not hand-edit `CHANGELOG.md`.
+
+Published JSON Schemas use versioned contract identifiers such as
+`sdl-authoring-input-v1`, but the suffix is not the same as a stability promise.
+The authoritative schema publication manifest records each schema's `draft` or
+`stable` stability class and canonical content hash. Current checked-in schemas
+are draft until a maintainer explicitly promotes them; stable breaking changes
+must mint a new schema version as described in
+[ADR-061](docs/decisions/adrs/adr-061-published-schema-evolution-policy.md).
 
 ## Maintainers
 

@@ -190,12 +190,6 @@ _ENV_REDACTED_CLASSIFICATIONS = (
     RuntimeEnvironmentValueClassification.REDACTED,
     RuntimeEnvironmentValueClassification.OPERATOR_SECRET,
 )
-_ENV_SECRET_NAME_CLASSIFICATIONS = (
-    RuntimeEnvironmentValueClassification.REDACTED,
-    RuntimeEnvironmentValueClassification.OPERATOR_SECRET,
-    RuntimeEnvironmentValueClassification.SECRET_FIXTURE,
-)
-_ENV_RAW_SECRET_NAME_CLASSIFICATIONS = (RuntimeEnvironmentValueClassification.SECRET_FIXTURE,)
 
 
 class RuntimeEnvironmentVariableProvenance(str, Enum):
@@ -264,14 +258,10 @@ class RuntimeEnvironmentVariable(SDLModel):
     def validate_redacted_value(self) -> "RuntimeEnvironmentVariable":
         enforce_observed_value_redaction(
             owner_label=f"runtime environment variable '{self.name}'",
-            name=self.name,
             value=self.value,
             classification=self.value_classification,
             redacted_classifications=_ENV_REDACTED_CLASSIFICATIONS,
-            classification_field="value_classification",
             raw_value_label="value",
-            secret_name_classifications=_ENV_SECRET_NAME_CLASSIFICATIONS,
-            raw_secret_name_classifications=_ENV_RAW_SECRET_NAME_CLASSIFICATIONS,
         )
         return self
 

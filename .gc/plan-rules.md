@@ -13,8 +13,16 @@ These encode the hard rules previously in `AGENTS.md` prose.
   already contain a UID such as `GOV-918`.
 - Plans MUST NOT add new authority-bearing artifacts outside `specs/`,
   `contracts/`, `docs/`, and `implementations/`.
-- Plans MUST NOT edit `contracts/schemas/` directly; change generator
-  inputs and regenerate.
+- Plans that change a published schema under `contracts/schemas/` (the
+  hand-governed normative authority per ADR-009 §7) MUST record a
+  contract-facing change-ledger entry (`last_change`: summary + content hash)
+  in `contracts/schema-publication-manifest.json`, and a plan that **removes**
+  a published schema MUST record a `removed_schemas` tombstone (schema path +
+  summary) in the same manifest. Plans MUST keep the reference implementation
+  (`schema_bundle()`) generating an identical bundle so
+  `tools/check_generated_schemas.py` passes. The published schema is the
+  authority; a generator/Python edit alone is NOT authorization for a schema
+  change.
 - Plans MUST NOT add new implementation logic to
   `implementations/python/src/aces/`; that tree is compatibility-only
   wrappers.

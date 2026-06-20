@@ -1738,13 +1738,14 @@ class TestRuntimeIdentityAuthorities:
         assert authority.policies[0].applies_to_refs == ["techvault-domain"]
         assert authority.policies[0].settings[0].values == ["14"]
 
-    def test_runtime_identity_secret_bearing_attribute_rejects_raw_values(self):
-        with pytest.raises(ValidationError, match="secret-bearing"):
-            RuntimeIdentityAttribute(
-                name="unicodePwd",
-                values=["not-for-fixtures"],
-                value_classification="plain",
-            )
+    def test_runtime_identity_secret_named_attribute_accepts_scenario_values(self):
+        attribute = RuntimeIdentityAttribute(
+            name="unicodePwd",
+            values=["not-for-fixtures"],
+            value_classification="plain",
+        )
+
+        assert attribute.values == ["not-for-fixtures"]
 
     def test_runtime_identity_attribute_accepts_observation_provenance(self):
         attr = RuntimeIdentityAttribute(name="misp_role", values=["admin"], provenance="runtime_created")
@@ -3538,9 +3539,10 @@ class TestRuntimeDnsService:
         assert rrset.records[0].rdata == "1 . alpn=h2,h3"
 
     @pytest.mark.parametrize("name", ["tsig_secret", "api_key", "update_key", "rndc.key", "key"])
-    def test_dns_secret_bearing_setting_must_omit_raw_value(self, name):
-        with pytest.raises(ValidationError, match="must omit its raw value"):
-            DnsRuntimeSetting(name=name, value="base64secret", value_classification="plain")
+    def test_dns_secret_named_setting_accepts_scenario_value(self, name):
+        setting = DnsRuntimeSetting(name=name, value="base64secret", value_classification="plain")
+
+        assert setting.value == "base64secret"
 
     def test_dns_setting_secret_name_detection_is_boundary_aware(self):
         setting = DnsRuntimeSetting(name="keyboard_layout", value="us", value_classification="plain")
@@ -3771,18 +3773,17 @@ class TestRuntimeDatabaseService:
             "service_credential",
         ],
     )
-    def test_secret_bearing_name_must_omit_value_regardless_of_classification(self, secret_name):
-        # Defaulting value_classification to 'unknown' must not let plaintext
-        # secrets through (the cycle-2 codex finding).
-        with pytest.raises(ValidationError, match="must omit its raw value"):
-            DatabaseSetting(name=secret_name, value="leak")
+    def test_secret_bearing_name_preserves_value_regardless_of_classification(self, secret_name):
+        setting = DatabaseSetting(name=secret_name, value="leak")
 
-    def test_secret_bearing_name_with_empty_value_still_requires_redacted_classification(self):
-        with pytest.raises(ValidationError, match="value_classification must be 'redacted' or 'operator_secret'"):
-            DatabaseSetting(name="password", value_classification="plain")
+        assert setting.value == "leak"
+
+    def test_secret_bearing_name_with_empty_value_allows_plain_classification(self):
+        setting = DatabaseSetting(name="password", value_classification="plain")
+
+        assert setting.value_classification == RuntimeSensitivityClassification.PLAIN
 
     def test_secret_bearing_name_with_variable_classification_is_skipped(self):
-        # ${var} classification is deferred to instantiation revalidation.
         setting = DatabaseSetting(name="password", value_classification="${CLS}")
         assert setting.value_classification == "${CLS}"
 

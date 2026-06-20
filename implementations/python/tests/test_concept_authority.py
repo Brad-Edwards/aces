@@ -20,9 +20,14 @@ from pydantic import ValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CATALOG_PATH = REPO_ROOT / "contracts" / "concept-authority" / "concept-families-v1.json"
+CONTROLLED_VOCABULARY_PATH = REPO_ROOT / "contracts" / "concept-authority" / "controlled-vocabularies-v1.json"
 FIXTURES_ROOT = REPO_ROOT / "contracts" / "fixtures"
 VALID_DIR = FIXTURES_ROOT / "concept-authority" / "concept-families-v1" / "valid"
 INVALID_DIR = FIXTURES_ROOT / "concept-authority" / "concept-families-v1" / "invalid"
+EPISODE_CONTRACT_TERM_IDS = {
+    "participant-episode-history-event-stream-v1",
+    "participant-episode-state-envelope-v1",
+}
 
 
 def _native_family_payload() -> dict[str, object]:
@@ -264,6 +269,57 @@ def test_authoritative_catalog_native_families_have_no_authority_metadata():
             assert family.non_ambiguity_constraints, (
                 f"Native family '{family_id}' should declare non-ambiguity constraints"
             )
+
+
+def test_authoritative_catalog_declares_episode_family():
+    payload = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    model = ConceptFamilyCatalogModel.model_validate(payload)
+
+    episode_family = model.families["episodes"]
+    assert episode_family.provenance == ConceptProvenanceCategory.NATIVE
+    assert episode_family.authority is None
+    assert episode_family.authority_reference is None
+    assert "participant runtime episode identity" in episode_family.extension_scope
+
+    relation_rules = " ".join(episode_family.relation_rules).lower()
+    for related_concept in ("task", "run", "scenario"):
+        assert related_concept in relation_rules
+
+    non_ambiguity_constraints = " ".join(episode_family.non_ambiguity_constraints).lower()
+    for forbidden_synonym in ("task", "run", "observable", "action"):
+        assert forbidden_synonym in non_ambiguity_constraints
+
+
+def test_authoritative_catalog_declares_runtime_inventory_family():
+    payload = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    model = ConceptFamilyCatalogModel.model_validate(payload)
+
+    runtime_family = model.families["runtime-inventory"]
+    assert runtime_family.provenance == ConceptProvenanceCategory.NATIVE
+    assert runtime_family.authority is None
+    assert runtime_family.authority_reference is None
+    assert "nodes.*.runtime" in runtime_family.extension_scope
+
+    relation_rules = " ".join(runtime_family.relation_rules).lower()
+    for related_concept in ("assets", "observables"):
+        assert related_concept in relation_rules
+
+    # Inventory fields are observed/declared node state, not actions or events.
+    non_ambiguity_constraints = " ".join(runtime_family.non_ambiguity_constraints).lower()
+    assert "action" in non_ambiguity_constraints
+    assert "event" in non_ambiguity_constraints
+
+
+def test_episode_contract_terms_have_catalog_family_anchor():
+    catalog_payload = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    vocabulary_payload = json.loads(CONTROLLED_VOCABULARY_PATH.read_text(encoding="utf-8"))
+    catalog = ConceptFamilyCatalogModel.model_validate(catalog_payload)
+
+    participant_contract_terms = set(
+        vocabulary_payload["vocabularies"]["participant-implementation-contracts"]["terms"]
+    )
+    assert participant_contract_terms >= EPISODE_CONTRACT_TERM_IDS
+    assert "episodes" in catalog.families
 
 
 def test_valid_fixture_passes_validation():

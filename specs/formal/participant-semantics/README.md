@@ -48,8 +48,13 @@ What is missing:
 - no participant-local outcome interpretation layer relating action/episode
   outcomes to objectives, workflows, evaluations, rewards, and evidence
 
-The repository is therefore correctly at `partial` design coverage after this
-artifact, and not at implementation coverage.
+The repository therefore remains at `partial` participant-semantics coverage
+where runtime implementation slices are incomplete. Issue #487 adds
+`implementations/python/tests/test_participant_semantics_invariant_oracle.py`
+as the executable FM-2 assurance artifact for the abstract model invariants
+`I1` through `I18`: it is implementation evidence for the published invariant
+oracle, not a claim that every staged SEM-208 through SEM-215 runtime contract
+is complete.
 
 ## Primary-Source Review
 
@@ -82,19 +87,84 @@ observation stream is not the environment state. Local history and belief matter
 when interpreting behavior.
 
 Littman's Markov games and the Dec-POMDP/POSG literature generalize this to
-multi-agent interaction. Bernstein, Zilberstein, and Immerman show that
-decentralized control under partial observability is fundamentally harder than
-centralized MDP/POMDP control. ACES should not pretend that one global state and
-one global observation stream are enough for multi-participant experiments.
+multi-agent interaction. Bernstein, Givan, Immerman, and Zilberstein
+(Mathematics of Operations Research, 2002) show that decentralized control
+under partial observability is fundamentally harder than centralized MDP/POMDP
+control. Oliehoek and Amato's Dec-POMDP monograph fixes the standard vocabulary
+ACES reuses for joint policies, action-observation histories, and information
+states. ACES should not pretend that one global state and one global
+observation stream are enough for multi-participant experiments.
+
+Mean-field game theory — Huang, Caines, and Malhamé (2006) and Lasry and Lions
+(2007), brought to MARL by Yang et al. (2018) — covers the population-limit
+regime where individual interaction is replaced by interaction with a
+population distribution. ACES's runtime layer records mean-field updates as
+environment state over a population scope, not as hidden participant actions;
+this lineage is why population-distribution disclosure is a first-class runtime
+record in `specs/formal/participant-runtime/`.
+
+### Knowledge, Information Structure, And Information Flow
+
+Fagin, Halpern, Moses, and Vardi's interpreted-systems framework gives the
+formal basis for participant-relative information: an agent's knowledge at a
+point is determined by indistinguishability over its local state across global
+runs. ACES's view relation `V_p,t`, local history `H_p,t`, and the
+visible-history indistinguishability relation in
+`specs/formal/participant-runtime/` are interpreted-systems constructions, not
+ad hoc bookkeeping.
+
+Dynamic epistemic logic (Baltag, Moss, and Solecki's announcement logics; van
+Ditmarsch, van der Hoek, and Kooi's treatment) models information change as
+explicit epistemic actions. This is the lineage for SEM-210's time-indexed
+`view_transition` discipline: discovery, inference, disclosure, concealment,
+and deception are recorded transition events that update a participant's view
+relation, never silent side effects of topology or scheduling.
+
+Kuhn's extensive-form game analysis (1953) is the original formal source for
+information sets and perfect recall. Perfect recall is a property of an
+information partition; a runtime claim that a participant history satisfies it
+therefore needs a constructive, checkable witness over the visible projection.
+The participant-runtime specification defines that witness; this document only
+records the obligation.
+
+Goguen and Meseguer's noninterference (1982) gives the information-flow reading
+of the hidden-truth boundary (I2): hidden world state and adjudication assets
+must be noninterfering with participant-visible projections in the absence of
+an explicit disclosure rule. Sabelfeld and Sands' declassification dimensions
+(2009) frame ACES disclosure rules as governed declassification policies: every
+permitted release of hidden information declares what is released, where in the
+view relation, when (the transition anchor), and by whose authority.
+
+### Action Languages And Planning Formalisms
+
+The precondition/effect/failure discipline in SEM-211 descends from the
+planning literature. STRIPS (Fikes and Nilsson, 1971) introduced the
+precondition/add/delete action model; PDDL standardized typed action schemata
+with explicit preconditions and effects (Haslum et al.'s language introduction
+is the consolidated reference); PDDL2.1 (Fox and Long, 2003) added durative
+actions, temporal preconditions/effects, and numeric resources — the direct
+ancestors of ACES temporal preconditions and resource preconditions; PPDDL
+(Younes et al., 2005) and RDDL (Sanner, 2010) added probabilistic effects and
+stochastic transition models, the lineage for ACES's non-deterministic effect
+and `unknown_effect` classes.
+
+ACES action contracts deliberately exceed this lineage: planning formalisms do
+not carry visibility effects, evidence expectations, realization profiles,
+fidelity claims, or mapping-loss labels, and they assume a closed-world effect
+axiomatization that a cyber range cannot honestly claim. ACES therefore fails
+closed on unresolved preconditions instead of assuming closed-world frame
+axioms, and treats declared effect classes as disclosure obligations rather
+than complete world models.
 
 ### Cyber Agent Environments
 
 [CybORG](https://arxiv.org/abs/2108.09118) is the closest cyber-agent precedent.
 It defines scenarios with agents, action spaces, observations, rewards, and
-reset; it also supports simulation and emulation. Its reported sim-to-emulation
-transfer failures are directly relevant: an agent can overfit to an observation
-artifact that does not exist in the emulator. ACES must therefore record
-observation provenance and realized backend disclosure, not just action results.
+reset; it also supports simulation and emulation. The sim-to-emulation transfer
+failures reported in the results discussion of Standen et al. (2021) are
+directly relevant: an agent can overfit to an observation artifact that does
+not exist in the emulator. ACES must therefore record observation provenance
+and realized backend disclosure, not just action results.
 
 [CyberBattleSim](https://www.microsoft.com/en-us/research/project/cyberbattlesim/)
 shows the value and limits of abstract cyber-network simulation. It is useful
@@ -102,11 +172,12 @@ for studying automated agents, but its high-level abstraction reinforces the
 need to disclose which action/effect/observation semantics are realized rather
 than assuming simulation results transfer to operational environments.
 
-[CyGIL's unified emulation/simulation training design](https://arxiv.org/abs/2304.01244)
-is relevant because it derives simulation transitions from emulated traces,
-preserving the same action space across the sim-to-real loop. It motivates
-ACES's requirement that action and observation contracts survive across backend
-fidelity modes.
+[CyGIL](https://arxiv.org/abs/2109.03331) and its follow-on
+[unified emulation-simulation training environment](https://arxiv.org/abs/2304.01244)
+are relevant because the unified design derives simulation transitions from
+emulated traces, preserving the same action space across the sim-to-real loop.
+They motivate ACES's requirement that action and observation contracts survive
+across backend fidelity modes.
 
 CyGIL also exposes a negative design lesson: an abstract action such as
 "network discovery" is too coarse to transfer honestly to a real or emulated
@@ -203,6 +274,29 @@ Lamport's happened-before relation establishes the key warning: distributed
 systems have partial ordering, and physical timestamps alone are not the same as
 causal ordering.
 
+Lamport's scalar clocks only respect causality in one direction; they cannot
+prove that two events are causally unrelated. Fidge (1988) and Mattern (1989)
+introduced vector time, which characterizes the causal partial order exactly,
+and Schwarz and Mattern (1994) survey what causal claims each clock mechanism
+can and cannot support. This distinction is load-bearing for ACES: any
+`VectorClock` ordering basis in the runtime layer claims the stronger
+characterization and therefore needs the Fidge/Mattern lineage, not just
+Lamport's.
+
+Winskel's event structures and Mazurkiewicz's trace theory provide the
+true-concurrency semantics behind ACES's realized-order model: a record of
+"what happened" in a concurrent run is a labelled partial order with explicit
+simultaneity/independence structure, not a single forced interleaving. This is
+why ACES joint-action records carry partial orders and simultaneity groups
+instead of a backend-chosen total order presented as ground truth.
+
+Formal temporal contracts also have direct precedent: Allen's interval algebra
+(1983) for window and interval relations, Koymans' metric temporal logic (1990)
+for deadline/latency bounds, and Alur and Dill's timed automata (1994) for
+machine-checkable real-time behavior. SEM-213's schedule, cadence, deadline,
+dwell, and time-window contracts are bounded fragments of these formalisms with
+declared time domains and clock authorities.
+
 HLA time-management literature, Time Warp, DEVS, SimPy scheduling, ROS 2 clock
 design, ns-3 realtime mode, and FMI all reinforce that clock authority, time
 domain, advancement, pacing, synchronization, and event ordering are separate
@@ -217,7 +311,11 @@ semantics around those events.
 Halpern and Pearl's structural-model causality motivates the attribution rule
 in this spec: an observed alert after an action is not automatically caused by
 that action. Causal claims require an evidence basis and, for strong claims, a
-counterfactual or intervention model.
+counterfactual or intervention model. Chockler and Halpern's structural-model
+treatment of responsibility and blame (2004) extends this to the
+multi-participant case SEM-212 must handle: when several actions jointly
+produce an effect, attribution edges need graded responsibility semantics, not
+a single binary cause label.
 
 ### DSL Evaluation And Language Critique
 
@@ -541,6 +639,47 @@ examples, negative fixtures, and compiled contracts. Issue #346 tracks this as
 a dedicated DSL language-evaluation evidence gate; this document only records
 the participant-semantics obligation.
 
+## Executable Invariant Oracle
+
+`implementations/python/tests/test_participant_semantics_invariant_oracle.py`
+is the executable oracle for the abstract model above. The oracle defines a
+test-local `ParticipantProgression` model for episode, action, observation,
+attribution, outcome, realization, provenance, lifecycle, mapping-loss, and
+language-evaluation surfaces. Its `INVARIANTS` catalog maps each spec invariant
+to a stable heading in this document and to the predicate that executes it.
+
+The mapping is checked in both directions:
+
+- the test suite extracts this README's `### I*` headings and requires them to
+  match the oracle catalog exactly;
+- every catalog entry stores the corresponding spec heading and requirement
+  slice references;
+- Hypothesis-generated valid progressions must satisfy every cataloged
+  invariant;
+- each invariant has a targeted mutation factory that produces at least one
+  rejected counterexample.
+
+| Spec invariant | Oracle predicate |
+| --- | --- |
+| `I1` | `_i1_role_neutral` |
+| `I2` | `_i2_hidden_truth_boundary` |
+| `I3` | `_i3_observation_projection` |
+| `I4` | `_i4_fail_closed_action_applicability` |
+| `I5` | `_i5_explicit_side_effects` |
+| `I6` | `_i6_explicit_interaction_semantics` |
+| `I7` | `_i7_temporal_domain_separation` |
+| `I8` | `_i8_ordering_before_causality` |
+| `I9` | `_i9_evidence_labeled_attribution` |
+| `I10` | `_i10_outcome_layer_separation` |
+| `I11` | `_i11_realization_disclosure` |
+| `I12` | `_i12_fidelity_claim_separation` |
+| `I13` | `_i13_observation_apparatus_disclosure` |
+| `I14` | `_i14_external_mapping_loss_labels` |
+| `I15` | `_i15_run_and_study_provenance` |
+| `I16` | `_i16_content_and_contract_lifecycle` |
+| `I17` | `_i17_benchmark_leakage_and_holdout_discipline` |
+| `I18` | `_i18_language_evaluation_obligation` |
+
 ## SEM-208 - Participant Behavior Semantics
 
 `SEM-208` requires explicit semantics for participant actions, observations,
@@ -577,7 +716,7 @@ Current implementation artifacts for the `SEM-208` slice:
 - `implementations/python/packages/aces_sdl/participant_behavior.py` defines
   typed action contracts and observation boundaries;
 - `implementations/python/packages/aces_sdl/semantics/participant_behavior.py`
-  and `implementations/python/packages/aces_sdl/validator.py` fail closed on
+  and `implementations/python/packages/aces_sdl/validator/` fail closed on
   unbound action-contract and observation-boundary references;
 - `implementations/python/packages/aces_processor/compiler.py` maps authored
   participants to compiled participant action, observation, and behavior
@@ -620,7 +759,7 @@ Current implementation artifacts for the `SEM-209` slice:
   interaction classes, target references, related actions, and shared-state
   references on action contracts;
 - `implementations/python/packages/aces_sdl/semantics/participant_behavior.py`
-  and `implementations/python/packages/aces_sdl/validator.py` fail closed on
+  and `implementations/python/packages/aces_sdl/validator/` fail closed on
   unbound related actions, interaction targets, and shared-state references;
 - `implementations/python/packages/aces_processor/compiler.py` carries declared
   interaction classes and shared-state references into compiled participant
@@ -691,7 +830,7 @@ Current implementation artifacts for the `SEM-210` slice:
   observation-boundary hidden, observable, and evidence-only reference
   separation;
 - `implementations/python/packages/aces_sdl/semantics/participant_behavior.py`
-  and `implementations/python/packages/aces_sdl/validator.py` continue to
+  and `implementations/python/packages/aces_sdl/validator/` continue to
   fail closed on unbound participant observation-boundary references, view-rule
   references, and view-transition evidence references;
 - `implementations/python/packages/aces_processor/compiler.py` carries hidden,
@@ -925,13 +1064,21 @@ Implementation artifacts:
 
 The complete participant surface is `FM3`.
 
-Future implementation PRs should include:
+Delivered executable assurance artifact:
 
-- invariant lists for each child UID;
+- `implementations/python/tests/test_participant_semantics_invariant_oracle.py`
+  provides the FM-2 invariant oracle for `I1` through `I18`, including
+  property-based valid episode/action/observation/outcome progressions and
+  invariant-specific rejecting mutations.
+
+Future implementation PRs should still include:
+
+- child UID invariant refinements that specialize the abstract `I1` through
+  `I18` oracle for concrete runtime slices;
 - typed IR or published contracts for actions, observations, visibility,
   attribution, temporal clauses, and outcomes;
-- abstract state-machine coverage for episode/action/observation/outcome
-  progression;
+- runtime-integrated abstract state-machine coverage for
+  episode/action/observation/outcome progression;
 - machine-checkable action, observation, visibility, failure, temporal,
   attribution, and outcome semantics; prose-only definitions are insufficient
   for conformance;
@@ -987,9 +1134,24 @@ Future implementation PRs should include:
 - [PettingZoo](https://papers.nips.cc/paper/2021/hash/7ed2d3454c5eea71148b11d0c25104ff-Abstract.html)
 - [OpenSpiel](https://arxiv.org/abs/1908.09453)
 - [Planning and Acting in Partially Observable Stochastic Domains](https://people.smp.uq.edu.au/YoniNazarathy/Control4406_2014/resources/KaelblingLittmanCassandra1998.pdf)
-- [The Complexity of Decentralized Control of Markov Decision Processes](https://arxiv.org/abs/1301.3836)
+- [Bernstein, Givan, Immerman, Zilberstein — The Complexity of Decentralized Control of Markov Decision Processes (Mathematics of Operations Research 27(4), 2002)](https://doi.org/10.1287/moor.27.4.819.297)
+- [Oliehoek and Amato — A Concise Introduction to Decentralized POMDPs (Springer, 2016)](https://doi.org/10.1007/978-3-319-28929-8)
+- [Kuhn — Extensive Games and the Problem of Information (Contributions to the Theory of Games II, 1953)](https://doi.org/10.1515/9781400881970-012)
+- [Fagin, Halpern, Moses, Vardi — Reasoning About Knowledge (MIT Press, 1995)](https://mitpress.mit.edu/9780262562003/reasoning-about-knowledge/)
+- [van Ditmarsch, van der Hoek, Kooi — Dynamic Epistemic Logic (Springer, 2007)](https://doi.org/10.1007/978-1-4020-5839-4)
+- [Goguen and Meseguer — Security Policies and Security Models (IEEE S&P, 1982)](https://doi.org/10.1109/SP.1982.10014)
+- [Sabelfeld and Sands — Declassification: Dimensions and Principles (Journal of Computer Security 17(5), 2009)](https://doi.org/10.3233/JCS-2009-0352)
+- [Huang, Caines, Malhamé — Large Population Stochastic Dynamic Games (Communications in Information and Systems 6(3), 2006)](https://doi.org/10.4310/CIS.2006.v6.n3.a5)
+- [Lasry and Lions — Mean Field Games (Japanese Journal of Mathematics 2, 2007)](https://doi.org/10.1007/s11537-007-0657-8)
+- [Yang et al. — Mean Field Multi-Agent Reinforcement Learning (ICML, 2018)](https://arxiv.org/abs/1802.05438)
+- [Fikes and Nilsson — STRIPS (Artificial Intelligence 2, 1971)](https://doi.org/10.1016/0004-3702(71)90010-5)
+- [Haslum, Lipovetzky, Magazzeni, Muise — An Introduction to the Planning Domain Definition Language (Morgan & Claypool, 2019)](https://doi.org/10.2200/S00900ED2V01Y201902AIM042)
+- [Fox and Long — PDDL2.1: An Extension to PDDL for Expressing Temporal Planning Domains (JAIR 20, 2003)](https://doi.org/10.1613/jair.1129)
+- [Younes, Littman, Weissman, Asmuth — The First Probabilistic Track of the International Planning Competition (JAIR 24, 2005)](https://doi.org/10.1613/jair.1880)
+- [Sanner — Relational Dynamic Influence Diagram Language (RDDL): Language Description (2010)](https://users.cecs.anu.edu.au/~ssanner/IPPC_2011/RDDL.pdf)
 - [CybORG](https://arxiv.org/abs/2108.09118)
-- [CyGIL unified emulation-simulation training](https://arxiv.org/abs/2304.01244)
+- [CyGIL: A Cyber Gym for Training Autonomous Agents over Emulated Network Systems](https://arxiv.org/abs/2109.03331)
+- [Unified Emulation-Simulation Training Environment for Autonomous Cyber Agents](https://arxiv.org/abs/2304.01244)
 - [CyberBattleSim](https://www.microsoft.com/en-us/research/project/cyberbattlesim/)
 - [Cybench](https://arxiv.org/abs/2408.08926)
 - [AutoPenBench](https://arxiv.org/abs/2410.03225)
@@ -1000,13 +1162,22 @@ Future implementation PRs should include:
 - [CyRIS](https://www.jaist.ac.jp/~razvan/publications/cyris_facilitating_training.pdf)
 - [Automated Cyber Range Design](https://arxiv.org/abs/2307.04416)
 - [Open Cyber Range SDL](https://documentation.opencyberrange.ee/docs/sdl/)
-- [CRACK: Building next generation Cyber Ranges](https://iris.imtlucca.it/handle/20.500.11771/15672)
+- [Russo, Costa, Armando — Building Next Generation Cyber Ranges with CRACK (Computers & Security 95, 2020)](https://doi.org/10.1016/j.cose.2020.101837)
 - [CACAO Security Playbooks v2.0](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.pdf)
 - [OCSF](https://ocsf.io/)
 - [MITRE ATT&CK Design and Philosophy](https://www.mitre.org/news-insights/publication/mitre-attck-design-and-philosophy)
 - [CALDERA planning and acting with unknowns](https://www.mitre.org/sites/default/files/2021-11/prs-18-0944-1-automated-adversary-emulation-planning-acting.pdf)
 - [Halpern and Pearl, structural-model causality](https://arxiv.org/abs/cs/0011012)
+- [Chockler and Halpern — Responsibility and Blame: A Structural-Model Approach (JAIR 22, 2004)](https://doi.org/10.1613/jair.1391)
 - [Lamport, Time, Clocks, and the Ordering of Events](https://systems.cs.columbia.edu/ds2-class/papers/lamport-time.pdf)
-- [IEEE HLA 1516 family](https://standards.ieee.org/ieee/1516/3744/)
+- [Fidge — Timestamps in Message-Passing Systems That Preserve the Partial Ordering (Australian Computer Science Communications 10(1), 1988)](https://fileadmin.cs.lth.se/cs/Personal/Amr_Ergawy/dist-algos-papers/4.pdf)
+- [Mattern — Virtual Time and Global States of Distributed Systems (Parallel and Distributed Algorithms, 1989)](https://www.vs.inf.ethz.ch/publ/papers/VirtTimeGlobStates.pdf)
+- [Schwarz and Mattern — Detecting Causal Relationships in Distributed Computations: In Search of the Holy Grail (Distributed Computing 7(3), 1994)](https://doi.org/10.1007/BF02277859)
+- [Winskel — Event Structures (Advances in Petri Nets, 1986)](https://doi.org/10.1007/3-540-17906-2_31)
+- [Mazurkiewicz — Trace Theory (Advances in Petri Nets, 1986)](https://doi.org/10.1007/3-540-17906-2_30)
+- [Allen — Maintaining Knowledge about Temporal Intervals (CACM 26(11), 1983)](https://doi.org/10.1145/182.358434)
+- [Koymans — Specifying Real-Time Properties with Metric Temporal Logic (Real-Time Systems 2, 1990)](https://doi.org/10.1007/BF01995674)
+- [Alur and Dill — A Theory of Timed Automata (Theoretical Computer Science 126, 1994)](https://doi.org/10.1016/0304-3975(94)90010-8)
+- [IEEE Std 1516-2010 — High Level Architecture: Framework and Rules](https://standards.ieee.org/ieee/1516/3744/)
 - [SISO Cyber DEM](https://cdn.ymaws.com/www.sisostandards.org/resource/resmgr/standards_products/siso-std-025-2023_cyberdem.pdf)
 - [Do Software Languages Engineers Evaluate their Languages?](https://arxiv.org/abs/1109.6794)

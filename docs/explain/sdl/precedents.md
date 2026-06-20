@@ -18,25 +18,31 @@ The SDL does not borrow every concern from the same place. In practice:
 So the source tables below explain both where a section's author-facing shape
 comes from and, where needed, which systems inform its execution semantics.
 
+Each source table adds a **Borrowed** column marking whether ACES took the
+source's *syntax* (the author-facing shape, keys, or structure), its *semantics*
+(the meaning or runtime behavior), or *both*. Where a row is ambiguous, the cell
+names which part was adopted and which was not. The "Deliberate Omissions" table
+is not a borrowing table and carries no such column.
+
 ## Core Structure (from Open Cyber Range SDL)
 
 The 14 base sections start from the [OCR SDL](https://github.com/Open-Cyber-Range/SDL-parser) v0.21.2 surface and are adapted into Python/Pydantic. This repository aims for coverage parity across the adopted OCR concepts while remaining its own SDL; when behavior diverges or OCR's own sources disagree, this document states repository behavior explicitly instead of making clone-level compatibility claims. The OCR SDL was developed by the Norwegian Cyber Range (CR14/NTNU).
 
 
-| SDL Element                | OCR Source                | Changes                                             |
-| -------------------------- | ------------------------- | --------------------------------------------------- |
-| Scenario                   | `Scenario` struct         | Added SDL extension fields                          |
-| Node (VM/Switch)           | `Node`, `VM`, `Switch`    | Added `os`, `os_version`, `services`, `asset_value` |
-| Resources                  | `Resources`               | Human-readable RAM parsing via Python               |
-| Role                       | `Role`                    | Direct port                                         |
-| InfraNode                  | `InfraNode`               | Added `acls`, `internal` flag                       |
-| Feature                    | `Feature`                 | Direct port                                         |
-| Condition                  | `Condition`               | Added `timeout`, `retries`, `start_period`          |
-| Vulnerability              | `Vulnerability`           | Direct port                                         |
-| Metric/Evaluation/TLO/Goal | OCR scoring pipeline      | Direct port                                         |
-| Entity                     | `Entity` + OCR entity surface | Direct port, including OCR fact maps            |
-| Inject/Event/Script/Story  | OCR orchestration         | Direct port                                         |
-| Source                     | `Source` (name + version) | Made provider-neutral                               |
+| SDL Element | OCR Source | Borrowed | Changes |
+| -------------------------- | ------------------------- | --- | --------------------------------------------------- |
+| Scenario | `Scenario` struct | Syntax | Added SDL extension fields |
+| Node (VM/Switch) | `Node`, `VM`, `Switch` | Syntax | Added `os`, `os_version`, `services`, `asset_value` |
+| Resources | `Resources` | Syntax | Human-readable RAM parsing via Python |
+| Role | `Role` | Syntax | Direct port |
+| InfraNode | `InfraNode` | Syntax | Added `acls`, `internal` flag |
+| Feature | `Feature` | Syntax | Direct port |
+| Condition | `Condition` | Both | Added `timeout`, `retries`, `start_period` |
+| Vulnerability | `Vulnerability` | Syntax | Direct port |
+| Metric/Evaluation/TLO/Goal | OCR scoring pipeline | Both | Direct port |
+| Entity | `Entity` + OCR entity surface | Both | Direct port, including OCR fact maps |
+| Inject/Event/Script/Story | OCR orchestration | Both | Direct port |
+| Source | `Source` (name + version) | Syntax | Made provider-neutral |
 
 
 ## Extensions by Source
@@ -44,14 +50,14 @@ The 14 base sections start from the [OCR SDL](https://github.com/Open-Cyber-Rang
 ### From CybORG CAGE Challenge
 
 
-| SDL Element             | CybORG Source                               | What We Adapted                               |
-| ----------------------- | ------------------------------------------- | --------------------------------------------- |
-| `Agent`                 | `Agents:` section (Scenario YAML)           | Actions, starting sessions, reward calculator |
-| `InitialKnowledge`      | `INT:` (Initial Network Topology)           | Known hosts and subnets at start              |
-| `Agent.allowed_subnets` | `AllowedSubnets:`                           | Network scope constraints                     |
-| `AssetValue`            | `ConfidentialityValue`, `AvailabilityValue` | Extended to CIA triad                         |
-| `ACLRule`               | `Subnets.NACLs`                             | Simplified from nested dict to flat rule list |
-| `Objective.agent/actions` | Agent identity + action space             | Objective actor binding and optional action subset validation |
+| SDL Element | CybORG Source | Borrowed | What We Adapted |
+| ----------------------- | ------------------------------------------- | --- | --------------------------------------------- |
+| `Agent` | `Agents:` section (Scenario YAML) | Both | Actions, starting sessions, reward calculator |
+| `InitialKnowledge` | `INT:` (Initial Network Topology) | Semantics | Known hosts and subnets at start |
+| `Agent.allowed_subnets` | `AllowedSubnets:` | Both | Network scope constraints |
+| `AssetValue` | `ConfidentialityValue`, `AvailabilityValue` | Semantics | Extended to CIA triad |
+| `ACLRule` | `Subnets.NACLs` | Both | Simplified from nested dict to flat rule list |
+| `Objective.agent/actions` | Agent identity + action space | Semantics | Objective actor binding and optional action subset validation |
 
 
 ### From Newer Participant And Benchmark Ecosystems
@@ -61,14 +67,14 @@ ecosystem surfaces. In many cases they are precedents for concerns the
 requirements recognize even when the current SDL syntax does not expose the
 full shape directly.
 
-| Concern | Primary Sources | What We Adapted |
-| ------- | --------------- | --------------- |
-| Participant decision surfaces and role-scoped observations | OpenRange episode/runtime model | Participant-visible decision context is treated as a first-class concern distinct from hidden truth assets and internal apparatus state |
-| Control-context assets (instructions, directives, policies) | OpenRange prompt modes, agent-oriented benchmark/task systems | Execution-guiding context is modeled as a participant concern without binding the ecosystem to one prompting or policy framework |
-| Trajectories, replay assets, and demonstration corpora | OpenRange training data, Open Thoughts Agent, Open Trajectory Gym | Stepwise participant interaction records are first-class experiment artifacts rather than incidental logs |
-| Benchmark protocols, judges, verifiers, and rewards | OpenBench, Open Trajectory Gym, agent benchmark systems | Tasks, protocols, and evaluation components are treated as distinct experiment objects rather than hidden harness details |
-| Hidden truth assets and adjudication surfaces | OpenRange private references, benchmark hidden tests/gold standards | Public task statements are kept distinct from hidden benchmark assets and adjudication material |
-| Swappable participant implementations | Agent benchmark stacks, provider/model-selectable eval systems | Concrete agent/policy/script/human-control implementations are treated as apparatus surfaces distinct from SDL roles, processors, and backends |
+| Concern | Primary Sources | Borrowed | What We Adapted |
+| ------- | --------------- | --- | --------------- |
+| Participant decision surfaces and role-scoped observations | OpenRange episode/runtime model | Semantics | Participant-visible decision context is treated as a first-class concern distinct from hidden truth assets and internal apparatus state |
+| Control-context assets (instructions, directives, policies) | OpenRange prompt modes, agent-oriented benchmark/task systems | Semantics | Execution-guiding context is modeled as a participant concern without binding the ecosystem to one prompting or policy framework |
+| Trajectories, replay assets, and demonstration corpora | OpenRange training data, Open Thoughts Agent, Open Trajectory Gym | Semantics | Stepwise participant interaction records are first-class experiment artifacts rather than incidental logs |
+| Benchmark protocols, judges, verifiers, and rewards | OpenBench, Open Trajectory Gym, agent benchmark systems | Semantics | Tasks, protocols, and evaluation components are treated as distinct experiment objects rather than hidden harness details |
+| Hidden truth assets and adjudication surfaces | OpenRange private references, benchmark hidden tests/gold standards | Semantics | Public task statements are kept distinct from hidden benchmark assets and adjudication material |
+| Swappable participant implementations | Agent benchmark stacks, provider/model-selectable eval systems | Semantics | Concrete agent/policy/script/human-control implementations are treated as apparatus surfaces distinct from SDL roles, processors, and backends |
 
 
 ### Participant Semantics Theory
@@ -77,19 +83,19 @@ Issue #71 adds a formal participant-semantics design in
 `specs/formal/participant-semantics/` and ADR-022. These precedents inform that
 design without becoming the ACES runtime API or authoring syntax.
 
-| Concern | Primary Sources | What We Adapted |
-| ------- | --------------- | --------------- |
-| Single-agent episode interface | [OpenAI Gym](https://arxiv.org/abs/1606.01540), [Gymnasium](https://arxiv.org/abs/2407.17032) | Actions, observations, rewards, reset, termination, and truncation are explicit semantic concepts rather than incidental adapter methods |
-| Multi-agent environment ordering | [PettingZoo](https://arxiv.org/abs/2009.14471), [OpenSpiel](https://arxiv.org/abs/1908.09453), Markov-game literature | Per-participant histories and information structure are first-class; joint behavior is not collapsed into one global action stream |
-| Partial observability and local history | POMDP, Dec-POMDP, POSG, and imperfect-information game literature | Participant-visible state is a projection with history, uncertainty, latency, and disclosure basis, not world truth |
-| Cyber-specific action/observation discipline | [CybORG](https://arxiv.org/abs/2108.09118), [CyberBattleSim](https://www.microsoft.com/en-us/research/project/cyberbattlesim/), [CyGIL](https://arxiv.org/abs/2304.01244) | Action/effect/observation semantics must disclose simulation, emulation, and realization assumptions instead of assuming transfer across fidelity modes |
-| Adversary behavior under uncertainty | [CALDERA planning and acting](https://www.mitre.org/sites/default/files/2021-11/prs-18-0944-1-automated-adversary-emulation-planning-acting.pdf), [MITRE ATT&CK design](https://www.mitre.org/news-insights/publication/mitre-attck-design-and-philosophy) | Cyber actions may change foothold, knowledge, detection surface, and downstream outcomes; technique labels do not replace action contracts |
-| Causality and temporal ordering | [Lamport ordering](https://systems.cs.columbia.edu/ds2-class/papers/lamport-time.pdf), [Halpern-Pearl structural causality](https://arxiv.org/abs/cs/0011012), HLA time management | Attribution edges require explicit ordering and evidence support; timestamp adjacency is not a causal claim |
-| Checkable scenario semantics | [VSDL](https://arxiv.org/abs/2001.06681), [CRACK](https://iris.imtlucca.it/handle/20.500.11771/15672), [CyRIS](https://www.jaist.ac.jp/~razvan/publications/cyris_facilitating_training.pdf) | Participant semantics inherit the requirement for executable contracts and conformance tests, while staying separate from topology/deployment generation |
-| Agent benchmark task structure | [Cybench](https://arxiv.org/abs/2408.08926), [AutoPenBench](https://arxiv.org/abs/2410.03225) | Task descriptions, starter files, evaluators, subtasks, gold steps, and milestones are treated as participant-view and outcome-interpretation inputs rather than hidden harness details |
-| Integrated adversarial evaluation | [CAIBench](https://arxiv.org/abs/2510.24317) | Offensive, defensive, privacy, and cyber-physical capabilities require role-neutral multi-participant semantics and outcome layers richer than final score |
-| Benchmark validity and overfitting controls | [AI Agents That Matter](https://arxiv.org/abs/2407.01502), [Benchmarking Practices in LLM-driven Offensive Security](https://arxiv.org/abs/2504.10112) | Run/study provenance, holdout discipline, scaffold disclosure, hidden assets, baselines, and cost/resource traces are experimental-instrumentation concerns |
-| DSL language adequacy and evaluation | [Do Software Languages Engineers Evaluate their Languages?](https://arxiv.org/abs/1109.6794), [When and How to Develop Domain-Specific Languages](https://doi.org/10.1145/1118890.1118892), [Domain-Specific Languages: A Systematic Mapping Study](https://doi.org/10.1016/j.infsof.2015.11.001) | Issue #346 treats expressiveness, usability, effectiveness, maintainability, ambiguity, and domain-expert reviewability as evidence-gated language claims |
+| Concern | Primary Sources | Borrowed | What We Adapted |
+| ------- | --------------- | --- | --------------- |
+| Single-agent episode interface | [OpenAI Gym](https://arxiv.org/abs/1606.01540), [Gymnasium](https://arxiv.org/abs/2407.17032) | Semantics | Actions, observations, rewards, reset, termination, and truncation are explicit semantic concepts rather than incidental adapter methods |
+| Multi-agent environment ordering | [PettingZoo](https://arxiv.org/abs/2009.14471), [OpenSpiel](https://arxiv.org/abs/1908.09453), Markov-game literature | Semantics | Per-participant histories and information structure are first-class; joint behavior is not collapsed into one global action stream |
+| Partial observability and local history | POMDP, Dec-POMDP, POSG, and imperfect-information game literature | Semantics | Participant-visible state is a projection with history, uncertainty, latency, and disclosure basis, not world truth |
+| Cyber-specific action/observation discipline | [CybORG](https://arxiv.org/abs/2108.09118), [CyberBattleSim](https://www.microsoft.com/en-us/research/project/cyberbattlesim/), [CyGIL](https://arxiv.org/abs/2304.01244) | Semantics | Action/effect/observation semantics must disclose simulation, emulation, and realization assumptions instead of assuming transfer across fidelity modes |
+| Adversary behavior under uncertainty | [CALDERA planning and acting](https://www.mitre.org/sites/default/files/2021-11/prs-18-0944-1-automated-adversary-emulation-planning-acting.pdf), [MITRE ATT&CK design](https://www.mitre.org/news-insights/publication/mitre-attck-design-and-philosophy) | Semantics | Cyber actions may change foothold, knowledge, detection surface, and downstream outcomes; technique labels do not replace action contracts |
+| Causality and temporal ordering | [Lamport ordering](https://systems.cs.columbia.edu/ds2-class/papers/lamport-time.pdf), [Halpern-Pearl structural causality](https://arxiv.org/abs/cs/0011012), HLA time management | Semantics | Attribution edges require explicit ordering and evidence support; timestamp adjacency is not a causal claim |
+| Checkable scenario semantics | [VSDL](https://arxiv.org/abs/2001.06681), [CRACK](https://iris.imtlucca.it/handle/20.500.11771/15672), [CyRIS](https://www.jaist.ac.jp/~razvan/publications/cyris_facilitating_training.pdf) | Semantics | Participant semantics inherit the requirement for executable contracts and conformance tests, while staying separate from topology/deployment generation |
+| Agent benchmark task structure | [Cybench](https://arxiv.org/abs/2408.08926), [AutoPenBench](https://arxiv.org/abs/2410.03225) | Semantics | Task descriptions, starter files, evaluators, subtasks, gold steps, and milestones are treated as participant-view and outcome-interpretation inputs rather than hidden harness details |
+| Integrated adversarial evaluation | [CAIBench](https://arxiv.org/abs/2510.24317) | Semantics | Offensive, defensive, privacy, and cyber-physical capabilities require role-neutral multi-participant semantics and outcome layers richer than final score |
+| Benchmark validity and overfitting controls | [AI Agents That Matter](https://arxiv.org/abs/2407.01502), [Benchmarking Practices in LLM-driven Offensive Security](https://arxiv.org/abs/2504.10112) | Semantics | Run/study provenance, holdout discipline, scaffold disclosure, hidden assets, baselines, and cost/resource traces are experimental-instrumentation concerns |
+| DSL language adequacy and evaluation | [Do Software Languages Engineers Evaluate their Languages?](https://arxiv.org/abs/1109.6794), [When and How to Develop Domain-Specific Languages](https://doi.org/10.1145/1118890.1118892), [Domain-Specific Languages: A Systematic Mapping Study](https://doi.org/10.1016/j.infsof.2015.11.001) | Semantics | Issue #346 treats expressiveness, usability, effectiveness, maintainability, ambiguity, and domain-expert reviewability as evidence-gated language claims |
 
 For the `SEM-209` implementation slice, ACES represents framework-neutral
 joint-action declarations and realized-order provenance. PettingZoo/OpenSpiel
@@ -101,10 +107,10 @@ shared-state references without making framework/tool APIs the SDL authority.
 ### From CyRIS
 
 
-| SDL Element | CyRIS Source                              | What We Adapted                                   |
-| ----------- | ----------------------------------------- | ------------------------------------------------- |
-| `Content`   | `copy_content`, `emulate_traffic_capture` | Generalized to file/dataset/directory types       |
-| `Account`   | `add_account`, `modify_account`           | Preserved host account-placement lineage; ACES-specific account metadata such as groups, password strength, SPN, and auth method are extensions, not CyRIS-derived directory semantics |
+| SDL Element | CyRIS Source | Borrowed | What We Adapted |
+| ----------- | ----------------------------------------- | --- | ------------------------------------------------- |
+| `Content` | `copy_content`, `emulate_traffic_capture` | Semantics | Generalized to file/dataset/directory types |
+| `Account` | `add_account`, `modify_account` | Semantics | Preserved host account-placement lineage; ACES-specific account metadata such as groups, password strength, SPN, and auth method are extensions, not CyRIS-derived directory semantics |
 
 
 ### From Identity, Directory, And Access-Control Sources
@@ -113,14 +119,14 @@ The `runtime.identity_authorities` surface is a neutral runtime inventory
 surface. It borrows concepts from standards and literature, but does not adopt
 one provider schema as the SDL schema.
 
-| SDL Element | Source Class | What We Adapted |
-| ----------- | ------------ | --------------- |
-| `RuntimeIdentityAuthority` | LDAP/X.500 naming contexts, Kerberos realms, SAML/OIDC issuers, SCIM/IAM tenants, NIST SP 800-63C-4 federation guidance | An authority boundary with stable ACES id plus observed namespace facts such as domain, realm, issuer, tenant, and base DN; all authority-local stable ids share one namespace |
-| `RuntimeIdentityService` | LDAP/Kerberos/SAML/OIDC/SCIM/IAM protocol endpoints and same-node `Node.services` transport bindings | Protocol/API endpoint inventory without treating the endpoint as the directory contents |
-| `RuntimeIdentitySubject` | LDAP entries, SCIM Users/Groups, AD users/groups/computers/service principals, SAML/OIDC subjects/clients, IAM roles/applications | Identity-bearing subjects with stable ACES ids, observed names/principals, provider identifiers as data, and bounded attributes |
-| `RuntimeIdentityPolicy` | NIST SP 800-162 ABAC, RBAC, group policy, Kerberos/domain policy, conditional-access/MFA policy concepts | Portable policy records with `applies_to_refs` rather than provider-specific policy-object cloning |
-| `RuntimeIdentityRelationship` | Access matrix/RBAC relationship concepts, directory membership, trust/federation/delegation/sync/ownership relations, BloodHound/OpenGraph node-edge analysis | Typed local authority edges with stable ids, usable by top-level relationship/objective refs and later attack-graph translation |
-| Attribute and setting value classification | OCSF/UCO sensitivity/evidence posture, repository runtime sensitivity vocabulary | Secret-bearing identity values are redacted/classified rather than copied into SDL fixtures or diagnostics |
+| SDL Element | Source Class | Borrowed | What We Adapted |
+| ----------- | ------------ | --- | --------------- |
+| `RuntimeIdentityAuthority` | LDAP/X.500 naming contexts, Kerberos realms, SAML/OIDC issuers, SCIM/IAM tenants, NIST SP 800-63C-4 federation guidance | Semantics | An authority boundary with stable ACES id plus observed namespace facts such as domain, realm, issuer, tenant, and base DN; all authority-local stable ids share one namespace |
+| `RuntimeIdentityService` | LDAP/Kerberos/SAML/OIDC/SCIM/IAM protocol endpoints and same-node `Node.services` transport bindings | Semantics | Protocol/API endpoint inventory without treating the endpoint as the directory contents |
+| `RuntimeIdentitySubject` | LDAP entries, SCIM Users/Groups, AD users/groups/computers/service principals, SAML/OIDC subjects/clients, IAM roles/applications | Semantics | Identity-bearing subjects with stable ACES ids, observed names/principals, provider identifiers as data, and bounded attributes |
+| `RuntimeIdentityPolicy` | NIST SP 800-162 ABAC, RBAC, group policy, Kerberos/domain policy, conditional-access/MFA policy concepts | Semantics | Portable policy records with `applies_to_refs` rather than provider-specific policy-object cloning |
+| `RuntimeIdentityRelationship` | Access matrix/RBAC relationship concepts, directory membership, trust/federation/delegation/sync/ownership relations, BloodHound/OpenGraph node-edge analysis | Semantics | Typed local authority edges with stable ids, usable by top-level relationship/objective refs and later attack-graph translation |
+| Attribute and setting value classification | OCSF/UCO sensitivity/evidence posture, repository runtime sensitivity vocabulary | Semantics | Secret-bearing identity values are redacted/classified rather than copied into SDL fixtures or diagnostics |
 
 This surface depends on industry standards for protocol/object terminology and
 on academic/security literature for the subject-policy-authority separation.
@@ -133,13 +139,13 @@ counterpart: it models the in-app authorization store of search clusters,
 key-value stores, dashboards, and platforms, distinct from the wire-protocol
 directory above and from database engine GRANTs.
 
-| SDL Element | Source Class | What We Adapted |
-| ----------- | ------------ | --------------- |
-| `RuntimeAppAuthorization` | Ferraiolo/Kuhn RBAC, Sandhu et al. RBAC96, ANSI INCITS 359 | An application-internal authorization store with a stable ACES id and an open `resource_vocabulary` spine discriminator; tier placement is derived from the referencing spine, not declared |
-| `RuntimeAppAuthorizationPrincipal` | OpenSearch/Elasticsearch security users, Cassandra `system_auth`, Redis ACL users, dashboard/platform accounts | Users, service accounts, API keys, and backend roles with reserved/hidden flags and a `credential_classification` only — no raw bcrypt hash, API key, or password |
-| `RuntimeAppAuthorizationGrant` | RBAC96 / ANSI INCITS 359 permission-assignment, NIST SP 800-162 ABAC resource-scoping | The defining resource-scoped grant: role reference → actions → resource patterns with an allow/deny effect and a `resource_kind` that is the single author-settable resource vocabulary |
-| `RuntimeAppAuthorizationRoleMapping` | OpenSearch backend-role mappings, directory-to-local role bindings | Bindings of backend roles, users, or hosts onto a local role |
-| `RuntimeAppAuthorizationTenant` | OpenSearch/Kibana tenants, platform namespace scopes | Namespace/tenancy scopes within the authorization store |
+| SDL Element | Source Class | Borrowed | What We Adapted |
+| ----------- | ------------ | --- | --------------- |
+| `RuntimeAppAuthorization` | Ferraiolo/Kuhn RBAC, Sandhu et al. RBAC96, ANSI INCITS 359 | Semantics | An application-internal authorization store with a stable ACES id and an open `resource_vocabulary` spine discriminator; tier placement is derived from the referencing spine, not declared |
+| `RuntimeAppAuthorizationPrincipal` | OpenSearch/Elasticsearch security users, Cassandra `system_auth`, Redis ACL users, dashboard/platform accounts | Semantics | Users, service accounts, API keys, and backend roles with reserved/hidden flags and a `credential_classification` only — no raw bcrypt hash, API key, or password |
+| `RuntimeAppAuthorizationGrant` | RBAC96 / ANSI INCITS 359 permission-assignment, NIST SP 800-162 ABAC resource-scoping | Semantics | The defining resource-scoped grant: role reference → actions → resource patterns with an allow/deny effect and a `resource_kind` that is the single author-settable resource vocabulary |
+| `RuntimeAppAuthorizationRoleMapping` | OpenSearch backend-role mappings, directory-to-local role bindings | Semantics | Bindings of backend roles, users, or hosts onto a local role |
+| `RuntimeAppAuthorizationTenant` | OpenSearch/Kibana tenants, platform namespace scopes | Semantics | Namespace/tenancy scopes within the authorization store |
 
 This surface depends on the RBAC/ABAC standards for the role-permission-subject
 spine and on product RBAC implementations for recurring facts; it does not adopt
@@ -149,22 +155,22 @@ any one product's security configuration as the canonical authored SDL shape.
 ### From STIX 2.1
 
 
-| SDL Element                | STIX Source                             | What We Adapted                            |
-| -------------------------- | --------------------------------------- | ------------------------------------------ |
-| `Relationship`             | Relationship SRO (typed directed edges) | Simplified to 7 relationship types         |
-| Cross-reference validation | STIX object referencing model           | Source/target resolve to any named element |
-| `RelationshipForwardingEdge` / `RelationshipServiceIntegration` / `RelationshipProxyUpstream` | Relationship SRO typed-detail pattern | Domain access detail on an edge (syslog enrollment per RFC 5424/5425, API auth per RFC 6749, reverse-proxy upstream per RFC 9110/7239) without re-typing referenced families |
+| SDL Element | STIX Source | Borrowed | What We Adapted |
+| -------------------------- | --------------------------------------- | --- | ------------------------------------------ |
+| `Relationship` | Relationship SRO (typed directed edges) | Both | Simplified to 7 relationship types |
+| Cross-reference validation | STIX object referencing model | Semantics | Source/target resolve to any named element |
+| `RelationshipForwardingEdge` / `RelationshipServiceIntegration` / `RelationshipProxyUpstream` | Relationship SRO typed-detail pattern | Both | Domain access detail on an edge (syslog enrollment per RFC 5424/5425, API auth per RFC 6749, reverse-proxy upstream per RFC 9110/7239) without re-typing referenced families |
 
 
 ### From CACAO v2.0
 
 
-| SDL Element           | CACAO Source                       | What We Adapted                                                        |
-| --------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
-| `Variable`            | `playbook_variables`               | Types, defaults, allowed_values                                        |
-| `${var}` substitution | CACAO variable substitution syntax | Deferred to instantiation time                                         |
-| `Objective`           | agent/target/workflow context      | Declarative actor-target-window-success binding without runtime probes |
-| `Workflow`            | workflow-step graph patterns       | Branching/parallel objective composition with SDL-only step types      |
+| SDL Element | CACAO Source | Borrowed | What We Adapted |
+| --------------------- | ---------------------------------- | --- | ---------------------------------------------------------------------- |
+| `Variable` | `playbook_variables` | Syntax | Types, defaults, allowed_values |
+| `${var}` substitution | CACAO variable substitution syntax | Both (syntax borrowed; resolution semantics deferred to instantiation) | Deferred to instantiation time |
+| `Objective` | agent/target/workflow context | Semantics | Declarative actor-target-window-success binding without runtime probes |
+| `Workflow` | workflow-step graph patterns | Syntax (graph shape; execution semantics from the workflow-systems table) | Branching/parallel objective composition with SDL-only step types |
 
 
 ### Control-Flow Semantics from Mature Workflow Systems
@@ -172,13 +178,13 @@ any one product's security configuration as the canonical authored SDL shape.
 These sources do not define the YAML keys directly, but they strongly inform
 how the runtime interprets workflow behavior after parsing.
 
-| Concern | Primary Sources | What We Adapted |
-| ------- | --------------- | --------------- |
-| Conditional branching over declared predicates | AWS Step Functions `Choice`, CACAO conditional steps | Explicit decision nodes with typed predicate dependencies instead of backend-local branching rules |
-| Parallel branch execution and convergence | AWS Step Functions `Parallel`, W3C SCXML `parallel`, Argo DAG fan-out/fan-in patterns | Parallel branches are explicit, joins are explicit barriers, and foreign entry into a join is rejected |
-| Retry and terminal outcome meaning | AWS Step Functions `Retry`/`Catch`, Argo retry strategy | Retry behavior is part of workflow semantics rather than a hidden adapter loop |
-| Observable step state | Step Functions execution-visible state, SCXML completion semantics | Only selected step kinds expose portable lifecycle/outcome state for predicates and backend results |
-| Workflow semantics as a first-class assurance surface | SCXML state-machine model, Kepler FM guidance for workflows/state machines | Workflow changes are treated as `FM3` state-machine work, not just parser changes |
+| Concern | Primary Sources | Borrowed | What We Adapted |
+| ------- | --------------- | --- | --------------- |
+| Conditional branching over declared predicates | AWS Step Functions `Choice`, CACAO conditional steps | Semantics | Explicit decision nodes with typed predicate dependencies instead of backend-local branching rules |
+| Parallel branch execution and convergence | AWS Step Functions `Parallel`, W3C SCXML `parallel`, Argo DAG fan-out/fan-in patterns | Semantics | Parallel branches are explicit, joins are explicit barriers, and foreign entry into a join is rejected |
+| Retry and terminal outcome meaning | AWS Step Functions `Retry`/`Catch`, Argo retry strategy | Semantics | Retry behavior is part of workflow semantics rather than a hidden adapter loop |
+| Observable step state | Step Functions execution-visible state, SCXML completion semantics | Semantics | Only selected step kinds expose portable lifecycle/outcome state for predicates and backend results |
+| Workflow semantics as a first-class assurance surface | SCXML state-machine model, Kepler FM guidance for workflows/state machines | Semantics | Workflow changes are treated as `FM3` state-machine work, not just parser changes |
 
 
 ### Runtime Boundary and Contract Precedents
@@ -186,12 +192,12 @@ how the runtime interprets workflow behavior after parsing.
 These sources inform the runtime/result contract rather than the SDL YAML
 surface.
 
-| Concern | Primary Sources | What We Adapted |
-| ------- | --------------- | --------------- |
-| Language-neutral backend boundary | Kubernetes API objects, Temporal payload/history model, OpenC2 abstract model + JSON serialization | Backends exchange plain-data, versioned workflow result envelopes rather than Python object identity |
-| Explicit compiled contract between definition and execution | Kubernetes versioned object schemas, Temporal workflow definition vs event-history separation | Compiler emits a dedicated `result_contract` instead of forcing the manager to infer semantics from incidental planner payloads |
-| Internal typed adapters behind a plain-data boundary | Temporal SDK data conversion, Kubernetes typed models over portable representations | Python typed workflow result models are internal normalization helpers, not the backend protocol |
-| Distinct apparatus declaration surfaces | OpenRange episode/runtime split, OpenBench model/provider configuration, benchmark registries | Processor, backend, and participant-implementation declaration surfaces remain distinct so the same scenario can be run under different apparatus honestly |
+| Concern | Primary Sources | Borrowed | What We Adapted |
+| ------- | --------------- | --- | --------------- |
+| Language-neutral backend boundary | Kubernetes API objects, Temporal payload/history model, OpenC2 abstract model + JSON serialization | Semantics | Backends exchange plain-data, versioned workflow result envelopes rather than Python object identity |
+| Explicit compiled contract between definition and execution | Kubernetes versioned object schemas, Temporal workflow definition vs event-history separation | Semantics | Compiler emits a dedicated `result_contract` instead of forcing the manager to infer semantics from incidental planner payloads |
+| Internal typed adapters behind a plain-data boundary | Temporal SDK data conversion, Kubernetes typed models over portable representations | Semantics | Python typed workflow result models are internal normalization helpers, not the backend protocol |
+| Distinct apparatus declaration surfaces | OpenRange episode/runtime split, OpenBench model/provider configuration, benchmark registries | Semantics | Processor, backend, and participant-implementation declaration surfaces remain distinct so the same scenario can be run under different apparatus honestly |
 
 
 ### From Time, Simulation, and Co-Simulation Systems
@@ -204,32 +210,32 @@ honestly across simulation, emulation, and live infrastructure.
 The primary research set for this area is curated in
 `research/primary/literature/time-and-simulation/`.
 
-| Concern | Primary Sources | What We Adapted |
-| ------- | --------------- | --------------- |
-| Distinct time domains and clock authority | [ROS 2 Clock and Time](https://design.ros2.org/articles/clock_and_time.html), [FMI 3.0.2](https://fmi-standard.org/docs/3.0.2/) | Authored temporal intent and realized clocks cannot be treated as the same thing; multiple clocks and explicit clock authority are first-class concerns |
-| Event-driven, logical, and virtual time progression | [SimPy Time and Scheduling](https://simpy.readthedocs.io/en/4.0.2/topical_guides/time_and_scheduling.html), Misra virtual-time work, DEVS literature | Time advancement policy is part of system meaning, not just a backend optimization |
-| Real-time pacing and synchronization | [ns-3 realtime execution](https://www.nsnam.org/docs/manual/html/realtime.html), adaptive time-dilation work for integrated simulation/emulation | Synchronization policy, pacing, and dilation are apparatus properties that affect experiment validity and comparability |
-| Ordering and causality beyond raw timestamps | Time Warp, DEVS, distributed-simulation time-management literature | Event order, causality guarantees, and temporal windows/deadlines must be modeled separately from the existence of timestamps |
-| Reset, replay, and episode-local temporal semantics | OpenRange episode model, benchmark/task systems, simulation literature | Episode boundaries, reset semantics, and replayability are temporal concerns, not just lifecycle bookkeeping |
-| Realized-time disclosure and provenance | OpenRange run/training-data records, co-simulation timing literature | Runs need explicit disclosure of the realized time model when results are compared across backends or replayed |
+| Concern | Primary Sources | Borrowed | What We Adapted |
+| ------- | --------------- | --- | --------------- |
+| Distinct time domains and clock authority | [ROS 2 Clock and Time](https://design.ros2.org/articles/clock_and_time.html), [FMI 3.0.2](https://fmi-standard.org/docs/3.0.2/) | Semantics | Authored temporal intent and realized clocks cannot be treated as the same thing; multiple clocks and explicit clock authority are first-class concerns |
+| Event-driven, logical, and virtual time progression | [SimPy Time and Scheduling](https://simpy.readthedocs.io/en/4.0.2/topical_guides/time_and_scheduling.html), Misra virtual-time work, DEVS literature | Semantics | Time advancement policy is part of system meaning, not just a backend optimization |
+| Real-time pacing and synchronization | [ns-3 realtime execution](https://www.nsnam.org/docs/manual/html/realtime.html), adaptive time-dilation work for integrated simulation/emulation | Semantics | Synchronization policy, pacing, and dilation are apparatus properties that affect experiment validity and comparability |
+| Ordering and causality beyond raw timestamps | Time Warp, DEVS, distributed-simulation time-management literature | Semantics | Event order, causality guarantees, and temporal windows/deadlines must be modeled separately from the existence of timestamps |
+| Reset, replay, and episode-local temporal semantics | OpenRange episode model, benchmark/task systems, simulation literature | Semantics | Episode boundaries, reset semantics, and replayability are temporal concerns, not just lifecycle bookkeeping |
+| Realized-time disclosure and provenance | OpenRange run/training-data records, co-simulation timing literature | Semantics | Runs need explicit disclosure of the realized time model when results are compared across backends or replayed |
 
 
 ### From OCSF
 
 
-| SDL Element     | OCSF Source         | What We Adapted                  |
-| --------------- | ------------------- | -------------------------------- |
-| `OSFamily` enum | `Device.os.type_id` | Vocabulary for OS classification |
-| `ServicePort`   | `NetworkEndpoint`   | Simplified port/protocol/name; named bindings become first-class refs |
+| SDL Element | OCSF Source | Borrowed | What We Adapted |
+| --------------- | ------------------- | --- | -------------------------------- |
+| `OSFamily` enum | `Device.os.type_id` | Both | Vocabulary for OS classification |
+| `ServicePort` | `NetworkEndpoint` | Both | Simplified port/protocol/name; named bindings become first-class refs |
 
 
 ### From Docker / Deployment Patterns
 
 
-| SDL Element                              | Source                          | What We Adapted              |
-| ---------------------------------------- | ------------------------------- | ---------------------------- |
-| `SimpleProperties.internal`              | Docker Compose `internal: true` | Network egress blocking flag |
-| `Condition.timeout/retries/start_period` | Docker health check fields      | Direct mapping               |
+| SDL Element | Source | Borrowed | What We Adapted |
+| ---------------------------------------- | ------------------------------- | --- | ---------------------------- |
+| `SimpleProperties.internal` | Docker Compose `internal: true` | Both | Network egress blocking flag |
+| `Condition.timeout/retries/start_period` | Docker health check fields | Both | Direct mapping |
 
 
 ## Deliberate Omissions
@@ -274,9 +280,9 @@ taxonomy of container, orchestrator, or host-security concerns.
 | SIEM/security-monitoring manager runtime inventory (manager modules, listeners, enrolled agents/groups, detection content sets, parsed detection definitions, bounded settings, API/control-plane posture) | Log-management/security-monitoring runtime inventory and loaded-definition manifests, not transport bindings, process/unit state, raw config, raw events, alert telemetry, or rule-engine execution | `Node.runtime.security_monitoring_managers` when observed; manager, content-set, and detection-definition refs may be targeted through qualified runtime refs; see ADR-040 and ADR-045 |
 | Application-internal RBAC store (principals, roles, resource-scoped permission grants, role mappings, tenants) | Application-internal authorization runtime state, not a wire-protocol directory or database engine GRANT surface | `Node.runtime.app_authorizations` when observed; the resource-scoped `permission_grant` is the defining addition; raw credentials are never stored; see ADR-046 |
 | Recurring scheduled-job cadence and run-state | Product-neutral cadence runtime state, not systemd unit lifecycle or forwarder input/output authoring | `Node.runtime.scheduled_jobs` when observed; cadence + run-state only; systemd lifecycle remains `runtime.service_manager_units`; see ADR-047 |
-| Non-relational datastore logical state (search clusters, wide-column stores, key-value stores, partitions, replication geometry, persistence posture, transport security, settings) | Participant-observable non-relational datastore runtime state, not the relational engine/GRANT surface, transport bindings, or software component identity | `Node.runtime.datastore_services` when observed; the open `data_model` discriminator drives a required-profile guard; service and child refs may be targeted through qualified runtime refs; internal RBAC is delegated via `authorization_ref`; raw key material is never stored; see ADR-048 |
+| Non-relational datastore logical state (search clusters, structured index mapping/template manifests, wide-column stores, key-value stores, partitions, replication geometry, persistence posture, transport security, settings) plus per-node engine provenance (version/build hash/build type), JVM/process memory posture (heap byte bounds, mlockall), a typed per-node engine-plugin inventory with per-plugin version, and a product-neutral client/peer node-endpoint inventory | Participant-observable non-relational datastore runtime state, not the relational engine/GRANT surface, transport bindings, raw backend mapping/template bodies, or software component identity; node endpoints are engine-published topology, not OS-bind or host-publication proof | `Node.runtime.datastore_services` when observed; the open `data_model` discriminator drives a required-profile guard; mappings/templates are bounded manifests with refs, counts, summaries, digests, and evidence refs; service and child refs (including nested node plugins/endpoints) may be targeted through qualified runtime refs; node plugin/endpoint ids join the service-wide stable-id namespace; internal RBAC is delegated via `authorization_ref`; explicit redaction classifications omit raw setting values; see ADR-048 (amended by ADR-058) and ADR-057 |
 | Security-platform application runtime inventory (threat-intel platform, SOAR, analyzer engine, case management, analytics dashboard — bounded content-object manifests, markings, upstream bindings, connectors, settings) | Participant-observable platform-application runtime state and bounded parsed manifests, not HTTP route surface, software component identity, raw object bodies, or playbook execution semantics | `Node.runtime.platform_applications` when observed; the open `platform_kind` discriminator drives a required-profile guard; content objects carry typed references not raw bodies; refs may be targeted through qualified runtime refs; internal RBAC is delegated via `authorization_ref`; see ADR-049 |
-| Forwarding / intel-sync agent runtime inventory (sources, transforms, ship targets, buffer policy, reload channels, settings for log forwarders and intel-sync co-processes) | Participant-observable agent-side shipping state, not SIEM manager inventory, detection-engine consumer state, scheduled-job cadence, systemd lifecycle, or a fake scenario node for an infrastructure-only sidecar | `Node.runtime.forwarding_agents` when the agent is node-hosted; top-level `forwarding_agents` when the forwarder is off-node infrastructure realization; the open `agent_kind` discriminator drives a required-profile guard; ship-target node/service refs resolve at scenario scope; enrollment identities and secret-bearing settings are never stored as raw values; the inter-node trust edge is a relationship forwarding edge; see ADR-050 |
+| Forwarding / intel-sync agent runtime inventory (sources, transforms, ship targets, buffer policy, reload channels, settings for log forwarders and intel-sync co-processes) | Participant-observable agent-side shipping state, not SIEM manager inventory, detection-engine consumer state, scheduled-job cadence, systemd lifecycle, or a fake scenario node for an infrastructure-only sidecar | `Node.runtime.forwarding_agents` when the agent is node-hosted; top-level `forwarding_agents` when the forwarder is off-node infrastructure realization; the open `agent_kind` discriminator drives a required-profile guard; ship-target node/service refs resolve at scenario scope; enrollment identities use a closed classification lattice and settings use explicit redaction classifications; the inter-node trust edge is a relationship forwarding edge; see ADR-050 and ADR-057 |
 | Container-spawn orchestration-authority runtime inventory (engine, scope, spawn templates, lifecycle policy, realized children, privilege class referencing a control-interface shell) | Participant-observable container-spawn authority state, not the control-interface shell itself, software component identity, or workflow execution semantics | `Node.runtime.orchestration_authorities` when observed; the open `privilege_class` discriminator drives a required-profile guard; `control_interface_ref` resolves to a same-node `RuntimeControlInterface` (host-root-equivalent requires a read-write docker socket); the control-interface shell is referenced, never duplicated; see ADR-051 |
 | Vendor-specific AD DS/LDAP/SCIM/IAM/SAML/OIDC schema clone | Provider coupling and false portability | Neutral `Node.runtime.identity_authorities` inventory when observed; provider identifiers remain data; see ADR-032 |
 | Service-manager unit state (systemd unit load/enable/active/sub/result) | Realized lifecycle state, distinct from installed software, transport services, live processes, container init, restart policy, and authored conditions | `Node.runtime.service_manager_units` when observed; raw `systemctl`/`journalctl`/unit-file output remains evidence rather than schema; see ADR-035 |

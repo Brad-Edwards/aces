@@ -2,7 +2,7 @@
   "schema_version": "backend-manifest/v2",
   "identity": {
     "name": "stub",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "supported_contract_versions": [
     "backend-manifest-v2",
@@ -18,7 +18,11 @@
     "evaluation-history-event-stream-v1",
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
-    "participant-behavior-history-event-stream-v1"
+    "participant-behavior-history-event-stream-v1",
+    "participant-lifecycle-event-v1",
+    "participant-observation-envelope-v1",
+    "participant-shared-state-record-v1",
+    "participant-outcome-report-v1"
   ],
   "compatibility": {
     "processors": ["aces-reference-processor"]
@@ -111,6 +115,7 @@
         "temporal_contracts"
       ],
       "supported_interaction_features": ["contention", "coordination", "interference", "shared_state_change"],
+      "feature_support": [],
       "constraints": {}
     }
   }

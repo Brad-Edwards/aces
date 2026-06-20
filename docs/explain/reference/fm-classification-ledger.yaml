@@ -1,0 +1,436 @@
+ledger: per-change-fm-classification
+policy_ref: specs/formal/assurance-policy.yaml
+entries:
+  - adr: ADR-023
+    surface: Container image build provenance surface
+    fm_level: FM1
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-023-container-image-build-provenance-surface.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_scenarios.py
+    waived_artifacts: []
+  - adr: ADR-024
+    surface: Local identity inventory surface
+    fm_level: FM1
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-024-local-identity-inventory-surface.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_models.py
+    waived_artifacts: []
+  - adr: ADR-025
+    surface: Container network realization surface
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-025-container-network-realization-surface.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_validator.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_sdl_validator.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-026
+    surface: Application HTTP surface inventory
+    fm_level: FM1
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-026-application-http-surface-inventory.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_validator.py
+    waived_artifacts: []
+  - adr: ADR-027
+    surface: Container init and reaper runtime surface
+    fm_level: FM1
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-027-container-init-reaper-runtime-surface.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_validator.py
+    waived_artifacts: []
+  - adr: ADR-028
+    surface: Container seccomp and security options surface
+    fm_level: FM1
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-028-container-seccomp-security-options-surface.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_validator.py
+    waived_artifacts: []
+  - adr: ADR-029
+    surface: Database logical-state runtime surface
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-029-database-logical-state-runtime-surface.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_datastore.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-030
+    surface: Process-scoped Linux capability policy
+    fm_level: FM1
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-030-process-scoped-linux-capability-policy.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_validator.py
+    waived_artifacts: []
+  - adr: ADR-031
+    surface: SSH server configuration surface
+    fm_level: FM1
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-031-ssh-server-configuration-surface.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_ssh_server.py
+    waived_artifacts: []
+  - adr: ADR-032
+    surface: Directory and domain identity runtime surface
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_validator.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-033
+    surface: Scenario delivery boundary for runtime node state
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_validator.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-034
+    surface: Runtime software component inventory
+    fm_level: FM1
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-034-runtime-software-component-inventory.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_models.py
+    waived_artifacts: []
+  - adr: ADR-035
+    surface: Service-manager unit state runtime surface
+    fm_level: FM3
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-035-service-manager-unit-state-runtime-surface.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_service_units.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+      - kind: abstract_state_machine_model
+        rationale: Historical backfill records current evidence; no abstract state-machine artifact was recorded for this accepted ADR.
+  - adr: ADR-036
+    surface: SDL, processor, and runtime module boundaries
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-036-sdl-processor-runtime-module-boundaries.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_contract_boundaries.py
+      - kind: typed_ir_or_contract_coverage
+        path: tools/policy/adr_policy.yaml
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-037
+    surface: Runtime file-service and filesystem presence semantics
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-037-runtime-file-service-and-filesystem-presence-semantics.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_validator.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-038
+    surface: Runtime mail-service logical state
+    fm_level: FM3
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-038-runtime-mail-service-logical-state.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_mail_service.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+      - kind: abstract_state_machine_model
+        rationale: Historical backfill records current evidence; no abstract state-machine artifact was recorded for this accepted ADR.
+  - adr: ADR-039
+    surface: DNS service runtime inventory
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-039-dns-service-runtime-inventory.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_validator.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-040
+    surface: Security-monitoring manager runtime inventory
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_security_monitoring.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-041
+    surface: Participant implementation manifest and provenance surface
+    fm_level: FM1
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-041-participant-implementation-manifest-and-provenance.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_participant_implementation_manifest.py
+    waived_artifacts: []
+  - adr: ADR-042
+    surface: Network sensor runtime monitoring posture
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-042-network-sensor-runtime-monitoring.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_network_sensor.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-043
+    surface: Generic runtime service listener surface
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-043-runtime-service-listener-surface.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_service_listeners.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-044
+    surface: Network detection engine runtime inventory
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-044-network-detection-engine-runtime-inventory.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_network_detection.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-045
+    surface: Security-monitoring detection definition semantics
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-045-security-monitoring-detection-definition-semantics.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_security_monitoring.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-046
+    surface: Application-internal authorization runtime inventory
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-046-app-authorization-runtime-inventory.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_app_authorization.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-047
+    surface: Scheduled-job runtime inventory
+    fm_level: FM3
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-047-scheduled-job-runtime-inventory.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_scheduled_job.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+      - kind: abstract_state_machine_model
+        rationale: Historical backfill records current evidence; no abstract state-machine artifact was recorded for this accepted ADR.
+  - adr: ADR-048
+    surface: Datastore service runtime inventory
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-048-datastore-service-runtime-inventory.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_datastore.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-049
+    surface: Platform application runtime inventory
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-049-platform-application-runtime-inventory.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_platform_application.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-050
+    surface: Forwarding agent runtime inventory
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_forwarding_agent.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-051
+    surface: Orchestration authority runtime inventory
+    fm_level: FM3
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-051-orchestration-authority-runtime-inventory.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_orchestration.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+      - kind: abstract_state_machine_model
+        rationale: Historical backfill records current evidence; no abstract state-machine artifact was recorded for this accepted ADR.
+  - adr: ADR-052
+    surface: Typed runtime relationship subtypes
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_family_invariants.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-053
+    surface: SDL module composition for inventory-backed scenarios
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_module_registry.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-054
+    surface: Participant runtime observable lifecycle
+    fm_level: FM3
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-054-participant-runtime-observable-lifecycle.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_control_plane.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_participant_runtime_invariants.py
+      - kind: abstract_state_machine_model
+        path: implementations/python/tests/test_participant_runtime_invariants.py
+  - adr: ADR-055
+    surface: Experiment core contract boundary
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-055-experiment-core-contract-boundary.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_contracts.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-056
+    surface: Runtime observed values and credential posture
+    fm_level: FM1
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-056-runtime-observed-values-and-credential-posture.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_observed_values.py
+    waived_artifacts: []
+  - adr: ADR-057
+    surface: Runtime scenario value realizability and explicit redaction
+    fm_level: FM1
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-057-runtime-secret-name-classifier-boundaries.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_observed_values.py
+    waived_artifacts: []
+  - adr: ADR-058
+    surface: Datastore node engine provenance and endpoints
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_datastore.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/tests/test_runtime_contracts.py
+    waived_artifacts:
+      - kind: property_based_or_differential_tests
+        rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.

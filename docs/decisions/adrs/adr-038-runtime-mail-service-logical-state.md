@@ -78,6 +78,56 @@ The implementation must reuse existing SDL gates:
 - generated-schema publication from Python model sources only;
 - repo policy, requirement governance, and full verification gates.
 
+## Security and Validation Gates
+
+- Parser/model gate: stable `mail_service_id` and child ids are concrete
+  symbols, not mapping keys or `${var}` placeholders.
+- SDL model gate: duplicate mail-service child ids are rejected per collection
+  and across the service-local reference namespace.
+- Enum normalization gate: mail protocol, listener role, AUTH mechanism, TLS
+  mode, mailbox/domain/store/queue kinds, mailbox status, setting provenance,
+  and setting classifications use the shared enum-or-var parser so hyphen and
+  underscore authoring spellings cannot drift by module.
+- Secret-handling gate: mailbox credential posture and setting sensitivity are
+  classifications only; raw passwords, hashes, API tokens, keytabs, private
+  keys, and other secret values are not portable mail-service data.
+- Semantic validation gate: mail services and listeners resolve optional
+  same-node `Node.services` refs; component, domain, mailbox-store, mailbox,
+  alias, routing, and setting refs resolve inside the owning mail service.
+- Relationship gate: top-level relationships carrying `mail_access` target a
+  runtime mail service and resolve concrete listener, mailbox, and domain refs
+  inside that service.
+- Evidence gate: setting source paths resolve to observed filesystem inventory
+  when the node has file inventory.
+- Contract/schema gate: generated JSON Schemas come from Python model sources;
+  schema files are not edited by hand.
+
+## Guardrails
+
+- Do not encode SMTP, IMAP, mailbox, alias, routing, or queue state as HTTP
+  application routes.
+- Do not overload `Node.services`; it remains a transport binding that a
+  mail-service record may reference.
+- Do not treat top-level `accounts` as mailbox inventory. Mailboxes may refer to
+  accounts or local users, but the mailbox record owns observed mailbox state.
+- Do not store raw Postfix, Dovecot, queue, mailbox, or credential payloads in
+  the portable SDL model; keep vendor-specific files as evidence.
+- Do not keep mail validation on a separate free-function path. It must remain
+  an in-class `SemanticValidator` pass that uses the same error collection and
+  unresolved-variable behavior as other runtime families.
+- Do not duplicate generic runtime helper policy in mail-specific modules; use
+  `runtime_values.py` for enum parsing, string-list coercion, non-empty strings,
+  absolute-path lists, duplicate detection, and observed-value redaction.
+
+## Non-Goals
+
+- Building a Postfix, Dovecot, POP3, LMTP, Sieve, DKIM, SPF, or DMARC parser.
+- Modeling complete mailbox contents, per-message queue contents, or mail logs
+  as first-class SDL records.
+- Replacing filesystem inventory, content evidence, top-level accounts,
+  transport services, runtime applications, or generic relationships.
+- Designing backend mail provisioning behavior or mail-delivery simulation.
+
 ## Consequences
 
 Positive:
@@ -110,3 +160,18 @@ Rejected alternatives:
   surfaces are evidence/data placement, not mail-service logical state.
 - Store raw Postfix/Dovecot config dumps. Raw dumps are provider-coupled,
   untyped, and unsafe for secret-bearing settings.
+
+## References
+
+- [Runtime File-Service and Filesystem Presence Semantics](adr-037-runtime-file-service-and-filesystem-presence-semantics.md),
+  [Database Runtime Inventory](adr-029-database-logical-state-runtime-surface.md), and
+  [Participant-Interactable Runtime Node State](adr-033-scenario-delivery-boundary-for-runtime-node-state.md).
+- [SDL Semantic Validation](../../explain/sdl/validation.md),
+  [Runtime Architecture](../../explain/sdl/runtime-architecture.md), and
+  [SDL Limitations](../../explain/sdl/limitations.md).
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-06-06 | 6958fed | Added Security and Validation Gates and Guardrails sections: shared enum-or-var parser, secret-classification boundaries, and service-local reference resolution. |

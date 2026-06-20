@@ -48,6 +48,15 @@ class RealizationSupportMode(str, Enum):
     OPEN_REALIZATION = "open-realization"
 
 
+class ParticipantFeatureSupportLevel(str, Enum):
+    """ADR-054 guarantee-strength scale for per-feature participant runtime support."""
+
+    UNSUPPORTED = "unsupported"
+    DISCLOSED_WEAK = "disclosed_weak"
+    BOUNDED = "bounded"
+    EXACT = "exact"
+
+
 class ConceptProvenanceCategory(str, Enum):
     """How a concept family relates to its authority source."""
 

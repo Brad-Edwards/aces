@@ -142,6 +142,31 @@
         "source",
         "items"
       ]
+    },
+    "scenario-node-runtime": {
+      "title": "Scenario Node Runtime",
+      "description": "Shared reference model for observed runtime inventory configuration attached to scenario nodes.",
+      "concept_family": "runtime-inventory",
+      "authoritative_schema": {
+        "contract_id": "sdl-authoring-input-v1",
+        "schema_pointer": "#/$defs/RuntimeConfiguration",
+        "instance_path": "nodes.*.runtime"
+      },
+      "reused_schemas": [
+        {
+          "contract_id": "instantiated-scenario-v1",
+          "schema_pointer": "#/$defs/RuntimeConfiguration",
+          "instance_path": "nodes.*.runtime"
+        }
+      ],
+      "key_fields": [
+        "container",
+        "network",
+        "service_listeners",
+        "filesystem_inventory",
+        "operational_policy",
+        "local_control_interfaces"
+      ]
     }
   }
 }

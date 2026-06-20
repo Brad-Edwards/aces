@@ -205,14 +205,15 @@ def test_runtime_mail_service_rejects_duplicate_stable_ids() -> None:
         )
 
 
-def test_runtime_mail_setting_rejects_secret_bearing_raw_value() -> None:
-    with pytest.raises(ValidationError, match="must omit its raw value"):
-        RuntimeMailSetting(
-            setting_id="relay-auth",
-            component_ref="postfix",
-            name="smtp_sasl_password_maps",
-            value="user:plaintext",
-        )
+def test_runtime_mail_setting_accepts_secret_named_scenario_value() -> None:
+    setting = RuntimeMailSetting(
+        setting_id="relay-auth",
+        component_ref="postfix",
+        name="smtp_sasl_password_maps",
+        value="user:plaintext",
+    )
+
+    assert setting.value == "user:plaintext"
 
 
 def test_runtime_mail_setting_rejects_redacted_raw_value() -> None:

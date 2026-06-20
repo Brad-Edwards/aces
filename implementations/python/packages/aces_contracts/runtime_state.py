@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
+
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import RuntimeDomain
 from aces_contracts.versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
@@ -35,6 +37,28 @@ class SnapshotEntry:
     status: str = "ready"
 
 
+@dataclass(frozen=True)
+class RealizationProvenanceEntry:
+    """SEM-218 provenance for one realized realization concern (invariant I5).
+
+    Records, for a single realization concern that entered a runtime snapshot /
+    result / history surface, its SEM-218 explicitness class and the origin of
+    the realized value: ``author-declared`` (honoured exactly as the author
+    wrote it), ``processor-derived`` (produced by deterministic processor
+    activity), or ``backend-realized`` (picked by the backend from an open or
+    constrained surface admitted by I3). It carries field-path and kind
+    references only — never the realized value itself, which may carry sensitive
+    material (SEM-218 host-exposure gate).
+    """
+
+    address: str
+    field_path: str
+    domain: str
+    requirement_kind: str
+    explicitness: ExplicitnessClass
+    provenance: ExplicitnessProvenance
+
+
 @dataclass
 class RuntimeSnapshot:
     """Current runtime snapshot."""
@@ -47,6 +71,9 @@ class RuntimeSnapshot:
     participant_episode_results: dict[str, dict[str, Any]] = field(default_factory=dict)
     participant_episode_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     participant_behavior_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    # SEM-218 invariant I5: per-concern provenance for realized realization
+    # concerns recorded across this snapshot's result / history surfaces.
+    realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def get(self, address: str) -> SnapshotEntry | None:
@@ -90,6 +117,11 @@ class RuntimeSnapshot:
                 "participant_behavior_history",
                 self.participant_behavior_history,
             ),
+            realization_provenance=_provenance_update(
+                updates,
+                "realization_provenance",
+                self.realization_provenance,
+            ),
             metadata=_mapping_update(updates, "metadata", self.metadata),
         )
 
@@ -102,6 +134,7 @@ _SNAPSHOT_UPDATE_KEYS = {
     "participant_episode_results",
     "participant_episode_history",
     "participant_behavior_history",
+    "realization_provenance",
     "metadata",
 }
 
@@ -136,6 +169,19 @@ def _history_update(
     if not isinstance(raw, Mapping):
         raise TypeError(f"{key} must be a mapping")
     return {str(address): list(events) for address, events in raw.items()}
+
+
+def _provenance_update(
+    updates: Mapping[str, object],
+    key: str,
+    current: tuple[RealizationProvenanceEntry, ...],
+) -> tuple[RealizationProvenanceEntry, ...]:
+    raw = updates.get(key)
+    if raw is None:
+        return tuple(current)
+    if not isinstance(raw, tuple) or any(not isinstance(entry, RealizationProvenanceEntry) for entry in raw):
+        raise TypeError(f"{key} must be a tuple of RealizationProvenanceEntry")
+    return raw
 
 
 @dataclass
@@ -185,9 +231,12 @@ class RuntimeSnapshotEnvelope:
 
 __all__ = (
     "ApplyResult",
+    "ExplicitnessClass",
+    "ExplicitnessProvenance",
     "OperationReceipt",
     "OperationState",
     "OperationStatus",
+    "RealizationProvenanceEntry",
     "RuntimeSnapshot",
     "RuntimeSnapshotEnvelope",
     "SnapshotEntry",

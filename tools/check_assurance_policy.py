@@ -23,8 +23,11 @@ matching the other policy gates (``check_repo_policy.py``,
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from collections.abc import Iterable
+from datetime import date as date_cls
+from datetime import datetime as datetime_cls
 from pathlib import Path
 from typing import Any
 
@@ -34,7 +37,7 @@ if str(REPO_ROOT) not in sys.path:
 
 import yaml
 
-from tools.policy.common import PolicyFailure, apply_exceptions, failures_to_json, load_exceptions
+from tools.policy.common import PolicyFailure, apply_exceptions, failures_to_json, load_exceptions, safe_repo_path
 
 # --------------------------------------------------------------------------- #
 # Canonical paths and baseline policy invariants. Test code imports these     #
@@ -49,10 +52,25 @@ ASSURANCE_POLICY_RELATIVE_PATH = "specs/formal/assurance-policy.yaml"
 ADR_POLICY_RELATIVE_PATH = "docs/decisions/adrs/adr-007-lightweight-formal-methods-policy.md"
 CODING_STANDARDS_RELATIVE_PATH = "docs/explain/reference/coding-standards.md"
 FORMAL_OVERVIEW_RELATIVE_PATH = "docs/specs/formal.md"
+ADR_TEMPLATE_RELATIVE_PATH = "docs/decisions/adrs/TEMPLATE.md"
+ADR_DIRECTORY_RELATIVE_PATH = "docs/decisions/adrs"
+FM_CLASSIFICATION_LEDGER_RELATIVE_PATH = "docs/explain/reference/fm-classification-ledger.yaml"
+# Per-classified-formal-subsystem fulfillment map (issue #485). Distinct from the
+# per-change ADR ledger above: this records, for each classified subsystem under
+# `specs/formal/<domain>/`, whether the required artifact kinds for its FM level
+# are delivered (a concrete non-empty repo path) or explicitly waived (ISO date +
+# tracking reference).
+ASSURANCE_FULFILLMENT_RELATIVE_PATH = "specs/formal/assurance-fulfillment.yaml"
+FORMAL_DOMAINS_RELATIVE_PATH = "specs/formal"
 
 # The baseline canonical level ids. The YAML MAY add more levels (e.g. FM4),
 # but these four are the floor and must always be present.
 CANONICAL_LEVEL_IDS: tuple[str, ...] = ("FM0", "FM1", "FM2", "FM3")
+
+# ADR-060 existed before this gate. ADR-061 and later ADRs must carry the
+# explicit per-change FM classification record.
+ADR_CLASSIFICATION_REQUIRED_FROM = 61
+FM_LEDGER_RUNTIME_ADR_RANGE = range(23, 59)
 
 # The four words in the ASR-505 statement -- the validator pins each to a
 # specific level so reordering does not silently keep passing.
@@ -111,6 +129,48 @@ _LEVEL_SEQUENCE_FIELDS: tuple[str, ...] = (
     "prohibited_artifacts",
 )
 _FM0_PROHIBITED_ARTIFACTS: frozenset[str] = frozenset({"TLA+", "Alloy"})
+_ADR_FILE_RE = re.compile(r"^adr-(\d{3})-.+\.md$")
+_ADR_CLASSIFICATION_RE = re.compile(r"^Classification:\s*(FM\d+)\s*$", re.MULTILINE)
+_ADR_REQUIRED_ARTIFACTS_RE = re.compile(r"^Required artifacts:\s*(.+?)\s*$", re.MULTILINE)
+_ADR_WAIVERS_RE = re.compile(r"^Waivers:\s*(.+?)\s*$", re.MULTILINE)
+_LEDGER_VALUE = "per-change-fm-classification"
+_FULFILLMENT_VALUE = "classification-based-assurance-fulfillment"
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _is_iso_date_waiver(value: Any) -> bool:
+    """Return True only when ``value`` is a date-only ``YYYY-MM-DD`` value.
+
+    Two shapes are accepted, mirroring how ``yaml.safe_load`` parses a waiver's
+    ``date`` field:
+
+    * A native YAML *date* scalar (``date: 2026-06-13``), which parses to a
+      ``datetime.date``. A native YAML *timestamp* scalar
+      (``date: 2026-06-13 10:30:00``) parses to a ``datetime.datetime`` -- which
+      is a *subclass* of ``date`` -- and must be rejected, because the contract
+      requires a date-only ``YYYY-MM-DD`` value, not a wall-clock timestamp.
+    * A quoted string, which must parse as a real ``YYYY-MM-DD`` calendar date.
+      The regex pins the textual shape (rejecting the broader forms that
+      ``date.fromisoformat`` accepts on Python >= 3.11, e.g. ``20250101`` or
+      ``2025-W01-1``); ``date.fromisoformat`` then enforces calendar validity, so
+      impossible dates such as ``2025-13-45`` or ``2025-02-30`` are rejected
+      rather than merely shape-matched.
+    """
+    if isinstance(value, datetime_cls):
+        # datetime is a date subclass; a timestamp scalar is not a date-only value.
+        return False
+    if isinstance(value, date_cls):
+        return True
+    if not isinstance(value, str):
+        return False
+    if not _ISO_DATE_RE.match(value):
+        return False
+    try:
+        date_cls.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
 
 # Human-readable phrasings for each YAML artifact slug. The drift guard
 # requires the union of required artifacts (across all levels in the YAML) to
@@ -499,6 +559,798 @@ def _required_artifact_union(levels: list[Any]) -> set[str]:
     return union
 
 
+def _level_ids(levels: list[Any]) -> set[str]:
+    """Return valid FM level ids from the canonical YAML."""
+    return {level["id"] for level in levels if isinstance(level, dict) and isinstance(level.get("id"), str)}
+
+
+def _required_artifacts_by_level(levels: list[Any]) -> dict[str, set[str]]:
+    """Return YAML-required artifact kinds per FM level."""
+    by_level: dict[str, set[str]] = {}
+    for level in levels:
+        if isinstance(level, dict) and isinstance(level.get("id"), str):
+            by_level[level["id"]] = set(_level_sequence(level, "required_artifacts"))
+    return by_level
+
+
+def _is_filled_field(value: str | None) -> bool:
+    """Return true when a template field has been replaced with a real value."""
+    if value is None:
+        return False
+    normalized = value.strip().lower()
+    if not normalized:
+        return False
+    if normalized in {"tbd", "todo", "none yet", "n/a"}:
+        return False
+    return "<" not in value and "..." not in value
+
+
+def _adr_number(path: Path) -> int | None:
+    match = _ADR_FILE_RE.match(path.name)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def _adr_id_from_number(number: int) -> str:
+    return f"ADR-{number:03d}"
+
+
+def _find_adr_path(repo_root: Path, adr_id: str) -> Path | None:
+    suffix = adr_id.removeprefix("ADR-")
+    if not suffix.isdigit():
+        return None
+    adr_dir = repo_root / ADR_DIRECTORY_RELATIVE_PATH
+    matches = sorted(adr_dir.glob(f"adr-{suffix}-*.md"))
+    return matches[0] if matches else None
+
+
+def _resolve_repo_path(repo_root: Path, relative_path: str) -> Path | None:
+    root = repo_root.resolve()
+    candidate = (root / relative_path).resolve()
+    if candidate == root or root in candidate.parents:
+        return candidate
+    return None
+
+
+def _check_adr_template_classification(repo_root: Path) -> list[PolicyFailure]:
+    template_path = repo_root / ADR_TEMPLATE_RELATIVE_PATH
+    if not template_path.is_file():
+        return [_fail("adr-template-classification", "ADR template is missing", ADR_TEMPLATE_RELATIVE_PATH)]
+    text = template_path.read_text(encoding="utf-8")
+    required_snippets = (
+        "## Classification",
+        "Classification: FM<n>",
+        "Required artifacts:",
+        "Waivers:",
+    )
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    if missing:
+        return [
+            _fail(
+                "adr-template-classification",
+                "ADR template is missing FM classification field(s): " + ", ".join(missing),
+                ADR_TEMPLATE_RELATIVE_PATH,
+            )
+        ]
+    return []
+
+
+def _check_new_adr_classifications(repo_root: Path, level_ids: set[str]) -> list[PolicyFailure]:
+    adr_dir = repo_root / ADR_DIRECTORY_RELATIVE_PATH
+    if not adr_dir.is_dir():
+        return []
+    failures: list[PolicyFailure] = []
+    for adr_path in sorted(adr_dir.glob("adr-*.md")):
+        number = _adr_number(adr_path)
+        if number is None or number < ADR_CLASSIFICATION_REQUIRED_FROM:
+            continue
+        rel_path = adr_path.relative_to(repo_root).as_posix()
+        text = adr_path.read_text(encoding="utf-8")
+        classification_matches = _ADR_CLASSIFICATION_RE.findall(text)
+        if len(classification_matches) != 1:
+            failures.append(
+                _fail(
+                    "adr-classification-missing",
+                    f"{_adr_id_from_number(number)} must contain exactly one 'Classification: FM<n>' field",
+                    rel_path,
+                )
+            )
+            continue
+        level_id = classification_matches[0]
+        if level_id not in level_ids:
+            failures.append(
+                _fail(
+                    "adr-classification-level",
+                    f"{_adr_id_from_number(number)} classification level {level_id} "
+                    f"is not defined in {ASSURANCE_POLICY_RELATIVE_PATH}",
+                    rel_path,
+                )
+            )
+        artifacts_match = _ADR_REQUIRED_ARTIFACTS_RE.search(text)
+        if not _is_filled_field(artifacts_match.group(1) if artifacts_match else None):
+            failures.append(
+                _fail(
+                    "adr-classification-artifacts",
+                    f"{_adr_id_from_number(number)} must name required artifacts delivered or waived",
+                    rel_path,
+                )
+            )
+        waivers_match = _ADR_WAIVERS_RE.search(text)
+        if not _is_filled_field(waivers_match.group(1) if waivers_match else None):
+            failures.append(
+                _fail(
+                    "adr-classification-waivers",
+                    f"{_adr_id_from_number(number)} must name waivers or explicitly say none",
+                    rel_path,
+                )
+            )
+    return failures
+
+
+def _runtime_adr_ids_present(repo_root: Path) -> set[str]:
+    adr_dir = repo_root / ADR_DIRECTORY_RELATIVE_PATH
+    if not adr_dir.is_dir():
+        return set()
+    present: set[str] = set()
+    for path in adr_dir.glob("adr-*.md"):
+        number = _adr_number(path)
+        if number in FM_LEDGER_RUNTIME_ADR_RANGE:
+            present.add(_adr_id_from_number(number))
+    return present
+
+
+def _check_ledger_artifact(
+    repo_root: Path,
+    entry_id: str,
+    artifact: Any,
+    valid_artifact_kinds: set[str],
+    index: int,
+) -> tuple[str | None, list[PolicyFailure]]:
+    path = FM_CLASSIFICATION_LEDGER_RELATIVE_PATH
+    if not isinstance(artifact, dict):
+        return None, [
+            _fail(
+                "fm-classification-ledger-artifact",
+                f"{entry_id} delivered_artifacts[{index}] must be a mapping",
+                path,
+            )
+        ]
+    kind = artifact.get("kind")
+    artifact_path = artifact.get("path")
+    failures: list[PolicyFailure] = []
+    if not isinstance(kind, str) or kind not in valid_artifact_kinds:
+        failures.append(
+            _fail(
+                "fm-classification-ledger-artifact",
+                f"{entry_id} delivered_artifacts[{index}].kind must be one of "
+                f"{sorted(valid_artifact_kinds)}; got {kind!r}",
+                path,
+            )
+        )
+    if not isinstance(artifact_path, str) or not artifact_path.strip():
+        failures.append(
+            _fail(
+                "fm-classification-ledger-artifact",
+                f"{entry_id} delivered_artifacts[{index}].path must be a non-empty repo-relative path",
+                path,
+            )
+        )
+    else:
+        resolved = _resolve_repo_path(repo_root, artifact_path)
+        if resolved is None:
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-artifact",
+                    f"{entry_id} delivered artifact path escapes the repo root: {artifact_path}",
+                    path,
+                )
+            )
+        elif not resolved.exists():
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-artifact",
+                    f"{entry_id} delivered artifact path does not exist: {artifact_path}",
+                    path,
+                )
+            )
+    return kind if isinstance(kind, str) else None, failures
+
+
+def _check_ledger_waiver(
+    entry_id: str,
+    waiver: Any,
+    valid_artifact_kinds: set[str],
+    index: int,
+) -> tuple[str | None, list[PolicyFailure]]:
+    path = FM_CLASSIFICATION_LEDGER_RELATIVE_PATH
+    if not isinstance(waiver, dict):
+        return None, [
+            _fail(
+                "fm-classification-ledger-waiver",
+                f"{entry_id} waived_artifacts[{index}] must be a mapping",
+                path,
+            )
+        ]
+    kind = waiver.get("kind")
+    rationale = waiver.get("rationale")
+    failures: list[PolicyFailure] = []
+    if not isinstance(kind, str) or kind not in valid_artifact_kinds:
+        failures.append(
+            _fail(
+                "fm-classification-ledger-waiver",
+                f"{entry_id} waived_artifacts[{index}].kind must be one of "
+                f"{sorted(valid_artifact_kinds)}; got {kind!r}",
+                path,
+            )
+        )
+    if not isinstance(rationale, str) or not rationale.strip():
+        failures.append(
+            _fail(
+                "fm-classification-ledger-waiver",
+                f"{entry_id} waived_artifacts[{index}].rationale must be non-empty",
+                path,
+            )
+        )
+    return kind if isinstance(kind, str) else None, failures
+
+
+def _check_fm_classification_ledger(repo_root: Path, levels: list[Any]) -> list[PolicyFailure]:
+    ledger_path = repo_root / FM_CLASSIFICATION_LEDGER_RELATIVE_PATH
+    if not ledger_path.is_file():
+        return [
+            _fail(
+                "fm-classification-ledger-missing",
+                f"FM classification ledger not found: {FM_CLASSIFICATION_LEDGER_RELATIVE_PATH}",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        ]
+    try:
+        raw = yaml.safe_load(ledger_path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        return [
+            _fail(
+                "fm-classification-ledger-parse",
+                f"failed to parse {FM_CLASSIFICATION_LEDGER_RELATIVE_PATH}: {exc}",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        ]
+    if not isinstance(raw, dict):
+        return [
+            _fail(
+                "fm-classification-ledger-shape",
+                f"{FM_CLASSIFICATION_LEDGER_RELATIVE_PATH} must be a YAML mapping at the top level",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        ]
+
+    failures: list[PolicyFailure] = []
+    if raw.get("ledger") != _LEDGER_VALUE:
+        failures.append(
+            _fail(
+                "fm-classification-ledger-field",
+                f"ledger field must be {_LEDGER_VALUE!r}",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        )
+    if raw.get("policy_ref") != ASSURANCE_POLICY_RELATIVE_PATH:
+        failures.append(
+            _fail(
+                "fm-classification-ledger-policy-ref",
+                f"policy_ref must be {ASSURANCE_POLICY_RELATIVE_PATH}",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        )
+
+    entries = raw.get("entries")
+    if not isinstance(entries, list):
+        return failures + [
+            _fail(
+                "fm-classification-ledger-field",
+                "entries must be a YAML list",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        ]
+
+    level_ids = _level_ids(levels)
+    required_by_level = _required_artifacts_by_level(levels)
+    valid_artifact_kinds = _required_artifact_union(levels)
+    seen: set[str] = set()
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-entry",
+                    f"entries[{index}] must be a mapping",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+            continue
+        adr = entry.get("adr")
+        entry_id = adr if isinstance(adr, str) else f"entries[{index}]"
+        if not isinstance(adr, str) or not re.fullmatch(r"ADR-\d{3}", adr):
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-entry",
+                    f"entries[{index}].adr must be an ADR-NNN id",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+        elif adr in seen:
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-duplicate",
+                    f"ledger contains duplicate entry for {adr}",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+        else:
+            seen.add(adr)
+            if _find_adr_path(repo_root, adr) is None:
+                failures.append(
+                    _fail(
+                        "fm-classification-ledger-entry",
+                        f"{adr} does not resolve to an ADR file under {ADR_DIRECTORY_RELATIVE_PATH}",
+                        FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                    )
+                )
+        surface = entry.get("surface")
+        if not isinstance(surface, str) or not surface.strip():
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-entry",
+                    f"{entry_id}.surface must be non-empty",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+        fm_level = entry.get("fm_level")
+        if not isinstance(fm_level, str) or fm_level not in level_ids:
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-level",
+                    f"{entry_id}.fm_level {fm_level!r} is not defined in {ASSURANCE_POLICY_RELATIVE_PATH}",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+            required = set()
+        else:
+            required = required_by_level.get(fm_level, set())
+
+        delivered = entry.get("delivered_artifacts")
+        if not isinstance(delivered, list):
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-artifact",
+                    f"{entry_id}.delivered_artifacts must be a YAML list",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+            delivered = []
+        delivered_kinds: set[str] = set()
+        for artifact_index, artifact in enumerate(delivered):
+            kind, artifact_failures = _check_ledger_artifact(
+                repo_root,
+                entry_id,
+                artifact,
+                valid_artifact_kinds,
+                artifact_index,
+            )
+            if kind is not None:
+                delivered_kinds.add(kind)
+            failures.extend(artifact_failures)
+
+        waived = entry.get("waived_artifacts", [])
+        if not isinstance(waived, list):
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-waiver",
+                    f"{entry_id}.waived_artifacts must be a YAML list when present",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+            waived = []
+        waived_kinds: set[str] = set()
+        for waiver_index, waiver in enumerate(waived):
+            kind, waiver_failures = _check_ledger_waiver(
+                entry_id,
+                waiver,
+                valid_artifact_kinds,
+                waiver_index,
+            )
+            if kind is not None:
+                waived_kinds.add(kind)
+            failures.extend(waiver_failures)
+
+        missing_required = sorted(required - delivered_kinds - waived_kinds)
+        if missing_required:
+            failures.append(
+                _fail(
+                    "fm-classification-ledger-artifacts",
+                    f"{entry_id} ({fm_level}) must deliver or waive required artifact kind(s): {missing_required}",
+                    FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+                )
+            )
+
+    missing = sorted(_runtime_adr_ids_present(repo_root) - seen)
+    if missing:
+        failures.append(
+            _fail(
+                "fm-classification-ledger-coverage",
+                f"ledger must cover existing runtime-surface ADRs {FM_LEDGER_RUNTIME_ADR_RANGE.start:03d}-"
+                f"{FM_LEDGER_RUNTIME_ADR_RANGE.stop - 1:03d}; missing: {missing}",
+                FM_CLASSIFICATION_LEDGER_RELATIVE_PATH,
+            )
+        )
+    return failures
+
+
+def _classified_formal_domains(repo_root: Path) -> list[str]:
+    """Return repo-relative paths of classified formal-spec subsystems.
+
+    A classified subsystem is an immediate subdirectory of ``specs/formal/`` that
+    carries a ``README.md`` -- the domain-marker convention documented in
+    ``specs/formal/README.md`` ("Each domain directory should include a short
+    README"). This is the independent source of truth the fulfillment registry is
+    checked against, so a new ``specs/formal/<domain>/`` that forgets a registry
+    entry fails the gate instead of being silently un-tracked.
+    """
+    formal_dir = repo_root / FORMAL_DOMAINS_RELATIVE_PATH
+    if not formal_dir.is_dir():
+        return []
+    domains: list[str] = []
+    for child in sorted(formal_dir.iterdir()):
+        if child.is_dir() and (child / "README.md").is_file():
+            domains.append(child.relative_to(repo_root).as_posix())
+    return domains
+
+
+def _check_fulfillment_delivered(
+    repo_root: Path,
+    entry_id: str,
+    delivered: Any,
+    valid_artifact_kinds: set[str],
+) -> tuple[set[str], list[PolicyFailure]]:
+    """Validate an entry's ``delivered_artifacts`` and return the satisfied kinds.
+
+    A kind counts as delivered only when its kind is valid AND its path resolves
+    inside the repo to an existing, non-empty file.
+    """
+    path = ASSURANCE_FULFILLMENT_RELATIVE_PATH
+    failures: list[PolicyFailure] = []
+    kinds: set[str] = set()
+    if delivered is None:
+        return kinds, failures  # absent list is fine -- required kinds may all be waived.
+    if not isinstance(delivered, list):
+        return kinds, [
+            _fail("assurance-fulfillment-artifact", f"{entry_id}.delivered_artifacts must be a YAML list", path)
+        ]
+    for index, artifact in enumerate(delivered):
+        if not isinstance(artifact, dict):
+            failures.append(
+                _fail(
+                    "assurance-fulfillment-artifact", f"{entry_id}.delivered_artifacts[{index}] must be a mapping", path
+                )
+            )
+            continue
+        kind = artifact.get("kind")
+        artifact_path = artifact.get("path")
+        kind_ok = isinstance(kind, str) and kind in valid_artifact_kinds
+        if not kind_ok:
+            failures.append(
+                _fail(
+                    "assurance-fulfillment-artifact",
+                    f"{entry_id}.delivered_artifacts[{index}].kind must be one of "
+                    f"{sorted(valid_artifact_kinds)}; got {kind!r}",
+                    path,
+                )
+            )
+        path_ok = False
+        if not isinstance(artifact_path, str) or not artifact_path.strip():
+            failures.append(
+                _fail(
+                    "assurance-fulfillment-artifact",
+                    f"{entry_id}.delivered_artifacts[{index}].path must be a non-empty repo-relative path",
+                    path,
+                )
+            )
+        else:
+            resolved = safe_repo_path(repo_root, artifact_path)
+            if resolved is None:
+                failures.append(
+                    _fail(
+                        "assurance-fulfillment-artifact",
+                        f"{entry_id} delivered artifact path escapes the repo root: {artifact_path}",
+                        path,
+                    )
+                )
+            elif not resolved.is_file():
+                failures.append(
+                    _fail(
+                        "assurance-fulfillment-artifact",
+                        f"{entry_id} delivered artifact path does not exist: {artifact_path}",
+                        path,
+                    )
+                )
+            elif resolved.stat().st_size == 0:
+                failures.append(
+                    _fail(
+                        "assurance-fulfillment-artifact",
+                        f"{entry_id} delivered artifact path is empty: {artifact_path}",
+                        path,
+                    )
+                )
+            else:
+                path_ok = True
+        if kind_ok and path_ok:
+            kinds.add(kind)
+    return kinds, failures
+
+
+def _check_fulfillment_waived(
+    entry_id: str,
+    waived: Any,
+    valid_artifact_kinds: set[str],
+) -> tuple[set[str], list[PolicyFailure]]:
+    """Validate an entry's ``waived_artifacts`` and return the waived kinds.
+
+    A waiver counts only when it names a valid kind, an ISO ``date``, at least one
+    ``tracking`` reference, and a non-empty ``rationale``.
+    """
+    path = ASSURANCE_FULFILLMENT_RELATIVE_PATH
+    failures: list[PolicyFailure] = []
+    kinds: set[str] = set()
+    if waived is None:
+        return kinds, failures
+    if not isinstance(waived, list):
+        return kinds, [
+            _fail("assurance-fulfillment-waiver", f"{entry_id}.waived_artifacts must be a YAML list when present", path)
+        ]
+    for index, waiver in enumerate(waived):
+        if not isinstance(waiver, dict):
+            failures.append(
+                _fail("assurance-fulfillment-waiver", f"{entry_id}.waived_artifacts[{index}] must be a mapping", path)
+            )
+            continue
+        kind = waiver.get("kind")
+        waiver_date = waiver.get("date")
+        tracking = waiver.get("tracking")
+        rationale = waiver.get("rationale")
+        kind_ok = isinstance(kind, str) and kind in valid_artifact_kinds
+        if not kind_ok:
+            failures.append(
+                _fail(
+                    "assurance-fulfillment-waiver",
+                    f"{entry_id}.waived_artifacts[{index}].kind must be one of "
+                    f"{sorted(valid_artifact_kinds)}; got {kind!r}",
+                    path,
+                )
+            )
+        date_ok = _is_iso_date_waiver(waiver_date)
+        if not date_ok:
+            failures.append(
+                _fail(
+                    "assurance-fulfillment-waiver",
+                    f"{entry_id} waiver for {kind!r} must carry an ISO date (YYYY-MM-DD); got {waiver_date!r}",
+                    path,
+                )
+            )
+        tracking_ok = isinstance(tracking, list) and any(isinstance(ref, str) and ref.strip() for ref in tracking)
+        if not tracking_ok:
+            failures.append(
+                _fail(
+                    "assurance-fulfillment-waiver",
+                    f"{entry_id} waiver for {kind!r} must name at least one tracking reference",
+                    path,
+                )
+            )
+        rationale_ok = isinstance(rationale, str) and bool(rationale.strip())
+        if not rationale_ok:
+            failures.append(
+                _fail(
+                    "assurance-fulfillment-waiver",
+                    f"{entry_id} waiver for {kind!r} must carry a non-empty rationale",
+                    path,
+                )
+            )
+        if kind_ok and date_ok and tracking_ok and rationale_ok:
+            kinds.add(kind)
+    return kinds, failures
+
+
+def _check_assurance_fulfillment(repo_root: Path, levels: list[Any]) -> list[PolicyFailure]:
+    """Validate the per-subsystem assurance fulfillment map (issue #485).
+
+    Every classified formal-spec subsystem must appear in the registry; every
+    registry subsystem must have a fulfillment entry (and vice-versa); and every
+    required artifact kind for the subsystem's FM level -- derived from
+    ``assurance-policy.yaml`` -- must be delivered (non-empty repo path) or waived
+    (ISO date + tracking reference).
+    """
+    path = ASSURANCE_FULFILLMENT_RELATIVE_PATH
+    fulfillment_path = repo_root / path
+    if not fulfillment_path.is_file():
+        return [_fail("assurance-fulfillment-missing", f"assurance fulfillment map not found: {path}", path)]
+    try:
+        raw = yaml.safe_load(fulfillment_path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        return [_fail("assurance-fulfillment-parse", f"failed to parse {path}: {exc}", path)]
+    if not isinstance(raw, dict):
+        return [_fail("assurance-fulfillment-shape", f"{path} must be a YAML mapping at the top level", path)]
+
+    failures: list[PolicyFailure] = []
+    if raw.get("fulfillment") != _FULFILLMENT_VALUE:
+        failures.append(_fail("assurance-fulfillment-field", f"fulfillment field must be {_FULFILLMENT_VALUE!r}", path))
+    if raw.get("policy_ref") != ASSURANCE_POLICY_RELATIVE_PATH:
+        failures.append(
+            _fail("assurance-fulfillment-field", f"policy_ref must be {ASSURANCE_POLICY_RELATIVE_PATH}", path)
+        )
+    adr_refs = raw.get("adr_refs")
+    if not isinstance(adr_refs, list):
+        failures.append(_fail("assurance-fulfillment-field", "adr_refs must be a YAML list", path))
+    else:
+        adr_strs = _refs_sequence(adr_refs)
+        for required_adr in ADR_REFS:
+            if required_adr not in adr_strs:
+                failures.append(_fail("assurance-fulfillment-field", f"adr_refs must include {required_adr}", path))
+
+    level_ids = _level_ids(levels)
+    required_by_level = _required_artifacts_by_level(levels)
+    valid_artifact_kinds = _required_artifact_union(levels)
+
+    # --- subsystem registry: {id, path, fm_level} ---
+    # The registry's path boundary is the classified formal-domain set itself --
+    # immediate `specs/formal/<domain>/` subdirectories carrying a README.md (per
+    # the issue #485 preflight and the specs/formal/README.md domain-marker
+    # convention). A registry entry pointing anywhere else
+    # (some other repo dir that merely happens to hold a README) is rejected, so
+    # the fulfillment surface cannot drift outside the declared ownership
+    # boundary.
+    formal_domain_paths = set(_classified_formal_domains(repo_root))
+    subsystems = raw.get("subsystems")
+    if not isinstance(subsystems, list):
+        failures.append(_fail("assurance-fulfillment-field", "subsystems must be a YAML list", path))
+        subsystems = []
+    registry: dict[str, dict] = {}
+    registered_paths: set[str] = set()
+    seen_ids: set[str] = set()
+    for index, sub in enumerate(subsystems):
+        if not isinstance(sub, dict):
+            failures.append(_fail("assurance-fulfillment-subsystem", f"subsystems[{index}] must be a mapping", path))
+            continue
+        sub_id = sub.get("id")
+        sub_path = sub.get("path")
+        fm_level = sub.get("fm_level")
+        ident = sub_id if isinstance(sub_id, str) and sub_id.strip() else f"subsystems[{index}]"
+        if not isinstance(sub_id, str) or not sub_id.strip():
+            failures.append(
+                _fail("assurance-fulfillment-subsystem", f"subsystems[{index}].id must be a non-empty string", path)
+            )
+            sub_id = None
+        elif sub_id in seen_ids:
+            failures.append(_fail("assurance-fulfillment-subsystem", f"duplicate subsystem id: {sub_id}", path))
+        else:
+            seen_ids.add(sub_id)
+        resolved_rel: str | None = None
+        if not isinstance(sub_path, str) or not sub_path.strip():
+            failures.append(
+                _fail("assurance-fulfillment-subsystem", f"{ident}.path must be a non-empty repo-relative path", path)
+            )
+        else:
+            resolved = safe_repo_path(repo_root, sub_path)
+            if resolved is None:
+                failures.append(
+                    _fail("assurance-fulfillment-subsystem", f"{ident}.path escapes the repo root: {sub_path}", path)
+                )
+            else:
+                candidate_rel = resolved.relative_to(repo_root.resolve()).as_posix()
+                if candidate_rel not in formal_domain_paths:
+                    failures.append(
+                        _fail(
+                            "assurance-fulfillment-subsystem",
+                            f"{ident}.path is not a classified formal-spec domain "
+                            f"(must be an immediate specs/formal/<domain>/ directory containing README.md): {sub_path}",
+                            path,
+                        )
+                    )
+                elif candidate_rel in registered_paths:
+                    failures.append(
+                        _fail(
+                            "assurance-fulfillment-subsystem",
+                            f"{ident}.path duplicates another registry entry's path: {sub_path}",
+                            path,
+                        )
+                    )
+                else:
+                    resolved_rel = candidate_rel
+                    registered_paths.add(resolved_rel)
+        if not isinstance(fm_level, str) or fm_level not in level_ids:
+            failures.append(
+                _fail(
+                    "assurance-fulfillment-level",
+                    f"{ident}.fm_level {fm_level!r} is not defined in {ASSURANCE_POLICY_RELATIVE_PATH}",
+                    path,
+                )
+            )
+            fm_level = None
+        if isinstance(sub_id, str) and sub_id.strip() and sub_id not in registry:
+            registry[sub_id] = {"path": resolved_rel, "fm_level": fm_level}
+
+    # --- coverage: every classified domain dir must be registered ---
+    for domain_rel in _classified_formal_domains(repo_root):
+        if domain_rel not in registered_paths:
+            failures.append(
+                _fail(
+                    "assurance-fulfillment-coverage",
+                    f"classified formal subsystem is absent from the fulfillment registry: {domain_rel}",
+                    path,
+                )
+            )
+
+    # --- fulfillment entries keyed by subsystem id ---
+    entries = raw.get("entries")
+    if not isinstance(entries, list):
+        failures.append(_fail("assurance-fulfillment-field", "entries must be a YAML list", path))
+        entries = []
+    entry_subsystems: set[str] = set()
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            failures.append(_fail("assurance-fulfillment-entry", f"entries[{index}] must be a mapping", path))
+            continue
+        sub_id = entry.get("subsystem")
+        if not isinstance(sub_id, str) or not sub_id.strip():
+            failures.append(
+                _fail("assurance-fulfillment-entry", f"entries[{index}].subsystem must be a non-empty string", path)
+            )
+            continue
+        if sub_id in entry_subsystems:
+            failures.append(
+                _fail("assurance-fulfillment-entry", f"duplicate fulfillment entry for subsystem: {sub_id}", path)
+            )
+            continue
+        entry_subsystems.add(sub_id)
+        if sub_id not in registry:
+            failures.append(
+                _fail(
+                    "assurance-fulfillment-entry-unknown",
+                    f"fulfillment entry references subsystem {sub_id!r} not in the registry",
+                    path,
+                )
+            )
+            continue
+        fm_level = registry[sub_id]["fm_level"]
+        required = required_by_level.get(fm_level, set()) if fm_level else set()
+        delivered_kinds, deliver_failures = _check_fulfillment_delivered(
+            repo_root, sub_id, entry.get("delivered_artifacts"), valid_artifact_kinds
+        )
+        failures.extend(deliver_failures)
+        waived_kinds, waiver_failures = _check_fulfillment_waived(
+            sub_id, entry.get("waived_artifacts"), valid_artifact_kinds
+        )
+        failures.extend(waiver_failures)
+        missing_required = sorted(required - delivered_kinds - waived_kinds)
+        if missing_required:
+            failures.append(
+                _fail(
+                    "assurance-fulfillment-artifacts",
+                    f"{sub_id} ({fm_level}) must deliver or waive required artifact kind(s): {missing_required}",
+                    path,
+                )
+            )
+
+    # --- every registry subsystem must have a fulfillment entry ---
+    for sub_id in registry:
+        if sub_id not in entry_subsystems:
+            failures.append(
+                _fail(
+                    "assurance-fulfillment-entry-missing",
+                    f"classified subsystem {sub_id!r} is in the registry but has no fulfillment entry",
+                    path,
+                )
+            )
+
+    return failures
+
+
 def _check_artifact_keyword_drift(
     repo_root: Path,
     doc_rel: str,
@@ -716,6 +1568,11 @@ def evaluate_assurance_policy(repo_root: Path) -> list[PolicyFailure]:
             required_artifacts,
         )
     )
+
+    failures.extend(_check_adr_template_classification(repo_root))
+    failures.extend(_check_new_adr_classifications(repo_root, _level_ids(levels)))
+    failures.extend(_check_fm_classification_ledger(repo_root, levels))
+    failures.extend(_check_assurance_fulfillment(repo_root, levels))
 
     return failures
 

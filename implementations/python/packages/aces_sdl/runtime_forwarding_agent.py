@@ -18,12 +18,10 @@ is exempt (nothing concrete is asserted); the ``unknown`` / ``other`` tail is
 permissive.
 
 This is observed runtime state attached to ``Node.runtime``. Secret-bearing
-settings and ship-target enrollment identities never carry raw values; they
-classify ``redacted`` / ``operator_secret`` via the shared
-``name_indicates_secret`` helper and the closed enrollment lattice.
+setting values are scenario content unless explicitly classified
+``redacted`` / ``operator_secret``; ship-target enrollment identities use the
+closed enrollment lattice because they intentionally carry no raw value field.
 """
-
-from enum import Enum
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
@@ -84,10 +82,6 @@ _REDACTED_SETTING_CLASSIFICATIONS = (
 )
 
 
-def _normalize_enum(value: object, enum_cls: type[Enum], *, field_name: str) -> object:
-    return parse_runtime_enum_or_var(value, enum_cls, field_name=field_name)
-
-
 class RuntimeForwardingSource(SDLModel):
     """An observed forwarder input source (tailed path, API pull, or queue)."""
 
@@ -106,12 +100,12 @@ class RuntimeForwardingSource(SDLModel):
     @field_validator("kind", mode="before")
     @classmethod
     def normalize_kind(cls, v: RuntimeForwardingSourceKind | str) -> object:
-        return _normalize_enum(v, RuntimeForwardingSourceKind, field_name="kind")
+        return parse_runtime_enum_or_var(v, RuntimeForwardingSourceKind, field_name="kind")
 
     @field_validator("parse_format", mode="before")
     @classmethod
     def normalize_parse_format(cls, v: RuntimeForwardingParseFormat | str) -> object:
-        return _normalize_enum(v, RuntimeForwardingParseFormat, field_name="parse_format")
+        return parse_runtime_enum_or_var(v, RuntimeForwardingParseFormat, field_name="parse_format")
 
 
 class RuntimeForwardingTransform(SDLModel):
@@ -130,7 +124,7 @@ class RuntimeForwardingTransform(SDLModel):
     @field_validator("kind", mode="before")
     @classmethod
     def normalize_kind(cls, v: RuntimeForwardingTransformKind | str) -> object:
-        return _normalize_enum(v, RuntimeForwardingTransformKind, field_name="kind")
+        return parse_runtime_enum_or_var(v, RuntimeForwardingTransformKind, field_name="kind")
 
 
 class RuntimeForwardingShipTarget(SDLModel):
@@ -167,12 +161,12 @@ class RuntimeForwardingShipTarget(SDLModel):
     @field_validator("protocol", mode="before")
     @classmethod
     def normalize_protocol(cls, v: RuntimeForwardingProtocol | str) -> object:
-        return _normalize_enum(v, RuntimeForwardingProtocol, field_name="protocol")
+        return parse_runtime_enum_or_var(v, RuntimeForwardingProtocol, field_name="protocol")
 
     @field_validator("enrollment_identity_classification", mode="before")
     @classmethod
     def normalize_enrollment_classification(cls, v: RuntimeForwardingEnrollmentClassification | str) -> object:
-        return _normalize_enum(
+        return parse_runtime_enum_or_var(
             v, RuntimeForwardingEnrollmentClassification, field_name="enrollment_identity_classification"
         )
 
@@ -219,7 +213,7 @@ class RuntimeForwardingBufferPolicy(SDLModel):
     @field_validator("crypto", mode="before")
     @classmethod
     def normalize_crypto(cls, v: RuntimeForwardingBufferCrypto | str) -> object:
-        return _normalize_enum(v, RuntimeForwardingBufferCrypto, field_name="crypto")
+        return parse_runtime_enum_or_var(v, RuntimeForwardingBufferCrypto, field_name="crypto")
 
 
 class RuntimeForwardingReloadChannel(SDLModel):
@@ -243,16 +237,15 @@ class RuntimeForwardingReloadChannel(SDLModel):
     @field_validator("kind", mode="before")
     @classmethod
     def normalize_kind(cls, v: RuntimeForwardingReloadChannelKind | str) -> object:
-        return _normalize_enum(v, RuntimeForwardingReloadChannelKind, field_name="kind")
+        return parse_runtime_enum_or_var(v, RuntimeForwardingReloadChannelKind, field_name="kind")
 
 
 class RuntimeForwardingSetting(SDLModel):
     """An observed forwarding-agent runtime setting with provenance and class.
 
-    Settings that may carry credentials or operator-only values must omit their
-    raw ``value`` and classify it ``redacted`` / ``operator_secret`` — enforced
-    via the shared ``name_indicates_secret`` helper even when the submitter left
-    ``classification`` at its default.
+    Explicit ``redacted`` / ``operator_secret`` classifications omit raw values;
+    credential-shaped names remain scenario content unless the author marks the
+    value withheld.
     """
 
     setting_id: str
@@ -270,22 +263,20 @@ class RuntimeForwardingSetting(SDLModel):
     @field_validator("provenance", mode="before")
     @classmethod
     def normalize_provenance(cls, v: RuntimeForwardingSettingProvenance | str) -> object:
-        return _normalize_enum(v, RuntimeForwardingSettingProvenance, field_name="provenance")
+        return parse_runtime_enum_or_var(v, RuntimeForwardingSettingProvenance, field_name="provenance")
 
     @field_validator("classification", mode="before")
     @classmethod
     def normalize_classification(cls, v: RuntimeForwardingSettingClassification | str) -> object:
-        return _normalize_enum(v, RuntimeForwardingSettingClassification, field_name="classification")
+        return parse_runtime_enum_or_var(v, RuntimeForwardingSettingClassification, field_name="classification")
 
     @model_validator(mode="after")
     def validate_setting(self) -> "RuntimeForwardingSetting":
         enforce_observed_value_redaction(
             owner_label=f"forwarding setting '{self.setting_id}'",
-            name=self.name,
             value=self.value,
             classification=self.classification,
             redacted_classifications=_REDACTED_SETTING_CLASSIFICATIONS,
-            classification_field="classification",
         )
         return self
 
@@ -320,12 +311,12 @@ class RuntimeForwardingAgent(SDLModel):
     @field_validator("implementation", mode="before")
     @classmethod
     def normalize_implementation(cls, v: RuntimeForwardingAgentImplementation | str) -> object:
-        return _normalize_enum(v, RuntimeForwardingAgentImplementation, field_name="implementation")
+        return parse_runtime_enum_or_var(v, RuntimeForwardingAgentImplementation, field_name="implementation")
 
     @field_validator("agent_kind", mode="before")
     @classmethod
     def normalize_agent_kind(cls, v: RuntimeForwardingAgentKind | str) -> object:
-        return _normalize_enum(v, RuntimeForwardingAgentKind, field_name="agent_kind")
+        return parse_runtime_enum_or_var(v, RuntimeForwardingAgentKind, field_name="agent_kind")
 
     @model_validator(mode="after")
     def validate_forwarding_agent(self) -> "RuntimeForwardingAgent":
@@ -466,19 +457,19 @@ class RelationshipForwardingEdge(SDLModel):
     @field_validator("target_listener_role", mode="before")
     @classmethod
     def normalize_target_listener_role(cls, v: RuntimeSecurityMonitoringListenerRole | str) -> object:
-        return _normalize_enum(v, RuntimeSecurityMonitoringListenerRole, field_name="target_listener_role")
+        return parse_runtime_enum_or_var(v, RuntimeSecurityMonitoringListenerRole, field_name="target_listener_role")
 
     @field_validator("enrollment_identity_classification", mode="before")
     @classmethod
     def normalize_enrollment_classification(cls, v: RuntimeForwardingEnrollmentClassification | str) -> object:
-        return _normalize_enum(
+        return parse_runtime_enum_or_var(
             v, RuntimeForwardingEnrollmentClassification, field_name="enrollment_identity_classification"
         )
 
     @field_validator("parse_format", mode="before")
     @classmethod
     def normalize_parse_format(cls, v: RuntimeForwardingParseFormat | str) -> object:
-        return _normalize_enum(v, RuntimeForwardingParseFormat, field_name="parse_format")
+        return parse_runtime_enum_or_var(v, RuntimeForwardingParseFormat, field_name="parse_format")
 
     @model_validator(mode="after")
     def validate_enrollment_identity(self) -> "RelationshipForwardingEdge":

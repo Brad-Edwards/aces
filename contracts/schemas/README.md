@@ -14,6 +14,7 @@ Current published schemas cover:
 - processor manifests (`v1` legacy plus shared-apparatus `v2`)
 - concept-authority catalogs
 - reference model catalogs
+- UCO alignment evidence
 - controlled vocabulary catalogs
 - semantic profiles
 - live-execution snapshots
@@ -65,6 +66,20 @@ instead they must declare non-empty `extension_scope`, `relation_rules`, and
 `non_ambiguity_constraints`. This keeps ACES experiment, runtime, apparatus,
 provenance, and governance concepts explicit without letting them silently fork
 shared cyber-domain concepts.
+
+## UCO Alignment Evidence
+
+The `uco-alignment-v1` schema publishes the machine-readable UCO alignment
+evidence catalog. It pins the reviewed UCO version and maps each adopted and
+adapted cyber-domain concept family (from `concept-families-v1`) to the UCO
+object types it aligns to, enumerating adapted-family divergences explicitly.
+
+The catalog lives at `contracts/concept-authority/uco-alignment-v1.json`.
+Coverage is catalog-derived: every adopted or adapted family whose authority is
+UCO must have exactly one alignment entry. Validation uses local evidence only
+and does not fetch the UCO ontology; semantic checks beyond JSON Schema enforce
+coverage, provenance agreement with `concept-families-v1`, canonical UCO IRIs,
+and the adapted-family divergence rule.
 
 ## Semantic Profiles
 

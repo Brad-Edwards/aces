@@ -12,13 +12,30 @@ Each ADR includes:
 - **Status**: `proposed`, `accepted`, `deprecated`, or `superseded by ADR-XXX`
 - **Context**: The problem or situation driving the decision
 - **Decision**: What we chose and why
+- **Alternatives Considered**: Credible rejected options and why they were not
+  chosen
 - **Consequences**: Trade-offs (positive, negative, risks)
+
+Use [`TEMPLATE.md`](TEMPLATE.md) when drafting a new ADR.
 
 ## Principles
 
-- ADRs are **immutable** once accepted. To reverse a decision, create a new ADR
-  that supersedes it.
-- ADRs are **numbered sequentially** and never reused.
+- An **accepted** ADR's content is **pinned** and citable. Its acceptance (or
+  last-amendment) content hash is recorded in
+  [`adr-index.yaml`](adr-index.yaml) and enforced by the `policy` nox session
+  (`tools/check_adr_immutability.py`). A substantive change to an accepted ADR
+  is legitimate only as a new **superseding** ADR, or as a recorded **amendment**
+  (a `## Amendments` row plus an updated pin, in the same change). Editorial-only
+  fixes (typos, formatting) also record a one-line amendment row — the gate
+  cannot tell editorial from substantive, so every canonical-content change is
+  recorded. See
+  [ADR-059](adr-059-adr-amendment-policy-and-pin-gate.md) for the full policy.
+- `proposed` ADRs are still being decided and may change freely;
+  `superseded`/`deprecated` ADRs leave the pinned set (the citable decision has
+  moved to the replacing ADR).
+- ADRs are **numbered sequentially** in landing order and never reused. The ADR
+  date records when the decision was made; it may differ from the landing order
+  when a decision is backfilled or merged later.
 - ADRs are **versioned with code** and live in the repo.
 
 ## Index
@@ -26,6 +43,48 @@ Each ADR includes:
 ```{toctree}
 :hidden:
 
+TEMPLATE
+adr-000-use-adrs
+adr-001-scenario-description-language
+adr-002-declarative-sdl-objectives
+adr-003-workflows-targetable-subobjects-and-enum-variables
+adr-004-sdl-runtime-layer
+adr-005-control-flow-primitives
+adr-006-workflow-control-language-redesign
+adr-007-lightweight-formal-methods-policy
+adr-008-processor-layer-and-execution-artifact-boundaries
+adr-009-normative-artifact-authority-and-repository-structure
+adr-010-repository-realignment-order-and-compatibility-policy
+adr-011-narrow-end-to-end-mvp-validation
+adr-012-shared-concept-authority-and-aces-extension-discipline
+adr-013-participant-episode-lifecycle-boundaries
+adr-014-nox-as-canonical-verification-graph
+adr-015-sdl-processor-layering-and-source-file-size-cap
+adr-016-semantic-layer-scope-and-coverage-model
+adr-017-conversation-surface-hardening
+adr-018-classification-based-assurance-policy
+adr-019-normative-authority-boundary-manifest
+adr-020-declarative-participant-framing-boundaries
+adr-021-falsification-first-claim-evidence-gate
+adr-022-participant-behavior-and-interaction-semantics
+adr-023-container-image-build-provenance-surface
+adr-024-local-identity-inventory-surface
+adr-025-container-network-realization-surface
+adr-026-application-http-surface-inventory
+adr-027-container-init-reaper-runtime-surface
+adr-028-container-seccomp-security-options-surface
+adr-029-database-logical-state-runtime-surface
+adr-030-process-scoped-linux-capability-policy
+adr-031-ssh-server-configuration-surface
+adr-032-directory-domain-identity-runtime-surface
+adr-033-scenario-delivery-boundary-for-runtime-node-state
+adr-034-runtime-software-component-inventory
+adr-035-service-manager-unit-state-runtime-surface
+adr-036-sdl-processor-runtime-module-boundaries
+adr-037-runtime-file-service-and-filesystem-presence-semantics
+adr-038-runtime-mail-service-logical-state
+adr-039-dns-service-runtime-inventory
+adr-040-security-monitoring-manager-runtime-inventory
 adr-041-participant-implementation-manifest-and-provenance
 adr-042-network-sensor-runtime-monitoring
 adr-043-runtime-service-listener-surface
@@ -42,6 +101,12 @@ adr-053-sdl-module-composition-for-inventory-backed-scenarios
 adr-054-participant-runtime-observable-lifecycle
 adr-055-experiment-core-contract-boundary
 adr-056-runtime-observed-values-and-credential-posture
+adr-057-runtime-secret-name-classifier-boundaries
+adr-058-datastore-node-engine-provenance-and-endpoints
+adr-059-adr-amendment-policy-and-pin-gate
+adr-060-participant-backend-facing-contract-surface
+adr-061-published-schema-evolution-policy
+adr-062-concept-authority-catalog-governance-gate
 ```
 
 | ADR | Title | Status | Date |
@@ -66,10 +131,10 @@ adr-056-runtime-observed-values-and-credential-posture
 | [017](adr-017-conversation-surface-hardening.md) | Conversation Surface Hardening | accepted | 2026-05-17 |
 | [018](adr-018-classification-based-assurance-policy.md) | Canonical Mapping for the Classification-Based Assurance Policy | accepted | 2026-05-17 |
 | [019](adr-019-normative-authority-boundary-manifest.md) | Canonical Manifest for the Normative Artifact Authority Boundary | accepted | 2026-05-17 |
-| [020](adr-020-declarative-participant-framing-boundaries.md) | Declarative Participant Framing Boundaries | proposed | 2026-05-18 |
-| [021](adr-021-falsification-first-claim-evidence-gate.md) | Falsification-First Claim Evidence Gate | proposed | 2026-05-18 |
-| [022](adr-022-participant-behavior-and-interaction-semantics.md) | Participant Behavior and Interaction Semantics | proposed | 2026-05-18 |
-| [023](adr-023-container-image-build-provenance-surface.md) | Container Image Build Provenance Surface | proposed | 2026-05-21 |
+| [020](adr-020-declarative-participant-framing-boundaries.md) | Declarative Participant Framing Boundaries | accepted | 2026-05-18 |
+| [021](adr-021-falsification-first-claim-evidence-gate.md) | Falsification-First Claim Evidence Gate | accepted | 2026-05-18 |
+| [022](adr-022-participant-behavior-and-interaction-semantics.md) | Participant Behavior and Interaction Semantics | accepted | 2026-05-18 |
+| [023](adr-023-container-image-build-provenance-surface.md) | Container Image Build Provenance Surface | accepted | 2026-05-21 |
 | [024](adr-024-local-identity-inventory-surface.md) | Local Identity Inventory Surface | accepted | 2026-05-21 |
 | [025](adr-025-container-network-realization-surface.md) | Container Network Realization Surface | accepted | 2026-05-21 |
 | [026](adr-026-application-http-surface-inventory.md) | Application HTTP Surface Inventory | accepted | 2026-05-22 |
@@ -100,6 +165,12 @@ adr-056-runtime-observed-values-and-credential-posture
 | [051](adr-051-orchestration-authority-runtime-inventory.md) | Orchestration Authority Runtime Inventory | accepted | 2026-05-30 |
 | [052](adr-052-typed-runtime-relationship-subtypes.md) | Typed Runtime Relationship Subtypes | accepted | 2026-05-30 |
 | [053](adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) | SDL Module Composition for Inventory-Backed Scenarios | accepted | 2026-06-03 |
-| [054](adr-054-participant-runtime-observable-lifecycle.md) | Participant Runtime Observable Lifecycle | proposed | 2026-06-05 |
+| [054](adr-054-participant-runtime-observable-lifecycle.md) | Participant Runtime Observable Lifecycle | accepted | 2026-06-05 |
 | [055](adr-055-experiment-core-contract-boundary.md) | Experiment Core Contract Boundary | accepted | 2026-05-26 |
 | [056](adr-056-runtime-observed-values-and-credential-posture.md) | Runtime Observed Values and Credential Posture | accepted | 2026-06-05 |
+| [057](adr-057-runtime-secret-name-classifier-boundaries.md) | Runtime Scenario Value Realizability and Explicit Redaction | accepted | 2026-06-06 |
+| [058](adr-058-datastore-node-engine-provenance-and-endpoints.md) | Datastore Node Engine Provenance and Endpoints | accepted | 2026-06-07 |
+| [059](adr-059-adr-amendment-policy-and-pin-gate.md) | ADR Amendment Policy and Acceptance-Content Pin Gate | accepted | 2026-06-10 |
+| [060](adr-060-participant-backend-facing-contract-surface.md) | Participant Backend-Facing Contract Surface | proposed | 2026-06-11 |
+| [061](adr-061-published-schema-evolution-policy.md) | Published Schema Evolution Policy | accepted | 2026-06-14 |
+| [062](adr-062-concept-authority-catalog-governance-gate.md) | Concept-Authority Catalog Governance Gate | accepted | 2026-06-14 |
