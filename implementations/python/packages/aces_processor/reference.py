@@ -90,8 +90,8 @@ class ReferenceProcessor:
 
         return reference_processor_manifest_payload(version=version)
 
+    @staticmethod
     def realize(
-        self,
         scenario: ScenarioInput,
         backend_manifest: BackendManifest,
         *,
@@ -132,7 +132,7 @@ def run_reference_processor(
 ) -> ReferenceProcessorResult:
     """Convenience wrapper around :meth:`ReferenceProcessor.realize`."""
 
-    return ReferenceProcessor().realize(
+    return ReferenceProcessor.realize(
         scenario,
         backend_manifest,
         parameters=parameters,
