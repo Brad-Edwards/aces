@@ -12,6 +12,10 @@ from aces_contracts.contracts import (
     RuntimeSnapshotEnvelopeModel,
     schema_bundle,
 )
+from aces_contracts.participant_concurrency import (
+    iter_participant_concurrency_snapshot_violations,
+    iter_participant_concurrency_transition_violations,
+)
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
 from aces_runtime.backend_calls import _call_backend_apply
 from aces_runtime.participant_result_contracts import participant_runtime_state_contract_diagnostics
@@ -151,6 +155,19 @@ def _snapshot_payload(**overrides: object) -> dict[str, object]:
     return payload
 
 
+def _concurrency_violation_messages(payload: dict[str, object]) -> list[str]:
+    return [
+        message
+        for _address, message in iter_participant_concurrency_snapshot_violations(
+            payload.get("joint_action_records"),
+            payload.get("time_management_contexts"),
+            participant_behavior_history=payload.get("participant_behavior_history"),
+            shared_state_records=payload.get("shared_state_records"),
+            shared_state_history=payload.get("shared_state_history"),
+        )
+    ]
+
+
 def test_runtime_snapshot_publishes_joint_action_and_time_context_records() -> None:
     payload = _snapshot_payload()
 
@@ -189,6 +206,93 @@ def test_joint_action_record_contract_rejects_exact_claim_without_time_context()
         ParticipantJointActionRecordModel.model_validate(payload)
 
 
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"member_event_refs": ["scan-red-0001", "scan-red-0001"]}, "member_event_refs must be unique"),
+        (
+            {"access_sets": [{"member_event_ref": "scan-red-0001"}]},
+            "access_sets must cover member_event_refs",
+        ),
+        ({"realized_order": ["scan-red-0001", "scan-missing-0001"]}, "realized_order"),
+        (
+            {"unsupported_disclosure": True, "exact_concurrency_claim": True},
+            "unsupported concurrency disclosure",
+        ),
+        (
+            {"conflict_policy": "unsupported", "unsupported_disclosure": False},
+            "unsupported conflict_policy",
+        ),
+        (
+            {
+                "conflict_policy": "retry",
+                "isolation_guarantee": "serializable",
+                "realized_order": [],
+                "retry_limit": 1,
+                "rollback_event_refs": ["scan-red-0001"],
+            },
+            "serializable joint action isolation",
+        ),
+        (
+            {"conflict_policy": "serialize", "isolation_guarantee": "none", "realized_order": []},
+            "serialize conflict_policy",
+        ),
+        (
+            {
+                "conflict_policy": "retry",
+                "isolation_guarantee": "none",
+                "realized_order": [],
+                "retry_limit": None,
+                "rollback_event_refs": [],
+            },
+            "retry conflict_policy",
+        ),
+        (
+            {"conflict_policy": "none", "isolation_guarantee": "none", "realized_order": []},
+            "none conflict_policy",
+        ),
+        (
+            {
+                "conflict_policy": "reject",
+                "isolation_guarantee": "none",
+                "atomicity_scope": "multi_object",
+                "realized_order": [],
+            },
+            "multi_object conflicting joint actions",
+        ),
+        (
+            {
+                "conflict_class": "none",
+                "conflict_policy": "reject",
+                "isolation_guarantee": "none",
+                "unsupported_disclosure": True,
+            },
+            "conflict_class cannot be none",
+        ),
+    ],
+)
+def test_joint_action_record_contract_rejects_concurrency_guardrails(
+    overrides: dict[str, object],
+    message: str,
+) -> None:
+    payload = _joint_action(**overrides)
+
+    with pytest.raises(ValidationError, match=message):
+        ParticipantJointActionRecordModel.model_validate(payload)
+
+
+def test_joint_action_record_contract_accepts_unsupported_policy_disclosure() -> None:
+    payload = _joint_action(
+        conflict_policy="unsupported",
+        unsupported_disclosure=True,
+        exact_concurrency_claim=False,
+    )
+
+    model = ParticipantJointActionRecordModel.model_validate(payload)
+
+    assert model.conflict_policy == "unsupported"
+
+
 def test_time_management_context_contract_rejects_wall_clock_exact_claim() -> None:
     payload = _time_context(
         mode="display",
@@ -199,6 +303,85 @@ def test_time_management_context_contract_rejects_wall_clock_exact_claim() -> No
     )
 
     with pytest.raises(ValidationError, match="wall_clock_only"):
+        ParticipantTimeManagementContextModel.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        (
+            {"mode": "display", "claim_strength": "bounded", "basis": "logical_clock", "clock_ref": None},
+            "clock_ref",
+        ),
+        ({"backend_serialized": False}, "backend_serialized mode"),
+        (
+            {
+                "mode": "lookahead",
+                "basis": "logical_clock",
+                "clock_ref": "clock.logical.runtime",
+                "backend_serialized": False,
+            },
+            "lookahead mode",
+        ),
+        (
+            {
+                "mode": "pacing",
+                "basis": "logical_clock",
+                "clock_ref": "clock.logical.runtime",
+                "backend_serialized": False,
+            },
+            "pacing mode",
+        ),
+        (
+            {
+                "mode": "rollback",
+                "basis": "logical_clock",
+                "clock_ref": "clock.logical.runtime",
+                "rollback_event_refs": [],
+                "backend_serialized": False,
+            },
+            "rollback mode",
+        ),
+        (
+            {
+                "mode": "devs",
+                "claim_strength": "display",
+                "basis": "wall_clock_only",
+                "clock_ref": None,
+                "backend_serialized": False,
+            },
+            "devs and fmi modes",
+        ),
+        (
+            {
+                "mode": "unsupported",
+                "claim_strength": "display",
+                "basis": "wall_clock_only",
+                "clock_ref": None,
+                "backend_serialized": False,
+            },
+            "unsupported time-management mode",
+        ),
+        (
+            {
+                "mode": "display",
+                "claim_strength": "exact",
+                "basis": "logical_clock",
+                "clock_ref": "clock.logical.runtime",
+                "unsupported_disclosure": True,
+                "backend_serialized": False,
+            },
+            "unsupported time-management disclosure",
+        ),
+    ],
+)
+def test_time_management_context_contract_rejects_mode_guardrails(
+    overrides: dict[str, object],
+    message: str,
+) -> None:
+    payload = _time_context(**overrides)
+
+    with pytest.raises(ValidationError, match=message):
         ParticipantTimeManagementContextModel.model_validate(payload)
 
 
@@ -294,6 +477,287 @@ def test_participant_runtime_state_diagnostics_reject_rollback_refs_when_history
     )
 
 
+def test_participant_concurrency_snapshot_validator_rejects_malformed_maps() -> None:
+    violations = list(
+        iter_participant_concurrency_snapshot_violations(
+            joint_action_records=[],
+            time_management_contexts=[],
+            participant_behavior_history=None,
+            shared_state_records=None,
+            shared_state_history=None,
+        )
+    )
+    messages = [message for _address, message in violations]
+
+    assert "joint_action_records must be a mapping" in messages
+    assert "time_management_contexts must be a mapping" in messages
+
+
+def test_participant_concurrency_snapshot_validator_rejects_malformed_records() -> None:
+    payload = _snapshot_payload(
+        joint_action_records={"": {}, "joint-red-blue-0001": "not-a-record"},
+        time_management_contexts={"": {}, "tm-red-blue-0001": "not-a-context"},
+    )
+
+    messages = _concurrency_violation_messages(payload)
+
+    assert "joint_action_records keys must be non-empty strings" in messages
+    assert "joint action record must be a mapping" in messages
+    assert "time_management_contexts keys must be non-empty strings" in messages
+    assert "time management context must be a mapping" in messages
+
+
+def test_participant_concurrency_snapshot_validator_rejects_malformed_joint_action_fields() -> None:
+    payload = _snapshot_payload(
+        joint_action_records={
+            "joint-red-blue-0001": _joint_action(
+                joint_action_set_id="joint-other-0001",
+                member_event_refs=["scan-red-0001", ""],
+                access_sets=[
+                    {},
+                    {
+                        "member_event_ref": "scan-red-0001",
+                        "shared_state_read_refs": "not-a-list",
+                        "shared_state_write_refs": ["", "state.missing"],
+                    },
+                ],
+                realized_order="not-a-list",
+                conflict_class="none",
+                conflict_policy="none",
+                isolation_guarantee="none",
+                time_management_context_ref="tm-missing-0001",
+            ),
+            "joint-missing-id": _joint_action(
+                joint_action_set_id="",
+                member_event_refs=["scan-red-0001", "scan-blue-0001"],
+                access_sets=[],
+                realized_order=["scan-red-0001", "scan-missing-0001"],
+                conflict_class="none",
+                conflict_policy="none",
+                isolation_guarantee="none",
+                time_management_context_ref=None,
+                exact_concurrency_claim=True,
+            ),
+            "joint-bad-access": _joint_action(
+                joint_action_set_id="joint-bad-access",
+                member_event_refs=["scan-red-0001"],
+                access_sets=["not-a-map"],
+                realized_order=[],
+                conflict_class="none",
+                conflict_policy="none",
+                isolation_guarantee="none",
+                time_management_context_ref=None,
+            ),
+        }
+    )
+
+    messages = _concurrency_violation_messages(payload)
+
+    assert any("does not match joint_action_set_id" in message for message in messages)
+    assert "joint action record requires joint_action_set_id" in messages
+    assert "joint action member_event_refs entries must be non-empty strings" in messages
+    assert "joint action access_sets must be a non-empty list" in messages
+    assert "joint action access set must be a mapping" in messages
+    assert "joint action access set requires member_event_ref" in messages
+    assert "shared_state_read_refs must be a list" in messages
+    assert "shared_state_write_refs entries must be non-empty strings" in messages
+    assert "shared_state_write_refs entry 'state.missing' does not resolve" in messages
+    assert "joint action realized_order must be a list" in messages
+    assert "joint action realized_order must be an exact permutation of member_event_refs" in messages
+    assert "time_management_context_ref 'tm-missing-0001' does not resolve" in messages
+    assert "exact concurrency claims require time_management_context_ref" in messages
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        (
+            {
+                "unsupported_disclosure": True,
+                "exact_concurrency_claim": True,
+            },
+            "unsupported concurrency disclosure",
+        ),
+        (
+            {
+                "conflict_policy": "unsupported",
+                "unsupported_disclosure": False,
+                "realized_order": [],
+                "isolation_guarantee": "none",
+            },
+            "unsupported conflict_policy",
+        ),
+        (
+            {
+                "conflict_policy": "serialize",
+                "realized_order": [],
+                "isolation_guarantee": "none",
+            },
+            "serialize conflict_policy",
+        ),
+        (
+            {
+                "conflict_policy": "retry",
+                "isolation_guarantee": "serializable",
+                "realized_order": [],
+                "retry_limit": 1,
+                "rollback_event_refs": ["scan-red-0001"],
+            },
+            "serializable joint action isolation",
+        ),
+        (
+            {
+                "conflict_policy": "retry",
+                "realized_order": [],
+                "isolation_guarantee": "none",
+                "retry_limit": None,
+                "rollback_event_refs": [],
+            },
+            "retry conflict_policy",
+        ),
+        (
+            {
+                "conflict_policy": "none",
+                "realized_order": [],
+                "isolation_guarantee": "none",
+            },
+            "none conflict_policy",
+        ),
+        (
+            {
+                "conflict_policy": "reject",
+                "realized_order": [],
+                "isolation_guarantee": "none",
+                "atomicity_scope": "multi_object",
+            },
+            "multi_object conflicting joint actions",
+        ),
+        (
+            {
+                "access_sets": [
+                    {"member_event_ref": "scan-red-0001", "shared_state_write_refs": [STATE_ADDRESS]},
+                    {"member_event_ref": "scan-blue-0001", "shared_state_write_refs": [STATE_ADDRESS]},
+                ],
+                "conflict_class": "read_write",
+                "conflict_policy": "reject",
+                "isolation_guarantee": "none",
+            },
+            "conflict_class must match",
+        ),
+        (
+            {
+                "conflict_class": "none",
+                "conflict_policy": "reject",
+                "isolation_guarantee": "none",
+                "unsupported_disclosure": True,
+            },
+            "conflict_class cannot be none",
+        ),
+    ],
+)
+def test_participant_concurrency_snapshot_validator_rejects_conflict_guardrails(
+    overrides: dict[str, object],
+    message: str,
+) -> None:
+    payload = _snapshot_payload(joint_action_records={"joint-red-blue-0001": _joint_action(**overrides)})
+
+    messages = _concurrency_violation_messages(payload)
+
+    assert any(message in violation for violation in messages)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"context_id": ""}, "requires context_id"),
+        ({"context_id": "tm-other-0001"}, "does not match context_id"),
+        (
+            {"mode": "display", "claim_strength": "bounded", "basis": "logical_clock", "clock_ref": None},
+            "clock_ref",
+        ),
+        (
+            {
+                "mode": "display",
+                "claim_strength": "exact",
+                "basis": "wall_clock_only",
+                "clock_ref": "clock.wall",
+                "backend_serialized": False,
+            },
+            "wall_clock_only time basis",
+        ),
+        ({"backend_serialized": False}, "backend_serialized mode"),
+        (
+            {
+                "mode": "lookahead",
+                "basis": "logical_clock",
+                "clock_ref": "clock.logical.runtime",
+                "backend_serialized": False,
+            },
+            "lookahead mode",
+        ),
+        (
+            {
+                "mode": "pacing",
+                "basis": "logical_clock",
+                "clock_ref": "clock.logical.runtime",
+                "backend_serialized": False,
+            },
+            "pacing mode",
+        ),
+        (
+            {
+                "mode": "rollback",
+                "basis": "logical_clock",
+                "clock_ref": "clock.logical.runtime",
+                "rollback_event_refs": [],
+                "backend_serialized": False,
+            },
+            "rollback mode",
+        ),
+        (
+            {
+                "mode": "devs",
+                "claim_strength": "display",
+                "basis": "wall_clock_only",
+                "clock_ref": None,
+                "backend_serialized": False,
+            },
+            "devs and fmi modes",
+        ),
+        (
+            {
+                "mode": "unsupported",
+                "claim_strength": "display",
+                "basis": "wall_clock_only",
+                "clock_ref": None,
+                "backend_serialized": False,
+            },
+            "unsupported time-management mode",
+        ),
+        (
+            {
+                "mode": "display",
+                "claim_strength": "exact",
+                "basis": "logical_clock",
+                "clock_ref": "clock.logical.runtime",
+                "unsupported_disclosure": True,
+                "backend_serialized": False,
+            },
+            "unsupported time-management disclosure",
+        ),
+    ],
+)
+def test_participant_concurrency_snapshot_validator_rejects_time_context_guardrails(
+    overrides: dict[str, object],
+    message: str,
+) -> None:
+    payload = _snapshot_payload(time_management_contexts={"tm-red-blue-0001": _time_context(**overrides)})
+
+    messages = _concurrency_violation_messages(payload)
+
+    assert any(message in violation for violation in messages)
+
+
 def test_backend_apply_rejects_rewriting_joint_action_records() -> None:
     payload = _snapshot_payload()
     base_snapshot = RuntimeSnapshot(
@@ -324,6 +788,40 @@ def test_backend_apply_rejects_rewriting_joint_action_records() -> None:
 
     assert result.success is False
     assert any("joint_action_records must be append-only" in item.message for item in result.diagnostics)
+
+
+def test_participant_concurrency_transition_validator_rejects_rewriting_records() -> None:
+    assert (
+        list(
+            iter_participant_concurrency_transition_violations(
+                {"": {}},
+                {},
+                [],
+                {},
+            )
+        )
+        == []
+    )
+
+    violations = list(
+        iter_participant_concurrency_transition_violations(
+            {"joint-red-blue-0001": _joint_action()},
+            {"joint-red-blue-0001": _joint_action(conflict_policy="reject")},
+            {"tm-red-blue-0001": _time_context()},
+            {
+                "tm-red-blue-0001": _time_context(
+                    mode="display",
+                    claim_strength="display",
+                    basis="wall_clock_only",
+                    backend_serialized=False,
+                )
+            },
+        )
+    )
+    messages = [message for _address, message in violations]
+
+    assert "joint_action_records must be append-only; record 'joint-red-blue-0001' changed" in messages
+    assert "time_management_contexts must be append-only; record 'tm-red-blue-0001' changed" in messages
 
 
 def test_joint_action_and_time_context_model_round_trip() -> None:
