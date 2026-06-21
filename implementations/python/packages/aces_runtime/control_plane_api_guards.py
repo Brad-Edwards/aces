@@ -37,16 +37,17 @@ def _content_length_guard_response(
     *,
     max_request_bytes: int,
 ) -> JSONResponse | None:
+    response: JSONResponse | None = None
     content_length = request.headers.get("content-length")
-    if content_length is None:
-        return None
-    try:
-        content_length_value = int(content_length)
-    except ValueError:
-        return _invalid_content_length_response(control_plane, request)
-    if content_length_value > max_request_bytes:
-        return _request_too_large_response(control_plane, request)
-    return None
+    if content_length is not None:
+        try:
+            content_length_value = int(content_length)
+        except ValueError:
+            response = _invalid_content_length_response(control_plane, request)
+        else:
+            if content_length_value > max_request_bytes:
+                response = _request_too_large_response(control_plane, request)
+    return response
 
 
 async def _body_size_guard_response(
