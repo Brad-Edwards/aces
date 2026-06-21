@@ -1,0 +1,637 @@
+{
+  "schema_version": "controlled-vocabularies/v1",
+  "vocabularies": {
+    "processor-features": {
+      "title": "Processor Features",
+      "description": "Closed portable processor capability feature identifiers.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "capabilities.supported_features"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "compilation": {
+          "title": "Compilation",
+          "description": "Processor can compile authoring inputs into intermediate artifacts."
+        },
+        "planning": {
+          "title": "Planning",
+          "description": "Processor can produce provisioning, orchestration, and evaluation plans."
+        },
+        "orchestration-coordination": {
+          "title": "Orchestration Coordination",
+          "description": "Processor coordinates orchestration concerns across runtime targets."
+        },
+        "evaluation-coordination": {
+          "title": "Evaluation Coordination",
+          "description": "Processor coordinates evaluation concerns across runtime targets."
+        },
+        "workflow-semantics": {
+          "title": "Workflow Semantics",
+          "description": "Processor supports the workflow semantic contract surface."
+        },
+        "objective-window-consistency": {
+          "title": "Objective Window Consistency",
+          "description": "Processor can validate objective-to-window consistency constraints."
+        },
+        "dependency-ordering": {
+          "title": "Dependency Ordering",
+          "description": "Processor computes dependency-safe execution and provisioning order."
+        },
+        "runtime-control-plane": {
+          "title": "Runtime Control Plane",
+          "description": "Processor participates in the typed runtime control-plane contract surfaces."
+        }
+      }
+    },
+    "participant-implementation-kinds": {
+      "title": "Participant Implementation Kinds",
+      "description": "Governed participant implementation categories for participant implementation manifests.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "implementation_kind"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "agent": {
+          "title": "Agent",
+          "description": "Autonomous or semi-autonomous software participant implementation."
+        },
+        "human-control-proxy": {
+          "title": "Human Control Proxy",
+          "description": "Implementation that mediates a human operator's participant control surface."
+        },
+        "policy": {
+          "title": "Policy",
+          "description": "Policy-directed participant implementation."
+        },
+        "script": {
+          "title": "Script",
+          "description": "Scripted participant implementation."
+        }
+      }
+    },
+    "participant-implementation-contracts": {
+      "title": "Participant Implementation Contracts",
+      "description": "Closed participant-facing contract identifiers that participant implementations may claim.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "capabilities.supported_participant_contracts"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "participant-behavior-history-event-stream-v1": {
+          "title": "Participant Behavior History Event Stream V1",
+          "description": "Participant behavior history event stream contract."
+        },
+        "participant-episode-history-event-stream-v1": {
+          "title": "Participant Episode History Event Stream V1",
+          "description": "Participant episode history event stream contract."
+        },
+        "participant-episode-state-envelope-v1": {
+          "title": "Participant Episode State Envelope V1",
+          "description": "Participant episode state envelope contract."
+        },
+        "participant-implementation-manifest-v1": {
+          "title": "Participant Implementation Manifest V1",
+          "description": "Participant implementation manifest contract."
+        },
+        "participant-implementation-provenance-v1": {
+          "title": "Participant Implementation Provenance V1",
+          "description": "Participant implementation provenance contract."
+        }
+      }
+    },
+    "participant-decision-surface-modes": {
+      "title": "Participant Decision Surface Modes",
+      "description": "Governed modes by which participant implementations make or relay decisions.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.supported_decision_surface_modes"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "autonomous": {
+          "title": "Autonomous",
+          "description": "Implementation selects participant actions without per-action external approval."
+        },
+        "human-control-proxy": {
+          "title": "Human Control Proxy",
+          "description": "Implementation relays a human operator's participant decisions."
+        },
+        "human-supervised": {
+          "title": "Human Supervised",
+          "description": "Implementation acts with human review or approval in the decision path."
+        },
+        "mixed-control": {
+          "title": "Mixed Control",
+          "description": "Implementation combines autonomous and externally directed decisions."
+        },
+        "policy-directed": {
+          "title": "Policy Directed",
+          "description": "Implementation selects actions from a declared policy or rule surface."
+        },
+        "replayed": {
+          "title": "Replayed",
+          "description": "Implementation replays a previously captured participant decision sequence."
+        },
+        "scripted": {
+          "title": "Scripted",
+          "description": "Implementation follows a fixed or parameterized script."
+        }
+      }
+    },
+    "participant-tool-affordance-expectations": {
+      "title": "Participant Tool Affordance Expectations",
+      "description": "Governed tool and affordance expectations declared by participant implementations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.tool_affordance_expectations"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "browser": {
+          "title": "Browser",
+          "description": "Implementation expects a browser-like interaction affordance."
+        },
+        "credential-store": {
+          "title": "Credential Store",
+          "description": "Implementation expects access to a governed credential-store affordance."
+        },
+        "file-system": {
+          "title": "File System",
+          "description": "Implementation expects file-system interaction affordances."
+        },
+        "http-api": {
+          "title": "HTTP API",
+          "description": "Implementation expects HTTP API interaction affordances."
+        },
+        "human-approval": {
+          "title": "Human Approval",
+          "description": "Implementation expects a human approval affordance."
+        },
+        "network-access": {
+          "title": "Network Access",
+          "description": "Implementation expects network interaction affordances."
+        },
+        "shell": {
+          "title": "Shell",
+          "description": "Implementation expects shell-command interaction affordances."
+        }
+      }
+    },
+    "participant-exposure-policy-kinds": {
+      "title": "Participant Exposure Policy Kinds",
+      "description": "Governed categories for participant implementation decision-surface exposure policies.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.exposure_policy_kinds"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "hidden-truth": {
+          "title": "Hidden Truth",
+          "description": "Policy controls hidden truth or answer material exposure."
+        },
+        "observation-stream": {
+          "title": "Observation Stream",
+          "description": "Policy controls participant-visible observation stream exposure."
+        },
+        "task-statement": {
+          "title": "Task Statement",
+          "description": "Policy controls public task statement exposure."
+        },
+        "tool-affordance": {
+          "title": "Tool Affordance",
+          "description": "Policy controls available tool or affordance exposure."
+        }
+      }
+    },
+    "workflow-features": {
+      "title": "Workflow Features",
+      "description": "Closed portable workflow control feature identifiers.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "capabilities.orchestrator.supported_workflow_features"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "decision": {
+          "title": "Decision",
+          "description": "Workflow engine supports decision nodes."
+        },
+        "switch": {
+          "title": "Switch",
+          "description": "Workflow engine supports switch nodes."
+        },
+        "retry": {
+          "title": "Retry",
+          "description": "Workflow engine supports retry nodes."
+        },
+        "call": {
+          "title": "Call",
+          "description": "Workflow engine supports call nodes."
+        },
+        "parallel-barrier": {
+          "title": "Parallel Barrier",
+          "description": "Workflow engine supports barrier-style parallel synchronization."
+        },
+        "failure-transitions": {
+          "title": "Failure Transitions",
+          "description": "Workflow engine supports failure transitions."
+        },
+        "cancellation": {
+          "title": "Cancellation",
+          "description": "Workflow engine supports cancellation semantics."
+        },
+        "timeouts": {
+          "title": "Timeouts",
+          "description": "Workflow engine supports timeout semantics."
+        },
+        "compensation": {
+          "title": "Compensation",
+          "description": "Workflow engine supports compensation semantics."
+        }
+      }
+    },
+    "workflow-state-predicate-features": {
+      "title": "Workflow State Predicate Features",
+      "description": "Closed portable workflow state-predicate identifiers.",
+      "kind": "enumeration",
+      "governed_scopes": [
+        "capabilities.orchestrator.supported_workflow_state_predicates"
+      ],
+      "extension_policy": "closed",
+      "terms": {
+        "outcome-matching": {
+          "title": "Outcome Matching",
+          "description": "Workflow predicates may match declared outcomes."
+        },
+        "attempt-counts": {
+          "title": "Attempt Counts",
+          "description": "Workflow predicates may inspect attempt counts."
+        }
+      }
+    },
+    "realization-support-modes": {
+      "title": "Realization Support Modes",
+      "description": "Closed portable realization-support mode identifiers.",
+      "kind": "enumeration",
+      "extension_policy": "closed",
+      "terms": {
+        "exact-only": {
+          "title": "Exact Only",
+          "description": "Implementation supports only exact realization matches."
+        },
+        "constrained": {
+          "title": "Constrained",
+          "description": "Implementation supports constrained realization."
+        },
+        "open-realization": {
+          "title": "Open Realization",
+          "description": "Implementation supports open-ended realization."
+        }
+      }
+    },
+    "concept-provenance-categories": {
+      "title": "Concept Provenance Categories",
+      "description": "Closed provenance categories for concept-family authority relationships.",
+      "kind": "enumeration",
+      "extension_policy": "closed",
+      "terms": {
+        "adopted": {
+          "title": "Adopted",
+          "description": "Concept family is adopted directly from an external authority."
+        },
+        "adapted": {
+          "title": "Adapted",
+          "description": "Concept family adapts an external authority for ACES use."
+        },
+        "native": {
+          "title": "Native",
+          "description": "Concept family is native to ACES."
+        }
+      }
+    },
+    "provisioner-node-types": {
+      "title": "Provisioner Node Types",
+      "description": "Provisioner-supported node type vocabulary.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.provisioner.supported_node_types"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "vm": {
+          "title": "Virtual Machine",
+          "description": "Provisioner can realize virtual machine nodes."
+        },
+        "switch": {
+          "title": "Switch",
+          "description": "Provisioner can realize switch nodes."
+        }
+      }
+    },
+    "provisioner-os-families": {
+      "title": "Provisioner OS Families",
+      "description": "Provisioner-supported operating system family vocabulary.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.provisioner.supported_os_families"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "linux": {
+          "title": "Linux",
+          "description": "Linux operating system family."
+        },
+        "windows": {
+          "title": "Windows",
+          "description": "Windows operating system family."
+        },
+        "macos": {
+          "title": "macOS",
+          "description": "macOS operating system family."
+        },
+        "freebsd": {
+          "title": "FreeBSD",
+          "description": "FreeBSD operating system family."
+        },
+        "other": {
+          "title": "Other",
+          "description": "Portable catch-all when no standard family applies."
+        }
+      }
+    },
+    "provisioner-content-types": {
+      "title": "Provisioner Content Types",
+      "description": "Provisioner-supported content type vocabulary.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.provisioner.supported_content_types"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "file": {
+          "title": "File",
+          "description": "Single file content."
+        },
+        "dataset": {
+          "title": "Dataset",
+          "description": "Dataset or collection content."
+        },
+        "directory": {
+          "title": "Directory",
+          "description": "Directory content."
+        }
+      }
+    },
+    "provisioner-account-features": {
+      "title": "Provisioner Account Features",
+      "description": "Provisioner-supported account feature vocabulary.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.provisioner.supported_account_features"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "groups": {
+          "title": "Groups",
+          "description": "Account group membership support."
+        },
+        "mail": {
+          "title": "Mail",
+          "description": "Account mail attribute support."
+        },
+        "spn": {
+          "title": "SPN",
+          "description": "Service principal name support."
+        },
+        "shell": {
+          "title": "Shell",
+          "description": "Shell attribute support."
+        },
+        "home": {
+          "title": "Home",
+          "description": "Home directory attribute support."
+        },
+        "disabled": {
+          "title": "Disabled",
+          "description": "Disabled-state attribute support."
+        },
+        "auth_method": {
+          "title": "Authentication Method",
+          "description": "Authentication method attribute support."
+        }
+      }
+    },
+    "orchestrator-supported-sections": {
+      "title": "Orchestrator Supported Sections",
+      "description": "Orchestrator-supported SDL section vocabulary.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.orchestrator.supported_sections"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "injects": {
+          "title": "Injects",
+          "description": "Inject section support."
+        },
+        "events": {
+          "title": "Events",
+          "description": "Event section support."
+        },
+        "scripts": {
+          "title": "Scripts",
+          "description": "Script section support."
+        },
+        "stories": {
+          "title": "Stories",
+          "description": "Story section support."
+        },
+        "workflows": {
+          "title": "Workflows",
+          "description": "Workflow section support."
+        }
+      }
+    },
+    "evaluator-supported-sections": {
+      "title": "Evaluator Supported Sections",
+      "description": "Evaluator-supported SDL section vocabulary.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.evaluator.supported_sections"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "conditions": {
+          "title": "Conditions",
+          "description": "Condition section support."
+        },
+        "metrics": {
+          "title": "Metrics",
+          "description": "Metric section support."
+        },
+        "evaluations": {
+          "title": "Evaluations",
+          "description": "Evaluation section support."
+        },
+        "tlos": {
+          "title": "TLOs",
+          "description": "TLO section support."
+        },
+        "goals": {
+          "title": "Goals",
+          "description": "Goal section support."
+        },
+        "objectives": {
+          "title": "Objectives",
+          "description": "Objective section support."
+        }
+      }
+    },
+    "participant-runtime-roles": {
+      "title": "Participant Runtime Roles",
+      "description": "Backend-supported participant role vocabulary for participant runtime capability declarations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.participant_runtime.supported_participant_roles"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "blue": {
+          "title": "Blue",
+          "description": "Backend supports blue-team participant roles."
+        },
+        "green": {
+          "title": "Green",
+          "description": "Backend supports green-team participant roles."
+        },
+        "red": {
+          "title": "Red",
+          "description": "Backend supports red-team participant roles."
+        },
+        "white": {
+          "title": "White",
+          "description": "Backend supports white-team participant roles."
+        }
+      }
+    },
+    "participant-runtime-behavior-features": {
+      "title": "Participant Runtime Behavior Features",
+      "description": "Backend-supported participant behavior feature vocabulary for participant runtime capability declarations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.participant_runtime.supported_behavior_features"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "action_contracts": {
+          "title": "Action Contracts",
+          "description": "Backend supports governed participant action contracts."
+        },
+        "attribution_support": {
+          "title": "Attribution Support",
+          "description": "Backend supports evidence-labeled participant attribution claims."
+        },
+        "behavior_history": {
+          "title": "Behavior History",
+          "description": "Backend supports participant behavior history event streams."
+        },
+        "effects": {
+          "title": "Effects",
+          "description": "Backend supports declared participant action effects."
+        },
+        "failure_classes": {
+          "title": "Failure Classes",
+          "description": "Backend supports portable participant failure classes."
+        },
+        "observation_boundaries": {
+          "title": "Observation Boundaries",
+          "description": "Backend supports participant-visible observation boundary semantics."
+        },
+        "outcome_interpretation": {
+          "title": "Outcome Interpretation",
+          "description": "Backend supports participant-local outcome interpretation records."
+        },
+        "preconditions": {
+          "title": "Preconditions",
+          "description": "Backend supports declared participant action preconditions."
+        },
+        "state_transitions": {
+          "title": "State Transitions",
+          "description": "Backend supports participant behavior state-transition records."
+        },
+        "temporal_contracts": {
+          "title": "Temporal Contracts",
+          "description": "Backend supports participant temporal contracts and timing disclosures."
+        }
+      }
+    },
+    "participant-runtime-interaction-features": {
+      "title": "Participant Runtime Interaction Features",
+      "description": "Backend-supported multi-participant interaction feature vocabulary.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.participant_runtime.supported_interaction_features"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "contention": {
+          "title": "Contention",
+          "description": "Backend supports declared contention interaction semantics."
+        },
+        "coordination": {
+          "title": "Coordination",
+          "description": "Backend supports declared coordination interaction semantics."
+        },
+        "interference": {
+          "title": "Interference",
+          "description": "Backend supports declared interference interaction semantics."
+        },
+        "shared_state_change": {
+          "title": "Shared State Change",
+          "description": "Backend supports declared shared-state interaction semantics."
+        }
+      }
+    },
+    "participant-runtime-feature-support-levels": {
+      "title": "Participant Runtime Feature Support Levels",
+      "description": "Closed ADR-054 guarantee-strength scale for per-feature participant runtime support declarations.",
+      "kind": "enumeration",
+      "extension_policy": "closed",
+      "terms": {
+        "bounded": {
+          "title": "Bounded",
+          "description": "Backend realizes the feature within explicitly disclosed bounds."
+        },
+        "disclosed_weak": {
+          "title": "Disclosed Weak",
+          "description": "Backend realizes the feature with disclosed weak guarantees."
+        },
+        "exact": {
+          "title": "Exact",
+          "description": "Backend realizes the feature with exact declared semantics."
+        },
+        "unsupported": {
+          "title": "Unsupported",
+          "description": "Backend declares no portable guarantee for the feature."
+        }
+      }
+    }
+  }
+}

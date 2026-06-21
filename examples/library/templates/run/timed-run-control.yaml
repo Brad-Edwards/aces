@@ -1,0 +1,66 @@
+template: aces-library-template
+version: 1
+id: timed-run-control
+surface: run
+requirement_refs: [AUT-806]
+source_refs:
+  - docs/explain/sdl/sections.md
+  - docs/explain/sdl/validation.md
+summary: Run template binding story/script timing to objective and workflow windows.
+body:
+  name: library-run-template
+  description: Run-oriented SDL wrapper with a timed story, script, event, objective, and workflow.
+  nodes:
+    service:
+      type: VM
+      resources: {ram: 1 GiB, cpu: 1}
+      services:
+        - {port: 443, name: https}
+  conditions:
+    telemetry-ready:
+      command: test -f /var/lib/aces/telemetry-ready
+      interval: 30
+  injects:
+    start-run:
+      description: Operator starts the run window.
+  events:
+    run-start:
+      conditions: [telemetry-ready]
+      injects: [start-run]
+  scripts:
+    run-script:
+      start-time: 0
+      end-time: 15 min
+      speed: 1.0
+      events:
+        run-start: 1 min
+  stories:
+    run-story:
+      speed: 1.0
+      scripts: [run-script]
+  entities:
+    operator-team:
+      role: blue
+  agents:
+    run-operator:
+      entity: operator-team
+  objectives:
+    observe-run-telemetry:
+      agent: run-operator
+      targets: [nodes.service.services.https]
+      success:
+        conditions: [telemetry-ready]
+      window:
+        stories: [run-story]
+        scripts: [run-script]
+        events: [run-start]
+  workflows:
+    run-control:
+      start: observe
+      steps:
+        observe:
+          type: objective
+          objective: observe-run-telemetry
+          on-success: done
+        done:
+          type: end

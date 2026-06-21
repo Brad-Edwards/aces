@@ -1,0 +1,1330 @@
+"""Backend conformance runner for schema-first runtime contracts."""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from enum import Enum
+from pathlib import Path
+from textwrap import dedent
+from typing import Any
+
+from aces_backend_protocols.capabilities import BackendManifest, participant_runtime_capability_contract_gaps
+from aces_backend_protocols.manifest import backend_manifest_payload
+from aces_contracts.backend_profiles import (
+    BackendProfileModel,
+    backend_profile_path,
+    backend_profiles_root,
+    load_backend_profile_from_path,
+)
+from aces_contracts.contracts import (
+    BackendManifestV2Model,
+    EvaluationHistoryEventModel,
+    EvaluationPlanModel,
+    EvaluationResultStateModel,
+    OperationReceiptModel,
+    OperationStatusModel,
+    OrchestrationPlanModel,
+    ParticipantBehaviorHistoryEventModel,
+    ParticipantEpisodeHistoryEventModel,
+    ParticipantEpisodeStateModel,
+    ParticipantImplementationManifestModel,
+    ParticipantImplementationProvenanceModel,
+    ParticipantLifecycleEventModel,
+    ParticipantObservationEnvelopeModel,
+    ParticipantSharedStateRecordModel,
+    ProvisioningPlanModel,
+    RuntimeSnapshotEnvelopeModel,
+    WorkflowExecutionStateModel,
+    WorkflowHistoryEventModel,
+    schema_bundle,
+)
+from aces_contracts.corpus import FIXTURES, corpus_family_root
+from aces_contracts.diagnostics import Diagnostic, Severity
+from aces_contracts.evaluation import EvaluationExecutionState
+from aces_contracts.participant_concurrency import iter_participant_concurrency_snapshot_violations
+from aces_contracts.participant_episode import (
+    ParticipantEpisodeExecutionState,
+    ParticipantEpisodeHistoryEvent,
+    ParticipantEpisodeTerminalReason,
+    iter_participant_episode_snapshot_violations,
+)
+from aces_contracts.participant_shared_state import iter_participant_shared_state_snapshot_violations
+from aces_contracts.planning import RuntimeDomain
+from aces_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope, SnapshotEntry
+from aces_contracts.workflow import WorkflowExecutionState
+from aces_processor.models import (
+    ParticipantActionContractRuntime,
+    ParticipantBehaviorHistoryEvent,
+    ParticipantObservationBoundaryRuntime,
+    iter_participant_behavior_history_violations,
+    iter_participant_behavior_joint_action_violations,
+)
+from aces_processor.reference import run_reference_processor
+from aces_runtime.control_plane import RuntimeControlPlane
+from aces_runtime.registry import RuntimeTarget
+from aces_runtime.result_contracts import (
+    evaluation_result_contract_diagnostics,
+    workflow_result_contract_diagnostics,
+)
+from aces_sdl.parser import parse_sdl
+from pydantic import ValidationError
+
+_SEMANTIC_INVALID_DIAGNOSTIC_CODE = "conformance.semantic-invalid"
+
+
+class BackendCapabilityProfile(str, Enum):
+    """Known backend capability profile ids the runner can map to known runtime surfaces.
+
+    The published ``contracts/profiles/backend/*.json`` corpus is the authority
+    for profile *contract sets* — this enum is intentionally NOT used to gate
+    which profile ids the CLI / API will accept. It is the inference target of
+    :func:`profile_for_manifest` and the dispatch key for capability-gap and
+    live-probe behavior that depends on a *known* runtime surface (e.g. only
+    the FULL_REMOTE_CONTROL_PLANE family drives the participant-episode probe).
+    Unknown profile ids loaded from the JSON corpus are still validated and
+    fixture-tested; they just skip capability and live-probe behavior because
+    their runtime surface contract is not known to this implementation.
+    """
+
+    PROVISIONING_ONLY = "provisioning-only"
+    ORCHESTRATION_CAPABLE = "orchestration-capable"
+    ORCHESTRATION_EVALUATION = "orchestration-evaluation"
+    FULL_REMOTE_CONTROL_PLANE = "full-remote-control-plane"
+
+
+BackendProfileSelector = str | BackendCapabilityProfile
+"""Type alias for any callable that accepts either a free-form profile id string
+or a known :class:`BackendCapabilityProfile` enum member. The CLI and runner
+accept either so adding a new published profile JSON does not require a
+Python-side enum edit."""
+
+
+def _to_profile_id(profile: BackendProfileSelector) -> str:
+    """Normalize a profile selector to its published id string."""
+
+    return profile.value if isinstance(profile, BackendCapabilityProfile) else profile
+
+
+def _to_known_profile(profile: BackendProfileSelector) -> BackendCapabilityProfile | None:
+    """Return the matching :class:`BackendCapabilityProfile` when ``profile`` is
+    a known runtime surface, else ``None``. Used to gate capability-gap and
+    live-probe behavior, both of which depend on knowing the runtime surface
+    contract for the profile."""
+
+    if isinstance(profile, BackendCapabilityProfile):
+        return profile
+    try:
+        return BackendCapabilityProfile(profile)
+    except ValueError:
+        return None
+
+
+@dataclass(frozen=True)
+class ConformanceCaseResult:
+    """Result for one fixture or probe case."""
+
+    name: str
+    contract_name: str
+    valid: bool
+    passed: bool
+    diagnostics: tuple[Diagnostic, ...] = ()
+
+
+@dataclass(frozen=True)
+class BackendConformanceReport:
+    """Machine-friendly conformance result.
+
+    ``profile`` is the requested profile id as a string. When the request used
+    a :class:`BackendCapabilityProfile` enum member, equality comparisons against
+    that member still work because the enum is ``str``-valued. Carrying the
+    field as ``str`` lets the runner accept (and report) profile ids that have
+    no Python-side enum member.
+    """
+
+    profile: str
+    passed: bool
+    cases: tuple[ConformanceCaseResult, ...] = ()
+    contract_versions: dict[str, str] = field(default_factory=dict)
+    unsupported_contract_gaps: tuple[str, ...] = ()
+    unsupported_capability_gaps: tuple[str, ...] = ()
+    diagnostics: tuple[Diagnostic, ...] = ()
+
+
+_MODEL_VALIDATORS = {
+    "backend-manifest-v2": BackendManifestV2Model.model_validate,
+    "participant-implementation-manifest-v1": ParticipantImplementationManifestModel.model_validate,
+    "participant-implementation-provenance-v1": ParticipantImplementationProvenanceModel.model_validate,
+    "provisioning-plan-v1": ProvisioningPlanModel.model_validate,
+    "orchestration-plan-v1": OrchestrationPlanModel.model_validate,
+    "evaluation-plan-v1": EvaluationPlanModel.model_validate,
+    "operation-receipt-v1": OperationReceiptModel.model_validate,
+    "operation-status-v1": OperationStatusModel.model_validate,
+    "runtime-snapshot-v1": RuntimeSnapshotEnvelopeModel.model_validate,
+    "workflow-result-envelope-v1": WorkflowExecutionStateModel.model_validate,
+    "evaluation-result-envelope-v1": EvaluationResultStateModel.model_validate,
+    "participant-episode-state-envelope-v1": ParticipantEpisodeStateModel.model_validate,
+    "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_validate,
+    "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_validate,
+    "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_validate,
+}
+
+
+_EVENT_STREAM_VALIDATORS: dict[str, tuple[type, str]] = {
+    "workflow-history-event-stream-v1": (WorkflowHistoryEventModel, "workflow"),
+    "evaluation-history-event-stream-v1": (EvaluationHistoryEventModel, "evaluation"),
+    "participant-episode-history-event-stream-v1": (
+        ParticipantEpisodeHistoryEventModel,
+        "participant episode",
+    ),
+    "participant-behavior-history-event-stream-v1": (
+        ParticipantBehaviorHistoryEventModel,
+        "participant behavior",
+    ),
+}
+
+
+def fixtures_root() -> Path:
+    return corpus_family_root(FIXTURES)
+
+
+def profiles_root() -> Path:
+    return backend_profiles_root()
+
+
+def _fixture_contract_root(root: Path, contract_name: str) -> Path:
+    matches = sorted(path for path in root.glob(f"**/{contract_name}") if path.is_dir())
+    if matches:
+        return matches[0]
+    return root / contract_name
+
+
+def _load_backend_profile(
+    profile: BackendProfileSelector,
+    *,
+    profiles_root: Path | None = None,
+) -> BackendProfileModel:
+    """Load a published backend profile from ``contracts/profiles/backend``.
+
+    ``profiles_root`` lets tests redirect the loader at a temporary corpus,
+    matching how ``run_fixture_suite`` accepts a ``root`` override for fixtures.
+    Identity checks (filename stem == payload ``profile``) and profile-id
+    grammar validation are enforced by the shared
+    :func:`load_backend_profile_from_path` helper. The override path here
+    *also* confines the resolved path to under the supplied ``profiles_root``
+    so a caller cannot escape it even if the grammar check were ever relaxed.
+    """
+
+    profile_id = _to_profile_id(profile)
+    if profiles_root is None:
+        path = backend_profile_path(profile_id)
+    else:
+        root = profiles_root.resolve()
+        candidate = (root / f"{profile_id}.json").resolve()
+        if not _path_is_within(candidate, root):
+            raise ValueError(
+                f"backend profile id {profile_id!r} resolves to {candidate} "
+                f"which is outside the configured profiles root {root}; refusing to load."
+            )
+        path = candidate
+    return load_backend_profile_from_path(profile_id, path)
+
+
+def _path_is_within(candidate: Path, root: Path) -> bool:
+    """Return ``True`` iff ``candidate`` is the same as or under ``root``."""
+
+    try:
+        candidate.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def required_contracts(
+    profile: BackendProfileSelector,
+    *,
+    profiles_root: Path | None = None,
+) -> frozenset[str]:
+    """Return the contracts a backend must honor for ``profile``.
+
+    The contract set is loaded from the published
+    ``contracts/profiles/backend/<profile>.json`` artifact — that file is the
+    single source of truth for the profile-to-contract mapping (ASR-502).
+    ``profile`` may be a free-form profile id string (the discoverable artifact
+    name) or a known :class:`BackendCapabilityProfile` enum member. Raises
+    ``FileNotFoundError`` / ``json.JSONDecodeError`` / ``ValidationError`` /
+    ``ValueError`` when the artifact is missing, malformed, or mislabeled;
+    the runner-facing :func:`_resolve_required_contracts` wraps those into
+    structured conformance diagnostics.
+    """
+
+    return frozenset(_load_backend_profile(profile, profiles_root=profiles_root).required_contracts)
+
+
+def _resolve_required_contracts(
+    profile: BackendProfileSelector,
+    *,
+    profiles_root: Path | None = None,
+) -> tuple[frozenset[str], tuple[Diagnostic, ...]]:
+    """Load the profile's contract set, converting load failures to diagnostics.
+
+    Profile JSON loading is now a hard prerequisite of every conformance run
+    (ASR-502), but the runner's public contract is to return a
+    :class:`BackendConformanceReport` rather than raise. Any failure to load
+    the published profile — missing file, malformed JSON, schema-rejected
+    payload, swapped artifact — therefore surfaces as a
+    ``conformance.profile-load-failed`` diagnostic on the report so the CLI
+    can still print the structured response and CI gates can still parse it.
+    """
+
+    profile_id = _to_profile_id(profile)
+    try:
+        return required_contracts(profile, profiles_root=profiles_root), ()
+    except (FileNotFoundError, json.JSONDecodeError, ValidationError, ValueError) as exc:
+        return frozenset(), (
+            _diagnostic(
+                "conformance.profile-load-failed",
+                profile_id,
+                f"Failed to load published backend profile {profile_id!r}: {_sanitize_load_error(exc)}",
+            ),
+        )
+
+
+def _sanitize_load_error(exc: Exception) -> str:
+    """Render a profile-load exception without echoing rejected file contents.
+
+    Pydantic's ``ValidationError`` carries the rejected ``input_value`` and can
+    surface it in ``str(exc)``. For a profile-load failure the diagnostic
+    should describe *what* went wrong (file missing, malformed JSON, identity
+    mismatch, schema-rejected) without quoting the failed input back to the
+    caller — that would turn a malformed-profile failure into a file-content
+    disclosure oracle when the loader is wrapped behind a less-trusted
+    boundary.
+    """
+
+    if isinstance(exc, FileNotFoundError):
+        return "profile artifact not found"
+    if isinstance(exc, json.JSONDecodeError):
+        return "profile artifact is not valid JSON"
+    if isinstance(exc, ValidationError):
+        return f"profile artifact failed closed-world validation ({exc.error_count()} error(s))"
+    return f"{type(exc).__name__}: {exc}"
+
+
+def _diagnostic(code: str, address: str, message: str) -> Diagnostic:
+    return Diagnostic(
+        code=code,
+        domain="conformance",
+        address=address,
+        message=message,
+        severity=Severity.ERROR,
+    )
+
+
+def _load_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _validate_event_stream(
+    *,
+    contract_name: str,
+    payload: Any,
+    model_cls: type,
+    event_label: str,
+) -> list[Diagnostic]:
+    """Validate a published history event stream against one Pydantic model.
+
+    Shared by the workflow, evaluation, and participant-episode history
+    event streams so adding a new stream type only requires extending
+    ``_EVENT_STREAM_VALIDATORS``.
+    """
+
+    if not isinstance(payload, list):
+        return [
+            _diagnostic(
+                "conformance.schema-invalid",
+                contract_name,
+                f"{event_label} history payload must be a list",
+            )
+        ]
+    diagnostics: list[Diagnostic] = []
+    for index, event in enumerate(payload):
+        try:
+            model_cls.model_validate(event)
+        except Exception as exc:
+            diagnostics.append(
+                _diagnostic(
+                    "conformance.schema-invalid",
+                    f"{contract_name}[{index}]",
+                    f"{event_label} history event is invalid: {exc}",
+                )
+            )
+    return diagnostics
+
+
+def _validate_payload(contract_name: str, payload: Any) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    validator = _MODEL_VALIDATORS.get(contract_name)
+    if validator is not None:
+        try:
+            validator(payload)
+        except Exception as exc:
+            diagnostics.append(
+                _diagnostic(
+                    "conformance.schema-invalid",
+                    contract_name,
+                    f"{contract_name} failed contract validation: {exc}",
+                )
+            )
+            return diagnostics
+    elif contract_name in _EVENT_STREAM_VALIDATORS:
+        diagnostics.extend(
+            _validate_event_stream(
+                contract_name=contract_name,
+                payload=payload,
+                model_cls=_EVENT_STREAM_VALIDATORS[contract_name][0],
+                event_label=_EVENT_STREAM_VALIDATORS[contract_name][1],
+            )
+        )
+    else:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.contract-unknown",
+                contract_name,
+                f"No conformance validator is registered for {contract_name}.",
+            )
+        )
+    return diagnostics
+
+
+def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
+    validated = RuntimeSnapshotEnvelopeModel.model_validate(payload)
+    entries = {
+        address: SnapshotEntry(
+            address=entry.address,
+            domain=RuntimeDomain(entry.domain),
+            resource_type=entry.resource_type,
+            payload=dict(entry.payload),
+            ordering_dependencies=tuple(entry.ordering_dependencies),
+            refresh_dependencies=tuple(entry.refresh_dependencies),
+            status=entry.status,
+        )
+        for address, entry in validated.entries.items()
+    }
+    return RuntimeSnapshot(
+        entries=entries,
+        orchestration_results={
+            address: result.model_dump(mode="json") for address, result in validated.orchestration_results.items()
+        },
+        orchestration_history={
+            address: [event.model_dump(mode="json") for event in history]
+            for address, history in validated.orchestration_history.items()
+        },
+        evaluation_results={
+            address: result.model_dump(mode="json") for address, result in validated.evaluation_results.items()
+        },
+        evaluation_history={
+            address: [event.model_dump(mode="json") for event in history]
+            for address, history in validated.evaluation_history.items()
+        },
+        participant_episode_results={
+            participant_address: result.model_dump(mode="json")
+            for participant_address, result in validated.participant_episode_results.items()
+        },
+        participant_episode_history={
+            participant_address: [event.model_dump(mode="json") for event in history]
+            for participant_address, history in validated.participant_episode_history.items()
+        },
+        participant_behavior_history={
+            participant_address: [event.model_dump(mode="json") for event in history]
+            for participant_address, history in validated.participant_behavior_history.items()
+        },
+        shared_state_records={
+            state_address: record.model_dump(mode="json")
+            for state_address, record in validated.shared_state_records.items()
+        },
+        shared_state_history={
+            state_address: [record.model_dump(mode="json") for record in records]
+            for state_address, records in validated.shared_state_history.items()
+        },
+        joint_action_records={
+            record_id: record.model_dump(mode="json") for record_id, record in validated.joint_action_records.items()
+        },
+        time_management_contexts={
+            context_id: context.model_dump(mode="json")
+            for context_id, context in validated.time_management_contexts.items()
+        },
+        metadata=dict(validated.metadata),
+    )
+
+
+def _participant_episode_snapshot_diagnostics(
+    snapshot: RuntimeSnapshot,
+) -> list[Diagnostic]:
+    """Surface participant-episode snapshot invariants as conformance diagnostics.
+
+    Delegates to ``iter_participant_episode_snapshot_violations`` so the
+    conformance path and the manager apply path share one source of truth
+    for every RUN-311 invariant, and wraps each violation in a
+    ``conformance.semantic-invalid`` diagnostic.
+    """
+
+    return [
+        _diagnostic(_SEMANTIC_INVALID_DIAGNOSTIC_CODE, address, message)
+        for address, message in iter_participant_episode_snapshot_violations(
+            snapshot.participant_episode_results,
+            snapshot.participant_episode_history,
+        )
+    ]
+
+
+def _participant_behavior_snapshot_references(
+    snapshot: RuntimeSnapshot,
+) -> tuple[
+    set[str],
+    dict[str, ParticipantActionContractRuntime],
+    set[str],
+    dict[str, ParticipantObservationBoundaryRuntime],
+    dict[str, set[str]],
+    dict[str, set[str]],
+]:
+    action_contract_addresses: set[str] = set()
+    action_contracts: dict[str, ParticipantActionContractRuntime] = {}
+    observation_boundary_addresses: set[str] = set()
+    observation_boundaries: dict[str, ParticipantObservationBoundaryRuntime] = {}
+    participant_action_addresses: dict[str, set[str]] = {}
+    participant_observation_boundary_addresses: dict[str, set[str]] = {}
+    for entry_address, entry in snapshot.entries.items():
+        for candidate in {entry_address, entry.address}:
+            if candidate.startswith("participant.action-contract."):
+                action_contract_addresses.add(candidate)
+                action_contracts[candidate] = ParticipantActionContractRuntime(
+                    address=candidate,
+                    name=str(entry.payload.get("name", "")),
+                    action_name=str(entry.payload.get("action_name", "")),
+                    semantic_version=str(entry.payload.get("semantic_version", "")),
+                    lifecycle_state=str(entry.payload.get("lifecycle_state", "")),
+                    behavioral_granularity=str(entry.payload.get("behavioral_granularity", "")),
+                    precondition_classes=tuple(str(item) for item in entry.payload.get("precondition_classes", ())),
+                    effect_classes=tuple(str(item) for item in entry.payload.get("effect_classes", ())),
+                    failure_classes=tuple(str(item) for item in entry.payload.get("failure_classes", ())),
+                    backend_failure_mappings=tuple(
+                        dict(item)
+                        for item in entry.payload.get("backend_failure_mappings", ())
+                        if isinstance(item, Mapping)
+                    ),
+                    interaction_classes=tuple(str(item) for item in entry.payload.get("interaction_classes", ())),
+                    shared_state_refs=tuple(str(item) for item in entry.payload.get("shared_state_refs", ())),
+                    spec=(
+                        dict(entry.payload.get("spec", {}))
+                        if isinstance(entry.payload.get("spec", {}), Mapping)
+                        else {}
+                    ),
+                )
+            elif candidate.startswith("participant.observation-boundary."):
+                observation_boundary_addresses.add(candidate)
+                observation_boundaries[candidate] = ParticipantObservationBoundaryRuntime(
+                    address=candidate,
+                    name=str(entry.payload.get("name", "")),
+                    boundary_name=str(entry.payload.get("boundary_name", "")),
+                    projection_basis=str(entry.payload.get("projection_basis", "")),
+                    hidden_refs=tuple(str(ref) for ref in entry.payload.get("hidden_refs", ())),
+                    observable_refs=tuple(str(ref) for ref in entry.payload.get("observable_refs", ())),
+                    evidence_refs=tuple(str(ref) for ref in entry.payload.get("evidence_refs", ())),
+                    disclosed_refs=tuple(str(ref) for ref in entry.payload.get("disclosed_refs", ())),
+                    evidence_only_refs=tuple(str(ref) for ref in entry.payload.get("evidence_only_refs", ())),
+                    discovered_refs=tuple(str(ref) for ref in entry.payload.get("discovered_refs", ())),
+                    inferred_refs=tuple(str(ref) for ref in entry.payload.get("inferred_refs", ())),
+                    concealed_refs=tuple(str(ref) for ref in entry.payload.get("concealed_refs", ())),
+                    deceptive_refs=tuple(str(ref) for ref in entry.payload.get("deceptive_refs", ())),
+                    view_transitions=tuple(dict(item) for item in entry.payload.get("view_transitions", ())),
+                    view_relation_timeline=tuple(
+                        dict(item) for item in entry.payload.get("view_relation_timeline", ())
+                    ),
+                    realized_view_disclosure=str(entry.payload.get("realized_view_disclosure", "")),
+                    spec=dict(entry.payload.get("spec", {})),
+                )
+            elif candidate.startswith("participant.behavior."):
+                participant_action_addresses[candidate] = {
+                    str(address)
+                    for address in entry.payload.get("action_contract_addresses", ())
+                    if isinstance(address, str) and address
+                }
+                participant_observation_boundary_addresses[candidate] = {
+                    str(address)
+                    for address in entry.payload.get("observation_boundary_addresses", ())
+                    if isinstance(address, str) and address
+                }
+    return (
+        action_contract_addresses,
+        action_contracts,
+        observation_boundary_addresses,
+        observation_boundaries,
+        participant_action_addresses,
+        participant_observation_boundary_addresses,
+    )
+
+
+def _participant_history_observation_boundary_addresses(history: Any) -> set[str]:
+    if not isinstance(history, list):
+        return set()
+    addresses: set[str] = set()
+    for event in history:
+        if not isinstance(event, Mapping):
+            continue
+        address = event.get("observation_boundary_address")
+        if isinstance(address, str) and address:
+            addresses.add(address)
+    return addresses
+
+
+def _participant_behavior_history_diagnostics(
+    root_address: str,
+    payload: Any,
+    *,
+    action_contract_addresses: set[str] | None = None,
+    action_contracts: dict[str, ParticipantActionContractRuntime] | None = None,
+    observation_boundary_addresses: set[str] | None = None,
+    observation_boundaries: dict[str, ParticipantObservationBoundaryRuntime] | None = None,
+    participant_episode_history: Any = None,
+    expected_participant_address: str | None = None,
+) -> list[Diagnostic]:
+    history_key = "runtime.snapshot.participant-behavior-history"
+    diagnostics: list[Diagnostic] = []
+    for address, message in iter_participant_behavior_history_violations(
+        payload,
+        action_contract_addresses=action_contract_addresses,
+        action_contracts=action_contracts,
+        observation_boundary_addresses=observation_boundary_addresses,
+        observation_boundaries=observation_boundaries,
+        participant_episode_history=participant_episode_history,
+        expected_participant_address=expected_participant_address,
+    ):
+        if address.startswith(history_key):
+            diagnostic_address = root_address + address.removeprefix(history_key)
+        else:
+            diagnostic_address = f"{root_address}.{address}"
+        diagnostics.append(_diagnostic(_SEMANTIC_INVALID_DIAGNOSTIC_CODE, diagnostic_address, message))
+    return diagnostics
+
+
+def _participant_behavior_snapshot_diagnostics(
+    snapshot: RuntimeSnapshot,
+) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    (
+        action_contract_addresses,
+        action_contracts,
+        observation_boundary_addresses,
+        observation_boundaries,
+        participant_action_addresses,
+        participant_observation_boundary_addresses,
+    ) = _participant_behavior_snapshot_references(snapshot)
+    for participant_address, history in snapshot.participant_behavior_history.items():
+        has_participant_action_binding = participant_address in participant_action_addresses
+        has_participant_boundary_binding = participant_address in participant_observation_boundary_addresses
+        participant_boundary_addresses = participant_observation_boundary_addresses.get(participant_address)
+        if participant_boundary_addresses is None:
+            participant_boundary_addresses = _participant_history_observation_boundary_addresses(history)
+        participant_known_boundary_addresses = (
+            participant_boundary_addresses if has_participant_boundary_binding else observation_boundary_addresses
+        )
+        participant_boundaries = {
+            address: observation_boundaries[address]
+            for address in sorted(participant_boundary_addresses)
+            if address in observation_boundaries
+        }
+        diagnostics.extend(
+            _participant_behavior_history_diagnostics(
+                f"runtime.snapshot.participant-behavior-history.{participant_address}",
+                history,
+                action_contract_addresses=(
+                    participant_action_addresses[participant_address]
+                    if has_participant_action_binding
+                    else action_contract_addresses
+                ),
+                action_contracts=action_contracts,
+                observation_boundary_addresses=participant_known_boundary_addresses,
+                observation_boundaries=participant_boundaries,
+                participant_episode_history=snapshot.participant_episode_history.get(participant_address),
+                expected_participant_address=participant_address,
+            )
+        )
+    for address, message in iter_participant_behavior_joint_action_violations(snapshot.participant_behavior_history):
+        diagnostics.append(
+            _diagnostic(
+                _SEMANTIC_INVALID_DIAGNOSTIC_CODE,
+                f"runtime.snapshot.participant-behavior-history.{address}",
+                message,
+            )
+        )
+    return diagnostics
+
+
+def _state_semantic_diagnostics(
+    contract_name: str,
+    payload: Any,
+    state_model: Any,
+    invalid_message: str,
+) -> list[Diagnostic]:
+    try:
+        state_model.from_payload(payload)
+    except (TypeError, ValueError) as exc:
+        return [
+            _diagnostic(
+                _SEMANTIC_INVALID_DIAGNOSTIC_CODE,
+                contract_name,
+                f"{invalid_message}: {exc}",
+            )
+        ]
+    return []
+
+
+def _event_stream_semantic_diagnostics(
+    contract_name: str,
+    payload: Any,
+    event_model: Any,
+    payload_type_message: str,
+    invalid_message: str,
+) -> list[Diagnostic]:
+    if not isinstance(payload, list):
+        return [
+            _diagnostic(
+                _SEMANTIC_INVALID_DIAGNOSTIC_CODE,
+                contract_name,
+                payload_type_message,
+            )
+        ]
+
+    diagnostics: list[Diagnostic] = []
+    for index, event in enumerate(payload):
+        try:
+            event_model.from_payload(event)
+        except (TypeError, ValueError) as exc:
+            diagnostics.append(
+                _diagnostic(
+                    _SEMANTIC_INVALID_DIAGNOSTIC_CODE,
+                    f"{contract_name}[{index}]",
+                    f"{invalid_message}: {exc}",
+                )
+            )
+    return diagnostics
+
+
+def _participant_behavior_stream_diagnostics(contract_name: str, payload: Any) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    if isinstance(payload, list):
+        for index, event in enumerate(payload):
+            try:
+                ParticipantBehaviorHistoryEvent.from_payload(event)
+            except (TypeError, ValueError) as exc:
+                diagnostics.append(
+                    _diagnostic(
+                        _SEMANTIC_INVALID_DIAGNOSTIC_CODE,
+                        f"{contract_name}[{index}]",
+                        f"participant behavior history event semantics are invalid: {exc}",
+                    )
+                )
+    diagnostics.extend(_participant_behavior_history_diagnostics(contract_name, payload))
+    return diagnostics
+
+
+def _shared_state_snapshot_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic]:
+    return [
+        _diagnostic(_SEMANTIC_INVALID_DIAGNOSTIC_CODE, address, message)
+        for address, message in iter_participant_shared_state_snapshot_violations(
+            snapshot.shared_state_records,
+            snapshot.shared_state_history,
+            participant_behavior_history=snapshot.participant_behavior_history,
+            metadata=snapshot.metadata,
+        )
+    ]
+
+
+def _participant_concurrency_snapshot_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic]:
+    return [
+        _diagnostic(_SEMANTIC_INVALID_DIAGNOSTIC_CODE, address, message)
+        for address, message in iter_participant_concurrency_snapshot_violations(
+            snapshot.joint_action_records,
+            snapshot.time_management_contexts,
+            participant_behavior_history=snapshot.participant_behavior_history,
+            shared_state_records=snapshot.shared_state_records,
+            shared_state_history=snapshot.shared_state_history,
+        )
+    ]
+
+
+def _runtime_snapshot_semantic_diagnostics(payload: Any) -> list[Diagnostic]:
+    snapshot = _snapshot_from_envelope(payload)
+    return [
+        *workflow_result_contract_diagnostics(snapshot),
+        *evaluation_result_contract_diagnostics(snapshot),
+        *_participant_episode_snapshot_diagnostics(snapshot),
+        *_participant_behavior_snapshot_diagnostics(snapshot),
+        *_shared_state_snapshot_diagnostics(snapshot),
+        *_participant_concurrency_snapshot_diagnostics(snapshot),
+    ]
+
+
+def _semantic_diagnostics(contract_name: str, payload: Any) -> list[Diagnostic]:
+    if contract_name == "workflow-result-envelope-v1":
+        return _state_semantic_diagnostics(
+            contract_name,
+            payload,
+            WorkflowExecutionState,
+            "workflow result semantics are invalid",
+        )
+    if contract_name == "evaluation-result-envelope-v1":
+        return _state_semantic_diagnostics(
+            contract_name,
+            payload,
+            EvaluationExecutionState,
+            "evaluation result semantics are invalid",
+        )
+    if contract_name == "participant-episode-state-envelope-v1":
+        return _state_semantic_diagnostics(
+            contract_name,
+            payload,
+            ParticipantEpisodeExecutionState,
+            "participant episode state semantics are invalid",
+        )
+    if contract_name == "participant-episode-history-event-stream-v1":
+        return _event_stream_semantic_diagnostics(
+            contract_name,
+            payload,
+            ParticipantEpisodeHistoryEvent,
+            "participant episode history payload must be a list",
+            "participant episode history event semantics are invalid",
+        )
+    if contract_name == "participant-behavior-history-event-stream-v1":
+        return _participant_behavior_stream_diagnostics(contract_name, payload)
+    if contract_name != "runtime-snapshot-v1":
+        return []
+    return _runtime_snapshot_semantic_diagnostics(payload)
+
+
+def _fixture_case_diagnostics(contract_name: str, payload: object) -> list[Diagnostic]:
+    """Schema-gate first; only run semantic analysis on a schema-valid payload.
+
+    Semantic checks (for example ``_runtime_snapshot_semantic_diagnostics``)
+    deserialize the payload through its closed-world contract model and assume it
+    is already schema-valid. Running them on a schema-invalid fixture would raise
+    instead of reporting a diagnostic, so a schema failure short-circuits.
+    """
+
+    schema_diagnostics = _validate_payload(contract_name, payload)
+    if schema_diagnostics:
+        return schema_diagnostics
+    return _semantic_diagnostics(contract_name, payload)
+
+
+def run_fixture_suite(
+    *,
+    profile: BackendProfileSelector,
+    root: Path | None = None,
+    profiles_root: Path | None = None,
+) -> BackendConformanceReport:
+    """Run the checked-in fixture corpus for a backend profile.
+
+    ``root`` overrides the fixtures tree (defaults to ``contracts/fixtures``);
+    ``profiles_root`` overrides the backend profile tree (defaults to
+    ``contracts/profiles/backend``). Both default to the canonical
+    ``contracts/`` paths so the published artifacts remain the authority.
+    """
+
+    root = fixtures_root() if root is None else root
+    bundle = schema_bundle()
+    required, profile_diagnostics = _resolve_required_contracts(profile, profiles_root=profiles_root)
+    cases: list[ConformanceCaseResult] = []
+    diagnostics: list[Diagnostic] = list(profile_diagnostics)
+
+    for contract_name in sorted(required):
+        contract_root = _fixture_contract_root(root, contract_name)
+        valid_dir = contract_root / "valid"
+        invalid_dir = contract_root / "invalid"
+        if not valid_dir.exists():
+            diagnostics.append(
+                _diagnostic(
+                    "conformance.fixture-missing",
+                    contract_name,
+                    f"Missing valid fixture directory for {contract_name}.",
+                )
+            )
+            continue
+
+        for path in sorted(valid_dir.glob("*.json")):
+            payload = _load_json(path)
+            case_diagnostics = _fixture_case_diagnostics(contract_name, payload)
+            cases.append(
+                ConformanceCaseResult(
+                    name=path.stem,
+                    contract_name=contract_name,
+                    valid=True,
+                    passed=not case_diagnostics,
+                    diagnostics=tuple(case_diagnostics),
+                )
+            )
+
+        if invalid_dir.exists():
+            for path in sorted(invalid_dir.glob("*.json")):
+                payload = _load_json(path)
+                case_diagnostics = _fixture_case_diagnostics(contract_name, payload)
+                cases.append(
+                    ConformanceCaseResult(
+                        name=path.stem,
+                        contract_name=contract_name,
+                        valid=False,
+                        passed=bool(case_diagnostics),
+                        diagnostics=tuple(case_diagnostics),
+                    )
+                )
+
+    return BackendConformanceReport(
+        profile=_to_profile_id(profile),
+        passed=not diagnostics and all(case.passed for case in cases),
+        cases=tuple(cases),
+        contract_versions={name: str(schema.get("title", name)) for name, schema in bundle.items() if name in required},
+        diagnostics=tuple(diagnostics),
+    )
+
+
+def profile_for_manifest(manifest: BackendManifest) -> BackendCapabilityProfile:
+    """Infer the nearest conformance profile for a backend manifest.
+
+    A backend that declares orchestrator, evaluator, AND participant
+    runtime capabilities is treated as ``FULL_REMOTE_CONTROL_PLANE``,
+    so the default ``run_target_conformance`` path automatically
+    validates the live target against the participant-episode contract
+    family (RUN-311). Backends that only declare orchestrator/evaluator
+    fall back to ``ORCHESTRATION_EVALUATION``; orchestrator-only
+    declarations fall back to ``ORCHESTRATION_CAPABLE``; provisioner-only
+    backends remain at ``PROVISIONING_ONLY``.
+    """
+
+    if manifest.has_orchestrator and manifest.has_evaluator and manifest.has_participant_runtime:
+        return BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE
+    if manifest.has_orchestrator and manifest.has_evaluator:
+        return BackendCapabilityProfile.ORCHESTRATION_EVALUATION
+    if manifest.has_orchestrator:
+        return BackendCapabilityProfile.ORCHESTRATION_CAPABLE
+    return BackendCapabilityProfile.PROVISIONING_ONLY
+
+
+def _capability_gaps(
+    profile: BackendProfileSelector,
+    target: RuntimeTarget,
+) -> tuple[str, ...]:
+    """Report runtime-surface gaps for known capability profiles only.
+
+    Capability-gap checking depends on knowing the runtime surface contract
+    for the profile (which roles must be present). For an unknown profile id
+    — e.g. a freshly-published artifact whose runtime surface this
+    implementation does not yet understand — we conservatively report no
+    gaps and let the published contract set drive validation. This keeps the
+    JSON corpus end-to-end authoritative for new profiles without requiring
+    Python edits up front.
+    """
+
+    known = _to_known_profile(profile)
+    if known is None:
+        return ()
+    gaps: list[str] = []
+    if (
+        known
+        in {
+            BackendCapabilityProfile.ORCHESTRATION_CAPABLE,
+            BackendCapabilityProfile.ORCHESTRATION_EVALUATION,
+            BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE,
+        }
+        and target.orchestrator is None
+    ):
+        gaps.append("orchestrator")
+    if (
+        known
+        in {
+            BackendCapabilityProfile.ORCHESTRATION_EVALUATION,
+            BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE,
+        }
+        and target.evaluator is None
+    ):
+        gaps.append("evaluator")
+    if known == BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE and target.participant_runtime is None:
+        gaps.append("participant_runtime")
+    return tuple(gaps)
+
+
+def _declared_contract_gaps(
+    profile: BackendProfileSelector,
+    manifest: BackendManifest,
+    *,
+    profiles_root: Path | None = None,
+) -> tuple[str, ...]:
+    """Return the contract ids declared by ``profile`` that ``manifest`` is missing.
+
+    Uses :func:`_resolve_required_contracts` so a missing/malformed/mislabeled
+    profile artifact cannot raise out of the conformance boundary. When the
+    profile fails to load, ``required`` is empty and the gap set is empty —
+    the profile-load diagnostic is surfaced separately on the report by
+    :func:`run_fixture_suite`, which the only caller (``run_target_conformance``)
+    invokes for the same profile.
+    """
+
+    required, _profile_diagnostics = _resolve_required_contracts(profile, profiles_root=profiles_root)
+    return tuple(sorted(required - manifest.supported_contract_versions))
+
+
+def run_target_conformance(
+    target: RuntimeTarget,
+    *,
+    profile: BackendProfileSelector | None = None,
+    root: Path | None = None,
+    profiles_root: Path | None = None,
+) -> BackendConformanceReport:
+    """Run fixture conformance for a target's declared runtime surface.
+
+    ``root`` overrides the fixtures tree and ``profiles_root`` overrides the
+    backend profile tree; both default to the canonical published roots.
+    """
+
+    effective_profile = profile or profile_for_manifest(target.manifest)
+    fixture_report = run_fixture_suite(profile=effective_profile, root=root, profiles_root=profiles_root)
+    if any(diag.code == "conformance.profile-load-failed" for diag in fixture_report.diagnostics):
+        # The published profile is the contract set we are supposed to validate
+        # against. With no profile loaded we must NOT mutate the backend via
+        # ``_live_target_cases`` — there is nothing to validate against. The
+        # fixture report already carries the structured profile-load
+        # diagnostic and ``passed=False``; surface it as the conformance
+        # result for this target.
+        return fixture_report
+    if _to_known_profile(effective_profile) is None:
+        # Target conformance enforces runtime-surface gates (which capability
+        # roles the target must implement, which live probes to run). Those
+        # gates depend on knowing the profile's runtime surface contract. For
+        # an unknown profile id we have NO runtime-surface authority — letting
+        # the run continue would silently certify a target that's missing every
+        # required role (orchestrator/evaluator/participant_runtime) just
+        # because the diff added a profile JSON we don't yet understand.
+        # Refuse explicitly so the gap is visible to CI and the JSON corpus is
+        # forced to land its runtime-surface contract before target conformance
+        # can certify against it.
+        profile_id = _to_profile_id(effective_profile)
+        diagnostics = (
+            *fixture_report.diagnostics,
+            _diagnostic(
+                "conformance.profile-runtime-surface-unknown",
+                profile_id,
+                (
+                    f"Target conformance cannot certify profile {profile_id!r}: this "
+                    "implementation does not know the runtime-surface contract for the "
+                    "profile. Known runtime surfaces: "
+                    + ", ".join(sorted(p.value for p in BackendCapabilityProfile))
+                    + ". Use run_fixture_suite() for fixture-only validation, or extend "
+                    "BackendCapabilityProfile to declare this profile's runtime surfaces."
+                ),
+            ),
+        )
+        return BackendConformanceReport(
+            profile=profile_id,
+            passed=False,
+            cases=fixture_report.cases,
+            contract_versions=dict(fixture_report.contract_versions),
+            diagnostics=diagnostics,
+        )
+    contract_gaps = _declared_contract_gaps(effective_profile, target.manifest, profiles_root=profiles_root)
+    surface_gaps = _capability_gaps(effective_profile, target)
+    claim_gaps = participant_runtime_capability_contract_gaps(target.manifest)
+    capability_gaps = tuple((*surface_gaps, *claim_gaps))
+    passed = fixture_report.passed and not contract_gaps and not capability_gaps
+    diagnostics = list(fixture_report.diagnostics)
+    if contract_gaps:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.unsupported-contract-declaration",
+                target.name,
+                f"Target does not declare required contracts for {_to_profile_id(effective_profile)}: {', '.join(contract_gaps)}",
+            )
+        )
+    if surface_gaps:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.unsupported-surface",
+                target.name,
+                "Target is missing required runtime surfaces: " + ", ".join(surface_gaps),
+            )
+        )
+    if claim_gaps:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.unsupported-capability-claim",
+                target.name,
+                "Target declares participant capability claims without required contract surfaces: "
+                + "; ".join(claim_gaps),
+            )
+        )
+    live_cases = _live_target_cases(target, effective_profile)
+    cases = tuple((*fixture_report.cases, *live_cases))
+    passed = passed and all(case.passed for case in live_cases)
+    return BackendConformanceReport(
+        profile=_to_profile_id(effective_profile),
+        passed=passed,
+        cases=cases,
+        contract_versions=dict(fixture_report.contract_versions),
+        unsupported_contract_gaps=contract_gaps,
+        unsupported_capability_gaps=capability_gaps,
+        diagnostics=tuple(diagnostics),
+    )
+
+
+def _drive_participant_episode_probe(
+    control_plane: RuntimeControlPlane,
+    *,
+    participant_address: str,
+) -> list[ConformanceCaseResult]:
+    """Drive a full RUN-311 participant lifecycle via the control plane.
+
+    Each control action becomes one ``ConformanceCaseResult`` so that
+    ``run_target_conformance`` reports a separate failure for any step
+    the backend rejects, and a final case validates the resulting
+    ``participant_episode_results`` / ``participant_episode_history``
+    against the shared snapshot invariants.
+
+    A target that registers a participant runtime but never populates
+    the snapshot fields fails the snapshot-state-not-empty check, so
+    the live conformance probe cannot certify a backend whose runtime
+    accepts every action but produces no observable state.
+    """
+
+    cases: list[ConformanceCaseResult] = []
+    actions = (
+        ("participant-initialize", lambda: control_plane.initialize_participant_episode(participant_address)),
+        ("participant-reset", lambda: control_plane.reset_participant_episode(participant_address)),
+        (
+            "participant-terminate",
+            lambda: control_plane.terminate_participant_episode(
+                participant_address,
+                terminal_reason=ParticipantEpisodeTerminalReason.COMPLETED,
+            ),
+        ),
+        ("participant-restart", lambda: control_plane.restart_participant_episode(participant_address)),
+    )
+    contract_name = "participant-episode-state-envelope-v1"
+    for case_name, invoke in actions:
+        try:
+            receipt = invoke()
+        except Exception as exc:  # pragma: no cover - defensive only
+            cases.append(
+                ConformanceCaseResult(
+                    name=case_name,
+                    contract_name=contract_name,
+                    valid=True,
+                    passed=False,
+                    diagnostics=(
+                        _diagnostic(
+                            "conformance.participant-runtime-failed",
+                            f"runtime.control-plane.participant.{participant_address}",
+                            f"{case_name} raised {type(exc).__name__}: {exc}",
+                        ),
+                    ),
+                )
+            )
+            continue
+        status = control_plane.get_operation(receipt.operation_id)
+        diagnostics: list[Diagnostic] = []
+        if status is None:
+            diagnostics.append(
+                _diagnostic(
+                    "conformance.participant-runtime-missing-status",
+                    f"runtime.control-plane.participant.{participant_address}",
+                    f"{case_name} did not produce an OperationStatus record",
+                )
+            )
+        elif status.state.value not in {"succeeded"}:
+            diagnostics.append(
+                _diagnostic(
+                    "conformance.participant-runtime-failed",
+                    f"runtime.control-plane.participant.{participant_address}",
+                    (
+                        f"{case_name} returned state {status.state.value!r} with diagnostics: "
+                        + "; ".join(diag.message for diag in status.diagnostics)
+                    ),
+                )
+            )
+        cases.append(
+            ConformanceCaseResult(
+                name=case_name,
+                contract_name=contract_name,
+                valid=True,
+                passed=not diagnostics,
+                diagnostics=tuple(diagnostics),
+            )
+        )
+
+    snapshot = control_plane.snapshot
+    final_diagnostics: list[Diagnostic] = []
+    if not snapshot.participant_episode_results:
+        final_diagnostics.append(
+            _diagnostic(
+                "conformance.participant-runtime-empty",
+                f"runtime.snapshot.participant-episode-results.{participant_address}",
+                (
+                    "Participant runtime accepted every control action but the snapshot "
+                    "exposes no participant_episode_results. RUN-311 backends must publish "
+                    "live episode state through the snapshot."
+                ),
+            )
+        )
+    if not snapshot.participant_episode_history:
+        final_diagnostics.append(
+            _diagnostic(
+                "conformance.participant-runtime-empty",
+                f"runtime.snapshot.participant-episode-history.{participant_address}",
+                (
+                    "Participant runtime accepted every control action but the snapshot "
+                    "exposes no participant_episode_history. RUN-311 backends must publish "
+                    "live episode history events through the snapshot."
+                ),
+            )
+        )
+    for address, message in iter_participant_episode_snapshot_violations(
+        snapshot.participant_episode_results,
+        snapshot.participant_episode_history,
+    ):
+        final_diagnostics.append(_diagnostic(_SEMANTIC_INVALID_DIAGNOSTIC_CODE, address, message))
+    cases.append(
+        ConformanceCaseResult(
+            name="participant-snapshot-consistent",
+            contract_name=contract_name,
+            valid=True,
+            passed=not final_diagnostics,
+            diagnostics=tuple(final_diagnostics),
+        )
+    )
+    return cases
+
+
+def _live_target_cases(
+    target: RuntimeTarget,
+    profile: BackendProfileSelector,
+) -> tuple[ConformanceCaseResult, ...]:
+    """Run live probes appropriate for known runtime surfaces only.
+
+    Live probes (orchestration, evaluation, participant-episode actions)
+    require knowing the profile's runtime contract. For an unknown profile id
+    we run only the manifest validation case (it's universally safe — just
+    validates against ``backend-manifest-v2``) and skip the rest. Capability
+    inference for known profiles still routes via :class:`BackendCapabilityProfile`.
+    """
+
+    cases: list[ConformanceCaseResult] = []
+    manifest_payload = backend_manifest_payload(target.manifest)
+    manifest_diags = _validate_payload("backend-manifest-v2", manifest_payload)
+    cases.append(
+        ConformanceCaseResult(
+            name="live-manifest",
+            contract_name="backend-manifest-v2",
+            valid=True,
+            passed=not manifest_diags,
+            diagnostics=tuple(manifest_diags),
+        )
+    )
+
+    known = _to_known_profile(profile)
+    if known is None or known == BackendCapabilityProfile.PROVISIONING_ONLY:
+        return tuple(cases)
+
+    scenario = parse_sdl(
+        dedent(
+            """
+            name: conformance
+            nodes:
+              vm:
+                type: vm
+                os: linux
+                resources: {ram: 1 gib, cpu: 1}
+                conditions: {health: ops}
+                roles: {ops: operator}
+            conditions:
+              health: {command: /bin/true, interval: 15}
+            entities:
+              blue: {role: blue}
+            objectives:
+              validate:
+                entity: blue
+                success: {conditions: [health]}
+            workflows:
+              response:
+                start: run
+                steps:
+                  run:
+                    type: objective
+                    objective: validate
+                    on-success: finish
+                  finish: {type: end}
+            """
+        )
+    )
+    execution_plan = run_reference_processor(scenario, target.manifest).execution_plan
+    control_plane = RuntimeControlPlane(target)
+    control_plane.submit_provisioning(execution_plan.provisioning)
+    if target.orchestrator is not None:
+        control_plane.submit_orchestration(execution_plan.orchestration)
+    if target.evaluator is not None:
+        control_plane.submit_evaluation(execution_plan.evaluation)
+    if target.participant_runtime is not None:
+        cases.extend(
+            _drive_participant_episode_probe(
+                control_plane,
+                participant_address="participant.conformance",
+            )
+        )
+    snapshot_payload = {
+        "schema_version": RuntimeSnapshotEnvelope().schema_version,
+        "entries": {
+            address: {
+                "address": entry.address,
+                "domain": entry.domain.value,
+                "resource_type": entry.resource_type,
+                "payload": dict(entry.payload),
+                "ordering_dependencies": list(entry.ordering_dependencies),
+                "refresh_dependencies": list(entry.refresh_dependencies),
+                "status": entry.status,
+            }
+            for address, entry in control_plane.snapshot.entries.items()
+        },
+        "orchestration_results": dict(control_plane.snapshot.orchestration_results),
+        "orchestration_history": dict(control_plane.snapshot.orchestration_history),
+        "evaluation_results": dict(control_plane.snapshot.evaluation_results),
+        "evaluation_history": dict(control_plane.snapshot.evaluation_history),
+        "participant_episode_results": dict(control_plane.snapshot.participant_episode_results),
+        "participant_episode_history": {
+            participant_address: list(events)
+            for participant_address, events in control_plane.snapshot.participant_episode_history.items()
+        },
+        "participant_behavior_history": {
+            participant_address: list(events)
+            for participant_address, events in control_plane.snapshot.participant_behavior_history.items()
+        },
+        "shared_state_records": dict(control_plane.snapshot.shared_state_records),
+        "shared_state_history": {
+            state_address: list(records)
+            for state_address, records in control_plane.snapshot.shared_state_history.items()
+        },
+        "joint_action_records": dict(control_plane.snapshot.joint_action_records),
+        "time_management_contexts": dict(control_plane.snapshot.time_management_contexts),
+        "metadata": dict(control_plane.snapshot.metadata),
+    }
+    snapshot_diags = [
+        *_validate_payload("runtime-snapshot-v1", snapshot_payload),
+        *_semantic_diagnostics("runtime-snapshot-v1", snapshot_payload),
+    ]
+    cases.append(
+        ConformanceCaseResult(
+            name="live-snapshot",
+            contract_name="runtime-snapshot-v1",
+            valid=True,
+            passed=not snapshot_diags,
+            diagnostics=tuple(snapshot_diags),
+        )
+    )
+    return tuple(cases)

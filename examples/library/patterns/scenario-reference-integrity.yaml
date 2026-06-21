@@ -1,0 +1,24 @@
+pattern: aces-library-pattern
+version: 1
+id: scenario-reference-integrity
+surface: scenario
+requirement_refs: [AUT-806]
+source_refs:
+  - examples/scenarios/hospital-ransomware-surgery-day.sdl.yaml
+  - docs/explain/sdl/validation.md
+summary: Keep scenario examples useful by making every cross-reference resolve through the current SDL validator.
+intent: >
+  Authors can copy a scenario skeleton and replace names while preserving the
+  parser-backed relationship between nodes, entities, agents, objectives, and
+  workflows.
+use_when:
+  - Building a new scenario from a small validated starting point.
+  - Reviewing whether a scenario example is still a positive corpus artifact.
+authoring_steps:
+  - Start with a complete SDL document that parses without semantic errors.
+  - Give every reusable surface a stable identifier before adding references.
+  - Add objective and workflow references only after the target sections exist.
+  - Validate with parse_sdl_file or the example-library policy checker.
+validation:
+  - command: uv run --project implementations/python --frozen python tools/check_example_library.py
+    expected: catalog and template bodies pass with no policy failures.

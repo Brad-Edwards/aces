@@ -1,0 +1,176 @@
+{
+  "$defs": {
+    "ParticipantStatusViewEpisodeStateModel": {
+      "additionalProperties": false,
+      "description": "Scope-projected episode state embedded in API-408 status views.\n\nThe view carries `participant_address` and `episode_id` once at the top\nlevel; the embedded record cannot restate them, so a nested record scoped\nto another participant or episode is structurally unrepresentable.",
+      "properties": {
+        "initialized_at": {
+          "title": "Initialized At",
+          "type": "string"
+        },
+        "last_control_action": {
+          "title": "Last Control Action",
+          "type": "string"
+        },
+        "previous_episode_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Previous Episode Id"
+        },
+        "sequence_number": {
+          "title": "Sequence Number",
+          "type": "integer"
+        },
+        "state_schema_version": {
+          "const": "participant-episode-state/v1",
+          "default": "participant-episode-state/v1",
+          "title": "State Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "terminal_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Terminal Reason"
+        },
+        "terminated_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Terminated At"
+        },
+        "updated_at": {
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sequence_number",
+        "status",
+        "initialized_at",
+        "updated_at",
+        "last_control_action"
+      ],
+      "title": "ParticipantStatusViewEpisodeStateModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/participant-status-view-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "API-408 retrieval projection of one participant's episode status.",
+  "properties": {
+    "episode_id": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Episode Id"
+    },
+    "episode_state": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ParticipantStatusViewEpisodeStateModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "generated_at": {
+      "format": "date-time",
+      "minLength": 1,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "marking_definition_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Marking Definition Refs",
+      "type": "array"
+    },
+    "open_operation_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Open Operation Refs",
+      "type": "array"
+    },
+    "participant_address": {
+      "minLength": 1,
+      "title": "Participant Address",
+      "type": "string"
+    },
+    "redaction_policy_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Redaction Policy Ref"
+    },
+    "source_snapshot_ref": {
+      "minLength": 1,
+      "title": "Source Snapshot Ref",
+      "type": "string"
+    },
+    "view_id": {
+      "minLength": 1,
+      "title": "View Id",
+      "type": "string"
+    },
+    "visibility_projection_ref": {
+      "minLength": 1,
+      "title": "Visibility Projection Ref",
+      "type": "string"
+    }
+  },
+  "required": [
+    "view_id",
+    "participant_address",
+    "generated_at",
+    "source_snapshot_ref",
+    "visibility_projection_ref"
+  ],
+  "title": "ParticipantStatusViewModel",
+  "type": "object"
+}

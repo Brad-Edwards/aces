@@ -1,0 +1,210 @@
+# Agent-Usable Guidance Profile (AUT-811)
+#
+# Canonical machine-readable guidance for agentic contributors and operators.
+# The profile is intentionally static data: MCP tools and docs may expose or
+# explain it, but this YAML is the source of truth for the rule ids.
+
+profile: aces-agent-guidance
+version: 1
+
+requirement_refs:
+  - AUT-811
+
+source_refs:
+  - AGENTS.md
+  - .gc/plan-rules.md
+  - docs/decisions/adrs/adr-009-normative-artifact-authority-and-repository-structure.md
+  - docs/decisions/adrs/adr-014-nox-as-canonical-verification-graph.md
+  - docs/decisions/adrs/adr-018-classification-based-assurance-policy.md
+  - docs/decisions/adrs/adr-021-falsification-first-claim-evidence-gate.md
+  - docs/explain/reference/coding-standards.md
+  - docs/explain/reference/documentation-style-guide.md
+  - docs/explain/reference/normative-artifact-authority.md
+  - docs/explain/sdl/language-service.md
+
+recommended_workflow:
+  - aces_tool_surface
+  - aces_agent_guidance
+  - sdl_overview
+  - sdl_section_reference
+  - sdl_completions
+  - sdl_apply_edit
+  - sdl_diagnostics
+  - sdl_format
+  - sdl_validate
+  - sdl_design_assessment
+  - sdl_plan
+  - sdl_claims_assessment
+
+guidance:
+  scope_boundaries:
+    - id: sdl-authoring-not-execution
+      audience: [contributor, operator]
+      surfaces: [mcp, sdl, processor]
+      statement: >-
+        ACES authoring and MCP tools describe, validate, inspect, compile, and
+        dry-run SDL scenarios. They do not execute participant cyber actions or
+        start a live range.
+      source_refs:
+        - implementations/python/packages/aces_mcp/tools/operations.py
+        - docs/explain/getting-started.md
+        - docs/explain/sdl/language-service.md
+
+    - id: reference-implementation-not-authority
+      audience: [contributor]
+      surfaces: [repository, specs, contracts, implementations]
+      statement: >-
+        Reference Python packages realize the ecosystem; they do not define
+        normative meaning when a spec, schema, fixture, profile, or
+        concept-authority artifact exists.
+      source_refs:
+        - docs/decisions/adrs/adr-009-normative-artifact-authority-and-repository-structure.md
+        - docs/explain/reference/normative-artifact-authority.md
+        - specs/authority/authority-boundary.yaml
+
+    - id: dry-run-not-runtime-evidence
+      audience: [operator]
+      surfaces: [processor, backend, assessment]
+      statement: >-
+        Planning against the reference stub backend can support capability and
+        planning claims. It is not evidence that a live range ran or that a
+        participant demonstrated skill.
+      source_refs:
+        - implementations/python/packages/aces_mcp/tools/operations.py
+        - docs/decisions/adrs/adr-021-falsification-first-claim-evidence-gate.md
+
+  invariants:
+    - id: validate-before-return
+      audience: [contributor, operator]
+      surfaces: [mcp, sdl]
+      statement: >-
+        SDL content returned by an agent must be checked with parser,
+        diagnostic, format, and semantic-validation tools appropriate to the
+        edit size.
+      source_refs:
+        - docs/explain/sdl/language-service.md
+        - docs/explain/sdl/validation.md
+
+    - id: preserve-authority-boundaries
+      audience: [contributor]
+      surfaces: [specs, contracts, implementations, docs]
+      statement: >-
+        New ecosystem authority belongs in approved authority roots. Published
+        schemas under contracts/schemas/ are the hand-governed normative
+        authority (ADR-009 section 7); the reference implementation only proves
+        compatibility with them. Do not relocate schema authority into
+        implementation models or generated output, and do not add
+        implementation-owned normative contracts.
+      source_refs:
+        - .gc/plan-rules.md
+        - specs/authority/authority-boundary.yaml
+        - docs/explain/reference/normative-artifact-authority.md
+
+    - id: claim-evidence-boundary
+      audience: [contributor, operator]
+      surfaces: [assessment, docs, releases]
+      statement: >-
+        Major maturity, portability, backend, provenance, participant-skill, or
+        run-success claims require explicit evidence. Internal consistency
+        alone is not enough.
+      source_refs:
+        - docs/decisions/adrs/adr-021-falsification-first-claim-evidence-gate.md
+        - implementations/python/packages/aces_mcp/tools/operation_support.py
+
+    - id: requirement-traceability-aligned
+      audience: [contributor]
+      surfaces: [ground-control, repository]
+      statement: >-
+        Code, tests, docs, and requirements must remain traceable through
+        Ground Control when implementation work changes requirement coverage.
+      source_refs:
+        - AGENTS.md
+        - .gc/plan-rules.md
+
+  review_priorities:
+    - id: semantic-correctness-first
+      audience: [contributor]
+      surfaces: [sdl, processor, tests]
+      statement: >-
+        Review semantic changes for parser behavior, reference resolution,
+        validation invariants, runtime model effects, and negative tests before
+        style or cleanup concerns.
+      source_refs:
+        - docs/decisions/adrs/adr-018-classification-based-assurance-policy.md
+        - docs/explain/reference/coding-standards.md
+
+    - id: security-and-secret-exposure
+      audience: [contributor, operator]
+      surfaces: [mcp, cli, control-plane, docs]
+      statement: >-
+        Prioritize auth boundaries, secret exposure, command examples, error
+        payload leakage, process argv, generated diagnostics, and examples that
+        might normalize unsafe behavior.
+      source_refs:
+        - .gc/plan-rules.md
+        - docs/explain/reference/documentation-style-guide.md
+
+    - id: claim-discipline
+      audience: [contributor, operator]
+      surfaces: [assessment, docs, releases]
+      statement: >-
+        Review whether every supported claim is backed by current source,
+        tests, contracts, or evidence, and whether unsupported claims are named
+        as unsupported.
+      source_refs:
+        - docs/decisions/adrs/adr-021-falsification-first-claim-evidence-gate.md
+        - docs/explain/sdl/limitations.md
+
+    - id: canonical-verification-graph
+      audience: [contributor]
+      surfaces: [ci, local-tools, policy]
+      statement: >-
+        Treat nox as the canonical verification graph. Local checks, hooks, and
+        CI must not drift into separate command definitions.
+      source_refs:
+        - docs/decisions/adrs/adr-014-nox-as-canonical-verification-graph.md
+        - noxfile.py
+
+  safe_operating_expectations:
+    - id: small-structured-edits
+      audience: [contributor, operator]
+      surfaces: [mcp, sdl]
+      statement: >-
+        Prefer small structured edits, completion checks, reference lookup, and
+        diagnostics over broad YAML rewrites when modifying SDL.
+      source_refs:
+        - docs/explain/sdl/language-service.md
+        - implementations/python/packages/aces_sdl/language_service.py
+
+    - id: no-participant-actions-through-guidance
+      audience: [operator]
+      surfaces: [mcp, backend]
+      statement: >-
+        Guidance and authoring tools must not be used as a route to scan,
+        exploit, SSH, execute commands, reveal hidden state, or bypass backend
+        controls.
+      source_refs:
+        - implementations/python/packages/aces_mcp/tools/operations.py
+        - docs/explain/getting-started.md
+
+    - id: do-not-carry-secrets
+      audience: [contributor, operator]
+      surfaces: [docs, examples, diagnostics, logs]
+      statement: >-
+        Do not place real credentials, bearer tokens, private keys, customer
+        data, environment dumps, or live infrastructure identifiers in SDL,
+        docs, examples, diagnostics, logs, or issue comments.
+      source_refs:
+        - .gc/plan-rules.md
+        - docs/explain/reference/documentation-style-guide.md
+
+    - id: qualify-before-claiming
+      audience: [operator]
+      surfaces: [assessment, reports]
+      statement: >-
+        Use design assessment, dry-run planning, and claims assessment before
+        presenting an SDL scenario as ready, portable, executed, or evidence
+        backed.
+      source_refs:
+        - implementations/python/packages/aces_mcp/tools/operations.py
+        - docs/explain/getting-started.md

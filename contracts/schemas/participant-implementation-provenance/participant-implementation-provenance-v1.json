@@ -1,0 +1,255 @@
+{
+  "$defs": {
+    "ApparatusIdentityModel": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "ApparatusIdentityModel",
+      "type": "object"
+    },
+    "ParticipantExposurePolicyModel": {
+      "additionalProperties": false,
+      "properties": {
+        "constraints": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Constraints",
+          "type": "object"
+        },
+        "disclosed_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Disclosed Refs",
+          "type": "array"
+        },
+        "exposure_policy_kinds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Exposure Policy Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "policy_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Policy Digest"
+        },
+        "policy_id": {
+          "minLength": 1,
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "policy_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Policy Version"
+        },
+        "tool_affordance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Tool Affordance Refs",
+          "type": "array"
+        },
+        "visibility_scope_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Visibility Scope Refs",
+          "type": "array"
+        },
+        "withheld_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Withheld Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "policy_id",
+        "exposure_policy_kinds"
+      ],
+      "title": "ParticipantExposurePolicyModel",
+      "type": "object"
+    },
+    "ParticipantImplementationSelectionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "configuration_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Configuration Digest"
+        },
+        "configuration_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Configuration Ref"
+        },
+        "exposure_policy": {
+          "$ref": "#/$defs/ParticipantExposurePolicyModel"
+        },
+        "implementation_identity": {
+          "$ref": "#/$defs/ApparatusIdentityModel"
+        },
+        "manifest_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Manifest Digest",
+          "type": "string"
+        },
+        "manifest_ref": {
+          "minLength": 1,
+          "title": "Manifest Ref",
+          "type": "string"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "participant_contract_versions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Participant Contract Versions",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "selected_decision_surface_mode": {
+          "minLength": 1,
+          "title": "Selected Decision Surface Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_address",
+        "implementation_identity",
+        "manifest_ref",
+        "manifest_digest",
+        "selected_decision_surface_mode",
+        "participant_contract_versions",
+        "exposure_policy"
+      ],
+      "title": "ParticipantImplementationSelectionModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/participant-implementation-provenance-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "backend_manifest_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Backend Manifest Ref"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "title": "Metadata",
+      "type": "object"
+    },
+    "participant_implementations": {
+      "items": {
+        "$ref": "#/$defs/ParticipantImplementationSelectionModel"
+      },
+      "minItems": 1,
+      "title": "Participant Implementations",
+      "type": "array"
+    },
+    "processor_manifest_ref": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Processor Manifest Ref"
+    },
+    "run_id": {
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "participant-implementation-provenance/v1",
+      "default": "participant-implementation-provenance/v1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "run_id",
+    "participant_implementations"
+  ],
+  "title": "ParticipantImplementationProvenanceModel",
+  "type": "object"
+}

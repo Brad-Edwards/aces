@@ -1,0 +1,4 @@
+interface:
+  display_name: "ACES Gap Remediation"
+  short_description: "Architecture-first gap remediation overlay"
+  default_prompt: "Use $aces-gap-remediation-implement to remediate an ACES/APTL gap through the Ground Control implement workflow."

@@ -1,0 +1,905 @@
+"""Reference HTTP/JSON control-plane API tests."""
+
+from __future__ import annotations
+
+import textwrap
+from pathlib import Path
+
+import aces_runtime.control_plane_store as control_plane_store_module
+import pytest
+from aces_contracts.runtime_state import RuntimeSnapshot
+from starlette.testclient import TestClient
+
+from aces.backends.stubs import create_stub_target
+from aces.core.runtime.compiler import compile_runtime_model
+from aces.core.runtime.control_plane import RuntimeControlPlane
+from aces.core.runtime.control_plane_api import create_control_plane_app
+from aces.core.runtime.control_plane_security import (
+    ControlPlaneIdentity,
+    ControlPlaneRole,
+    ControlPlaneSecurityConfig,
+)
+from aces.core.runtime.control_plane_store import LocalControlPlaneStore
+from aces.core.runtime.planner import plan
+from aces.core.sdl import parse_sdl
+
+
+def _scenario(yaml_str: str):
+    return parse_sdl(textwrap.dedent(yaml_str))
+
+
+def _test_security(target_name: str, *, max_request_bytes: int = 1_000_000) -> ControlPlaneSecurityConfig:
+    return ControlPlaneSecurityConfig(
+        max_request_bytes=max_request_bytes,
+        trust_proxy_identity_headers=True,
+        trusted_identities={
+            "backend-service": ControlPlaneIdentity(
+                identity="backend-service",
+                roles=frozenset({ControlPlaneRole.BACKEND}),
+                target_name=target_name,
+            ),
+        },
+        bearer_tokens={
+            "test-operator-token": ControlPlaneIdentity(
+                identity="operator",
+                roles=frozenset({ControlPlaneRole.OPERATOR, ControlPlaneRole.AUDITOR}),
+                target_name=target_name,
+            ),
+        },
+    )
+
+
+def test_control_plane_strict_defaults_ship_without_builtin_principals():
+    security = ControlPlaneSecurityConfig.strict_defaults()
+
+    assert security.require_verified_identity is True
+    assert security.trust_proxy_identity_headers is False
+    assert security.trusted_identities == {}
+    assert security.bearer_tokens == {}
+
+
+def test_control_plane_api_default_security_does_not_trust_builtin_headers_or_tokens():
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(control_plane)
+
+    with TestClient(app) as client:
+        header_response = client.get(
+            "/snapshot",
+            headers={
+                "x-aces-client-verified": "true",
+                "x-aces-client-identity": "backend-service",
+            },
+        )
+        token_response = client.get(
+            "/snapshot",
+            headers={"authorization": "Bearer operator-token"},
+        )
+
+    assert header_response.status_code == 401
+    assert token_response.status_code == 401
+
+
+def test_control_plane_api_openapi_documents_explicit_error_responses():
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+
+    operation_responses = app.openapi()["paths"]
+
+    assert "409" in operation_responses["/operations/provisioning"]["post"]["responses"]
+    assert "409" in operation_responses["/operations/orchestration"]["post"]["responses"]
+    assert "409" in operation_responses["/operations/evaluation"]["post"]["responses"]
+    assert "404" in operation_responses["/operations/{operation_id}"]["get"]["responses"]
+    assert "409" in operation_responses["/workflows/{workflow_address}/cancel"]["post"]["responses"]
+    assert "409" in operation_responses["/workflows/reconcile-timeouts"]["post"]["responses"]
+    assert "409" in operation_responses["/participants/{participant_address}/episodes/initialize"]["post"]["responses"]
+    assert "409" in operation_responses["/participants/{participant_address}/episodes/reset"]["post"]["responses"]
+    assert "409" in operation_responses["/participants/{participant_address}/episodes/restart"]["post"]["responses"]
+    terminate_responses = operation_responses["/participants/{participant_address}/episodes/terminate"]["post"][
+        "responses"
+    ]
+    assert "400" in terminate_responses
+    assert "409" in terminate_responses
+
+
+def test_control_plane_api_accepts_orchestration_plan_and_exposes_snapshot():
+    scenario = _scenario("""
+name: workflow
+nodes:
+  vm:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    conditions: {health: ops}
+    roles: {ops: operator}
+conditions:
+  health: {command: /bin/true, interval: 15}
+entities:
+  blue: {role: blue}
+objectives:
+  validate:
+    entity: blue
+    success: {conditions: [health]}
+workflows:
+  response:
+    start: run
+    steps:
+      run:
+        type: objective
+        objective: validate
+        on-success: finish
+      finish: {type: end}
+""")
+    target = create_stub_target()
+    execution_plan = plan(compile_runtime_model(scenario), target.manifest)
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+    headers = {
+        "x-aces-client-verified": "true",
+        "x-aces-client-identity": "backend-service",
+    }
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/operations/orchestration",
+            json={
+                "operations": [
+                    {
+                        "action": op.action.value,
+                        "address": op.address,
+                        "resource_type": op.resource_type,
+                        "payload": op.payload,
+                        "ordering_dependencies": list(op.ordering_dependencies),
+                        "refresh_dependencies": list(op.refresh_dependencies),
+                    }
+                    for op in execution_plan.orchestration.operations
+                ],
+                "startup_order": execution_plan.orchestration.startup_order,
+                "diagnostics": [],
+            },
+            headers=headers,
+        )
+        assert response.status_code == 200
+        receipt = response.json()
+        status_response = client.get(
+            f"/operations/{receipt['operation_id']}",
+            headers=headers,
+        )
+        assert status_response.status_code == 200
+        snapshot_response = client.get("/snapshot", headers=headers)
+        assert snapshot_response.status_code == 200
+        snapshot = snapshot_response.json()
+        assert snapshot["orchestration_results"]
+
+
+def test_control_plane_api_rejects_unauthenticated_mutations():
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/operations/provisioning",
+            json={"operations": [], "diagnostics": []},
+        )
+
+    assert response.status_code == 401
+
+
+def test_control_plane_api_supports_idempotent_retries():
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+    headers = {
+        "x-aces-client-verified": "true",
+        "x-aces-client-identity": "backend-service",
+        "idempotency-key": "same-request",
+    }
+
+    with TestClient(app) as client:
+        first = client.post(
+            "/operations/provisioning",
+            json={"operations": [], "diagnostics": []},
+            headers=headers,
+        )
+        second = client.post(
+            "/operations/provisioning",
+            json={"operations": [], "diagnostics": []},
+            headers=headers,
+        )
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json()["operation_id"] == second.json()["operation_id"]
+
+
+def test_control_plane_api_persists_operations_and_snapshot(tmp_path: Path):
+    scenario = _scenario("""
+name: workflow
+nodes:
+  vm:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+""")
+    target = create_stub_target()
+    execution_plan = plan(compile_runtime_model(scenario), target.manifest)
+    store = LocalControlPlaneStore(tmp_path / "cp-store")
+    control_plane = RuntimeControlPlane(target, store=store)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+    headers = {
+        "x-aces-client-verified": "true",
+        "x-aces-client-identity": "backend-service",
+    }
+
+    with TestClient(app) as client:
+        receipt = client.post(
+            "/operations/provisioning",
+            json={
+                "operations": [
+                    {
+                        "action": op.action.value,
+                        "address": op.address,
+                        "resource_type": op.resource_type,
+                        "payload": op.payload,
+                        "ordering_dependencies": list(op.ordering_dependencies),
+                        "refresh_dependencies": list(op.refresh_dependencies),
+                    }
+                    for op in execution_plan.provisioning.operations
+                ],
+                "diagnostics": [],
+            },
+            headers=headers,
+        ).json()
+
+    restarted = RuntimeControlPlane(target, store=store)
+    assert restarted.get_operation(receipt["operation_id"]) is not None
+    assert restarted.get_snapshot().snapshot.entries
+
+
+def test_control_plane_api_records_audit_events_for_denials():
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/snapshot")
+
+    assert response.status_code == 401
+    assert control_plane.audit_log()
+    assert control_plane.audit_log()[-1].allowed is False
+
+
+def test_control_plane_api_enforces_request_size_limit():
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    security = _test_security(target.name, max_request_bytes=32)
+    app = create_control_plane_app(control_plane, security=security)
+    headers = {
+        "x-aces-client-verified": "true",
+        "x-aces-client-identity": "backend-service",
+    }
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/operations/provisioning",
+            json={"operations": [], "diagnostics": [], "padding": "x" * 100},
+            headers=headers,
+        )
+
+    assert response.status_code == 413
+
+
+def test_control_plane_api_rejects_invalid_content_length_header():
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+    headers = {
+        "x-aces-client-verified": "true",
+        "x-aces-client-identity": "backend-service",
+        "content-type": "application/json",
+        "content-length": "not-a-number",
+    }
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/operations/provisioning",
+            content=b'{"operations":[],"diagnostics":[]}',
+            headers=headers,
+        )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "invalid content-length"}
+    assert control_plane.audit_log()[-1].reason == "invalid content-length"
+
+
+def test_local_control_plane_store_saves_snapshot_with_atomic_replace(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    store = LocalControlPlaneStore(tmp_path / "cp-store")
+    replace_calls: list[tuple[Path, Path]] = []
+    real_replace = control_plane_store_module.os.replace
+
+    def tracked_replace(source: str, destination: str) -> None:
+        replace_calls.append((Path(source), Path(destination)))
+        real_replace(source, destination)
+
+    monkeypatch.setattr(control_plane_store_module.os, "replace", tracked_replace)
+
+    store.save_snapshot(RuntimeSnapshot())
+
+    assert replace_calls
+    assert replace_calls[0][1] == tmp_path / "cp-store" / "snapshot.json"
+    assert not replace_calls[0][0].exists()
+    assert not list((tmp_path / "cp-store").glob("*.tmp"))
+
+
+def test_local_control_plane_store_cleans_temp_file_after_atomic_replace_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    store = LocalControlPlaneStore(tmp_path / "cp-store")
+
+    def fail_replace(source: str, destination: str) -> None:
+        del source, destination
+        raise OSError("replace failed")
+
+    monkeypatch.setattr(control_plane_store_module.os, "replace", fail_replace)
+
+    with pytest.raises(OSError, match="replace failed"):
+        store.save_snapshot(RuntimeSnapshot())
+
+    assert not (tmp_path / "cp-store" / "snapshot.json").exists()
+    assert not list((tmp_path / "cp-store").glob("*.tmp"))
+
+
+def test_control_plane_api_cancels_workflow_runs():
+    scenario = _scenario("""
+name: workflow
+nodes:
+  vm:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    conditions: {health: ops}
+    roles: {ops: operator}
+conditions:
+  health: {command: /bin/true, interval: 15}
+entities:
+  blue: {role: blue}
+objectives:
+  validate:
+    entity: blue
+    success: {conditions: [health]}
+workflows:
+  response:
+    start: run
+    steps:
+      run:
+        type: objective
+        objective: validate
+        on-success: finish
+      finish: {type: end}
+""")
+    target = create_stub_target()
+    execution_plan = plan(compile_runtime_model(scenario), target.manifest)
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+    headers = {
+        "x-aces-client-verified": "true",
+        "x-aces-client-identity": "backend-service",
+    }
+
+    with TestClient(app) as client:
+        client.post(
+            "/operations/orchestration",
+            json={
+                "operations": [
+                    {
+                        "action": op.action.value,
+                        "address": op.address,
+                        "resource_type": op.resource_type,
+                        "payload": op.payload,
+                        "ordering_dependencies": list(op.ordering_dependencies),
+                        "refresh_dependencies": list(op.refresh_dependencies),
+                    }
+                    for op in execution_plan.orchestration.operations
+                ],
+                "startup_order": execution_plan.orchestration.startup_order,
+                "diagnostics": [],
+            },
+            headers=headers,
+        )
+        cancel = client.post(
+            "/workflows/orchestration.workflow.response/cancel",
+            json={"reason": "operator requested stop"},
+            headers=headers,
+        )
+        snapshot = client.get("/snapshot", headers=headers).json()
+
+    assert cancel.status_code == 200
+    result = snapshot["orchestration_results"]["orchestration.workflow.response"]
+    assert result["workflow_status"] == "cancelled"
+    assert result["terminal_reason"] == "operator requested stop"
+
+
+def test_control_plane_api_reconciles_workflow_timeouts():
+    scenario = _scenario("""
+name: workflow
+nodes:
+  vm:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    conditions: {health: ops}
+    roles: {ops: operator}
+conditions:
+  health: {command: /bin/true, interval: 15}
+entities:
+  blue: {role: blue}
+objectives:
+  validate:
+    entity: blue
+    success: {conditions: [health]}
+workflows:
+  response:
+    start: run
+    timeout: 1
+    steps:
+      run:
+        type: objective
+        objective: validate
+        on-success: finish
+      finish: {type: end}
+""")
+    target = create_stub_target()
+    execution_plan = plan(compile_runtime_model(scenario), target.manifest)
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+    headers = {
+        "x-aces-client-verified": "true",
+        "x-aces-client-identity": "backend-service",
+    }
+
+    with TestClient(app) as client:
+        client.post(
+            "/operations/orchestration",
+            json={
+                "operations": [
+                    {
+                        "action": op.action.value,
+                        "address": op.address,
+                        "resource_type": op.resource_type,
+                        "payload": op.payload,
+                        "ordering_dependencies": list(op.ordering_dependencies),
+                        "refresh_dependencies": list(op.refresh_dependencies),
+                    }
+                    for op in execution_plan.orchestration.operations
+                ],
+                "startup_order": execution_plan.orchestration.startup_order,
+                "diagnostics": [],
+            },
+            headers=headers,
+        )
+        reconcile = client.post(
+            "/workflows/reconcile-timeouts",
+            headers=headers,
+        )
+        assert reconcile.status_code == 200
+        control_plane.reconcile_workflow_timeouts(now="2099-01-01T00:00:00Z")
+        snapshot = client.get("/snapshot", headers=headers).json()
+
+    result = snapshot["orchestration_results"]["orchestration.workflow.response"]
+    assert result["workflow_status"] == "timed_out"
+    assert result["terminal_reason"] == "workflow timed out"
+
+
+def test_control_plane_api_cancellation_triggers_compensation_history():
+    scenario = _scenario("""
+name: workflow
+nodes:
+  vm:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    conditions: {health: ops}
+    roles: {ops: operator}
+conditions:
+  health: {command: /bin/true, interval: 15}
+entities:
+  blue: {role: blue}
+objectives:
+  validate:
+    entity: blue
+    success: {conditions: [health]}
+workflows:
+  rollback:
+    start: finish
+    steps:
+      finish: {type: end}
+  response:
+    start: run
+    compensation:
+      mode: automatic
+      on: [cancelled]
+    steps:
+      run:
+        type: objective
+        objective: validate
+        compensate-with: rollback
+        on-success: finish
+        on-failure: finish
+      finish: {type: end}
+""")
+    target = create_stub_target()
+    execution_plan = plan(compile_runtime_model(scenario), target.manifest)
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+    headers = {
+        "x-aces-client-verified": "true",
+        "x-aces-client-identity": "backend-service",
+    }
+
+    with TestClient(app) as client:
+        client.post(
+            "/operations/orchestration",
+            json={
+                "operations": [
+                    {
+                        "action": op.action.value,
+                        "address": op.address,
+                        "resource_type": op.resource_type,
+                        "payload": op.payload,
+                        "ordering_dependencies": list(op.ordering_dependencies),
+                        "refresh_dependencies": list(op.refresh_dependencies),
+                    }
+                    for op in execution_plan.orchestration.operations
+                ],
+                "startup_order": execution_plan.orchestration.startup_order,
+                "diagnostics": [],
+            },
+            headers=headers,
+        )
+        workflow_address = "orchestration.workflow.response"
+        seeded = dict(control_plane._snapshot.orchestration_results[workflow_address])
+        seeded["steps"] = {
+            **seeded["steps"],
+            "run": {"lifecycle": "completed", "outcome": "succeeded", "attempts": 1},
+        }
+        control_plane._snapshot = control_plane._snapshot.with_entries(
+            dict(control_plane._snapshot.entries),
+            orchestration_results={
+                **control_plane._snapshot.orchestration_results,
+                workflow_address: seeded,
+            },
+            orchestration_history={
+                **control_plane._snapshot.orchestration_history,
+                workflow_address: [
+                    *control_plane._snapshot.orchestration_history[workflow_address],
+                    {
+                        "event_type": "step_completed",
+                        "timestamp": seeded["updated_at"],
+                        "step_name": "run",
+                        "branch_name": None,
+                        "join_step": None,
+                        "outcome": "succeeded",
+                        "details": {},
+                    },
+                ],
+            },
+        )
+        cancel = client.post(
+            "/workflows/orchestration.workflow.response/cancel",
+            json={"reason": "operator requested stop"},
+            headers=headers,
+        )
+        snapshot = client.get("/snapshot", headers=headers).json()
+
+    assert cancel.status_code == 200
+    result = snapshot["orchestration_results"]["orchestration.workflow.response"]
+    history = snapshot["orchestration_history"]["orchestration.workflow.response"]
+    assert result["workflow_status"] == "cancelled"
+    assert result["compensation_status"] == "succeeded"
+    assert any(event["event_type"] == "compensation_started" for event in history)
+    assert any(
+        event["event_type"] == "compensation_workflow_completed"
+        and event["details"].get("workflow_address") == "orchestration.workflow.rollback"
+        for event in history
+    )
+
+
+def test_control_plane_api_timeout_triggers_compensation_history():
+    scenario = _scenario("""
+name: workflow
+nodes:
+  vm:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    conditions: {health: ops}
+    roles: {ops: operator}
+conditions:
+  health: {command: /bin/true, interval: 15}
+entities:
+  blue: {role: blue}
+objectives:
+  validate:
+    entity: blue
+    success: {conditions: [health]}
+workflows:
+  rollback:
+    start: finish
+    steps:
+      finish: {type: end}
+  response:
+    start: run
+    timeout: 1
+    compensation:
+      mode: automatic
+      on: [timed_out]
+    steps:
+      run:
+        type: objective
+        objective: validate
+        compensate-with: rollback
+        on-success: finish
+        on-failure: finish
+      finish: {type: end}
+""")
+    target = create_stub_target()
+    execution_plan = plan(compile_runtime_model(scenario), target.manifest)
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+    headers = {
+        "x-aces-client-verified": "true",
+        "x-aces-client-identity": "backend-service",
+    }
+
+    with TestClient(app) as client:
+        client.post(
+            "/operations/orchestration",
+            json={
+                "operations": [
+                    {
+                        "action": op.action.value,
+                        "address": op.address,
+                        "resource_type": op.resource_type,
+                        "payload": op.payload,
+                        "ordering_dependencies": list(op.ordering_dependencies),
+                        "refresh_dependencies": list(op.refresh_dependencies),
+                    }
+                    for op in execution_plan.orchestration.operations
+                ],
+                "startup_order": execution_plan.orchestration.startup_order,
+                "diagnostics": [],
+            },
+            headers=headers,
+        )
+        workflow_address = "orchestration.workflow.response"
+        seeded = dict(control_plane._snapshot.orchestration_results[workflow_address])
+        seeded["started_at"] = "2000-01-01T00:00:00Z"
+        seeded["updated_at"] = "2000-01-01T00:00:01Z"
+        seeded["steps"] = {
+            **seeded["steps"],
+            "run": {"lifecycle": "completed", "outcome": "succeeded", "attempts": 1},
+        }
+        control_plane._snapshot = control_plane._snapshot.with_entries(
+            dict(control_plane._snapshot.entries),
+            orchestration_results={
+                **control_plane._snapshot.orchestration_results,
+                workflow_address: seeded,
+            },
+            orchestration_history={
+                **control_plane._snapshot.orchestration_history,
+                workflow_address: [
+                    *control_plane._snapshot.orchestration_history[workflow_address],
+                    {
+                        "event_type": "step_completed",
+                        "timestamp": "2000-01-01T00:00:01Z",
+                        "step_name": "run",
+                        "branch_name": None,
+                        "join_step": None,
+                        "outcome": "succeeded",
+                        "details": {},
+                    },
+                ],
+            },
+        )
+        client.post("/workflows/reconcile-timeouts", headers=headers)
+        snapshot = client.get("/snapshot", headers=headers).json()
+
+    result = snapshot["orchestration_results"]["orchestration.workflow.response"]
+    history = snapshot["orchestration_history"]["orchestration.workflow.response"]
+    assert result["workflow_status"] == "timed_out"
+    assert result["compensation_status"] == "succeeded"
+    assert any(event["event_type"] == "compensation_completed" for event in history)
+
+
+class TestParticipantEpisodeHttpRoutes:
+    """RUN-311 — HTTP surface for participant episode lifecycle control.
+
+    Each POST route must drive the same state-machine transitions as the
+    in-process control plane and the resulting ``/snapshot`` response
+    must expose the mutated ``participant_episode_results`` /
+    ``participant_episode_history`` fields in the RuntimeSnapshot envelope.
+    """
+
+    def _build_client(self):
+        target = create_stub_target()
+        control_plane = RuntimeControlPlane(target)
+        app = create_control_plane_app(
+            control_plane,
+            security=_test_security(target.name),
+        )
+        return TestClient(app)
+
+    @property
+    def _headers(self) -> dict[str, str]:
+        return {
+            "x-aces-client-verified": "true",
+            "x-aces-client-identity": "backend-service",
+        }
+
+    def test_initialize_route_creates_first_episode(self):
+        client = self._build_client()
+
+        response = client.post(
+            "/participants/participant.alice/episodes/initialize",
+            headers=self._headers,
+            json={},
+        )
+        snapshot = client.get("/snapshot", headers=self._headers).json()
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["accepted"] is True
+        assert body["domain"] == "participant"
+        state = snapshot["participant_episode_results"]["participant.alice"]
+        assert state["status"] == "running"
+        assert state["sequence_number"] == 0
+        history = snapshot["participant_episode_history"]["participant.alice"]
+        assert [event["event_type"] for event in history] == [
+            "episode_initialized",
+            "episode_running",
+        ]
+
+    def test_reset_route_allocates_new_episode(self):
+        client = self._build_client()
+        client.post(
+            "/participants/participant.alice/episodes/initialize",
+            headers=self._headers,
+            json={},
+        )
+
+        response = client.post(
+            "/participants/participant.alice/episodes/reset",
+            headers=self._headers,
+            json={"reason": "operator reset"},
+        )
+        snapshot = client.get("/snapshot", headers=self._headers).json()
+
+        assert response.status_code == 200
+        state = snapshot["participant_episode_results"]["participant.alice"]
+        assert state["sequence_number"] == 1
+        assert state["last_control_action"] == "reset"
+        assert state["previous_episode_id"] == "participant.alice-episode-1"
+
+    def test_terminate_route_drives_state_to_terminated(self):
+        client = self._build_client()
+        client.post(
+            "/participants/participant.alice/episodes/initialize",
+            headers=self._headers,
+            json={},
+        )
+
+        response = client.post(
+            "/participants/participant.alice/episodes/terminate",
+            headers=self._headers,
+            json={"terminal_reason": "completed"},
+        )
+        snapshot = client.get("/snapshot", headers=self._headers).json()
+
+        assert response.status_code == 200
+        state = snapshot["participant_episode_results"]["participant.alice"]
+        assert state["status"] == "terminated"
+        assert state["terminal_reason"] == "completed"
+        history = snapshot["participant_episode_history"]["participant.alice"]
+        assert history[-1]["event_type"] == "episode_completed"
+
+    def test_terminate_route_rejects_invalid_terminal_reason(self):
+        client = self._build_client()
+        client.post(
+            "/participants/participant.alice/episodes/initialize",
+            headers=self._headers,
+            json={},
+        )
+
+        response = client.post(
+            "/participants/participant.alice/episodes/terminate",
+            headers=self._headers,
+            json={"terminal_reason": "exploded"},
+        )
+
+        assert response.status_code == 400
+        assert "invalid terminal_reason" in response.json()["detail"]
+
+    def test_restart_route_resumes_after_termination(self):
+        client = self._build_client()
+        client.post(
+            "/participants/participant.alice/episodes/initialize",
+            headers=self._headers,
+            json={},
+        )
+        client.post(
+            "/participants/participant.alice/episodes/terminate",
+            headers=self._headers,
+            json={"terminal_reason": "completed"},
+        )
+
+        response = client.post(
+            "/participants/participant.alice/episodes/restart",
+            headers=self._headers,
+            json={},
+        )
+        snapshot = client.get("/snapshot", headers=self._headers).json()
+
+        assert response.status_code == 200
+        state = snapshot["participant_episode_results"]["participant.alice"]
+        assert state["sequence_number"] == 1
+        assert state["status"] == "running"
+        assert state["last_control_action"] == "restart"
+
+    def test_routes_require_authenticated_identity(self):
+        client = self._build_client()
+
+        response = client.post(
+            "/participants/participant.alice/episodes/initialize",
+            json={},
+        )
+        assert response.status_code == 401
+
+    def test_routes_reject_unknown_body_fields(self):
+        """Closed-world request bodies — unknown fields must be rejected."""
+        client = self._build_client()
+
+        response = client.post(
+            "/participants/participant.alice/episodes/initialize",
+            headers=self._headers,
+            json={"episode_id": "alice-1", "unknown": "value"},
+        )
+        assert response.status_code == 422

@@ -1,0 +1,4068 @@
+{
+  "$defs": {
+    "EvaluationHistoryEventModel": {
+      "additionalProperties": false,
+      "properties": {
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        },
+        "details": {
+          "additionalProperties": true,
+          "title": "Details",
+          "type": "object"
+        },
+        "event_type": {
+          "title": "Event Type",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "max_score": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Score"
+        },
+        "passed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Passed"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "timestamp": {
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_type",
+        "timestamp",
+        "status"
+      ],
+      "title": "EvaluationHistoryEventModel",
+      "type": "object"
+    },
+    "EvaluationResultStateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "max_score": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Score"
+        },
+        "observed_at": {
+          "title": "Observed At",
+          "type": "string"
+        },
+        "passed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Passed"
+        },
+        "resource_type": {
+          "title": "Resource Type",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        },
+        "state_schema_version": {
+          "const": "evaluation-result-state/v1",
+          "default": "evaluation-result-state/v1",
+          "title": "State Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "updated_at": {
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "resource_type",
+        "run_id",
+        "status",
+        "observed_at",
+        "updated_at"
+      ],
+      "title": "EvaluationResultStateModel",
+      "type": "object"
+    },
+    "EventClassificationModel": {
+      "additionalProperties": false,
+      "description": "ACES-native normalized event classification tuple (ADR-054).",
+      "properties": {
+        "activity_id": {
+          "title": "Activity Id",
+          "type": "integer"
+        },
+        "activity_name": {
+          "minLength": 1,
+          "title": "Activity Name",
+          "type": "string"
+        },
+        "category_name": {
+          "minLength": 1,
+          "title": "Category Name",
+          "type": "string"
+        },
+        "category_uid": {
+          "title": "Category Uid",
+          "type": "integer"
+        },
+        "class_name": {
+          "minLength": 1,
+          "title": "Class Name",
+          "type": "string"
+        },
+        "class_uid": {
+          "title": "Class Uid",
+          "type": "integer"
+        },
+        "severity": {
+          "minLength": 1,
+          "title": "Severity",
+          "type": "string"
+        },
+        "severity_id": {
+          "title": "Severity Id",
+          "type": "integer"
+        },
+        "type_name": {
+          "minLength": 1,
+          "title": "Type Name",
+          "type": "string"
+        },
+        "type_uid": {
+          "title": "Type Uid",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "category_uid",
+        "category_name",
+        "class_uid",
+        "class_name",
+        "activity_id",
+        "activity_name",
+        "type_uid",
+        "type_name",
+        "severity_id",
+        "severity"
+      ],
+      "title": "EventClassificationModel",
+      "type": "object"
+    },
+    "ExplicitnessClass": {
+      "description": "SEM-218 author-intent class for a declaration.",
+      "enum": [
+        "exact",
+        "constrained",
+        "open"
+      ],
+      "title": "ExplicitnessClass",
+      "type": "string"
+    },
+    "ExplicitnessProvenance": {
+      "description": "Where the classified value came from in the SDL lifecycle.",
+      "enum": [
+        "author-declared",
+        "processor-derived",
+        "backend-realized"
+      ],
+      "title": "ExplicitnessProvenance",
+      "type": "string"
+    },
+    "OutcomeInterpretationSourceLayer": {
+      "description": "Semantic layers that may feed a SEM-215 interpretation rule.",
+      "enum": [
+        "participant_action_outcome",
+        "participant_episode_status",
+        "objective_result",
+        "workflow_result",
+        "evaluation_result",
+        "evidence_claim",
+        "reward_signal",
+        "benchmark_milestone",
+        "subtask",
+        "gold_step",
+        "human_assistance",
+        "scaffold_variant",
+        "cost_resource_telemetry",
+        "privacy_redaction_result"
+      ],
+      "title": "OutcomeInterpretationSourceLayer",
+      "type": "string"
+    },
+    "OutcomeInterpretationTargetLayer": {
+      "description": "Semantic layers a SEM-215 interpretation rule may explicitly produce.",
+      "enum": [
+        "scenario_meaning",
+        "objective_result",
+        "workflow_result",
+        "evaluation_result",
+        "evidence_claim",
+        "reward_signal",
+        "benchmark_progress",
+        "privacy_redaction_result"
+      ],
+      "title": "OutcomeInterpretationTargetLayer",
+      "type": "string"
+    },
+    "ParticipantActionEffectResultModel": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "diagnostics": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "effect_class": {
+          "$ref": "#/$defs/ParticipantEffectClass"
+        },
+        "effect_id": {
+          "minLength": 1,
+          "title": "Effect Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "target_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Target Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "effect_id",
+        "effect_class",
+        "description"
+      ],
+      "title": "ParticipantActionEffectResultModel",
+      "type": "object"
+    },
+    "ParticipantActionPreconditionResultModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action_contract_address": {
+          "minLength": 1,
+          "title": "Action Contract Address",
+          "type": "string"
+        },
+        "diagnostics": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "observation_point": {
+          "minLength": 1,
+          "title": "Observation Point",
+          "type": "string"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "precondition_class": {
+          "$ref": "#/$defs/ParticipantPreconditionClass"
+        },
+        "precondition_id": {
+          "minLength": 1,
+          "title": "Precondition Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "satisfied",
+            "unsatisfied",
+            "unresolved"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "support_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Support Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "precondition_id",
+        "precondition_class",
+        "status",
+        "participant_address",
+        "episode_id",
+        "action_contract_address",
+        "observation_point"
+      ],
+      "title": "ParticipantActionPreconditionResultModel",
+      "type": "object"
+    },
+    "ParticipantActionResultModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action_contract_address": {
+          "minLength": 1,
+          "title": "Action Contract Address",
+          "type": "string"
+        },
+        "action_instance_id": {
+          "minLength": 1,
+          "title": "Action Instance Id",
+          "type": "string"
+        },
+        "diagnostics": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "effects": {
+          "items": {
+            "$ref": "#/$defs/ParticipantActionEffectResultModel"
+          },
+          "title": "Effects",
+          "type": "array"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "failure_class": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantFailureClass"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "observation_point": {
+          "minLength": 1,
+          "title": "Observation Point",
+          "type": "string"
+        },
+        "observations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Observations",
+          "type": "array"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "preconditions": {
+          "items": {
+            "$ref": "#/$defs/ParticipantActionPreconditionResultModel"
+          },
+          "title": "Preconditions",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "withheld",
+            "succeeded",
+            "failed",
+            "partial_success",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "participant_address",
+        "episode_id",
+        "action_instance_id",
+        "action_contract_address",
+        "observation_point"
+      ],
+      "title": "ParticipantActionResultModel",
+      "type": "object"
+    },
+    "ParticipantAdmissionDisposition": {
+      "description": "RUN-306 selection/admission disposition values.",
+      "enum": [
+        "admitted",
+        "rejected",
+        "withheld",
+        "unknown",
+        "not_applicable"
+      ],
+      "title": "ParticipantAdmissionDisposition",
+      "type": "string"
+    },
+    "ParticipantAttributionCandidateKind": {
+      "description": "Portable candidate classes for participant attribution edges.",
+      "enum": [
+        "action",
+        "state_change",
+        "detection",
+        "alert",
+        "observation",
+        "evidence",
+        "downstream_outcome",
+        "evaluation_result",
+        "objective_result"
+      ],
+      "title": "ParticipantAttributionCandidateKind",
+      "type": "string"
+    },
+    "ParticipantAttributionCandidateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_kind": {
+          "$ref": "#/$defs/ParticipantAttributionCandidateKind"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "ref": {
+          "minLength": 1,
+          "title": "Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_kind",
+        "ref",
+        "description"
+      ],
+      "title": "ParticipantAttributionCandidateModel",
+      "type": "object"
+    },
+    "ParticipantAttributionEdgeModel": {
+      "additionalProperties": false,
+      "properties": {
+        "cause_candidate": {
+          "$ref": "#/$defs/ParticipantAttributionCandidateModel"
+        },
+        "confidence": {
+          "minLength": 1,
+          "title": "Confidence",
+          "type": "string"
+        },
+        "edge_id": {
+          "minLength": 1,
+          "title": "Edge Id",
+          "type": "string"
+        },
+        "effect_candidate": {
+          "$ref": "#/$defs/ParticipantAttributionCandidateModel"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "evidence_basis": {
+          "$ref": "#/$defs/ParticipantAttributionEvidenceBasisModel"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "interpretation_rule_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interpretation Rule Ref"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "observation_point": {
+          "minLength": 1,
+          "title": "Observation Point",
+          "type": "string"
+        },
+        "ordering_basis": {
+          "$ref": "#/$defs/ParticipantAttributionOrderingBasisModel"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "strength": {
+          "minLength": 1,
+          "title": "Strength",
+          "type": "string"
+        },
+        "support_class": {
+          "$ref": "#/$defs/ParticipantAttributionSupportClass"
+        }
+      },
+      "required": [
+        "edge_id",
+        "participant_address",
+        "episode_id",
+        "observation_point",
+        "cause_candidate",
+        "effect_candidate",
+        "ordering_basis",
+        "evidence_basis",
+        "support_class",
+        "confidence",
+        "strength",
+        "limitations",
+        "evidence_refs"
+      ],
+      "title": "ParticipantAttributionEdgeModel",
+      "type": "object"
+    },
+    "ParticipantAttributionEvidenceBasisModel": {
+      "additionalProperties": false,
+      "properties": {
+        "capture_apparatus": {
+          "minLength": 1,
+          "title": "Capture Apparatus",
+          "type": "string"
+        },
+        "granularity": {
+          "minLength": 1,
+          "title": "Granularity",
+          "type": "string"
+        },
+        "loss_model": {
+          "minLength": 1,
+          "title": "Loss Model",
+          "type": "string"
+        },
+        "observer_effects": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Observer Effects",
+          "type": "array"
+        },
+        "redaction_policy": {
+          "minLength": 1,
+          "title": "Redaction Policy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "capture_apparatus",
+        "granularity",
+        "loss_model",
+        "redaction_policy",
+        "observer_effects"
+      ],
+      "title": "ParticipantAttributionEvidenceBasisModel",
+      "type": "object"
+    },
+    "ParticipantAttributionOrderingBasisKind": {
+      "description": "Explicit ordering bases for attribution edges.",
+      "enum": [
+        "happened_before",
+        "workflow_order",
+        "episode_order",
+        "backend_event_order",
+        "replay_order",
+        "ablation_order",
+        "structural_causal",
+        "timestamp_adjacency"
+      ],
+      "title": "ParticipantAttributionOrderingBasisKind",
+      "type": "string"
+    },
+    "ParticipantAttributionOrderingBasisModel": {
+      "additionalProperties": false,
+      "properties": {
+        "basis_kind": {
+          "$ref": "#/$defs/ParticipantAttributionOrderingBasisKind"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "ordered_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Ordered Event Refs",
+          "type": "array"
+        },
+        "relation_ref": {
+          "minLength": 1,
+          "title": "Relation Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "basis_kind",
+        "relation_ref",
+        "description"
+      ],
+      "title": "ParticipantAttributionOrderingBasisModel",
+      "type": "object"
+    },
+    "ParticipantAttributionSupportClass": {
+      "description": "Evidence-strength classes for participant attribution.",
+      "enum": [
+        "declared_association",
+        "temporal_support",
+        "contract_support",
+        "observation_support",
+        "counterfactual_support",
+        "intervention_support",
+        "replay_support",
+        "ablation_support",
+        "structural_causal_support"
+      ],
+      "title": "ParticipantAttributionSupportClass",
+      "type": "string"
+    },
+    "ParticipantBehaviorHistoryEventModel": {
+      "additionalProperties": false,
+      "properties": {
+        "action_contract_address": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Action Contract Address"
+        },
+        "action_instance_id": {
+          "minLength": 1,
+          "title": "Action Instance Id",
+          "type": "string"
+        },
+        "action_result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantActionResultModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "actor_provenance": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actor Provenance"
+        },
+        "admission_disposition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantAdmissionDisposition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "attribution_edges": {
+          "items": {
+            "$ref": "#/$defs/ParticipantAttributionEdgeModel"
+          },
+          "title": "Attribution Edges",
+          "type": "array"
+        },
+        "details": {
+          "$ref": "#/$defs/ParticipantObservationDetailsModel"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "event_type": {
+          "$ref": "#/$defs/ParticipantBehaviorHistoryEventType"
+        },
+        "interaction_class": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantInteractionClass"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "interaction_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interaction Ref"
+        },
+        "joint_action_set_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Joint Action Set Id"
+        },
+        "lifecycle_phase": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantRuntimeLifecyclePhase"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "observation_boundary_address": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Boundary Address"
+        },
+        "observation_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantObservationStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "operation_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Ref"
+        },
+        "operation_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantLifecycleOperationState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "outcome_interpretations": {
+          "items": {
+            "$ref": "#/$defs/ParticipantOutcomeInterpretationRecordModel"
+          },
+          "title": "Outcome Interpretations",
+          "type": "array"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "phase_realization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ParticipantPhaseRealization"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "post_state_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Post State Digest"
+        },
+        "realized_order": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Realized Order"
+        },
+        "shared_state_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Shared State Refs",
+          "type": "array"
+        },
+        "state_transition_kind": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "State Transition Kind"
+        },
+        "temporal_contexts": {
+          "items": {
+            "$ref": "#/$defs/ParticipantTemporalRuntimeContextModel"
+          },
+          "title": "Temporal Contexts",
+          "type": "array"
+        },
+        "timestamp": {
+          "minLength": 1,
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_type",
+        "timestamp",
+        "participant_address",
+        "episode_id",
+        "action_instance_id"
+      ],
+      "title": "ParticipantBehaviorHistoryEventModel",
+      "type": "object"
+    },
+    "ParticipantBehaviorHistoryEventType": {
+      "description": "Portable history event kinds for participant behavior semantics.",
+      "enum": [
+        "action_attempted",
+        "state_transition_recorded",
+        "observation_emitted"
+      ],
+      "title": "ParticipantBehaviorHistoryEventType",
+      "type": "string"
+    },
+    "ParticipantEffectClass": {
+      "description": "SEM-211 effect classes for participant action results.",
+      "enum": [
+        "intended_effect",
+        "side_effect",
+        "observation_effect",
+        "visibility_effect",
+        "detection_effect",
+        "evidence_effect",
+        "no_effect",
+        "unknown_effect"
+      ],
+      "title": "ParticipantEffectClass",
+      "type": "string"
+    },
+    "ParticipantEpisodeHistoryEventModel": {
+      "additionalProperties": false,
+      "properties": {
+        "control_action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Control Action"
+        },
+        "details": {
+          "additionalProperties": true,
+          "title": "Details",
+          "type": "object"
+        },
+        "episode_id": {
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "event_type": {
+          "title": "Event Type",
+          "type": "string"
+        },
+        "participant_address": {
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "sequence_number": {
+          "title": "Sequence Number",
+          "type": "integer"
+        },
+        "terminal_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Terminal Reason"
+        },
+        "timestamp": {
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_type",
+        "timestamp",
+        "participant_address",
+        "episode_id",
+        "sequence_number"
+      ],
+      "title": "ParticipantEpisodeHistoryEventModel",
+      "type": "object"
+    },
+    "ParticipantEpisodeStateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "episode_id": {
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "initialized_at": {
+          "title": "Initialized At",
+          "type": "string"
+        },
+        "last_control_action": {
+          "title": "Last Control Action",
+          "type": "string"
+        },
+        "participant_address": {
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "previous_episode_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Previous Episode Id"
+        },
+        "sequence_number": {
+          "title": "Sequence Number",
+          "type": "integer"
+        },
+        "state_schema_version": {
+          "const": "participant-episode-state/v1",
+          "default": "participant-episode-state/v1",
+          "title": "State Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "terminal_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Terminal Reason"
+        },
+        "terminated_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Terminated At"
+        },
+        "updated_at": {
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_address",
+        "episode_id",
+        "sequence_number",
+        "status",
+        "initialized_at",
+        "updated_at",
+        "last_control_action"
+      ],
+      "title": "ParticipantEpisodeStateModel",
+      "type": "object"
+    },
+    "ParticipantFailureClass": {
+      "description": "SEM-211 portable failure classes for participant action attempts.",
+      "enum": [
+        "precondition_unsatisfied",
+        "unsupported_action",
+        "target_unavailable",
+        "authority_denied",
+        "resource_exhausted",
+        "timeout",
+        "interrupted",
+        "contention_lost",
+        "partial_success",
+        "unsafe_withheld",
+        "backend_error",
+        "unknown"
+      ],
+      "title": "ParticipantFailureClass",
+      "type": "string"
+    },
+    "ParticipantInteractionClass": {
+      "description": "SEM-209 interaction classes for multi-participant behavior.",
+      "enum": [
+        "coordination",
+        "contention",
+        "interference",
+        "shared_state_change"
+      ],
+      "title": "ParticipantInteractionClass",
+      "type": "string"
+    },
+    "ParticipantJointActionAccessSetModel": {
+      "additionalProperties": false,
+      "description": "Read/write footprint for one member event in a joint action record.",
+      "properties": {
+        "evidence_stream_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Stream Refs",
+          "type": "array"
+        },
+        "exclusive_resource_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Exclusive Resource Refs",
+          "type": "array"
+        },
+        "member_event_ref": {
+          "minLength": 1,
+          "title": "Member Event Ref",
+          "type": "string"
+        },
+        "shared_state_read_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Shared State Read Refs",
+          "type": "array"
+        },
+        "shared_state_write_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Shared State Write Refs",
+          "type": "array"
+        },
+        "visibility_effect_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Visibility Effect Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "member_event_ref"
+      ],
+      "title": "ParticipantJointActionAccessSetModel",
+      "type": "object"
+    },
+    "ParticipantJointActionRecordModel": {
+      "additionalProperties": false,
+      "description": "RUN-308 joint action / concurrency record over behavior events.",
+      "properties": {
+        "access_sets": {
+          "items": {
+            "$ref": "#/$defs/ParticipantJointActionAccessSetModel"
+          },
+          "minItems": 1,
+          "title": "Access Sets",
+          "type": "array"
+        },
+        "actor_ref": {
+          "minLength": 1,
+          "title": "Actor Ref",
+          "type": "string"
+        },
+        "atomicity_scope": {
+          "enum": [
+            "single_object",
+            "multi_object",
+            "coordination_interval",
+            "unsupported"
+          ],
+          "title": "Atomicity Scope",
+          "type": "string"
+        },
+        "authorization_scope": {
+          "minLength": 1,
+          "title": "Authorization Scope",
+          "type": "string"
+        },
+        "clock_authority": {
+          "minLength": 1,
+          "title": "Clock Authority",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "conflict_class": {
+          "enum": [
+            "none",
+            "read_write",
+            "write_write",
+            "unsupported"
+          ],
+          "title": "Conflict Class",
+          "type": "string"
+        },
+        "conflict_policy": {
+          "enum": [
+            "none",
+            "coordinate",
+            "serialize",
+            "reject",
+            "retry",
+            "withhold",
+            "merge",
+            "rollback",
+            "disclose_weak_guarantee",
+            "unsupported"
+          ],
+          "title": "Conflict Policy",
+          "type": "string"
+        },
+        "episode_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Episode Id"
+        },
+        "event_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EventClassificationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event_id": {
+          "minLength": 1,
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "minLength": 1,
+          "title": "Event Type",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "exact_concurrency_claim": {
+          "default": false,
+          "title": "Exact Concurrency Claim",
+          "type": "boolean"
+        },
+        "extension_policy": {
+          "minLength": 1,
+          "title": "Extension Policy",
+          "type": "string"
+        },
+        "fairness_policy_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fairness Policy Ref"
+        },
+        "granular_markings": {
+          "additionalProperties": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Granular Markings",
+          "type": "object"
+        },
+        "ingested_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Ingested At",
+          "type": "string"
+        },
+        "isolation_guarantee": {
+          "enum": [
+            "none",
+            "serializable",
+            "snapshot",
+            "causal",
+            "unsupported"
+          ],
+          "title": "Isolation Guarantee",
+          "type": "string"
+        },
+        "joint_action_set_id": {
+          "minLength": 1,
+          "title": "Joint Action Set Id",
+          "type": "string"
+        },
+        "logical_order_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Logical Order Ref"
+        },
+        "marking_definition_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Marking Definition Refs",
+          "type": "array"
+        },
+        "markings": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Markings",
+          "type": "array"
+        },
+        "member_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Member Event Refs",
+          "type": "array"
+        },
+        "object_marking_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Object Marking Refs",
+          "type": "array"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "ordering_basis": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Ordering Basis",
+          "type": "string"
+        },
+        "participant_address": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participant Address"
+        },
+        "participant_observation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Participant Observation Refs",
+          "type": "array"
+        },
+        "predecessor_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Predecessor Event Refs",
+          "type": "array"
+        },
+        "producer_ref": {
+          "minLength": 1,
+          "title": "Producer Ref",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "raw_data_integrity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RawDataIntegrityModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "realized_order": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Realized Order",
+          "type": "array"
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "redaction_policy_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Redaction Policy Ref"
+        },
+        "retry_limit": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retry Limit"
+        },
+        "rollback_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Rollback Event Refs",
+          "type": "array"
+        },
+        "schema_name": {
+          "minLength": 1,
+          "title": "Schema Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "minLength": 1,
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence_number": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence Number"
+        },
+        "simultaneity_group_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simultaneity Group Ref"
+        },
+        "source_pipeline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourcePipelineModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_raw_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Raw Ref"
+        },
+        "source_record_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Record Ref"
+        },
+        "source_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceStatusModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_system_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source System Ref"
+        },
+        "temporal_context": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temporal Context"
+        },
+        "time_management_context_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Time Management Context Ref"
+        },
+        "timeout_policy_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout Policy Ref"
+        },
+        "unsupported_disclosure": {
+          "default": false,
+          "title": "Unsupported Disclosure",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_name",
+        "schema_version",
+        "event_type",
+        "extension_policy",
+        "occurred_at",
+        "recorded_at",
+        "ingested_at",
+        "clock_authority",
+        "ordering_basis",
+        "actor_ref",
+        "producer_ref",
+        "authorization_scope",
+        "joint_action_set_id",
+        "member_event_refs",
+        "access_sets",
+        "conflict_class",
+        "conflict_policy",
+        "isolation_guarantee",
+        "atomicity_scope"
+      ],
+      "title": "ParticipantJointActionRecordModel",
+      "type": "object"
+    },
+    "ParticipantLifecycleOperationState": {
+      "description": "RUN-306 operation states for execution-attempt records.",
+      "enum": [
+        "submitted",
+        "acknowledged",
+        "running",
+        "blocked",
+        "completed",
+        "partial",
+        "failed",
+        "timed_out",
+        "cancelled",
+        "unknown",
+        "unsupported"
+      ],
+      "title": "ParticipantLifecycleOperationState",
+      "type": "string"
+    },
+    "ParticipantObservationDetailsModel": {
+      "additionalProperties": false,
+      "properties": {
+        "disclosed_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Disclosed Refs",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "visible_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Visible Refs",
+          "type": "array"
+        }
+      },
+      "title": "ParticipantObservationDetailsModel",
+      "type": "object"
+    },
+    "ParticipantObservationStatus": {
+      "description": "Terminal interpretation of a participant observation event.",
+      "enum": [
+        "terminal",
+        "orphaned_action"
+      ],
+      "title": "ParticipantObservationStatus",
+      "type": "string"
+    },
+    "ParticipantOutcomeInterpretationRecordModel": {
+      "additionalProperties": false,
+      "properties": {
+        "diagnostics": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "episode_id": {
+          "minLength": 1,
+          "title": "Episode Id",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "interpretation_id": {
+          "minLength": 1,
+          "title": "Interpretation Id",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "observation_point": {
+          "minLength": 1,
+          "title": "Observation Point",
+          "type": "string"
+        },
+        "participant_address": {
+          "minLength": 1,
+          "title": "Participant Address",
+          "type": "string"
+        },
+        "rule_address": {
+          "minLength": 1,
+          "title": "Rule Address",
+          "type": "string"
+        },
+        "source_bindings": {
+          "items": {
+            "$ref": "#/$defs/ParticipantOutcomeSourceRecordModel"
+          },
+          "minItems": 1,
+          "title": "Source Bindings",
+          "type": "array"
+        },
+        "target_bindings": {
+          "items": {
+            "$ref": "#/$defs/ParticipantOutcomeTargetRecordModel"
+          },
+          "minItems": 1,
+          "title": "Target Bindings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "interpretation_id",
+        "rule_address",
+        "participant_address",
+        "episode_id",
+        "observation_point",
+        "source_bindings",
+        "target_bindings",
+        "evidence_refs",
+        "limitations"
+      ],
+      "title": "ParticipantOutcomeInterpretationRecordModel",
+      "type": "object"
+    },
+    "ParticipantOutcomeSourceRecordModel": {
+      "additionalProperties": false,
+      "properties": {
+        "diagnostics": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "observed_value": {
+          "minLength": 1,
+          "title": "Observed Value",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "ref": {
+          "minLength": 1,
+          "title": "Ref",
+          "type": "string"
+        },
+        "source_id": {
+          "minLength": 1,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_layer": {
+          "$ref": "#/$defs/OutcomeInterpretationSourceLayer"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_layer",
+        "ref",
+        "observed_value"
+      ],
+      "title": "ParticipantOutcomeSourceRecordModel",
+      "type": "object"
+    },
+    "ParticipantOutcomeTargetRecordModel": {
+      "additionalProperties": false,
+      "properties": {
+        "diagnostics": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "governance_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Governance Ref"
+        },
+        "interpreted_value": {
+          "minLength": 1,
+          "title": "Interpreted Value",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "ref": {
+          "minLength": 1,
+          "title": "Ref",
+          "type": "string"
+        },
+        "target_id": {
+          "minLength": 1,
+          "title": "Target Id",
+          "type": "string"
+        },
+        "target_layer": {
+          "$ref": "#/$defs/OutcomeInterpretationTargetLayer"
+        }
+      },
+      "required": [
+        "target_id",
+        "target_layer",
+        "ref",
+        "interpreted_value",
+        "evidence_refs",
+        "limitations"
+      ],
+      "title": "ParticipantOutcomeTargetRecordModel",
+      "type": "object"
+    },
+    "ParticipantPhaseRealization": {
+      "description": "RUN-306 realization modes for an observable lifecycle phase.",
+      "enum": [
+        "observed",
+        "runtime_mediated",
+        "externally_supplied",
+        "opaque",
+        "unknown",
+        "not_applicable",
+        "unsupported"
+      ],
+      "title": "ParticipantPhaseRealization",
+      "type": "string"
+    },
+    "ParticipantPreconditionClass": {
+      "description": "SEM-211 precondition classes for participant action applicability.",
+      "enum": [
+        "authority",
+        "capability",
+        "target",
+        "knowledge",
+        "resource",
+        "temporal",
+        "interaction",
+        "realization"
+      ],
+      "title": "ParticipantPreconditionClass",
+      "type": "string"
+    },
+    "ParticipantRuntimeLifecyclePhase": {
+      "description": "RUN-306 observable participant runtime lifecycle phases.",
+      "enum": [
+        "intent_or_proposal",
+        "selection_or_admission",
+        "execution_attempt",
+        "observation_emission",
+        "state_update_commit"
+      ],
+      "title": "ParticipantRuntimeLifecyclePhase",
+      "type": "string"
+    },
+    "ParticipantSharedStateAccessModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "access_kind": {
+                "enum": [
+                  "read",
+                  "read_write"
+                ]
+              }
+            },
+            "required": [
+              "access_kind"
+            ]
+          },
+          "then": {
+            "anyOf": [
+              {
+                "properties": {
+                  "read_revision": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "read_revision"
+                ]
+              },
+              {
+                "properties": {
+                  "read_digest": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "read_digest"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "access_kind": {
+                "enum": [
+                  "write",
+                  "read_write"
+                ]
+              }
+            },
+            "required": [
+              "access_kind"
+            ]
+          },
+          "then": {
+            "anyOf": [
+              {
+                "properties": {
+                  "write_revision": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "write_revision"
+                ]
+              },
+              {
+                "properties": {
+                  "write_digest": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "write_digest"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "description": "RUN-307 read/write access record over one shared-state address.",
+      "properties": {
+        "access_kind": {
+          "enum": [
+            "read",
+            "write",
+            "read_write"
+          ],
+          "title": "Access Kind",
+          "type": "string"
+        },
+        "access_purpose": {
+          "minLength": 1,
+          "title": "Access Purpose",
+          "type": "string"
+        },
+        "atomic_group_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Atomic Group Ref"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "read_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Read Digest"
+        },
+        "read_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Read Revision"
+        },
+        "snapshot_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snapshot Ref"
+        },
+        "state_address": {
+          "minLength": 1,
+          "title": "State Address",
+          "type": "string"
+        },
+        "write_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Write Digest"
+        },
+        "write_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Write Revision"
+        }
+      },
+      "required": [
+        "state_address",
+        "access_kind",
+        "access_purpose"
+      ],
+      "title": "ParticipantSharedStateAccessModel",
+      "type": "object"
+    },
+    "ParticipantSharedStateRecordModel": {
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "revision": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "revision"
+          ]
+        },
+        {
+          "properties": {
+            "digest": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "digest"
+          ]
+        }
+      ],
+      "description": "RUN-307 versioned shared operational state-change report.",
+      "properties": {
+        "accesses": {
+          "items": {
+            "$ref": "#/$defs/ParticipantSharedStateAccessModel"
+          },
+          "title": "Accesses",
+          "type": "array"
+        },
+        "actor_ref": {
+          "minLength": 1,
+          "title": "Actor Ref",
+          "type": "string"
+        },
+        "authorization_scope": {
+          "minLength": 1,
+          "title": "Authorization Scope",
+          "type": "string"
+        },
+        "clock_authority": {
+          "minLength": 1,
+          "title": "Clock Authority",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "conflict_policy": {
+          "enum": [
+            "coordinate",
+            "serialize",
+            "reject",
+            "retry",
+            "withhold",
+            "merge",
+            "rollback",
+            "disclose_weak_guarantee",
+            "unsupported"
+          ],
+          "title": "Conflict Policy",
+          "type": "string"
+        },
+        "digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Digest"
+        },
+        "episode_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Episode Id"
+        },
+        "event_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EventClassificationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event_id": {
+          "minLength": 1,
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "minLength": 1,
+          "title": "Event Type",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "extension_policy": {
+          "minLength": 1,
+          "title": "Extension Policy",
+          "type": "string"
+        },
+        "granular_markings": {
+          "additionalProperties": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Granular Markings",
+          "type": "object"
+        },
+        "ingested_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Ingested At",
+          "type": "string"
+        },
+        "logical_order_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Logical Order Ref"
+        },
+        "marking_definition_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Marking Definition Refs",
+          "type": "array"
+        },
+        "markings": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Markings",
+          "type": "array"
+        },
+        "object_marking_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Object Marking Refs",
+          "type": "array"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "ordering_basis": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Ordering Basis",
+          "type": "string"
+        },
+        "participant_address": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participant Address"
+        },
+        "predecessor_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Predecessor Event Refs",
+          "type": "array"
+        },
+        "predecessor_revision_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Predecessor Revision Refs",
+          "type": "array"
+        },
+        "producer_ref": {
+          "minLength": 1,
+          "title": "Producer Ref",
+          "type": "string"
+        },
+        "provenance": {
+          "minLength": 1,
+          "title": "Provenance",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "raw_data_integrity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RawDataIntegrityModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "redaction_policy_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Redaction Policy Ref"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "schema_name": {
+          "minLength": 1,
+          "title": "Schema Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "minLength": 1,
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence_number": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence Number"
+        },
+        "source_pipeline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourcePipelineModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_raw_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Raw Ref"
+        },
+        "source_record_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Record Ref"
+        },
+        "source_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceStatusModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_system_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source System Ref"
+        },
+        "state_address": {
+          "minLength": 1,
+          "title": "State Address",
+          "type": "string"
+        },
+        "state_kind": {
+          "minLength": 1,
+          "title": "State Kind",
+          "type": "string"
+        },
+        "state_scope": {
+          "minLength": 1,
+          "title": "State Scope",
+          "type": "string"
+        },
+        "temporal_context": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temporal Context"
+        },
+        "value_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value Ref"
+        },
+        "visibility_projection_basis": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Visibility Projection Basis"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_name",
+        "schema_version",
+        "event_type",
+        "extension_policy",
+        "occurred_at",
+        "recorded_at",
+        "ingested_at",
+        "clock_authority",
+        "ordering_basis",
+        "actor_ref",
+        "producer_ref",
+        "authorization_scope",
+        "state_address",
+        "state_scope",
+        "state_kind",
+        "conflict_policy",
+        "provenance"
+      ],
+      "title": "ParticipantSharedStateRecordModel",
+      "type": "object"
+    },
+    "ParticipantTemporalEventPoint": {
+      "description": "Named participant event points used by temporal contracts.",
+      "enum": [
+        "submit",
+        "start",
+        "end",
+        "observed",
+        "effective",
+        "deadline",
+        "window_open",
+        "window_close",
+        "reset",
+        "replay"
+      ],
+      "title": "ParticipantTemporalEventPoint",
+      "type": "string"
+    },
+    "ParticipantTemporalRuntimeContextModel": {
+      "additionalProperties": false,
+      "properties": {
+        "backend_disclosure_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Backend Disclosure Refs",
+          "type": "array"
+        },
+        "clock_authority": {
+          "minLength": 1,
+          "title": "Clock Authority",
+          "type": "string"
+        },
+        "event_points": {
+          "items": {
+            "$ref": "#/$defs/ParticipantTemporalEventPoint"
+          },
+          "minItems": 1,
+          "title": "Event Points",
+          "type": "array"
+        },
+        "observation_point": {
+          "minLength": 1,
+          "title": "Observation Point",
+          "type": "string"
+        },
+        "replay_boundary": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Replay Boundary"
+        },
+        "reset_boundary": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reset Boundary"
+        },
+        "temporal_contract_id": {
+          "minLength": 1,
+          "title": "Temporal Contract Id",
+          "type": "string"
+        },
+        "time_domain": {
+          "$ref": "#/$defs/ParticipantTimeDomain"
+        }
+      },
+      "required": [
+        "temporal_contract_id",
+        "time_domain",
+        "clock_authority",
+        "event_points",
+        "observation_point"
+      ],
+      "title": "ParticipantTemporalRuntimeContextModel",
+      "type": "object"
+    },
+    "ParticipantTimeDomain": {
+      "description": "Distinct SEM-213 time domains.",
+      "enum": [
+        "episode_step",
+        "scenario_time",
+        "simulation_time",
+        "backend_time",
+        "wall_clock_time"
+      ],
+      "title": "ParticipantTimeDomain",
+      "type": "string"
+    },
+    "ParticipantTimeManagementContextModel": {
+      "additionalProperties": false,
+      "description": "RUN-308 time-management basis for concurrent or distributed runtime claims.",
+      "properties": {
+        "actor_ref": {
+          "minLength": 1,
+          "title": "Actor Ref",
+          "type": "string"
+        },
+        "advance_by": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Advance By"
+        },
+        "authorization_scope": {
+          "minLength": 1,
+          "title": "Authorization Scope",
+          "type": "string"
+        },
+        "backend_serialized": {
+          "default": false,
+          "title": "Backend Serialized",
+          "type": "boolean"
+        },
+        "basis": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Basis",
+          "type": "string"
+        },
+        "claim_strength": {
+          "enum": [
+            "display",
+            "bounded",
+            "exact",
+            "unsupported"
+          ],
+          "title": "Claim Strength",
+          "type": "string"
+        },
+        "clock_authority": {
+          "minLength": 1,
+          "title": "Clock Authority",
+          "type": "string"
+        },
+        "clock_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clock Ref"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "context_id": {
+          "minLength": 1,
+          "title": "Context Id",
+          "type": "string"
+        },
+        "episode_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Episode Id"
+        },
+        "event_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EventClassificationModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "event_id": {
+          "minLength": 1,
+          "title": "Event Id",
+          "type": "string"
+        },
+        "event_type": {
+          "minLength": 1,
+          "title": "Event Type",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "extension_policy": {
+          "minLength": 1,
+          "title": "Extension Policy",
+          "type": "string"
+        },
+        "granular_markings": {
+          "additionalProperties": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Granular Markings",
+          "type": "object"
+        },
+        "ingested_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Ingested At",
+          "type": "string"
+        },
+        "logical_order_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Logical Order Ref"
+        },
+        "lookahead": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lookahead"
+        },
+        "marking_definition_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Marking Definition Refs",
+          "type": "array"
+        },
+        "markings": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Markings",
+          "type": "array"
+        },
+        "mode": {
+          "enum": [
+            "display",
+            "pacing",
+            "lookahead",
+            "rollback",
+            "devs",
+            "fmi",
+            "backend_serialized",
+            "unsupported"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "object_marking_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Object Marking Refs",
+          "type": "array"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "ordering_basis": {
+          "enum": [
+            "total_order",
+            "partial_order",
+            "simultaneous",
+            "serialized_backend_order",
+            "simulation_tick",
+            "control_plane_order",
+            "logical_clock",
+            "vector_clock",
+            "wall_clock_only",
+            "unknown",
+            "unsupported"
+          ],
+          "title": "Ordering Basis",
+          "type": "string"
+        },
+        "participant_address": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participant Address"
+        },
+        "predecessor_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Predecessor Event Refs",
+          "type": "array"
+        },
+        "producer_ref": {
+          "minLength": 1,
+          "title": "Producer Ref",
+          "type": "string"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "raw_data_integrity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RawDataIntegrityModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "recorded_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "redaction_policy_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Redaction Policy Ref"
+        },
+        "rollback_event_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Rollback Event Refs",
+          "type": "array"
+        },
+        "schema_name": {
+          "minLength": 1,
+          "title": "Schema Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "minLength": 1,
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence_number": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence Number"
+        },
+        "source_pipeline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourcePipelineModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_raw_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Raw Ref"
+        },
+        "source_record_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Record Ref"
+        },
+        "source_status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceStatusModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_system_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source System Ref"
+        },
+        "temporal_context": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temporal Context"
+        },
+        "unsupported_disclosure": {
+          "default": false,
+          "title": "Unsupported Disclosure",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "event_id",
+        "schema_name",
+        "schema_version",
+        "event_type",
+        "extension_policy",
+        "occurred_at",
+        "recorded_at",
+        "ingested_at",
+        "clock_authority",
+        "ordering_basis",
+        "actor_ref",
+        "producer_ref",
+        "authorization_scope",
+        "context_id",
+        "mode",
+        "claim_strength",
+        "basis"
+      ],
+      "title": "ParticipantTimeManagementContextModel",
+      "type": "object"
+    },
+    "RawDataIntegrityModel": {
+      "additionalProperties": false,
+      "description": "Hash, size, and truncation facts for raw data behind a runtime claim.",
+      "properties": {
+        "raw_data_hash": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Hash"
+        },
+        "raw_data_hash_algorithm": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Hash Algorithm"
+        },
+        "raw_data_is_truncated": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Is Truncated"
+        },
+        "raw_data_size": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Size"
+        },
+        "raw_data_untruncated_size": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw Data Untruncated Size"
+        }
+      },
+      "title": "RawDataIntegrityModel",
+      "type": "object"
+    },
+    "RealizationProvenanceEntryModel": {
+      "additionalProperties": false,
+      "description": "SEM-218 invariant I5: provenance for one realized realization concern.\n\nDistinguishes ``author-declared`` / ``processor-derived`` / ``backend-realized``\norigins for a realized concern recorded on the snapshot's result / history\nsurfaces. Carries field-path and kind references only (never the realized\nvalue, per the SEM-218 host-exposure gate). Kept distinct from ADR-054\nlifecycle ``phase_realization`` and API-407 participant feature support.",
+      "properties": {
+        "address": {
+          "minLength": 1,
+          "title": "Address",
+          "type": "string"
+        },
+        "domain": {
+          "minLength": 1,
+          "title": "Domain",
+          "type": "string"
+        },
+        "explicitness": {
+          "$ref": "#/$defs/ExplicitnessClass"
+        },
+        "field_path": {
+          "minLength": 1,
+          "title": "Field Path",
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/ExplicitnessProvenance"
+        },
+        "requirement_kind": {
+          "minLength": 1,
+          "title": "Requirement Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "field_path",
+        "domain",
+        "requirement_kind",
+        "explicitness",
+        "provenance"
+      ],
+      "title": "RealizationProvenanceEntryModel",
+      "type": "object"
+    },
+    "SnapshotEntryModel": {
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "title": "Address",
+          "type": "string"
+        },
+        "domain": {
+          "title": "Domain",
+          "type": "string"
+        },
+        "ordering_dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ordering Dependencies",
+          "type": "array"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "title": "Payload",
+          "type": "object"
+        },
+        "refresh_dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Refresh Dependencies",
+          "type": "array"
+        },
+        "resource_type": {
+          "title": "Resource Type",
+          "type": "string"
+        },
+        "status": {
+          "default": "ready",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "domain",
+        "resource_type"
+      ],
+      "title": "SnapshotEntryModel",
+      "type": "object"
+    },
+    "SourcePipelineModel": {
+      "additionalProperties": false,
+      "description": "Source product, identity, and pipeline-time facts for a mapped record.",
+      "properties": {
+        "correlation_uid": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlation Uid"
+        },
+        "log_name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Log Name"
+        },
+        "log_provider": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Log Provider"
+        },
+        "log_source": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Log Source"
+        },
+        "logged_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Logged Time"
+        },
+        "original_event_uid": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Event Uid"
+        },
+        "original_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Time"
+        },
+        "processed_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Processed Time"
+        },
+        "product_ref": {
+          "minLength": 1,
+          "title": "Product Ref",
+          "type": "string"
+        },
+        "product_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Product Version"
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sequence"
+        },
+        "transmit_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transmit Time"
+        }
+      },
+      "required": [
+        "product_ref"
+      ],
+      "title": "SourcePipelineModel",
+      "type": "object"
+    },
+    "SourceStatusModel": {
+      "additionalProperties": false,
+      "description": "Normalized source status claim for one participant runtime record.",
+      "properties": {
+        "source_status_label": {
+          "minLength": 1,
+          "title": "Source Status Label",
+          "type": "string"
+        },
+        "source_status_mapping": {
+          "minLength": 1,
+          "title": "Source Status Mapping",
+          "type": "string"
+        },
+        "status": {
+          "minLength": 1,
+          "title": "Status",
+          "type": "string"
+        },
+        "status_code": {
+          "minLength": 1,
+          "title": "Status Code",
+          "type": "string"
+        },
+        "status_detail": {
+          "minLength": 1,
+          "title": "Status Detail",
+          "type": "string"
+        },
+        "status_id": {
+          "title": "Status Id",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status_id",
+        "status",
+        "status_code",
+        "status_detail",
+        "source_status_label",
+        "source_status_mapping"
+      ],
+      "title": "SourceStatusModel",
+      "type": "object"
+    },
+    "WorkflowExecutionStateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "compensation_failures": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Compensation Failures",
+          "type": "array"
+        },
+        "compensation_started_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Compensation Started At"
+        },
+        "compensation_status": {
+          "title": "Compensation Status",
+          "type": "string"
+        },
+        "compensation_updated_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Compensation Updated At"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "started_at": {
+          "title": "Started At",
+          "type": "string"
+        },
+        "state_schema_version": {
+          "const": "workflow-step-state/v1",
+          "default": "workflow-step-state/v1",
+          "title": "State Schema Version",
+          "type": "string"
+        },
+        "steps": {
+          "additionalProperties": {
+            "$ref": "#/$defs/WorkflowStepStateModel"
+          },
+          "title": "Steps",
+          "type": "object"
+        },
+        "terminal_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Terminal Reason"
+        },
+        "updated_at": {
+          "title": "Updated At",
+          "type": "string"
+        },
+        "workflow_status": {
+          "title": "Workflow Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "workflow_status",
+        "run_id",
+        "started_at",
+        "updated_at",
+        "compensation_status"
+      ],
+      "title": "WorkflowExecutionStateModel",
+      "type": "object"
+    },
+    "WorkflowHistoryEventModel": {
+      "additionalProperties": false,
+      "properties": {
+        "branch_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Branch Name"
+        },
+        "details": {
+          "additionalProperties": true,
+          "title": "Details",
+          "type": "object"
+        },
+        "event_type": {
+          "title": "Event Type",
+          "type": "string"
+        },
+        "join_step": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Join Step"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Outcome"
+        },
+        "step_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Step Name"
+        },
+        "timestamp": {
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_type",
+        "timestamp"
+      ],
+      "title": "WorkflowHistoryEventModel",
+      "type": "object"
+    },
+    "WorkflowStepStateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {
+          "title": "Attempts",
+          "type": "integer"
+        },
+        "lifecycle": {
+          "title": "Lifecycle",
+          "type": "string"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Outcome"
+        }
+      },
+      "required": [
+        "lifecycle",
+        "attempts"
+      ],
+      "title": "WorkflowStepStateModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/runtime-snapshot-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Published envelope for a live runtime snapshot.\n\nParticipant episode surfaces (``participant_episode_results`` and\n``participant_episode_history``) are both keyed by the stable\n``participant_address`` of the participant the state/history belongs\nto. SEM-208 participant behavior history is keyed the same way and\nrecords action, observation, and state-transition events with compiled\nbehavior-contract addresses. The episode results map carries the\ncurrently-live episode state per participant; prior episodes survive only\nthrough append-only history streams and the ``previous_episode_id`` chain\non each state.",
+  "properties": {
+    "entries": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SnapshotEntryModel"
+      },
+      "title": "Entries",
+      "type": "object"
+    },
+    "evaluation_history": {
+      "additionalProperties": {
+        "items": {
+          "$ref": "#/$defs/EvaluationHistoryEventModel"
+        },
+        "type": "array"
+      },
+      "title": "Evaluation History",
+      "type": "object"
+    },
+    "evaluation_results": {
+      "additionalProperties": {
+        "$ref": "#/$defs/EvaluationResultStateModel"
+      },
+      "title": "Evaluation Results",
+      "type": "object"
+    },
+    "joint_action_records": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParticipantJointActionRecordModel"
+      },
+      "title": "Joint Action Records",
+      "type": "object"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "title": "Metadata",
+      "type": "object"
+    },
+    "orchestration_history": {
+      "additionalProperties": {
+        "items": {
+          "$ref": "#/$defs/WorkflowHistoryEventModel"
+        },
+        "type": "array"
+      },
+      "title": "Orchestration History",
+      "type": "object"
+    },
+    "orchestration_results": {
+      "additionalProperties": {
+        "$ref": "#/$defs/WorkflowExecutionStateModel"
+      },
+      "title": "Orchestration Results",
+      "type": "object"
+    },
+    "participant_behavior_history": {
+      "additionalProperties": {
+        "items": {
+          "$ref": "#/$defs/ParticipantBehaviorHistoryEventModel"
+        },
+        "type": "array"
+      },
+      "title": "Participant Behavior History",
+      "type": "object"
+    },
+    "participant_episode_history": {
+      "additionalProperties": {
+        "items": {
+          "$ref": "#/$defs/ParticipantEpisodeHistoryEventModel"
+        },
+        "type": "array"
+      },
+      "title": "Participant Episode History",
+      "type": "object"
+    },
+    "participant_episode_results": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParticipantEpisodeStateModel"
+      },
+      "title": "Participant Episode Results",
+      "type": "object"
+    },
+    "realization_provenance": {
+      "items": {
+        "$ref": "#/$defs/RealizationProvenanceEntryModel"
+      },
+      "title": "Realization Provenance",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "runtime-snapshot/v1",
+      "default": "runtime-snapshot/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "shared_state_history": {
+      "additionalProperties": {
+        "items": {
+          "$ref": "#/$defs/ParticipantSharedStateRecordModel"
+        },
+        "type": "array"
+      },
+      "title": "Shared State History",
+      "type": "object"
+    },
+    "shared_state_records": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParticipantSharedStateRecordModel"
+      },
+      "title": "Shared State Records",
+      "type": "object"
+    },
+    "time_management_contexts": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParticipantTimeManagementContextModel"
+      },
+      "title": "Time Management Contexts",
+      "type": "object"
+    }
+  },
+  "title": "RuntimeSnapshotEnvelopeModel",
+  "type": "object"
+}

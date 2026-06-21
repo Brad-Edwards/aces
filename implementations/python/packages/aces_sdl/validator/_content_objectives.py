@@ -1,0 +1,375 @@
+"""SemanticValidator _ContentObjectivesMixin (split from validator.py).
+
+Part of the SemanticValidator mixin composition; see __init__.py.
+"""
+
+from collections.abc import Callable
+
+from ..semantics.objective_semantics import (
+    AssessmentResourceCatalog,
+    ObjectiveIssue,
+    WindowResourceCatalog,
+    analyze_objective_semantics,
+)
+from ..semantics.participant_behavior import (
+    ParticipantBehaviorIssue,
+    analyze_participant_behavior,
+)
+from ..semantics.participant_outcome import (
+    ParticipantOutcomeIssue,
+    analyze_participant_outcome_interpretations,
+)
+
+# Renders an objective-semantics issue (machine-readable code from
+# ``aces_sdl.semantics.objective_semantics``) into the authoring-error string
+# the SDL surface has always used. Keyed by issue code so a new code is a new
+# line here rather than a new branch in a growing conditional.
+_OBJECTIVE_ISSUE_RENDERERS = {
+    "objective.actor-agent-undeclared": (
+        lambda i: f"Objective '{i.objective_name}' references undefined agent '{i.ref}'"
+    ),
+    "objective.actor-entity-undeclared": (
+        lambda i: f"Objective '{i.objective_name}' references undefined entity '{i.ref}'"
+    ),
+    "objective.action-not-declared": (
+        lambda i: f"Objective '{i.objective_name}' action '{i.ref}' is not declared by agent '{i.actor_name}'"
+    ),
+    "objective.target-unresolvable": (
+        lambda i: f"Objective '{i.objective_name}' target '{i.ref}' does not reference any defined targetable element"
+    ),
+    "objective.target-ambiguous": (
+        lambda i: f"Objective '{i.objective_name}' target '{i.ref}' is ambiguous; use one of: {', '.join(i.candidates)}"
+    ),
+    "objective.success-condition-undeclared": (
+        lambda i: f"Objective '{i.objective_name}' references undefined condition '{i.ref}' in success criteria"
+    ),
+    "objective.success-metric-undeclared": (
+        lambda i: f"Objective '{i.objective_name}' references undefined metric '{i.ref}' in success criteria"
+    ),
+    "objective.success-evaluation-undeclared": (
+        lambda i: f"Objective '{i.objective_name}' references undefined evaluation '{i.ref}' in success criteria"
+    ),
+    "objective.success-tlo-undeclared": (
+        lambda i: f"Objective '{i.objective_name}' references undefined TLO '{i.ref}' in success criteria"
+    ),
+    "objective.success-goal-undeclared": (
+        lambda i: f"Objective '{i.objective_name}' references undefined goal '{i.ref}' in success criteria"
+    ),
+    "objective.window.story-unbound": (
+        lambda i: f"Objective '{i.objective_name}' references undefined story '{i.ref}' in window"
+    ),
+    "objective.window.script-unbound": (
+        lambda i: f"Objective '{i.objective_name}' references undefined script '{i.ref}' in window"
+    ),
+    "objective.window.script-outside-window-stories": (
+        lambda i: f"Objective '{i.objective_name}' window script '{i.ref}' is not included by the referenced stories"
+    ),
+    "objective.window.event-unbound": (
+        lambda i: f"Objective '{i.objective_name}' references undefined event '{i.ref}' in window"
+    ),
+    "objective.window.event-outside-window-scripts": (
+        lambda i: f"Objective '{i.objective_name}' window event '{i.ref}' is not included by the referenced scripts"
+    ),
+    "objective.window.workflow-unbound": (
+        lambda i: f"Objective '{i.objective_name}' references undefined workflow '{i.ref}' in window"
+    ),
+    "objective.window.step-requires-workflow-window": (
+        lambda i: f"Objective '{i.objective_name}' window steps require at least one referenced workflow"
+    ),
+    "objective.window.step-invalid-format": (
+        lambda i: f"Objective '{i.objective_name}' window step '{i.ref}' must use '<workflow>.<step>' syntax"
+    ),
+    "objective.window.step-workflow-unbound": (
+        lambda i: (
+            f"Objective '{i.objective_name}' window step '{i.ref}' references undefined workflow '{i.workflow_name}'"
+        )
+    ),
+    "objective.window.step-workflow-outside-window": (
+        lambda i: f"Objective '{i.objective_name}' window step '{i.ref}' is not part of the referenced workflows"
+    ),
+    "objective.window.step-unbound": (
+        lambda i: f"Objective '{i.objective_name}' window step '{i.ref}' references undefined step '{i.step_name}'"
+    ),
+    "objective.dependency-undeclared": (
+        lambda i: f"Objective '{i.objective_name}' depends on undefined objective '{i.ref}'"
+    ),
+    "objective.dependency-cycle": lambda _i: "Objective dependency graph contains a cycle",
+}
+
+_PARTICIPANT_BEHAVIOR_ISSUE_RENDERERS = {
+    "participant.action-contract-unbound": (
+        lambda i: f"Agent '{i.participant_name}' action '{i.ref}' does not reference a declared action_contract"
+    ),
+    "participant.observation-boundary-unbound": (
+        lambda i: (
+            f"Agent '{i.participant_name}' observation_boundary '{i.ref}' "
+            "does not reference a declared observation_boundary"
+        )
+    ),
+    "participant.interaction-action-unbound": (
+        lambda i: (
+            f"Action contract '{i.action_name}' interaction related_action '{i.ref}' "
+            "does not reference a declared action_contract"
+        )
+    ),
+    "participant.view-rule-ref-unbound": (
+        lambda i: (
+            f"Observation boundary '{i.boundary_name}' view_rule information_ref '{i.ref}' "
+            "is not declared by observable_refs, hidden_refs, or evidence_refs"
+        )
+    ),
+    "participant.view-rule-evidence-unbound": (
+        lambda i: (
+            f"Observation boundary '{i.boundary_name}' view_rule evidence_ref '{i.ref}' "
+            "is not declared by evidence_refs"
+        )
+    ),
+    "participant.view-transition-ref-unbound": (
+        lambda i: (
+            f"Observation boundary '{i.boundary_name}' view_transition '{i.transition_id}' "
+            f"information_ref '{i.ref}' is not declared by observable_refs, hidden_refs, or evidence_refs"
+        )
+    ),
+    "participant.view-transition-evidence-unbound": (
+        lambda i: (
+            f"Observation boundary '{i.boundary_name}' view_transition '{i.transition_id}' "
+            f"evidence_ref '{i.ref}' is not declared by evidence_refs"
+        )
+    ),
+}
+
+_PARTICIPANT_OUTCOME_ISSUE_RENDERERS = {
+    "participant.outcome.source-action-unbound": (
+        lambda i: f"Outcome interpretation rule '{i.rule_name}' source '{i.ref}' references undefined action contract"
+    ),
+    "participant.outcome.source-objective-unbound": (
+        lambda i: f"Outcome interpretation rule '{i.rule_name}' source '{i.ref}' references undefined objective"
+    ),
+    "participant.outcome.source-workflow-unbound": (
+        lambda i: f"Outcome interpretation rule '{i.rule_name}' source '{i.ref}' references undefined workflow"
+    ),
+    "participant.outcome.source-evaluation-unbound": (
+        lambda i: f"Outcome interpretation rule '{i.rule_name}' source '{i.ref}' references undefined evaluation"
+    ),
+    "participant.outcome.target-objective-unbound": (
+        lambda i: f"Outcome interpretation rule '{i.rule_name}' target '{i.ref}' references undefined objective"
+    ),
+    "participant.outcome.target-workflow-unbound": (
+        lambda i: f"Outcome interpretation rule '{i.rule_name}' target '{i.ref}' references undefined workflow"
+    ),
+    "participant.outcome.target-evaluation-unbound": (
+        lambda i: f"Outcome interpretation rule '{i.rule_name}' target '{i.ref}' references undefined evaluation"
+    ),
+}
+
+
+class _ContentObjectivesMixin:
+    def _verify_content(self) -> None:
+        for name, item in self._s.content.items():
+            if item.target and not self._is_unresolved_var(item.target) and item.target not in self._s.nodes:
+                self._err(f"Content '{name}' targets undefined node '{item.target}'")
+            elif item.target and not self._is_unresolved_var(item.target) and not self._is_vm_node(item.target):
+                self._err(f"Content '{name}' target '{item.target}' must be a VM node")
+
+    def _verify_accounts(self) -> None:
+        for name, acct in self._s.accounts.items():
+            if acct.node and not self._is_unresolved_var(acct.node) and acct.node not in self._s.nodes:
+                self._err(f"Account '{name}' references undefined node '{acct.node}'")
+            elif acct.node and not self._is_unresolved_var(acct.node) and not self._is_vm_node(acct.node):
+                self._err(f"Account '{name}' node '{acct.node}' must be a VM node")
+
+    def _verify_relationships(self) -> None:
+        for name, rel in self._s.relationships.items():
+            if not self._is_unresolved_var(rel.source):
+                self._validate_named_ref(
+                    rel.source,
+                    owner_label=f"Relationship '{name}'",
+                    ref_label="source",
+                )
+            if not self._is_unresolved_var(rel.target):
+                self._validate_named_ref(
+                    rel.target,
+                    owner_label=f"Relationship '{name}'",
+                    ref_label="target",
+                )
+
+    def _verify_agents(self) -> None:
+        flat_entity_names = self._all_entity_names()
+        service_names = {service.name for node in self._s.nodes.values() for service in node.services if service.name}
+        for name, agent in self._s.agents.items():
+            self._verify_agent(name, agent, flat_entity_names, service_names)
+
+    def _verify_agent(self, name: str, agent: object, flat_entity_names: set[str], service_names: set[str]) -> None:
+        label = f"Agent '{name}'"
+        if agent.entity and not self._is_unresolved_var(agent.entity) and agent.entity not in flat_entity_names:
+            self._err(f"{label} references undefined entity '{agent.entity}'")
+        self._verify_membership_refs(
+            agent.starting_accounts,
+            self._s.accounts,
+            lambda ref: f"{label} starting_account '{ref}' not in accounts section",
+        )
+        self._verify_agent_subnet_refs(
+            agent.allowed_subnets,
+            undefined=lambda ref: f"{label} allowed_subnet '{ref}' not in infrastructure section",
+            not_switch=lambda ref: f"{label} allowed_subnet '{ref}' must reference a switch/network entry",
+        )
+        if agent.initial_knowledge:
+            self._verify_agent_initial_knowledge(name, agent.initial_knowledge, service_names)
+        self._verify_agent_starting_conditions(label, agent)
+        for anchor in agent.authority_anchors:
+            if not self._is_unresolved_var(anchor):
+                self._validate_named_ref(anchor, owner_label=label, ref_label="authority_anchor", targetable=False)
+        for scope in agent.operating_scope:
+            if not self._is_unresolved_var(scope):
+                self._validate_operating_scope_ref(scope, owner_label=label)
+
+    def _verify_membership_refs(self, refs: list[str], valid: object, error_msg: Callable[[str], str]) -> None:
+        for ref in refs:
+            if not self._is_unresolved_var(ref) and ref not in valid:
+                self._err(error_msg(ref))
+
+    def _verify_agent_subnet_refs(
+        self, refs: list[str], *, undefined: Callable[[str], str], not_switch: Callable[[str], str]
+    ) -> None:
+        for subnet in refs:
+            if self._is_unresolved_var(subnet):
+                continue
+            if subnet not in self._s.infrastructure:
+                self._err(undefined(subnet))
+            elif not self._is_switch_node(subnet):
+                self._err(not_switch(subnet))
+
+    def _verify_agent_starting_conditions(self, label: str, agent: object) -> None:
+        for cond_name in agent.starting_conditions:
+            if self._is_unresolved_var(cond_name):
+                continue
+            # ADR-020 §6 publishes starting_conditions as accepting bare
+            # (`health`) or section-qualified (`conditions.health`)
+            # references. Strip the `conditions.` prefix when present so
+            # both forms resolve against the same dict.
+            bare_name = cond_name.removeprefix("conditions.")
+            if bare_name not in self._s.conditions:
+                self._err(f"{label} starting_condition '{cond_name}' not in conditions section")
+
+    def _verify_agent_initial_knowledge(self, name: str, initial_knowledge: object, service_names: set[str]) -> None:
+        label = f"Agent '{name}'"
+        self._verify_agent_ik_hosts(label, initial_knowledge)
+        self._verify_agent_subnet_refs(
+            initial_knowledge.subnets,
+            undefined=lambda ref: f"{label} initial_knowledge subnet '{ref}' not in infrastructure section",
+            not_switch=lambda ref: f"{label} initial_knowledge subnet '{ref}' must reference a switch/network entry",
+        )
+        self._verify_membership_refs(
+            initial_knowledge.services,
+            service_names,
+            lambda ref: f"{label} initial_knowledge service '{ref}' not in node service names",
+        )
+        self._verify_membership_refs(
+            initial_knowledge.accounts,
+            self._s.accounts,
+            lambda ref: f"{label} initial_knowledge account '{ref}' not in accounts section",
+        )
+
+    def _verify_agent_ik_hosts(self, label: str, initial_knowledge: object) -> None:
+        for host in initial_knowledge.hosts:
+            if self._is_unresolved_var(host):
+                continue
+            if host not in self._s.nodes:
+                self._err(f"{label} initial_knowledge host '{host}' not in nodes section")
+            elif not self._is_vm_node(host):
+                self._err(f"{label} initial_knowledge host '{host}' must reference a VM node")
+
+    def _verify_participant_behavior(self) -> None:
+        analysis = analyze_participant_behavior(
+            agents_by_name=self._s.agents,
+            action_contracts=self._s.action_contracts,
+            observation_boundaries=self._s.observation_boundaries,
+            is_unresolved=self._is_unresolved_var,
+        )
+        for issue in analysis.issues:
+            self._err(self._format_participant_behavior_issue(issue))
+        self._verify_participant_interaction_refs()
+
+    def _verify_participant_interaction_refs(self) -> None:
+        for action_name, action_contract in self._s.action_contracts.items():
+            for index, interaction in enumerate(action_contract.interactions):
+                owner_label = f"Action contract '{action_name}' interaction[{index}]"
+                if not self._is_unresolved_var(interaction.target):
+                    self._validate_named_ref(
+                        interaction.target,
+                        owner_label=owner_label,
+                        ref_label="target",
+                        targetable=True,
+                    )
+                for ref in interaction.shared_state_refs:
+                    if self._is_unresolved_var(ref):
+                        continue
+                    self._validate_named_ref(
+                        ref,
+                        owner_label=owner_label,
+                        ref_label="shared_state_ref",
+                        targetable=True,
+                    )
+
+    def _verify_participant_outcomes(self) -> None:
+        analysis = analyze_participant_outcome_interpretations(
+            outcome_interpretation_rules=self._s.outcome_interpretation_rules,
+            action_contracts=self._s.action_contracts,
+            objectives=self._s.objectives,
+            workflows=self._s.workflows,
+            evaluations=self._s.evaluations,
+            is_unresolved=self._is_unresolved_var,
+        )
+        for issue in analysis.issues:
+            self._err(self._format_participant_outcome_issue(issue))
+
+    def _verify_objectives(self) -> None:
+        # Declarative-objective semantics — actor binding, target resolution,
+        # success interpretation, windows, and dependency ordering (SEM-207).
+        # The name-level reference graph, ordering/refresh-role model, and
+        # fail-closed issue set live in ``aces_sdl.semantics.objective_semantics``;
+        # this pass renders the machine-readable issues it reports as authoring
+        # errors.
+        analysis = analyze_objective_semantics(
+            objectives_by_name=self._s.objectives,
+            agents_by_name=self._s.agents,
+            entity_names=self._all_entity_names(),
+            assessment_resources=AssessmentResourceCatalog(
+                conditions=self._s.conditions,
+                metrics=self._s.metrics,
+                evaluations=self._s.evaluations,
+                tlos=self._s.tlos,
+                goals=self._s.goals,
+            ),
+            window_resources=WindowResourceCatalog(
+                stories=self._s.stories,
+                scripts=self._s.scripts,
+                events=self._s.events,
+                workflows=self._s.workflows,
+            ),
+            targetable_name_index=self._named_ref_index(targetable=True),
+            is_unresolved=self._is_unresolved_var,
+        )
+        for issue in analysis.issues:
+            self._err(self._format_objective_issue(issue))
+
+    @staticmethod
+    def _format_objective_issue(issue: ObjectiveIssue) -> str:
+        renderer = _OBJECTIVE_ISSUE_RENDERERS.get(issue.code)
+        if renderer is None:
+            raise AssertionError(f"unhandled objective-semantics issue code: {issue.code}")
+        return renderer(issue)
+
+    @staticmethod
+    def _format_participant_behavior_issue(issue: ParticipantBehaviorIssue) -> str:
+        renderer = _PARTICIPANT_BEHAVIOR_ISSUE_RENDERERS.get(issue.code)
+        if renderer is None:
+            raise AssertionError(f"unhandled participant-behavior issue code: {issue.code}")
+        return renderer(issue)
+
+    @staticmethod
+    def _format_participant_outcome_issue(issue: ParticipantOutcomeIssue) -> str:
+        renderer = _PARTICIPANT_OUTCOME_ISSUE_RENDERERS.get(issue.code)
+        if renderer is None:
+            raise AssertionError(f"unhandled participant-outcome issue code: {issue.code}")
+        return renderer(issue)

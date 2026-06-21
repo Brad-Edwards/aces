@@ -1,0 +1,10 @@
+{
+  "schema_version": "backend-profile/v1",
+  "profile": "provisioning-only",
+  "required_contracts": [
+    "backend-manifest-v2",
+    "operation-receipt-v1",
+    "operation-status-v1",
+    "runtime-snapshot-v1"
+  ]
+}
