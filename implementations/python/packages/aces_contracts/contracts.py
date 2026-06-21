@@ -375,6 +375,40 @@ def _attach_experiment_datetime_invariants(contract_id: str, json_schema: dict[s
     )
 
 
+def _validate_reported_value_status(
+    value_status: str,
+    value: object | None,
+    *,
+    reported_message: str,
+    non_reported_message: str,
+) -> None:
+    if value_status == "reported" and value is None:
+        raise ValueError(reported_message)
+    if value_status != "reported" and value is not None:
+        raise ValueError(non_reported_message)
+
+
+def _extend_reported_value_status_schema(json_schema: JsonSchemaValue) -> None:
+    json_schema.setdefault("allOf", []).extend(
+        [
+            {
+                "if": {
+                    "properties": {"value_status": {"const": "reported"}},
+                    "required": ["value_status"],
+                },
+                "then": {"required": ["value"], "properties": {"value": {"not": {"type": "null"}}}},
+            },
+            {
+                "if": {
+                    "properties": {"value_status": {"enum": ["missing", "withheld", "not-applicable"]}},
+                    "required": ["value_status"],
+                },
+                "then": {"properties": {"value": {"type": "null"}}},
+            },
+        ]
+    )
+
+
 _DEFS_KEY = "$defs"
 _INSTANTIATION_INVARIANT_CONTRACT_ID = "instantiated-scenario-v1"
 _SCHEMA_MAP_KEYS = ("properties", "patternProperties", _DEFS_KEY)
@@ -3388,10 +3422,12 @@ class ExperimentDerivedMeasureModel(ContractModel):
     @model_validator(mode="after")
     def _validate_derived_measure(self) -> ExperimentDerivedMeasureModel:
         _parse_rfc3339_datetime("generated_at", self.generated_at)
-        if self.value_status == "reported" and self.value is None:
-            raise ValueError("reported derived measures must include value")
-        if self.value_status != "reported" and self.value is not None:
-            raise ValueError("non-reported derived measures must not include value")
+        _validate_reported_value_status(
+            self.value_status,
+            self.value,
+            reported_message="reported derived measures must include value",
+            non_reported_message="non-reported derived measures must not include value",
+        )
         return self
 
     @classmethod
@@ -3402,24 +3438,7 @@ class ExperimentDerivedMeasureModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        json_schema.setdefault("allOf", []).extend(
-            [
-                {
-                    "if": {
-                        "properties": {"value_status": {"const": "reported"}},
-                        "required": ["value_status"],
-                    },
-                    "then": {"required": ["value"], "properties": {"value": {"not": {"type": "null"}}}},
-                },
-                {
-                    "if": {
-                        "properties": {"value_status": {"enum": ["missing", "withheld", "not-applicable"]}},
-                        "required": ["value_status"],
-                    },
-                    "then": {"properties": {"value": {"type": "null"}}},
-                },
-            ]
-        )
+        _extend_reported_value_status_schema(json_schema)
         _add_aces_invariant(
             json_schema,
             "derived-measure-reported-value-present",
@@ -4099,10 +4118,12 @@ class ExperimentResultSummaryModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_reported_value(self) -> ExperimentResultSummaryModel:
-        if self.value_status == "reported" and self.value is None:
-            raise ValueError("reported result summaries must include value")
-        if self.value_status != "reported" and self.value is not None:
-            raise ValueError("non-reported result summaries must not include value")
+        _validate_reported_value_status(
+            self.value_status,
+            self.value,
+            reported_message="reported result summaries must include value",
+            non_reported_message="non-reported result summaries must not include value",
+        )
         return self
 
     @classmethod
@@ -4113,24 +4134,7 @@ class ExperimentResultSummaryModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        json_schema.setdefault("allOf", []).extend(
-            [
-                {
-                    "if": {
-                        "properties": {"value_status": {"const": "reported"}},
-                        "required": ["value_status"],
-                    },
-                    "then": {"required": ["value"], "properties": {"value": {"not": {"type": "null"}}}},
-                },
-                {
-                    "if": {
-                        "properties": {"value_status": {"enum": ["missing", "withheld", "not-applicable"]}},
-                        "required": ["value_status"],
-                    },
-                    "then": {"properties": {"value": {"type": "null"}}},
-                },
-            ]
-        )
+        _extend_reported_value_status_schema(json_schema)
         return json_schema
 
 

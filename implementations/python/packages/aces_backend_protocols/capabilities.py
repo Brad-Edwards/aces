@@ -594,6 +594,7 @@ def observation_capability_contract_gaps(manifest: BackendManifest) -> tuple[str
 
     required_contracts = set(observation.supported_evidence_contracts) | set(OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS)
     missing = sorted(required_contracts - manifest.supported_contract_versions)
-    if not missing:
-        return ()
-    return (f"capabilities.observation missing required contracts: {', '.join(missing)}",)
+    gaps: list[str] = []
+    if missing:
+        gaps.append(f"capabilities.observation missing required contracts: {', '.join(missing)}")
+    return tuple(gaps)

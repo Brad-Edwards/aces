@@ -1045,7 +1045,7 @@ def run_target_conformance(
     surface_gaps = _capability_gaps(effective_profile, target)
     participant_claim_gaps = participant_runtime_capability_contract_gaps(target.manifest)
     observation_claim_gaps = observation_capability_contract_gaps(target.manifest)
-    claim_gaps = tuple((*participant_claim_gaps, *observation_claim_gaps))
+    claim_gaps = (*participant_claim_gaps, *observation_claim_gaps)
     capability_gaps = tuple((*surface_gaps, *claim_gaps))
     passed = fixture_report.passed and not contract_gaps and not capability_gaps
     diagnostics = list(fixture_report.diagnostics)
