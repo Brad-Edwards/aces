@@ -176,22 +176,17 @@ def _install_request_guards(
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
-        content_length = request.headers.get("content-length")
-        guard_response: Response | None = None
-        if content_length is not None:
-            try:
-                content_length_value = int(content_length)
-            except ValueError:
-                guard_response = _invalid_content_length_response(control_plane, request)
-            else:
-                if content_length_value > security.max_request_bytes:
-                    guard_response = _request_too_large_response(control_plane, request)
+        guard_response = _content_length_guard_response(
+            control_plane,
+            request,
+            max_request_bytes=security.max_request_bytes,
+        )
         if guard_response is None:
-            body = await request.body()
-            if len(body) > security.max_request_bytes:
-                guard_response = _request_too_large_response(control_plane, request)
-            else:
-                request.state.raw_body = body
+            guard_response = await _body_size_guard_response(
+                control_plane,
+                request,
+                max_request_bytes=security.max_request_bytes,
+            )
         if guard_response is not None:
             return guard_response
         return await call_next(request)
@@ -206,6 +201,37 @@ def _install_request_guards(
             reason=f"internal-error:{type(exc).__name__}",
         )
         return JSONResponse(status_code=500, content={"detail": "internal server error"})
+
+
+def _content_length_guard_response(
+    control_plane: RuntimeControlPlane,
+    request: Request,
+    *,
+    max_request_bytes: int,
+) -> JSONResponse | None:
+    content_length = request.headers.get("content-length")
+    if content_length is None:
+        return None
+    try:
+        content_length_value = int(content_length)
+    except ValueError:
+        return _invalid_content_length_response(control_plane, request)
+    if content_length_value > max_request_bytes:
+        return _request_too_large_response(control_plane, request)
+    return None
+
+
+async def _body_size_guard_response(
+    control_plane: RuntimeControlPlane,
+    request: Request,
+    *,
+    max_request_bytes: int,
+) -> JSONResponse | None:
+    body = await request.body()
+    if len(body) > max_request_bytes:
+        return _request_too_large_response(control_plane, request)
+    request.state.raw_body = body
+    return None
 
 
 def _request_too_large_response(
