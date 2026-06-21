@@ -1,0 +1,465 @@
+{
+  "$defs": {
+    "ExperimentDerivedMeasureMethodModel": {
+      "additionalProperties": false,
+      "description": "Method metadata for deriving measures from raw evidence.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "method_id": {
+          "minLength": 1,
+          "title": "Method Id",
+          "type": "string"
+        },
+        "method_version": {
+          "minLength": 1,
+          "title": "Method Version",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/$defs/ExperimentParameterModel"
+          },
+          "title": "Parameters",
+          "type": "array"
+        }
+      },
+      "required": [
+        "method_id",
+        "method_version",
+        "name"
+      ],
+      "title": "ExperimentDerivedMeasureMethodModel",
+      "type": "object"
+    },
+    "ExperimentEvidenceRecordReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to a raw captured evidence record.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "evidence-record",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentEvidenceRecordReferenceModel",
+      "type": "object"
+    },
+    "ExperimentParameterModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "redaction": {
+                "enum": [
+                  "redacted",
+                  "withheld"
+                ]
+              }
+            },
+            "required": [
+              "redaction"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Redaction-aware parameter captured for a task, run, or apparatus context.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "redaction": {
+          "default": "none",
+          "enum": [
+            "none",
+            "redacted",
+            "withheld"
+          ],
+          "title": "Redaction",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "value_kind": {
+          "enum": [
+            "configuration",
+            "protocol",
+            "apparatus",
+            "analysis",
+            "other"
+          ],
+          "title": "Value Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "value_kind"
+      ],
+      "title": "ExperimentParameterModel",
+      "type": "object"
+    },
+    "ExperimentReferenceModel": {
+      "additionalProperties": false,
+      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "processor",
+            "backend",
+            "participant-implementation",
+            "scenario",
+            "scenario-snapshot",
+            "task",
+            "protocol",
+            "apparatus-context",
+            "run",
+            "metric-definition",
+            "result",
+            "study",
+            "manifest",
+            "profile",
+            "capability",
+            "capture-spec",
+            "evidence",
+            "evidence-record",
+            "derived-measure",
+            "measurement-channel",
+            "analysis-artifact",
+            "other"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentReferenceModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/experiment-derived-measure-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "value_status": {
+            "const": "reported"
+          }
+        },
+        "required": [
+          "value_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "not": {
+              "type": "null"
+            }
+          }
+        },
+        "required": [
+          "value"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "value_status": {
+            "enum": [
+              "missing",
+              "withheld",
+              "not-applicable"
+            ]
+          }
+        },
+        "required": [
+          "value_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "description": "EXP-709 derived measure/evaluation output computed from raw evidence.",
+  "properties": {
+    "derived_measure_id": {
+      "minLength": 1,
+      "title": "Derived Measure Id",
+      "type": "string"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "minLength": 1,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "limitations": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "measure_kind": {
+      "enum": [
+        "metric",
+        "evaluation",
+        "score",
+        "summary",
+        "analysis-output",
+        "other"
+      ],
+      "title": "Measure Kind",
+      "type": "string"
+    },
+    "measure_version": {
+      "minLength": 1,
+      "title": "Measure Version",
+      "type": "string"
+    },
+    "method": {
+      "$ref": "#/$defs/ExperimentDerivedMeasureMethodModel"
+    },
+    "metric_ref": {
+      "$ref": "#/$defs/ExperimentReferenceModel"
+    },
+    "provenance_refs": {
+      "items": {
+        "$ref": "#/$defs/ExperimentReferenceModel"
+      },
+      "title": "Provenance Refs",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "experiment-derived-measure/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_evidence_refs": {
+      "items": {
+        "$ref": "#/$defs/ExperimentEvidenceRecordReferenceModel"
+      },
+      "minItems": 1,
+      "title": "Source Evidence Refs",
+      "type": "array"
+    },
+    "uncertainty": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Uncertainty"
+    },
+    "value": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Value"
+    },
+    "value_status": {
+      "enum": [
+        "reported",
+        "missing",
+        "withheld",
+        "not-applicable"
+      ],
+      "title": "Value Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "derived_measure_id",
+    "measure_version",
+    "measure_kind",
+    "metric_ref",
+    "method",
+    "source_evidence_refs",
+    "generated_at",
+    "value_status"
+  ],
+  "title": "ExperimentDerivedMeasureModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Reported derived measures must include a value; missing/withheld/not-applicable measures must not.",
+      "id": "derived-measure-reported-value-present",
+      "inputs": [
+        {
+          "contract_id": "experiment-derived-measure-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure"
+    },
+    {
+      "description": "generated_at must be a valid RFC 3339 date-time.",
+      "id": "derived-measure-generated-at-valid",
+      "inputs": [
+        {
+          "contract_id": "experiment-derived-measure-v1",
+          "instance_path": "#/generated_at"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "experiment-derived-measure-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

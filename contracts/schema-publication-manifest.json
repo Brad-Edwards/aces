@@ -12,20 +12,20 @@
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "7698fe1c5350d56917663b9642c563a8ea0cb633fd42f15b8e585dd75017a92b",
+      "content_hash": "645831fb013c9450a1354a609b0645f6d045c85b3d92edcdd3cdbce19a0e3064",
       "last_change": {
-        "summary": "Added the RUN-308 participant joint-action and time-management contract identifiers to backend-supported contract declarations.",
-        "content_hash": "7698fe1c5350d56917663b9642c563a8ea0cb633fd42f15b8e585dd75017a92b"
+        "summary": "Added the EXP-715 observation capability declaration and experiment evidence contract identifiers to backend manifest v2.",
+        "content_hash": "645831fb013c9450a1354a609b0645f6d045c85b3d92edcdd3cdbce19a0e3064"
       }
     },
     {
       "contract_id": "backend-profile-v1",
       "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
       "stability": "draft",
-      "content_hash": "52476744039a9ef398de1c7b0ecac5eceb47e6b7ebde93c3d69dab9f0928d06a",
+      "content_hash": "85ddac10a896b39cc9c5ef3f73141e84566236d12d0127511007610ccd700694",
       "last_change": {
-        "summary": "Added the RUN-308 participant joint-action and time-management contract identifiers to the backend profile contract vocabulary.",
-        "content_hash": "52476744039a9ef398de1c7b0ecac5eceb47e6b7ebde93c3d69dab9f0928d06a"
+        "summary": "Added the EXP-707/EXP-708/EXP-709 experiment evidence contracts to the backend profile contract vocabulary.",
+        "content_hash": "85ddac10a896b39cc9c5ef3f73141e84566236d12d0127511007610ccd700694"
       }
     },
     {
@@ -62,25 +62,71 @@
       "contract_id": "experiment-apparatus-context-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-apparatus-context-v1.json",
       "stability": "draft",
-      "content_hash": "6e1f9885835bc6b6e8af922f5624ef09084c2fc8992b2a7f8fdb4e078f6ae2c0"
+      "content_hash": "565558814655c9fc3cd790fb441633622e4846d416ffaba43812143024e33ae3",
+      "last_change": {
+        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
+        "content_hash": "565558814655c9fc3cd790fb441633622e4846d416ffaba43812143024e33ae3"
+      }
+    },
+    {
+      "contract_id": "experiment-capture-spec-v1",
+      "schema_path": "contracts/schemas/experiment-core/experiment-capture-spec-v1.json",
+      "stability": "draft",
+      "content_hash": "f38b438f8ebf032732d2002d0f29e702ce8ac838dcb7027224258b1ae4cdb121",
+      "last_change": {
+        "summary": "Initial publication of the EXP-707 experiment capture specification contract for declarative evidence requirements.",
+        "content_hash": "f38b438f8ebf032732d2002d0f29e702ce8ac838dcb7027224258b1ae4cdb121"
+      }
+    },
+    {
+      "contract_id": "experiment-derived-measure-v1",
+      "schema_path": "contracts/schemas/experiment-core/experiment-derived-measure-v1.json",
+      "stability": "draft",
+      "content_hash": "5075502877e58d10978d82652a7e23813eb76e2868784116293c257480f034bd",
+      "last_change": {
+        "summary": "Initial publication of the EXP-709 experiment derived measure contract for metrics and evaluations computed from raw evidence.",
+        "content_hash": "5075502877e58d10978d82652a7e23813eb76e2868784116293c257480f034bd"
+      }
+    },
+    {
+      "contract_id": "experiment-evidence-record-v1",
+      "schema_path": "contracts/schemas/experiment-core/experiment-evidence-record-v1.json",
+      "stability": "draft",
+      "content_hash": "c3ccf50f5652d1ff34e1347d72eb75da3b23add85b6ca9409d645a407ab715e2",
+      "last_change": {
+        "summary": "Initial publication of the EXP-708 experiment evidence record contract for raw captured observations and artifacts.",
+        "content_hash": "c3ccf50f5652d1ff34e1347d72eb75da3b23add85b6ca9409d645a407ab715e2"
+      }
     },
     {
       "contract_id": "experiment-run-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
       "stability": "draft",
-      "content_hash": "ceeead6df3a0d71477221bba8d8ac64b5a5f234a315d7c695357b04101bbb155"
+      "content_hash": "5f3010f98d3f6790d055ede4da92c0307ce7f01f0c8682598cbffa2c0d2d548d",
+      "last_change": {
+        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
+        "content_hash": "5f3010f98d3f6790d055ede4da92c0307ce7f01f0c8682598cbffa2c0d2d548d"
+      }
     },
     {
       "contract_id": "experiment-study-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
       "stability": "draft",
-      "content_hash": "8065247bb9185692c7de922e60b88e49420a32f3e57300801c3218c629194fa6"
+      "content_hash": "b769512ccf43a3cae303d363da84cf1d4bbd97099d7f9085f065bbe4d801b4d3",
+      "last_change": {
+        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
+        "content_hash": "b769512ccf43a3cae303d363da84cf1d4bbd97099d7f9085f065bbe4d801b4d3"
+      }
     },
     {
       "contract_id": "experiment-task-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-task-v1.json",
       "stability": "draft",
-      "content_hash": "fcdbd1d6d1d455ef2f43360dd0408c006ac2d1cd6f6454f46f7ba63365e9a661"
+      "content_hash": "45fb2eb011d89b9be057d236b9d4e58c2ce01f8c1365f7d521afc8192d68a73a",
+      "last_change": {
+        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
+        "content_hash": "45fb2eb011d89b9be057d236b9d4e58c2ce01f8c1365f7d521afc8192d68a73a"
+      }
     },
     {
       "contract_id": "instantiated-scenario-v1",

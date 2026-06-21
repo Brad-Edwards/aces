@@ -1,0 +1,808 @@
+{
+  "$defs": {
+    "ExperimentArtifactRefModel": {
+      "additionalProperties": false,
+      "description": "Reference to an artifact that supports a task, run, apparatus, or study.",
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "checksum": {
+          "$ref": "#/$defs/ExperimentChecksumModel"
+        },
+        "created_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Created At",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "media_type": {
+          "minLength": 1,
+          "title": "Media Type",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "protocol",
+            "metric-definition",
+            "scenario-snapshot",
+            "manifest",
+            "apparatus-evidence",
+            "observation",
+            "result",
+            "analysis",
+            "report",
+            "export",
+            "starter-file",
+            "evaluator",
+            "subtask",
+            "gold-step",
+            "milestone",
+            "human-assistance",
+            "scaffold",
+            "baseline",
+            "cost-resource-trace",
+            "other"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "satisfies_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentEvidenceSatisfactionReferenceModel"
+          },
+          "title": "Satisfies Refs",
+          "type": "array"
+        },
+        "sensitivity": {
+          "enum": [
+            "public",
+            "internal",
+            "restricted",
+            "redacted"
+          ],
+          "title": "Sensitivity",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "uri": {
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "role",
+        "media_type",
+        "uri",
+        "checksum",
+        "size_bytes",
+        "created_at",
+        "source",
+        "sensitivity"
+      ],
+      "title": "ExperimentArtifactRefModel",
+      "type": "object"
+    },
+    "ExperimentCaptureRequirementModel": {
+      "additionalProperties": false,
+      "description": "One evidence capture requirement inside a capture specification.",
+      "properties": {
+        "capture_kind": {
+          "enum": [
+            "artifact",
+            "observation",
+            "trace",
+            "telemetry",
+            "log",
+            "packet-capture",
+            "other"
+          ],
+          "title": "Capture Kind",
+          "type": "string"
+        },
+        "capture_scope": {
+          "enum": [
+            "task",
+            "run",
+            "apparatus",
+            "participant",
+            "backend",
+            "processor",
+            "network",
+            "service"
+          ],
+          "title": "Capture Scope",
+          "type": "string"
+        },
+        "channel_ref": {
+          "$ref": "#/$defs/ExperimentMeasurementChannelReferenceModel"
+        },
+        "expected_media_types": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Expected Media Types",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "integrity_requirements": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Integrity Requirements",
+          "type": "array"
+        },
+        "loss_disclosure_required": {
+          "default": true,
+          "title": "Loss Disclosure Required",
+          "type": "boolean"
+        },
+        "notes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "redaction_policy": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Redaction Policy"
+        },
+        "required_artifact_roles": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Required Artifact Roles",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "requirement_id": {
+          "minLength": 1,
+          "title": "Requirement Id",
+          "type": "string"
+        },
+        "retention_policy": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retention Policy"
+        },
+        "sensitivity": {
+          "enum": [
+            "public",
+            "internal",
+            "restricted",
+            "redacted"
+          ],
+          "title": "Sensitivity",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "window_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Window Refs",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "requirement_id",
+        "title",
+        "capture_kind",
+        "capture_scope",
+        "channel_ref",
+        "window_refs",
+        "expected_media_types",
+        "sensitivity",
+        "integrity_requirements"
+      ],
+      "title": "ExperimentCaptureRequirementModel",
+      "type": "object"
+    },
+    "ExperimentCaptureWindowModel": {
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "starts_at": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "starts_at"
+          ]
+        },
+        {
+          "properties": {
+            "ends_at": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "ends_at"
+          ]
+        },
+        {
+          "properties": {
+            "trigger_ref": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "trigger_ref"
+          ]
+        }
+      ],
+      "description": "Declarative scope/window over which evidence must be captured.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "ends_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ends At"
+        },
+        "starts_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "minLength": 1,
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Starts At"
+        },
+        "trigger_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentReferenceModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "window_id": {
+          "minLength": 1,
+          "title": "Window Id",
+          "type": "string"
+        },
+        "window_kind": {
+          "enum": [
+            "task",
+            "run",
+            "apparatus",
+            "event",
+            "interval",
+            "manual"
+          ],
+          "title": "Window Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "window_id",
+        "window_kind"
+      ],
+      "title": "ExperimentCaptureWindowModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "Capture window ends_at must not precede starts_at when both timestamps are present.",
+          "id": "capture-window-interval-valid",
+          "inputs": [
+            {
+              "contract_id": "experiment-capture-spec-v1",
+              "instance_path": "#/capture_windows"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.ExperimentCaptureWindowModel._validate_capture_window"
+        }
+      ]
+    },
+    "ExperimentChecksumModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha256"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{64}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha384"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{96}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha512"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{128}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "blake3"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{64}$"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Checksum metadata for an experiment-core artifact reference.",
+      "properties": {
+        "algorithm": {
+          "enum": [
+            "sha256",
+            "sha384",
+            "sha512",
+            "blake3"
+          ],
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "pattern": "^[A-Fa-f0-9]+$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "title": "ExperimentChecksumModel",
+      "type": "object"
+    },
+    "ExperimentEvidenceSatisfactionReferenceModel": {
+      "additionalProperties": false,
+      "description": "Evidence concept reference that an artifact claims to satisfy.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "evidence",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentEvidenceSatisfactionReferenceModel",
+      "type": "object"
+    },
+    "ExperimentMeasurementChannelReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to a declared measurement channel.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "measurement-channel",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentMeasurementChannelReferenceModel",
+      "type": "object"
+    },
+    "ExperimentReferenceModel": {
+      "additionalProperties": false,
+      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "processor",
+            "backend",
+            "participant-implementation",
+            "scenario",
+            "scenario-snapshot",
+            "task",
+            "protocol",
+            "apparatus-context",
+            "run",
+            "metric-definition",
+            "result",
+            "study",
+            "manifest",
+            "profile",
+            "capability",
+            "capture-spec",
+            "evidence",
+            "evidence-record",
+            "derived-measure",
+            "measurement-channel",
+            "analysis-artifact",
+            "other"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentReferenceModel",
+      "type": "object"
+    },
+    "ExperimentValidityNoteModel": {
+      "additionalProperties": false,
+      "description": "Validity threat, limitation, or mitigation note for experiment interpretation.",
+      "properties": {
+        "category": {
+          "enum": [
+            "construct",
+            "internal",
+            "external",
+            "conclusion",
+            "statistical",
+            "apparatus",
+            "reproducibility",
+            "security",
+            "other"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "mitigation": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mitigation"
+        },
+        "note": {
+          "minLength": 1,
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "note"
+      ],
+      "title": "ExperimentValidityNoteModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/experiment-capture-spec-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Declarative EXP-707 specification of what experiment evidence to capture.",
+  "properties": {
+    "artifact_refs": {
+      "items": {
+        "$ref": "#/$defs/ExperimentArtifactRefModel"
+      },
+      "title": "Artifact Refs",
+      "type": "array"
+    },
+    "capture_requirements": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ExperimentCaptureRequirementModel"
+      },
+      "minProperties": 1,
+      "propertyNames": {
+        "minLength": 1
+      },
+      "title": "Capture Requirements",
+      "type": "object"
+    },
+    "capture_spec_id": {
+      "minLength": 1,
+      "title": "Capture Spec Id",
+      "type": "string"
+    },
+    "capture_windows": {
+      "items": {
+        "$ref": "#/$defs/ExperimentCaptureWindowModel"
+      },
+      "minItems": 1,
+      "title": "Capture Windows",
+      "type": "array"
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "experiment-capture-spec/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scope_refs": {
+      "items": {
+        "$ref": "#/$defs/ExperimentReferenceModel"
+      },
+      "minItems": 1,
+      "title": "Scope Refs",
+      "type": "array"
+    },
+    "spec_version": {
+      "minLength": 1,
+      "title": "Spec Version",
+      "type": "string"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "validity_notes": {
+      "items": {
+        "$ref": "#/$defs/ExperimentValidityNoteModel"
+      },
+      "title": "Validity Notes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "capture_spec_id",
+    "spec_version",
+    "title",
+    "description",
+    "scope_refs",
+    "capture_windows",
+    "capture_requirements"
+  ],
+  "title": "ExperimentCaptureSpecModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Every capture_requirements object key must match the embedded requirement_id value, and window_refs must resolve to declared capture_windows.",
+      "id": "capture-requirement-key-matches-requirement-id",
+      "inputs": [
+        {
+          "contract_id": "experiment-capture-spec-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ExperimentCaptureSpecModel._validate_capture_spec"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "experiment-capture-spec-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

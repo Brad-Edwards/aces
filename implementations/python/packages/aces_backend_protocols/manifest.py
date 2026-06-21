@@ -9,6 +9,7 @@ from aces_contracts.contracts import (
     BackendCompatibilityModel,
     BackendManifestV2Model,
     ConceptBindingEntryModel,
+    ObservationCapabilitiesModel,
     ParticipantFeatureSupportModel,
     RealizationSupportDeclarationModel,
 )
@@ -110,6 +111,22 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                     "constraints": dict(manifest.participant_runtime.constraints),
                 }
                 if manifest.participant_runtime is not None
+                else None
+            ),
+            "observation": (
+                ObservationCapabilitiesModel(
+                    name=manifest.observation.name,
+                    supported_capture_kinds=sorted(manifest.observation.supported_capture_kinds),
+                    supported_channel_kinds=sorted(manifest.observation.supported_channel_kinds),
+                    supported_evidence_contracts=sorted(manifest.observation.supported_evidence_contracts),
+                    supported_media_types=sorted(manifest.observation.supported_media_types),
+                    supported_sealing_modes=sorted(manifest.observation.supported_sealing_modes),
+                    supports_redaction=manifest.observation.supports_redaction,
+                    supports_loss_disclosure=manifest.observation.supports_loss_disclosure,
+                    supports_chain_of_custody=manifest.observation.supports_chain_of_custody,
+                    constraints=dict(manifest.observation.constraints),
+                ).model_dump(mode="json")
+                if manifest.observation is not None
                 else None
             ),
         },

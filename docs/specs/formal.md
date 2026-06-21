@@ -21,7 +21,9 @@ formal artifacts are warranted.
   runtime state/history, observable action lifecycle, shared operational state,
   and concurrent execution semantics
 - **Experiment Core** (`specs/formal/experiment-core/`) -- Task, run,
-  apparatus-context, study/collection, and archival provenance contracts
+  apparatus-context, study/collection, capture specification, raw evidence,
+  derived measure, backend observation capability, and archival provenance
+  contracts
 
 ## FM Classification
 

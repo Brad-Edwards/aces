@@ -609,6 +609,106 @@
         }
       }
     },
+    "observation-capture-kinds": {
+      "title": "Observation Capture Kinds",
+      "description": "Backend-supported evidence capture categories for experiment observation capability declarations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.observation.supported_capture_kinds"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "artifact": {
+          "title": "Artifact",
+          "description": "Backend can collect named artifact references as experiment evidence."
+        },
+        "log": {
+          "title": "Log",
+          "description": "Backend can collect log records as experiment evidence."
+        },
+        "observation": {
+          "title": "Observation",
+          "description": "Backend can collect direct observed facts or annotations as experiment evidence."
+        },
+        "packet-capture": {
+          "title": "Packet Capture",
+          "description": "Backend can collect packet-capture outputs as experiment evidence."
+        },
+        "telemetry": {
+          "title": "Telemetry",
+          "description": "Backend can collect telemetry streams or snapshots as experiment evidence."
+        },
+        "trace": {
+          "title": "Trace",
+          "description": "Backend can collect execution traces as experiment evidence."
+        }
+      }
+    },
+    "observation-channel-kinds": {
+      "title": "Observation Channel Kinds",
+      "description": "Backend-supported source channel categories for experiment observation capability declarations.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.observation.supported_channel_kinds"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "backend-log": {
+          "title": "Backend Log",
+          "description": "Backend can capture evidence from backend-owned logs."
+        },
+        "evaluation-history": {
+          "title": "Evaluation History",
+          "description": "Backend can capture evidence from evaluation history surfaces."
+        },
+        "file-artifact": {
+          "title": "File Artifact",
+          "description": "Backend can capture evidence from file-backed artifacts."
+        },
+        "packet-capture": {
+          "title": "Packet Capture",
+          "description": "Backend can capture evidence from packet-capture channels."
+        },
+        "participant-observation": {
+          "title": "Participant Observation",
+          "description": "Backend can capture evidence from participant observation surfaces."
+        },
+        "runtime-snapshot": {
+          "title": "Runtime Snapshot",
+          "description": "Backend can capture evidence from runtime snapshot surfaces."
+        },
+        "workflow-history": {
+          "title": "Workflow History",
+          "description": "Backend can capture evidence from workflow history surfaces."
+        }
+      }
+    },
+    "observation-sealing-modes": {
+      "title": "Observation Sealing Modes",
+      "description": "Backend-supported integrity sealing modes for experiment observation evidence.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "capabilities.observation.supported_sealing_modes"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "digest": {
+          "title": "Digest",
+          "description": "Backend can bind evidence to a checksum or digest."
+        },
+        "immutable-store": {
+          "title": "Immutable Store",
+          "description": "Backend can store evidence in an append-only or immutable store."
+        },
+        "signed-attestation": {
+          "title": "Signed Attestation",
+          "description": "Backend can attach a signed attestation to evidence collection."
+        }
+      }
+    },
     "participant-runtime-feature-support-levels": {
       "title": "Participant Runtime Feature Support Levels",
       "description": "Closed ADR-054 guarantee-strength scale for per-feature participant runtime support declarations.",

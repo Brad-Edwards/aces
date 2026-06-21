@@ -22,6 +22,7 @@ from aces_backend_protocols.capabilities import (
     BackendCapabilitySet,
     BackendManifest,
     EvaluatorCapabilities,
+    ObservationCapabilities,
     OrchestratorCapabilities,
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
@@ -69,6 +70,18 @@ def _concept_bindings() -> tuple[ConceptBinding, ...]:
         ConceptBinding(
             scope="capabilities.participant_runtime.supported_interaction_features",
             family="relationships",
+        ),
+        ConceptBinding(
+            scope="capabilities.observation.supported_capture_kinds",
+            family="provenance-and-evidence",
+        ),
+        ConceptBinding(
+            scope="capabilities.observation.supported_channel_kinds",
+            family="apparatus-declarations",
+        ),
+        ConceptBinding(
+            scope="capabilities.observation.supported_sealing_modes",
+            family="provenance-and-evidence",
         ),
     )
 
@@ -149,6 +162,32 @@ def _capabilities() -> BackendCapabilitySet:
             supported_participant_roles=_PARTICIPANT_ROLES,
             supported_behavior_features=_PARTICIPANT_BEHAVIOR_FEATURES,
             supported_interaction_features=_PARTICIPANT_INTERACTION_FEATURES,
+        ),
+        observation=ObservationCapabilities(
+            name="reference-emulation-observation",
+            supported_capture_kinds=frozenset({"artifact", "log", "observation", "telemetry", "trace"}),
+            supported_channel_kinds=frozenset(
+                {
+                    "backend-log",
+                    "evaluation-history",
+                    "file-artifact",
+                    "participant-observation",
+                    "runtime-snapshot",
+                    "workflow-history",
+                }
+            ),
+            supported_evidence_contracts=frozenset(
+                {
+                    "experiment-capture-spec-v1",
+                    "experiment-evidence-record-v1",
+                    "experiment-derived-measure-v1",
+                }
+            ),
+            supported_media_types=frozenset({"application/json", "text/plain"}),
+            supported_sealing_modes=frozenset({"digest", "immutable-store"}),
+            supports_redaction=True,
+            supports_loss_disclosure=True,
+            supports_chain_of_custody=False,
         ),
     )
 

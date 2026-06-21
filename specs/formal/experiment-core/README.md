@@ -1,12 +1,17 @@
 # Experiment Core Formal Specification
 
 This domain specifies the EXP-701 through EXP-705 experiment-core contract
-boundary:
+boundary plus the EXP-707, EXP-708, EXP-709, and EXP-715 evidence/measure
+extension:
 
 - `experiment-task-v1`
 - `experiment-apparatus-context-v1`
 - `experiment-run-v1`
 - `experiment-study-v1`
+- `experiment-capture-spec-v1`
+- `experiment-evidence-record-v1`
+- `experiment-derived-measure-v1`
+- optional `backend-manifest-v2` `capabilities.observation`
 
 The contracts describe cyber range experiment artifacts. They do not implement
 execution, storage, scheduling, APIs, or analysis engines.
@@ -30,7 +35,9 @@ Rationale:
 ## Authoritative Artifacts
 
 - Normative prose: this directory.
-- Architecture decision: `docs/decisions/adrs/adr-055-experiment-core-contract-boundary.md`.
+- Architecture decisions:
+  `docs/decisions/adrs/adr-055-experiment-core-contract-boundary.md` and
+  `docs/decisions/adrs/adr-064-experiment-evidence-and-measure-contract-boundary.md`.
 - Machine-readable schemas: `contracts/schemas/experiment-core/`.
 - Contract source: `implementations/python/packages/aces_contracts/contracts.py`.
 - Schema generation: `tools/generate_contract_schemas.py`.
@@ -44,8 +51,10 @@ metadata. Each invariant records a stable id, severity, validator, and input
 contract/path set; the annotation shape is published as
 `aces-semantic-invariants-v1` and is validated during schema generation.
 Examples include metric key equality, task/run protocol binding, run time
-ordering, result-evidence reference resolution, study metric grounding, and
-manifest-selection and manifest-payload consistency.
+ordering, result-evidence reference resolution, capture-requirement key
+resolution, raw evidence content disclosure, derived-measure source evidence
+requirements, study metric grounding, and manifest-selection and
+manifest-payload consistency.
 
 ## Definitions
 
@@ -134,6 +143,66 @@ artifact id or by an artifact `satisfies_refs` entry. If a task or metric
 evidence requirement carries digest or path metadata, the matching run artifact
 MUST satisfy those fields with its concrete checksum and URI/path.
 
+### Capture Specification
+
+An experiment capture specification is the declarative EXP-707 statement of
+what evidence should be captured for an experiment scope. It binds:
+
+- task, run, apparatus, or adjacent scope references;
+- capture windows;
+- capture requirements keyed by requirement id;
+- measurement channel references;
+- expected media types and artifact roles;
+- sensitivity, redaction, integrity, retention, and loss-disclosure
+  expectations;
+- validity notes and supporting artifacts.
+
+A capture specification is not proof that capture occurred. It is an intent and
+review surface that raw evidence records can cite.
+
+### Evidence Record
+
+An experiment evidence record is the raw EXP-708 evidence surface. It binds:
+
+- a capture specification reference;
+- a capture requirement reference;
+- a run reference, plus optional task and apparatus context references;
+- source references and evidence kind;
+- capture timestamp and capture window reference;
+- raw content as an artifact reference, content URI with checksum, or bounded
+  payload summary;
+- sensitivity, redaction state, loss disclosure when needed, and provenance.
+
+Evidence records MUST NOT carry metric ids, computed values, scores, or
+evaluation decisions. Those belong in derived measures or run summaries.
+
+### Derived Measure
+
+An experiment derived measure is the EXP-709 interpreted output surface. It
+binds:
+
+- a metric or evaluation reference;
+- derivation method id, version, parameters, and description;
+- one or more source evidence-record references;
+- generation timestamp;
+- value status and value when reported;
+- uncertainty, limitations, and provenance.
+
+Derived measures MUST NOT stand in for raw observations. Their reviewability
+depends on following `source_evidence_refs` back to evidence records.
+
+### Backend Observation Capability
+
+The optional EXP-715 `backend-manifest-v2` `capabilities.observation` block
+declares whether a backend can support observation/evidence collection
+surfaces. It binds supported capture kinds, source channel kinds, evidence
+contracts, media types, sealing modes, redaction support, loss-disclosure
+support, chain-of-custody support, and constraints.
+
+Observation capability is not orchestrator, evaluator, or participant-runtime
+capability. It is a backend apparatus claim that must be backed by published
+experiment evidence contracts and governed concept bindings.
+
 ### Study Or Collection
 
 A study groups tasks, runs, results, evidence, reports, and analysis artifacts
@@ -206,6 +275,18 @@ Studies carry accountable analysis context:
 12. Required task apparatus capabilities MUST resolve to capability references
     in the run apparatus compatibility declarations or component compatibility
     references.
+13. Capture specifications, evidence records, and derived measures MUST use
+    distinct reference kinds: `capture-spec`, `evidence-record`, and
+    `derived-measure`.
+14. Capture specification `capture_requirements` keys MUST match embedded
+    `requirement_id` values, and requirement `window_refs` MUST resolve to
+    declared capture windows.
+15. Evidence records MUST cite a capture specification and requirement, carry
+    raw content, and MUST NOT include metric ids or derived values.
+16. Derived measures MUST cite at least one evidence record and MUST NOT be
+    treated as raw evidence.
+17. Backends that declare `capabilities.observation` MUST declare the published
+    experiment evidence contracts that make the observation claim inspectable.
 
 ### Provenance
 
@@ -276,6 +357,17 @@ Studies carry accountable analysis context:
     not-evaluated evaluation runs.
 15. Run-allocation `blocking_factors` MUST reference declared blocking,
     stratification, apparatus, or control study factors with declared levels.
+16. Capture windows MUST declare a start, end, or trigger, and an interval with
+    both start and end MUST NOT end before it starts.
+17. Evidence records MUST use valid RFC 3339 `captured_at` timestamps.
+    Redacted or withheld evidence records MUST disclose the loss in
+    `raw_content.loss_disclosure`.
+18. Derived measures MUST use valid RFC 3339 `generated_at` timestamps.
+    Reported measures MUST include a value; missing, withheld, and
+    not-applicable measures MUST NOT include a value.
+19. Observation capability terms MUST be validated through the governed
+    concept-authority scopes for capture kinds, channel kinds, and sealing
+    modes.
 
 ### Closed-World Contracts
 
@@ -331,3 +423,7 @@ base. The most load-bearing criteria are:
 - HTTP APIs.
 - New SDL authoring syntax.
 - PROV, RO-Crate, OpenML, or MLflow as the internal ACES schema.
+- Runtime evidence capture, artifact storage, retention jobs, or capture
+  schedulers.
+- Backend-native packet/log/trace parsers.
+- Processor logic that computes derived measures from evidence records.

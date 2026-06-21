@@ -12,6 +12,9 @@ from aces_contracts.contracts import (
     AcesSemanticInvariantProfileReferenceModel,
     BackendManifestV2Model,
     ExperimentApparatusContextModel,
+    ExperimentCaptureSpecModel,
+    ExperimentDerivedMeasureModel,
+    ExperimentEvidenceRecordModel,
     ExperimentRunModel,
     ExperimentStudyModel,
     ExperimentTaskModel,
@@ -38,6 +41,9 @@ from aces.core.runtime import contracts as compat_runtime_contracts
 
 EXPERIMENT_CORE_FIXTURE_MODELS = {
     "experiment-apparatus-context-v1": ExperimentApparatusContextModel,
+    "experiment-capture-spec-v1": ExperimentCaptureSpecModel,
+    "experiment-derived-measure-v1": ExperimentDerivedMeasureModel,
+    "experiment-evidence-record-v1": ExperimentEvidenceRecordModel,
     "experiment-run-v1": ExperimentRunModel,
     "experiment-study-v1": ExperimentStudyModel,
     "experiment-task-v1": ExperimentTaskModel,
@@ -425,6 +431,84 @@ def test_experiment_core_schemas_publish_closed_world_contracts():
         rule.get("if", {}).get("properties", {}).get("run_status", {}).get("const") == "invalidated"
         for rule in run_schema["allOf"]
     )
+
+
+def test_experiment_evidence_measure_schemas_publish_separate_surfaces():
+    generated = schema_bundle()
+
+    capture_schema = generated["experiment-capture-spec-v1"]
+    evidence_schema = generated["experiment-evidence-record-v1"]
+    measure_schema = generated["experiment-derived-measure-v1"]
+
+    assert capture_schema["additionalProperties"] is False
+    assert evidence_schema["additionalProperties"] is False
+    assert measure_schema["additionalProperties"] is False
+    assert capture_schema["properties"]["capture_requirements"]["type"] == "object"
+    assert (
+        capture_schema["properties"]["capture_requirements"]["additionalProperties"]["$ref"]
+        == "#/$defs/ExperimentCaptureRequirementModel"
+    )
+    assert "capture-requirement-key-matches-requirement-id" in _invariant_ids(capture_schema)
+    assert "capture-window-interval-valid" in _invariant_ids(capture_schema["$defs"]["ExperimentCaptureWindowModel"])
+    assert set(capture_schema["required"]) >= {
+        "schema_version",
+        "capture_spec_id",
+        "spec_version",
+        "scope_refs",
+        "capture_windows",
+        "capture_requirements",
+    }
+
+    assert evidence_schema["properties"]["capture_spec_ref"]["$ref"] == "#/$defs/ExperimentCaptureSpecReferenceModel"
+    assert evidence_schema["properties"]["raw_content"]["$ref"] == "#/$defs/ExperimentRawEvidenceContentModel"
+    assert "metric_id" not in evidence_schema["properties"]
+    assert "value" not in evidence_schema["properties"]
+    assert "evidence-record-raw-content-present" in _invariant_ids(evidence_schema)
+    assert "evidence-record-captured-at-valid" in _invariant_ids(evidence_schema)
+    assert set(evidence_schema["required"]) >= {
+        "schema_version",
+        "evidence_record_id",
+        "record_version",
+        "capture_spec_ref",
+        "run_ref",
+        "evidence_kind",
+        "captured_at",
+        "raw_content",
+        "sensitivity",
+        "redaction_state",
+    }
+
+    assert measure_schema["properties"]["source_evidence_refs"]["items"]["$ref"] == (
+        "#/$defs/ExperimentEvidenceRecordReferenceModel"
+    )
+    assert "derived-measure-reported-value-present" in _invariant_ids(measure_schema)
+    assert "derived-measure-generated-at-valid" in _invariant_ids(measure_schema)
+    assert set(measure_schema["required"]) >= {
+        "schema_version",
+        "derived_measure_id",
+        "measure_version",
+        "measure_kind",
+        "metric_ref",
+        "method",
+        "source_evidence_refs",
+        "generated_at",
+        "value_status",
+    }
+
+
+def test_experiment_evidence_measure_contracts_reject_boundary_blurring():
+    capture_payload = _experiment_fixture("experiment-capture-spec-v1")
+    capture_payload["capture_requirements"]["network-trace"]["requirement_id"] = "different-id"
+    with pytest.raises(ValidationError, match="capture_requirements keys"):
+        ExperimentCaptureSpecModel.model_validate(capture_payload)
+
+    raw_evidence_payload = _experiment_fixture("experiment-evidence-record-v1")
+    raw_evidence_payload["metric_id"] = "latency-ms"
+    _assert_schema_and_model_reject("experiment-evidence-record-v1", raw_evidence_payload)
+
+    derived_payload = _experiment_fixture("experiment-derived-measure-v1")
+    derived_payload["source_evidence_refs"] = []
+    _assert_schema_and_model_reject("experiment-derived-measure-v1", derived_payload)
 
 
 def test_aces_semantic_invariant_annotations_have_published_shape():

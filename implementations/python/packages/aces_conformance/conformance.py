@@ -10,7 +10,11 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Any
 
-from aces_backend_protocols.capabilities import BackendManifest, participant_runtime_capability_contract_gaps
+from aces_backend_protocols.capabilities import (
+    BackendManifest,
+    observation_capability_contract_gaps,
+    participant_runtime_capability_contract_gaps,
+)
 from aces_backend_protocols.manifest import backend_manifest_payload
 from aces_contracts.backend_profiles import (
     BackendProfileModel,
@@ -23,6 +27,9 @@ from aces_contracts.contracts import (
     EvaluationHistoryEventModel,
     EvaluationPlanModel,
     EvaluationResultStateModel,
+    ExperimentCaptureSpecModel,
+    ExperimentDerivedMeasureModel,
+    ExperimentEvidenceRecordModel,
     OperationReceiptModel,
     OperationStatusModel,
     OrchestrationPlanModel,
@@ -168,6 +175,9 @@ _MODEL_VALIDATORS = {
     "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_validate,
     "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_validate,
     "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_validate,
+    "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_validate,
+    "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_validate,
+    "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_validate,
 }
 
 
@@ -1033,7 +1043,9 @@ def run_target_conformance(
         )
     contract_gaps = _declared_contract_gaps(effective_profile, target.manifest, profiles_root=profiles_root)
     surface_gaps = _capability_gaps(effective_profile, target)
-    claim_gaps = participant_runtime_capability_contract_gaps(target.manifest)
+    participant_claim_gaps = participant_runtime_capability_contract_gaps(target.manifest)
+    observation_claim_gaps = observation_capability_contract_gaps(target.manifest)
+    claim_gaps = (*participant_claim_gaps, *observation_claim_gaps)
     capability_gaps = tuple((*surface_gaps, *claim_gaps))
     passed = fixture_report.passed and not contract_gaps and not capability_gaps
     diagnostics = list(fixture_report.diagnostics)
