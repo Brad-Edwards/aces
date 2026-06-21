@@ -463,6 +463,197 @@ def test_oci_bundle_rejects_unsafe_tar_members(tmp_path: Path):
         module_registry._safe_tar_members(tar, tmp_path / "cache")
 
 
+def test_oci_bundle_rejects_special_member_types(tmp_path: Path):
+    bundle_buffer = io.BytesIO()
+    with tarfile.open(fileobj=bundle_buffer, mode="w:gz") as tar:
+        fifo = tarfile.TarInfo(name="pipe")
+        fifo.type = tarfile.FIFOTYPE
+        tar.addfile(fifo)
+    bundle_buffer.seek(0)
+
+    with (
+        tarfile.open(fileobj=bundle_buffer, mode="r:gz") as tar,
+        pytest.raises(SDLParseError, match="Unsupported tar member"),
+    ):
+        module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+
+def test_oci_bundle_rejects_symlink_members(tmp_path: Path):
+    # A symlink whose own name passes the traversal check (e.g. name='module.yaml')
+    # but whose linkname escapes the cache is a distinct attack vector and must be
+    # rejected before extraction.
+    bundle_buffer = io.BytesIO()
+    with tarfile.open(fileobj=bundle_buffer, mode="w:gz") as tar:
+        member = tarfile.TarInfo(name="module.yaml")
+        member.type = tarfile.SYMTYPE
+        member.linkname = "../outside.yaml"
+        tar.addfile(member)
+    bundle_buffer.seek(0)
+
+    with (
+        tarfile.open(fileobj=bundle_buffer, mode="r:gz") as tar,
+        pytest.raises(SDLParseError, match="Links are not allowed"),
+    ):
+        module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+
+def test_oci_bundle_rejects_hardlink_members(tmp_path: Path):
+    bundle_buffer = io.BytesIO()
+    with tarfile.open(fileobj=bundle_buffer, mode="w:gz") as tar:
+        target = tarfile.TarInfo(name="module.yaml")
+        target.size = 0
+        tar.addfile(target, io.BytesIO(b""))
+        link = tarfile.TarInfo(name="link.yaml")
+        link.type = tarfile.LNKTYPE
+        link.linkname = "module.yaml"
+        tar.addfile(link)
+    bundle_buffer.seek(0)
+
+    with (
+        tarfile.open(fileobj=bundle_buffer, mode="r:gz") as tar,
+        pytest.raises(SDLParseError, match="Links are not allowed"),
+    ):
+        module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+
+def test_oci_bundle_strips_dangerous_mode_bits(tmp_path: Path):
+    payload = b"name: m\n"
+    bundle_buffer = io.BytesIO()
+    with tarfile.open(fileobj=bundle_buffer, mode="w:gz") as tar:
+        member = tarfile.TarInfo(name="module.yaml")
+        member.size = len(payload)
+        member.mode = 0o4755  # setuid bit set by an attacker-controlled bundle
+        tar.addfile(member, io.BytesIO(payload))
+    bundle_buffer.seek(0)
+
+    with tarfile.open(fileobj=bundle_buffer, mode="r:gz") as tar:
+        safe = module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+    assert safe[0].mode & 0o7000 == 0
+    assert safe[0].mode == 0o755
+
+
+def test_oci_bundle_extracts_safe_members(tmp_path: Path):
+    payload = b"name: ok\n"
+    bundle_buffer = io.BytesIO()
+    with tarfile.open(fileobj=bundle_buffer, mode="w:gz") as tar:
+        member = tarfile.TarInfo(name="module.yaml")
+        member.size = len(payload)
+        tar.addfile(member, io.BytesIO(payload))
+    bundle_buffer.seek(0)
+
+    root_path = module_registry._extract_bundle_to_cache(
+        bundle_bytes=bundle_buffer.getvalue(),
+        manifest_digest="deadbeef",
+        root_file="module.yaml",
+        base_dir=tmp_path,
+    )
+
+    assert root_path.is_file()
+    assert root_path.read_bytes() == payload
+    cache = module_registry._oci_cache_dir(tmp_path) / "deadbeef"
+    assert root_path.resolve().is_relative_to(cache.resolve())
+
+
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
+def test_oci_bundle_fallback_extraction_validates_members(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    # Simulate Python 3.11.0–3.11.3, where TarFile.extractall lacks the PEP 706
+    # `filter` keyword (backported in 3.11.4). The fallback path must still extract
+    # only validated members rather than performing an unfiltered extraction.
+    real_extractall = tarfile.TarFile.extractall
+
+    def no_filter_extractall(self, path=None, members=None, **kwargs):
+        if "filter" in kwargs:
+            raise TypeError("extractall() got an unexpected keyword argument 'filter'")
+        return real_extractall(self, path, members=members)
+
+    monkeypatch.setattr(tarfile.TarFile, "extractall", no_filter_extractall)
+
+    payload = b"name: ok\n"
+    bundle_buffer = io.BytesIO()
+    with tarfile.open(fileobj=bundle_buffer, mode="w:gz") as tar:
+        member = tarfile.TarInfo(name="module.yaml")
+        member.size = len(payload)
+        tar.addfile(member, io.BytesIO(payload))
+    bundle_buffer.seek(0)
+
+    root_path = module_registry._extract_bundle_to_cache(
+        bundle_bytes=bundle_buffer.getvalue(),
+        manifest_digest="cafef00d",
+        root_file="module.yaml",
+        base_dir=tmp_path,
+    )
+
+    assert root_path.is_file()
+    assert root_path.read_bytes() == payload
+
+
+def test_oci_bundle_fallback_rejects_traversal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    # The fallback path used on Python 3.11.0–3.11.3 must still reject traversal.
+    real_extractall = tarfile.TarFile.extractall
+
+    def no_filter_extractall(self, path=None, members=None, **kwargs):
+        if "filter" in kwargs:
+            raise TypeError("extractall() got an unexpected keyword argument 'filter'")
+        return real_extractall(self, path, members=members)
+
+    monkeypatch.setattr(tarfile.TarFile, "extractall", no_filter_extractall)
+
+    payload = b"owned\n"
+    bundle_buffer = io.BytesIO()
+    with tarfile.open(fileobj=bundle_buffer, mode="w:gz") as tar:
+        member = tarfile.TarInfo(name="../escape.yaml")
+        member.size = len(payload)
+        tar.addfile(member, io.BytesIO(payload))
+    bundle_buffer.seek(0)
+
+    with pytest.raises(SDLParseError, match="Path traversal detected"):
+        module_registry._extract_bundle_to_cache(
+            bundle_bytes=bundle_buffer.getvalue(),
+            manifest_digest="badbad",
+            root_file="module.yaml",
+            base_dir=tmp_path,
+        )
+    assert not (tmp_path / "escape.yaml").exists()
+
+
+def test_oci_bundle_rejects_root_file_directory(tmp_path: Path):
+    bundle_buffer = io.BytesIO()
+    with tarfile.open(fileobj=bundle_buffer, mode="w:gz") as tar:
+        directory = tarfile.TarInfo(name="module.yaml")
+        directory.type = tarfile.DIRTYPE
+        directory.mode = 0o755
+        tar.addfile(directory)
+    bundle_buffer.seek(0)
+
+    with pytest.raises(SDLParseError, match="root file"):
+        module_registry._extract_bundle_to_cache(
+            bundle_bytes=bundle_buffer.getvalue(),
+            manifest_digest="d1rd1r",
+            root_file="module.yaml",
+            base_dir=tmp_path,
+        )
+
+
+def test_oci_bundle_cache_hit_enforces_root_file_containment(tmp_path: Path):
+    # Simulate a cache populated by an earlier unsafe extractor: a symlink at the
+    # root_file location resolving outside the digest cache. The cache-hit fast path
+    # must still fail closed rather than returning the escaping path.
+    cache_root = module_registry._oci_cache_dir(tmp_path) / "stale"
+    cache_root.mkdir(parents=True)
+    outside = tmp_path / "outside.yaml"
+    outside.write_text("name: evil\n", encoding="utf-8")
+    (cache_root / "module.yaml").symlink_to(outside)
+
+    with pytest.raises(SDLParseError, match="root file"):
+        module_registry._extract_bundle_to_cache(
+            bundle_bytes=b"",
+            manifest_digest="stale",
+            root_file="module.yaml",
+            base_dir=tmp_path,
+        )
+
+
 def test_signed_oci_import_resolution_and_publish_cli(tmp_path: Path):
     module_path = _local_module(tmp_path / "shared.yaml")
     runner = CliRunner()
