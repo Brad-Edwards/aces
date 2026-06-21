@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from typing import Protocol, TypeVar
 
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
@@ -18,6 +19,13 @@ PLACEMENT_RESOURCE_TYPES = frozenset({"feature-binding", "content-placement", "a
 SUPPORTED_RESOURCE_TYPES = frozenset({NODE_RESOURCE_TYPE, NETWORK_RESOURCE_TYPE}) | PLACEMENT_RESOURCE_TYPES
 
 
+class _Addressed(Protocol):
+    address: str
+
+
+_TAddressed = TypeVar("_TAddressed", bound=_Addressed)
+
+
 @dataclass(frozen=True)
 class SimulationRealization:
     """Driver-agnostic interpretation of a provisioning plan."""
@@ -28,57 +36,84 @@ class SimulationRealization:
     diagnostics: tuple[Diagnostic, ...] = ()
 
 
+@dataclass(frozen=True)
+class _SimulationPlanInputs:
+    network_specs: tuple[SimulationNetworkSpec, ...]
+    node_payloads: tuple[tuple[PlannedResource, Mapping[str, object]], ...]
+    placement_specs: tuple[SimulationPlacementSpec, ...]
+    diagnostics: tuple[Diagnostic, ...]
+
+
 def interpret_simulation_plan(plan: ProvisioningPlan) -> SimulationRealization:
     """Interpret an ACES provisioning plan as portable simulation specs."""
 
-    diagnostics: list[Diagnostic] = []
-    network_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
-    node_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
-    placement_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
-
-    for resource in plan.resources.values():
-        if resource.domain != RuntimeDomain.PROVISIONING:
-            continue
-        if resource.resource_type not in SUPPORTED_RESOURCE_TYPES:
-            diagnostics.append(_unsupported_resource(resource))
-            continue
-        payload = resource.payload
-        if not isinstance(payload, Mapping):
-            diagnostics.append(_invalid_payload(resource))
-            continue
-        if resource.resource_type == NETWORK_RESOURCE_TYPE:
-            network_resources.append((resource, payload))
-        elif resource.resource_type == NODE_RESOURCE_TYPE:
-            node_resources.append((resource, payload))
-        else:
-            placement_resources.append((resource, payload))
-
-    networks = [_network_spec(resource, payload) for resource, payload in network_resources]
-    network_lookup = _network_address_lookup(networks)
-    nodes = [_node_spec(resource, payload, network_lookup) for resource, payload in node_resources]
-    placements = [_placement_spec(resource, payload) for resource, payload in placement_resources]
+    collected = _collect_simulation_inputs(plan.resources.values())
+    network_lookup = _network_address_lookup(collected.network_specs)
+    node_specs = tuple(_node_spec(resource, payload, network_lookup) for resource, payload in collected.node_payloads)
 
     return SimulationRealization(
-        networks=tuple(sorted(networks, key=lambda spec: spec.address)),
-        nodes=tuple(sorted(nodes, key=lambda spec: spec.address)),
-        placements=tuple(sorted(placements, key=lambda spec: spec.address)),
+        networks=_sort_by_address(collected.network_specs),
+        nodes=_sort_by_address(node_specs),
+        placements=_sort_by_address(collected.placement_specs),
+        diagnostics=collected.diagnostics,
+    )
+
+
+def _collect_simulation_inputs(resources: Iterable[PlannedResource]) -> _SimulationPlanInputs:
+    diagnostics: list[Diagnostic] = []
+    networks: list[SimulationNetworkSpec] = []
+    nodes: list[tuple[PlannedResource, Mapping[str, object]]] = []
+    placements: list[SimulationPlacementSpec] = []
+
+    for resource in resources:
+        if resource.domain != RuntimeDomain.PROVISIONING:
+            continue
+        payload = _mapping_payload(resource, diagnostics)
+        if payload is None:
+            continue
+        if resource.resource_type == NETWORK_RESOURCE_TYPE:
+            networks.append(_network_spec(resource, payload))
+            continue
+        if resource.resource_type == NODE_RESOURCE_TYPE:
+            nodes.append((resource, payload))
+            continue
+        placements.append(_placement_spec(resource, payload))
+
+    return _SimulationPlanInputs(
+        network_specs=tuple(networks),
+        node_payloads=tuple(nodes),
+        placement_specs=tuple(placements),
         diagnostics=tuple(diagnostics),
     )
 
 
-def _network_address_lookup(networks: list[SimulationNetworkSpec]) -> dict[str, str]:
-    lookup: dict[str, str] = {}
-    for spec in networks:
-        for key in (spec.address, spec.name, spec.address.rsplit(".", 1)[-1]):
-            if key:
-                lookup[key] = spec.address
-    return lookup
+def _mapping_payload(resource: PlannedResource, diagnostics: list[Diagnostic]) -> Mapping[str, object] | None:
+    if resource.resource_type not in SUPPORTED_RESOURCE_TYPES:
+        diagnostics.append(_unsupported_resource(resource))
+        return None
+    if isinstance(resource.payload, Mapping):
+        return resource.payload
+    diagnostics.append(_invalid_payload(resource))
+    return None
+
+
+def _network_address_lookup(networks: Iterable[SimulationNetworkSpec]) -> dict[str, str]:
+    return {key: spec.address for spec in networks for key in _network_aliases(spec)}
+
+
+def _network_aliases(spec: SimulationNetworkSpec) -> tuple[str, ...]:
+    return tuple(alias for alias in (spec.address, spec.name, spec.address.rsplit(".", 1)[-1]) if alias)
+
+
+def _sort_by_address(items: Iterable[_TAddressed]) -> tuple[_TAddressed, ...]:
+    return tuple(sorted(items, key=lambda item: item.address))
 
 
 def _resource_name(resource: PlannedResource, payload: Mapping[str, object]) -> str:
-    name = payload.get("name") or payload.get("node_name")
-    if isinstance(name, str) and name:
-        return name
+    for key in ("name", "node_name"):
+        value = payload.get(key)
+        if isinstance(value, str) and value:
+            return value
     return resource.address.rsplit(".", 1)[-1]
 
 
@@ -91,12 +126,18 @@ def _infrastructure_spec(payload: Mapping[str, object]) -> Mapping[str, object]:
 
 
 def _network_spec(resource: PlannedResource, payload: Mapping[str, object]) -> SimulationNetworkSpec:
-    infrastructure = _infrastructure_spec(payload)
+    return SimulationNetworkSpec(
+        address=resource.address,
+        name=_resource_name(resource, payload),
+        labels=_network_labels(_infrastructure_spec(payload)),
+    )
+
+
+def _network_labels(infrastructure: Mapping[str, object]) -> dict[str, str]:
     properties = infrastructure.get("properties")
-    labels: dict[str, str] = {}
     if isinstance(properties, Mapping) and properties.get("internal") is True:
-        labels["internal"] = "true"
-    return SimulationNetworkSpec(address=resource.address, name=_resource_name(resource, payload), labels=labels)
+        return {"internal": "true"}
+    return {}
 
 
 def _node_spec(
@@ -104,12 +145,6 @@ def _node_spec(
     payload: Mapping[str, object],
     network_lookup: dict[str, str],
 ) -> SimulationNodeSpec:
-    infrastructure = _infrastructure_spec(payload)
-    networks = infrastructure.get("networks")
-    references: tuple[str, ...] = ()
-    if isinstance(networks, (list, tuple)):
-        references = tuple(str(ref) for ref in networks if isinstance(ref, str) and ref)
-    network_addresses = tuple(network_lookup.get(ref, ref) for ref in references)
     os_family = _string_or_default(payload.get("os_family") or payload.get("os"), "other")
     node_type = _string_or_default(payload.get("node_type") or payload.get("type"), "vm")
     return SimulationNodeSpec(
@@ -118,19 +153,36 @@ def _node_spec(
         node_type=node_type,
         os_family=os_family,
         model_ref=_model_ref(payload, os_family),
-        networks=network_addresses,
+        networks=_resolved_networks(payload, network_lookup),
     )
 
 
+def _resolved_networks(payload: Mapping[str, object], network_lookup: dict[str, str]) -> tuple[str, ...]:
+    return tuple(network_lookup.get(ref, ref) for ref in _network_references(payload))
+
+
+def _network_references(payload: Mapping[str, object]) -> tuple[str, ...]:
+    networks = _infrastructure_spec(payload).get("networks")
+    if not isinstance(networks, (list, tuple)):
+        return ()
+    return tuple(ref for ref in networks if isinstance(ref, str) and ref)
+
+
 def _placement_spec(resource: PlannedResource, payload: Mapping[str, object]) -> SimulationPlacementSpec:
-    target = payload.get("target") or payload.get("target_address") or payload.get("node")
-    target_address = target if isinstance(target, str) and target else None
     return SimulationPlacementSpec(
         address=resource.address,
         resource_type=resource.resource_type,
         name=_resource_name(resource, payload),
-        target_address=target_address,
+        target_address=_target_address(payload),
     )
+
+
+def _target_address(payload: Mapping[str, object]) -> str | None:
+    for key in ("target", "target_address", "node"):
+        value = payload.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return None
 
 
 def _model_ref(payload: Mapping[str, object], os_family: str) -> str:

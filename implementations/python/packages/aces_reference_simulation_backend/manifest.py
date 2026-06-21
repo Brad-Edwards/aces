@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as distribution_version
+import importlib.metadata
 
 from aces_backend_protocols.capabilities import (
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
@@ -26,66 +25,75 @@ from aces_contracts.vocabulary import RealizationSupportMode
 REFERENCE_SIMULATION_BACKEND_NAME = "reference-simulation"
 
 _PARTICIPANT_ROLES = frozenset(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE])
-_PARTICIPANT_BEHAVIOR_FEATURES = frozenset(
-    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE]
+_PARTICIPANT_FEATURES_BY_SCOPE = {
+    PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE: frozenset(
+        PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE]
+    ),
+    PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE: frozenset(
+        PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
+    ),
+}
+_CONCEPT_BINDING_ROWS = (
+    ("capabilities.provisioner.supported_node_types", "assets"),
+    ("capabilities.provisioner.supported_os_families", "assets"),
+    ("capabilities.provisioner.supported_content_types", "tools-and-artifacts"),
+    ("capabilities.provisioner.supported_account_features", "identities"),
+    ("capabilities.orchestrator.supported_sections", "actions-and-events"),
+    ("capabilities.evaluator.supported_sections", "observables"),
+    ("capabilities.participant_runtime.supported_participant_roles", "identities"),
+    ("capabilities.participant_runtime.supported_behavior_features", "actions-and-events"),
+    ("capabilities.participant_runtime.supported_interaction_features", "relationships"),
 )
-_PARTICIPANT_INTERACTION_FEATURES = frozenset(
-    PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
+_REALIZATION_DECLARATION = {
+    "domain": "runtime-realization",
+    "support_mode": RealizationSupportMode.CONSTRAINED,
+    "supported_constraint_kinds": frozenset(
+        (
+            "node-type",
+            "os-family",
+            "content-type",
+            "account-feature",
+            "workflow-feature",
+            "workflow-state-predicate",
+        )
+    ),
+    "supported_exact_requirement_kinds": frozenset(("declared-capability-match",)),
+    "disclosure_kinds": frozenset(("backend-manifest-v2", "runtime-snapshot-v1", "operation-status-v1")),
+}
+_WORKFLOW_FEATURES = frozenset(
+    (
+        WorkflowFeature.DECISION,
+        WorkflowFeature.SWITCH,
+        WorkflowFeature.CALL,
+        WorkflowFeature.PARALLEL_BARRIER,
+        WorkflowFeature.RETRY,
+        WorkflowFeature.FAILURE_TRANSITIONS,
+        WorkflowFeature.CANCELLATION,
+        WorkflowFeature.TIMEOUTS,
+        WorkflowFeature.COMPENSATION,
+    )
+)
+_WORKFLOW_STATE_PREDICATES = frozenset(
+    (
+        WorkflowStatePredicateFeature.OUTCOME_MATCHING,
+        WorkflowStatePredicateFeature.ATTEMPT_COUNTS,
+    )
 )
 
 
 def _current_backend_version() -> str:
     try:
-        return distribution_version("aces-sdl")
-    except PackageNotFoundError:
+        return importlib.metadata.version("aces-sdl")
+    except importlib.metadata.PackageNotFoundError:
         return "0.0.0+unknown"
 
 
 def _concept_bindings() -> tuple[ConceptBinding, ...]:
-    return (
-        ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
-        ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
-        ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
-        ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
-        ConceptBinding(scope="capabilities.orchestrator.supported_sections", family="actions-and-events"),
-        ConceptBinding(scope="capabilities.evaluator.supported_sections", family="observables"),
-        ConceptBinding(scope="capabilities.participant_runtime.supported_participant_roles", family="identities"),
-        ConceptBinding(
-            scope="capabilities.participant_runtime.supported_behavior_features",
-            family="actions-and-events",
-        ),
-        ConceptBinding(
-            scope="capabilities.participant_runtime.supported_interaction_features",
-            family="relationships",
-        ),
-    )
+    return tuple(ConceptBinding(scope=scope, family=family) for scope, family in _CONCEPT_BINDING_ROWS)
 
 
 def _realization_support() -> tuple[RealizationSupportDeclaration, ...]:
-    return (
-        RealizationSupportDeclaration(
-            domain="runtime-realization",
-            support_mode=RealizationSupportMode.CONSTRAINED,
-            supported_constraint_kinds=frozenset(
-                {
-                    "node-type",
-                    "os-family",
-                    "content-type",
-                    "account-feature",
-                    "workflow-feature",
-                    "workflow-state-predicate",
-                }
-            ),
-            supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
-            disclosure_kinds=frozenset(
-                {
-                    "backend-manifest-v2",
-                    "runtime-snapshot-v1",
-                    "operation-status-v1",
-                }
-            ),
-        ),
-    )
+    return (RealizationSupportDeclaration(**_REALIZATION_DECLARATION),)
 
 
 def _capabilities() -> BackendCapabilitySet:
@@ -110,25 +118,8 @@ def _capabilities() -> BackendCapabilitySet:
             supports_workflows=True,
             supports_condition_refs=True,
             supports_inject_bindings=True,
-            supported_workflow_features=frozenset(
-                {
-                    WorkflowFeature.DECISION,
-                    WorkflowFeature.SWITCH,
-                    WorkflowFeature.CALL,
-                    WorkflowFeature.PARALLEL_BARRIER,
-                    WorkflowFeature.RETRY,
-                    WorkflowFeature.FAILURE_TRANSITIONS,
-                    WorkflowFeature.CANCELLATION,
-                    WorkflowFeature.TIMEOUTS,
-                    WorkflowFeature.COMPENSATION,
-                }
-            ),
-            supported_workflow_state_predicates=frozenset(
-                {
-                    WorkflowStatePredicateFeature.OUTCOME_MATCHING,
-                    WorkflowStatePredicateFeature.ATTEMPT_COUNTS,
-                }
-            ),
+            supported_workflow_features=_WORKFLOW_FEATURES,
+            supported_workflow_state_predicates=_WORKFLOW_STATE_PREDICATES,
             constraints={"clock": "simulation_tick"},
         ),
         evaluator=EvaluatorCapabilities(
@@ -141,8 +132,10 @@ def _capabilities() -> BackendCapabilitySet:
         participant_runtime=ParticipantRuntimeCapabilities(
             name="reference-simulation-participant-runtime",
             supported_participant_roles=_PARTICIPANT_ROLES,
-            supported_behavior_features=_PARTICIPANT_BEHAVIOR_FEATURES,
-            supported_interaction_features=_PARTICIPANT_INTERACTION_FEATURES,
+            supported_behavior_features=_PARTICIPANT_FEATURES_BY_SCOPE[PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE],
+            supported_interaction_features=_PARTICIPANT_FEATURES_BY_SCOPE[
+                PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE
+            ],
             constraints={"clock": "simulation_tick"},
         ),
     )
