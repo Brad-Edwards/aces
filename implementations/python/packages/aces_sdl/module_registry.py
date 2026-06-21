@@ -247,7 +247,7 @@ _HTTP_TIMEOUT_SECONDS = 30
 def _json_request(url: str, *, headers: dict[str, str] | None = None) -> Any:
     request = Request(url, headers=headers or {})
     try:
-        with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:  # noqa: S310 - explicit OCI fetch
+        with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:
             return json.loads(response.read().decode("utf-8"))
     except (HTTPError, URLError, json.JSONDecodeError) as exc:
         raise SDLParseError(f"Failed to fetch OCI metadata from {url}: {exc}") from exc
@@ -256,7 +256,7 @@ def _json_request(url: str, *, headers: dict[str, str] | None = None) -> Any:
 def _bytes_request(url: str, *, headers: dict[str, str] | None = None) -> bytes:
     request = Request(url, headers=headers or {})
     try:
-        with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:  # noqa: S310 - explicit OCI fetch
+        with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:
             return response.read()
     except (HTTPError, URLError) as exc:
         raise SDLParseError(f"Failed to fetch OCI blob from {url}: {exc}") from exc

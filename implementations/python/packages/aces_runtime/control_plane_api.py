@@ -177,17 +177,23 @@ def _install_request_guards(
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         content_length = request.headers.get("content-length")
+        guard_response: Response | None = None
         if content_length is not None:
             try:
                 content_length_value = int(content_length)
             except ValueError:
-                return _invalid_content_length_response(control_plane, request)
-            if content_length_value > security.max_request_bytes:
-                return _request_too_large_response(control_plane, request)
-        body = await request.body()
-        if len(body) > security.max_request_bytes:
-            return _request_too_large_response(control_plane, request)
-        request.state.raw_body = body
+                guard_response = _invalid_content_length_response(control_plane, request)
+            else:
+                if content_length_value > security.max_request_bytes:
+                    guard_response = _request_too_large_response(control_plane, request)
+        if guard_response is None:
+            body = await request.body()
+            if len(body) > security.max_request_bytes:
+                guard_response = _request_too_large_response(control_plane, request)
+            else:
+                request.state.raw_body = body
+        if guard_response is not None:
+            return guard_response
         return await call_next(request)
 
     @app.exception_handler(Exception)
