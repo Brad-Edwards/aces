@@ -5,11 +5,14 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
+import aces_runtime.control_plane_store as control_plane_store_module
+import pytest
 from aces_contracts.contracts import (
     ParticipantContextViewModel,
     ParticipantHistoryViewModel,
     ParticipantStatusViewModel,
 )
+from aces_contracts.runtime_state import RuntimeSnapshot
 from starlette.testclient import TestClient
 
 from aces.backends.stubs import create_stub_target
@@ -334,6 +337,73 @@ def test_control_plane_api_enforces_request_size_limit():
         )
 
     assert response.status_code == 413
+
+
+def test_control_plane_api_rejects_invalid_content_length_header():
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+    headers = {
+        "x-aces-client-verified": "true",
+        "x-aces-client-identity": "backend-service",
+        "content-type": "application/json",
+        "content-length": "not-a-number",
+    }
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/operations/provisioning",
+            content=b'{"operations":[],"diagnostics":[]}',
+            headers=headers,
+        )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "invalid content-length"}
+    assert control_plane.audit_log()[-1].reason == "invalid content-length"
+
+
+def test_local_control_plane_store_saves_snapshot_with_atomic_replace(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    store = LocalControlPlaneStore(tmp_path / "cp-store")
+    replace_calls: list[tuple[Path, Path]] = []
+    real_replace = control_plane_store_module.os.replace
+
+    def tracked_replace(source: str, destination: str) -> None:
+        replace_calls.append((Path(source), Path(destination)))
+        real_replace(source, destination)
+
+    monkeypatch.setattr(control_plane_store_module.os, "replace", tracked_replace)
+
+    store.save_snapshot(RuntimeSnapshot())
+
+    assert replace_calls
+    assert replace_calls[0][1] == tmp_path / "cp-store" / "snapshot.json"
+    assert not replace_calls[0][0].exists()
+    assert not list((tmp_path / "cp-store").glob("*.tmp"))
+
+
+def test_local_control_plane_store_cleans_temp_file_after_atomic_replace_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    store = LocalControlPlaneStore(tmp_path / "cp-store")
+
+    def fail_replace(source: str, destination: str) -> None:
+        del source, destination
+        raise OSError("replace failed")
+
+    monkeypatch.setattr(control_plane_store_module.os, "replace", fail_replace)
+
+    with pytest.raises(OSError, match="replace failed"):
+        store.save_snapshot(RuntimeSnapshot())
+
+    assert not (tmp_path / "cp-store" / "snapshot.json").exists()
+    assert not list((tmp_path / "cp-store").glob("*.tmp"))
 
 
 def test_control_plane_api_cancels_workflow_runs():

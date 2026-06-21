@@ -241,10 +241,13 @@ def _registry_base_url(registry: str, *, allow_insecure_http: bool) -> str:
     return f"https://{registry}".rstrip("/")
 
 
+_HTTP_TIMEOUT_SECONDS = 30
+
+
 def _json_request(url: str, *, headers: dict[str, str] | None = None) -> Any:
     request = Request(url, headers=headers or {})
     try:
-        with urlopen(request) as response:  # noqa: S310 - explicit OCI fetch
+        with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:
             return json.loads(response.read().decode("utf-8"))
     except (HTTPError, URLError, json.JSONDecodeError) as exc:
         raise SDLParseError(f"Failed to fetch OCI metadata from {url}: {exc}") from exc
@@ -253,7 +256,7 @@ def _json_request(url: str, *, headers: dict[str, str] | None = None) -> Any:
 def _bytes_request(url: str, *, headers: dict[str, str] | None = None) -> bytes:
     request = Request(url, headers=headers or {})
     try:
-        with urlopen(request) as response:  # noqa: S310 - explicit OCI fetch
+        with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:
             return response.read()
     except (HTTPError, URLError) as exc:
         raise SDLParseError(f"Failed to fetch OCI blob from {url}: {exc}") from exc
@@ -290,6 +293,23 @@ def _oci_cache_dir(base_dir: Path) -> Path:
     return base_dir / ".aces" / "module-cache"
 
 
+def _safe_tar_members(
+    tar: tarfile.TarFile,
+    dest: Path,
+) -> list[tarfile.TarInfo]:
+    """Filter tar members to prevent path traversal on Python < 3.12."""
+    safe: list[tarfile.TarInfo] = []
+    resolved_dest = dest.resolve()
+    for member in tar.getmembers():
+        member_path = (dest / member.name).resolve()
+        if not member_path.is_relative_to(resolved_dest):
+            raise SDLParseError(f"Path traversal detected in OCI bundle tar member: {member.name!r}")
+        if member.issym() or member.islnk():
+            raise SDLParseError(f"Symlinks are not allowed in OCI bundle tar: {member.name!r}")
+        safe.append(member)
+    return safe
+
+
 def _extract_bundle_to_cache(
     *,
     bundle_bytes: bytes,
@@ -298,6 +318,8 @@ def _extract_bundle_to_cache(
     base_dir: Path,
 ) -> Path:
     cache_dir = _oci_cache_dir(base_dir) / manifest_digest
+    if ".." in Path(root_file).parts or Path(root_file).is_absolute():
+        raise SDLParseError(f"Invalid OCI root_file path: {root_file!r}")
     root_path = cache_dir / root_file
     if root_path.exists():
         return root_path
@@ -306,7 +328,8 @@ def _extract_bundle_to_cache(
         try:
             tar.extractall(cache_dir, filter="data")
         except TypeError:  # pragma: no cover - Python < 3.12 fallback
-            tar.extractall(cache_dir)
+            safe_members = _safe_tar_members(tar, cache_dir)
+            tar.extractall(cache_dir, members=safe_members)
     if not root_path.exists():
         raise SDLParseError(f"Resolved OCI module bundle is missing declared root file '{root_file}'")
     return root_path
@@ -399,6 +422,8 @@ def resolve_import(
     if source.startswith("local:"):
         relative = source.removeprefix("local:")
         import_path = (base_dir / relative).resolve()
+        if not import_path.is_relative_to(base_dir.resolve()):
+            raise SDLParseError(f"Local import path escapes base directory: {relative!r}")
         if not import_path.exists():
             raise SDLParseError(f"Imported SDL file not found: {relative}")
         from .parser import _load_normalized_data
@@ -585,6 +610,8 @@ def _collect_local_bundle_files(
                 "publish a self-contained local module graph"
             )
         child_path = (resolved.parent / source.removeprefix("local:")).resolve()
+        if not child_path.is_relative_to(resolved.parent):
+            raise SDLParseError(f"Local import path escapes base directory: {source!r}")
         files.update(_collect_local_bundle_files(child_path, seen=seen))
     return files
 
