@@ -198,10 +198,10 @@
       "contract_id": "participant-outcome-report-v1",
       "schema_path": "contracts/schemas/participant-runtime/participant-outcome-report-v1.json",
       "stability": "draft",
-      "content_hash": "1b65d36136812ae18c80ba7822df69b0ca65b569fd4cc2e2bd6c1fd07e5e4abf",
+      "content_hash": "e7c8cb7fa41803e16c7fd99f71365621cce9e1cf21f13701c8d482cc030dcea7",
       "last_change": {
-        "summary": "Initial publication of the participant outcome-report runtime contract: participant outcome reporting in the backend-facing contract family (ADR-060, issue #76).",
-        "content_hash": "1b65d36136812ae18c80ba7822df69b0ca65b569fd4cc2e2bd6c1fd07e5e4abf"
+        "summary": "Require participant outcome reports to carry at least one explicit state relationship for API-411.",
+        "content_hash": "e7c8cb7fa41803e16c7fd99f71365621cce9e1cf21f13701c8d482cc030dcea7"
       }
     },
     {

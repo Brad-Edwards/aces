@@ -140,6 +140,15 @@ def test_participant_outcome_report_publishes_no_score_or_reward_surface():
     source_schema = schema["$defs"]["ParticipantOutcomeReportSourceModel"]
     assert source_schema["properties"]["source_kind"]["enum"] == ["action_result", "episode_status", "evidence"]
     assert schema["properties"]["outcome_sources"]["minItems"] == 1
+    assert schema["properties"]["state_relationships"]["minItems"] == 1
+
+
+def test_participant_outcome_report_requires_state_relationships():
+    payload = _valid_fixture("participant-outcome-report-v1")
+    payload["state_relationships"] = []
+
+    with pytest.raises(ValidationError, match="state_relationships"):
+        ParticipantOutcomeReportModel.model_validate(payload)
 
 
 def test_participant_history_view_schema_requires_completeness_basis_when_not_complete():

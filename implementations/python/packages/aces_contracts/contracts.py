@@ -1401,7 +1401,7 @@ class ParticipantOutcomeReportModel(ParticipantRuntimeBaseEnvelopeModel):
     outcome_id: NonEmptyString
     interpretation_rule_ref: NonEmptyString
     outcome_sources: list[ParticipantOutcomeReportSourceModel] = Field(min_length=1)
-    state_relationships: list[ParticipantOutcomeReportStateRelationshipModel] = Field(default_factory=list)
+    state_relationships: list[ParticipantOutcomeReportStateRelationshipModel] = Field(min_length=1)
 
 
 class ParticipantStatusViewEpisodeStateModel(ContractModel):
