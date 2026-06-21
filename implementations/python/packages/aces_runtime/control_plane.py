@@ -51,6 +51,7 @@ from .control_plane_store import (
 )
 from .control_plane_timeouts import workflow_timeout_update
 from .control_plane_workflows import maybe_apply_compensation
+from .participant_retrieval import ParticipantRetrievalMixin
 from .registry import RuntimeTarget
 
 _NO_PARTICIPANT_RUNTIME_MESSAGE = "Target does not provide a participant runtime."
@@ -66,7 +67,7 @@ def _utc_now() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
-class RuntimeControlPlane:
+class RuntimeControlPlane(ParticipantRetrievalMixin):
     """Reference control plane for async runtime submission and observation."""
 
     def __init__(

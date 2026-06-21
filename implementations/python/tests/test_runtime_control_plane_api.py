@@ -7,6 +7,11 @@ from pathlib import Path
 
 import aces_runtime.control_plane_store as control_plane_store_module
 import pytest
+from aces_contracts.contracts import (
+    ParticipantContextViewModel,
+    ParticipantHistoryViewModel,
+    ParticipantStatusViewModel,
+)
 from aces_contracts.runtime_state import RuntimeSnapshot
 from starlette.testclient import TestClient
 
@@ -19,13 +24,34 @@ from aces.core.runtime.control_plane_security import (
     ControlPlaneRole,
     ControlPlaneSecurityConfig,
 )
-from aces.core.runtime.control_plane_store import LocalControlPlaneStore
+from aces.core.runtime.control_plane_store import ControlPlaneOperationRecord, LocalControlPlaneStore
+from aces.core.runtime.models import OperationReceipt, OperationState, OperationStatus, RuntimeDomain
 from aces.core.runtime.planner import plan
 from aces.core.sdl import parse_sdl
 
 
 def _scenario(yaml_str: str):
     return parse_sdl(textwrap.dedent(yaml_str))
+
+
+def _participant_operation_record(operation_id: str, participant_address: str) -> ControlPlaneOperationRecord:
+    submitted_at = "2026-06-05T10:00:00Z"
+    return ControlPlaneOperationRecord(
+        receipt=OperationReceipt(
+            operation_id=operation_id,
+            domain=RuntimeDomain.PARTICIPANT,
+            submitted_at=submitted_at,
+            accepted=True,
+        ),
+        status=OperationStatus(
+            operation_id=operation_id,
+            domain=RuntimeDomain.PARTICIPANT,
+            state=OperationState.RUNNING,
+            submitted_at=submitted_at,
+            updated_at=submitted_at,
+            changed_addresses=[participant_address],
+        ),
+    )
 
 
 def _test_security(target_name: str, *, max_request_bytes: int = 1_000_000) -> ControlPlaneSecurityConfig:
@@ -104,6 +130,10 @@ def test_control_plane_api_openapi_documents_explicit_error_responses():
     ]
     assert "400" in terminate_responses
     assert "409" in terminate_responses
+    assert "404" in operation_responses["/participants/{participant_address}/status"]["get"]["responses"]
+    history_path = "/participants/{participant_address}/episodes/{episode_id}/history"
+    assert "404" in operation_responses[history_path]["get"]["responses"]
+    assert "404" in operation_responses["/participants/{participant_address}/context"]["get"]["responses"]
 
 
 def test_control_plane_api_accepts_orchestration_plan_and_exposes_snapshot():
@@ -510,12 +540,22 @@ workflows:
             },
             headers=headers,
         )
+        workflow_address = "orchestration.workflow.response"
+        seeded = dict(control_plane._snapshot.orchestration_results[workflow_address])
+        seeded["started_at"] = "2000-01-01T00:00:00Z"
+        seeded["updated_at"] = "2000-01-01T00:00:01Z"
+        control_plane._snapshot = control_plane._snapshot.with_entries(
+            dict(control_plane._snapshot.entries),
+            orchestration_results={
+                **control_plane._snapshot.orchestration_results,
+                workflow_address: seeded,
+            },
+        )
         reconcile = client.post(
             "/workflows/reconcile-timeouts",
             headers=headers,
         )
         assert reconcile.status_code == 200
-        control_plane.reconcile_workflow_timeouts(now="2099-01-01T00:00:00Z")
         snapshot = client.get("/snapshot", headers=headers).json()
 
     result = snapshot["orchestration_results"]["orchestration.workflow.response"]
@@ -903,3 +943,114 @@ class TestParticipantEpisodeHttpRoutes:
             json={"episode_id": "alice-1", "unknown": "value"},
         )
         assert response.status_code == 422
+
+    def test_status_route_returns_api_408_status_view(self):
+        client = self._build_client()
+        client.post(
+            "/participants/participant.alice/episodes/initialize",
+            headers=self._headers,
+            json={},
+        )
+
+        response = client.get(
+            "/participants/participant.alice/status",
+            headers=self._headers,
+        )
+
+        assert response.status_code == 200
+        view = ParticipantStatusViewModel.model_validate(response.json())
+        assert view.participant_address == "participant.alice"
+        assert view.episode_id == "participant.alice-episode-1"
+        assert view.episode_state is not None
+        assert view.episode_state.status == "running"
+
+    def test_status_route_scopes_open_operations_to_participant(self):
+        target = create_stub_target()
+        control_plane = RuntimeControlPlane(target)
+        control_plane.initialize_participant_episode("participant.alice")
+        control_plane.initialize_participant_episode("participant.bob")
+        control_plane._operations = {
+            "op-alice": _participant_operation_record("op-alice", "participant.alice"),
+            "op-bob": _participant_operation_record("op-bob", "participant.bob"),
+        }
+        client = TestClient(
+            create_control_plane_app(
+                control_plane,
+                security=_test_security(target.name),
+            )
+        )
+
+        response = client.get(
+            "/participants/participant.alice/status",
+            headers=self._headers,
+        )
+
+        assert response.status_code == 200
+        view = ParticipantStatusViewModel.model_validate(response.json())
+        assert view.open_operation_refs == ["op-alice"]
+
+    def test_history_route_returns_api_408_history_view(self):
+        client = self._build_client()
+        client.post(
+            "/participants/participant.alice/episodes/initialize",
+            headers=self._headers,
+            json={},
+        )
+
+        response = client.get(
+            "/participants/participant.alice/episodes/participant.alice-episode-1/history",
+            headers=self._headers,
+        )
+
+        assert response.status_code == 200
+        view = ParticipantHistoryViewModel.model_validate(response.json())
+        assert view.participant_address == "participant.alice"
+        assert view.episode_id == "participant.alice-episode-1"
+        assert [event.event_type for event in view.episode_history] == [
+            "episode_initialized",
+            "episode_running",
+        ]
+        assert view.completeness == "complete"
+
+    def test_context_route_returns_api_408_reference_view(self):
+        client = self._build_client()
+        client.post(
+            "/participants/participant.alice/episodes/initialize",
+            headers=self._headers,
+            json={},
+        )
+
+        response = client.get(
+            "/participants/participant.alice/context",
+            params={
+                "view_ref": "views.context.network-posture.v1",
+                "episode_id": "participant.alice-episode-1",
+                "payload_ref": "evidence.context.alice.network-posture",
+            },
+            headers=self._headers,
+        )
+
+        assert response.status_code == 200
+        view = ParticipantContextViewModel.model_validate(response.json())
+        assert view.participant_address == "participant.alice"
+        assert view.view_ref == "views.context.network-posture.v1"
+        assert view.derived_from_refs == ["runtime.snapshot.current"]
+        assert view.payload_ref == "evidence.context.alice.network-posture"
+
+    def test_retrieval_routes_return_404_for_unknown_participants(self):
+        client = self._build_client()
+
+        status = client.get("/participants/participant.unknown/status", headers=self._headers)
+        history = client.get(
+            "/participants/participant.unknown/episodes/episode-1/history",
+            headers=self._headers,
+        )
+        context = client.get(
+            "/participants/participant.unknown/context",
+            params={"view_ref": "views.context.network-posture.v1"},
+            headers=self._headers,
+        )
+
+        assert status.status_code == 404
+        assert history.status_code == 404
+        assert context.status_code == 404
