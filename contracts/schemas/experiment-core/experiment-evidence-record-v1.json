@@ -1,0 +1,713 @@
+{
+  "$defs": {
+    "ExperimentArtifactRefModel": {
+      "additionalProperties": false,
+      "description": "Reference to an artifact that supports a task, run, apparatus, or study.",
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "checksum": {
+          "$ref": "#/$defs/ExperimentChecksumModel"
+        },
+        "created_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Created At",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "media_type": {
+          "minLength": 1,
+          "title": "Media Type",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "protocol",
+            "metric-definition",
+            "scenario-snapshot",
+            "manifest",
+            "apparatus-evidence",
+            "observation",
+            "result",
+            "analysis",
+            "report",
+            "export",
+            "starter-file",
+            "evaluator",
+            "subtask",
+            "gold-step",
+            "milestone",
+            "human-assistance",
+            "scaffold",
+            "baseline",
+            "cost-resource-trace",
+            "other"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "satisfies_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentEvidenceSatisfactionReferenceModel"
+          },
+          "title": "Satisfies Refs",
+          "type": "array"
+        },
+        "sensitivity": {
+          "enum": [
+            "public",
+            "internal",
+            "restricted",
+            "redacted"
+          ],
+          "title": "Sensitivity",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "uri": {
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "role",
+        "media_type",
+        "uri",
+        "checksum",
+        "size_bytes",
+        "created_at",
+        "source",
+        "sensitivity"
+      ],
+      "title": "ExperimentArtifactRefModel",
+      "type": "object"
+    },
+    "ExperimentCaptureSpecReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to a declarative capture specification.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "capture-spec",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentCaptureSpecReferenceModel",
+      "type": "object"
+    },
+    "ExperimentChecksumModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha256"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{64}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha384"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{96}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha512"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{128}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "blake3"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{64}$"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Checksum metadata for an experiment-core artifact reference.",
+      "properties": {
+        "algorithm": {
+          "enum": [
+            "sha256",
+            "sha384",
+            "sha512",
+            "blake3"
+          ],
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "pattern": "^[A-Fa-f0-9]+$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "title": "ExperimentChecksumModel",
+      "type": "object"
+    },
+    "ExperimentEvidenceSatisfactionReferenceModel": {
+      "additionalProperties": false,
+      "description": "Evidence concept reference that an artifact claims to satisfy.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "evidence",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentEvidenceSatisfactionReferenceModel",
+      "type": "object"
+    },
+    "ExperimentRawEvidenceContentModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "content_uri": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            },
+            "required": [
+              "content_uri"
+            ]
+          },
+          "then": {
+            "properties": {
+              "content_checksum": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            },
+            "required": [
+              "content_checksum"
+            ]
+          }
+        }
+      ],
+      "anyOf": [
+        {
+          "properties": {
+            "artifact_ref": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "artifact_ref"
+          ]
+        },
+        {
+          "properties": {
+            "content_uri": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "content_uri"
+          ]
+        },
+        {
+          "properties": {
+            "payload_summary": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "payload_summary"
+          ]
+        }
+      ],
+      "description": "Raw captured payload reference or bounded summary for EXP-708 records.",
+      "properties": {
+        "artifact_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentArtifactRefModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "content_checksum": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentChecksumModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "content_uri": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content Uri"
+        },
+        "loss_disclosure": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Loss Disclosure"
+        },
+        "payload_summary": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Payload Summary"
+        }
+      },
+      "title": "ExperimentRawEvidenceContentModel",
+      "type": "object"
+    },
+    "ExperimentReferenceModel": {
+      "additionalProperties": false,
+      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "processor",
+            "backend",
+            "participant-implementation",
+            "scenario",
+            "scenario-snapshot",
+            "task",
+            "protocol",
+            "apparatus-context",
+            "run",
+            "metric-definition",
+            "result",
+            "study",
+            "manifest",
+            "profile",
+            "capability",
+            "capture-spec",
+            "evidence",
+            "evidence-record",
+            "derived-measure",
+            "measurement-channel",
+            "analysis-artifact",
+            "other"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentReferenceModel",
+      "type": "object"
+    },
+    "ExperimentTaskReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to an experiment task.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "task",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentTaskReferenceModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/experiment-evidence-record-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Raw captured EXP-708 evidence record, distinct from derived measures.",
+  "properties": {
+    "apparatus_context_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExperimentReferenceModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "capture_requirement_ref": {
+      "minLength": 1,
+      "title": "Capture Requirement Ref",
+      "type": "string"
+    },
+    "capture_spec_ref": {
+      "$ref": "#/$defs/ExperimentCaptureSpecReferenceModel"
+    },
+    "capture_window_ref": {
+      "minLength": 1,
+      "title": "Capture Window Ref",
+      "type": "string"
+    },
+    "captured_at": {
+      "format": "date-time",
+      "minLength": 1,
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+      "title": "Captured At",
+      "type": "string"
+    },
+    "evidence_kind": {
+      "enum": [
+        "artifact",
+        "observation",
+        "trace",
+        "telemetry",
+        "log",
+        "packet-capture",
+        "other"
+      ],
+      "title": "Evidence Kind",
+      "type": "string"
+    },
+    "evidence_record_id": {
+      "minLength": 1,
+      "title": "Evidence Record Id",
+      "type": "string"
+    },
+    "provenance_refs": {
+      "items": {
+        "$ref": "#/$defs/ExperimentReferenceModel"
+      },
+      "title": "Provenance Refs",
+      "type": "array"
+    },
+    "raw_content": {
+      "$ref": "#/$defs/ExperimentRawEvidenceContentModel"
+    },
+    "record_version": {
+      "minLength": 1,
+      "title": "Record Version",
+      "type": "string"
+    },
+    "redaction_state": {
+      "enum": [
+        "none",
+        "redacted",
+        "withheld"
+      ],
+      "title": "Redaction State",
+      "type": "string"
+    },
+    "run_ref": {
+      "$ref": "#/$defs/ExperimentReferenceModel"
+    },
+    "schema_version": {
+      "const": "experiment-evidence-record/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sensitivity": {
+      "enum": [
+        "public",
+        "internal",
+        "restricted",
+        "redacted"
+      ],
+      "title": "Sensitivity",
+      "type": "string"
+    },
+    "source_refs": {
+      "items": {
+        "$ref": "#/$defs/ExperimentReferenceModel"
+      },
+      "minItems": 1,
+      "title": "Source Refs",
+      "type": "array"
+    },
+    "task_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExperimentTaskReferenceModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "schema_version",
+    "evidence_record_id",
+    "record_version",
+    "capture_spec_ref",
+    "capture_requirement_ref",
+    "run_ref",
+    "source_refs",
+    "evidence_kind",
+    "captured_at",
+    "capture_window_ref",
+    "raw_content",
+    "sensitivity",
+    "redaction_state"
+  ],
+  "title": "ExperimentEvidenceRecordModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Evidence records must carry raw content as an artifact reference, content URI with checksum, or bounded payload summary; redacted/withheld records must disclose loss.",
+      "id": "evidence-record-raw-content-present",
+      "inputs": [
+        {
+          "contract_id": "experiment-evidence-record-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ExperimentEvidenceRecordModel._validate_evidence_record"
+    },
+    {
+      "description": "captured_at must be a valid RFC 3339 date-time.",
+      "id": "evidence-record-captured-at-valid",
+      "inputs": [
+        {
+          "contract_id": "experiment-evidence-record-v1",
+          "instance_path": "#/captured_at"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ExperimentEvidenceRecordModel._validate_evidence_record"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "experiment-evidence-record-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

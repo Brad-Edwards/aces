@@ -259,3 +259,6 @@ adrs:
   - id: ADR-063
     path: docs/decisions/adrs/adr-063-reference-emulation-backend.md
     pin: 7c82b434119b802f8acc7c23148811316b21754fac39798b5790ff5e65bb2415
+  - id: ADR-064
+    path: docs/decisions/adrs/adr-064-experiment-evidence-and-measure-contract-boundary.md
+    pin: 8bd179ba5c14c82b5998f9269d96a0c981cccb870c5b42bd27eb4b636b9c908b

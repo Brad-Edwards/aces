@@ -63,6 +63,9 @@ from .versions import (
     CONTROLLED_VOCABULARIES_SCHEMA_VERSION,
     EVALUATION_STATE_SCHEMA_VERSION,
     EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION,
+    EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION,
+    EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION,
+    EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION,
     EXPERIMENT_RUN_SCHEMA_VERSION,
     EXPERIMENT_STUDY_SCHEMA_VERSION,
     EXPERIMENT_TASK_SCHEMA_VERSION,
@@ -139,6 +142,9 @@ _BACKEND_CONCEPT_BINDING_SCOPES = frozenset(
         "capabilities.provisioner.supported_account_features",
         "capabilities.orchestrator.supported_sections",
         "capabilities.evaluator.supported_sections",
+        "capabilities.observation.supported_capture_kinds",
+        "capabilities.observation.supported_channel_kinds",
+        "capabilities.observation.supported_sealing_modes",
         "capabilities.participant_runtime.supported_participant_roles",
         "capabilities.participant_runtime.supported_behavior_features",
         "capabilities.participant_runtime.supported_interaction_features",
@@ -2155,11 +2161,52 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
         return self
 
 
+class ObservationCapabilitiesModel(ContractModel):
+    """EXP-715 backend observation and evidence-collection capability declaration."""
+
+    name: NonEmptyString
+    supported_capture_kinds: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_channel_kinds: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_evidence_contracts: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_media_types: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_sealing_modes: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supports_redaction: bool = False
+    supports_loss_disclosure: bool = False
+    supports_chain_of_custody: bool = False
+    constraints: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _validate_observation_capability(self) -> ObservationCapabilitiesModel:
+        _validate_unique_string_values("supported_capture_kinds", self.supported_capture_kinds)
+        _validate_unique_string_values("supported_channel_kinds", self.supported_channel_kinds)
+        _validate_unique_string_values("supported_evidence_contracts", self.supported_evidence_contracts)
+        _validate_unique_string_values("supported_media_types", self.supported_media_types)
+        _validate_unique_string_values("supported_sealing_modes", self.supported_sealing_modes)
+        _validate_controlled_vocabulary_terms(
+            "capabilities.observation.supported_capture_kinds",
+            self.supported_capture_kinds,
+        )
+        _validate_controlled_vocabulary_terms(
+            "capabilities.observation.supported_channel_kinds",
+            self.supported_channel_kinds,
+        )
+        _validate_controlled_vocabulary_terms(
+            "capabilities.observation.supported_sealing_modes",
+            self.supported_sealing_modes,
+        )
+        validate_backend_supported_contract_versions(self.supported_evidence_contracts)
+        for contract_id in self.supported_evidence_contracts:
+            if not contract_id.startswith("experiment-"):
+                raise ValueError("observation supported_evidence_contracts must be experiment contract ids")
+        return self
+
+
 class BackendCapabilitiesV2Model(ContractModel):
     provisioner: ProvisionerCapabilitiesModel
     orchestrator: OrchestratorCapabilitiesModel | None = None
     evaluator: EvaluatorCapabilitiesModel | None = None
     participant_runtime: ParticipantRuntimeCapabilitiesModel | None = None
+    observation: ObservationCapabilitiesModel | None = None
 
 
 class ProcessorManifestV2Model(ContractModel):
@@ -2419,12 +2466,16 @@ class ExperimentReferenceModel(ContractModel):
         "protocol",
         "apparatus-context",
         "run",
+        "metric-definition",
         "result",
         "study",
         "manifest",
         "profile",
         "capability",
+        "capture-spec",
         "evidence",
+        "evidence-record",
+        "derived-measure",
         "measurement-channel",
         "analysis-artifact",
         "other",
@@ -2734,6 +2785,84 @@ class ExperimentRunEvidenceArtifactReferenceModel(ExperimentEvidenceReferenceMod
         return json_schema
 
 
+class ExperimentCaptureSpecReferenceModel(ExperimentReferenceModel):
+    """Reference constrained to a declarative capture specification."""
+
+    ref_kind: Literal["capture-spec"]
+
+    @model_validator(mode="after")
+    def _validate_capture_spec_reference_scope(self) -> ExperimentCaptureSpecReferenceModel:
+        if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
+            raise ValueError("capture-spec references must not carry ref_digest or ref_path")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        properties = json_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("ref_digest", None)
+            properties.pop("ref_path", None)
+        return json_schema
+
+
+class ExperimentEvidenceRecordReferenceModel(ExperimentReferenceModel):
+    """Reference constrained to a raw captured evidence record."""
+
+    ref_kind: Literal["evidence-record"]
+
+    @model_validator(mode="after")
+    def _validate_evidence_record_reference_scope(self) -> ExperimentEvidenceRecordReferenceModel:
+        if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
+            raise ValueError("evidence-record references must not carry ref_digest or ref_path")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        properties = json_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("ref_digest", None)
+            properties.pop("ref_path", None)
+        return json_schema
+
+
+class ExperimentDerivedMeasureReferenceModel(ExperimentReferenceModel):
+    """Reference constrained to a derived measure or analysis output."""
+
+    ref_kind: Literal["derived-measure"]
+
+    @model_validator(mode="after")
+    def _validate_derived_measure_reference_scope(self) -> ExperimentDerivedMeasureReferenceModel:
+        if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
+            raise ValueError("derived-measure references must not carry ref_digest or ref_path")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        properties = json_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("ref_digest", None)
+            properties.pop("ref_path", None)
+        return json_schema
+
+
 class ExperimentMeasurementChannelReferenceModel(ExperimentReferenceModel):
     """Reference constrained to a declared measurement channel."""
 
@@ -3001,6 +3130,311 @@ class ExperimentValidityNoteModel(ContractModel):
     ]
     note: NonEmptyString
     mitigation: NonEmptyString | None = None
+
+
+class ExperimentCaptureWindowModel(ContractModel):
+    """Declarative scope/window over which evidence must be captured."""
+
+    window_id: NonEmptyString
+    window_kind: Literal["task", "run", "apparatus", "event", "interval", "manual"]
+    starts_at: Rfc3339DateTimeString | None = None
+    ends_at: Rfc3339DateTimeString | None = None
+    trigger_ref: ExperimentReferenceModel | None = None
+    description: NonEmptyString | None = None
+
+    @model_validator(mode="after")
+    def _validate_capture_window(self) -> ExperimentCaptureWindowModel:
+        if self.starts_at is None and self.ends_at is None and self.trigger_ref is None:
+            raise ValueError("capture windows must declare starts_at, ends_at, or trigger_ref")
+        if self.starts_at is not None and self.ends_at is not None:
+            starts_at = _parse_rfc3339_datetime("starts_at", self.starts_at)
+            ends_at = _parse_rfc3339_datetime("ends_at", self.ends_at)
+            if ends_at < starts_at:
+                raise ValueError("capture window ends_at must be greater than or equal to starts_at")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("anyOf", []).extend(
+            [
+                {"required": ["starts_at"], "properties": {"starts_at": {"not": {"type": "null"}}}},
+                {"required": ["ends_at"], "properties": {"ends_at": {"not": {"type": "null"}}}},
+                {"required": ["trigger_ref"], "properties": {"trigger_ref": {"not": {"type": "null"}}}},
+            ]
+        )
+        _add_aces_invariant(
+            json_schema,
+            "capture-window-interval-valid",
+            "Capture window ends_at must not precede starts_at when both timestamps are present.",
+            validator="aces_contracts.contracts.ExperimentCaptureWindowModel._validate_capture_window",
+            inputs=[{"contract_id": "experiment-capture-spec-v1", "instance_path": "#/capture_windows"}],
+        )
+        return json_schema
+
+
+class ExperimentCaptureRequirementModel(ContractModel):
+    """One evidence capture requirement inside a capture specification."""
+
+    requirement_id: NonEmptyString
+    title: NonEmptyString
+    capture_kind: Literal["artifact", "observation", "trace", "telemetry", "log", "packet-capture", "other"]
+    capture_scope: Literal["task", "run", "apparatus", "participant", "backend", "processor", "network", "service"]
+    channel_ref: ExperimentMeasurementChannelReferenceModel
+    window_refs: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    expected_media_types: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    required_artifact_roles: list[NonEmptyString] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
+    sensitivity: Literal["public", "internal", "restricted", "redacted"]
+    redaction_policy: NonEmptyString | None = None
+    integrity_requirements: list[NonEmptyString] = Field(min_length=1)
+    retention_policy: NonEmptyString | None = None
+    loss_disclosure_required: bool = True
+    notes: list[NonEmptyString] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_capture_requirement(self) -> ExperimentCaptureRequirementModel:
+        _validate_unique_string_values("window_refs", self.window_refs)
+        _validate_unique_string_values("expected_media_types", self.expected_media_types)
+        _validate_unique_string_values("required_artifact_roles", self.required_artifact_roles)
+        return self
+
+
+class ExperimentCaptureSpecModel(ContractModel):
+    """Declarative EXP-707 specification of what experiment evidence to capture."""
+
+    schema_version: Literal[EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION]
+    capture_spec_id: NonEmptyString
+    spec_version: NonEmptyString
+    title: NonEmptyString
+    description: NonEmptyString
+    scope_refs: list[ExperimentReferenceModel] = Field(min_length=1)
+    capture_windows: list[ExperimentCaptureWindowModel] = Field(min_length=1)
+    capture_requirements: dict[NonEmptyString, ExperimentCaptureRequirementModel] = Field(min_length=1)
+    validity_notes: list[ExperimentValidityNoteModel] = Field(default_factory=list)
+    artifact_refs: list[ExperimentArtifactRefModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_capture_spec(self) -> ExperimentCaptureSpecModel:
+        mismatches = [
+            requirement_key
+            for requirement_key, requirement in self.capture_requirements.items()
+            if requirement.requirement_id != requirement_key
+        ]
+        if mismatches:
+            joined = ", ".join(sorted(mismatches))
+            raise ValueError(f"capture_requirements keys must match embedded requirement_id: {joined}")
+        window_ids = {window.window_id for window in self.capture_windows}
+        missing_window_refs = sorted(
+            {
+                window_ref
+                for requirement in self.capture_requirements.values()
+                for window_ref in requirement.window_refs
+                if window_ref not in window_ids
+            }
+        )
+        if missing_window_refs:
+            joined = ", ".join(missing_window_refs)
+            raise ValueError(f"capture requirement window_refs must resolve to capture_windows: {joined}")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        _add_aces_invariant(
+            json_schema,
+            "capture-requirement-key-matches-requirement-id",
+            "Every capture_requirements object key must match the embedded requirement_id value, and window_refs "
+            "must resolve to declared capture_windows.",
+            validator="aces_contracts.contracts.ExperimentCaptureSpecModel._validate_capture_spec",
+            inputs=[{"contract_id": "experiment-capture-spec-v1", "instance_path": "#"}],
+        )
+        return json_schema
+
+
+class ExperimentRawEvidenceContentModel(ContractModel):
+    """Raw captured payload reference or bounded summary for EXP-708 records."""
+
+    artifact_ref: ExperimentArtifactRefModel | None = None
+    content_uri: NonEmptyString | None = None
+    content_checksum: ExperimentChecksumModel | None = None
+    payload_summary: NonEmptyString | None = None
+    loss_disclosure: NonEmptyString | None = None
+
+    @model_validator(mode="after")
+    def _validate_raw_content(self) -> ExperimentRawEvidenceContentModel:
+        if self.artifact_ref is None and self.content_uri is None and self.payload_summary is None:
+            raise ValueError("raw evidence content must include artifact_ref, content_uri, or payload_summary")
+        if self.content_uri is not None and self.content_checksum is None:
+            raise ValueError("content_uri raw evidence must include content_checksum")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("anyOf", []).extend(
+            [
+                {"required": ["artifact_ref"], "properties": {"artifact_ref": {"not": {"type": "null"}}}},
+                {"required": ["content_uri"], "properties": {"content_uri": {"not": {"type": "null"}}}},
+                {"required": ["payload_summary"], "properties": {"payload_summary": {"not": {"type": "null"}}}},
+            ]
+        )
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {"required": ["content_uri"], "properties": {"content_uri": {"not": {"type": "null"}}}},
+                "then": {
+                    "required": ["content_checksum"],
+                    "properties": {"content_checksum": {"not": {"type": "null"}}},
+                },
+            }
+        )
+        return json_schema
+
+
+class ExperimentEvidenceRecordModel(ContractModel):
+    """Raw captured EXP-708 evidence record, distinct from derived measures."""
+
+    schema_version: Literal[EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION]
+    evidence_record_id: NonEmptyString
+    record_version: NonEmptyString
+    capture_spec_ref: ExperimentCaptureSpecReferenceModel
+    capture_requirement_ref: NonEmptyString
+    run_ref: ExperimentReferenceModel
+    task_ref: ExperimentTaskReferenceModel | None = None
+    apparatus_context_ref: ExperimentReferenceModel | None = None
+    source_refs: list[ExperimentReferenceModel] = Field(min_length=1)
+    evidence_kind: Literal["artifact", "observation", "trace", "telemetry", "log", "packet-capture", "other"]
+    captured_at: Rfc3339DateTimeString
+    capture_window_ref: NonEmptyString
+    raw_content: ExperimentRawEvidenceContentModel
+    sensitivity: Literal["public", "internal", "restricted", "redacted"]
+    redaction_state: Literal["none", "redacted", "withheld"]
+    provenance_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_evidence_record(self) -> ExperimentEvidenceRecordModel:
+        _parse_rfc3339_datetime("captured_at", self.captured_at)
+        if self.redaction_state != "none" and self.raw_content.loss_disclosure is None:
+            raise ValueError("redacted or withheld evidence records must include raw_content.loss_disclosure")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        _add_aces_invariant(
+            json_schema,
+            "evidence-record-raw-content-present",
+            "Evidence records must carry raw content as an artifact reference, content URI with checksum, or bounded "
+            "payload summary; redacted/withheld records must disclose loss.",
+            validator="aces_contracts.contracts.ExperimentEvidenceRecordModel._validate_evidence_record",
+            inputs=[{"contract_id": "experiment-evidence-record-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "evidence-record-captured-at-valid",
+            "captured_at must be a valid RFC 3339 date-time.",
+            validator="aces_contracts.contracts.ExperimentEvidenceRecordModel._validate_evidence_record",
+            inputs=[{"contract_id": "experiment-evidence-record-v1", "instance_path": "#/captured_at"}],
+        )
+        return json_schema
+
+
+class ExperimentDerivedMeasureMethodModel(ContractModel):
+    """Method metadata for deriving measures from raw evidence."""
+
+    method_id: NonEmptyString
+    method_version: NonEmptyString
+    name: NonEmptyString
+    description: NonEmptyString | None = None
+    parameters: list[ExperimentParameterModel] = Field(default_factory=list)
+
+
+class ExperimentDerivedMeasureModel(ContractModel):
+    """EXP-709 derived measure/evaluation output computed from raw evidence."""
+
+    schema_version: Literal[EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION]
+    derived_measure_id: NonEmptyString
+    measure_version: NonEmptyString
+    measure_kind: Literal["metric", "evaluation", "score", "summary", "analysis-output", "other"]
+    metric_ref: ExperimentReferenceModel
+    method: ExperimentDerivedMeasureMethodModel
+    source_evidence_refs: list[ExperimentEvidenceRecordReferenceModel] = Field(min_length=1)
+    generated_at: Rfc3339DateTimeString
+    value_status: Literal["reported", "missing", "withheld", "not-applicable"]
+    value: str | int | float | bool | None = None
+    uncertainty: NonEmptyString | None = None
+    limitations: list[NonEmptyString] = Field(default_factory=list)
+    provenance_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_derived_measure(self) -> ExperimentDerivedMeasureModel:
+        _parse_rfc3339_datetime("generated_at", self.generated_at)
+        if self.value_status == "reported" and self.value is None:
+            raise ValueError("reported derived measures must include value")
+        if self.value_status != "reported" and self.value is not None:
+            raise ValueError("non-reported derived measures must not include value")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {
+                        "properties": {"value_status": {"const": "reported"}},
+                        "required": ["value_status"],
+                    },
+                    "then": {"required": ["value"], "properties": {"value": {"not": {"type": "null"}}}},
+                },
+                {
+                    "if": {
+                        "properties": {"value_status": {"enum": ["missing", "withheld", "not-applicable"]}},
+                        "required": ["value_status"],
+                    },
+                    "then": {"properties": {"value": {"type": "null"}}},
+                },
+            ]
+        )
+        _add_aces_invariant(
+            json_schema,
+            "derived-measure-reported-value-present",
+            "Reported derived measures must include a value; missing/withheld/not-applicable measures must not.",
+            validator="aces_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure",
+            inputs=[{"contract_id": "experiment-derived-measure-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "derived-measure-generated-at-valid",
+            "generated_at must be a valid RFC 3339 date-time.",
+            validator="aces_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure",
+            inputs=[{"contract_id": "experiment-derived-measure-v1", "instance_path": "#/generated_at"}],
+        )
+        return json_schema
 
 
 class ExperimentMetricDefinitionModel(ContractModel):
@@ -5494,6 +5928,9 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
+        "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_json_schema(),
+        "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_json_schema(),
+        "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_json_schema(),
         "experiment-run-v1": ExperimentRunModel.model_json_schema(),
         "experiment-study-v1": ExperimentStudyModel.model_json_schema(),
         "experiment-task-v1": ExperimentTaskModel.model_json_schema(),
@@ -5577,10 +6014,19 @@ __all__ = [
     "ExperimentApparatusContextModel",
     "ExperimentArtifactRefModel",
     "ExperimentBackendReferenceModel",
+    "ExperimentCaptureRequirementModel",
+    "ExperimentCaptureSpecModel",
+    "ExperimentCaptureSpecReferenceModel",
+    "ExperimentCaptureWindowModel",
     "ExperimentChecksumModel",
     "ExperimentClockContextModel",
     "ExperimentConditionAssignmentParameterModel",
     "ExperimentConditionAssignmentReferenceModel",
+    "ExperimentDerivedMeasureMethodModel",
+    "ExperimentDerivedMeasureModel",
+    "ExperimentDerivedMeasureReferenceModel",
+    "ExperimentEvidenceRecordModel",
+    "ExperimentEvidenceRecordReferenceModel",
     "ExperimentEvidenceReferenceModel",
     "ExperimentEvaluationProtocolModel",
     "ExperimentInvalidationModel",
@@ -5608,6 +6054,9 @@ __all__ = [
     "ExperimentUncertaintyMethodModel",
     "ExperimentValidityNoteModel",
     "EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION",
+    "EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION",
+    "EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION",
+    "EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION",
     "EXPERIMENT_RUN_SCHEMA_VERSION",
     "EXPERIMENT_STUDY_SCHEMA_VERSION",
     "EXPERIMENT_TASK_SCHEMA_VERSION",
@@ -5621,6 +6070,7 @@ __all__ = [
     "OPERATION_SCHEMA_VERSION",
     "OperationReceiptModel",
     "OperationStatusModel",
+    "ObservationCapabilitiesModel",
     "OrchestrationPlanModel",
     "OrchestratorCapabilitiesModel",
     "PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION",

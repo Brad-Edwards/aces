@@ -35,6 +35,17 @@
           ],
           "default": null
         },
+        "observation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObservationCapabilitiesModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "orchestrator": {
           "anyOf": [
             {
@@ -178,6 +189,99 @@
         "supported_sections"
       ],
       "title": "EvaluatorCapabilitiesModel",
+      "type": "object"
+    },
+    "ObservationCapabilitiesModel": {
+      "additionalProperties": false,
+      "description": "EXP-715 backend observation and evidence-collection capability declaration.",
+      "properties": {
+        "constraints": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Constraints",
+          "type": "object"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "supported_capture_kinds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Capture Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_channel_kinds": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Channel Kinds",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_evidence_contracts": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Evidence Contracts",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_media_types": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Media Types",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_sealing_modes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Sealing Modes",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supports_chain_of_custody": {
+          "default": false,
+          "title": "Supports Chain Of Custody",
+          "type": "boolean"
+        },
+        "supports_loss_disclosure": {
+          "default": false,
+          "title": "Supports Loss Disclosure",
+          "type": "boolean"
+        },
+        "supports_redaction": {
+          "default": false,
+          "title": "Supports Redaction",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "supported_capture_kinds",
+        "supported_channel_kinds",
+        "supported_evidence_contracts",
+        "supported_media_types",
+        "supported_sealing_modes"
+      ],
+      "title": "ObservationCapabilitiesModel",
       "type": "object"
     },
     "OrchestratorCapabilitiesModel": {
@@ -765,7 +869,10 @@
           "participant-shared-state-record-v1",
           "participant-joint-action-record-v1",
           "participant-time-management-context-v1",
-          "participant-outcome-report-v1"
+          "participant-outcome-report-v1",
+          "experiment-capture-spec-v1",
+          "experiment-evidence-record-v1",
+          "experiment-derived-measure-v1"
         ],
         "minLength": 1,
         "type": "string"

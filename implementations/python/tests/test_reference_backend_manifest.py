@@ -27,12 +27,13 @@ def test_manifest_infers_full_remote_control_plane_profile():
     assert profile_for_manifest(manifest) == BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE
 
 
-def test_manifest_declares_orchestrator_evaluator_participant_runtime():
+def test_manifest_declares_orchestrator_evaluator_participant_runtime_and_observation():
     manifest = create_reference_backend_manifest()
 
     assert manifest.has_orchestrator
     assert manifest.has_evaluator
     assert manifest.has_participant_runtime
+    assert manifest.has_observation
 
 
 def test_manifest_accepts_and_ignores_extra_config_kwargs():

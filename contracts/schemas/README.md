@@ -23,7 +23,8 @@ Current published schemas cover:
 - evaluation result envelopes
 - evaluation history streams
 - operation receipts and statuses
-- experiment-core task, run, apparatus-context, and study/collection contracts
+- experiment-core task, run, apparatus-context, study/collection, capture
+  specification, raw evidence, and derived measure contracts
 
 Current filenames still use `runtime` for some live-execution artifacts. That
 naming is preserved for compatibility while the repository migrates toward the
@@ -154,12 +155,17 @@ The `experiment-core` schema family publishes:
 - `experiment-apparatus-context-v1`
 - `experiment-run-v1`
 - `experiment-study-v1`
+- `experiment-capture-spec-v1`
+- `experiment-evidence-record-v1`
+- `experiment-derived-measure-v1`
 
 These schemas keep SDL scenario authoring, experiment task protocol, execution
-apparatus context, archival run provenance, and study/collection analysis
-separate. The normative invariant set lives in
-`specs/formal/experiment-core/`, and ADR-037 records the architectural
-boundary.
+apparatus context, archival run provenance, study/collection analysis,
+declarative capture requirements, raw evidence records, and derived
+measure/evaluation outputs separate. The normative invariant set lives in
+`specs/formal/experiment-core/`. ADR-055 records the original task/run/study
+boundary, and ADR-064 records the evidence/measure and backend observation
+capability extension.
 
 Schema-expressible invariants are encoded in the published schemas. In
 particular, task/run reference-kind constraints and invalidated-run
@@ -173,3 +179,8 @@ declare draft 2020-12 identity, and the annotation profile shape is published as
 `aces-semantic-invariants-v1` and checked during generation. Generic JSON Schema
 validation remains structural; consumers of experiment-core records must apply
 the named semantic validators before accepting records as ACES-conformant.
+
+The optional backend-manifest `capabilities.observation` block declares EXP-715
+observation/evidence collection support. Backends that declare it must also
+declare the published capture-spec, evidence-record, and derived-measure
+contracts that make the claim inspectable.

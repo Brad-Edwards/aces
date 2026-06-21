@@ -24,10 +24,15 @@
     "participant-shared-state-record-v1",
     "participant-joint-action-record-v1",
     "participant-time-management-context-v1",
-    "participant-outcome-report-v1"
+    "participant-outcome-report-v1",
+    "experiment-capture-spec-v1",
+    "experiment-evidence-record-v1",
+    "experiment-derived-measure-v1"
   ],
   "compatibility": {
-    "processors": ["aces-reference-processor"]
+    "processors": [
+      "aces-reference-processor"
+    ]
   },
   "realization_support": [
     {
@@ -41,7 +46,9 @@
         "workflow-feature",
         "workflow-state-predicate"
       ],
-      "supported_exact_requirement_kinds": ["declared-capability-match"],
+      "supported_exact_requirement_kinds": [
+        "declared-capability-match"
+      ],
       "disclosure_kinds": [
         "backend-manifest-v2",
         "operation-status-v1",
@@ -51,24 +58,84 @@
     }
   ],
   "concept_bindings": [
-    {"scope": "capabilities.provisioner.supported_node_types", "family": "assets"},
-    {"scope": "capabilities.provisioner.supported_os_families", "family": "assets"},
-    {"scope": "capabilities.provisioner.supported_content_types", "family": "tools-and-artifacts"},
-    {"scope": "capabilities.provisioner.supported_account_features", "family": "identities"},
-    {"scope": "capabilities.orchestrator.supported_sections", "family": "actions-and-events"},
-    {"scope": "capabilities.evaluator.supported_sections", "family": "observables"},
-    {"scope": "capabilities.participant_runtime.supported_participant_roles", "family": "identities"},
-    {"scope": "capabilities.participant_runtime.supported_behavior_features", "family": "actions-and-events"},
-    {"scope": "capabilities.participant_runtime.supported_interaction_features", "family": "relationships"}
+    {
+      "scope": "capabilities.provisioner.supported_node_types",
+      "family": "assets"
+    },
+    {
+      "scope": "capabilities.provisioner.supported_os_families",
+      "family": "assets"
+    },
+    {
+      "scope": "capabilities.provisioner.supported_content_types",
+      "family": "tools-and-artifacts"
+    },
+    {
+      "scope": "capabilities.provisioner.supported_account_features",
+      "family": "identities"
+    },
+    {
+      "scope": "capabilities.orchestrator.supported_sections",
+      "family": "actions-and-events"
+    },
+    {
+      "scope": "capabilities.evaluator.supported_sections",
+      "family": "observables"
+    },
+    {
+      "scope": "capabilities.participant_runtime.supported_participant_roles",
+      "family": "identities"
+    },
+    {
+      "scope": "capabilities.participant_runtime.supported_behavior_features",
+      "family": "actions-and-events"
+    },
+    {
+      "scope": "capabilities.participant_runtime.supported_interaction_features",
+      "family": "relationships"
+    },
+    {
+      "scope": "capabilities.observation.supported_capture_kinds",
+      "family": "provenance-and-evidence"
+    },
+    {
+      "scope": "capabilities.observation.supported_channel_kinds",
+      "family": "apparatus-declarations"
+    },
+    {
+      "scope": "capabilities.observation.supported_sealing_modes",
+      "family": "provenance-and-evidence"
+    }
   ],
   "constraints": {},
   "capabilities": {
     "provisioner": {
       "name": "stub-provisioner",
-      "supported_node_types": ["switch", "vm"],
-      "supported_os_families": ["freebsd", "linux", "macos", "other", "windows"],
-      "supported_content_types": ["dataset", "directory", "file"],
-      "supported_account_features": ["auth_method", "disabled", "groups", "home", "mail", "shell", "spn"],
+      "supported_node_types": [
+        "switch",
+        "vm"
+      ],
+      "supported_os_families": [
+        "freebsd",
+        "linux",
+        "macos",
+        "other",
+        "windows"
+      ],
+      "supported_content_types": [
+        "dataset",
+        "directory",
+        "file"
+      ],
+      "supported_account_features": [
+        "auth_method",
+        "disabled",
+        "groups",
+        "home",
+        "mail",
+        "shell",
+        "spn"
+      ],
       "max_total_nodes": null,
       "supports_acls": true,
       "supports_accounts": true,
@@ -76,7 +143,13 @@
     },
     "orchestrator": {
       "name": "stub-orchestrator",
-      "supported_sections": ["events", "injects", "scripts", "stories", "workflows"],
+      "supported_sections": [
+        "events",
+        "injects",
+        "scripts",
+        "stories",
+        "workflows"
+      ],
       "supports_workflows": true,
       "supports_condition_refs": true,
       "supports_inject_bindings": true,
@@ -91,19 +164,34 @@
         "switch",
         "timeouts"
       ],
-      "supported_workflow_state_predicates": ["attempt-counts", "outcome-matching"],
+      "supported_workflow_state_predicates": [
+        "attempt-counts",
+        "outcome-matching"
+      ],
       "constraints": {}
     },
     "evaluator": {
       "name": "stub-evaluator",
-      "supported_sections": ["conditions", "evaluations", "goals", "metrics", "objectives", "tlos"],
+      "supported_sections": [
+        "conditions",
+        "evaluations",
+        "goals",
+        "metrics",
+        "objectives",
+        "tlos"
+      ],
       "supports_scoring": true,
       "supports_objectives": true,
       "constraints": {}
     },
     "participant_runtime": {
       "name": "stub-participant-runtime",
-      "supported_participant_roles": ["blue", "green", "red", "white"],
+      "supported_participant_roles": [
+        "blue",
+        "green",
+        "red",
+        "white"
+      ],
       "supported_behavior_features": [
         "action_contracts",
         "attribution_support",
@@ -116,8 +204,48 @@
         "state_transitions",
         "temporal_contracts"
       ],
-      "supported_interaction_features": ["contention", "coordination", "interference", "shared_state_change"],
+      "supported_interaction_features": [
+        "contention",
+        "coordination",
+        "interference",
+        "shared_state_change"
+      ],
       "feature_support": [],
+      "constraints": {}
+    },
+    "observation": {
+      "name": "stub-observation",
+      "supported_capture_kinds": [
+        "artifact",
+        "log",
+        "observation",
+        "telemetry",
+        "trace"
+      ],
+      "supported_channel_kinds": [
+        "backend-log",
+        "evaluation-history",
+        "file-artifact",
+        "participant-observation",
+        "runtime-snapshot",
+        "workflow-history"
+      ],
+      "supported_evidence_contracts": [
+        "experiment-capture-spec-v1",
+        "experiment-derived-measure-v1",
+        "experiment-evidence-record-v1"
+      ],
+      "supported_media_types": [
+        "application/json",
+        "text/plain"
+      ],
+      "supported_sealing_modes": [
+        "digest",
+        "immutable-store"
+      ],
+      "supports_redaction": true,
+      "supports_loss_disclosure": true,
+      "supports_chain_of_custody": false,
       "constraints": {}
     }
   }
