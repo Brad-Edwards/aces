@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ from aces_backend_protocols.capabilities import (
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
     BackendManifest,
     OrchestratorCapabilities,
+    ParticipantFeatureSupport,
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
     participant_runtime_capability_contract_gaps,
@@ -125,6 +127,7 @@ def test_backend_manifest_v2_declares_participant_capability_dimensions():
         "interference",
         "shared_state_change",
     ]
+    assert participant_runtime["feature_support"] == []
 
     model = BackendManifestV2Model.model_validate(payload)
     assert model.capabilities.participant_runtime is not None
@@ -187,6 +190,89 @@ def test_participant_runtime_capabilities_validate_api_405_vocabularies():
             supported_behavior_features=frozenset({"custom_feature"}),
             supported_interaction_features=frozenset({"coordination"}),
         )
+
+
+def test_participant_feature_support_validates_api_407_declarations():
+    declaration = ParticipantFeatureSupport(
+        feature="coordination",
+        support_level=ParticipantFeatureSupportLevel.EXACT,
+    )
+
+    assert declaration.support_level == ParticipantFeatureSupportLevel.EXACT
+
+    with pytest.raises(ValueError, match="governed participant behavior or interaction feature"):
+        ParticipantFeatureSupport(
+            feature="custom_feature",
+            support_level=ParticipantFeatureSupportLevel.EXACT,
+        )
+
+    with pytest.raises(ValueError, match="disclosure_refs"):
+        ParticipantFeatureSupport(
+            feature="coordination",
+            support_level=ParticipantFeatureSupportLevel.BOUNDED,
+        )
+
+    unsupported_declaration = ParticipantFeatureSupport(
+        feature="coordination",
+        support_level=ParticipantFeatureSupportLevel.UNSUPPORTED,
+        disclosure_refs=("disclosures.coordination.unsupported.v1",),
+    )
+    with pytest.raises(ValueError, match="supported feature unsupported"):
+        ParticipantRuntimeCapabilities(
+            name="participant-runtime",
+            supported_participant_roles=frozenset({"blue"}),
+            supported_behavior_features=frozenset({"action_contracts"}),
+            supported_interaction_features=frozenset({"coordination"}),
+            feature_support=(unsupported_declaration,),
+        )
+
+
+def test_backend_manifest_payload_renders_api_407_feature_support_entries():
+    manifest = create_stub_manifest()
+    assert manifest.participant_runtime is not None
+    participant_runtime = replace(
+        manifest.participant_runtime,
+        feature_support=(
+            ParticipantFeatureSupport(
+                feature="behavior_history",
+                support_level=ParticipantFeatureSupportLevel.BOUNDED,
+                constraint_refs=("constraints.behavior-history.retention-window",),
+                disclosure_refs=("disclosures.behavior-history.bounded.v1",),
+            ),
+            ParticipantFeatureSupport(
+                feature="coordination",
+                support_level=ParticipantFeatureSupportLevel.EXACT,
+            ),
+        ),
+    )
+    capabilities = replace(manifest.capabilities, participant_runtime=participant_runtime)
+    manifest = BackendManifest(
+        identity=manifest.identity,
+        supported_contract_versions=manifest.supported_contract_versions,
+        compatibility=manifest.compatibility,
+        realization_support=manifest.realization_support,
+        concept_bindings=manifest.concept_bindings,
+        constraints=manifest.constraints,
+        capabilities=capabilities,
+    )
+
+    payload = backend_manifest_payload(manifest)
+
+    assert payload["capabilities"]["participant_runtime"]["feature_support"] == [
+        {
+            "feature": "behavior_history",
+            "support_level": "bounded",
+            "constraint_refs": ["constraints.behavior-history.retention-window"],
+            "disclosure_refs": ["disclosures.behavior-history.bounded.v1"],
+        },
+        {
+            "feature": "coordination",
+            "support_level": "exact",
+            "constraint_refs": [],
+            "disclosure_refs": [],
+        },
+    ]
+    BackendManifestV2Model.model_validate(payload)
 
 
 def test_participant_runtime_capability_evidence_covers_standard_vocabularies():
