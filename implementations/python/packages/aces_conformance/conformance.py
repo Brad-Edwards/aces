@@ -31,6 +31,9 @@ from aces_contracts.contracts import (
     ParticipantEpisodeStateModel,
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
+    ParticipantLifecycleEventModel,
+    ParticipantObservationEnvelopeModel,
+    ParticipantSharedStateRecordModel,
     ProvisioningPlanModel,
     RuntimeSnapshotEnvelopeModel,
     WorkflowExecutionStateModel,
@@ -162,6 +165,9 @@ _MODEL_VALIDATORS = {
     "workflow-result-envelope-v1": WorkflowExecutionStateModel.model_validate,
     "evaluation-result-envelope-v1": EvaluationResultStateModel.model_validate,
     "participant-episode-state-envelope-v1": ParticipantEpisodeStateModel.model_validate,
+    "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_validate,
+    "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_validate,
+    "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_validate,
 }
 
 
