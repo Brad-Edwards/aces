@@ -318,7 +318,8 @@ def _safe_tar_members(
             raise SDLParseError(f"Links are not allowed in OCI bundle tar: {member.name!r}")
         if not (member.isfile() or member.isdir()):
             raise SDLParseError(f"Unsupported tar member type in OCI bundle: {member.name!r}")
-        member.mode &= 0o777  # drop setuid/setgid/sticky bits
+        # Drop setuid/setgid/sticky bits.
+        member.mode &= 0o777
         safe.append(member)
     return safe
 
@@ -347,7 +348,8 @@ def _extract_bundle_to_cache(
             safe_members = _safe_tar_members(tar, cache_dir)
             try:
                 tar.extractall(cache_dir, members=safe_members, filter="data")
-            except TypeError:  # Python 3.11.0–3.11.3 lack the PEP 706 filter keyword
+            # Python 3.11.0–3.11.3 lack the PEP 706 filter keyword.
+            except TypeError:
                 tar.extractall(cache_dir, members=safe_members)
     # Enforce the root-file containment contract on EVERY return path, including
     # the cache-hit fast path: a stale cache (e.g. one populated by an earlier
