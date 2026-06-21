@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import base64
+import io
 import json
 import shutil
+import tarfile
 import textwrap
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import aces_sdl.module_registry as module_registry
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -362,6 +365,102 @@ def test_local_import_lockfile_is_checkout_independent(tmp_path: Path):
     stale = runner.invoke(app, ["sdl", "verify-imports", str(checkout_b / "root.yaml")])
     assert stale.exit_code != 0
     assert "stale" in stale.output.lower()
+
+
+def test_local_imports_cannot_escape_base_dir(tmp_path: Path):
+    _local_module(tmp_path / "shared.yaml")
+    root = _root_import(
+        tmp_path / "scenario" / "root.yaml",
+        "source: local:../shared.yaml\n            namespace: shared",
+    )
+
+    with pytest.raises(SDLParseError, match="escapes base directory"):
+        parse_sdl_file(root)
+
+
+def test_publishing_local_bundle_rejects_import_escape(tmp_path: Path):
+    _local_module(tmp_path / "shared.yaml")
+    root = _write(
+        tmp_path / "scenario" / "root.yaml",
+        """
+        name: root
+        version: 1.0.0
+        module:
+          id: acme/root
+          version: 1.0.0
+          exports:
+            nodes: [vm]
+            infrastructure: [vm]
+        imports:
+          - source: local:../shared.yaml
+            namespace: shared
+        nodes:
+          vm:
+            type: vm
+            os: linux
+            resources: {ram: 1 gib, cpu: 1}
+        infrastructure:
+          vm: 1
+        """,
+    )
+
+    with pytest.raises(SDLParseError, match="escapes base directory"):
+        publish_module_to_oci_layout(root, output_dir=tmp_path / "dist")
+
+
+def test_oci_registry_requests_use_bounded_timeouts(monkeypatch: pytest.MonkeyPatch):
+    responses = [b'{"ok": true}', b"bundle-bytes"]
+    timeouts: list[float | None] = []
+
+    class _Response:
+        def __init__(self, payload: bytes) -> None:
+            self._payload = payload
+
+        def __enter__(self) -> _Response:
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            del exc_type, exc, tb
+
+        def read(self) -> bytes:
+            return self._payload
+
+    def fake_urlopen(request, *, timeout=None):
+        del request
+        timeouts.append(timeout)
+        return _Response(responses.pop(0))
+
+    monkeypatch.setattr(module_registry, "urlopen", fake_urlopen)
+
+    assert module_registry._json_request("https://registry.example/v2/acme/tags/list") == {"ok": True}
+    assert module_registry._bytes_request("https://registry.example/v2/acme/blobs/sha256:abc") == b"bundle-bytes"
+    assert timeouts == [module_registry._HTTP_TIMEOUT_SECONDS, module_registry._HTTP_TIMEOUT_SECONDS]
+
+
+def test_oci_bundle_rejects_root_file_escape(tmp_path: Path):
+    with pytest.raises(SDLParseError, match="Invalid OCI root_file path"):
+        module_registry._extract_bundle_to_cache(
+            bundle_bytes=b"",
+            manifest_digest="abc123",
+            root_file="../module.yaml",
+            base_dir=tmp_path,
+        )
+
+
+def test_oci_bundle_rejects_unsafe_tar_members(tmp_path: Path):
+    bundle_buffer = io.BytesIO()
+    with tarfile.open(fileobj=bundle_buffer, mode="w:gz") as tar:
+        payload = b"name: unsafe\n"
+        member = tarfile.TarInfo(name="../escape.yaml")
+        member.size = len(payload)
+        tar.addfile(member, io.BytesIO(payload))
+    bundle_buffer.seek(0)
+
+    with (
+        tarfile.open(fileobj=bundle_buffer, mode="r:gz") as tar,
+        pytest.raises(SDLParseError, match="Path traversal detected"),
+    ):
+        module_registry._safe_tar_members(tar, tmp_path / "cache")
 
 
 def test_signed_oci_import_resolution_and_publish_cli(tmp_path: Path):
