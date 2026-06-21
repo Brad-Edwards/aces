@@ -33,6 +33,7 @@ from .control_plane_api_models import (
     _request_fingerprint,
     _snapshot_model,
 )
+from .control_plane_api_participant_retrieval import register_participant_retrieval_routes
 from .control_plane_security import (
     ControlPlaneIdentity,
     ControlPlaneRole,
@@ -162,6 +163,7 @@ def create_control_plane_app(
     _register_operation_routes(app, control_plane)
     _register_workflow_routes(app, control_plane)
     _register_participant_episode_routes(app, control_plane)
+    register_participant_retrieval_routes(app, control_plane)
     return app
 
 

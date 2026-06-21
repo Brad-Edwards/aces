@@ -36,12 +36,14 @@ def execute_participant_action(
         return existing
     operation_id = str(uuid4())
     submitted_at = _utc_now()
+    target_address = getattr(request, "participant_address", "")
     status = OperationStatus(
         operation_id=operation_id,
         domain=RuntimeDomain.PARTICIPANT,
         state=OperationState.RUNNING,
         submitted_at=submitted_at,
         updated_at=submitted_at,
+        changed_addresses=[target_address] if isinstance(target_address, str) and target_address else [],
     )
     receipt = OperationReceipt(
         operation_id=operation_id,

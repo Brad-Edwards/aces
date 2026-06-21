@@ -5,13 +5,22 @@ from __future__ import annotations
 import textwrap
 
 from aces_backend_stubs.stubs import create_stub_components, create_stub_manifest
+from aces_contracts.contracts import (
+    ParticipantContextViewModel,
+    ParticipantHistoryViewModel,
+    ParticipantStatusViewModel,
+)
+from aces_contracts.runtime_state import RuntimeSnapshot
 from aces_processor.models import iter_participant_episode_snapshot_violations
 
 from aces.backends.stubs import create_stub_target
 from aces.core.runtime.compiler import compile_runtime_model
 from aces.core.runtime.control_plane import RuntimeControlPlane
+from aces.core.runtime.control_plane_store import ControlPlaneOperationRecord
 from aces.core.runtime.models import (
+    OperationReceipt,
     OperationState,
+    OperationStatus,
     ParticipantEpisodeTerminalReason,
     RuntimeDomain,
 )
@@ -22,6 +31,66 @@ from aces.core.sdl import parse_sdl
 
 def _scenario(yaml_str: str):
     return parse_sdl(textwrap.dedent(yaml_str))
+
+
+def _episode_state(participant_address: str, episode_id: str) -> dict[str, object]:
+    return {
+        "state_schema_version": "participant-episode-state/v1",
+        "participant_address": participant_address,
+        "episode_id": episode_id,
+        "sequence_number": 0,
+        "status": "running",
+        "terminal_reason": None,
+        "initialized_at": "2026-06-05T10:00:00Z",
+        "updated_at": "2026-06-05T10:00:00Z",
+        "terminated_at": None,
+        "last_control_action": "initialize",
+        "previous_episode_id": None,
+    }
+
+
+def _episode_history_event(participant_address: str, episode_id: str) -> dict[str, object]:
+    return {
+        "event_type": "episode_running",
+        "timestamp": "2026-06-05T10:00:00Z",
+        "participant_address": participant_address,
+        "episode_id": episode_id,
+        "sequence_number": 0,
+        "terminal_reason": None,
+        "control_action": None,
+        "details": {},
+    }
+
+
+def _behavior_history_event(participant_address: str, episode_id: str) -> dict[str, object]:
+    return {
+        "event_type": "action_attempted",
+        "timestamp": "2026-06-05T10:00:01Z",
+        "participant_address": participant_address,
+        "episode_id": episode_id,
+        "action_instance_id": f"{participant_address}.action-1",
+        "details": {},
+    }
+
+
+def _participant_operation_record(operation_id: str, participant_address: str) -> ControlPlaneOperationRecord:
+    submitted_at = "2026-06-05T10:00:00Z"
+    return ControlPlaneOperationRecord(
+        receipt=OperationReceipt(
+            operation_id=operation_id,
+            domain=RuntimeDomain.PARTICIPANT,
+            submitted_at=submitted_at,
+            accepted=True,
+        ),
+        status=OperationStatus(
+            operation_id=operation_id,
+            domain=RuntimeDomain.PARTICIPANT,
+            state=OperationState.RUNNING,
+            submitted_at=submitted_at,
+            updated_at=submitted_at,
+            changed_addresses=[participant_address],
+        ),
+    )
 
 
 def test_control_plane_submits_provisioning_and_updates_snapshot():
@@ -299,3 +368,105 @@ class TestParticipantEpisodeControlPlane:
             "episode_initialized",
             "episode_running",
         ]
+
+    def test_status_view_projects_current_participant_episode_state(self):
+        control_plane = RuntimeControlPlane(create_stub_target())
+        control_plane.initialize_participant_episode("participant.alice")
+
+        view = control_plane.get_participant_status_view("participant.alice")
+
+        assert isinstance(view, ParticipantStatusViewModel)
+        assert view.participant_address == "participant.alice"
+        assert view.episode_id == "participant.alice-episode-1"
+        assert view.source_snapshot_ref == "runtime.snapshot.current"
+        assert view.episode_state is not None
+        assert view.episode_state.status == "running"
+        episode_state = view.episode_state.model_dump(mode="json")
+        assert "participant_address" not in episode_state
+        assert "episode_id" not in episode_state
+
+    def test_status_view_scopes_open_operations_to_participant(self):
+        snapshot = RuntimeSnapshot(
+            participant_episode_results={
+                "participant.alice": _episode_state("participant.alice", "episode-1"),
+                "participant.bob": _episode_state("participant.bob", "episode-1"),
+            }
+        )
+        control_plane = RuntimeControlPlane(create_stub_target(), initial_snapshot=snapshot)
+        control_plane._operations = {
+            "op-alice": _participant_operation_record("op-alice", "participant.alice"),
+            "op-bob": _participant_operation_record("op-bob", "participant.bob"),
+        }
+
+        view = control_plane.get_participant_status_view("participant.alice")
+
+        assert view is not None
+        assert view.open_operation_refs == ["op-alice"]
+
+    def test_history_view_filters_to_one_participant_episode_and_projects_scope(self):
+        snapshot = RuntimeSnapshot(
+            participant_episode_results={
+                "participant.alice": _episode_state("participant.alice", "episode-1"),
+                "participant.bob": _episode_state("participant.bob", "episode-1"),
+            },
+            participant_episode_history={
+                "participant.alice": [
+                    _episode_history_event("participant.alice", "episode-1"),
+                    _episode_history_event("participant.alice", "episode-2"),
+                ],
+                "participant.bob": [_episode_history_event("participant.bob", "episode-1")],
+            },
+            participant_behavior_history={
+                "participant.alice": [
+                    _behavior_history_event("participant.alice", "episode-1"),
+                    _behavior_history_event("participant.alice", "episode-2"),
+                ],
+                "participant.bob": [_behavior_history_event("participant.bob", "episode-1")],
+            },
+        )
+        control_plane = RuntimeControlPlane(create_stub_target(), initial_snapshot=snapshot)
+
+        view = control_plane.get_participant_history_view("participant.alice", "episode-1")
+
+        assert isinstance(view, ParticipantHistoryViewModel)
+        assert view.participant_address == "participant.alice"
+        assert view.episode_id == "episode-1"
+        assert view.completeness == "complete"
+        assert len(view.episode_history) == 1
+        assert len(view.behavior_history) == 1
+        for event in [*view.episode_history, *view.behavior_history]:
+            payload = event.model_dump(mode="json")
+            assert "participant_address" not in payload
+            assert "episode_id" not in payload
+
+    def test_context_view_is_reference_and_provenance_only(self):
+        control_plane = RuntimeControlPlane(create_stub_target())
+        control_plane.initialize_participant_episode("participant.alice")
+
+        view = control_plane.get_participant_context_view(
+            "participant.alice",
+            view_ref="views.context.network-posture.v1",
+            episode_id="participant.alice-episode-1",
+            derivation_basis_ref="rules.context.network-posture.v1",
+            payload_ref="evidence.context.alice.network-posture",
+        )
+
+        assert isinstance(view, ParticipantContextViewModel)
+        assert view.participant_address == "participant.alice"
+        assert view.episode_id == "participant.alice-episode-1"
+        assert view.view_ref == "views.context.network-posture.v1"
+        assert view.derived_from_refs == ["runtime.snapshot.current"]
+        assert view.payload_ref == "evidence.context.alice.network-posture"
+
+    def test_participant_retrieval_views_return_none_for_unknown_participant(self):
+        control_plane = RuntimeControlPlane(create_stub_target())
+
+        assert control_plane.get_participant_status_view("participant.unknown") is None
+        assert control_plane.get_participant_history_view("participant.unknown", "episode-1") is None
+        assert (
+            control_plane.get_participant_context_view(
+                "participant.unknown",
+                view_ref="views.context.network-posture.v1",
+            )
+            is None
+        )
