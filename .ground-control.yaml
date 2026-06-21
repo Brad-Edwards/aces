@@ -16,6 +16,11 @@ requirements:
     - GOV-918
     - RUN-311
     - ADR-012
+routing:
+  enabled: true
+  default_provider: claude
+  default_fallback: parent
+  stages: {}
 sonarcloud:
   project_key: Brad-Edwards_aces
   organization: brad-edwards
