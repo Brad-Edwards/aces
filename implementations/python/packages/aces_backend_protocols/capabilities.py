@@ -11,7 +11,7 @@ from aces_contracts.apparatus import (
 )
 from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
 from aces_contracts.manifest_authority import validate_backend_supported_contract_versions
-from aces_contracts.vocabulary import WorkflowFeature, WorkflowStatePredicateFeature
+from aces_contracts.vocabulary import ParticipantFeatureSupportLevel, WorkflowFeature, WorkflowStatePredicateFeature
 
 PARTICIPANT_RUNTIME_ROLE_SCOPE = "capabilities.participant_runtime.supported_participant_roles"
 PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = "capabilities.participant_runtime.supported_behavior_features"
@@ -195,6 +195,66 @@ class EvaluatorCapabilities:
             raise ValueError("EvaluatorCapabilities must support scoring, objectives, or both")
 
 
+def _validate_unique_non_empty_strings(field_name: str, values: tuple[str, ...]) -> None:
+    if any(not value.strip() for value in values):
+        raise ValueError(f"{field_name} must not contain empty strings")
+    if len(set(values)) != len(values):
+        raise ValueError(f"{field_name} must not contain duplicate values")
+
+
+def _validate_participant_feature_support_term(feature: str) -> None:
+    errors: list[str] = []
+    for scope in (PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE, PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE):
+        try:
+            validate_controlled_vocabulary_scope_values(scope, (feature,))
+        except ValueError as exc:
+            errors.append(str(exc))
+            continue
+        return
+    raise ValueError(
+        "ParticipantFeatureSupport.feature must be a governed participant behavior or interaction feature "
+        f"term, or match the governed extension pattern; got {feature!r}; "
+        f"validation details: {'; '.join(errors)}"
+    )
+
+
+@dataclass(frozen=True)
+class ParticipantFeatureSupport:
+    """API-407 per-feature participant runtime support declaration."""
+
+    feature: str
+    support_level: ParticipantFeatureSupportLevel | str
+    constraint_refs: tuple[str, ...] = ()
+    disclosure_refs: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.feature.strip():
+            raise ValueError("ParticipantFeatureSupport.feature must be non-empty")
+        _validate_participant_feature_support_term(self.feature)
+
+        try:
+            support_level = (
+                self.support_level
+                if isinstance(self.support_level, ParticipantFeatureSupportLevel)
+                else ParticipantFeatureSupportLevel(str(self.support_level))
+            )
+        except ValueError as exc:
+            raise ValueError("ParticipantFeatureSupport.support_level must be a valid support level") from exc
+
+        constraint_refs = tuple(self.constraint_refs)
+        disclosure_refs = tuple(self.disclosure_refs)
+        _validate_unique_non_empty_strings("ParticipantFeatureSupport.constraint_refs", constraint_refs)
+        _validate_unique_non_empty_strings("ParticipantFeatureSupport.disclosure_refs", disclosure_refs)
+        if support_level != ParticipantFeatureSupportLevel.EXACT and not disclosure_refs:
+            raise ValueError(
+                "ParticipantFeatureSupport disclosure_refs must be non-empty when support_level is below exact"
+            )
+
+        object.__setattr__(self, "support_level", support_level)
+        object.__setattr__(self, "constraint_refs", constraint_refs)
+        object.__setattr__(self, "disclosure_refs", disclosure_refs)
+
+
 @dataclass(frozen=True)
 class ParticipantRuntimeCapabilities:
     """Participant-episode lifecycle support declaration.
@@ -217,6 +277,7 @@ class ParticipantRuntimeCapabilities:
     supported_participant_roles: frozenset[str] = frozenset()
     supported_behavior_features: frozenset[str] = frozenset()
     supported_interaction_features: frozenset[str] = frozenset()
+    feature_support: tuple[ParticipantFeatureSupport, ...] = ()
     constraints: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -252,6 +313,22 @@ class ParticipantRuntimeCapabilities:
             PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
             self.supported_interaction_features,
         )
+        feature_support = tuple(
+            entry if isinstance(entry, ParticipantFeatureSupport) else ParticipantFeatureSupport(**entry)
+            for entry in self.feature_support
+        )
+        feature_names = tuple(entry.feature for entry in feature_support)
+        _validate_unique_non_empty_strings("ParticipantRuntimeCapabilities.feature_support", feature_names)
+        supported_features = self.supported_behavior_features | self.supported_interaction_features
+        for entry in feature_support:
+            if (
+                entry.support_level == ParticipantFeatureSupportLevel.UNSUPPORTED
+                and entry.feature in supported_features
+            ):
+                raise ValueError(
+                    "ParticipantRuntimeCapabilities.feature_support cannot declare a supported feature unsupported"
+                )
+        object.__setattr__(self, "feature_support", feature_support)
 
 
 @dataclass(frozen=True)

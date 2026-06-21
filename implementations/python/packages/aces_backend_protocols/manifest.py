@@ -9,6 +9,7 @@ from aces_contracts.contracts import (
     BackendCompatibilityModel,
     BackendManifestV2Model,
     ConceptBindingEntryModel,
+    ParticipantFeatureSupportModel,
     RealizationSupportDeclarationModel,
 )
 from aces_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
@@ -97,6 +98,15 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                     "supported_interaction_features": sorted(
                         manifest.participant_runtime.supported_interaction_features
                     ),
+                    "feature_support": [
+                        ParticipantFeatureSupportModel(
+                            feature=entry.feature,
+                            support_level=entry.support_level,
+                            constraint_refs=list(entry.constraint_refs),
+                            disclosure_refs=list(entry.disclosure_refs),
+                        )
+                        for entry in manifest.participant_runtime.feature_support
+                    ],
                     "constraints": dict(manifest.participant_runtime.constraints),
                 }
                 if manifest.participant_runtime is not None
