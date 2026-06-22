@@ -16,6 +16,7 @@ from aces_contracts.contracts import (
     ExperimentDerivedMeasureModel,
     ExperimentEvidenceRecordModel,
     ExperimentRunModel,
+    ExperimentRunTraceabilityModel,
     ExperimentStudyModel,
     ExperimentTaskModel,
     ParticipantImplementationManifestModel,
@@ -494,6 +495,61 @@ def test_experiment_evidence_measure_schemas_publish_separate_surfaces():
         "generated_at",
         "value_status",
     }
+
+
+def test_experiment_run_schema_publishes_canonical_provenance_surface():
+    generated = schema_bundle()
+    run_schema = generated["experiment-run-v1"]
+
+    assert run_schema["properties"]["traceability"]["$ref"] == "#/$defs/ExperimentRunTraceabilityModel"
+    assert run_schema["properties"]["realized_form_disclosures"]["items"]["$ref"] == (
+        "#/$defs/ExperimentRealizedFormDisclosureModel"
+    )
+    assert "traceability" in run_schema["required"]
+
+    traceability_schema = run_schema["$defs"]["ExperimentRunTraceabilityModel"]
+    assert traceability_schema["additionalProperties"] is False
+    assert set(traceability_schema["required"]) >= {"capture_spec_refs", "evidence_record_refs"}
+    assert "run-traceability-refs-unique" in _invariant_ids(traceability_schema)
+
+    disclosure_schema = run_schema["$defs"]["ExperimentRealizedFormDisclosureModel"]
+    assert disclosure_schema["additionalProperties"] is False
+    assert "realized-form-disclosure-substantive" in _invariant_ids(disclosure_schema)
+    assert any(
+        rule.get("if", {}).get("properties", {}).get("basis", {}).get("const") == "processor-realized"
+        for rule in disclosure_schema["allOf"]
+    )
+
+
+def test_experiment_run_provenance_contracts_reject_boundary_blurring():
+    payload = _experiment_fixture("experiment-run-v1")
+
+    missing_traceability = deepcopy(payload)
+    del missing_traceability["traceability"]
+    _assert_schema_and_model_reject("experiment-run-v1", missing_traceability)
+
+    duplicate_evidence_record = deepcopy(payload)
+    duplicate_evidence_record["traceability"]["evidence_record_refs"].append(
+        deepcopy(duplicate_evidence_record["traceability"]["evidence_record_refs"][0])
+    )
+    with pytest.raises(ValidationError, match="traceability evidence_record_refs must not contain duplicates"):
+        ExperimentRunTraceabilityModel.model_validate(duplicate_evidence_record["traceability"])
+
+    unsupported_realized_form = deepcopy(payload)
+    unsupported_realized_form["realized_form_disclosures"][0]["realized_ref"] = None
+    unsupported_realized_form["realized_form_disclosures"][0]["realized_value_summary"] = None
+    _assert_schema_and_model_reject("experiment-run-v1", unsupported_realized_form)
+
+    processor_disclosure_by_backend = deepcopy(payload)
+    processor_disclosure_by_backend["realized_form_disclosures"][0]["realized_by_ref"]["ref_kind"] = "backend"
+    _assert_schema_and_model_reject("experiment-run-v1", processor_disclosure_by_backend)
+
+    disclosure_without_traced_evidence = deepcopy(payload)
+    disclosure_without_traced_evidence["realized_form_disclosures"][0]["evidence_refs"][0]["ref_id"] = (
+        "untraced-evidence-record"
+    )
+    with pytest.raises(ValidationError, match="realized_form_disclosures evidence_refs must be listed"):
+        ExperimentRunModel.model_validate(disclosure_without_traced_evidence)
 
 
 def test_experiment_evidence_measure_contracts_reject_boundary_blurring():

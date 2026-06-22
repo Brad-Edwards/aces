@@ -429,6 +429,41 @@
       "title": "ExperimentArtifactRefModel",
       "type": "object"
     },
+    "ExperimentCaptureSpecReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to a declarative capture specification.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "capture-spec",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentCaptureSpecReferenceModel",
+      "type": "object"
+    },
     "ExperimentChecksumModel": {
       "additionalProperties": false,
       "allOf": [
@@ -580,6 +615,76 @@
         "time_domain"
       ],
       "title": "ExperimentClockContextModel",
+      "type": "object"
+    },
+    "ExperimentDerivedMeasureReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to a derived measure or analysis output.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "derived-measure",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentDerivedMeasureReferenceModel",
+      "type": "object"
+    },
+    "ExperimentEvidenceRecordReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to a raw captured evidence record.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "evidence-record",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentEvidenceRecordReferenceModel",
       "type": "object"
     },
     "ExperimentEvidenceSatisfactionReferenceModel": {
@@ -992,6 +1097,197 @@
       "title": "ExperimentParameterModel",
       "type": "object"
     },
+    "ExperimentRealizedFormDisclosureModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "basis": {
+                "const": "processor-realized"
+              }
+            },
+            "required": [
+              "basis"
+            ]
+          },
+          "then": {
+            "properties": {
+              "realized_by_ref": {
+                "properties": {
+                  "ref_kind": {
+                    "const": "processor"
+                  }
+                },
+                "required": [
+                  "ref_kind"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "basis": {
+                "const": "backend-realized"
+              }
+            },
+            "required": [
+              "basis"
+            ]
+          },
+          "then": {
+            "properties": {
+              "realized_by_ref": {
+                "properties": {
+                  "ref_kind": {
+                    "const": "backend"
+                  }
+                },
+                "required": [
+                  "ref_kind"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "anyOf": [
+        {
+          "properties": {
+            "realized_ref": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "realized_ref"
+          ]
+        },
+        {
+          "properties": {
+            "realized_value_summary": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "realized_value_summary"
+          ]
+        }
+      ],
+      "description": "Disclosure of one realized form chosen for an underspecified run concern.",
+      "properties": {
+        "authored_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentReferenceModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "basis": {
+          "enum": [
+            "author-declared",
+            "processor-realized",
+            "backend-realized",
+            "operator-supplied",
+            "observed"
+          ],
+          "title": "Basis",
+          "type": "string"
+        },
+        "concern_id": {
+          "minLength": 1,
+          "title": "Concern Id",
+          "type": "string"
+        },
+        "concern_kind": {
+          "enum": [
+            "scenario-module",
+            "processor-selection",
+            "backend-selection",
+            "participant-implementation",
+            "apparatus-configuration",
+            "parameter-default",
+            "stochastic-control",
+            "measurement-channel",
+            "capture-window",
+            "other"
+          ],
+          "title": "Concern Kind",
+          "type": "string"
+        },
+        "disclosure": {
+          "minLength": 1,
+          "title": "Disclosure",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentEvidenceRecordReferenceModel"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "realized_by_ref": {
+          "$ref": "#/$defs/ExperimentReferenceModel"
+        },
+        "realized_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentReferenceModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "realized_value_summary": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Realized Value Summary"
+        }
+      },
+      "required": [
+        "concern_id",
+        "concern_kind",
+        "basis",
+        "realized_by_ref",
+        "disclosure"
+      ],
+      "title": "ExperimentRealizedFormDisclosureModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "Every realized-form disclosure must name a realized reference or value summary and use the right processor/backend realization authority for processor-realized and backend-realized concerns.",
+          "id": "realized-form-disclosure-substantive",
+          "inputs": [
+            {
+              "contract_id": "experiment-run-v1",
+              "instance_path": "#/realized_form_disclosures"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.ExperimentRealizedFormDisclosureModel._validate_realized_form_disclosure"
+        }
+      ]
+    },
     "ExperimentReferenceModel": {
       "additionalProperties": false,
       "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
@@ -1230,6 +1526,70 @@
       ],
       "title": "ExperimentRunEvidenceArtifactReferenceModel",
       "type": "object"
+    },
+    "ExperimentRunTraceabilityModel": {
+      "additionalProperties": false,
+      "description": "Canonical run provenance links across capture, evidence, measures, and claims.",
+      "properties": {
+        "capture_spec_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentCaptureSpecReferenceModel"
+          },
+          "minItems": 1,
+          "title": "Capture Spec Refs",
+          "type": "array"
+        },
+        "claim_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentReferenceModel"
+          },
+          "title": "Claim Refs",
+          "type": "array"
+        },
+        "derived_measure_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentDerivedMeasureReferenceModel"
+          },
+          "title": "Derived Measure Refs",
+          "type": "array"
+        },
+        "evidence_record_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentEvidenceRecordReferenceModel"
+          },
+          "minItems": 1,
+          "title": "Evidence Record Refs",
+          "type": "array"
+        },
+        "notes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "capture_spec_refs",
+        "evidence_record_refs"
+      ],
+      "title": "ExperimentRunTraceabilityModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "Run provenance traceability references must be duplicate-free, and claim refs must be grounded by at least one derived measure ref.",
+          "id": "run-traceability-refs-unique",
+          "inputs": [
+            {
+              "contract_id": "experiment-run-v1",
+              "instance_path": "#/traceability"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.ExperimentRunTraceabilityModel._validate_run_traceability"
+        }
+      ]
     },
     "ExperimentScenarioSnapshotReferenceModel": {
       "additionalProperties": false,
@@ -1774,6 +2134,13 @@
       ],
       "default": null
     },
+    "realized_form_disclosures": {
+      "items": {
+        "$ref": "#/$defs/ExperimentRealizedFormDisclosureModel"
+      },
+      "title": "Realized Form Disclosures",
+      "type": "array"
+    },
     "result_summaries": {
       "additionalProperties": {
         "$ref": "#/$defs/ExperimentResultSummaryModel"
@@ -1833,6 +2200,9 @@
     "task_ref": {
       "$ref": "#/$defs/ExperimentTaskReferenceModel"
     },
+    "traceability": {
+      "$ref": "#/$defs/ExperimentRunTraceabilityModel"
+    },
     "used_refs": {
       "items": {
         "$ref": "#/$defs/ExperimentReferenceModel"
@@ -1855,6 +2225,7 @@
     "clock_context",
     "run_status",
     "outcome_status",
+    "traceability",
     "evidence_artifacts",
     "result_summaries"
   ],
@@ -1888,6 +2259,18 @@
     {
       "description": "Participant implementation apparatus components must resolve to run-level participant provenance.",
       "id": "participant-implementation-provenance-resolves",
+      "inputs": [
+        {
+          "contract_id": "experiment-run-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ExperimentRunModel._validate_archival_run"
+    },
+    {
+      "description": "Every realized-form disclosure evidence ref must also appear in the run traceability evidence refs.",
+      "id": "realized-form-evidence-refs-traced",
       "inputs": [
         {
           "contract_id": "experiment-run-v1",
