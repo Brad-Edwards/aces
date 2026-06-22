@@ -836,6 +836,30 @@ def test_experiment_core_rejects_under_specified_evidence_records():
         ExperimentEvidenceRecordModel.model_validate(redacted_without_loss_disclosure)
 
 
+def test_experiment_core_rejects_under_specified_derived_measures():
+    payload = _experiment_fixture("experiment-derived-measure-v1")
+
+    reported_without_value = deepcopy(payload)
+    reported_without_value["value_status"] = "reported"
+    reported_without_value.pop("value", None)
+    with pytest.raises(ValidationError, match="reported derived measures must include value"):
+        ExperimentDerivedMeasureModel.model_validate(reported_without_value)
+
+    non_reported_with_value = deepcopy(payload)
+    non_reported_with_value["value_status"] = "withheld"
+    non_reported_with_value["value"] = True
+    with pytest.raises(ValidationError, match="non-reported derived measures must not include value"):
+        ExperimentDerivedMeasureModel.model_validate(non_reported_with_value)
+
+    invalid_generated_at = deepcopy(payload)
+    invalid_generated_at["generated_at"] = "not-a-timestamp"
+    _assert_schema_and_model_reject("experiment-derived-measure-v1", invalid_generated_at)
+
+    empty_source_evidence_refs = deepcopy(payload)
+    empty_source_evidence_refs["source_evidence_refs"] = []
+    _assert_schema_and_model_reject("experiment-derived-measure-v1", empty_source_evidence_refs)
+
+
 def test_experiment_core_rejects_under_specified_task_disclosure_surfaces():
     payload = _experiment_fixture("experiment-task-v1")
 

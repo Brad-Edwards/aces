@@ -17,4 +17,5 @@ preflight-guardrails
 issue-88-evidence-measure-preflight-guardrails
 issue-233-exp-707-capture-spec-preflight-guardrails
 issue-234-exp-708-evidence-record-preflight-guardrails
+issue-235-exp-709-derived-measure-preflight-guardrails
 ```
