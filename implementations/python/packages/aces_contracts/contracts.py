@@ -3607,7 +3607,9 @@ class ExperimentRealizedFormDisclosureModel(ContractModel):
             "realized-form-disclosure-substantive",
             "Every realized-form disclosure must name a realized reference or value summary and use the right "
             "processor/backend realization authority for processor-realized and backend-realized concerns.",
-            validator="aces_contracts.contracts.ExperimentRealizedFormDisclosureModel._validate_realized_form_disclosure",
+            validator=(
+                "aces_contracts.contracts.ExperimentRealizedFormDisclosureModel._validate_realized_form_disclosure"
+            ),
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/realized_form_disclosures"}],
         )
         return json_schema
