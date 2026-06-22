@@ -757,6 +757,29 @@ def test_experiment_core_rejects_under_specified_capture_specs():
     _assert_schema_and_model_reject("experiment-capture-spec-v1", under_specified_window)
 
 
+def test_experiment_core_rejects_under_specified_evidence_records():
+    payload = _experiment_fixture("experiment-evidence-record-v1")
+
+    content_uri_without_checksum = deepcopy(payload)
+    content_uri_without_checksum["raw_content"].pop("content_checksum", None)
+    with pytest.raises(ValidationError, match="content_checksum"):
+        ExperimentEvidenceRecordModel.model_validate(content_uri_without_checksum)
+
+    empty_source_refs = deepcopy(payload)
+    empty_source_refs["source_refs"] = []
+    _assert_schema_and_model_reject("experiment-evidence-record-v1", empty_source_refs)
+
+    invalid_captured_at = deepcopy(payload)
+    invalid_captured_at["captured_at"] = "not-a-timestamp"
+    _assert_schema_and_model_reject("experiment-evidence-record-v1", invalid_captured_at)
+
+    redacted_without_loss_disclosure = deepcopy(payload)
+    redacted_without_loss_disclosure["redaction_state"] = "redacted"
+    redacted_without_loss_disclosure["raw_content"].pop("loss_disclosure", None)
+    with pytest.raises(ValidationError, match="loss_disclosure"):
+        ExperimentEvidenceRecordModel.model_validate(redacted_without_loss_disclosure)
+
+
 def test_experiment_core_rejects_under_specified_task_disclosure_surfaces():
     payload = _experiment_fixture("experiment-task-v1")
 
