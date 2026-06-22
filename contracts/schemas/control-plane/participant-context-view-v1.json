@@ -1,9 +1,259 @@
 {
+  "$defs": {
+    "ParticipantContextComparabilityModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "comparability_class": {
+                "enum": [
+                  "portable_with_disclosed_weakening",
+                  "backend_specific_non_comparable"
+                ]
+              }
+            },
+            "required": [
+              "comparability_class"
+            ]
+          },
+          "then": {
+            "properties": {
+              "backend_disclosure_refs": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "backend_disclosure_refs"
+            ]
+          }
+        }
+      ],
+      "description": "Explicit comparability claim for a SEM-214 context view.",
+      "properties": {
+        "backend_disclosure_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Backend Disclosure Refs",
+          "type": "array"
+        },
+        "comparability_class": {
+          "enum": [
+            "portable_equivalent",
+            "portable_with_disclosed_weakening",
+            "backend_specific_non_comparable"
+          ],
+          "title": "Comparability Class",
+          "type": "string"
+        },
+        "comparison_basis_ref": {
+          "minLength": 1,
+          "title": "Comparison Basis Ref",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "comparability_class",
+        "comparison_basis_ref",
+        "limitations"
+      ],
+      "title": "ParticipantContextComparabilityModel",
+      "type": "object"
+    },
+    "ParticipantContextSourceLayerModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "temporal_relation": {
+                "const": "bounded_staleness"
+              }
+            },
+            "required": [
+              "temporal_relation"
+            ]
+          },
+          "then": {
+            "properties": {
+              "freshness_basis_ref": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "freshness_basis_ref"
+            ]
+          }
+        }
+      ],
+      "description": "One governed source layer consumed by a SEM-214 context view.",
+      "properties": {
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "freshness_basis_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Freshness Basis Ref"
+        },
+        "observation_point": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observation Point"
+        },
+        "provenance_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provenance Refs",
+          "type": "array"
+        },
+        "ref": {
+          "minLength": 1,
+          "title": "Ref",
+          "type": "string"
+        },
+        "source_id": {
+          "minLength": 1,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_layer": {
+          "enum": [
+            "source_snapshot",
+            "participant_observation",
+            "participant_behavior_history",
+            "participant_episode_state",
+            "participant_status_view",
+            "participant_history_view",
+            "evidence_record",
+            "derived_measure",
+            "control_plane_operation"
+          ],
+          "title": "Source Layer",
+          "type": "string"
+        },
+        "temporal_relation": {
+          "enum": [
+            "same_observation_point",
+            "bounded_staleness",
+            "historical_replay"
+          ],
+          "title": "Temporal Relation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "source_layer",
+        "ref",
+        "temporal_relation",
+        "evidence_refs",
+        "provenance_refs"
+      ],
+      "title": "ParticipantContextSourceLayerModel",
+      "type": "object"
+    },
+    "ParticipantContextTransformationModel": {
+      "additionalProperties": false,
+      "description": "Governed transformation relation for a SEM-214 context view.",
+      "properties": {
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "input_source_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Input Source Ids",
+          "type": "array"
+        },
+        "output_semantics_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Semantics Ref"
+        },
+        "transformation_rule_ref": {
+          "minLength": 1,
+          "title": "Transformation Rule Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "transformation_rule_ref",
+        "description",
+        "input_source_ids"
+      ],
+      "title": "ParticipantContextTransformationModel",
+      "type": "object"
+    }
+  },
   "$id": "https://aces.dev/schemas/participant-context-view-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "API-408 derived operational context view (reference-and-provenance only).",
+  "description": "API-408 derived operational context view with SEM-214 semantics.",
   "properties": {
+    "audience_scope": {
+      "enum": [
+        "participant_visible",
+        "operator_visible",
+        "evaluator_visible",
+        "auditor_visible"
+      ],
+      "title": "Audience Scope",
+      "type": "string"
+    },
+    "comparability": {
+      "$ref": "#/$defs/ParticipantContextComparabilityModel"
+    },
     "derivation_basis_ref": {
       "anyOf": [
         {
@@ -39,6 +289,15 @@
       "default": null,
       "title": "Episode Id"
     },
+    "evidence_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Evidence Refs",
+      "type": "array"
+    },
     "generated_at": {
       "format": "date-time",
       "minLength": 1,
@@ -54,9 +313,24 @@
       "title": "Marking Definition Refs",
       "type": "array"
     },
+    "meaning_ref": {
+      "minLength": 1,
+      "title": "Meaning Ref",
+      "type": "string"
+    },
+    "observation_point": {
+      "minLength": 1,
+      "title": "Observation Point",
+      "type": "string"
+    },
     "participant_address": {
       "minLength": 1,
       "title": "Participant Address",
+      "type": "string"
+    },
+    "participant_scope": {
+      "const": "participant_local",
+      "title": "Participant Scope",
       "type": "string"
     },
     "payload_ref": {
@@ -72,6 +346,15 @@
       "default": null,
       "title": "Payload Ref"
     },
+    "provenance_refs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Provenance Refs",
+      "type": "array"
+    },
     "redaction_policy_ref": {
       "anyOf": [
         {
@@ -85,10 +368,30 @@
       "default": null,
       "title": "Redaction Policy Ref"
     },
+    "semantic_limitations": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Semantic Limitations",
+      "type": "array"
+    },
+    "source_layers": {
+      "items": {
+        "$ref": "#/$defs/ParticipantContextSourceLayerModel"
+      },
+      "minItems": 1,
+      "title": "Source Layers",
+      "type": "array"
+    },
     "source_snapshot_ref": {
       "minLength": 1,
       "title": "Source Snapshot Ref",
       "type": "string"
+    },
+    "transformation": {
+      "$ref": "#/$defs/ParticipantContextTransformationModel"
     },
     "view_id": {
       "minLength": 1,
@@ -112,7 +415,17 @@
     "generated_at",
     "source_snapshot_ref",
     "view_ref",
+    "meaning_ref",
+    "participant_scope",
+    "audience_scope",
+    "observation_point",
     "derived_from_refs",
+    "source_layers",
+    "transformation",
+    "comparability",
+    "evidence_refs",
+    "provenance_refs",
+    "semantic_limitations",
     "visibility_projection_ref"
   ],
   "title": "ParticipantContextViewModel",

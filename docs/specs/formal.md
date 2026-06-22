@@ -16,7 +16,7 @@ formal artifacts are warranted.
 - **Runtime Contracts** (`specs/formal/runtime-contracts/`) -- Result/evaluation contracts
 - **Participant Semantics** (`specs/formal/participant-semantics/`) -- Participant
   action, observation, interaction, visibility, causality, temporal behavior,
-  and outcome-interpretation semantics
+  derived context-view, and outcome-interpretation semantics
 - **Participant Runtime** (`specs/formal/participant-runtime/`) -- Participant
   runtime state/history, observable action lifecycle, shared operational state,
   and concurrent execution semantics

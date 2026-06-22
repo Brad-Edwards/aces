@@ -9,11 +9,13 @@
   "participant_scope": "participant_local",
   "audience_scope": "participant_visible",
   "observation_point": "episode-step:tick42",
-  "derived_from_refs": [],
+  "derived_from_refs": [
+    "snapshots.run-778.tick42"
+  ],
   "source_layers": [
     {
       "source_id": "snapshot-tick42",
-      "source_layer": "source_snapshot",
+      "source_layer": "global_runtime_state",
       "ref": "snapshots.run-778.tick42",
       "temporal_relation": "same_observation_point",
       "observation_point": "episode-step:tick42",

@@ -933,6 +933,22 @@ class TestParticipantEpisodeHttpRoutes:
         )
         assert response.status_code == 401
 
+    def test_retrieval_routes_require_authenticated_identity(self):
+        client = self._build_client()
+
+        status = client.get("/participants/participant.alice/status")
+        history = client.get(
+            "/participants/participant.alice/episodes/participant.alice-episode-1/history",
+        )
+        context = client.get(
+            "/participants/participant.alice/context",
+            params={"view_ref": "views.context.network-posture.v1"},
+        )
+
+        assert status.status_code == 401
+        assert history.status_code == 401
+        assert context.status_code == 401
+
     def test_routes_reject_unknown_body_fields(self):
         """Closed-world request bodies — unknown fields must be rejected."""
         client = self._build_client()
@@ -1012,7 +1028,7 @@ class TestParticipantEpisodeHttpRoutes:
         ]
         assert view.completeness == "complete"
 
-    def test_context_route_returns_api_408_reference_view(self):
+    def test_context_route_returns_api_408_sem214_view(self):
         client = self._build_client()
         client.post(
             "/participants/participant.alice/episodes/initialize",
@@ -1026,6 +1042,11 @@ class TestParticipantEpisodeHttpRoutes:
                 "view_ref": "views.context.network-posture.v1",
                 "episode_id": "participant.alice-episode-1",
                 "payload_ref": "evidence.context.alice.network-posture",
+                "meaning_ref": "attacker.override",
+                "audience_scope": "audience_neutral",
+                "observation_point": "future-state",
+                "comparability_class": "backend_specific_non_comparable",
+                "backend_disclosure_ref": "attacker.disclosure",
             },
             headers=self._headers,
         )
@@ -1035,6 +1056,15 @@ class TestParticipantEpisodeHttpRoutes:
         assert view.participant_address == "participant.alice"
         assert view.view_ref == "views.context.network-posture.v1"
         assert view.derived_from_refs == ["runtime.snapshot.current"]
+        assert view.meaning_ref == "views.context.network-posture.v1"
+        assert view.participant_scope == "participant_local"
+        assert view.audience_scope == "participant_visible"
+        assert view.observation_point == "participant.alice-episode-1"
+        assert view.source_layers[0].source_layer == "source_snapshot"
+        assert view.source_layers[0].evidence_refs == ["runtime.snapshot.current"]
+        assert view.transformation.transformation_rule_ref == "views.context.network-posture.v1"
+        assert view.comparability.comparability_class == "portable_equivalent"
+        assert view.comparability.backend_disclosure_refs == []
         assert view.payload_ref == "evidence.context.alice.network-posture"
 
     def test_retrieval_routes_return_404_for_unknown_participants(self):
