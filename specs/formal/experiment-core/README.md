@@ -2,7 +2,7 @@
 
 This domain specifies the EXP-701 through EXP-705 experiment-core contract
 boundary plus the EXP-707, EXP-708, EXP-709, and EXP-715 evidence/measure
-extension:
+extension and the EXP-710, EXP-720, and EXP-722 run provenance extension:
 
 - `experiment-task-v1`
 - `experiment-apparatus-context-v1`
@@ -12,6 +12,8 @@ extension:
 - `experiment-evidence-record-v1`
 - `experiment-derived-measure-v1`
 - optional `backend-manifest-v2` `capabilities.observation`
+- canonical run traceability and realized-form disclosures inside
+  `experiment-run-v1`
 
 The contracts describe cyber range experiment artifacts. They do not implement
 execution, storage, scheduling, APIs, or analysis engines.
@@ -37,7 +39,9 @@ Rationale:
 - Normative prose: this directory.
 - Architecture decisions:
   `docs/decisions/adrs/adr-055-experiment-core-contract-boundary.md` and
-  `docs/decisions/adrs/adr-064-experiment-evidence-and-measure-contract-boundary.md`.
+  `docs/decisions/adrs/adr-064-experiment-evidence-and-measure-contract-boundary.md`,
+  and
+  `docs/decisions/adrs/adr-065-experiment-run-provenance-contract-boundary.md`.
 - Machine-readable schemas: `contracts/schemas/experiment-core/`.
 - Contract source: `implementations/python/packages/aces_contracts/contracts.py`.
 - Schema generation: `tools/generate_contract_schemas.py`.
@@ -53,8 +57,8 @@ contract/path set; the annotation shape is published as
 Examples include metric key equality, task/run protocol binding, run time
 ordering, result-evidence reference resolution, capture-requirement key
 resolution, raw evidence content disclosure, derived-measure source evidence
-requirements, study metric grounding, and manifest-selection and
-manifest-payload consistency.
+requirements, run provenance traceability, realized-form disclosure, study
+metric grounding, and manifest-selection and manifest-payload consistency.
 
 ## Definitions
 
@@ -142,6 +146,40 @@ evidence artifacts satisfy the task and metric evidence requirements, either by
 artifact id or by an artifact `satisfies_refs` entry. If a task or metric
 evidence requirement carries digest or path metadata, the matching run artifact
 MUST satisfy those fields with its concrete checksum and URI/path.
+
+### Run Traceability
+
+Run traceability is the EXP-710 path from the run to the evidence and claims
+that interpret it. The `experiment-run-v1` `traceability` block binds:
+
+- capture specification refs;
+- raw evidence-record refs;
+- derived-measure refs;
+- claim, result, report, or analysis refs;
+- optional notes for human review.
+
+Traceability belongs in the run because the run is the record that knows the
+task, scenario snapshot, apparatus, evidence, result summaries, and generated
+artifacts together. It is not a separate graph service and not an alternative
+run schema.
+
+### Realized Form Disclosure
+
+Realized-form disclosure is the EXP-722 record of concrete forms chosen for
+concerns left open by the authored scenario, task, or apparatus declaration.
+Each disclosure binds:
+
+- a stable concern id and concern kind;
+- the realization basis, such as processor-realized or backend-realized;
+- the processor, backend, operator, or observation reference that made or
+  recorded the realization;
+- the authored reference when one exists;
+- either a realized reference or a realized value summary;
+- disclosure prose and optional evidence-record refs.
+
+Realized-form disclosures are part of run provenance. They are not authored
+scenario meaning, are not raw evidence records, and are not derived measures or
+results.
 
 ### Capture Specification
 
@@ -287,6 +325,15 @@ Studies carry accountable analysis context:
     treated as raw evidence.
 17. Backends that declare `capabilities.observation` MUST declare the published
     experiment evidence contracts that make the observation claim inspectable.
+18. `experiment-run-v1` is the canonical run provenance record. ACES MUST NOT
+    publish a parallel run-provenance root schema for the same archival run
+    facts unless a later ADR supersedes this boundary.
+19. Run traceability MUST link at least one capture specification and at least
+    one evidence record. Claim refs MUST be grounded by derived-measure refs.
+20. Realized-form disclosures MUST carry a realized reference or a realized
+    value summary. Processor-realized disclosures MUST be attributed to a
+    processor reference, and backend-realized disclosures MUST be attributed to
+    a backend reference.
 
 ### Provenance
 
@@ -368,6 +415,8 @@ Studies carry accountable analysis context:
 19. Observation capability terms MUST be validated through the governed
     concept-authority scopes for capture kinds, channel kinds, and sealing
     modes.
+20. Realized-form disclosure evidence refs MUST be present in the containing
+    run's traceability evidence-record refs.
 
 ### Closed-World Contracts
 

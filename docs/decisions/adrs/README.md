@@ -109,6 +109,7 @@ adr-061-published-schema-evolution-policy
 adr-062-concept-authority-catalog-governance-gate
 adr-063-reference-emulation-backend
 adr-064-experiment-evidence-and-measure-contract-boundary
+adr-065-experiment-run-provenance-contract-boundary
 ```
 
 | ADR | Title | Status | Date |
@@ -178,3 +179,4 @@ adr-064-experiment-evidence-and-measure-contract-boundary
 | [062](adr-062-concept-authority-catalog-governance-gate.md) | Concept-Authority Catalog Governance Gate | accepted | 2026-06-14 |
 | [063](adr-063-reference-emulation-backend.md) | Reference Emulation Backend | accepted | 2026-06-20 |
 | [064](adr-064-experiment-evidence-and-measure-contract-boundary.md) | Experiment Evidence and Measure Contract Boundary | accepted | 2026-06-21 |
+| [065](adr-065-experiment-run-provenance-contract-boundary.md) | Experiment Run Provenance Contract Boundary | accepted | 2026-06-22 |

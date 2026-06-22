@@ -165,13 +165,18 @@ declarative capture requirements, raw evidence records, and derived
 measure/evaluation outputs separate. The normative invariant set lives in
 `specs/formal/experiment-core/`. ADR-055 records the original task/run/study
 boundary, and ADR-064 records the evidence/measure and backend observation
-capability extension.
+capability extension. ADR-065 records `experiment-run-v1` as the canonical run
+provenance record with required traceability links and realized-form
+disclosures.
 
 Schema-expressible invariants are encoded in the published schemas. In
 particular, task/run reference-kind constraints and invalidated-run
 requirements are part of `experiment-task-v1` and `experiment-run-v1`, while
 identifier uniqueness for metrics, apparatus components, result summaries,
 study members, and study factors is represented with keyed object maps.
+Run traceability and realized-form disclosure invariants keep claims grounded
+in evidence/derived-measure refs and keep realized choices distinct from
+authored scenario meaning and result values.
 Cross-artifact or graph invariants that standard JSON Schema cannot express are
 published under the ACES semantic-invariant profile with `x-aces-invariants`
 entries that name the validator and input contract paths. The generated schemas

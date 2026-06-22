@@ -61,6 +61,11 @@ contracts are archival design artifacts for scientific experiment records; they
 do not add runtime execution, capture, storage, scheduling, statistical engines,
 or API behavior by themselves.
 
+`experiment-run-v1` is the canonical run provenance record. It carries the
+task/run/apparatus context, result and evidence pointers, traceability links to
+capture specs, evidence records, derived measures, and claims, plus
+realized-form disclosures for underspecified concerns resolved during a run.
+
 Within experiment-core contracts, identifier-bearing collections that require
 uniqueness are object maps keyed by that identifier. This keeps uniqueness
 portable in the published JSON Schemas rather than implementation-private.
