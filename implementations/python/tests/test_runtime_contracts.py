@@ -860,6 +860,36 @@ def test_experiment_core_rejects_under_specified_derived_measures():
     _assert_schema_and_model_reject("experiment-derived-measure-v1", empty_source_evidence_refs)
 
 
+def test_experiment_core_rejects_under_specified_run_provenance():
+    payload = _experiment_fixture("experiment-run-v1")
+
+    claim_without_derived_measure = deepcopy(payload)
+    claim_without_derived_measure["traceability"]["claim_refs"] = [{"ref_kind": "result", "ref_id": "claim-ungrounded"}]
+    claim_without_derived_measure["traceability"]["derived_measure_refs"] = []
+    with pytest.raises(ValidationError, match="claim_refs require at least one derived_measure_refs entry"):
+        ExperimentRunModel.model_validate(claim_without_derived_measure)
+
+    duplicate_capture_spec_ref = deepcopy(payload)
+    duplicate_capture_spec_ref["traceability"]["capture_spec_refs"].append(
+        deepcopy(duplicate_capture_spec_ref["traceability"]["capture_spec_refs"][0])
+    )
+    with pytest.raises(ValidationError, match="traceability capture_spec_refs must not contain duplicates"):
+        ExperimentRunTraceabilityModel.model_validate(duplicate_capture_spec_ref["traceability"])
+
+    realized_form_missing_target = deepcopy(payload)
+    realized_form_missing_target["realized_form_disclosures"][0]["realized_ref"] = None
+    realized_form_missing_target["realized_form_disclosures"][0]["realized_value_summary"] = None
+    _assert_schema_and_model_reject("experiment-run-v1", realized_form_missing_target)
+
+    backend_realized_by_processor = deepcopy(payload)
+    backend_realized_by_processor["realized_form_disclosures"][0]["basis"] = "backend-realized"
+    _assert_schema_and_model_reject("experiment-run-v1", backend_realized_by_processor)
+
+    empty_traceability_capture_specs = deepcopy(payload)
+    empty_traceability_capture_specs["traceability"]["capture_spec_refs"] = []
+    _assert_schema_and_model_reject("experiment-run-v1", empty_traceability_capture_specs)
+
+
 def test_experiment_core_rejects_under_specified_task_disclosure_surfaces():
     payload = _experiment_fixture("experiment-task-v1")
 
