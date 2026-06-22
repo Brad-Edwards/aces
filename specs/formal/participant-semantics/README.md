@@ -1024,6 +1024,44 @@ This slice implements participant-local temporal contracts and conformance
 checks. It does not claim the broader ACES clock/time-model work owned by
 `SEM-227`, `SEM-228`, and `SEM-229`.
 
+## SEM-214 - Portable Semantics For Derived Context Views
+
+`SEM-214` requires explicit meaning and comparability semantics for derived
+operational context views so their interpretation remains portable across
+runtimes and backends.
+
+Design commitments:
+
+- a context view is participant-local and must name its audience scope;
+- every view names the observation point at which the derived context applies;
+- source layers are explicit and limited to governed snapshot, participant
+  observation, participant history/status, evidence, derived-measure, and
+  control-plane operation records;
+- hidden/global runtime state is not a valid context-view source layer;
+- future-state sources are not valid, and bounded stale sources require a
+  freshness-basis reference;
+- the transformation rule and input source ids are explicit;
+- evidence and provenance references are required;
+- comparability is an explicit claim with a comparison-basis reference,
+  limitations, and backend disclosures whenever the claim is weakened or
+  backend-specific.
+
+Implementation artifacts:
+
+- `participant-context-view-v1` carries the SEM-214 envelope in the existing
+  API-408 control-plane carrier;
+- `implementations/python/packages/aces_contracts/contracts.py` defines the
+  closed-world Pydantic model and JSON Schema reference output;
+- `contracts/fixtures/control-plane/participant-context-view-v1/` contains
+  positive and negative fixtures for source-layer, temporal, audience-scope,
+  evidence/provenance, and comparability constraints;
+- `implementations/python/packages/aces_runtime/participant_retrieval.py`
+  constructs the SEM-214 envelope for the existing context retrieval path;
+- `implementations/python/tests/test_participant_backend_contracts.py`,
+  `test_runtime_control_plane.py`, and `test_runtime_control_plane_api.py`
+  verify schema/model rejection, runtime construction, and HTTP response
+  binding.
+
 ## SEM-215 - Participant Outcome Interpretation Semantics
 
 `SEM-215` requires semantics for interpreting participant-local outcomes and

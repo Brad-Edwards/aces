@@ -93,6 +93,11 @@ class ParticipantRetrievalMixin:
                 return None
         elif not _participant_exists(self._snapshot, participant_address):
             return None
+        source_refs = tuple(derived_from_refs or (_CURRENT_SNAPSHOT_REF,))
+        source_ref = source_refs[0]
+        source_id = "source-snapshot"
+        resolved_observation_point = episode_id or _CURRENT_SNAPSHOT_REF
+        resolved_derivation_basis_ref = derivation_basis_ref or view_ref
         return ParticipantContextViewModel.model_validate(
             {
                 "view_id": _view_id("context", participant_address, episode_id or view_ref),
@@ -101,7 +106,41 @@ class ParticipantRetrievalMixin:
                 "generated_at": _utc_now(),
                 "source_snapshot_ref": _CURRENT_SNAPSHOT_REF,
                 "view_ref": view_ref,
-                "derived_from_refs": list(derived_from_refs or (_CURRENT_SNAPSHOT_REF,)),
+                "meaning_ref": view_ref,
+                "participant_scope": "participant_local",
+                "audience_scope": "participant_visible",
+                "observation_point": resolved_observation_point,
+                "derived_from_refs": list(source_refs),
+                "source_layers": [
+                    {
+                        "source_id": source_id,
+                        "source_layer": "source_snapshot",
+                        "ref": source_ref,
+                        "temporal_relation": "same_observation_point",
+                        "observation_point": resolved_observation_point,
+                        "evidence_refs": list(source_refs),
+                        "provenance_refs": list(source_refs),
+                    }
+                ],
+                "transformation": {
+                    "transformation_rule_ref": resolved_derivation_basis_ref,
+                    "description": "API-408 derived context view relation declared by the governed view reference",
+                    "input_source_ids": [source_id],
+                    "output_semantics_ref": view_ref,
+                },
+                "comparability": {
+                    "comparability_class": "portable_equivalent",
+                    "comparison_basis_ref": f"comparability.{view_ref}",
+                    "backend_disclosure_refs": [],
+                    "limitations": [
+                        "Comparable only under the declared view, transformation, visibility, and evidence basis"
+                    ],
+                },
+                "evidence_refs": list(source_refs),
+                "provenance_refs": list(source_refs),
+                "semantic_limitations": [
+                    "Context-view payload remains a referenced derived view, not backend-private state"
+                ],
                 "derivation_basis_ref": derivation_basis_ref,
                 "payload_ref": payload_ref,
                 "visibility_projection_ref": _visibility_projection_ref(participant_address, "context"),

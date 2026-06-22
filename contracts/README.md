@@ -54,6 +54,12 @@ It includes:
 - live runtime/control-plane contracts
 - experiment, evidence, and provenance artifact boundaries
 
+The control-plane `participant-context-view-v1` contract includes the SEM-214
+meaning and comparability envelope for derived operational context views:
+participant-local scope, audience scope, observation point, governed source
+layers, transformation rule, evidence/provenance basis, semantic limitations,
+and explicit comparability disclosure.
+
 The published experiment-core contract family includes task, run,
 apparatus-context, study/collection, capture specification, raw evidence record,
 and derived measure schemas under `contracts/schemas/experiment-core/`. These

@@ -170,10 +170,10 @@
       "contract_id": "participant-context-view-v1",
       "schema_path": "contracts/schemas/control-plane/participant-context-view-v1.json",
       "stability": "draft",
-      "content_hash": "ff2e5866bde73898ead051cd5cfb20d32168ad3f8a6f9775d8481c728c40c24b",
+      "content_hash": "7f29533c310d3bc8a457f2734bbee0165e3190fff78704cae83928d88a46cee9",
       "last_change": {
-        "summary": "Initial publication of the participant context-view control-plane contract: the participant-visible context projection in the backend-facing contract family (ADR-060, issue #76).",
-        "content_hash": "ff2e5866bde73898ead051cd5cfb20d32168ad3f8a6f9775d8481c728c40c24b"
+        "summary": "Added SEM-214 portable meaning and comparability semantics to the participant context-view control-plane contract.",
+        "content_hash": "7f29533c310d3bc8a457f2734bbee0165e3190fff78704cae83928d88a46cee9"
       }
     },
     {

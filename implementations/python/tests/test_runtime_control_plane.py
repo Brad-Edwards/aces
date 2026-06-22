@@ -439,7 +439,7 @@ class TestParticipantEpisodeControlPlane:
             assert "participant_address" not in payload
             assert "episode_id" not in payload
 
-    def test_context_view_is_reference_and_provenance_only(self):
+    def test_context_view_declares_sem214_reference_semantics(self):
         control_plane = RuntimeControlPlane(create_stub_target())
         control_plane.initialize_participant_episode("participant.alice")
 
@@ -456,6 +456,16 @@ class TestParticipantEpisodeControlPlane:
         assert view.episode_id == "participant.alice-episode-1"
         assert view.view_ref == "views.context.network-posture.v1"
         assert view.derived_from_refs == ["runtime.snapshot.current"]
+        assert view.meaning_ref == "views.context.network-posture.v1"
+        assert view.participant_scope == "participant_local"
+        assert view.audience_scope == "participant_visible"
+        assert view.observation_point == "participant.alice-episode-1"
+        assert view.source_layers[0].source_layer == "source_snapshot"
+        assert view.source_layers[0].temporal_relation == "same_observation_point"
+        assert view.transformation.transformation_rule_ref == "rules.context.network-posture.v1"
+        assert view.transformation.input_source_ids == ["source-snapshot"]
+        assert view.comparability.comparability_class == "portable_equivalent"
+        assert view.comparability.comparison_basis_ref == "comparability.views.context.network-posture.v1"
         assert view.payload_ref == "evidence.context.alice.network-posture"
 
     def test_participant_retrieval_views_return_none_for_unknown_participant(self):

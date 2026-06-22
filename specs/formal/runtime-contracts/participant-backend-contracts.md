@@ -131,7 +131,7 @@ never a second source of truth. They live in the `control-plane` family:
 | --- | --- | --- |
 | `participant-status-view-v1` | Episode state and lifecycle facts for one participant (+ open operation refs) | embeds the scope-projected episode-state shape |
 | `participant-history-view-v1` | Episode and behavior history retrieval | carries `completeness` (`complete`/`truncated`/`filtered`) with a required basis when not complete |
-| `participant-context-view-v1` | Derived operational context views | reference-and-provenance only; see below |
+| `participant-context-view-v1` | Derived operational context views | reference carrier plus SEM-214 meaning/comparability envelope; see below |
 
 Views are one-participant projections, and the contract makes that structural:
 `participant_address` and `episode_id` are carried exactly once, at the view
@@ -163,9 +163,14 @@ Rules:
 - views carry no retrieval-only state: every field is derivable from recorded
   contracts;
 - `participant-context-view-v1` carries the governed `view_ref`, the
-  `derived_from_refs` provenance, and an optional `payload_ref`. The
-  *semantics* of derived context views — meaning and comparability — belong
-  to `SEM-214` (wave 3) and are deliberately not claimed here;
+  `derived_from_refs` provenance, an optional `payload_ref`, and the SEM-214
+  meaning/comparability envelope. A context view must declare its
+  `meaning_ref`, participant-local scope, audience scope, observation point,
+  consumed source layers, transformation rule, evidence/provenance basis,
+  semantic limitations, and comparability class/basis. Hidden/global source
+  layers, future-state sources, participant-local state presented as
+  audience-neutral, and weakened backend comparability claims without a
+  disclosure are invalid;
 - endpoint binding, authentication, role checks, request limits, audit
   recording, and error envelopes reuse the existing control-plane contract
   (API-403/404) and are implementation scope (#202).

@@ -23,6 +23,8 @@ Current published schemas cover:
 - evaluation result envelopes
 - evaluation history streams
 - operation receipts and statuses
+- control-plane participant status/history/context views, including SEM-214
+  context-view meaning and comparability semantics
 - experiment-core task, run, apparatus-context, study/collection, capture
   specification, raw evidence, and derived measure contracts
 

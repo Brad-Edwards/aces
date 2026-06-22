@@ -7,9 +7,11 @@
   "view_ref": "views.context.network-posture.v1",
   "meaning_ref": "semantics.context.network-posture.v1",
   "participant_scope": "participant_local",
-  "audience_scope": "participant_visible",
+  "audience_scope": "audience_neutral",
   "observation_point": "episode-step:tick42",
-  "derived_from_refs": [],
+  "derived_from_refs": [
+    "snapshots.run-778.tick42"
+  ],
   "source_layers": [
     {
       "source_id": "snapshot-tick42",
