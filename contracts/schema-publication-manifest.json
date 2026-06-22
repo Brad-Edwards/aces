@@ -102,10 +102,10 @@
       "contract_id": "experiment-run-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
       "stability": "draft",
-      "content_hash": "5f3010f98d3f6790d055ede4da92c0307ce7f01f0c8682598cbffa2c0d2d548d",
+      "content_hash": "9d4d86dfcbe6cca5e93bb4ae2005b07876dcd0fc2acbaf2f6c3aba945ecec4e5",
       "last_change": {
-        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
-        "content_hash": "5f3010f98d3f6790d055ede4da92c0307ce7f01f0c8682598cbffa2c0d2d548d"
+        "summary": "Added EXP-710/EXP-720/EXP-722 run provenance traceability and realized-form disclosure surfaces.",
+        "content_hash": "9d4d86dfcbe6cca5e93bb4ae2005b07876dcd0fc2acbaf2f6c3aba945ecec4e5"
       }
     },
     {

@@ -3060,6 +3060,36 @@ def _reference_identity_satisfies_requirement(
     return _reference_identity_satisfies_requirement(candidate_subject, requirement_subject)
 
 
+def _experiment_reference_key(
+    reference: ExperimentReferenceModel,
+) -> tuple[Any, ...]:
+    subject_ref = getattr(reference, "subject_ref", None)
+    return (
+        reference.ref_kind,
+        reference.ref_id,
+        reference.ref_version,
+        _canonical_digest(getattr(reference, "ref_digest", None)),
+        getattr(reference, "ref_path", None),
+        _experiment_reference_key(subject_ref) if subject_ref is not None else None,
+    )
+
+
+def _validate_unique_experiment_references(
+    field_name: str,
+    references: list[ExperimentReferenceModel],
+) -> None:
+    seen: set[tuple[Any, ...]] = set()
+    duplicates: list[str] = []
+    for reference in references:
+        key = _experiment_reference_key(reference)
+        if key in seen:
+            duplicates.append(_format_reference(reference))
+        seen.add(key)
+    if duplicates:
+        joined = ", ".join(sorted(set(duplicates)))
+        raise ValueError(f"{field_name} must not contain duplicates: {joined}")
+
+
 def _identity_matches_reference(identity: ApparatusIdentityModel, reference: ExperimentReferenceModel) -> bool:
     if reference.ref_digest is not None or reference.ref_path is not None:
         return False
@@ -3452,6 +3482,135 @@ class ExperimentDerivedMeasureModel(ContractModel):
             "generated_at must be a valid RFC 3339 date-time.",
             validator="aces_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure",
             inputs=[{"contract_id": "experiment-derived-measure-v1", "instance_path": "#/generated_at"}],
+        )
+        return json_schema
+
+
+class ExperimentRunTraceabilityModel(ContractModel):
+    """Canonical run provenance links across capture, evidence, measures, and claims."""
+
+    capture_spec_refs: list[ExperimentCaptureSpecReferenceModel] = Field(min_length=1)
+    evidence_record_refs: list[ExperimentEvidenceRecordReferenceModel] = Field(min_length=1)
+    derived_measure_refs: list[ExperimentDerivedMeasureReferenceModel] = Field(default_factory=list)
+    claim_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+    notes: list[NonEmptyString] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_run_traceability(self) -> ExperimentRunTraceabilityModel:
+        _validate_unique_experiment_references("traceability capture_spec_refs", self.capture_spec_refs)
+        _validate_unique_experiment_references("traceability evidence_record_refs", self.evidence_record_refs)
+        _validate_unique_experiment_references("traceability derived_measure_refs", self.derived_measure_refs)
+        _validate_unique_experiment_references("traceability claim_refs", self.claim_refs)
+        if self.claim_refs and not self.derived_measure_refs:
+            raise ValueError("traceability claim_refs require at least one derived_measure_refs entry")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        _add_aces_invariant(
+            json_schema,
+            "run-traceability-refs-unique",
+            "Run provenance traceability references must be duplicate-free, and claim refs must be grounded by "
+            "at least one derived measure ref.",
+            validator="aces_contracts.contracts.ExperimentRunTraceabilityModel._validate_run_traceability",
+            inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/traceability"}],
+        )
+        return json_schema
+
+
+class ExperimentRealizedFormDisclosureModel(ContractModel):
+    """Disclosure of one realized form chosen for an underspecified run concern."""
+
+    concern_id: NonEmptyString
+    concern_kind: Literal[
+        "scenario-module",
+        "processor-selection",
+        "backend-selection",
+        "participant-implementation",
+        "apparatus-configuration",
+        "parameter-default",
+        "stochastic-control",
+        "measurement-channel",
+        "capture-window",
+        "other",
+    ]
+    basis: Literal["author-declared", "processor-realized", "backend-realized", "operator-supplied", "observed"]
+    realized_by_ref: ExperimentReferenceModel
+    authored_ref: ExperimentReferenceModel | None = None
+    realized_ref: ExperimentReferenceModel | None = None
+    realized_value_summary: NonEmptyString | None = None
+    disclosure: NonEmptyString
+    evidence_refs: list[ExperimentEvidenceRecordReferenceModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_realized_form_disclosure(self) -> ExperimentRealizedFormDisclosureModel:
+        if self.realized_ref is None and self.realized_value_summary is None:
+            raise ValueError("realized form disclosures must include realized_ref or realized_value_summary")
+        if self.basis == "processor-realized" and self.realized_by_ref.ref_kind != "processor":
+            raise ValueError("processor-realized disclosures must use a processor realized_by_ref")
+        if self.basis == "backend-realized" and self.realized_by_ref.ref_kind != "backend":
+            raise ValueError("backend-realized disclosures must use a backend realized_by_ref")
+        _validate_unique_experiment_references("realized form disclosure evidence_refs", self.evidence_refs)
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("anyOf", []).extend(
+            [
+                {"required": ["realized_ref"], "properties": {"realized_ref": {"not": {"type": "null"}}}},
+                {
+                    "required": ["realized_value_summary"],
+                    "properties": {"realized_value_summary": {"not": {"type": "null"}}},
+                },
+            ]
+        )
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {"properties": {"basis": {"const": "processor-realized"}}, "required": ["basis"]},
+                    "then": {
+                        "properties": {
+                            "realized_by_ref": {
+                                "required": ["ref_kind"],
+                                "properties": {"ref_kind": {"const": "processor"}},
+                            }
+                        }
+                    },
+                },
+                {
+                    "if": {"properties": {"basis": {"const": "backend-realized"}}, "required": ["basis"]},
+                    "then": {
+                        "properties": {
+                            "realized_by_ref": {
+                                "required": ["ref_kind"],
+                                "properties": {"ref_kind": {"const": "backend"}},
+                            }
+                        }
+                    },
+                },
+            ]
+        )
+        _add_aces_invariant(
+            json_schema,
+            "realized-form-disclosure-substantive",
+            "Every realized-form disclosure must name a realized reference or value summary and use the right "
+            "processor/backend realization authority for processor-realized and backend-realized concerns.",
+            validator=(
+                "aces_contracts.contracts.ExperimentRealizedFormDisclosureModel._validate_realized_form_disclosure"
+            ),
+            inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/realized_form_disclosures"}],
         )
         return json_schema
 
@@ -4168,6 +4327,8 @@ class ExperimentRunModel(ContractModel):
     clock_context: ExperimentClockContextModel
     run_status: Literal["sealed", "completed", "failed", "aborted", "invalidated", "superseded"]
     outcome_status: Literal["succeeded", "failed", "partial", "inconclusive", "not-evaluated"]
+    traceability: ExperimentRunTraceabilityModel
+    realized_form_disclosures: list[ExperimentRealizedFormDisclosureModel] = Field(default_factory=list)
     evidence_artifacts: list[ExperimentArtifactRefModel] = Field(min_length=1)
     result_summaries: dict[NonEmptyString, ExperimentResultSummaryModel] = Field(min_length=1)
     deviations: list[NonEmptyString] = Field(default_factory=list)
@@ -4228,6 +4389,20 @@ class ExperimentRunModel(ContractModel):
         if missing_evidence_refs:
             joined = ", ".join(missing_evidence_refs)
             raise ValueError(f"result_summaries evidence_refs must resolve to evidence_artifacts: {joined}")
+        traced_evidence_record_refs = {
+            _experiment_reference_key(evidence_ref) for evidence_ref in self.traceability.evidence_record_refs
+        }
+        missing_disclosure_evidence_refs = sorted(
+            _format_reference(evidence_ref)
+            for disclosure in self.realized_form_disclosures
+            for evidence_ref in disclosure.evidence_refs
+            if _experiment_reference_key(evidence_ref) not in traced_evidence_record_refs
+        )
+        if missing_disclosure_evidence_refs:
+            joined = ", ".join(missing_disclosure_evidence_refs)
+            raise ValueError(
+                f"realized_form_disclosures evidence_refs must be listed in traceability evidence_record_refs: {joined}"
+            )
         return self
 
     @classmethod
@@ -4268,6 +4443,13 @@ class ExperimentRunModel(ContractModel):
             json_schema,
             "participant-implementation-provenance-resolves",
             "Participant implementation apparatus components must resolve to run-level participant provenance.",
+            validator="aces_contracts.contracts.ExperimentRunModel._validate_archival_run",
+            inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "realized-form-evidence-refs-traced",
+            "Every realized-form disclosure evidence ref must also appear in the run traceability evidence refs.",
             validator="aces_contracts.contracts.ExperimentRunModel._validate_archival_run",
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
@@ -6041,10 +6223,12 @@ __all__ = [
     "ExperimentMultipleComparisonPolicyModel",
     "ExperimentParameterModel",
     "ExperimentProcessorReferenceModel",
+    "ExperimentRealizedFormDisclosureModel",
     "ExperimentReferenceModel",
     "ExperimentResultSummaryModel",
     "ExperimentRunAllocationPlanModel",
     "ExperimentRunModel",
+    "ExperimentRunTraceabilityModel",
     "ExperimentScenarioReferenceModel",
     "ExperimentScenarioSnapshotReferenceModel",
     "ExperimentSplitAndLeakageControlsModel",
