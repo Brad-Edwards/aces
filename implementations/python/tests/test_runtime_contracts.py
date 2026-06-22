@@ -787,6 +787,32 @@ def test_experiment_core_rejects_under_specified_apparatus_contexts():
         ExperimentApparatusContextModel.model_validate(extra_digest_manifest_with_supported_processor_subject)
 
 
+def test_experiment_core_rejects_under_specified_capture_specs():
+    payload = _experiment_fixture("experiment-capture-spec-v1")
+
+    mismatched_requirement_key = deepcopy(payload)
+    mismatched_requirement_key["capture_requirements"]["network-trace"]["requirement_id"] = "different-id"
+    with pytest.raises(ValidationError, match="capture_requirements keys"):
+        ExperimentCaptureSpecModel.model_validate(mismatched_requirement_key)
+
+    unresolved_window_ref = deepcopy(payload)
+    unresolved_window_ref["capture_requirements"]["network-trace"]["window_refs"] = ["missing-window"]
+    with pytest.raises(ValidationError, match="window_refs must resolve"):
+        ExperimentCaptureSpecModel.model_validate(unresolved_window_ref)
+
+    reversed_capture_window = deepcopy(payload)
+    reversed_capture_window["capture_windows"][0]["starts_at"] = "2026-05-26T00:40:00Z"
+    reversed_capture_window["capture_windows"][0]["ends_at"] = "2026-05-26T00:10:00Z"
+    with pytest.raises(ValidationError, match="ends_at must be greater"):
+        ExperimentCaptureSpecModel.model_validate(reversed_capture_window)
+
+    under_specified_window = deepcopy(payload)
+    under_specified_window["capture_windows"][0].pop("starts_at", None)
+    under_specified_window["capture_windows"][0].pop("ends_at", None)
+    under_specified_window["capture_windows"][0].pop("trigger_ref", None)
+    _assert_schema_and_model_reject("experiment-capture-spec-v1", under_specified_window)
+
+
 def test_experiment_core_rejects_under_specified_task_disclosure_surfaces():
     payload = _experiment_fixture("experiment-task-v1")
 

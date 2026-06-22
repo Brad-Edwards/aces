@@ -15,4 +15,5 @@ design-criteria-for-exp-701-705
 traceability-matrix-exp-701-705
 preflight-guardrails
 issue-88-evidence-measure-preflight-guardrails
+issue-233-exp-707-capture-spec-preflight-guardrails
 ```
