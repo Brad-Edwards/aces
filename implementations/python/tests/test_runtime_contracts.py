@@ -890,6 +890,38 @@ def test_experiment_core_rejects_under_specified_run_provenance():
     _assert_schema_and_model_reject("experiment-run-v1", empty_traceability_capture_specs)
 
 
+def test_experiment_core_rejects_under_specified_realized_form_disclosures():
+    # EXP-722: realized forms chosen for underspecified concerns must be preserved
+    # substantively, attributed to the right processor/backend authority, and grounded
+    # in run-traced evidence so they stay distinct from the authored scenario and from
+    # derived results. The model and published schema shipped under #89; this is the
+    # conformance test of record and must not change them.
+    payload = _experiment_fixture("experiment-run-v1")
+
+    missing_realized_target = deepcopy(payload)
+    missing_realized_target["realized_form_disclosures"][0]["realized_ref"] = None
+    missing_realized_target["realized_form_disclosures"][0]["realized_value_summary"] = None
+    _assert_schema_and_model_reject("experiment-run-v1", missing_realized_target)
+
+    processor_realized_by_backend = deepcopy(payload)
+    processor_realized_by_backend["realized_form_disclosures"][0]["realized_by_ref"]["ref_kind"] = "backend"
+    _assert_schema_and_model_reject("experiment-run-v1", processor_realized_by_backend)
+
+    disclosure_evidence_not_traced = deepcopy(payload)
+    disclosure_evidence_not_traced["realized_form_disclosures"][0]["evidence_refs"][0]["ref_id"] = (
+        "evidence-realized-form-untraced"
+    )
+    with pytest.raises(ValidationError, match="realized_form_disclosures evidence_refs must be listed"):
+        ExperimentRunModel.model_validate(disclosure_evidence_not_traced)
+
+    duplicate_disclosure_evidence = deepcopy(payload)
+    duplicate_disclosure_evidence["realized_form_disclosures"][0]["evidence_refs"].append(
+        deepcopy(duplicate_disclosure_evidence["realized_form_disclosures"][0]["evidence_refs"][0])
+    )
+    with pytest.raises(ValidationError, match="realized form disclosure evidence_refs must not contain duplicates"):
+        ExperimentRunModel.model_validate(duplicate_disclosure_evidence)
+
+
 def test_experiment_core_rejects_under_specified_task_disclosure_surfaces():
     payload = _experiment_fixture("experiment-task-v1")
 
