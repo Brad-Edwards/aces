@@ -265,3 +265,6 @@ adrs:
   - id: ADR-065
     path: docs/decisions/adrs/adr-065-experiment-run-provenance-contract-boundary.md
     pin: 69f90581b2bcedc12bfb7ed8aa688787d7a0d9aa4cc49a90f8c631ecbae8a356
+  - id: ADR-066
+    path: docs/decisions/adrs/adr-066-observability-evidence-plane-separation.md
+    pin: c2a8cf0bafdf53007df8a6c40f60bd63114656887b3c2feaca6f678ef6ae6d65

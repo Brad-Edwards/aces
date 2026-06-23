@@ -98,4 +98,7 @@ A new top-level authoring section is added by: defining its model and the
 published schema field, adding a row to this catalog (with its shape,
 requiredness, key shape, and references), adding its reference edges to
 [`references.md`](references.md), and updating the reference implementation and
-its tests. No parallel section registry exists or should be created.
+its tests. Scenario-native observability or authored evidence-requirement
+sections must also satisfy
+[`observability-and-evidence.md`](observability-and-evidence.md). No parallel
+section registry exists or should be created.
