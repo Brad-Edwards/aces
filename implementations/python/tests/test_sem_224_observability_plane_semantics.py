@@ -33,6 +33,7 @@ from aces_sdl.observability_plane_semantics import (
     PLANE_BY_CONTRACT_ID,
     SCENARIO_NATIVE_OBSERVABILITY_FAMILIES,
     ObservabilityEvidencePlane,
+    _validate_scenario_native_families,
     assert_single_primary_plane,
     classify_contract_plane,
     classify_runtime_family,
@@ -117,6 +118,17 @@ def test_scenario_native_observability_families_are_registered_and_distinct():
     assert SCENARIO_NATIVE_OBSERVABILITY_FAMILIES.issubset(registered)
     for collection_name in SCENARIO_NATIVE_OBSERVABILITY_FAMILIES:
         assert classify_runtime_family(collection_name) is (ObservabilityEvidencePlane.SCENARIO_NATIVE_OBSERVABILITY)
+
+
+def test_scenario_native_family_validation_fails_closed_on_unregistered_name():
+    # A scenario-native family that is not in the runtime-family registry must
+    # raise at construction time rather than silently misclassify.
+    with pytest.raises(RuntimeError, match="not registered"):
+        _validate_scenario_native_families(("not_a_real_family",), frozenset({"service_listeners"}))
+    # The happy path returns the validated set unchanged.
+    assert _validate_scenario_native_families(
+        ("service_listeners",), frozenset({"service_listeners", "applications"})
+    ) == frozenset({"service_listeners"})
 
 
 def test_backend_observability_is_not_a_participant_observation():

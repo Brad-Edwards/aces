@@ -69,14 +69,26 @@ _SCENARIO_NATIVE_FAMILY_NAMES: tuple[str, ...] = (
 )
 
 _REGISTERED_FAMILY_NAMES = frozenset(family.collection_name for family in RUNTIME_SERVICE_FAMILIES)
-_UNREGISTERED = frozenset(_SCENARIO_NATIVE_FAMILY_NAMES) - _REGISTERED_FAMILY_NAMES
-if _UNREGISTERED:  # pragma: no cover - guard fires only on a registry rename
-    raise RuntimeError(
-        "SEM-224 scenario-native observability families are not registered in "
-        f"RUNTIME_SERVICE_FAMILIES: {sorted(_UNREGISTERED)}"
-    )
 
-SCENARIO_NATIVE_OBSERVABILITY_FAMILIES: frozenset[str] = frozenset(_SCENARIO_NATIVE_FAMILY_NAMES)
+
+def _validate_scenario_native_families(names: tuple[str, ...], registered: frozenset[str]) -> frozenset[str]:
+    """Fail closed if a scenario-native family name is not a registered runtime family.
+
+    Keeps the classifier from silently drifting when a runtime family is renamed.
+    """
+
+    unregistered = frozenset(names) - registered
+    if unregistered:
+        raise RuntimeError(
+            "SEM-224 scenario-native observability families are not registered in "
+            f"RUNTIME_SERVICE_FAMILIES: {sorted(unregistered)}"
+        )
+    return frozenset(names)
+
+
+SCENARIO_NATIVE_OBSERVABILITY_FAMILIES: frozenset[str] = _validate_scenario_native_families(
+    _SCENARIO_NATIVE_FAMILY_NAMES, _REGISTERED_FAMILY_NAMES
+)
 
 # Strings the ADR calls out as ambiguous: they appear across multiple planes and
 # therefore never decide ownership on their own (OE-11).
@@ -96,6 +108,10 @@ AMBIGUOUS_PLANE_TOKENS: frozenset[str] = frozenset(
         "metrics",
     }
 )
+
+# OE-11 made structural: the set of strings authorized to decide a plane is empty
+# by construction. Plane ownership is a carrier-role decision, never a token one.
+_PLANE_DECIDING_TOKENS: frozenset[str] = frozenset()
 
 
 def classify_contract_plane(contract_id: str) -> ObservabilityEvidencePlane:
@@ -141,9 +157,13 @@ def assert_single_primary_plane(
 
 
 def token_decides_plane(token: str) -> bool:
-    """OE-11: a bare string never decides plane ownership; the carrier does."""
+    """OE-11: a bare string never decides plane ownership; the carrier does.
 
-    return False
+    The set of plane-deciding tokens is empty by construction, so the answer is
+    always ``False`` -- plane ownership comes from the carrier role, not a token.
+    """
+
+    return token in _PLANE_DECIDING_TOKENS
 
 
 __all__ = [
