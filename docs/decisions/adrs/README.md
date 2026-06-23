@@ -110,6 +110,7 @@ adr-062-concept-authority-catalog-governance-gate
 adr-063-reference-emulation-backend
 adr-064-experiment-evidence-and-measure-contract-boundary
 adr-065-experiment-run-provenance-contract-boundary
+adr-066-observability-evidence-plane-separation
 ```
 
 | ADR | Title | Status | Date |
@@ -180,3 +181,4 @@ adr-065-experiment-run-provenance-contract-boundary
 | [063](adr-063-reference-emulation-backend.md) | Reference Emulation Backend | accepted | 2026-06-20 |
 | [064](adr-064-experiment-evidence-and-measure-contract-boundary.md) | Experiment Evidence and Measure Contract Boundary | accepted | 2026-06-21 |
 | [065](adr-065-experiment-run-provenance-contract-boundary.md) | Experiment Run Provenance Contract Boundary | accepted | 2026-06-22 |
+| [066](adr-066-observability-evidence-plane-separation.md) | Observability and Evidence Plane Separation | accepted | 2026-06-23 |

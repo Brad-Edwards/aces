@@ -67,6 +67,7 @@ tests, rather than a prose rewrite. The catalogs are:
 | [`references.md`](references.md) | **2. Reference-resolution catalog** | Reference forms (bare, qualified, nested runtime-family, workflow-step, module-composed), the resolution algorithm, the fail-closed ambiguity rule, and the cross-section reference-edge catalog. |
 | [`variables-and-instantiation.md`](variables-and-instantiation.md) | **3. Variable / instantiation catalog** | Variable types, defaults, `allowed_values`, `${…}` substitution, the instantiation algorithm, and post-instantiation exclusions. |
 | [`runtime-inventory.md`](runtime-inventory.md) | **4. Runtime-family index** | The node-scoped runtime-inventory index — family key, collection name, primary `<noun>_id`, child-ref collections, owning ADR — and the shared invariants stated once, delegating per-field semantics to the family ADRs. |
+| [`observability-and-evidence.md`](observability-and-evidence.md) | **5. Observability and evidence planes** | Scenario-native observability, authored evidence requirements, processor/backend operational observability, captured evidence, derived analysis, and augmentation classification rules. |
 | [`diagnostics.md`](diagnostics.md) | — | The parse / semantic-validation / instantiation diagnostic stages and the normative error-vs-advisory classification criterion. |
 
 ## Acceptance-question map
@@ -83,13 +84,17 @@ An implementer can answer each structural question from the named file alone:
   [`variables-and-instantiation.md`](variables-and-instantiation.md).
 - *What is the runtime-inventory surface and which ADR owns each family?* →
   [`runtime-inventory.md`](runtime-inventory.md).
+- *How are scenario-native observability systems and authored evidence
+  requirements kept distinct?* →
+  [`observability-and-evidence.md`](observability-and-evidence.md).
 - *When is a problem an error versus an advisory?* →
   [`diagnostics.md`](diagnostics.md).
 
 ## Scope
 
 In scope: the SDL authoring model — document structure, references, variables,
-instantiation, the runtime-inventory index, and the diagnostic boundary.
+instantiation, the runtime-inventory index, observability/evidence plane
+rules, and the diagnostic boundary.
 
 Out of scope: delivery-level concerns (container, infrastructure-as-code, and
 cloud-API mechanics), processor and backend execution contracts, and the
