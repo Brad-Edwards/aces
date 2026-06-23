@@ -796,6 +796,7 @@
       "validator": "aces_contracts.contracts.ExperimentCaptureSpecModel._validate_capture_spec"
     }
   ],
+  "x-aces-plane": "authored_evidence_requirement",
   "x-aces-semantic-profile": {
     "contract_id": "experiment-capture-spec-v1",
     "entry_schema_contract_id": "aces-semantic-invariants-v1",

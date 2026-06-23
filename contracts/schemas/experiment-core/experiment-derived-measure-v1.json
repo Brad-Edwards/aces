@@ -453,6 +453,7 @@
       "validator": "aces_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure"
     }
   ],
+  "x-aces-plane": "derived_analysis",
   "x-aces-semantic-profile": {
     "contract_id": "experiment-derived-measure-v1",
     "entry_schema_contract_id": "aces-semantic-invariants-v1",
