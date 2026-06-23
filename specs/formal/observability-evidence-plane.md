@@ -138,3 +138,31 @@ The minimum adversarial fixture set for implementation is:
 - This design does not transition SEM-224, SEM-225, DSL-123, or DSL-124 to
   implementation coverage. It records the criteria the spawned issues must
   satisfy.
+
+## Implementation Coverage (#334 / SEM-224)
+
+SEM-224 is realized as a carrier-oriented plane classifier plus portable plane
+traceability over the existing carriers. The classifier
+`aces_sdl.observability_plane_semantics` is the single source of plane
+ownership; it assigns exactly one primary plane by contract role or runtime
+family identity and never by a free string (OE-01, OE-11). The three
+claim-bearing experiment-core carriers publish their plane as an `x-aces-plane`
+annotation sourced from that classifier. The plane *separation* each carrier
+enforces was already realized by the EXP-707/708/709 contracts and SEM-216; this
+issue adds the unifying classifier, the portable annotation, and the SEM-224
+probe set.
+
+| Invariant / matrix row | Realizing artifact | Test | New in #334? |
+| --- | --- | --- | --- |
+| OE-01 single primary plane | `observability_plane_semantics.classify_contract_plane`, `assert_single_primary_plane` | `test_each_claim_bearing_contract_maps_to_exactly_one_plane`, `test_assert_single_primary_plane_rejects_zero_or_multiple` | yes |
+| OE-11 carrier, not string, decides plane | `classify_contract_plane` (fail-closed), `token_decides_plane`, `AMBIGUOUS_PLANE_TOKENS` | `test_classify_contract_plane_fails_closed_on_unknown_carrier`, `test_token_never_decides_plane` | yes |
+| Distinguish scenario-native observability | `SCENARIO_NATIVE_OBSERVABILITY_FAMILIES` over `RUNTIME_SERVICE_FAMILIES`; SEM-216 B5 boundary | `test_scenario_native_observability_families_are_registered_and_distinct`, `test_backend_observability_is_not_a_participant_observation` | classifier new; B5 reused |
+| OE-04 capture requirement is not proof of capture | required `capture_requirement_ref` on `ExperimentEvidenceRecordModel` | `test_capture_record_without_requirement_ref_is_rejected` (fixture `sem224-capture-record-without-requirement-ref.json`) | probe new |
+| Distinguish processor/backend operational | `PLANE_BY_CONTRACT_ID` (manifests, apparatus context) | `test_operational_carriers_map_to_processor_backend_plane` | yes |
+| OE-05 captured evidence is not derived analysis | `ExperimentEvidenceRecordModel` shape; SEM-216 B3 | `test_derived_analysis_is_not_captured_evidence` | classifier new; B3 reused |
+| OE-06 derived analysis must cite source evidence | `ExperimentDerivedMeasureModel.source_evidence_refs` (`min_length=1`) | `test_derived_measure_without_source_evidence_is_rejected`, `test_reference_derived_measure_cites_source_evidence` | pre-existing rule, SEM-224 probe |
+| Plane traceability published portably | `x-aces-plane` on the three experiment-core schemas | `test_claim_bearing_contracts_publish_their_plane_annotation` | yes |
+
+SEM-225 augmentation carriers (#335), DSL-123 scenario-native authoring
+surfaces (#336), and DSL-124 authored evidence-requirement surfaces (#337)
+extend the carrier→plane registry rather than re-implementing it.

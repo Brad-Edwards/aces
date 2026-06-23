@@ -12,6 +12,7 @@ from typing import Annotated, Any, Literal
 
 from aces_sdl import VARIABLE_TOKEN_PATTERN
 from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from aces_sdl.observability_plane_semantics import classify_contract_plane
 from aces_sdl.participant_attribution_semantics import (
     ParticipantAttributionCandidateKind,
     ParticipantAttributionOrderingBasisKind,
@@ -295,6 +296,17 @@ def _add_aces_invariant(
                 "inputs": inputs,
             }
         )
+
+
+def _add_aces_plane(json_schema: JsonSchemaValue, contract_id: str) -> None:
+    """Publish the carrier's single SEM-224 observability/evidence plane.
+
+    Plane ownership is sourced from the carrier-oriented classifier so the
+    portable ``x-aces-plane`` annotation cannot drift from
+    ``aces_sdl.observability_plane_semantics`` (ADR-066 / SEM-224).
+    """
+
+    json_schema["x-aces-plane"] = classify_contract_plane(contract_id).value
 
 
 def _schema_contains_aces_invariants(schema_node: Any) -> bool:
@@ -3578,6 +3590,7 @@ class ExperimentCaptureSpecModel(ContractModel):
             validator="aces_contracts.contracts.ExperimentCaptureSpecModel._validate_capture_spec",
             inputs=[{"contract_id": "experiment-capture-spec-v1", "instance_path": "#"}],
         )
+        _add_aces_plane(json_schema, "experiment-capture-spec-v1")
         return json_schema
 
 
@@ -3695,6 +3708,7 @@ class ExperimentEvidenceRecordModel(ContractModel):
                 },
             }
         )
+        _add_aces_plane(json_schema, "experiment-evidence-record-v1")
         return json_schema
 
 
@@ -3759,6 +3773,7 @@ class ExperimentDerivedMeasureModel(ContractModel):
             validator="aces_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure",
             inputs=[{"contract_id": "experiment-derived-measure-v1", "instance_path": "#/generated_at"}],
         )
+        _add_aces_plane(json_schema, "experiment-derived-measure-v1")
         return json_schema
 
 

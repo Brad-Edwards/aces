@@ -72,30 +72,30 @@
       "contract_id": "experiment-capture-spec-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-capture-spec-v1.json",
       "stability": "draft",
-      "content_hash": "f38b438f8ebf032732d2002d0f29e702ce8ac838dcb7027224258b1ae4cdb121",
+      "content_hash": "1c479291aed4c60aa7a28d93839d3633f8dee585ca3098b83bd4fbb03bea86ad",
       "last_change": {
-        "summary": "Initial publication of the EXP-707 experiment capture specification contract for declarative evidence requirements.",
-        "content_hash": "f38b438f8ebf032732d2002d0f29e702ce8ac838dcb7027224258b1ae4cdb121"
+        "summary": "Published the SEM-224 observability/evidence plane (authored_evidence_requirement) as a portable x-aces-plane annotation sourced from the carrier-oriented plane classifier.",
+        "content_hash": "1c479291aed4c60aa7a28d93839d3633f8dee585ca3098b83bd4fbb03bea86ad"
       }
     },
     {
       "contract_id": "experiment-derived-measure-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-derived-measure-v1.json",
       "stability": "draft",
-      "content_hash": "5075502877e58d10978d82652a7e23813eb76e2868784116293c257480f034bd",
+      "content_hash": "162aeeb41906008b03ef211b20646f451101c59cdcabc1614427ca3fa7945afe",
       "last_change": {
-        "summary": "Initial publication of the EXP-709 experiment derived measure contract for metrics and evaluations computed from raw evidence.",
-        "content_hash": "5075502877e58d10978d82652a7e23813eb76e2868784116293c257480f034bd"
+        "summary": "Published the SEM-224 observability/evidence plane (derived_analysis) as a portable x-aces-plane annotation sourced from the carrier-oriented plane classifier.",
+        "content_hash": "162aeeb41906008b03ef211b20646f451101c59cdcabc1614427ca3fa7945afe"
       }
     },
     {
       "contract_id": "experiment-evidence-record-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-evidence-record-v1.json",
       "stability": "draft",
-      "content_hash": "463f7b0132ef401616a8dece940dca7654e2d32a8d223f5932404f06d464724b",
+      "content_hash": "3483ac4ff2cb61278d64253257f70dc73d14eaff3bc5501eee20a86a55d7d707",
       "last_change": {
-        "summary": "Published the SEM-216 evidence-boundary rule as a portable schema constraint: redacted or withheld evidence records must disclose raw_content.loss_disclosure.",
-        "content_hash": "463f7b0132ef401616a8dece940dca7654e2d32a8d223f5932404f06d464724b"
+        "summary": "Published the SEM-224 observability/evidence plane (captured_evidence) as a portable x-aces-plane annotation sourced from the carrier-oriented plane classifier.",
+        "content_hash": "3483ac4ff2cb61278d64253257f70dc73d14eaff3bc5501eee20a86a55d7d707"
       }
     },
     {

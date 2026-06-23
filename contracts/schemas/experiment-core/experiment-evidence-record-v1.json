@@ -736,6 +736,7 @@
       "validator": "aces_contracts.contracts.ExperimentEvidenceRecordModel._validate_evidence_record"
     }
   ],
+  "x-aces-plane": "captured_evidence",
   "x-aces-semantic-profile": {
     "contract_id": "experiment-evidence-record-v1",
     "entry_schema_contract_id": "aces-semantic-invariants-v1",
