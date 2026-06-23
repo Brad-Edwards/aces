@@ -167,6 +167,39 @@ against the authoritative catalog at model time, and scope paths must resolve
 to governed manifest vocabulary surfaces that are actually declared in the
 artifact.
 
+## External Knowledge Binding Effects (SEM-217)
+
+`SEM-217` fixes what an external knowledge binding is allowed to do to native
+ACES meaning. The effect is explicit and surface-owned; it is never inferred
+from a label, a URL, or the fact that an external source uses similar words.
+
+The current effect vocabulary is closed:
+
+- `annotates`: the external reference adds reviewable context or evidence and
+  does not change native validation, planning, runtime, or conformance meaning
+  by itself.
+- `aligns`: the ACES concept family is adopted from the external authority with
+  equivalent meaning. For the current UCO slice, adopted families align and
+  carry an empty divergence list.
+- `refines`: the ACES concept family is adapted from the external authority.
+  It preserves a reviewed correspondence while narrowing or diverging in an
+  explicitly recorded way.
+- `constrains`: a governed profile, manifest, or vocabulary surface restricts
+  which family or term a field may use. A constraint is enforceable validation
+  behavior, not descriptive metadata.
+
+Implementation guidance:
+
+- resolve effects from existing contract data: concept-family provenance,
+  `uco-alignment-v1`, semantic-profile `required_bindings`, manifest
+  `concept_bindings`, and controlled vocabulary governed scopes;
+- do not add live ontology fetches, authority-specific runtime calls, or
+  token-bearing process arguments;
+- do not treat UCO, ATT&CK, OCSF, CACAO, STIX, OpenC2, CVE, exploit modules,
+  or benchmark milestones as SDL syntax or as automatic schema inheritance;
+- do not overload `ConceptBinding` into a general external term-mapping model;
+  it remains the manifest vocabulary-to-family binding surface.
+
 ## ACES Extension Discipline (GOV-919)
 
 `GOV-919` implements the ACES concept layer by making native extension metadata

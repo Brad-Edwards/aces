@@ -1217,6 +1217,53 @@ Current implementation artifacts for the `SEM-216` slice:
   `test_participant_backend_contracts.py` and `test_runtime_contracts.py` carry
   the same fixtures.
 
+## SEM-217 - External Knowledge Binding Semantics
+
+`SEM-217` requires explicit semantics for external knowledge bindings so a
+reference to UCO, another ontology, a vocabulary, or an interoperability
+profile cannot silently rewrite ACES-native meaning.
+
+An external knowledge binding has exactly the effect declared by the governed
+ACES surface that carries it:
+
+- **annotates** - an external reference, reviewed class, evidence source, or
+  citation adds context for a native ACES concept without changing validation,
+  planning, runtime, or conformance semantics by itself.
+- **aligns** - a reviewed external authority has equivalent meaning for the
+  native ACES family. In the current concept-authority slice, adopted UCO
+  concept families align with UCO meaning and carry no divergence list.
+- **refines** - a reviewed external authority is used with ACES-specific
+  narrowing, loss, or divergence. In the current slice, adapted UCO concept
+  families refine rather than align and must enumerate the divergence.
+- **constrains** - a governed surface must bind a vocabulary, capability, or
+  phase assumption to a declared concept family; missing, unknown, duplicate,
+  or out-of-scope bindings are validation failures, not advisory metadata.
+
+Design commitments:
+
+- native ACES contracts, concept families, reference models, semantic profiles,
+  and validators remain the authority for ACES behavior;
+- external authority references are versioned, review-scoped evidence rather
+  than live network dependencies;
+- annotation never implies constraint, refinement never weakens existing ACES
+  invariants, and alignment never means schema inheritance;
+- artifact-local labels do not define portable semantics unless they bind to a
+  governed concept family or controlled vocabulary surface.
+
+Current implementation artifacts for the `SEM-217` slice:
+
+- `implementations/python/packages/aces_contracts/semantic_binding_effects.py`
+  resolves the four SEM-217 effects over the existing UCO alignment and shared
+  semantic-profile records;
+- `implementations/python/tests/test_sem_217_knowledge_bindings.py` proves that
+  adopted UCO bindings annotate and align, adapted UCO bindings annotate and
+  refine, profile required bindings constrain governed surfaces, phases without
+  governed bindings do not create constraint effects, and the effect vocabulary
+  is closed over the four SEM-217 terms;
+- `docs/explain/reference/shared-concept-model.md` records the
+  implementation-facing guardrails and anti-patterns for external knowledge
+  bindings.
+
 ## Required Future Verification
 
 The complete participant surface is `FM3`.
