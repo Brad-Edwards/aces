@@ -239,6 +239,52 @@
   "$id": "https://aces.dev/schemas/participant-context-view-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "audience_scope": {
+            "const": "participant_visible"
+          },
+          "source_layers": {
+            "contains": {
+              "properties": {
+                "source_layer": {
+                  "enum": [
+                    "evidence_record",
+                    "derived_measure"
+                  ]
+                }
+              },
+              "required": [
+                "source_layer"
+              ]
+            }
+          }
+        },
+        "required": [
+          "audience_scope",
+          "source_layers"
+        ]
+      },
+      "then": {
+        "properties": {
+          "derivation_basis_ref": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "redaction_policy_ref": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "derivation_basis_ref",
+          "redaction_policy_ref"
+        ]
+      }
+    }
+  ],
   "description": "API-408 derived operational context view with SEM-214 semantics.",
   "properties": {
     "audience_scope": {
@@ -429,5 +475,40 @@
     "visibility_projection_ref"
   ],
   "title": "ParticipantContextViewModel",
-  "type": "object"
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Participant-visible context views drawing on an archival evidence_record or derived_measure source layer must mediate that source through transformation.input_source_ids.",
+      "id": "context-view-sem216-archival-source-mediated",
+      "inputs": [
+        {
+          "contract_id": "participant-context-view-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ParticipantContextViewModel._validate_sem216_audience_boundary"
+    },
+    {
+      "description": "Participant-visible context views must not set payload_ref to a raw archival evidence_record or derived_measure source ref; payload_ref must identify the transformed, redacted view output.",
+      "id": "context-view-sem216-payload-not-raw-archival",
+      "inputs": [
+        {
+          "contract_id": "participant-context-view-v1",
+          "instance_path": "#/payload_ref"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ParticipantContextViewModel._validate_sem216_audience_boundary"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "participant-context-view-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
 }

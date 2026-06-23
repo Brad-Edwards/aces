@@ -169,6 +169,7 @@ decisions/adrs/adr-062-concept-authority-catalog-governance-gate
 decisions/adrs/adr-063-reference-emulation-backend
 decisions/adrs/adr-064-experiment-evidence-and-measure-contract-boundary
 decisions/adrs/adr-065-experiment-run-provenance-contract-boundary
+decisions/issue-248-sem-216-boundary-semantics-preflight
 decisions/sem-213-temporal-participant-preflight
 decisions/issue-508-related-work-comparison-preflight
 decisions/issue-42-validator-package-split-preflight

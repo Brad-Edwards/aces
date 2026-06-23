@@ -545,6 +545,41 @@
   "$id": "https://aces.dev/schemas/experiment-evidence-record-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "redaction_state": {
+            "enum": [
+              "redacted",
+              "withheld"
+            ]
+          }
+        },
+        "required": [
+          "redaction_state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "raw_content": {
+            "properties": {
+              "loss_disclosure": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "loss_disclosure"
+            ]
+          }
+        },
+        "required": [
+          "raw_content"
+        ]
+      }
+    }
+  ],
   "description": "Raw captured EXP-708 evidence record, distinct from derived measures.",
   "properties": {
     "apparatus_context_ref": {
