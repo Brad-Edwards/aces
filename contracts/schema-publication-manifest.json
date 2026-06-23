@@ -92,10 +92,10 @@
       "contract_id": "experiment-evidence-record-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-evidence-record-v1.json",
       "stability": "draft",
-      "content_hash": "c3ccf50f5652d1ff34e1347d72eb75da3b23add85b6ca9409d645a407ab715e2",
+      "content_hash": "463f7b0132ef401616a8dece940dca7654e2d32a8d223f5932404f06d464724b",
       "last_change": {
-        "summary": "Initial publication of the EXP-708 experiment evidence record contract for raw captured observations and artifacts.",
-        "content_hash": "c3ccf50f5652d1ff34e1347d72eb75da3b23add85b6ca9409d645a407ab715e2"
+        "summary": "Published the SEM-216 evidence-boundary rule as a portable schema constraint: redacted or withheld evidence records must disclose raw_content.loss_disclosure.",
+        "content_hash": "463f7b0132ef401616a8dece940dca7654e2d32a8d223f5932404f06d464724b"
       }
     },
     {
@@ -170,10 +170,10 @@
       "contract_id": "participant-context-view-v1",
       "schema_path": "contracts/schemas/control-plane/participant-context-view-v1.json",
       "stability": "draft",
-      "content_hash": "7f29533c310d3bc8a457f2734bbee0165e3190fff78704cae83928d88a46cee9",
+      "content_hash": "2946f3d2cb6e74a5848f57b3729545b4939cacd84aecdc2a5b86add7e431c0de",
       "last_change": {
-        "summary": "Added SEM-214 portable meaning and comparability semantics to the participant context-view control-plane contract.",
-        "content_hash": "7f29533c310d3bc8a457f2734bbee0165e3190fff78704cae83928d88a46cee9"
+        "summary": "Added the SEM-216 audience-boundary rules to participant-visible context views: archival evidence_record/derived_measure source layers require a derivation_basis_ref view rule and redaction_policy_ref (published allOf), must be mediated by the transformation, and payload_ref must not alias a raw archival ref (both published as x-aces-invariants).",
+        "content_hash": "2946f3d2cb6e74a5848f57b3729545b4939cacd84aecdc2a5b86add7e431c0de"
       }
     },
     {

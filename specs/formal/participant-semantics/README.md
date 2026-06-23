@@ -1098,6 +1098,125 @@ Implementation artifacts:
 - runtime conformance checks that reject ungrounded action outcome, evidence
   claim, and episode-status interpretation sources.
 
+## SEM-216 - Boundary Semantics For State, Evidence, Evaluation, Analysis, And Views
+
+`SEM-216` requires explicit semantics distinguishing runtime-observable state,
+captured evidence, derived evaluations, analysis outputs, and audience-specific
+views so one stratum is never silently substituted for another.
+
+`SEM-216` is a **boundary-semantics requirement over the existing contract
+families**, not a new universal taxonomy. Per the architecture preflight
+(`docs/decisions/issue-248-sem-216-boundary-semantics-preflight.md`) there is no
+"state/evidence/result/view" super-schema: each stratum keeps its own governed
+carrier, and cross-boundary movement is by typed references, source layers,
+traceability blocks, checksums, and provenance refs only.
+
+The five strata and their governing carriers:
+
+- **runtime-observable state** is live, mutable control-plane/runtime material:
+  `RuntimeSnapshot`, snapshot entries, workflow/evaluation results and history,
+  participant episode/behavior/shared-state/joint-action records, operation
+  status, and audit metadata. It is not archival run provenance by itself.
+- **captured evidence** is the EXP-708 `experiment-evidence-record-v1` surface:
+  typed source refs, content URI plus checksum or bounded summary, sensitivity,
+  redaction state, loss disclosure, and provenance. A capture spec declares
+  intent; it is not proof that evidence exists.
+- **derived evaluations** are compiled evaluation result/history contracts and
+  the EXP-709 `experiment-derived-measure-v1` archival measure; a raw evidence
+  record is never a metric value, score, or measure.
+- **analysis outputs** are study/report artifacts or derived measures with
+  `measure_kind: analysis-output`, kept grounded through run traceability and at
+  least one derived-measure reference; they must not float from raw runtime
+  state or evaluator detail.
+- **audience-specific views** are projections over recorded carriers
+  (`participant-status-view-v1`, `participant-history-view-v1`,
+  `participant-context-view-v1`), never sources of truth.
+
+Design commitments:
+
+- the five strata are distinct objects carried by named existing contracts; no
+  contract may carry another stratum's shape (closed-world models reject it);
+- archival evidence and derived evaluation/adjudication outputs reach a
+  participant-visible view only through a governed view rule and a redaction
+  policy, only when the archival source is mediated by the view transformation
+  rather than passed through raw, and only when the disclosed `payload_ref` is
+  the transformed view output rather than an alias of the raw archival ref;
+- evidence claims disclose redaction and loss at the evidence boundary;
+- backend-native observability is not an admissible portable view source and is
+  not a portable semantic observation;
+- analysis outputs remain grounded in run traceability and derived measures.
+
+Boundary obligations (each is exercised by an adversarial negative fixture):
+
+- **B1** - archived evidence must not become participant-visible without a view
+  rule. A `participant_visible` `participant-context-view-v1` that draws on an
+  `evidence_record` source layer must declare a `derivation_basis_ref` view rule
+  and a `redaction_policy_ref` (published `allOf`), the evidence source must
+  appear in `transformation.input_source_ids`, and `payload_ref` must not alias
+  the raw evidence ref (both relational rules published as `x-aces-invariants`).
+- **B2** - hidden adjudication / derived-evaluation outputs must not reach a
+  participant view without redaction governance. A `participant_visible` view
+  that draws on a `derived_measure` source layer must additionally declare a
+  `redaction_policy_ref`, mediate the source through the transformation, and
+  expose a transformed `payload_ref` rather than the raw measure ref.
+
+The required-ref clauses of B1/B2 (and B4) are enforced both by the closed-world
+model and by the published JSON Schema `allOf`, so schema-only consumers reject
+them. The relational clauses that standard JSON Schema cannot express - archival
+source mediation and `payload_ref` non-aliasing - are enforced by the model and
+published as `x-aces-invariants` on `participant-context-view-v1` (the ACES
+semantic-invariant profile, per ADR-009 §7 and the experiment-core convention),
+so the portable contract advertises every obligation and names its validator.
+- **B3** - derived analysis is never captured evidence. An
+  `experiment-evidence-record-v1` record is closed-world and carries no
+  `measure_kind`/`value`/metric shape, and its `evidence_kind` has no
+  measure/analysis member.
+- **B4** - evidence claims must disclose redaction/loss. A `redacted` or
+  `withheld` evidence record must carry `raw_content.loss_disclosure`, enforced
+  both by the model and by the published schema.
+- **B5** - backend observability is not a portable semantic observation. Only
+  the governed `source_layer` vocabulary is an admissible portable view source;
+  raw backend-native observability streams are rejected by the closed enum.
+
+Stratum boundary traceability:
+
+| Stratum | Carrier (contract / model) | Enforcement point | Invariant |
+| ------- | -------------------------- | ----------------- | --------- |
+| runtime-observable state | `RuntimeSnapshotEnvelopeModel` / `RuntimeSnapshot` | runtime snapshot diagnostics in `aces_conformance/conformance.py` | I2, I13 |
+| captured evidence | `experiment-evidence-record-v1` / `ExperimentEvidenceRecordModel` | `_validate_evidence_record`, `_validate_raw_content`, closed-world `evidence_kind` (B3, B4) | I3, I13 |
+| derived evaluations | `experiment-derived-measure-v1` / `ExperimentDerivedMeasureModel` | `_validate_derived_measure`, typed `source_evidence_refs` | I10 |
+| analysis outputs | derived measure `measure_kind: analysis-output` + `ExperimentRunTraceabilityModel` | `_validate_run_traceability` claim grounding | I10, I15 |
+| audience-specific views | `participant-context-view-v1` / `ParticipantContextViewModel` | `_validate_sem214_source_binding` + `_validate_sem216_audience_boundary` (B1, B2, B5) | I2, I3, I13 |
+
+The obligations are projections of the existing abstract invariants - **I2**
+(hidden-truth boundary), **I3**/**I13** (observation projection / apparatus
+disclosure), **I10** (outcome-layer separation), and **I15** (run/study
+provenance) - so `SEM-216` introduces no new `### I*` invariant heading and the
+invariant oracle is unchanged.
+
+Current implementation artifacts for the `SEM-216` slice:
+
+- `implementations/python/packages/aces_contracts/contracts.py` adds
+  `ParticipantContextViewModel._validate_sem216_audience_boundary` with its
+  published `allOf` (required view rule + redaction policy) and
+  `x-aces-invariants` (archival source mediation, `payload_ref` non-aliasing)
+  for the B1/B2/B5 view boundary, and publishes the evidence
+  redaction/loss-disclosure rule as a portable schema constraint on
+  `ExperimentEvidenceRecordModel` (B4);
+- `contracts/schemas/control-plane/participant-context-view-v1.json` and
+  `contracts/schemas/experiment-core/experiment-evidence-record-v1.json` carry
+  the regenerated boundary constraints, recorded in
+  `contracts/schema-publication-manifest.json`;
+- `contracts/fixtures/control-plane/participant-context-view-v1/` and
+  `contracts/fixtures/experiment-core/experiment-evidence-record-v1/` add the
+  positive mediated-view fixture and the five adversarial negative fixtures
+  (B1-B5);
+- `implementations/python/tests/test_sem_216_boundary_semantics.py` proves each
+  boundary obligation is rejected by both schema and model, with the mediated
+  view admitted; the existing fixture-walk tests in
+  `test_participant_backend_contracts.py` and `test_runtime_contracts.py` carry
+  the same fixtures.
+
 ## Required Future Verification
 
 The complete participant surface is `FM3`.

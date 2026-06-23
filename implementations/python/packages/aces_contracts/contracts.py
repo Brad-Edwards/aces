@@ -1826,6 +1826,105 @@ class ParticipantContextViewModel(ContractModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def _validate_sem216_audience_boundary(self) -> ParticipantContextViewModel:
+        # SEM-216 B1/B2: archived evidence and derived evaluation/adjudication outputs are
+        # distinct strata from an audience-specific view. A participant-visible view may only
+        # draw on an evidence_record or derived_measure source layer through a governed view
+        # rule (derivation_basis_ref), under a redaction policy (redaction_policy_ref); the
+        # archival source must be consumed by the transformation rather than passed through raw;
+        # and the disclosed payload must be the transformed output, never the raw archival ref.
+        #
+        # The required-ref clauses are also published as a schema allOf so schema-only consumers
+        # enforce them; the relational mediation and payload-aliasing clauses cannot be expressed
+        # in JSON Schema and are published as x-aces-invariants (see __get_pydantic_json_schema__).
+        if self.audience_scope != "participant_visible":
+            return self
+        archival_layers = [
+            source for source in self.source_layers if source.source_layer in {"evidence_record", "derived_measure"}
+        ]
+        if not archival_layers:
+            return self
+        if self.derivation_basis_ref is None:
+            raise ValueError(
+                "participant-visible context views that draw on archival evidence_record or derived_measure "
+                "source layers must declare a derivation_basis_ref governed view rule"
+            )
+        if self.redaction_policy_ref is None:
+            raise ValueError(
+                "participant-visible context views that draw on archival evidence_record or derived_measure "
+                "source layers must declare a redaction_policy_ref"
+            )
+        mediated = set(self.transformation.input_source_ids)
+        unmediated = sorted(source.source_id for source in archival_layers if source.source_id not in mediated)
+        if unmediated:
+            raise ValueError(
+                "participant-visible archival source layers must be mediated by the transformation view rule; "
+                "unmediated source ids: " + ", ".join(unmediated)
+            )
+        if self.payload_ref is not None:
+            raw_archival_refs = {source.ref for source in archival_layers}
+            raw_archival_refs.update(ref for source in archival_layers for ref in source.evidence_refs)
+            if self.payload_ref in raw_archival_refs:
+                raise ValueError(
+                    "participant-visible context views must not set payload_ref to a raw archival "
+                    "evidence_record/derived_measure source ref; payload_ref must identify the transformed, "
+                    "redacted view output produced under the governed view rule"
+                )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {
+                    "properties": {
+                        "audience_scope": {"const": "participant_visible"},
+                        "source_layers": {
+                            "contains": {
+                                "properties": {"source_layer": {"enum": ["evidence_record", "derived_measure"]}},
+                                "required": ["source_layer"],
+                            }
+                        },
+                    },
+                    "required": ["audience_scope", "source_layers"],
+                },
+                "then": {
+                    "required": ["derivation_basis_ref", "redaction_policy_ref"],
+                    "properties": {
+                        "derivation_basis_ref": {"type": "string", "minLength": 1},
+                        "redaction_policy_ref": {"type": "string", "minLength": 1},
+                    },
+                },
+            }
+        )
+        # SEM-216 relational obligations that standard JSON Schema cannot express are published
+        # as ACES semantic invariants so schema-only consumers see the full portable contract and
+        # the validator that enforces it (mirrors the experiment-core x-aces-invariants pattern).
+        _add_aces_invariant(
+            json_schema,
+            "context-view-sem216-archival-source-mediated",
+            "Participant-visible context views drawing on an archival evidence_record or derived_measure "
+            "source layer must mediate that source through transformation.input_source_ids.",
+            validator="aces_contracts.contracts.ParticipantContextViewModel._validate_sem216_audience_boundary",
+            inputs=[{"contract_id": "participant-context-view-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "context-view-sem216-payload-not-raw-archival",
+            "Participant-visible context views must not set payload_ref to a raw archival evidence_record or "
+            "derived_measure source ref; payload_ref must identify the transformed, redacted view output.",
+            validator="aces_contracts.contracts.ParticipantContextViewModel._validate_sem216_audience_boundary",
+            inputs=[{"contract_id": "participant-context-view-v1", "instance_path": "#/payload_ref"}],
+        )
+        return json_schema
+
 
 class PlanOperationModel(ContractModel):
     action: str
@@ -3575,6 +3674,26 @@ class ExperimentEvidenceRecordModel(ContractModel):
             "captured_at must be a valid RFC 3339 date-time.",
             validator="aces_contracts.contracts.ExperimentEvidenceRecordModel._validate_evidence_record",
             inputs=[{"contract_id": "experiment-evidence-record-v1", "instance_path": "#/captured_at"}],
+        )
+        # SEM-216 B4: redacted or withheld evidence records must disclose redaction/loss at the
+        # evidence boundary. Publish the model rule as a portable schema constraint so any
+        # consumer validating against the JSON Schema enforces the disclosure, not just the model.
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {
+                    "properties": {"redaction_state": {"enum": ["redacted", "withheld"]}},
+                    "required": ["redaction_state"],
+                },
+                "then": {
+                    "required": ["raw_content"],
+                    "properties": {
+                        "raw_content": {
+                            "required": ["loss_disclosure"],
+                            "properties": {"loss_disclosure": {"type": "string", "minLength": 1}},
+                        }
+                    },
+                },
+            }
         )
         return json_schema
 
