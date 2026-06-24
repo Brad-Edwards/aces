@@ -429,6 +429,319 @@
       "title": "ExperimentArtifactRefModel",
       "type": "object"
     },
+    "ExperimentAugmentationDisclosureModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "properties": {
+            "augmented_by_ref": {
+              "properties": {
+                "ref_kind": {
+                  "enum": [
+                    "processor",
+                    "backend"
+                  ]
+                }
+              },
+              "required": [
+                "ref_kind"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classifications": {
+                "contains": {
+                  "const": "environment_visible"
+                }
+              }
+            },
+            "required": [
+              "classifications"
+            ]
+          },
+          "then": {
+            "properties": {
+              "carrier_refs": {
+                "contains": {
+                  "properties": {
+                    "ref_kind": {
+                      "enum": [
+                        "apparatus-context",
+                        "capture-spec",
+                        "derived-measure",
+                        "evidence-record",
+                        "manifest",
+                        "measurement-channel",
+                        "profile",
+                        "run",
+                        "scenario-snapshot"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ref_kind"
+                  ]
+                }
+              },
+              "environment_effect": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "evidence_refs": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "carrier_refs",
+              "environment_effect",
+              "evidence_refs"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classifications": {
+                "contains": {
+                  "const": "participant_visible"
+                }
+              }
+            },
+            "required": [
+              "classifications"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence_refs": {
+                "minItems": 1
+              },
+              "markings": {
+                "minItems": 1
+              },
+              "participant_visibility": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "participant_visibility",
+              "markings",
+              "evidence_refs"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classifications": {
+                "contains": {
+                  "const": "comparability_relevant"
+                }
+              }
+            },
+            "required": [
+              "classifications"
+            ]
+          },
+          "then": {
+            "properties": {
+              "comparability_effect": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "evidence_refs": {
+                "minItems": 1
+              },
+              "observer_effect": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "comparability_effect",
+              "observer_effect",
+              "evidence_refs"
+            ]
+          }
+        }
+      ],
+      "description": "Disclosure for processor/backend augmentation used by a run.",
+      "properties": {
+        "affected_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentReferenceModel"
+          },
+          "title": "Affected Refs",
+          "type": "array"
+        },
+        "augmentation_id": {
+          "minLength": 1,
+          "title": "Augmentation Id",
+          "type": "string"
+        },
+        "augmented_by_ref": {
+          "$ref": "#/$defs/ExperimentReferenceModel"
+        },
+        "carrier_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentReferenceModel"
+          },
+          "minItems": 1,
+          "title": "Carrier Refs",
+          "type": "array"
+        },
+        "classifications": {
+          "items": {
+            "enum": [
+              "apparatus_only",
+              "environment_visible",
+              "participant_visible",
+              "comparability_relevant"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Classifications",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "comparability_effect": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comparability Effect"
+        },
+        "disclosure_policy": {
+          "minLength": 1,
+          "title": "Disclosure Policy",
+          "type": "string"
+        },
+        "environment_effect": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Environment Effect"
+        },
+        "evidence_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentEvidenceRecordReferenceModel"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "markings": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Markings",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "notes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "observer_effect": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observer Effect"
+        },
+        "participant_visibility": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participant Visibility"
+        },
+        "purpose": {
+          "enum": [
+            "evidence",
+            "evaluation",
+            "operational",
+            "comparability",
+            "other"
+          ],
+          "title": "Purpose",
+          "type": "string"
+        },
+        "realization_layer": {
+          "enum": [
+            "processor",
+            "backend",
+            "apparatus",
+            "runtime-environment",
+            "participant-runtime",
+            "measurement-channel",
+            "analysis",
+            "other"
+          ],
+          "title": "Realization Layer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "augmentation_id",
+        "purpose",
+        "realization_layer",
+        "classifications",
+        "augmented_by_ref",
+        "carrier_refs",
+        "disclosure_policy"
+      ],
+      "title": "ExperimentAugmentationDisclosureModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "Augmentation disclosures must keep environment-visible, participant-visible, and comparability-relevant semantics explicit and must use processor/backend authority.",
+          "id": "augmentation-disclosure-semantics-valid",
+          "inputs": [
+            {
+              "contract_id": "experiment-run-v1",
+              "instance_path": "#/augmentation_disclosures"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.ExperimentAugmentationDisclosureModel._validate_augmentation_disclosure"
+        }
+      ]
+    },
     "ExperimentCaptureSpecReferenceModel": {
       "additionalProperties": false,
       "description": "Reference constrained to a declarative capture specification.",
@@ -2053,6 +2366,13 @@
     "apparatus_context": {
       "$ref": "#/$defs/ExperimentApparatusContextModel"
     },
+    "augmentation_disclosures": {
+      "items": {
+        "$ref": "#/$defs/ExperimentAugmentationDisclosureModel"
+      },
+      "title": "Augmentation Disclosures",
+      "type": "array"
+    },
     "clock_context": {
       "$ref": "#/$defs/ExperimentClockContextModel"
     },
@@ -2271,6 +2591,18 @@
     {
       "description": "Every realized-form disclosure evidence ref must also appear in the run traceability evidence refs.",
       "id": "realized-form-evidence-refs-traced",
+      "inputs": [
+        {
+          "contract_id": "experiment-run-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ExperimentRunModel._validate_archival_run"
+    },
+    {
+      "description": "Every augmentation disclosure evidence ref must also appear in the run traceability evidence refs, and augmentation_id values must be unique within the run.",
+      "id": "augmentation-disclosure-evidence-refs-traced",
       "inputs": [
         {
           "contract_id": "experiment-run-v1",

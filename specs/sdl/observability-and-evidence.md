@@ -112,6 +112,14 @@ augmentation MUST have first-class provenance or evidence disclosure. They MUST
 NOT be hidden in metadata, diagnostics, audit blobs, backend-native DTOs, or
 raw logs.
 
+Run-level processor/backend augmentation disclosures are carried by
+`experiment-run-v1` `augmentation_disclosures`. That carrier records the
+augmentation purpose, realization layer, additive classifications, portable
+carrier refs, disclosure policy, markings, observer/comparability effects, and
+run-traced evidence refs. SDL authoring that depends on augmentation output
+must map to that run-provenance carrier rather than relying on backend logs,
+free-form metadata, evaluator internals, or untyped diagnostic text.
+
 ## Reference And Validation Requirements
 
 Future SDL fields for this catalog must satisfy the existing SDL gates:
