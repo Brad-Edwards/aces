@@ -236,3 +236,4 @@ participant-visible, or comparability-relevant.
 
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
+| 2026-06-23 | #335 | Implemented SEM-225 run-level augmentation disclosures in `experiment-run-v1`, including separate environment-visible, participant-visible, and comparability-relevant validation. |

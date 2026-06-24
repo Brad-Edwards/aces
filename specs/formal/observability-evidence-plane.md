@@ -135,9 +135,9 @@ The minimum adversarial fixture set for implementation is:
   analysis engines, or backend adapters.
 - This design does not replace ADR-022, ADR-054, ADR-064, ADR-065, SEM-218, or
   existing control-plane security and diagnostics.
-- This design does not transition SEM-224, SEM-225, DSL-123, or DSL-124 to
-  implementation coverage. It records the criteria the spawned issues must
-  satisfy.
+- The design criteria above do not by themselves transition SEM-224, SEM-225,
+  DSL-123, or DSL-124 to implementation coverage. The implementation coverage
+  sections below record realized subsets as spawned issues land.
 
 ## Implementation Coverage (#334 / SEM-224)
 
@@ -163,6 +163,33 @@ probe set.
 | OE-06 derived analysis must cite source evidence | `ExperimentDerivedMeasureModel.source_evidence_refs` (`min_length=1`) | `test_derived_measure_without_source_evidence_is_rejected`, `test_reference_derived_measure_cites_source_evidence` | pre-existing rule, SEM-224 probe |
 | Plane traceability published portably | `x-aces-plane` on the three experiment-core schemas | `test_claim_bearing_contracts_publish_their_plane_annotation` | yes |
 
-SEM-225 augmentation carriers (#335), DSL-123 scenario-native authoring
-surfaces (#336), and DSL-124 authored evidence-requirement surfaces (#337)
-extend the carrier→plane registry rather than re-implementing it.
+## Implementation Coverage (#335 / SEM-225)
+
+SEM-225 is realized as run-level augmentation disclosure on
+`experiment-run-v1`. `ExperimentAugmentationDisclosureModel` records the
+augmentation purpose, realization layer, additive classifications, processor or
+backend authority, first-class carrier refs, disclosure policy, markings,
+observer/comparability effects, and evidence-record refs. The run validator
+keeps augmentation evidence refs tied to `traceability.evidence_record_refs` so
+augmentation claims do not float free of captured evidence.
+
+The model keeps the three SEM-225 axes separate:
+
+- `environment_visible` requires an explicit environment effect and a portable
+  carrier ref rather than a backend-log-only reference;
+- `participant_visible` requires participant visibility text plus markings; and
+- `comparability_relevant` requires both comparability impact and observer
+  effect disclosure.
+
+| Invariant / matrix row | Realizing artifact | Test | New in #335? |
+| --- | --- | --- | --- |
+| OE-09 first-class augmentation disclosure | `ExperimentAugmentationDisclosureModel`, `ExperimentRunModel.augmentation_disclosures` | `test_sem_225_accepts_run_augmentation_disclosure`, `test_experiment_run_schema_publishes_sem_225_augmentation_surface` | yes |
+| Environment-visible augmentation is not backend-log-only | portable carrier validation in `ExperimentAugmentationDisclosureModel` | `test_sem_225_rejects_environment_visible_backend_log_only_disclosure` | yes |
+| Participant-visible augmentation carries visibility/marking context | participant visibility and marking validation | `test_sem_225_rejects_participant_visible_augmentation_without_markings` | yes |
+| Comparability-relevant augmentation names observer effect | comparability and observer-effect validation | `test_sem_225_rejects_comparability_relevant_augmentation_without_observer_effect` | yes |
+| Processor/backend authority boundary | `augmented_by_ref` constrained to processor/backend refs | `test_sem_225_rejects_non_processor_backend_augmentation_authority` | yes |
+| Evidence provenance remains traced | run-level augmentation evidence refs checked against traceability | `test_sem_225_augmentation_evidence_refs_must_be_run_traced` | yes |
+
+DSL-123 scenario-native authoring surfaces (#336) and DSL-124 authored
+evidence-requirement surfaces (#337) extend the carrier-to-plane registry rather
+than re-implementing it.

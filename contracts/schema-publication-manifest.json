@@ -102,10 +102,10 @@
       "contract_id": "experiment-run-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
       "stability": "draft",
-      "content_hash": "9d4d86dfcbe6cca5e93bb4ae2005b07876dcd0fc2acbaf2f6c3aba945ecec4e5",
+      "content_hash": "e1e7ca5e74439140cd27340a7754d8b871266e518ce93c98bf6ff0dbaa8bd134",
       "last_change": {
-        "summary": "Added EXP-710/EXP-720/EXP-722 run provenance traceability and realized-form disclosure surfaces.",
-        "content_hash": "9d4d86dfcbe6cca5e93bb4ae2005b07876dcd0fc2acbaf2f6c3aba945ecec4e5"
+        "summary": "Added SEM-225 run-level augmentation disclosures for processor/backend augmentation classification, visibility, observer-effect, comparability, and evidence provenance.",
+        "content_hash": "e1e7ca5e74439140cd27340a7754d8b871266e518ce93c98bf6ff0dbaa8bd134"
       }
     },
     {
