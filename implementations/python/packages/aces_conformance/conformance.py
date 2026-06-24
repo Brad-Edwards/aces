@@ -619,6 +619,29 @@ def _participant_behavior_history_diagnostics(
     return diagnostics
 
 
+def _participant_behavior_binding_diagnostics(
+    participant_address: str,
+    history: object,
+    *,
+    has_participant_action_binding: bool,
+    has_participant_boundary_binding: bool,
+) -> list[Diagnostic]:
+    if not isinstance(history, list) or not history:
+        return []
+    if has_participant_action_binding and has_participant_boundary_binding:
+        return []
+    return [
+        _diagnostic(
+            _SEMANTIC_INVALID_DIAGNOSTIC_CODE,
+            f"runtime.snapshot.participant-behavior-history.{participant_address}",
+            (
+                "participant behavior history requires a participant.behavior snapshot entry "
+                "with action_contract_addresses and observation_boundary_addresses"
+            ),
+        )
+    ]
+
+
 def _participant_behavior_snapshot_diagnostics(
     snapshot: RuntimeSnapshot,
 ) -> list[Diagnostic]:
@@ -634,6 +657,14 @@ def _participant_behavior_snapshot_diagnostics(
     for participant_address, history in snapshot.participant_behavior_history.items():
         has_participant_action_binding = participant_address in participant_action_addresses
         has_participant_boundary_binding = participant_address in participant_observation_boundary_addresses
+        diagnostics.extend(
+            _participant_behavior_binding_diagnostics(
+                participant_address,
+                history,
+                has_participant_action_binding=has_participant_action_binding,
+                has_participant_boundary_binding=has_participant_boundary_binding,
+            )
+        )
         participant_boundary_addresses = participant_observation_boundary_addresses.get(participant_address)
         if participant_boundary_addresses is None:
             participant_boundary_addresses = _participant_history_observation_boundary_addresses(history)
