@@ -1,0 +1,1 @@
+Noted in the README that APTL (Advanced Purple Team Lab) is a worked example of a separate project specifying its scenarios as ACES SDL documents and realizing the selected topology on a concrete Docker Compose backend.
