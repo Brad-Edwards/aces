@@ -110,10 +110,11 @@ following structure.
    `participant-context-view-v1` (derived operational context views). All
    three apply visibility projection and marking/redaction enforcement before
    publication and carry no retrieval-only state that does not exist in
-   recorded contracts. The *semantics* of derived context views (meaning and
-   comparability) belong to `SEM-214` (wave 3); `participant-context-view-v1`
-   carries the view reference, provenance, and marking discipline only and
-   makes no comparability claim.
+   recorded contracts. `participant-context-view-v1` carries the SEM-214
+   meaning/comparability envelope: a governed meaning reference, participant
+   and audience scope, observation point, consumed source layers,
+   transformation rule, evidence/provenance basis, semantic limitations, and
+   explicit comparability basis/disclosures.
 
 6. **`API-411` outcomes are interpretation records.**
    `participant-outcome-report-v1` reports participant-local outcomes as
@@ -163,9 +164,10 @@ Negative:
 
 Risks:
 
-- The `SEM-214` deferral means `participant-context-view-v1` could prove
-  inadequate when derived-context-view semantics are designed; mitigated by
-  keeping that carrier reference-and-provenance only.
+- SEM-214 semantics make `participant-context-view-v1` stricter: existing
+  producers must provide explicit meaning, source, transformation,
+  evidence/provenance, and comparability metadata rather than treating schema
+  validity alone as a portability claim.
 - The API-407 guarantee-strength scale could be misread as SEM-218
   realization support; mitigated by the explicit boundary rule in this ADR
   and by distinct manifest fields.

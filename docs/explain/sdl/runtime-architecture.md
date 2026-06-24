@@ -171,6 +171,27 @@ honestly react to upstream changes.
 Ordering graphs must remain acyclic within each domain; the planner emits error
 diagnostics and invalidates the plan if a cycle survives into runtime planning.
 
+### Reference processor
+
+`aces_processor.reference.run_reference_processor(scenario, backend_manifest)`
+(and the `ReferenceProcessor` class) is the repository-owned reference
+implementation of the processing model. It assembles the stages above into one
+call — accepting SDL text, a file path, or an already-parsed scenario — and
+returns a `ReferenceProcessorResult` carrying the compiled `RuntimeModel`, the
+`ExecutionPlan`, and the combined compilation + planning diagnostics
+(`is_valid` is false when any are errors). `ReferenceProcessor.manifest_payload()`
+exposes the published processor manifest through the canonical renderer.
+
+Per ADR-008 the processor is the semantics-bearing layer between SDL authoring
+and backend realization, so the reference processor's responsibility ends at the
+`ExecutionPlan`: it imports only the SDL/processor/contract layers and never
+`aces_runtime` (the one-directional boundary enforced by
+`tools/policy/adr_policy.yaml`). End-to-end execution is realized by composing
+its plan with the reference runtime (`RuntimeManager` / `RuntimeControlPlane`);
+the backend-conformance live probe drives exactly this composition, and the
+RUN-313 tests use it to prove every contract version the processor manifest
+declares is exercised end to end.
+
 ## Runtime Snapshot
 
 `RuntimeSnapshot` is the typed state model used by the planner and manager. Each

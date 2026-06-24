@@ -240,6 +240,68 @@
   },
   "run_status": "completed",
   "outcome_status": "succeeded",
+  "traceability": {
+    "capture_spec_refs": [
+      {
+        "ref_kind": "capture-spec",
+        "ref_id": "capture-techvault-evidence-v1",
+        "ref_version": "1.0.0"
+      }
+    ],
+    "evidence_record_refs": [
+      {
+        "ref_kind": "evidence-record",
+        "ref_id": "evidence-techvault-network-trace-001",
+        "ref_version": "1.0.0"
+      }
+    ],
+    "derived_measure_refs": [
+      {
+        "ref_kind": "derived-measure",
+        "ref_id": "measure-techvault-foothold-001",
+        "ref_version": "1.0.0"
+      }
+    ],
+    "claim_refs": [
+      {
+        "ref_kind": "result",
+        "ref_id": "foothold-achieved-result"
+      }
+    ],
+    "notes": [
+      "The run provenance chain binds the declared capture spec, raw evidence record, derived foothold measure, and result claim."
+    ]
+  },
+  "realized_form_disclosures": [
+    {
+      "concern_id": "composed-scenario-snapshot",
+      "concern_kind": "scenario-module",
+      "basis": "processor-realized",
+      "realized_by_ref": {
+        "ref_kind": "processor",
+        "ref_id": "aces-reference-processor",
+        "ref_version": "0.1.0"
+      },
+      "authored_ref": {
+        "ref_kind": "scenario",
+        "ref_id": "scenario-techvault"
+      },
+      "realized_ref": {
+        "ref_kind": "scenario-snapshot",
+        "ref_id": "scenario-techvault",
+        "ref_version": "2026-05-26",
+        "ref_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "disclosure": "The processor resolved the authored TechVault scenario into the canonical composed scenario snapshot used by this run.",
+      "evidence_refs": [
+        {
+          "ref_kind": "evidence-record",
+          "ref_id": "evidence-techvault-network-trace-001",
+          "ref_version": "1.0.0"
+        }
+      ]
+    }
+  ],
   "evidence_artifacts": [
     {
       "artifact_id": "evaluation-history",

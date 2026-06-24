@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
+from contextlib import suppress
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
@@ -95,6 +98,12 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
             participant_address: list(events)
             for participant_address, events in snapshot.participant_behavior_history.items()
         },
+        "shared_state_records": dict(snapshot.shared_state_records),
+        "shared_state_history": {
+            state_address: list(records) for state_address, records in snapshot.shared_state_history.items()
+        },
+        "joint_action_records": dict(snapshot.joint_action_records),
+        "time_management_contexts": dict(snapshot.time_management_contexts),
         "realization_provenance": [
             {
                 "address": entry.address,
@@ -142,6 +151,12 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
             participant_address: list(events)
             for participant_address, events in payload.get("participant_behavior_history", {}).items()
         },
+        shared_state_records=dict(payload.get("shared_state_records", {})),
+        shared_state_history={
+            state_address: list(records) for state_address, records in payload.get("shared_state_history", {}).items()
+        },
+        joint_action_records=dict(payload.get("joint_action_records", {})),
+        time_management_contexts=dict(payload.get("time_management_contexts", {})),
         realization_provenance=tuple(
             RealizationProvenanceEntry(
                 address=str(item.get("address", "")),
@@ -289,6 +304,19 @@ class LocalControlPlaneStore:
         self._operations_path = self._base_dir / "operations.json"
         self._audit_path = self._base_dir / "audit.jsonl"
 
+    @staticmethod
+    def _atomic_write(path: Path, content: str) -> None:
+        """Write content atomically via a temporary file and os.replace."""
+        fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(content)
+            os.replace(tmp, path)
+        except BaseException:
+            with suppress(OSError):
+                os.unlink(tmp)
+            raise
+
     def load_snapshot(self) -> RuntimeSnapshot:
         if not self._snapshot_path.exists():
             return RuntimeSnapshot()
@@ -296,10 +324,8 @@ class LocalControlPlaneStore:
         return _snapshot_from_payload(payload)
 
     def save_snapshot(self, snapshot: RuntimeSnapshot) -> None:
-        self._snapshot_path.write_text(
-            json.dumps(_snapshot_payload(snapshot), indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        content = json.dumps(_snapshot_payload(snapshot), indent=2, sort_keys=True) + "\n"
+        self._atomic_write(self._snapshot_path, content)
 
     def load_records(self) -> dict[str, ControlPlaneOperationRecord]:
         if not self._operations_path.exists():
@@ -317,10 +343,8 @@ class LocalControlPlaneStore:
         payload = {
             operation_id: _record_payload(operation_record) for operation_id, operation_record in records.items()
         }
-        self._operations_path.write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        content = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        self._atomic_write(self._operations_path, content)
 
     def find_by_idempotency(
         self,

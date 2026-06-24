@@ -241,10 +241,13 @@ def _registry_base_url(registry: str, *, allow_insecure_http: bool) -> str:
     return f"https://{registry}".rstrip("/")
 
 
+_HTTP_TIMEOUT_SECONDS = 30
+
+
 def _json_request(url: str, *, headers: dict[str, str] | None = None) -> Any:
     request = Request(url, headers=headers or {})
     try:
-        with urlopen(request) as response:  # noqa: S310 - explicit OCI fetch
+        with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:
             return json.loads(response.read().decode("utf-8"))
     except (HTTPError, URLError, json.JSONDecodeError) as exc:
         raise SDLParseError(f"Failed to fetch OCI metadata from {url}: {exc}") from exc
@@ -253,7 +256,7 @@ def _json_request(url: str, *, headers: dict[str, str] | None = None) -> Any:
 def _bytes_request(url: str, *, headers: dict[str, str] | None = None) -> bytes:
     request = Request(url, headers=headers or {})
     try:
-        with urlopen(request) as response:  # noqa: S310 - explicit OCI fetch
+        with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:
             return response.read()
     except (HTTPError, URLError) as exc:
         raise SDLParseError(f"Failed to fetch OCI blob from {url}: {exc}") from exc
@@ -290,6 +293,37 @@ def _oci_cache_dir(base_dir: Path) -> Path:
     return base_dir / ".aces" / "module-cache"
 
 
+def _safe_tar_members(
+    tar: tarfile.TarFile,
+    dest: Path,
+) -> list[tarfile.TarInfo]:
+    """Validate every tar member before extraction (fail closed).
+
+    The OCI bundle bytes are attacker-controlled even after registry allowlisting,
+    digest pinning, and signature verification, so this validation is the
+    filesystem-write boundary for module import resolution. It must hold on every
+    supported runtime, not just on Python 3.12+ where ``extractall(filter="data")``
+    is available, because the PEP 706 ``filter`` keyword was backported only in
+    Python 3.11.4 while the project supports ``>=3.11``. Validation therefore
+    matches the ``data`` filter's guarantees: reject path traversal, symlinks,
+    hard links, and special files, and strip setuid/setgid/sticky bits.
+    """
+    safe: list[tarfile.TarInfo] = []
+    resolved_dest = dest.resolve()
+    for member in tar.getmembers():
+        member_path = (dest / member.name).resolve()
+        if not member_path.is_relative_to(resolved_dest):
+            raise SDLParseError(f"Path traversal detected in OCI bundle tar member: {member.name!r}")
+        if member.issym() or member.islnk():
+            raise SDLParseError(f"Links are not allowed in OCI bundle tar: {member.name!r}")
+        if not (member.isfile() or member.isdir()):
+            raise SDLParseError(f"Unsupported tar member type in OCI bundle: {member.name!r}")
+        # Drop setuid/setgid/sticky bits.
+        member.mode &= 0o777
+        safe.append(member)
+    return safe
+
+
 def _extract_bundle_to_cache(
     *,
     bundle_bytes: bytes,
@@ -298,16 +332,31 @@ def _extract_bundle_to_cache(
     base_dir: Path,
 ) -> Path:
     cache_dir = _oci_cache_dir(base_dir) / manifest_digest
+    if ".." in Path(root_file).parts or Path(root_file).is_absolute():
+        raise SDLParseError(f"Invalid OCI root_file path: {root_file!r}")
+    resolved_cache = cache_dir.resolve()
     root_path = cache_dir / root_file
-    if root_path.exists():
-        return root_path
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(fileobj=io.BytesIO(bundle_bytes), mode="r:gz") as tar:
-        try:
-            tar.extractall(cache_dir, filter="data")
-        except TypeError:  # pragma: no cover - Python < 3.12 fallback
-            tar.extractall(cache_dir)
     if not root_path.exists():
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        with tarfile.open(fileobj=io.BytesIO(bundle_bytes), mode="r:gz") as tar:
+            # Validate every member up front so the security property is identical on
+            # all supported runtimes and never depends on the runtime's tarfile filter
+            # support. ``filter="data"`` is applied as defense in depth where available
+            # (Python 3.11.4+/3.12+); on 3.11.0–3.11.3 the keyword is absent and the
+            # already-validated members are the guarantee. No path falls back to an
+            # unfiltered ``tar.extractall(cache_dir)``.
+            safe_members = _safe_tar_members(tar, cache_dir)
+            try:
+                tar.extractall(cache_dir, members=safe_members, filter="data")
+            # Python 3.11.0–3.11.3 lack the PEP 706 filter keyword.
+            except TypeError:
+                tar.extractall(cache_dir, members=safe_members)
+    # Enforce the root-file containment contract on EVERY return path, including
+    # the cache-hit fast path: a stale cache (e.g. one populated by an earlier
+    # unsafe extractor) could hold a symlink or a non-regular file at root_file
+    # that resolves outside the digest cache. Validating here fails closed
+    # regardless of whether extraction ran this call.
+    if not root_path.is_file() or not root_path.resolve().is_relative_to(resolved_cache):
         raise SDLParseError(f"Resolved OCI module bundle is missing declared root file '{root_file}'")
     return root_path
 
@@ -399,6 +448,8 @@ def resolve_import(
     if source.startswith("local:"):
         relative = source.removeprefix("local:")
         import_path = (base_dir / relative).resolve()
+        if not import_path.is_relative_to(base_dir.resolve()):
+            raise SDLParseError(f"Local import path escapes base directory: {relative!r}")
         if not import_path.exists():
             raise SDLParseError(f"Imported SDL file not found: {relative}")
         from .parser import _load_normalized_data
@@ -585,6 +636,8 @@ def _collect_local_bundle_files(
                 "publish a self-contained local module graph"
             )
         child_path = (resolved.parent / source.removeprefix("local:")).resolve()
+        if not child_path.is_relative_to(resolved.parent):
+            raise SDLParseError(f"Local import path escapes base directory: {source!r}")
         files.update(_collect_local_bundle_files(child_path, seen=seen))
     return files
 

@@ -5,6 +5,14 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
+import aces_runtime.control_plane_store as control_plane_store_module
+import pytest
+from aces_contracts.contracts import (
+    ParticipantContextViewModel,
+    ParticipantHistoryViewModel,
+    ParticipantStatusViewModel,
+)
+from aces_contracts.runtime_state import RuntimeSnapshot
 from starlette.testclient import TestClient
 
 from aces.backends.stubs import create_stub_target
@@ -16,13 +24,34 @@ from aces.core.runtime.control_plane_security import (
     ControlPlaneRole,
     ControlPlaneSecurityConfig,
 )
-from aces.core.runtime.control_plane_store import LocalControlPlaneStore
+from aces.core.runtime.control_plane_store import ControlPlaneOperationRecord, LocalControlPlaneStore
+from aces.core.runtime.models import OperationReceipt, OperationState, OperationStatus, RuntimeDomain
 from aces.core.runtime.planner import plan
 from aces.core.sdl import parse_sdl
 
 
 def _scenario(yaml_str: str):
     return parse_sdl(textwrap.dedent(yaml_str))
+
+
+def _participant_operation_record(operation_id: str, participant_address: str) -> ControlPlaneOperationRecord:
+    submitted_at = "2026-06-05T10:00:00Z"
+    return ControlPlaneOperationRecord(
+        receipt=OperationReceipt(
+            operation_id=operation_id,
+            domain=RuntimeDomain.PARTICIPANT,
+            submitted_at=submitted_at,
+            accepted=True,
+        ),
+        status=OperationStatus(
+            operation_id=operation_id,
+            domain=RuntimeDomain.PARTICIPANT,
+            state=OperationState.RUNNING,
+            submitted_at=submitted_at,
+            updated_at=submitted_at,
+            changed_addresses=[participant_address],
+        ),
+    )
 
 
 def _test_security(target_name: str, *, max_request_bytes: int = 1_000_000) -> ControlPlaneSecurityConfig:
@@ -101,6 +130,10 @@ def test_control_plane_api_openapi_documents_explicit_error_responses():
     ]
     assert "400" in terminate_responses
     assert "409" in terminate_responses
+    assert "404" in operation_responses["/participants/{participant_address}/status"]["get"]["responses"]
+    history_path = "/participants/{participant_address}/episodes/{episode_id}/history"
+    assert "404" in operation_responses[history_path]["get"]["responses"]
+    assert "404" in operation_responses["/participants/{participant_address}/context"]["get"]["responses"]
 
 
 def test_control_plane_api_accepts_orchestration_plan_and_exposes_snapshot():
@@ -306,6 +339,73 @@ def test_control_plane_api_enforces_request_size_limit():
     assert response.status_code == 413
 
 
+def test_control_plane_api_rejects_invalid_content_length_header():
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+    headers = {
+        "x-aces-client-verified": "true",
+        "x-aces-client-identity": "backend-service",
+        "content-type": "application/json",
+        "content-length": "not-a-number",
+    }
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/operations/provisioning",
+            content=b'{"operations":[],"diagnostics":[]}',
+            headers=headers,
+        )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "invalid content-length"}
+    assert control_plane.audit_log()[-1].reason == "invalid content-length"
+
+
+def test_local_control_plane_store_saves_snapshot_with_atomic_replace(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    store = LocalControlPlaneStore(tmp_path / "cp-store")
+    replace_calls: list[tuple[Path, Path]] = []
+    real_replace = control_plane_store_module.os.replace
+
+    def tracked_replace(source: str, destination: str) -> None:
+        replace_calls.append((Path(source), Path(destination)))
+        real_replace(source, destination)
+
+    monkeypatch.setattr(control_plane_store_module.os, "replace", tracked_replace)
+
+    store.save_snapshot(RuntimeSnapshot())
+
+    assert replace_calls
+    assert replace_calls[0][1] == tmp_path / "cp-store" / "snapshot.json"
+    assert not replace_calls[0][0].exists()
+    assert not list((tmp_path / "cp-store").glob("*.tmp"))
+
+
+def test_local_control_plane_store_cleans_temp_file_after_atomic_replace_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    store = LocalControlPlaneStore(tmp_path / "cp-store")
+
+    def fail_replace(source: str, destination: str) -> None:
+        del source, destination
+        raise OSError("replace failed")
+
+    monkeypatch.setattr(control_plane_store_module.os, "replace", fail_replace)
+
+    with pytest.raises(OSError, match="replace failed"):
+        store.save_snapshot(RuntimeSnapshot())
+
+    assert not (tmp_path / "cp-store" / "snapshot.json").exists()
+    assert not list((tmp_path / "cp-store").glob("*.tmp"))
+
+
 def test_control_plane_api_cancels_workflow_runs():
     scenario = _scenario("""
 name: workflow
@@ -440,12 +540,22 @@ workflows:
             },
             headers=headers,
         )
+        workflow_address = "orchestration.workflow.response"
+        seeded = dict(control_plane._snapshot.orchestration_results[workflow_address])
+        seeded["started_at"] = "2000-01-01T00:00:00Z"
+        seeded["updated_at"] = "2000-01-01T00:00:01Z"
+        control_plane._snapshot = control_plane._snapshot.with_entries(
+            dict(control_plane._snapshot.entries),
+            orchestration_results={
+                **control_plane._snapshot.orchestration_results,
+                workflow_address: seeded,
+            },
+        )
         reconcile = client.post(
             "/workflows/reconcile-timeouts",
             headers=headers,
         )
         assert reconcile.status_code == 200
-        control_plane.reconcile_workflow_timeouts(now="2099-01-01T00:00:00Z")
         snapshot = client.get("/snapshot", headers=headers).json()
 
     result = snapshot["orchestration_results"]["orchestration.workflow.response"]
@@ -823,6 +933,22 @@ class TestParticipantEpisodeHttpRoutes:
         )
         assert response.status_code == 401
 
+    def test_retrieval_routes_require_authenticated_identity(self):
+        client = self._build_client()
+
+        status = client.get("/participants/participant.alice/status")
+        history = client.get(
+            "/participants/participant.alice/episodes/participant.alice-episode-1/history",
+        )
+        context = client.get(
+            "/participants/participant.alice/context",
+            params={"view_ref": "views.context.network-posture.v1"},
+        )
+
+        assert status.status_code == 401
+        assert history.status_code == 401
+        assert context.status_code == 401
+
     def test_routes_reject_unknown_body_fields(self):
         """Closed-world request bodies — unknown fields must be rejected."""
         client = self._build_client()
@@ -833,3 +959,128 @@ class TestParticipantEpisodeHttpRoutes:
             json={"episode_id": "alice-1", "unknown": "value"},
         )
         assert response.status_code == 422
+
+    def test_status_route_returns_api_408_status_view(self):
+        client = self._build_client()
+        client.post(
+            "/participants/participant.alice/episodes/initialize",
+            headers=self._headers,
+            json={},
+        )
+
+        response = client.get(
+            "/participants/participant.alice/status",
+            headers=self._headers,
+        )
+
+        assert response.status_code == 200
+        view = ParticipantStatusViewModel.model_validate(response.json())
+        assert view.participant_address == "participant.alice"
+        assert view.episode_id == "participant.alice-episode-1"
+        assert view.episode_state is not None
+        assert view.episode_state.status == "running"
+
+    def test_status_route_scopes_open_operations_to_participant(self):
+        target = create_stub_target()
+        control_plane = RuntimeControlPlane(target)
+        control_plane.initialize_participant_episode("participant.alice")
+        control_plane.initialize_participant_episode("participant.bob")
+        control_plane._operations = {
+            "op-alice": _participant_operation_record("op-alice", "participant.alice"),
+            "op-bob": _participant_operation_record("op-bob", "participant.bob"),
+        }
+        client = TestClient(
+            create_control_plane_app(
+                control_plane,
+                security=_test_security(target.name),
+            )
+        )
+
+        response = client.get(
+            "/participants/participant.alice/status",
+            headers=self._headers,
+        )
+
+        assert response.status_code == 200
+        view = ParticipantStatusViewModel.model_validate(response.json())
+        assert view.open_operation_refs == ["op-alice"]
+
+    def test_history_route_returns_api_408_history_view(self):
+        client = self._build_client()
+        client.post(
+            "/participants/participant.alice/episodes/initialize",
+            headers=self._headers,
+            json={},
+        )
+
+        response = client.get(
+            "/participants/participant.alice/episodes/participant.alice-episode-1/history",
+            headers=self._headers,
+        )
+
+        assert response.status_code == 200
+        view = ParticipantHistoryViewModel.model_validate(response.json())
+        assert view.participant_address == "participant.alice"
+        assert view.episode_id == "participant.alice-episode-1"
+        assert [event.event_type for event in view.episode_history] == [
+            "episode_initialized",
+            "episode_running",
+        ]
+        assert view.completeness == "complete"
+
+    def test_context_route_returns_api_408_sem214_view(self):
+        client = self._build_client()
+        client.post(
+            "/participants/participant.alice/episodes/initialize",
+            headers=self._headers,
+            json={},
+        )
+
+        response = client.get(
+            "/participants/participant.alice/context",
+            params={
+                "view_ref": "views.context.network-posture.v1",
+                "episode_id": "participant.alice-episode-1",
+                "payload_ref": "evidence.context.alice.network-posture",
+                "meaning_ref": "attacker.override",
+                "audience_scope": "audience_neutral",
+                "observation_point": "future-state",
+                "comparability_class": "backend_specific_non_comparable",
+                "backend_disclosure_ref": "attacker.disclosure",
+            },
+            headers=self._headers,
+        )
+
+        assert response.status_code == 200
+        view = ParticipantContextViewModel.model_validate(response.json())
+        assert view.participant_address == "participant.alice"
+        assert view.view_ref == "views.context.network-posture.v1"
+        assert view.derived_from_refs == ["runtime.snapshot.current"]
+        assert view.meaning_ref == "views.context.network-posture.v1"
+        assert view.participant_scope == "participant_local"
+        assert view.audience_scope == "participant_visible"
+        assert view.observation_point == "participant.alice-episode-1"
+        assert view.source_layers[0].source_layer == "source_snapshot"
+        assert view.source_layers[0].evidence_refs == ["runtime.snapshot.current"]
+        assert view.transformation.transformation_rule_ref == "views.context.network-posture.v1"
+        assert view.comparability.comparability_class == "portable_equivalent"
+        assert view.comparability.backend_disclosure_refs == []
+        assert view.payload_ref == "evidence.context.alice.network-posture"
+
+    def test_retrieval_routes_return_404_for_unknown_participants(self):
+        client = self._build_client()
+
+        status = client.get("/participants/participant.unknown/status", headers=self._headers)
+        history = client.get(
+            "/participants/participant.unknown/episodes/episode-1/history",
+            headers=self._headers,
+        )
+        context = client.get(
+            "/participants/participant.unknown/context",
+            params={"view_ref": "views.context.network-posture.v1"},
+            headers=self._headers,
+        )
+
+        assert status.status_code == 404
+        assert history.status_code == 404
+        assert context.status_code == 404

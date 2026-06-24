@@ -10,7 +10,11 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Any
 
-from aces_backend_protocols.capabilities import BackendManifest, participant_runtime_capability_contract_gaps
+from aces_backend_protocols.capabilities import (
+    BackendManifest,
+    observation_capability_contract_gaps,
+    participant_runtime_capability_contract_gaps,
+)
 from aces_backend_protocols.manifest import backend_manifest_payload
 from aces_contracts.backend_profiles import (
     BackendProfileModel,
@@ -23,6 +27,9 @@ from aces_contracts.contracts import (
     EvaluationHistoryEventModel,
     EvaluationPlanModel,
     EvaluationResultStateModel,
+    ExperimentCaptureSpecModel,
+    ExperimentDerivedMeasureModel,
+    ExperimentEvidenceRecordModel,
     OperationReceiptModel,
     OperationStatusModel,
     OrchestrationPlanModel,
@@ -31,6 +38,9 @@ from aces_contracts.contracts import (
     ParticipantEpisodeStateModel,
     ParticipantImplementationManifestModel,
     ParticipantImplementationProvenanceModel,
+    ParticipantLifecycleEventModel,
+    ParticipantObservationEnvelopeModel,
+    ParticipantSharedStateRecordModel,
     ProvisioningPlanModel,
     RuntimeSnapshotEnvelopeModel,
     WorkflowExecutionStateModel,
@@ -40,16 +50,17 @@ from aces_contracts.contracts import (
 from aces_contracts.corpus import FIXTURES, corpus_family_root
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.evaluation import EvaluationExecutionState
+from aces_contracts.participant_concurrency import iter_participant_concurrency_snapshot_violations
 from aces_contracts.participant_episode import (
     ParticipantEpisodeExecutionState,
     ParticipantEpisodeHistoryEvent,
     ParticipantEpisodeTerminalReason,
     iter_participant_episode_snapshot_violations,
 )
+from aces_contracts.participant_shared_state import iter_participant_shared_state_snapshot_violations
 from aces_contracts.planning import RuntimeDomain
 from aces_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope, SnapshotEntry
 from aces_contracts.workflow import WorkflowExecutionState
-from aces_processor.compiler import compile_runtime_model
 from aces_processor.models import (
     ParticipantActionContractRuntime,
     ParticipantBehaviorHistoryEvent,
@@ -57,7 +68,7 @@ from aces_processor.models import (
     iter_participant_behavior_history_violations,
     iter_participant_behavior_joint_action_violations,
 )
-from aces_processor.planner import plan
+from aces_processor.reference import run_reference_processor
 from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.registry import RuntimeTarget
 from aces_runtime.result_contracts import (
@@ -161,6 +172,12 @@ _MODEL_VALIDATORS = {
     "workflow-result-envelope-v1": WorkflowExecutionStateModel.model_validate,
     "evaluation-result-envelope-v1": EvaluationResultStateModel.model_validate,
     "participant-episode-state-envelope-v1": ParticipantEpisodeStateModel.model_validate,
+    "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_validate,
+    "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_validate,
+    "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_validate,
+    "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_validate,
+    "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_validate,
+    "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_validate,
 }
 
 
@@ -433,6 +450,21 @@ def _snapshot_from_envelope(payload: dict[str, Any]) -> RuntimeSnapshot:
             participant_address: [event.model_dump(mode="json") for event in history]
             for participant_address, history in validated.participant_behavior_history.items()
         },
+        shared_state_records={
+            state_address: record.model_dump(mode="json")
+            for state_address, record in validated.shared_state_records.items()
+        },
+        shared_state_history={
+            state_address: [record.model_dump(mode="json") for record in records]
+            for state_address, records in validated.shared_state_history.items()
+        },
+        joint_action_records={
+            record_id: record.model_dump(mode="json") for record_id, record in validated.joint_action_records.items()
+        },
+        time_management_contexts={
+            context_id: context.model_dump(mode="json")
+            for context_id, context in validated.time_management_contexts.items()
+        },
         metadata=dict(validated.metadata),
     )
 
@@ -587,6 +619,29 @@ def _participant_behavior_history_diagnostics(
     return diagnostics
 
 
+def _participant_behavior_binding_diagnostics(
+    participant_address: str,
+    history: object,
+    *,
+    has_participant_action_binding: bool,
+    has_participant_boundary_binding: bool,
+) -> list[Diagnostic]:
+    if not isinstance(history, list) or not history:
+        return []
+    if has_participant_action_binding and has_participant_boundary_binding:
+        return []
+    return [
+        _diagnostic(
+            _SEMANTIC_INVALID_DIAGNOSTIC_CODE,
+            f"runtime.snapshot.participant-behavior-history.{participant_address}",
+            (
+                "participant behavior history requires a participant.behavior snapshot entry "
+                "with action_contract_addresses and observation_boundary_addresses"
+            ),
+        )
+    ]
+
+
 def _participant_behavior_snapshot_diagnostics(
     snapshot: RuntimeSnapshot,
 ) -> list[Diagnostic]:
@@ -602,6 +657,14 @@ def _participant_behavior_snapshot_diagnostics(
     for participant_address, history in snapshot.participant_behavior_history.items():
         has_participant_action_binding = participant_address in participant_action_addresses
         has_participant_boundary_binding = participant_address in participant_observation_boundary_addresses
+        diagnostics.extend(
+            _participant_behavior_binding_diagnostics(
+                participant_address,
+                history,
+                has_participant_action_binding=has_participant_action_binding,
+                has_participant_boundary_binding=has_participant_boundary_binding,
+            )
+        )
         participant_boundary_addresses = participant_observation_boundary_addresses.get(participant_address)
         if participant_boundary_addresses is None:
             participant_boundary_addresses = _participant_history_observation_boundary_addresses(history)
@@ -708,6 +771,31 @@ def _participant_behavior_stream_diagnostics(contract_name: str, payload: Any) -
     return diagnostics
 
 
+def _shared_state_snapshot_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic]:
+    return [
+        _diagnostic(_SEMANTIC_INVALID_DIAGNOSTIC_CODE, address, message)
+        for address, message in iter_participant_shared_state_snapshot_violations(
+            snapshot.shared_state_records,
+            snapshot.shared_state_history,
+            participant_behavior_history=snapshot.participant_behavior_history,
+            metadata=snapshot.metadata,
+        )
+    ]
+
+
+def _participant_concurrency_snapshot_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic]:
+    return [
+        _diagnostic(_SEMANTIC_INVALID_DIAGNOSTIC_CODE, address, message)
+        for address, message in iter_participant_concurrency_snapshot_violations(
+            snapshot.joint_action_records,
+            snapshot.time_management_contexts,
+            participant_behavior_history=snapshot.participant_behavior_history,
+            shared_state_records=snapshot.shared_state_records,
+            shared_state_history=snapshot.shared_state_history,
+        )
+    ]
+
+
 def _runtime_snapshot_semantic_diagnostics(payload: Any) -> list[Diagnostic]:
     snapshot = _snapshot_from_envelope(payload)
     return [
@@ -715,6 +803,8 @@ def _runtime_snapshot_semantic_diagnostics(payload: Any) -> list[Diagnostic]:
         *evaluation_result_contract_diagnostics(snapshot),
         *_participant_episode_snapshot_diagnostics(snapshot),
         *_participant_behavior_snapshot_diagnostics(snapshot),
+        *_shared_state_snapshot_diagnostics(snapshot),
+        *_participant_concurrency_snapshot_diagnostics(snapshot),
     ]
 
 
@@ -984,7 +1074,9 @@ def run_target_conformance(
         )
     contract_gaps = _declared_contract_gaps(effective_profile, target.manifest, profiles_root=profiles_root)
     surface_gaps = _capability_gaps(effective_profile, target)
-    claim_gaps = participant_runtime_capability_contract_gaps(target.manifest)
+    participant_claim_gaps = participant_runtime_capability_contract_gaps(target.manifest)
+    observation_claim_gaps = observation_capability_contract_gaps(target.manifest)
+    claim_gaps = (*participant_claim_gaps, *observation_claim_gaps)
     capability_gaps = tuple((*surface_gaps, *claim_gaps))
     passed = fixture_report.passed and not contract_gaps and not capability_gaps
     diagnostics = list(fixture_report.diagnostics)
@@ -1215,7 +1307,7 @@ def _live_target_cases(
             """
         )
     )
-    execution_plan = plan(compile_runtime_model(scenario), target.manifest)
+    execution_plan = run_reference_processor(scenario, target.manifest).execution_plan
     control_plane = RuntimeControlPlane(target)
     control_plane.submit_provisioning(execution_plan.provisioning)
     if target.orchestrator is not None:
@@ -1252,6 +1344,17 @@ def _live_target_cases(
             participant_address: list(events)
             for participant_address, events in control_plane.snapshot.participant_episode_history.items()
         },
+        "participant_behavior_history": {
+            participant_address: list(events)
+            for participant_address, events in control_plane.snapshot.participant_behavior_history.items()
+        },
+        "shared_state_records": dict(control_plane.snapshot.shared_state_records),
+        "shared_state_history": {
+            state_address: list(records)
+            for state_address, records in control_plane.snapshot.shared_state_history.items()
+        },
+        "joint_action_records": dict(control_plane.snapshot.joint_action_records),
+        "time_management_contexts": dict(control_plane.snapshot.time_management_contexts),
         "metadata": dict(control_plane.snapshot.metadata),
     }
     snapshot_diags = [

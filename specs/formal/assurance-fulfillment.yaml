@@ -55,6 +55,9 @@ subsystems:
   - id: participant-semantics
     path: specs/formal/participant-semantics
     fm_level: FM3
+  - id: participant-behavior-model
+    path: specs/formal/participant-behavior-model
+    fm_level: FM2
   - id: realization
     path: specs/formal/realization
     fm_level: FM2
@@ -230,6 +233,52 @@ entries:
         rationale: >-
           No executable abstract model exists; #487 tracks the executable
           invariant oracle (I1-I18) for the abstract model.
+
+  - subsystem: participant-behavior-model
+    # Design coverage for ACT-602/603/606/607/608 plus executable ACT-602
+    # conformance coverage. Remaining executable artifacts are owned by the
+    # other spawned implementation issues.
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/participant-behavior-model/README.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_runtime_conformance.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/packages/aces_processor/models.py
+    waived_artifacts:
+      - kind: unit_tests
+        date: 2026-06-23
+        tracking:
+          - "#205"
+          - "#206"
+          - "#207"
+          - "#208"
+        rationale: >-
+          ACT-602 conformance tests now cover the executable behavior-model
+          binding gate; the remaining behavior-model test coverage is owned by
+          the other per-UID implementation issues.
+      - kind: typed_ir_or_contract_coverage
+        date: 2026-06-23
+        tracking:
+          - "#205"
+          - "#206"
+          - "#207"
+          - "#208"
+        rationale: >-
+          ACT-602 reuses the existing compiled participant behavior binding;
+          additional SDL fields, contract schemas, and runtime carriers are
+          owned by the other per-UID implementation issues.
+      - kind: property_based_or_differential_tests
+        date: 2026-06-23
+        tracking:
+          - "#205"
+          - "#206"
+          - "#207"
+          - "#208"
+        rationale: >-
+          No property-based or differential behavior-model coverage ships with
+          the joint design or ACT-602 conformance gate; that evidence is owned
+          by the remaining per-UID implementation issues.
 
   - subsystem: realization
     # SEM-218 realization enforcement is in flight across #489/#490/#491; the

@@ -107,6 +107,11 @@ adr-059-adr-amendment-policy-and-pin-gate
 adr-060-participant-backend-facing-contract-surface
 adr-061-published-schema-evolution-policy
 adr-062-concept-authority-catalog-governance-gate
+adr-063-reference-emulation-backend
+adr-064-experiment-evidence-and-measure-contract-boundary
+adr-065-experiment-run-provenance-contract-boundary
+adr-066-observability-evidence-plane-separation
+adr-067-participant-behavior-model
 ```
 
 | ADR | Title | Status | Date |
@@ -174,3 +179,8 @@ adr-062-concept-authority-catalog-governance-gate
 | [060](adr-060-participant-backend-facing-contract-surface.md) | Participant Backend-Facing Contract Surface | proposed | 2026-06-11 |
 | [061](adr-061-published-schema-evolution-policy.md) | Published Schema Evolution Policy | accepted | 2026-06-14 |
 | [062](adr-062-concept-authority-catalog-governance-gate.md) | Concept-Authority Catalog Governance Gate | accepted | 2026-06-14 |
+| [063](adr-063-reference-emulation-backend.md) | Reference Emulation Backend | accepted | 2026-06-20 |
+| [064](adr-064-experiment-evidence-and-measure-contract-boundary.md) | Experiment Evidence and Measure Contract Boundary | accepted | 2026-06-21 |
+| [065](adr-065-experiment-run-provenance-contract-boundary.md) | Experiment Run Provenance Contract Boundary | accepted | 2026-06-22 |
+| [066](adr-066-observability-evidence-plane-separation.md) | Observability and Evidence Plane Separation | accepted | 2026-06-23 |
+| [067](adr-067-participant-behavior-model.md) | Participant Behavior Model | proposed | 2026-06-23 |

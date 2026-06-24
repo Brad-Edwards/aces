@@ -1,7 +1,8 @@
 # Experiment Core Research Notes
 
-These notes support the issue #87 experiment-core design. They are research and
-pre-flight evidence, not normative contract authority.
+These notes support the issue #87 experiment-core design and the issue #88
+evidence/measure extension. They are research and pre-flight evidence, not
+normative contract authority.
 
 ```{toctree}
 :maxdepth: 1
@@ -13,4 +14,10 @@ cyber-range-scientific-instrument
 design-criteria-for-exp-701-705
 traceability-matrix-exp-701-705
 preflight-guardrails
+issue-88-evidence-measure-preflight-guardrails
+issue-233-exp-707-capture-spec-preflight-guardrails
+issue-234-exp-708-evidence-record-preflight-guardrails
+issue-235-exp-709-derived-measure-preflight-guardrails
+issue-238-exp-720-run-provenance-preflight-guardrails
+issue-239-exp-722-realized-form-preflight-guardrails
 ```

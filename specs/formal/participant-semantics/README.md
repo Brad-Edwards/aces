@@ -1024,6 +1024,44 @@ This slice implements participant-local temporal contracts and conformance
 checks. It does not claim the broader ACES clock/time-model work owned by
 `SEM-227`, `SEM-228`, and `SEM-229`.
 
+## SEM-214 - Portable Semantics For Derived Context Views
+
+`SEM-214` requires explicit meaning and comparability semantics for derived
+operational context views so their interpretation remains portable across
+runtimes and backends.
+
+Design commitments:
+
+- a context view is participant-local and must name its audience scope;
+- every view names the observation point at which the derived context applies;
+- source layers are explicit and limited to governed snapshot, participant
+  observation, participant history/status, evidence, derived-measure, and
+  control-plane operation records;
+- hidden/global runtime state is not a valid context-view source layer;
+- future-state sources are not valid, and bounded stale sources require a
+  freshness-basis reference;
+- the transformation rule and input source ids are explicit;
+- evidence and provenance references are required;
+- comparability is an explicit claim with a comparison-basis reference,
+  limitations, and backend disclosures whenever the claim is weakened or
+  backend-specific.
+
+Implementation artifacts:
+
+- `participant-context-view-v1` carries the SEM-214 envelope in the existing
+  API-408 control-plane carrier;
+- `implementations/python/packages/aces_contracts/contracts.py` defines the
+  closed-world Pydantic model and JSON Schema reference output;
+- `contracts/fixtures/control-plane/participant-context-view-v1/` contains
+  positive and negative fixtures for source-layer, temporal, audience-scope,
+  evidence/provenance, and comparability constraints;
+- `implementations/python/packages/aces_runtime/participant_retrieval.py`
+  constructs the SEM-214 envelope for the existing context retrieval path;
+- `implementations/python/tests/test_participant_backend_contracts.py`,
+  `test_runtime_control_plane.py`, and `test_runtime_control_plane_api.py`
+  verify schema/model rejection, runtime construction, and HTTP response
+  binding.
+
 ## SEM-215 - Participant Outcome Interpretation Semantics
 
 `SEM-215` requires semantics for interpreting participant-local outcomes and
@@ -1059,6 +1097,172 @@ Implementation artifacts:
 - evidence records that preserve participant-local outcome basis;
 - runtime conformance checks that reject ungrounded action outcome, evidence
   claim, and episode-status interpretation sources.
+
+## SEM-216 - Boundary Semantics For State, Evidence, Evaluation, Analysis, And Views
+
+`SEM-216` requires explicit semantics distinguishing runtime-observable state,
+captured evidence, derived evaluations, analysis outputs, and audience-specific
+views so one stratum is never silently substituted for another.
+
+`SEM-216` is a **boundary-semantics requirement over the existing contract
+families**, not a new universal taxonomy. Per the architecture preflight
+(`docs/decisions/issue-248-sem-216-boundary-semantics-preflight.md`) there is no
+"state/evidence/result/view" super-schema: each stratum keeps its own governed
+carrier, and cross-boundary movement is by typed references, source layers,
+traceability blocks, checksums, and provenance refs only.
+
+The five strata and their governing carriers:
+
+- **runtime-observable state** is live, mutable control-plane/runtime material:
+  `RuntimeSnapshot`, snapshot entries, workflow/evaluation results and history,
+  participant episode/behavior/shared-state/joint-action records, operation
+  status, and audit metadata. It is not archival run provenance by itself.
+- **captured evidence** is the EXP-708 `experiment-evidence-record-v1` surface:
+  typed source refs, content URI plus checksum or bounded summary, sensitivity,
+  redaction state, loss disclosure, and provenance. A capture spec declares
+  intent; it is not proof that evidence exists.
+- **derived evaluations** are compiled evaluation result/history contracts and
+  the EXP-709 `experiment-derived-measure-v1` archival measure; a raw evidence
+  record is never a metric value, score, or measure.
+- **analysis outputs** are study/report artifacts or derived measures with
+  `measure_kind: analysis-output`, kept grounded through run traceability and at
+  least one derived-measure reference; they must not float from raw runtime
+  state or evaluator detail.
+- **audience-specific views** are projections over recorded carriers
+  (`participant-status-view-v1`, `participant-history-view-v1`,
+  `participant-context-view-v1`), never sources of truth.
+
+Design commitments:
+
+- the five strata are distinct objects carried by named existing contracts; no
+  contract may carry another stratum's shape (closed-world models reject it);
+- archival evidence and derived evaluation/adjudication outputs reach a
+  participant-visible view only through a governed view rule and a redaction
+  policy, only when the archival source is mediated by the view transformation
+  rather than passed through raw, and only when the disclosed `payload_ref` is
+  the transformed view output rather than an alias of the raw archival ref;
+- evidence claims disclose redaction and loss at the evidence boundary;
+- backend-native observability is not an admissible portable view source and is
+  not a portable semantic observation;
+- analysis outputs remain grounded in run traceability and derived measures.
+
+Boundary obligations (each is exercised by an adversarial negative fixture):
+
+- **B1** - archived evidence must not become participant-visible without a view
+  rule. A `participant_visible` `participant-context-view-v1` that draws on an
+  `evidence_record` source layer must declare a `derivation_basis_ref` view rule
+  and a `redaction_policy_ref` (published `allOf`), the evidence source must
+  appear in `transformation.input_source_ids`, and `payload_ref` must not alias
+  the raw evidence ref (both relational rules published as `x-aces-invariants`).
+- **B2** - hidden adjudication / derived-evaluation outputs must not reach a
+  participant view without redaction governance. A `participant_visible` view
+  that draws on a `derived_measure` source layer must additionally declare a
+  `redaction_policy_ref`, mediate the source through the transformation, and
+  expose a transformed `payload_ref` rather than the raw measure ref.
+
+The required-ref clauses of B1/B2 (and B4) are enforced both by the closed-world
+model and by the published JSON Schema `allOf`, so schema-only consumers reject
+them. The relational clauses that standard JSON Schema cannot express - archival
+source mediation and `payload_ref` non-aliasing - are enforced by the model and
+published as `x-aces-invariants` on `participant-context-view-v1` (the ACES
+semantic-invariant profile, per ADR-009 §7 and the experiment-core convention),
+so the portable contract advertises every obligation and names its validator.
+- **B3** - derived analysis is never captured evidence. An
+  `experiment-evidence-record-v1` record is closed-world and carries no
+  `measure_kind`/`value`/metric shape, and its `evidence_kind` has no
+  measure/analysis member.
+- **B4** - evidence claims must disclose redaction/loss. A `redacted` or
+  `withheld` evidence record must carry `raw_content.loss_disclosure`, enforced
+  both by the model and by the published schema.
+- **B5** - backend observability is not a portable semantic observation. Only
+  the governed `source_layer` vocabulary is an admissible portable view source;
+  raw backend-native observability streams are rejected by the closed enum.
+
+Stratum boundary traceability:
+
+| Stratum | Carrier (contract / model) | Enforcement point | Invariant |
+| ------- | -------------------------- | ----------------- | --------- |
+| runtime-observable state | `RuntimeSnapshotEnvelopeModel` / `RuntimeSnapshot` | runtime snapshot diagnostics in `aces_conformance/conformance.py` | I2, I13 |
+| captured evidence | `experiment-evidence-record-v1` / `ExperimentEvidenceRecordModel` | `_validate_evidence_record`, `_validate_raw_content`, closed-world `evidence_kind` (B3, B4) | I3, I13 |
+| derived evaluations | `experiment-derived-measure-v1` / `ExperimentDerivedMeasureModel` | `_validate_derived_measure`, typed `source_evidence_refs` | I10 |
+| analysis outputs | derived measure `measure_kind: analysis-output` + `ExperimentRunTraceabilityModel` | `_validate_run_traceability` claim grounding | I10, I15 |
+| audience-specific views | `participant-context-view-v1` / `ParticipantContextViewModel` | `_validate_sem214_source_binding` + `_validate_sem216_audience_boundary` (B1, B2, B5) | I2, I3, I13 |
+
+The obligations are projections of the existing abstract invariants - **I2**
+(hidden-truth boundary), **I3**/**I13** (observation projection / apparatus
+disclosure), **I10** (outcome-layer separation), and **I15** (run/study
+provenance) - so `SEM-216` introduces no new `### I*` invariant heading and the
+invariant oracle is unchanged.
+
+Current implementation artifacts for the `SEM-216` slice:
+
+- `implementations/python/packages/aces_contracts/contracts.py` adds
+  `ParticipantContextViewModel._validate_sem216_audience_boundary` with its
+  published `allOf` (required view rule + redaction policy) and
+  `x-aces-invariants` (archival source mediation, `payload_ref` non-aliasing)
+  for the B1/B2/B5 view boundary, and publishes the evidence
+  redaction/loss-disclosure rule as a portable schema constraint on
+  `ExperimentEvidenceRecordModel` (B4);
+- `contracts/schemas/control-plane/participant-context-view-v1.json` and
+  `contracts/schemas/experiment-core/experiment-evidence-record-v1.json` carry
+  the regenerated boundary constraints, recorded in
+  `contracts/schema-publication-manifest.json`;
+- `contracts/fixtures/control-plane/participant-context-view-v1/` and
+  `contracts/fixtures/experiment-core/experiment-evidence-record-v1/` add the
+  positive mediated-view fixture and the five adversarial negative fixtures
+  (B1-B5);
+- `implementations/python/tests/test_sem_216_boundary_semantics.py` proves each
+  boundary obligation is rejected by both schema and model, with the mediated
+  view admitted; the existing fixture-walk tests in
+  `test_participant_backend_contracts.py` and `test_runtime_contracts.py` carry
+  the same fixtures.
+
+## SEM-217 - External Knowledge Binding Semantics
+
+`SEM-217` requires explicit semantics for external knowledge bindings so a
+reference to UCO, another ontology, a vocabulary, or an interoperability
+profile cannot silently rewrite ACES-native meaning.
+
+An external knowledge binding has exactly the effect declared by the governed
+ACES surface that carries it:
+
+- **annotates** - an external reference, reviewed class, evidence source, or
+  citation adds context for a native ACES concept without changing validation,
+  planning, runtime, or conformance semantics by itself.
+- **aligns** - a reviewed external authority has equivalent meaning for the
+  native ACES family. In the current concept-authority slice, adopted UCO
+  concept families align with UCO meaning and carry no divergence list.
+- **refines** - a reviewed external authority is used with ACES-specific
+  narrowing, loss, or divergence. In the current slice, adapted UCO concept
+  families refine rather than align and must enumerate the divergence.
+- **constrains** - a governed surface must bind a vocabulary, capability, or
+  phase assumption to a declared concept family; missing, unknown, duplicate,
+  or out-of-scope bindings are validation failures, not advisory metadata.
+
+Design commitments:
+
+- native ACES contracts, concept families, reference models, semantic profiles,
+  and validators remain the authority for ACES behavior;
+- external authority references are versioned, review-scoped evidence rather
+  than live network dependencies;
+- annotation never implies constraint, refinement never weakens existing ACES
+  invariants, and alignment never means schema inheritance;
+- artifact-local labels do not define portable semantics unless they bind to a
+  governed concept family or controlled vocabulary surface.
+
+Current implementation artifacts for the `SEM-217` slice:
+
+- `implementations/python/packages/aces_contracts/semantic_binding_effects.py`
+  resolves the four SEM-217 effects over the existing UCO alignment and shared
+  semantic-profile records;
+- `implementations/python/tests/test_sem_217_knowledge_bindings.py` proves that
+  adopted UCO bindings annotate and align, adapted UCO bindings annotate and
+  refine, profile required bindings constrain governed surfaces, phases without
+  governed bindings do not create constraint effects, and the effect vocabulary
+  is closed over the four SEM-217 terms;
+- `docs/explain/reference/shared-concept-model.md` records the
+  implementation-facing guardrails and anti-patterns for external knowledge
+  bindings.
 
 ## Required Future Verification
 

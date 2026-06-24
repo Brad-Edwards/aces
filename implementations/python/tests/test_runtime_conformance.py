@@ -19,6 +19,12 @@ from aces.core.runtime.conformance import (
 )
 from aces.core.runtime.registry import RuntimeTarget
 
+API_406_CARRIER_CONTRACTS = {
+    "participant-lifecycle-event-v1",
+    "participant-observation-envelope-v1",
+    "participant-shared-state-record-v1",
+}
+
 
 def test_fixture_suite_passes_for_orchestration_evaluation_profile():
     report = run_fixture_suite(profile=BackendCapabilityProfile.ORCHESTRATION_EVALUATION)
@@ -59,6 +65,46 @@ def test_target_conformance_passes_for_stub_target():
                 f"Live participant probe case {case.name!r} must succeed for the stub backend; "
                 f"diagnostics: {[diag.message for diag in case.diagnostics]}"
             )
+
+
+def test_full_remote_control_plane_profile_requires_api_406_carriers():
+    contracts = required_contracts(BackendCapabilityProfile.FULL_REMOTE_CONTROL_PLANE)
+
+    assert contracts >= API_406_CARRIER_CONTRACTS
+    assert {
+        "runtime-snapshot-v1",
+        "participant-episode-state-envelope-v1",
+        "participant-episode-history-event-stream-v1",
+        "participant-behavior-history-event-stream-v1",
+    } <= contracts
+
+
+def test_fixture_suite_validates_api_406_carrier_fixtures(tmp_path: Path):
+    backend_dir = tmp_path / "backend"
+    backend_dir.mkdir()
+    (backend_dir / "provisioning-only.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "backend-profile/v1",
+                "profile": "provisioning-only",
+                "required_contracts": sorted(API_406_CARRIER_CONTRACTS),
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = run_fixture_suite(
+        profile=BackendCapabilityProfile.PROVISIONING_ONLY,
+        profiles_root=backend_dir,
+    )
+
+    assert report.passed is True
+    assert {case.contract_name for case in report.cases} == API_406_CARRIER_CONTRACTS
+    assert any(case.valid is False for case in report.cases)
+    assert all(
+        diagnostic.code != "conformance.contract-unknown" for case in report.cases for diagnostic in case.diagnostics
+    )
 
 
 def test_profile_is_inferred_as_full_when_manifest_declares_participant_runtime():
@@ -335,6 +381,84 @@ def test_runtime_snapshot_behavior_history_refs_must_match_snapshot_entries():
     messages = [diagnostic.message for diagnostic in diagnostics]
     assert any("unknown observation_boundary_address" in message for message in messages)
     assert not any("unknown action_contract_address" in message for message in messages)
+
+
+def test_runtime_snapshot_behavior_history_requires_participant_behavior_binding():
+    action_address = "participant.action-contract.scan"
+    boundary_address = "participant.observation-boundary.red-view"
+    participant_address = "participant.behavior.red-agent"
+
+    def _snapshot_entry(address: str, resource_type: str) -> dict[str, object]:
+        return {
+            "address": address,
+            "domain": "participant",
+            "resource_type": resource_type,
+            "payload": {},
+            "ordering_dependencies": [],
+            "refresh_dependencies": [],
+            "status": "ready",
+        }
+
+    snapshot_payload = {
+        "schema_version": "runtime-snapshot/v1",
+        "entries": {
+            action_address: _snapshot_entry(action_address, "participant-action-contract"),
+            boundary_address: _snapshot_entry(boundary_address, "participant-observation-boundary"),
+        },
+        "orchestration_results": {},
+        "orchestration_history": {},
+        "evaluation_results": {},
+        "evaluation_history": {},
+        "participant_episode_results": {},
+        "participant_episode_history": {},
+        "participant_behavior_history": {
+            participant_address: [
+                {
+                    "event_type": "action_attempted",
+                    "timestamp": "2026-05-18T18:30:00Z",
+                    "participant_address": participant_address,
+                    "episode_id": "episode-1",
+                    "action_instance_id": "scan-1",
+                    "action_contract_address": action_address,
+                    "actor_provenance": participant_address,
+                    "details": {},
+                },
+                {
+                    "event_type": "state_transition_recorded",
+                    "timestamp": "2026-05-18T18:30:01Z",
+                    "participant_address": participant_address,
+                    "episode_id": "episode-1",
+                    "action_instance_id": "scan-1",
+                    "action_contract_address": action_address,
+                    "state_transition_kind": "knowledge-expanded",
+                    "post_state_digest": "sha256:scan-1",
+                    "details": {},
+                },
+                {
+                    "event_type": "observation_emitted",
+                    "timestamp": "2026-05-18T18:30:02Z",
+                    "participant_address": participant_address,
+                    "episode_id": "episode-1",
+                    "action_instance_id": "scan-1",
+                    "action_contract_address": action_address,
+                    "observation_boundary_address": boundary_address,
+                    "observation_status": "terminal",
+                    "post_state_digest": "sha256:scan-1",
+                    "details": {},
+                },
+            ]
+        },
+        "metadata": {},
+    }
+
+    diagnostics = _semantic_diagnostics("runtime-snapshot-v1", snapshot_payload)
+
+    assert any(
+        diagnostic.code == "conformance.semantic-invalid"
+        and diagnostic.address == f"runtime.snapshot.participant-behavior-history.{participant_address}"
+        and "requires a participant.behavior snapshot entry" in diagnostic.message
+        for diagnostic in diagnostics
+    )
 
 
 def test_runtime_snapshot_behavior_history_validates_joint_action_order_across_participants():
@@ -701,6 +825,9 @@ def test_target_conformance_fails_when_declared_contracts_do_not_cover_profile_r
         "participant-behavior-history-event-stream-v1",
         "participant-episode-history-event-stream-v1",
         "participant-episode-state-envelope-v1",
+        "participant-lifecycle-event-v1",
+        "participant-observation-envelope-v1",
+        "participant-shared-state-record-v1",
         "provisioning-plan-v1",
         "runtime-snapshot-v1",
         "workflow-history-event-stream-v1",

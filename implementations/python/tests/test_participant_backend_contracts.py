@@ -15,12 +15,14 @@ from aces_contracts.contracts import (
     ParticipantHistoryViewBehaviorEventModel,
     ParticipantHistoryViewEpisodeEventModel,
     ParticipantHistoryViewModel,
+    ParticipantJointActionRecordModel,
     ParticipantLifecycleEventModel,
     ParticipantObservationEnvelopeModel,
     ParticipantOutcomeReportModel,
     ParticipantSharedStateRecordModel,
     ParticipantStatusViewEpisodeStateModel,
     ParticipantStatusViewModel,
+    ParticipantTimeManagementContextModel,
     schema_bundle,
 )
 from jsonschema import Draft202012Validator
@@ -33,6 +35,8 @@ PARTICIPANT_RUNTIME_FIXTURE_MODELS = {
     "participant-lifecycle-event-v1": ParticipantLifecycleEventModel,
     "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel,
     "participant-shared-state-record-v1": ParticipantSharedStateRecordModel,
+    "participant-joint-action-record-v1": ParticipantJointActionRecordModel,
+    "participant-time-management-context-v1": ParticipantTimeManagementContextModel,
     "participant-outcome-report-v1": ParticipantOutcomeReportModel,
 }
 CONTROL_PLANE_VIEW_FIXTURE_MODELS = {
@@ -136,6 +140,15 @@ def test_participant_outcome_report_publishes_no_score_or_reward_surface():
     source_schema = schema["$defs"]["ParticipantOutcomeReportSourceModel"]
     assert source_schema["properties"]["source_kind"]["enum"] == ["action_result", "episode_status", "evidence"]
     assert schema["properties"]["outcome_sources"]["minItems"] == 1
+    assert schema["properties"]["state_relationships"]["minItems"] == 1
+
+
+def test_participant_outcome_report_requires_state_relationships():
+    payload = _valid_fixture("participant-outcome-report-v1")
+    payload["state_relationships"] = []
+
+    with pytest.raises(ValidationError, match="state_relationships"):
+        ParticipantOutcomeReportModel.model_validate(payload)
 
 
 def test_participant_history_view_schema_requires_completeness_basis_when_not_complete():
@@ -166,6 +179,22 @@ def test_participant_views_reuse_published_episode_shapes():
     )
     context_schema = generated["participant-context-view-v1"]
     assert context_schema["properties"]["derived_from_refs"]["minItems"] == 1
+    assert context_schema["properties"]["source_layers"]["minItems"] == 1
+    assert context_schema["properties"]["evidence_refs"]["minItems"] == 1
+    assert context_schema["properties"]["provenance_refs"]["minItems"] == 1
+    assert context_schema["properties"]["semantic_limitations"]["minItems"] == 1
+    assert {
+        "meaning_ref",
+        "participant_scope",
+        "audience_scope",
+        "observation_point",
+        "source_layers",
+        "transformation",
+        "comparability",
+        "evidence_refs",
+        "provenance_refs",
+        "semantic_limitations",
+    } <= set(context_schema["required"])
 
 
 def test_participant_backend_contract_valid_fixtures_pass_schema_and_model_validation():
@@ -229,9 +258,11 @@ def _projected_field_parity(source_cls, projected_cls):
 
 
 def test_view_projected_models_track_recorded_contract_shapes():
-    _projected_field_parity(ParticipantEpisodeStateModel, ParticipantStatusViewEpisodeStateModel)
-    _projected_field_parity(ParticipantEpisodeHistoryEventModel, ParticipantHistoryViewEpisodeEventModel)
-    _projected_field_parity(ParticipantBehaviorHistoryEventModel, ParticipantHistoryViewBehaviorEventModel)
+    assert _projected_field_parity(ParticipantEpisodeStateModel, ParticipantStatusViewEpisodeStateModel) is None
+    assert _projected_field_parity(ParticipantEpisodeHistoryEventModel, ParticipantHistoryViewEpisodeEventModel) is None
+    assert (
+        _projected_field_parity(ParticipantBehaviorHistoryEventModel, ParticipantHistoryViewBehaviorEventModel) is None
+    )
 
 
 def test_participant_status_view_rejects_episode_state_restating_scope():
@@ -296,7 +327,8 @@ def _history_payload_with_action_result(participant_address: str, episode_id: st
 
 def test_participant_history_view_accepts_in_scope_nested_records():
     payload = _history_payload_with_action_result("participants.blue.rl", "ep-blue-002")
-    ParticipantHistoryViewModel.model_validate(payload)
+    view = ParticipantHistoryViewModel.model_validate(payload)
+    assert view.behavior_history[0].action_result is not None
 
 
 def test_participant_history_view_rejects_nested_action_result_for_another_participant():
@@ -403,6 +435,40 @@ def test_participant_context_view_requires_source_snapshot_ref():
         ParticipantContextViewModel.model_validate(payload)
 
 
+def test_participant_context_view_rejects_hidden_or_global_source_layers():
+    payload = _valid_fixture("participant-context-view-v1")
+    payload["source_layers"][0]["source_layer"] = "global_runtime_state"
+
+    with pytest.raises(ValidationError, match="source_layer"):
+        ParticipantContextViewModel.model_validate(payload)
+
+
+def test_participant_context_view_rejects_future_state_sources():
+    payload = _valid_fixture("participant-context-view-v1")
+    payload["source_layers"][0]["temporal_relation"] = "future_state"
+
+    with pytest.raises(ValidationError, match="temporal_relation"):
+        ParticipantContextViewModel.model_validate(payload)
+
+
+def test_participant_context_view_bounded_staleness_requires_basis():
+    payload = _valid_fixture("participant-context-view-v1")
+    payload["source_layers"][0]["temporal_relation"] = "bounded_staleness"
+    payload["source_layers"][0].pop("freshness_basis_ref", None)
+
+    with pytest.raises(ValidationError, match="freshness_basis_ref"):
+        ParticipantContextViewModel.model_validate(payload)
+
+
+def test_participant_context_view_weak_comparability_requires_backend_disclosure():
+    payload = _valid_fixture("participant-context-view-v1")
+    payload["comparability"]["comparability_class"] = "portable_with_disclosed_weakening"
+    payload["comparability"]["backend_disclosure_refs"] = []
+
+    with pytest.raises(ValidationError, match="backend_disclosure_refs"):
+        ParticipantContextViewModel.model_validate(payload)
+
+
 def test_participant_lifecycle_event_rejects_unknown_mapping_loss():
     payload = _valid_fixture("participant-lifecycle-event-v1")
     payload["mapping_loss"] = "collapsed"
@@ -425,3 +491,22 @@ def test_participant_shared_state_record_rejects_unknown_conflict_policy():
 
     with pytest.raises(ValidationError, match="conflict_policy"):
         ParticipantSharedStateRecordModel.model_validate(payload)
+
+
+def test_participant_joint_action_record_rejects_implicit_last_writer_wins():
+    payload = _valid_fixture("participant-joint-action-record-v1")
+    payload["conflict_class"] = "none"
+    payload["conflict_policy"] = "none"
+    payload["realized_order"] = []
+
+    with pytest.raises(ValidationError, match="conflict_class"):
+        ParticipantJointActionRecordModel.model_validate(payload)
+
+
+def test_participant_time_management_context_rejects_timestamp_only_exact_claim():
+    payload = _valid_fixture("participant-time-management-context-v1")
+    payload["basis"] = "wall_clock_only"
+    payload["claim_strength"] = "exact"
+
+    with pytest.raises(ValidationError, match="wall_clock_only"):
+        ParticipantTimeManagementContextModel.model_validate(payload)

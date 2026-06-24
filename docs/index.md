@@ -164,6 +164,12 @@ decisions/adrs/adr-057-runtime-secret-name-classifier-boundaries
 decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints
 decisions/adrs/adr-059-adr-amendment-policy-and-pin-gate
 decisions/adrs/adr-060-participant-backend-facing-contract-surface
+decisions/adrs/adr-061-published-schema-evolution-policy
+decisions/adrs/adr-062-concept-authority-catalog-governance-gate
+decisions/adrs/adr-063-reference-emulation-backend
+decisions/adrs/adr-064-experiment-evidence-and-measure-contract-boundary
+decisions/adrs/adr-065-experiment-run-provenance-contract-boundary
+decisions/issue-248-sem-216-boundary-semantics-preflight
 decisions/sem-213-temporal-participant-preflight
 decisions/issue-508-related-work-comparison-preflight
 decisions/issue-42-validator-package-split-preflight
@@ -181,6 +187,7 @@ explain/reference/glossary
 explain/reference/shared-concept-model
 explain/reference/shared-semantic-integrity
 explain/reference/backend-conformance
+explain/reference/reference-emulation-backend
 explain/reference/normative-artifact-authority
 explain/reference/assessment-semantics
 explain/reference/objective-semantics

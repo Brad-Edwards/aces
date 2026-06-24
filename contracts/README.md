@@ -54,11 +54,23 @@ It includes:
 - live runtime/control-plane contracts
 - experiment, evidence, and provenance artifact boundaries
 
-The first published experiment-core contract family includes task, run,
-apparatus-context, and study/collection schemas under
-`contracts/schemas/experiment-core/`. These contracts are archival design
-artifacts for scientific experiment records; they do not add runtime execution,
-storage, or API behavior by themselves.
+The control-plane `participant-context-view-v1` contract includes the SEM-214
+meaning and comparability envelope for derived operational context views:
+participant-local scope, audience scope, observation point, governed source
+layers, transformation rule, evidence/provenance basis, semantic limitations,
+and explicit comparability disclosure.
+
+The published experiment-core contract family includes task, run,
+apparatus-context, study/collection, capture specification, raw evidence record,
+and derived measure schemas under `contracts/schemas/experiment-core/`. These
+contracts are archival design artifacts for scientific experiment records; they
+do not add runtime execution, capture, storage, scheduling, statistical engines,
+or API behavior by themselves.
+
+`experiment-run-v1` is the canonical run provenance record. It carries the
+task/run/apparatus context, result and evidence pointers, traceability links to
+capture specs, evidence records, derived measures, and claims, plus
+realized-form disclosures for underspecified concerns resolved during a run.
 
 Within experiment-core contracts, identifier-bearing collections that require
 uniqueness are object maps keyed by that identifier. This keeps uniqueness

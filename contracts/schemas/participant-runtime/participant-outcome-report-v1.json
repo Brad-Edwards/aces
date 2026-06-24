@@ -747,6 +747,7 @@
       "items": {
         "$ref": "#/$defs/ParticipantOutcomeReportStateRelationshipModel"
       },
+      "minItems": 1,
       "title": "State Relationships",
       "type": "array"
     },
@@ -780,7 +781,8 @@
     "authorization_scope",
     "outcome_id",
     "interpretation_rule_ref",
-    "outcome_sources"
+    "outcome_sources",
+    "state_relationships"
   ],
   "title": "ParticipantOutcomeReportModel",
   "type": "object"

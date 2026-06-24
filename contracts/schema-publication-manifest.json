@@ -12,20 +12,20 @@
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "da156411d9877ad75045569b47e3b98597b6dec23a827d176c1fc64d9532cc90",
+      "content_hash": "645831fb013c9450a1354a609b0645f6d045c85b3d92edcdd3cdbce19a0e3064",
       "last_change": {
-        "summary": "Extended the backend manifest with the participant backend-facing runtime capability surface (API-407 manifest extension; ADR-060, issue #76).",
-        "content_hash": "da156411d9877ad75045569b47e3b98597b6dec23a827d176c1fc64d9532cc90"
+        "summary": "Added the EXP-715 observation capability declaration and experiment evidence contract identifiers to backend manifest v2.",
+        "content_hash": "645831fb013c9450a1354a609b0645f6d045c85b3d92edcdd3cdbce19a0e3064"
       }
     },
     {
       "contract_id": "backend-profile-v1",
       "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
       "stability": "draft",
-      "content_hash": "1c9ffe10f1c2c420610d1353dc1406bb0e0d63001c4f6a32e1aca061b164af1d",
+      "content_hash": "85ddac10a896b39cc9c5ef3f73141e84566236d12d0127511007610ccd700694",
       "last_change": {
-        "summary": "Added the participant backend-facing contract identifiers (lifecycle-event, observation-envelope, shared-state-record, outcome-report) to the backend profile contract vocabulary (ADR-060, issue #76).",
-        "content_hash": "1c9ffe10f1c2c420610d1353dc1406bb0e0d63001c4f6a32e1aca061b164af1d"
+        "summary": "Added the EXP-707/EXP-708/EXP-709 experiment evidence contracts to the backend profile contract vocabulary.",
+        "content_hash": "85ddac10a896b39cc9c5ef3f73141e84566236d12d0127511007610ccd700694"
       }
     },
     {
@@ -62,25 +62,71 @@
       "contract_id": "experiment-apparatus-context-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-apparatus-context-v1.json",
       "stability": "draft",
-      "content_hash": "6e1f9885835bc6b6e8af922f5624ef09084c2fc8992b2a7f8fdb4e078f6ae2c0"
+      "content_hash": "565558814655c9fc3cd790fb441633622e4846d416ffaba43812143024e33ae3",
+      "last_change": {
+        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
+        "content_hash": "565558814655c9fc3cd790fb441633622e4846d416ffaba43812143024e33ae3"
+      }
+    },
+    {
+      "contract_id": "experiment-capture-spec-v1",
+      "schema_path": "contracts/schemas/experiment-core/experiment-capture-spec-v1.json",
+      "stability": "draft",
+      "content_hash": "1c479291aed4c60aa7a28d93839d3633f8dee585ca3098b83bd4fbb03bea86ad",
+      "last_change": {
+        "summary": "Published the SEM-224 observability/evidence plane (authored_evidence_requirement) as a portable x-aces-plane annotation sourced from the carrier-oriented plane classifier.",
+        "content_hash": "1c479291aed4c60aa7a28d93839d3633f8dee585ca3098b83bd4fbb03bea86ad"
+      }
+    },
+    {
+      "contract_id": "experiment-derived-measure-v1",
+      "schema_path": "contracts/schemas/experiment-core/experiment-derived-measure-v1.json",
+      "stability": "draft",
+      "content_hash": "162aeeb41906008b03ef211b20646f451101c59cdcabc1614427ca3fa7945afe",
+      "last_change": {
+        "summary": "Published the SEM-224 observability/evidence plane (derived_analysis) as a portable x-aces-plane annotation sourced from the carrier-oriented plane classifier.",
+        "content_hash": "162aeeb41906008b03ef211b20646f451101c59cdcabc1614427ca3fa7945afe"
+      }
+    },
+    {
+      "contract_id": "experiment-evidence-record-v1",
+      "schema_path": "contracts/schemas/experiment-core/experiment-evidence-record-v1.json",
+      "stability": "draft",
+      "content_hash": "3483ac4ff2cb61278d64253257f70dc73d14eaff3bc5501eee20a86a55d7d707",
+      "last_change": {
+        "summary": "Published the SEM-224 observability/evidence plane (captured_evidence) as a portable x-aces-plane annotation sourced from the carrier-oriented plane classifier.",
+        "content_hash": "3483ac4ff2cb61278d64253257f70dc73d14eaff3bc5501eee20a86a55d7d707"
+      }
     },
     {
       "contract_id": "experiment-run-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
       "stability": "draft",
-      "content_hash": "ceeead6df3a0d71477221bba8d8ac64b5a5f234a315d7c695357b04101bbb155"
+      "content_hash": "e1e7ca5e74439140cd27340a7754d8b871266e518ce93c98bf6ff0dbaa8bd134",
+      "last_change": {
+        "summary": "Added SEM-225 run-level augmentation disclosures for processor/backend augmentation classification, visibility, observer-effect, comparability, and evidence provenance.",
+        "content_hash": "e1e7ca5e74439140cd27340a7754d8b871266e518ce93c98bf6ff0dbaa8bd134"
+      }
     },
     {
       "contract_id": "experiment-study-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
       "stability": "draft",
-      "content_hash": "8065247bb9185692c7de922e60b88e49420a32f3e57300801c3218c629194fa6"
+      "content_hash": "b769512ccf43a3cae303d363da84cf1d4bbd97099d7f9085f065bbe4d801b4d3",
+      "last_change": {
+        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
+        "content_hash": "b769512ccf43a3cae303d363da84cf1d4bbd97099d7f9085f065bbe4d801b4d3"
+      }
     },
     {
       "contract_id": "experiment-task-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-task-v1.json",
       "stability": "draft",
-      "content_hash": "fcdbd1d6d1d455ef2f43360dd0408c006ac2d1cd6f6454f46f7ba63365e9a661"
+      "content_hash": "45fb2eb011d89b9be057d236b9d4e58c2ce01f8c1365f7d521afc8192d68a73a",
+      "last_change": {
+        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
+        "content_hash": "45fb2eb011d89b9be057d236b9d4e58c2ce01f8c1365f7d521afc8192d68a73a"
+      }
     },
     {
       "contract_id": "instantiated-scenario-v1",
@@ -124,10 +170,10 @@
       "contract_id": "participant-context-view-v1",
       "schema_path": "contracts/schemas/control-plane/participant-context-view-v1.json",
       "stability": "draft",
-      "content_hash": "ff2e5866bde73898ead051cd5cfb20d32168ad3f8a6f9775d8481c728c40c24b",
+      "content_hash": "2946f3d2cb6e74a5848f57b3729545b4939cacd84aecdc2a5b86add7e431c0de",
       "last_change": {
-        "summary": "Initial publication of the participant context-view control-plane contract: the participant-visible context projection in the backend-facing contract family (ADR-060, issue #76).",
-        "content_hash": "ff2e5866bde73898ead051cd5cfb20d32168ad3f8a6f9775d8481c728c40c24b"
+        "summary": "Added the SEM-216 audience-boundary rules to participant-visible context views: archival evidence_record/derived_measure source layers require a derivation_basis_ref view rule and redaction_policy_ref (published allOf), must be mediated by the transformation, and payload_ref must not alias a raw archival ref (both published as x-aces-invariants).",
+        "content_hash": "2946f3d2cb6e74a5848f57b3729545b4939cacd84aecdc2a5b86add7e431c0de"
       }
     },
     {
@@ -165,6 +211,16 @@
       "content_hash": "a4c050fb2a53129148f7d2960a7cb06d36c4682483064734e505acda4677d7ec"
     },
     {
+      "contract_id": "participant-joint-action-record-v1",
+      "schema_path": "contracts/schemas/participant-runtime/participant-joint-action-record-v1.json",
+      "stability": "draft",
+      "content_hash": "bfd0f43f8b19f3658d71ca81520c481aa447f0486eee669edfc4521d0cdbd1a8",
+      "last_change": {
+        "summary": "Initial publication of the RUN-308 participant joint-action runtime contract: membership, access-set, conflict, isolation, and realized-order evidence.",
+        "content_hash": "bfd0f43f8b19f3658d71ca81520c481aa447f0486eee669edfc4521d0cdbd1a8"
+      }
+    },
+    {
       "contract_id": "participant-lifecycle-event-v1",
       "schema_path": "contracts/schemas/participant-runtime/participant-lifecycle-event-v1.json",
       "stability": "draft",
@@ -188,20 +244,20 @@
       "contract_id": "participant-outcome-report-v1",
       "schema_path": "contracts/schemas/participant-runtime/participant-outcome-report-v1.json",
       "stability": "draft",
-      "content_hash": "1b65d36136812ae18c80ba7822df69b0ca65b569fd4cc2e2bd6c1fd07e5e4abf",
+      "content_hash": "e7c8cb7fa41803e16c7fd99f71365621cce9e1cf21f13701c8d482cc030dcea7",
       "last_change": {
-        "summary": "Initial publication of the participant outcome-report runtime contract: participant outcome reporting in the backend-facing contract family (ADR-060, issue #76).",
-        "content_hash": "1b65d36136812ae18c80ba7822df69b0ca65b569fd4cc2e2bd6c1fd07e5e4abf"
+        "summary": "Require participant outcome reports to carry at least one explicit state relationship for API-411.",
+        "content_hash": "e7c8cb7fa41803e16c7fd99f71365621cce9e1cf21f13701c8d482cc030dcea7"
       }
     },
     {
       "contract_id": "participant-shared-state-record-v1",
       "schema_path": "contracts/schemas/participant-runtime/participant-shared-state-record-v1.json",
       "stability": "draft",
-      "content_hash": "a3ad56415946417bfbd19cd637886d8442a3e2be510212471e1fcb139cf241d1",
+      "content_hash": "8de5075b682a2ef7f7bf9d18f9dcb51667f2efeb496f283d0bb54b9bb0ffd38b",
       "last_change": {
-        "summary": "Initial publication of the participant shared-state-record runtime contract: shared-state records in the backend-facing contract family (ADR-060, issue #76).",
-        "content_hash": "a3ad56415946417bfbd19cd637886d8442a3e2be510212471e1fcb139cf241d1"
+        "summary": "Require participant shared-state records and accesses to carry revision or digest markers for RUN-307 version discipline.",
+        "content_hash": "8de5075b682a2ef7f7bf9d18f9dcb51667f2efeb496f283d0bb54b9bb0ffd38b"
       }
     },
     {
@@ -212,6 +268,16 @@
       "last_change": {
         "summary": "Initial publication of the participant status-view control-plane contract: the participant status/lifecycle projection in the backend-facing contract family (ADR-060, issue #76).",
         "content_hash": "aef73b7d52c99de2a51cb2a58de0e30c37fc7fb2af5627cd6241a6aad288d07c"
+      }
+    },
+    {
+      "contract_id": "participant-time-management-context-v1",
+      "schema_path": "contracts/schemas/participant-runtime/participant-time-management-context-v1.json",
+      "stability": "draft",
+      "content_hash": "e4711ff9a4674697fb8aed40af863ea0327ad31824ef0a8f07d182ccfa9f28a1",
+      "last_change": {
+        "summary": "Initial publication of the RUN-308 participant time-management context contract: clock, ordering, lookahead, pacing, rollback, and backend-serialization basis.",
+        "content_hash": "e4711ff9a4674697fb8aed40af863ea0327ad31824ef0a8f07d182ccfa9f28a1"
       }
     },
     {
@@ -236,10 +302,10 @@
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "348a25b49e30081797164f77cb344dbf27e85007fcf5d9e93c2e57e33795074a",
+      "content_hash": "cb6a599ef5137bcc5954ffd4f451167562186112c7595ec20b50eb94b97e1550",
       "last_change": {
-        "summary": "Add SEM-218 realization_provenance ledger (RealizationProvenanceEntryModel) to the runtime snapshot envelope: per-concern author-declared/processor-derived/backend-realized provenance for realized realization concerns, enforcing invariant I5 (issue #491).",
-        "content_hash": "348a25b49e30081797164f77cb344dbf27e85007fcf5d9e93c2e57e33795074a"
+        "summary": "Added first-class joint_action_records and time_management_contexts fields to the runtime snapshot envelope for RUN-308 concurrent participant execution.",
+        "content_hash": "cb6a599ef5137bcc5954ffd4f451167562186112c7595ec20b50eb94b97e1550"
       }
     },
     {

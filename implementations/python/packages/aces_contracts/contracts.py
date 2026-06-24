@@ -12,6 +12,7 @@ from typing import Annotated, Any, Literal
 
 from aces_sdl import VARIABLE_TOKEN_PATTERN
 from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from aces_sdl.observability_plane_semantics import classify_contract_plane
 from aces_sdl.participant_attribution_semantics import (
     ParticipantAttributionCandidateKind,
     ParticipantAttributionOrderingBasisKind,
@@ -63,6 +64,9 @@ from .versions import (
     CONTROLLED_VOCABULARIES_SCHEMA_VERSION,
     EVALUATION_STATE_SCHEMA_VERSION,
     EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION,
+    EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION,
+    EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION,
+    EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION,
     EXPERIMENT_RUN_SCHEMA_VERSION,
     EXPERIMENT_STUDY_SCHEMA_VERSION,
     EXPERIMENT_TASK_SCHEMA_VERSION,
@@ -139,6 +143,9 @@ _BACKEND_CONCEPT_BINDING_SCOPES = frozenset(
         "capabilities.provisioner.supported_account_features",
         "capabilities.orchestrator.supported_sections",
         "capabilities.evaluator.supported_sections",
+        "capabilities.observation.supported_capture_kinds",
+        "capabilities.observation.supported_channel_kinds",
+        "capabilities.observation.supported_sealing_modes",
         "capabilities.participant_runtime.supported_participant_roles",
         "capabilities.participant_runtime.supported_behavior_features",
         "capabilities.participant_runtime.supported_interaction_features",
@@ -291,6 +298,17 @@ def _add_aces_invariant(
         )
 
 
+def _add_aces_plane(json_schema: JsonSchemaValue, contract_id: str) -> None:
+    """Publish the carrier's single SEM-224 observability/evidence plane.
+
+    Plane ownership is sourced from the carrier-oriented classifier so the
+    portable ``x-aces-plane`` annotation cannot drift from
+    ``aces_sdl.observability_plane_semantics`` (ADR-066 / SEM-224).
+    """
+
+    json_schema["x-aces-plane"] = classify_contract_plane(contract_id).value
+
+
 def _schema_contains_aces_invariants(schema_node: Any) -> bool:
     if isinstance(schema_node, dict):
         if "x-aces-invariants" in schema_node:
@@ -366,6 +384,40 @@ def _attach_experiment_datetime_invariants(contract_id: str, json_schema: dict[s
         description,
         validator=validator,
         inputs=inputs,
+    )
+
+
+def _validate_reported_value_status(
+    value_status: str,
+    value: object | None,
+    *,
+    reported_message: str,
+    non_reported_message: str,
+) -> None:
+    if value_status == "reported" and value is None:
+        raise ValueError(reported_message)
+    if value_status != "reported" and value is not None:
+        raise ValueError(non_reported_message)
+
+
+def _extend_reported_value_status_schema(json_schema: JsonSchemaValue) -> None:
+    json_schema.setdefault("allOf", []).extend(
+        [
+            {
+                "if": {
+                    "properties": {"value_status": {"const": "reported"}},
+                    "required": ["value_status"],
+                },
+                "then": {"required": ["value"], "properties": {"value": {"not": {"type": "null"}}}},
+            },
+            {
+                "if": {
+                    "properties": {"value_status": {"enum": ["missing", "withheld", "not-applicable"]}},
+                    "required": ["value_status"],
+                },
+                "then": {"properties": {"value": {"type": "null"}}},
+            },
+        ]
     )
 
 
@@ -914,6 +966,32 @@ ParticipantRuntimeConflictPolicy = Literal[
     "disclose_weak_guarantee",
     "unsupported",
 ]
+ParticipantRuntimeConflictClass = Literal["none", "read_write", "write_write", "unsupported"]
+ParticipantRuntimeJointActionConflictPolicy = Literal[
+    "none",
+    "coordinate",
+    "serialize",
+    "reject",
+    "retry",
+    "withhold",
+    "merge",
+    "rollback",
+    "disclose_weak_guarantee",
+    "unsupported",
+]
+ParticipantRuntimeIsolationGuarantee = Literal["none", "serializable", "snapshot", "causal", "unsupported"]
+ParticipantRuntimeAtomicityScope = Literal["single_object", "multi_object", "coordination_interval", "unsupported"]
+ParticipantRuntimeTimeManagementMode = Literal[
+    "display",
+    "pacing",
+    "lookahead",
+    "rollback",
+    "devs",
+    "fmi",
+    "backend_serialized",
+    "unsupported",
+]
+ParticipantRuntimeTimeClaimStrength = Literal["display", "bounded", "exact", "unsupported"]
 
 
 class EventClassificationModel(ContractModel):
@@ -1091,6 +1169,52 @@ class ParticipantSharedStateAccessModel(ContractModel):
     atomic_group_ref: NonEmptyString | None = None
     evidence_refs: list[NonEmptyString] = Field(default_factory=list)
 
+    @model_validator(mode="after")
+    def _validate_revision_markers(self) -> ParticipantSharedStateAccessModel:
+        if self.access_kind in {"read", "read_write"} and self.read_revision is None and self.read_digest is None:
+            raise ValueError("shared state read access requires read_revision or read_digest")
+        if self.access_kind in {"write", "read_write"} and self.write_revision is None and self.write_digest is None:
+            raise ValueError("shared state write access requires write_revision or write_digest")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {
+                        "properties": {"access_kind": {"enum": ["read", "read_write"]}},
+                        "required": ["access_kind"],
+                    },
+                    "then": {
+                        "anyOf": [
+                            {"required": ["read_revision"], "properties": {"read_revision": {"type": "string"}}},
+                            {"required": ["read_digest"], "properties": {"read_digest": {"type": "string"}}},
+                        ]
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"access_kind": {"enum": ["write", "read_write"]}},
+                        "required": ["access_kind"],
+                    },
+                    "then": {
+                        "anyOf": [
+                            {"required": ["write_revision"], "properties": {"write_revision": {"type": "string"}}},
+                            {"required": ["write_digest"], "properties": {"write_digest": {"type": "string"}}},
+                        ]
+                    },
+                },
+            ]
+        )
+        return json_schema
+
 
 class ParticipantSharedStateRecordModel(ParticipantRuntimeBaseEnvelopeModel):
     """RUN-307 versioned shared operational state-change report."""
@@ -1106,6 +1230,201 @@ class ParticipantSharedStateRecordModel(ParticipantRuntimeBaseEnvelopeModel):
     provenance: NonEmptyString
     value_ref: NonEmptyString | None = None
     accesses: list[ParticipantSharedStateAccessModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_revision_marker(self) -> ParticipantSharedStateRecordModel:
+        if self.revision is None and self.digest is None:
+            raise ValueError("participant shared state record requires revision or digest")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("anyOf", []).extend(
+            [
+                {"required": ["revision"], "properties": {"revision": {"type": "string"}}},
+                {"required": ["digest"], "properties": {"digest": {"type": "string"}}},
+            ]
+        )
+        return json_schema
+
+
+class ParticipantJointActionAccessSetModel(ContractModel):
+    """Read/write footprint for one member event in a joint action record."""
+
+    member_event_ref: NonEmptyString
+    shared_state_read_refs: list[NonEmptyString] = Field(default_factory=list)
+    shared_state_write_refs: list[NonEmptyString] = Field(default_factory=list)
+    exclusive_resource_refs: list[NonEmptyString] = Field(default_factory=list)
+    visibility_effect_refs: list[NonEmptyString] = Field(default_factory=list)
+    evidence_stream_refs: list[NonEmptyString] = Field(default_factory=list)
+
+
+def _exact_string_permutation(values: list[str], expected: set[str]) -> bool:
+    return len(values) == len(expected) and set(values) == expected
+
+
+def _joint_action_actual_conflict(access_sets: list[ParticipantJointActionAccessSetModel]) -> str:
+    read_write_conflict = False
+    for left_index, left in enumerate(access_sets):
+        left_reads = set(left.shared_state_read_refs)
+        left_writes = set(left.shared_state_write_refs) | {f"resource:{ref}" for ref in left.exclusive_resource_refs}
+        for right in access_sets[left_index + 1 :]:
+            right_reads = set(right.shared_state_read_refs)
+            right_writes = set(right.shared_state_write_refs) | {
+                f"resource:{ref}" for ref in right.exclusive_resource_refs
+            }
+            if left_writes & right_writes:
+                return "write_write"
+            if (left_writes & right_reads) or (left_reads & right_writes):
+                read_write_conflict = True
+    return "read_write" if read_write_conflict else "none"
+
+
+def _joint_action_member_ref_set(member_event_refs: list[str]) -> set[str]:
+    member_refs = list(member_event_refs)
+    member_ref_set = set(member_refs)
+    if len(member_refs) != len(member_ref_set):
+        raise ValueError("joint action member_event_refs must be unique")
+    return member_ref_set
+
+
+def _validate_joint_action_members(record: Any, member_ref_set: set[str]) -> None:
+    access_event_refs = [access.member_event_ref for access in record.access_sets]
+    if not _exact_string_permutation(access_event_refs, member_ref_set):
+        raise ValueError("joint action access_sets must cover member_event_refs exactly once")
+    if record.realized_order and not _exact_string_permutation(record.realized_order, member_ref_set):
+        raise ValueError("joint action realized_order must be an exact permutation of member_event_refs")
+
+
+def _validate_joint_action_disclosure(record: Any) -> None:
+    if record.unsupported_disclosure and record.exact_concurrency_claim:
+        raise ValueError("unsupported concurrency disclosure cannot carry an exact concurrency claim")
+    if record.exact_concurrency_claim and record.time_management_context_ref is None:
+        raise ValueError("exact concurrency claims require time_management_context_ref")
+
+
+def _joint_action_unsupported_policy_applies(record: Any) -> bool:
+    if record.conflict_policy != "unsupported":
+        return False
+    if not record.unsupported_disclosure or record.exact_concurrency_claim:
+        raise ValueError("unsupported conflict_policy requires unsupported_disclosure and no exact claim")
+    return True
+
+
+def _validate_joint_action_conflict(record: Any, actual_conflict: str) -> None:
+    if not record.unsupported_disclosure and record.conflict_class != actual_conflict:
+        raise ValueError("joint action conflict_class must match declared access-set conflicts")
+    if record.conflict_class == "none" and actual_conflict != "none":
+        raise ValueError("joint action conflict_class cannot be none when access sets conflict")
+    _validate_joint_action_conflict_policy(record, actual_conflict)
+    _validate_joint_action_atomicity(record, actual_conflict)
+
+
+def _validate_joint_action_conflict_policy(record: Any, actual_conflict: str) -> None:
+    if record.isolation_guarantee == "serializable" and not record.realized_order:
+        raise ValueError("serializable joint action isolation requires realized_order")
+    if record.conflict_policy == "serialize" and not record.realized_order:
+        raise ValueError("serialize conflict_policy requires realized_order")
+    if record.conflict_policy == "retry" and (record.retry_limit is None or not record.rollback_event_refs):
+        raise ValueError("retry conflict_policy requires retry_limit and rollback_event_refs")
+    if record.conflict_policy == "none" and actual_conflict != "none":
+        raise ValueError("none conflict_policy is only valid when access sets do not conflict")
+
+
+def _validate_joint_action_atomicity(record: Any, actual_conflict: str) -> None:
+    has_recovery_evidence = bool(record.realized_order or record.rollback_event_refs)
+    if record.atomicity_scope == "multi_object" and actual_conflict != "none" and not has_recovery_evidence:
+        raise ValueError("multi_object conflicting joint actions require realized_order or rollback_event_refs")
+
+
+class ParticipantJointActionRecordModel(ParticipantRuntimeBaseEnvelopeModel):
+    """RUN-308 joint action / concurrency record over behavior events."""
+
+    joint_action_set_id: NonEmptyString
+    member_event_refs: list[NonEmptyString] = Field(min_length=1)
+    access_sets: list[ParticipantJointActionAccessSetModel] = Field(min_length=1)
+    conflict_class: ParticipantRuntimeConflictClass
+    conflict_policy: ParticipantRuntimeJointActionConflictPolicy
+    isolation_guarantee: ParticipantRuntimeIsolationGuarantee
+    atomicity_scope: ParticipantRuntimeAtomicityScope
+    realized_order: list[NonEmptyString] = Field(default_factory=list)
+    simultaneity_group_ref: NonEmptyString | None = None
+    time_management_context_ref: NonEmptyString | None = None
+    participant_observation_refs: list[NonEmptyString] = Field(default_factory=list)
+    rollback_event_refs: list[NonEmptyString] = Field(default_factory=list)
+    retry_limit: NonNegativeInteger | None = None
+    timeout_policy_ref: NonEmptyString | None = None
+    fairness_policy_ref: NonEmptyString | None = None
+    unsupported_disclosure: bool = False
+    exact_concurrency_claim: bool = False
+
+    @model_validator(mode="after")
+    def _validate_joint_action_record(self) -> ParticipantJointActionRecordModel:
+        member_ref_set = _joint_action_member_ref_set(self.member_event_refs)
+        _validate_joint_action_members(self, member_ref_set)
+        _validate_joint_action_disclosure(self)
+        if _joint_action_unsupported_policy_applies(self):
+            return self
+
+        actual_conflict = _joint_action_actual_conflict(self.access_sets)
+        _validate_joint_action_conflict(self, actual_conflict)
+        return self
+
+
+def _validate_time_management_claim(context: Any) -> None:
+    if context.unsupported_disclosure and context.claim_strength == "exact":
+        raise ValueError("unsupported time-management disclosure cannot carry an exact claim")
+    if context.basis == "wall_clock_only" and context.claim_strength != "display":
+        raise ValueError("wall_clock_only time basis supports display claims only")
+    if context.claim_strength in {"bounded", "exact"} and context.clock_ref is None:
+        raise ValueError("bounded or exact time-management claims require clock_ref")
+
+
+def _validate_time_management_mode(context: Any) -> None:
+    if context.mode == "backend_serialized":
+        _validate_backend_serialized_time_management(context)
+    if context.mode == "lookahead" and context.lookahead is None:
+        raise ValueError("lookahead mode requires lookahead")
+    if context.mode == "pacing" and context.advance_by is None:
+        raise ValueError("pacing mode requires advance_by")
+    if context.mode == "rollback" and not context.rollback_event_refs:
+        raise ValueError("rollback mode requires rollback_event_refs")
+    if context.mode in {"devs", "fmi"} and (context.clock_ref is None or context.basis == "wall_clock_only"):
+        raise ValueError("devs and fmi modes require a non-wall-clock basis and clock_ref")
+    if context.mode == "unsupported" and not context.unsupported_disclosure:
+        raise ValueError("unsupported time-management mode requires unsupported_disclosure")
+
+
+def _validate_backend_serialized_time_management(context: Any) -> None:
+    if not context.backend_serialized or context.basis != "serialized_backend_order" or context.clock_ref is None:
+        raise ValueError("backend_serialized mode requires serialized_backend_order basis and clock_ref")
+
+
+class ParticipantTimeManagementContextModel(ParticipantRuntimeBaseEnvelopeModel):
+    """RUN-308 time-management basis for concurrent or distributed runtime claims."""
+
+    context_id: NonEmptyString
+    mode: ParticipantRuntimeTimeManagementMode
+    claim_strength: ParticipantRuntimeTimeClaimStrength
+    basis: ParticipantRuntimeOrderingBasis
+    clock_ref: NonEmptyString | None = None
+    lookahead: NonNegativeInteger | None = None
+    advance_by: PositiveInteger | None = None
+    rollback_event_refs: list[NonEmptyString] = Field(default_factory=list)
+    unsupported_disclosure: bool = False
+    backend_serialized: bool = False
+
+    @model_validator(mode="after")
+    def _validate_time_management_context(self) -> ParticipantTimeManagementContextModel:
+        _validate_time_management_claim(self)
+        _validate_time_management_mode(self)
+        return self
 
 
 class ParticipantOutcomeReportSourceModel(ContractModel):
@@ -1134,7 +1453,7 @@ class ParticipantOutcomeReportModel(ParticipantRuntimeBaseEnvelopeModel):
     outcome_id: NonEmptyString
     interpretation_rule_ref: NonEmptyString
     outcome_sources: list[ParticipantOutcomeReportSourceModel] = Field(min_length=1)
-    state_relationships: list[ParticipantOutcomeReportStateRelationshipModel] = Field(default_factory=list)
+    state_relationships: list[ParticipantOutcomeReportStateRelationshipModel] = Field(min_length=1)
 
 
 class ParticipantStatusViewEpisodeStateModel(ContractModel):
@@ -1346,8 +1665,135 @@ class ParticipantHistoryViewModel(ContractModel):
         return json_schema
 
 
+ParticipantContextAudienceScope = Literal[
+    "participant_visible",
+    "operator_visible",
+    "evaluator_visible",
+    "auditor_visible",
+]
+ParticipantContextParticipantScope = Literal["participant_local"]
+ParticipantContextSourceLayer = Literal[
+    "source_snapshot",
+    "participant_observation",
+    "participant_behavior_history",
+    "participant_episode_state",
+    "participant_status_view",
+    "participant_history_view",
+    "evidence_record",
+    "derived_measure",
+    "control_plane_operation",
+]
+ParticipantContextTemporalRelation = Literal[
+    "same_observation_point",
+    "bounded_staleness",
+    "historical_replay",
+]
+ParticipantContextComparabilityClass = Literal[
+    "portable_equivalent",
+    "portable_with_disclosed_weakening",
+    "backend_specific_non_comparable",
+]
+
+
+class ParticipantContextSourceLayerModel(ContractModel):
+    """One governed source layer consumed by a SEM-214 context view."""
+
+    source_id: NonEmptyString
+    source_layer: ParticipantContextSourceLayer
+    ref: NonEmptyString
+    temporal_relation: ParticipantContextTemporalRelation
+    observation_point: NonEmptyString | None = None
+    freshness_basis_ref: NonEmptyString | None = None
+    evidence_refs: list[NonEmptyString] = Field(min_length=1)
+    provenance_refs: list[NonEmptyString] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _validate_temporal_basis(self) -> ParticipantContextSourceLayerModel:
+        if self.temporal_relation == "bounded_staleness" and self.freshness_basis_ref is None:
+            raise ValueError("freshness_basis_ref is required for bounded_staleness source layers")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {
+                    "properties": {"temporal_relation": {"const": "bounded_staleness"}},
+                    "required": ["temporal_relation"],
+                },
+                "then": {
+                    "required": ["freshness_basis_ref"],
+                    "properties": {"freshness_basis_ref": {"type": "string", "minLength": 1}},
+                },
+            }
+        )
+        return json_schema
+
+
+class ParticipantContextTransformationModel(ContractModel):
+    """Governed transformation relation for a SEM-214 context view."""
+
+    transformation_rule_ref: NonEmptyString
+    description: NonEmptyString
+    input_source_ids: list[NonEmptyString] = Field(min_length=1)
+    output_semantics_ref: NonEmptyString | None = None
+
+
+class ParticipantContextComparabilityModel(ContractModel):
+    """Explicit comparability claim for a SEM-214 context view."""
+
+    comparability_class: ParticipantContextComparabilityClass
+    comparison_basis_ref: NonEmptyString
+    backend_disclosure_refs: list[NonEmptyString] = Field(default_factory=list)
+    limitations: list[NonEmptyString] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _validate_disclosed_weakening(self) -> ParticipantContextComparabilityModel:
+        if (
+            self.comparability_class in {"portable_with_disclosed_weakening", "backend_specific_non_comparable"}
+            and not self.backend_disclosure_refs
+        ):
+            raise ValueError("backend_disclosure_refs are required when comparability is weakened or backend-specific")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {
+                    "properties": {
+                        "comparability_class": {
+                            "enum": [
+                                "portable_with_disclosed_weakening",
+                                "backend_specific_non_comparable",
+                            ]
+                        }
+                    },
+                    "required": ["comparability_class"],
+                },
+                "then": {
+                    "required": ["backend_disclosure_refs"],
+                    "properties": {"backend_disclosure_refs": {"minItems": 1}},
+                },
+            }
+        )
+        return json_schema
+
+
 class ParticipantContextViewModel(ContractModel):
-    """API-408 derived operational context view (reference-and-provenance only)."""
+    """API-408 derived operational context view with SEM-214 semantics."""
 
     view_id: NonEmptyString
     participant_address: NonEmptyString
@@ -1355,12 +1801,141 @@ class ParticipantContextViewModel(ContractModel):
     generated_at: Rfc3339DateTimeString
     source_snapshot_ref: NonEmptyString
     view_ref: NonEmptyString
+    meaning_ref: NonEmptyString
+    participant_scope: ParticipantContextParticipantScope
+    audience_scope: ParticipantContextAudienceScope
+    observation_point: NonEmptyString
     derived_from_refs: list[NonEmptyString] = Field(min_length=1)
+    source_layers: list[ParticipantContextSourceLayerModel] = Field(min_length=1)
+    transformation: ParticipantContextTransformationModel
+    comparability: ParticipantContextComparabilityModel
+    evidence_refs: list[NonEmptyString] = Field(min_length=1)
+    provenance_refs: list[NonEmptyString] = Field(min_length=1)
+    semantic_limitations: list[NonEmptyString] = Field(min_length=1)
     derivation_basis_ref: NonEmptyString | None = None
     payload_ref: NonEmptyString | None = None
     visibility_projection_ref: NonEmptyString
     marking_definition_refs: list[NonEmptyString] = Field(default_factory=list)
     redaction_policy_ref: NonEmptyString | None = None
+
+    @model_validator(mode="after")
+    def _validate_sem214_source_binding(self) -> ParticipantContextViewModel:
+        source_ids = [source.source_id for source in self.source_layers]
+        if len(set(source_ids)) != len(source_ids):
+            raise ValueError("context view source_layers source_id values must be unique")
+        unknown_inputs = sorted(set(self.transformation.input_source_ids) - set(source_ids))
+        if unknown_inputs:
+            raise ValueError(
+                "context view transformation input_source_ids must reference source_layers: "
+                + ", ".join(unknown_inputs)
+            )
+        available_refs = set(self.derived_from_refs) | {self.source_snapshot_ref}
+        missing_refs = sorted(source.ref for source in self.source_layers if source.ref not in available_refs)
+        if missing_refs:
+            raise ValueError(
+                "context view source layer refs must be listed in derived_from_refs or source_snapshot_ref: "
+                + ", ".join(missing_refs)
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_sem216_audience_boundary(self) -> ParticipantContextViewModel:
+        # SEM-216 B1/B2: archived evidence and derived evaluation/adjudication outputs are
+        # distinct strata from an audience-specific view. A participant-visible view may only
+        # draw on an evidence_record or derived_measure source layer through a governed view
+        # rule (derivation_basis_ref), under a redaction policy (redaction_policy_ref); the
+        # archival source must be consumed by the transformation rather than passed through raw;
+        # and the disclosed payload must be the transformed output, never the raw archival ref.
+        #
+        # The required-ref clauses are also published as a schema allOf so schema-only consumers
+        # enforce them; the relational mediation and payload-aliasing clauses cannot be expressed
+        # in JSON Schema and are published as x-aces-invariants (see __get_pydantic_json_schema__).
+        if self.audience_scope != "participant_visible":
+            return self
+        archival_layers = [
+            source for source in self.source_layers if source.source_layer in {"evidence_record", "derived_measure"}
+        ]
+        if not archival_layers:
+            return self
+        if self.derivation_basis_ref is None:
+            raise ValueError(
+                "participant-visible context views that draw on archival evidence_record or derived_measure "
+                "source layers must declare a derivation_basis_ref governed view rule"
+            )
+        if self.redaction_policy_ref is None:
+            raise ValueError(
+                "participant-visible context views that draw on archival evidence_record or derived_measure "
+                "source layers must declare a redaction_policy_ref"
+            )
+        mediated = set(self.transformation.input_source_ids)
+        unmediated = sorted(source.source_id for source in archival_layers if source.source_id not in mediated)
+        if unmediated:
+            raise ValueError(
+                "participant-visible archival source layers must be mediated by the transformation view rule; "
+                "unmediated source ids: " + ", ".join(unmediated)
+            )
+        if self.payload_ref is not None:
+            raw_archival_refs = {source.ref for source in archival_layers}
+            raw_archival_refs.update(ref for source in archival_layers for ref in source.evidence_refs)
+            if self.payload_ref in raw_archival_refs:
+                raise ValueError(
+                    "participant-visible context views must not set payload_ref to a raw archival "
+                    "evidence_record/derived_measure source ref; payload_ref must identify the transformed, "
+                    "redacted view output produced under the governed view rule"
+                )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {
+                    "properties": {
+                        "audience_scope": {"const": "participant_visible"},
+                        "source_layers": {
+                            "contains": {
+                                "properties": {"source_layer": {"enum": ["evidence_record", "derived_measure"]}},
+                                "required": ["source_layer"],
+                            }
+                        },
+                    },
+                    "required": ["audience_scope", "source_layers"],
+                },
+                "then": {
+                    "required": ["derivation_basis_ref", "redaction_policy_ref"],
+                    "properties": {
+                        "derivation_basis_ref": {"type": "string", "minLength": 1},
+                        "redaction_policy_ref": {"type": "string", "minLength": 1},
+                    },
+                },
+            }
+        )
+        # SEM-216 relational obligations that standard JSON Schema cannot express are published
+        # as ACES semantic invariants so schema-only consumers see the full portable contract and
+        # the validator that enforces it (mirrors the experiment-core x-aces-invariants pattern).
+        _add_aces_invariant(
+            json_schema,
+            "context-view-sem216-archival-source-mediated",
+            "Participant-visible context views drawing on an archival evidence_record or derived_measure "
+            "source layer must mediate that source through transformation.input_source_ids.",
+            validator="aces_contracts.contracts.ParticipantContextViewModel._validate_sem216_audience_boundary",
+            inputs=[{"contract_id": "participant-context-view-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "context-view-sem216-payload-not-raw-archival",
+            "Participant-visible context views must not set payload_ref to a raw archival evidence_record or "
+            "derived_measure source ref; payload_ref must identify the transformed, redacted view output.",
+            validator="aces_contracts.contracts.ParticipantContextViewModel._validate_sem216_audience_boundary",
+            inputs=[{"contract_id": "participant-context-view-v1", "instance_path": "#/payload_ref"}],
+        )
+        return json_schema
 
 
 class PlanOperationModel(ContractModel):
@@ -1440,6 +2015,10 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     participant_episode_results: dict[str, ParticipantEpisodeStateModel] = Field(default_factory=dict)
     participant_episode_history: dict[str, list[ParticipantEpisodeHistoryEventModel]] = Field(default_factory=dict)
     participant_behavior_history: dict[str, list[ParticipantBehaviorHistoryEventModel]] = Field(default_factory=dict)
+    shared_state_records: dict[str, ParticipantSharedStateRecordModel] = Field(default_factory=dict)
+    shared_state_history: dict[str, list[ParticipantSharedStateRecordModel]] = Field(default_factory=dict)
+    joint_action_records: dict[str, ParticipantJointActionRecordModel] = Field(default_factory=dict)
+    time_management_contexts: dict[str, ParticipantTimeManagementContextModel] = Field(default_factory=dict)
     realization_provenance: list[RealizationProvenanceEntryModel] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -1884,11 +2463,52 @@ class ParticipantRuntimeCapabilitiesModel(ContractModel):
         return self
 
 
+class ObservationCapabilitiesModel(ContractModel):
+    """EXP-715 backend observation and evidence-collection capability declaration."""
+
+    name: NonEmptyString
+    supported_capture_kinds: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_channel_kinds: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_evidence_contracts: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_media_types: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supported_sealing_modes: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    supports_redaction: bool = False
+    supports_loss_disclosure: bool = False
+    supports_chain_of_custody: bool = False
+    constraints: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _validate_observation_capability(self) -> ObservationCapabilitiesModel:
+        _validate_unique_string_values("supported_capture_kinds", self.supported_capture_kinds)
+        _validate_unique_string_values("supported_channel_kinds", self.supported_channel_kinds)
+        _validate_unique_string_values("supported_evidence_contracts", self.supported_evidence_contracts)
+        _validate_unique_string_values("supported_media_types", self.supported_media_types)
+        _validate_unique_string_values("supported_sealing_modes", self.supported_sealing_modes)
+        _validate_controlled_vocabulary_terms(
+            "capabilities.observation.supported_capture_kinds",
+            self.supported_capture_kinds,
+        )
+        _validate_controlled_vocabulary_terms(
+            "capabilities.observation.supported_channel_kinds",
+            self.supported_channel_kinds,
+        )
+        _validate_controlled_vocabulary_terms(
+            "capabilities.observation.supported_sealing_modes",
+            self.supported_sealing_modes,
+        )
+        validate_backend_supported_contract_versions(self.supported_evidence_contracts)
+        for contract_id in self.supported_evidence_contracts:
+            if not contract_id.startswith("experiment-"):
+                raise ValueError("observation supported_evidence_contracts must be experiment contract ids")
+        return self
+
+
 class BackendCapabilitiesV2Model(ContractModel):
     provisioner: ProvisionerCapabilitiesModel
     orchestrator: OrchestratorCapabilitiesModel | None = None
     evaluator: EvaluatorCapabilitiesModel | None = None
     participant_runtime: ParticipantRuntimeCapabilitiesModel | None = None
+    observation: ObservationCapabilitiesModel | None = None
 
 
 class ProcessorManifestV2Model(ContractModel):
@@ -2148,12 +2768,16 @@ class ExperimentReferenceModel(ContractModel):
         "protocol",
         "apparatus-context",
         "run",
+        "metric-definition",
         "result",
         "study",
         "manifest",
         "profile",
         "capability",
+        "capture-spec",
         "evidence",
+        "evidence-record",
+        "derived-measure",
         "measurement-channel",
         "analysis-artifact",
         "other",
@@ -2463,6 +3087,84 @@ class ExperimentRunEvidenceArtifactReferenceModel(ExperimentEvidenceReferenceMod
         return json_schema
 
 
+class ExperimentCaptureSpecReferenceModel(ExperimentReferenceModel):
+    """Reference constrained to a declarative capture specification."""
+
+    ref_kind: Literal["capture-spec"]
+
+    @model_validator(mode="after")
+    def _validate_capture_spec_reference_scope(self) -> ExperimentCaptureSpecReferenceModel:
+        if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
+            raise ValueError("capture-spec references must not carry ref_digest or ref_path")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        properties = json_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("ref_digest", None)
+            properties.pop("ref_path", None)
+        return json_schema
+
+
+class ExperimentEvidenceRecordReferenceModel(ExperimentReferenceModel):
+    """Reference constrained to a raw captured evidence record."""
+
+    ref_kind: Literal["evidence-record"]
+
+    @model_validator(mode="after")
+    def _validate_evidence_record_reference_scope(self) -> ExperimentEvidenceRecordReferenceModel:
+        if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
+            raise ValueError("evidence-record references must not carry ref_digest or ref_path")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        properties = json_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("ref_digest", None)
+            properties.pop("ref_path", None)
+        return json_schema
+
+
+class ExperimentDerivedMeasureReferenceModel(ExperimentReferenceModel):
+    """Reference constrained to a derived measure or analysis output."""
+
+    ref_kind: Literal["derived-measure"]
+
+    @model_validator(mode="after")
+    def _validate_derived_measure_reference_scope(self) -> ExperimentDerivedMeasureReferenceModel:
+        if "ref_digest" in self.model_fields_set or "ref_path" in self.model_fields_set:
+            raise ValueError("derived-measure references must not carry ref_digest or ref_path")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        properties = json_schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("ref_digest", None)
+            properties.pop("ref_path", None)
+        return json_schema
+
+
 class ExperimentMeasurementChannelReferenceModel(ExperimentReferenceModel):
     """Reference constrained to a declared measurement channel."""
 
@@ -2626,6 +3328,36 @@ def _reference_identity_satisfies_requirement(
     return _reference_identity_satisfies_requirement(candidate_subject, requirement_subject)
 
 
+def _experiment_reference_key(
+    reference: ExperimentReferenceModel,
+) -> tuple[Any, ...]:
+    subject_ref = getattr(reference, "subject_ref", None)
+    return (
+        reference.ref_kind,
+        reference.ref_id,
+        reference.ref_version,
+        _canonical_digest(getattr(reference, "ref_digest", None)),
+        getattr(reference, "ref_path", None),
+        _experiment_reference_key(subject_ref) if subject_ref is not None else None,
+    )
+
+
+def _validate_unique_experiment_references(
+    field_name: str,
+    references: list[ExperimentReferenceModel],
+) -> None:
+    seen: set[tuple[Any, ...]] = set()
+    duplicates: list[str] = []
+    for reference in references:
+        key = _experiment_reference_key(reference)
+        if key in seen:
+            duplicates.append(_format_reference(reference))
+        seen.add(key)
+    if duplicates:
+        joined = ", ".join(sorted(set(duplicates)))
+        raise ValueError(f"{field_name} must not contain duplicates: {joined}")
+
+
 def _identity_matches_reference(identity: ApparatusIdentityModel, reference: ExperimentReferenceModel) -> bool:
     if reference.ref_digest is not None or reference.ref_path is not None:
         return False
@@ -2730,6 +3462,624 @@ class ExperimentValidityNoteModel(ContractModel):
     ]
     note: NonEmptyString
     mitigation: NonEmptyString | None = None
+
+
+class ExperimentCaptureWindowModel(ContractModel):
+    """Declarative scope/window over which evidence must be captured."""
+
+    window_id: NonEmptyString
+    window_kind: Literal["task", "run", "apparatus", "event", "interval", "manual"]
+    starts_at: Rfc3339DateTimeString | None = None
+    ends_at: Rfc3339DateTimeString | None = None
+    trigger_ref: ExperimentReferenceModel | None = None
+    description: NonEmptyString | None = None
+
+    @model_validator(mode="after")
+    def _validate_capture_window(self) -> ExperimentCaptureWindowModel:
+        if self.starts_at is None and self.ends_at is None and self.trigger_ref is None:
+            raise ValueError("capture windows must declare starts_at, ends_at, or trigger_ref")
+        if self.starts_at is not None and self.ends_at is not None:
+            starts_at = _parse_rfc3339_datetime("starts_at", self.starts_at)
+            ends_at = _parse_rfc3339_datetime("ends_at", self.ends_at)
+            if ends_at < starts_at:
+                raise ValueError("capture window ends_at must be greater than or equal to starts_at")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("anyOf", []).extend(
+            [
+                {"required": ["starts_at"], "properties": {"starts_at": {"not": {"type": "null"}}}},
+                {"required": ["ends_at"], "properties": {"ends_at": {"not": {"type": "null"}}}},
+                {"required": ["trigger_ref"], "properties": {"trigger_ref": {"not": {"type": "null"}}}},
+            ]
+        )
+        _add_aces_invariant(
+            json_schema,
+            "capture-window-interval-valid",
+            "Capture window ends_at must not precede starts_at when both timestamps are present.",
+            validator="aces_contracts.contracts.ExperimentCaptureWindowModel._validate_capture_window",
+            inputs=[{"contract_id": "experiment-capture-spec-v1", "instance_path": "#/capture_windows"}],
+        )
+        return json_schema
+
+
+class ExperimentCaptureRequirementModel(ContractModel):
+    """One evidence capture requirement inside a capture specification."""
+
+    requirement_id: NonEmptyString
+    title: NonEmptyString
+    capture_kind: Literal["artifact", "observation", "trace", "telemetry", "log", "packet-capture", "other"]
+    capture_scope: Literal["task", "run", "apparatus", "participant", "backend", "processor", "network", "service"]
+    channel_ref: ExperimentMeasurementChannelReferenceModel
+    window_refs: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    expected_media_types: list[NonEmptyString] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    required_artifact_roles: list[NonEmptyString] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
+    sensitivity: Literal["public", "internal", "restricted", "redacted"]
+    redaction_policy: NonEmptyString | None = None
+    integrity_requirements: list[NonEmptyString] = Field(min_length=1)
+    retention_policy: NonEmptyString | None = None
+    loss_disclosure_required: bool = True
+    notes: list[NonEmptyString] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_capture_requirement(self) -> ExperimentCaptureRequirementModel:
+        _validate_unique_string_values("window_refs", self.window_refs)
+        _validate_unique_string_values("expected_media_types", self.expected_media_types)
+        _validate_unique_string_values("required_artifact_roles", self.required_artifact_roles)
+        return self
+
+
+class ExperimentCaptureSpecModel(ContractModel):
+    """Declarative EXP-707 specification of what experiment evidence to capture."""
+
+    schema_version: Literal[EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION]
+    capture_spec_id: NonEmptyString
+    spec_version: NonEmptyString
+    title: NonEmptyString
+    description: NonEmptyString
+    scope_refs: list[ExperimentReferenceModel] = Field(min_length=1)
+    capture_windows: list[ExperimentCaptureWindowModel] = Field(min_length=1)
+    capture_requirements: dict[NonEmptyString, ExperimentCaptureRequirementModel] = Field(min_length=1)
+    validity_notes: list[ExperimentValidityNoteModel] = Field(default_factory=list)
+    artifact_refs: list[ExperimentArtifactRefModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_capture_spec(self) -> ExperimentCaptureSpecModel:
+        mismatches = [
+            requirement_key
+            for requirement_key, requirement in self.capture_requirements.items()
+            if requirement.requirement_id != requirement_key
+        ]
+        if mismatches:
+            joined = ", ".join(sorted(mismatches))
+            raise ValueError(f"capture_requirements keys must match embedded requirement_id: {joined}")
+        window_ids = {window.window_id for window in self.capture_windows}
+        missing_window_refs = sorted(
+            {
+                window_ref
+                for requirement in self.capture_requirements.values()
+                for window_ref in requirement.window_refs
+                if window_ref not in window_ids
+            }
+        )
+        if missing_window_refs:
+            joined = ", ".join(missing_window_refs)
+            raise ValueError(f"capture requirement window_refs must resolve to capture_windows: {joined}")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        _add_aces_invariant(
+            json_schema,
+            "capture-requirement-key-matches-requirement-id",
+            "Every capture_requirements object key must match the embedded requirement_id value, and window_refs "
+            "must resolve to declared capture_windows.",
+            validator="aces_contracts.contracts.ExperimentCaptureSpecModel._validate_capture_spec",
+            inputs=[{"contract_id": "experiment-capture-spec-v1", "instance_path": "#"}],
+        )
+        _add_aces_plane(json_schema, "experiment-capture-spec-v1")
+        return json_schema
+
+
+class ExperimentRawEvidenceContentModel(ContractModel):
+    """Raw captured payload reference or bounded summary for EXP-708 records."""
+
+    artifact_ref: ExperimentArtifactRefModel | None = None
+    content_uri: NonEmptyString | None = None
+    content_checksum: ExperimentChecksumModel | None = None
+    payload_summary: NonEmptyString | None = None
+    loss_disclosure: NonEmptyString | None = None
+
+    @model_validator(mode="after")
+    def _validate_raw_content(self) -> ExperimentRawEvidenceContentModel:
+        if self.artifact_ref is None and self.content_uri is None and self.payload_summary is None:
+            raise ValueError("raw evidence content must include artifact_ref, content_uri, or payload_summary")
+        if self.content_uri is not None and self.content_checksum is None:
+            raise ValueError("content_uri raw evidence must include content_checksum")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("anyOf", []).extend(
+            [
+                {"required": ["artifact_ref"], "properties": {"artifact_ref": {"not": {"type": "null"}}}},
+                {"required": ["content_uri"], "properties": {"content_uri": {"not": {"type": "null"}}}},
+                {"required": ["payload_summary"], "properties": {"payload_summary": {"not": {"type": "null"}}}},
+            ]
+        )
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {"required": ["content_uri"], "properties": {"content_uri": {"not": {"type": "null"}}}},
+                "then": {
+                    "required": ["content_checksum"],
+                    "properties": {"content_checksum": {"not": {"type": "null"}}},
+                },
+            }
+        )
+        return json_schema
+
+
+class ExperimentEvidenceRecordModel(ContractModel):
+    """Raw captured EXP-708 evidence record, distinct from derived measures."""
+
+    schema_version: Literal[EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION]
+    evidence_record_id: NonEmptyString
+    record_version: NonEmptyString
+    capture_spec_ref: ExperimentCaptureSpecReferenceModel
+    capture_requirement_ref: NonEmptyString
+    run_ref: ExperimentReferenceModel
+    task_ref: ExperimentTaskReferenceModel | None = None
+    apparatus_context_ref: ExperimentReferenceModel | None = None
+    source_refs: list[ExperimentReferenceModel] = Field(min_length=1)
+    evidence_kind: Literal["artifact", "observation", "trace", "telemetry", "log", "packet-capture", "other"]
+    captured_at: Rfc3339DateTimeString
+    capture_window_ref: NonEmptyString
+    raw_content: ExperimentRawEvidenceContentModel
+    sensitivity: Literal["public", "internal", "restricted", "redacted"]
+    redaction_state: Literal["none", "redacted", "withheld"]
+    provenance_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_evidence_record(self) -> ExperimentEvidenceRecordModel:
+        _parse_rfc3339_datetime("captured_at", self.captured_at)
+        if self.redaction_state != "none" and self.raw_content.loss_disclosure is None:
+            raise ValueError("redacted or withheld evidence records must include raw_content.loss_disclosure")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        _add_aces_invariant(
+            json_schema,
+            "evidence-record-raw-content-present",
+            "Evidence records must carry raw content as an artifact reference, content URI with checksum, or bounded "
+            "payload summary; redacted/withheld records must disclose loss.",
+            validator="aces_contracts.contracts.ExperimentEvidenceRecordModel._validate_evidence_record",
+            inputs=[{"contract_id": "experiment-evidence-record-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "evidence-record-captured-at-valid",
+            "captured_at must be a valid RFC 3339 date-time.",
+            validator="aces_contracts.contracts.ExperimentEvidenceRecordModel._validate_evidence_record",
+            inputs=[{"contract_id": "experiment-evidence-record-v1", "instance_path": "#/captured_at"}],
+        )
+        # SEM-216 B4: redacted or withheld evidence records must disclose redaction/loss at the
+        # evidence boundary. Publish the model rule as a portable schema constraint so any
+        # consumer validating against the JSON Schema enforces the disclosure, not just the model.
+        json_schema.setdefault("allOf", []).append(
+            {
+                "if": {
+                    "properties": {"redaction_state": {"enum": ["redacted", "withheld"]}},
+                    "required": ["redaction_state"],
+                },
+                "then": {
+                    "required": ["raw_content"],
+                    "properties": {
+                        "raw_content": {
+                            "required": ["loss_disclosure"],
+                            "properties": {"loss_disclosure": {"type": "string", "minLength": 1}},
+                        }
+                    },
+                },
+            }
+        )
+        _add_aces_plane(json_schema, "experiment-evidence-record-v1")
+        return json_schema
+
+
+class ExperimentDerivedMeasureMethodModel(ContractModel):
+    """Method metadata for deriving measures from raw evidence."""
+
+    method_id: NonEmptyString
+    method_version: NonEmptyString
+    name: NonEmptyString
+    description: NonEmptyString | None = None
+    parameters: list[ExperimentParameterModel] = Field(default_factory=list)
+
+
+class ExperimentDerivedMeasureModel(ContractModel):
+    """EXP-709 derived measure/evaluation output computed from raw evidence."""
+
+    schema_version: Literal[EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION]
+    derived_measure_id: NonEmptyString
+    measure_version: NonEmptyString
+    measure_kind: Literal["metric", "evaluation", "score", "summary", "analysis-output", "other"]
+    metric_ref: ExperimentReferenceModel
+    method: ExperimentDerivedMeasureMethodModel
+    source_evidence_refs: list[ExperimentEvidenceRecordReferenceModel] = Field(min_length=1)
+    generated_at: Rfc3339DateTimeString
+    value_status: Literal["reported", "missing", "withheld", "not-applicable"]
+    value: str | int | float | bool | None = None
+    uncertainty: NonEmptyString | None = None
+    limitations: list[NonEmptyString] = Field(default_factory=list)
+    provenance_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_derived_measure(self) -> ExperimentDerivedMeasureModel:
+        _parse_rfc3339_datetime("generated_at", self.generated_at)
+        _validate_reported_value_status(
+            self.value_status,
+            self.value,
+            reported_message="reported derived measures must include value",
+            non_reported_message="non-reported derived measures must not include value",
+        )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        _extend_reported_value_status_schema(json_schema)
+        _add_aces_invariant(
+            json_schema,
+            "derived-measure-reported-value-present",
+            "Reported derived measures must include a value; missing/withheld/not-applicable measures must not.",
+            validator="aces_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure",
+            inputs=[{"contract_id": "experiment-derived-measure-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "derived-measure-generated-at-valid",
+            "generated_at must be a valid RFC 3339 date-time.",
+            validator="aces_contracts.contracts.ExperimentDerivedMeasureModel._validate_derived_measure",
+            inputs=[{"contract_id": "experiment-derived-measure-v1", "instance_path": "#/generated_at"}],
+        )
+        _add_aces_plane(json_schema, "experiment-derived-measure-v1")
+        return json_schema
+
+
+class ExperimentRunTraceabilityModel(ContractModel):
+    """Canonical run provenance links across capture, evidence, measures, and claims."""
+
+    capture_spec_refs: list[ExperimentCaptureSpecReferenceModel] = Field(min_length=1)
+    evidence_record_refs: list[ExperimentEvidenceRecordReferenceModel] = Field(min_length=1)
+    derived_measure_refs: list[ExperimentDerivedMeasureReferenceModel] = Field(default_factory=list)
+    claim_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+    notes: list[NonEmptyString] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_run_traceability(self) -> ExperimentRunTraceabilityModel:
+        _validate_unique_experiment_references("traceability capture_spec_refs", self.capture_spec_refs)
+        _validate_unique_experiment_references("traceability evidence_record_refs", self.evidence_record_refs)
+        _validate_unique_experiment_references("traceability derived_measure_refs", self.derived_measure_refs)
+        _validate_unique_experiment_references("traceability claim_refs", self.claim_refs)
+        if self.claim_refs and not self.derived_measure_refs:
+            raise ValueError("traceability claim_refs require at least one derived_measure_refs entry")
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        _add_aces_invariant(
+            json_schema,
+            "run-traceability-refs-unique",
+            "Run provenance traceability references must be duplicate-free, and claim refs must be grounded by "
+            "at least one derived measure ref.",
+            validator="aces_contracts.contracts.ExperimentRunTraceabilityModel._validate_run_traceability",
+            inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/traceability"}],
+        )
+        return json_schema
+
+
+class ExperimentRealizedFormDisclosureModel(ContractModel):
+    """Disclosure of one realized form chosen for an underspecified run concern."""
+
+    concern_id: NonEmptyString
+    concern_kind: Literal[
+        "scenario-module",
+        "processor-selection",
+        "backend-selection",
+        "participant-implementation",
+        "apparatus-configuration",
+        "parameter-default",
+        "stochastic-control",
+        "measurement-channel",
+        "capture-window",
+        "other",
+    ]
+    basis: Literal["author-declared", "processor-realized", "backend-realized", "operator-supplied", "observed"]
+    realized_by_ref: ExperimentReferenceModel
+    authored_ref: ExperimentReferenceModel | None = None
+    realized_ref: ExperimentReferenceModel | None = None
+    realized_value_summary: NonEmptyString | None = None
+    disclosure: NonEmptyString
+    evidence_refs: list[ExperimentEvidenceRecordReferenceModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_realized_form_disclosure(self) -> ExperimentRealizedFormDisclosureModel:
+        if self.realized_ref is None and self.realized_value_summary is None:
+            raise ValueError("realized form disclosures must include realized_ref or realized_value_summary")
+        if self.basis == "processor-realized" and self.realized_by_ref.ref_kind != "processor":
+            raise ValueError("processor-realized disclosures must use a processor realized_by_ref")
+        if self.basis == "backend-realized" and self.realized_by_ref.ref_kind != "backend":
+            raise ValueError("backend-realized disclosures must use a backend realized_by_ref")
+        _validate_unique_experiment_references("realized form disclosure evidence_refs", self.evidence_refs)
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("anyOf", []).extend(
+            [
+                {"required": ["realized_ref"], "properties": {"realized_ref": {"not": {"type": "null"}}}},
+                {
+                    "required": ["realized_value_summary"],
+                    "properties": {"realized_value_summary": {"not": {"type": "null"}}},
+                },
+            ]
+        )
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {"properties": {"basis": {"const": "processor-realized"}}, "required": ["basis"]},
+                    "then": {
+                        "properties": {
+                            "realized_by_ref": {
+                                "required": ["ref_kind"],
+                                "properties": {"ref_kind": {"const": "processor"}},
+                            }
+                        }
+                    },
+                },
+                {
+                    "if": {"properties": {"basis": {"const": "backend-realized"}}, "required": ["basis"]},
+                    "then": {
+                        "properties": {
+                            "realized_by_ref": {
+                                "required": ["ref_kind"],
+                                "properties": {"ref_kind": {"const": "backend"}},
+                            }
+                        }
+                    },
+                },
+            ]
+        )
+        _add_aces_invariant(
+            json_schema,
+            "realized-form-disclosure-substantive",
+            "Every realized-form disclosure must name a realized reference or value summary and use the right "
+            "processor/backend realization authority for processor-realized and backend-realized concerns.",
+            validator=(
+                "aces_contracts.contracts.ExperimentRealizedFormDisclosureModel._validate_realized_form_disclosure"
+            ),
+            inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/realized_form_disclosures"}],
+        )
+        return json_schema
+
+
+_SEM_225_PORTABLE_CARRIER_KINDS = frozenset(
+    {
+        "apparatus-context",
+        "capture-spec",
+        "derived-measure",
+        "evidence-record",
+        "manifest",
+        "measurement-channel",
+        "profile",
+        "run",
+        "scenario-snapshot",
+    }
+)
+
+
+def _validate_sem_225_claim_evidence(
+    classifications: set[str],
+    evidence_refs: list[ExperimentEvidenceRecordReferenceModel],
+) -> None:
+    if classifications - {"apparatus_only"} and not evidence_refs:
+        raise ValueError("environment, participant, or comparability augmentations require evidence_refs")
+
+
+def _validate_sem_225_environment_visible(disclosure: ExperimentAugmentationDisclosureModel) -> None:
+    if disclosure.environment_effect is None:
+        raise ValueError("environment_visible augmentation disclosures require environment_effect")
+    if not any(ref.ref_kind in _SEM_225_PORTABLE_CARRIER_KINDS for ref in disclosure.carrier_refs):
+        raise ValueError("environment_visible augmentation disclosures require a portable carrier_ref")
+
+
+def _validate_sem_225_participant_visible(disclosure: ExperimentAugmentationDisclosureModel) -> None:
+    if disclosure.participant_visibility is None:
+        raise ValueError("participant_visible augmentation disclosures require participant_visibility")
+    if not disclosure.markings:
+        raise ValueError("participant_visible augmentation disclosures require markings")
+
+
+def _validate_sem_225_comparability_relevant(disclosure: ExperimentAugmentationDisclosureModel) -> None:
+    if disclosure.comparability_effect is None:
+        raise ValueError("comparability_relevant augmentation disclosures require comparability_effect")
+    if disclosure.observer_effect is None:
+        raise ValueError("comparability_relevant augmentation disclosures require observer_effect")
+
+
+class ExperimentAugmentationDisclosureModel(ContractModel):
+    """Disclosure for processor/backend augmentation used by a run."""
+
+    augmentation_id: NonEmptyString
+    purpose: Literal["evidence", "evaluation", "operational", "comparability", "other"]
+    realization_layer: Literal[
+        "processor",
+        "backend",
+        "apparatus",
+        "runtime-environment",
+        "participant-runtime",
+        "measurement-channel",
+        "analysis",
+        "other",
+    ]
+    classifications: list[
+        Literal["apparatus_only", "environment_visible", "participant_visible", "comparability_relevant"]
+    ] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    augmented_by_ref: ExperimentReferenceModel
+    carrier_refs: list[ExperimentReferenceModel] = Field(min_length=1)
+    affected_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+    evidence_refs: list[ExperimentEvidenceRecordReferenceModel] = Field(default_factory=list)
+    disclosure_policy: NonEmptyString
+    markings: list[NonEmptyString] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
+    observer_effect: NonEmptyString | None = None
+    environment_effect: NonEmptyString | None = None
+    participant_visibility: NonEmptyString | None = None
+    comparability_effect: NonEmptyString | None = None
+    notes: list[NonEmptyString] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_augmentation_disclosure(self) -> ExperimentAugmentationDisclosureModel:
+        _validate_unique_string_values("augmentation classifications", self.classifications)
+        _validate_unique_string_values("augmentation disclosure markings", self.markings)
+        _validate_unique_string_values("augmentation disclosure notes", self.notes)
+        _validate_unique_experiment_references("augmentation disclosure carrier_refs", self.carrier_refs)
+        _validate_unique_experiment_references("augmentation disclosure affected_refs", self.affected_refs)
+        _validate_unique_experiment_references("augmentation disclosure evidence_refs", self.evidence_refs)
+
+        if self.augmented_by_ref.ref_kind not in {"processor", "backend"}:
+            raise ValueError("augmentation disclosures must use a processor or backend augmented_by_ref")
+
+        classification_set = set(self.classifications)
+        _validate_sem_225_claim_evidence(classification_set, self.evidence_refs)
+        if "environment_visible" in classification_set:
+            _validate_sem_225_environment_visible(self)
+        if "participant_visible" in classification_set:
+            _validate_sem_225_participant_visible(self)
+        if "comparability_relevant" in classification_set:
+            _validate_sem_225_comparability_relevant(self)
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "properties": {
+                        "augmented_by_ref": {
+                            "required": ["ref_kind"],
+                            "properties": {"ref_kind": {"enum": ["processor", "backend"]}},
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {"classifications": {"contains": {"const": "environment_visible"}}},
+                        "required": ["classifications"],
+                    },
+                    "then": {
+                        "required": ["carrier_refs", "environment_effect", "evidence_refs"],
+                        "properties": {
+                            "environment_effect": {"type": "string", "minLength": 1},
+                            "carrier_refs": {
+                                "contains": {
+                                    "required": ["ref_kind"],
+                                    "properties": {"ref_kind": {"enum": sorted(_SEM_225_PORTABLE_CARRIER_KINDS)}},
+                                }
+                            },
+                            "evidence_refs": {"minItems": 1},
+                        },
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"classifications": {"contains": {"const": "participant_visible"}}},
+                        "required": ["classifications"],
+                    },
+                    "then": {
+                        "required": ["participant_visibility", "markings", "evidence_refs"],
+                        "properties": {
+                            "participant_visibility": {"type": "string", "minLength": 1},
+                            "markings": {"minItems": 1},
+                            "evidence_refs": {"minItems": 1},
+                        },
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"classifications": {"contains": {"const": "comparability_relevant"}}},
+                        "required": ["classifications"],
+                    },
+                    "then": {
+                        "required": ["comparability_effect", "observer_effect", "evidence_refs"],
+                        "properties": {
+                            "comparability_effect": {"type": "string", "minLength": 1},
+                            "observer_effect": {"type": "string", "minLength": 1},
+                            "evidence_refs": {"minItems": 1},
+                        },
+                    },
+                },
+            ]
+        )
+        _add_aces_invariant(
+            json_schema,
+            "augmentation-disclosure-semantics-valid",
+            "Augmentation disclosures must keep environment-visible, participant-visible, and "
+            "comparability-relevant semantics explicit and must use processor/backend authority.",
+            validator=(
+                "aces_contracts.contracts.ExperimentAugmentationDisclosureModel._validate_augmentation_disclosure"
+            ),
+            inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/augmentation_disclosures"}],
+        )
+        return json_schema
 
 
 class ExperimentMetricDefinitionModel(ContractModel):
@@ -3394,10 +4744,12 @@ class ExperimentResultSummaryModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_reported_value(self) -> ExperimentResultSummaryModel:
-        if self.value_status == "reported" and self.value is None:
-            raise ValueError("reported result summaries must include value")
-        if self.value_status != "reported" and self.value is not None:
-            raise ValueError("non-reported result summaries must not include value")
+        _validate_reported_value_status(
+            self.value_status,
+            self.value,
+            reported_message="reported result summaries must include value",
+            non_reported_message="non-reported result summaries must not include value",
+        )
         return self
 
     @classmethod
@@ -3408,24 +4760,7 @@ class ExperimentResultSummaryModel(ContractModel):
     ) -> JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        json_schema.setdefault("allOf", []).extend(
-            [
-                {
-                    "if": {
-                        "properties": {"value_status": {"const": "reported"}},
-                        "required": ["value_status"],
-                    },
-                    "then": {"required": ["value"], "properties": {"value": {"not": {"type": "null"}}}},
-                },
-                {
-                    "if": {
-                        "properties": {"value_status": {"enum": ["missing", "withheld", "not-applicable"]}},
-                        "required": ["value_status"],
-                    },
-                    "then": {"properties": {"value": {"type": "null"}}},
-                },
-            ]
-        )
+        _extend_reported_value_status_schema(json_schema)
         return json_schema
 
 
@@ -3459,6 +4794,9 @@ class ExperimentRunModel(ContractModel):
     clock_context: ExperimentClockContextModel
     run_status: Literal["sealed", "completed", "failed", "aborted", "invalidated", "superseded"]
     outcome_status: Literal["succeeded", "failed", "partial", "inconclusive", "not-evaluated"]
+    traceability: ExperimentRunTraceabilityModel
+    realized_form_disclosures: list[ExperimentRealizedFormDisclosureModel] = Field(default_factory=list)
+    augmentation_disclosures: list[ExperimentAugmentationDisclosureModel] = Field(default_factory=list)
     evidence_artifacts: list[ExperimentArtifactRefModel] = Field(min_length=1)
     result_summaries: dict[NonEmptyString, ExperimentResultSummaryModel] = Field(min_length=1)
     deviations: list[NonEmptyString] = Field(default_factory=list)
@@ -3519,6 +4857,35 @@ class ExperimentRunModel(ContractModel):
         if missing_evidence_refs:
             joined = ", ".join(missing_evidence_refs)
             raise ValueError(f"result_summaries evidence_refs must resolve to evidence_artifacts: {joined}")
+        traced_evidence_record_refs = {
+            _experiment_reference_key(evidence_ref) for evidence_ref in self.traceability.evidence_record_refs
+        }
+        missing_disclosure_evidence_refs = sorted(
+            _format_reference(evidence_ref)
+            for disclosure in self.realized_form_disclosures
+            for evidence_ref in disclosure.evidence_refs
+            if _experiment_reference_key(evidence_ref) not in traced_evidence_record_refs
+        )
+        if missing_disclosure_evidence_refs:
+            joined = ", ".join(missing_disclosure_evidence_refs)
+            raise ValueError(
+                f"realized_form_disclosures evidence_refs must be listed in traceability evidence_record_refs: {joined}"
+            )
+        _validate_unique_string_values(
+            "augmentation_disclosures augmentation_id",
+            [disclosure.augmentation_id for disclosure in self.augmentation_disclosures],
+        )
+        missing_augmentation_evidence_refs = sorted(
+            _format_reference(evidence_ref)
+            for disclosure in self.augmentation_disclosures
+            for evidence_ref in disclosure.evidence_refs
+            if _experiment_reference_key(evidence_ref) not in traced_evidence_record_refs
+        )
+        if missing_augmentation_evidence_refs:
+            joined = ", ".join(missing_augmentation_evidence_refs)
+            raise ValueError(
+                f"augmentation_disclosures evidence_refs must be listed in traceability evidence_record_refs: {joined}"
+            )
         return self
 
     @classmethod
@@ -3559,6 +4926,21 @@ class ExperimentRunModel(ContractModel):
             json_schema,
             "participant-implementation-provenance-resolves",
             "Participant implementation apparatus components must resolve to run-level participant provenance.",
+            validator="aces_contracts.contracts.ExperimentRunModel._validate_archival_run",
+            inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "realized-form-evidence-refs-traced",
+            "Every realized-form disclosure evidence ref must also appear in the run traceability evidence refs.",
+            validator="aces_contracts.contracts.ExperimentRunModel._validate_archival_run",
+            inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "augmentation-disclosure-evidence-refs-traced",
+            "Every augmentation disclosure evidence ref must also appear in the run traceability evidence refs, "
+            "and augmentation_id values must be unique within the run.",
             validator="aces_contracts.contracts.ExperimentRunModel._validate_archival_run",
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
@@ -5223,6 +6605,9 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
+        "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_json_schema(),
+        "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_json_schema(),
+        "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_json_schema(),
         "experiment-run-v1": ExperimentRunModel.model_json_schema(),
         "experiment-study-v1": ExperimentStudyModel.model_json_schema(),
         "experiment-task-v1": ExperimentTaskModel.model_json_schema(),
@@ -5253,6 +6638,8 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-lifecycle-event-v1": ParticipantLifecycleEventModel.model_json_schema(),
         "participant-observation-envelope-v1": ParticipantObservationEnvelopeModel.model_json_schema(),
         "participant-shared-state-record-v1": ParticipantSharedStateRecordModel.model_json_schema(),
+        "participant-joint-action-record-v1": ParticipantJointActionRecordModel.model_json_schema(),
+        "participant-time-management-context-v1": ParticipantTimeManagementContextModel.model_json_schema(),
         "participant-outcome-report-v1": ParticipantOutcomeReportModel.model_json_schema(),
         "participant-status-view-v1": ParticipantStatusViewModel.model_json_schema(),
         "participant-history-view-v1": ParticipantHistoryViewModel.model_json_schema(),
@@ -5303,11 +6690,21 @@ __all__ = [
     "ExperimentApparatusConstraintModel",
     "ExperimentApparatusContextModel",
     "ExperimentArtifactRefModel",
+    "ExperimentAugmentationDisclosureModel",
     "ExperimentBackendReferenceModel",
+    "ExperimentCaptureRequirementModel",
+    "ExperimentCaptureSpecModel",
+    "ExperimentCaptureSpecReferenceModel",
+    "ExperimentCaptureWindowModel",
     "ExperimentChecksumModel",
     "ExperimentClockContextModel",
     "ExperimentConditionAssignmentParameterModel",
     "ExperimentConditionAssignmentReferenceModel",
+    "ExperimentDerivedMeasureMethodModel",
+    "ExperimentDerivedMeasureModel",
+    "ExperimentDerivedMeasureReferenceModel",
+    "ExperimentEvidenceRecordModel",
+    "ExperimentEvidenceRecordReferenceModel",
     "ExperimentEvidenceReferenceModel",
     "ExperimentEvaluationProtocolModel",
     "ExperimentInvalidationModel",
@@ -5318,10 +6715,12 @@ __all__ = [
     "ExperimentMultipleComparisonPolicyModel",
     "ExperimentParameterModel",
     "ExperimentProcessorReferenceModel",
+    "ExperimentRealizedFormDisclosureModel",
     "ExperimentReferenceModel",
     "ExperimentResultSummaryModel",
     "ExperimentRunAllocationPlanModel",
     "ExperimentRunModel",
+    "ExperimentRunTraceabilityModel",
     "ExperimentScenarioReferenceModel",
     "ExperimentScenarioSnapshotReferenceModel",
     "ExperimentSplitAndLeakageControlsModel",
@@ -5335,6 +6734,9 @@ __all__ = [
     "ExperimentUncertaintyMethodModel",
     "ExperimentValidityNoteModel",
     "EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION",
+    "EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION",
+    "EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION",
+    "EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION",
     "EXPERIMENT_RUN_SCHEMA_VERSION",
     "EXPERIMENT_STUDY_SCHEMA_VERSION",
     "EXPERIMENT_TASK_SCHEMA_VERSION",
@@ -5348,6 +6750,7 @@ __all__ = [
     "OPERATION_SCHEMA_VERSION",
     "OperationReceiptModel",
     "OperationStatusModel",
+    "ObservationCapabilitiesModel",
     "OrchestrationPlanModel",
     "OrchestratorCapabilitiesModel",
     "PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION",
@@ -5375,6 +6778,8 @@ __all__ = [
     "ParticipantImplementationManifestModel",
     "ParticipantImplementationProvenanceModel",
     "ParticipantImplementationSelectionModel",
+    "ParticipantJointActionAccessSetModel",
+    "ParticipantJointActionRecordModel",
     "ParticipantLifecycleEventModel",
     "ParticipantObservationEnvelopeModel",
     "ParticipantObservationLossDescriptorModel",
@@ -5392,6 +6797,7 @@ __all__ = [
     "ParticipantStatusViewEpisodeStateModel",
     "ParticipantStatusViewModel",
     "ParticipantTemporalRuntimeContextModel",
+    "ParticipantTimeManagementContextModel",
     "VIEW_SCOPE_PROJECTED_FIELDS",
     "PlanOperationModel",
     "ProcessorFeature",

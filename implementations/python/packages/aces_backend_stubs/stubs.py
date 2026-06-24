@@ -12,6 +12,7 @@ from aces_backend_protocols.capabilities import (
     BackendCapabilitySet,
     BackendManifest,
     EvaluatorCapabilities,
+    ObservationCapabilities,
     OrchestratorCapabilities,
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
@@ -61,6 +62,7 @@ def _current_backend_version() -> str:
 def create_stub_manifest(
     *,
     with_participant_runtime: bool = True,
+    with_observation: bool = True,
     **config,
 ) -> BackendManifest:
     """Return the fully capable stub manifest.
@@ -81,7 +83,13 @@ def create_stub_manifest(
         supported_contract_versions.discard("participant-lifecycle-event-v1")
         supported_contract_versions.discard("participant-observation-envelope-v1")
         supported_contract_versions.discard("participant-shared-state-record-v1")
+        supported_contract_versions.discard("participant-joint-action-record-v1")
+        supported_contract_versions.discard("participant-time-management-context-v1")
         supported_contract_versions.discard("participant-outcome-report-v1")
+    if not with_observation:
+        supported_contract_versions.discard("experiment-capture-spec-v1")
+        supported_contract_versions.discard("experiment-evidence-record-v1")
+        supported_contract_versions.discard("experiment-derived-measure-v1")
     concept_bindings = (
         ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
         ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
@@ -103,6 +111,21 @@ def create_stub_manifest(
             ConceptBinding(
                 scope="capabilities.participant_runtime.supported_interaction_features",
                 family="relationships",
+            ),
+        )
+    if with_observation:
+        concept_bindings += (
+            ConceptBinding(
+                scope="capabilities.observation.supported_capture_kinds",
+                family="provenance-and-evidence",
+            ),
+            ConceptBinding(
+                scope="capabilities.observation.supported_channel_kinds",
+                family="apparatus-declarations",
+            ),
+            ConceptBinding(
+                scope="capabilities.observation.supported_sealing_modes",
+                family="provenance-and-evidence",
             ),
         )
     return BackendManifest(
@@ -188,6 +211,36 @@ def create_stub_manifest(
                     supported_interaction_features=REFERENCE_PARTICIPANT_INTERACTION_FEATURES,
                 )
                 if with_participant_runtime
+                else None
+            ),
+            observation=(
+                ObservationCapabilities(
+                    name="stub-observation",
+                    supported_capture_kinds=frozenset({"artifact", "log", "observation", "telemetry", "trace"}),
+                    supported_channel_kinds=frozenset(
+                        {
+                            "backend-log",
+                            "evaluation-history",
+                            "file-artifact",
+                            "participant-observation",
+                            "runtime-snapshot",
+                            "workflow-history",
+                        }
+                    ),
+                    supported_evidence_contracts=frozenset(
+                        {
+                            "experiment-capture-spec-v1",
+                            "experiment-evidence-record-v1",
+                            "experiment-derived-measure-v1",
+                        }
+                    ),
+                    supported_media_types=frozenset({"application/json", "text/plain"}),
+                    supported_sealing_modes=frozenset({"digest", "immutable-store"}),
+                    supports_redaction=True,
+                    supports_loss_disclosure=True,
+                    supports_chain_of_custody=False,
+                )
+                if with_observation
                 else None
             ),
         ),

@@ -21,6 +21,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
 from .control_plane import RuntimeControlPlane
+from .control_plane_api_guards import request_size_guard_response
 from .control_plane_api_models import (
     _evaluation_plan,
     _operation_status_model,
@@ -33,13 +34,13 @@ from .control_plane_api_models import (
     _request_fingerprint,
     _snapshot_model,
 )
+from .control_plane_api_participant_retrieval import register_participant_retrieval_routes
 from .control_plane_security import (
     ControlPlaneIdentity,
     ControlPlaneRole,
     ControlPlaneSecurityConfig,
 )
 
-_REQUEST_TOO_LARGE_DETAIL = "request too large"
 _CONFLICT_RESPONSES = {409: {"description": "Conflict"}}
 _NOT_FOUND_RESPONSES = {404: {"description": "Not found"}}
 _BAD_REQUEST_CONFLICT_RESPONSES = {
@@ -162,6 +163,7 @@ def create_control_plane_app(
     _register_operation_routes(app, control_plane)
     _register_workflow_routes(app, control_plane)
     _register_participant_episode_routes(app, control_plane)
+    register_participant_retrieval_routes(app, control_plane)
     return app
 
 
@@ -175,13 +177,13 @@ def _install_request_guards(
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
-        content_length = request.headers.get("content-length")
-        if content_length is not None and _content_length_exceeds_limit(content_length, security.max_request_bytes):
-            return _request_too_large_response(control_plane, request)
-        body = await request.body()
-        if len(body) > security.max_request_bytes:
-            return _request_too_large_response(control_plane, request)
-        request.state.raw_body = body
+        guard_response = await request_size_guard_response(
+            control_plane,
+            request,
+            max_request_bytes=security.max_request_bytes,
+        )
+        if guard_response is not None:
+            return guard_response
         return await call_next(request)
 
     @app.exception_handler(Exception)
@@ -194,27 +196,6 @@ def _install_request_guards(
             reason=f"internal-error:{type(exc).__name__}",
         )
         return JSONResponse(status_code=500, content={"detail": "internal server error"})
-
-
-def _content_length_exceeds_limit(content_length: str, max_request_bytes: int) -> bool:
-    try:
-        return int(content_length) > max_request_bytes
-    except ValueError:
-        return False
-
-
-def _request_too_large_response(
-    control_plane: RuntimeControlPlane,
-    request: Request,
-) -> JSONResponse:
-    control_plane.record_audit(
-        action=request.method,
-        identity="anonymous",
-        allowed=False,
-        target=str(request.url.path),
-        reason=_REQUEST_TOO_LARGE_DETAIL,
-    )
-    return JSONResponse(status_code=413, content={"detail": _REQUEST_TOO_LARGE_DETAIL})
 
 
 def _register_operation_routes(

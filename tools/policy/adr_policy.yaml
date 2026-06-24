@@ -114,6 +114,22 @@ module_boundaries:
       public_import_prefixes:
         aces_runtime:
           - aces_runtime.registry
+    - id: aces_reference_backend
+      root: implementations/python/packages/aces_reference_backend
+      allowed_top_level_imports:
+        - aces_backend_protocols
+        - aces_contracts
+        - aces_runtime
+      forbidden_import_prefixes:
+        - aces_backend_stubs
+        - aces_cli
+        - aces_conformance
+        - aces_mcp
+        - aces_processor
+        - aces_sdl
+      public_import_prefixes:
+        aces_runtime:
+          - aces_runtime.registry
     - id: aces_conformance
       root: implementations/python/packages/aces_conformance
       allowed_top_level_imports:
@@ -128,6 +144,7 @@ module_boundaries:
           - aces_processor.compiler
           - aces_processor.models
           - aces_processor.planner
+          - aces_processor.reference
         aces_runtime:
           - aces_runtime.control_plane
           - aces_runtime.registry

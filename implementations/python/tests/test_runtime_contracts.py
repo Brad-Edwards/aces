@@ -12,7 +12,11 @@ from aces_contracts.contracts import (
     AcesSemanticInvariantProfileReferenceModel,
     BackendManifestV2Model,
     ExperimentApparatusContextModel,
+    ExperimentCaptureSpecModel,
+    ExperimentDerivedMeasureModel,
+    ExperimentEvidenceRecordModel,
     ExperimentRunModel,
+    ExperimentRunTraceabilityModel,
     ExperimentStudyModel,
     ExperimentTaskModel,
     ParticipantImplementationManifestModel,
@@ -38,6 +42,9 @@ from aces.core.runtime import contracts as compat_runtime_contracts
 
 EXPERIMENT_CORE_FIXTURE_MODELS = {
     "experiment-apparatus-context-v1": ExperimentApparatusContextModel,
+    "experiment-capture-spec-v1": ExperimentCaptureSpecModel,
+    "experiment-derived-measure-v1": ExperimentDerivedMeasureModel,
+    "experiment-evidence-record-v1": ExperimentEvidenceRecordModel,
     "experiment-run-v1": ExperimentRunModel,
     "experiment-study-v1": ExperimentStudyModel,
     "experiment-task-v1": ExperimentTaskModel,
@@ -427,6 +434,139 @@ def test_experiment_core_schemas_publish_closed_world_contracts():
     )
 
 
+def test_experiment_evidence_measure_schemas_publish_separate_surfaces():
+    generated = schema_bundle()
+
+    capture_schema = generated["experiment-capture-spec-v1"]
+    evidence_schema = generated["experiment-evidence-record-v1"]
+    measure_schema = generated["experiment-derived-measure-v1"]
+
+    assert capture_schema["additionalProperties"] is False
+    assert evidence_schema["additionalProperties"] is False
+    assert measure_schema["additionalProperties"] is False
+    assert capture_schema["properties"]["capture_requirements"]["type"] == "object"
+    assert (
+        capture_schema["properties"]["capture_requirements"]["additionalProperties"]["$ref"]
+        == "#/$defs/ExperimentCaptureRequirementModel"
+    )
+    assert "capture-requirement-key-matches-requirement-id" in _invariant_ids(capture_schema)
+    assert "capture-window-interval-valid" in _invariant_ids(capture_schema["$defs"]["ExperimentCaptureWindowModel"])
+    assert set(capture_schema["required"]) >= {
+        "schema_version",
+        "capture_spec_id",
+        "spec_version",
+        "scope_refs",
+        "capture_windows",
+        "capture_requirements",
+    }
+
+    assert evidence_schema["properties"]["capture_spec_ref"]["$ref"] == "#/$defs/ExperimentCaptureSpecReferenceModel"
+    assert evidence_schema["properties"]["raw_content"]["$ref"] == "#/$defs/ExperimentRawEvidenceContentModel"
+    assert "metric_id" not in evidence_schema["properties"]
+    assert "value" not in evidence_schema["properties"]
+    assert "evidence-record-raw-content-present" in _invariant_ids(evidence_schema)
+    assert "evidence-record-captured-at-valid" in _invariant_ids(evidence_schema)
+    assert set(evidence_schema["required"]) >= {
+        "schema_version",
+        "evidence_record_id",
+        "record_version",
+        "capture_spec_ref",
+        "run_ref",
+        "evidence_kind",
+        "captured_at",
+        "raw_content",
+        "sensitivity",
+        "redaction_state",
+    }
+
+    assert measure_schema["properties"]["source_evidence_refs"]["items"]["$ref"] == (
+        "#/$defs/ExperimentEvidenceRecordReferenceModel"
+    )
+    assert "derived-measure-reported-value-present" in _invariant_ids(measure_schema)
+    assert "derived-measure-generated-at-valid" in _invariant_ids(measure_schema)
+    assert set(measure_schema["required"]) >= {
+        "schema_version",
+        "derived_measure_id",
+        "measure_version",
+        "measure_kind",
+        "metric_ref",
+        "method",
+        "source_evidence_refs",
+        "generated_at",
+        "value_status",
+    }
+
+
+def test_experiment_run_schema_publishes_canonical_provenance_surface():
+    generated = schema_bundle()
+    run_schema = generated["experiment-run-v1"]
+
+    assert run_schema["properties"]["traceability"]["$ref"] == "#/$defs/ExperimentRunTraceabilityModel"
+    assert run_schema["properties"]["realized_form_disclosures"]["items"]["$ref"] == (
+        "#/$defs/ExperimentRealizedFormDisclosureModel"
+    )
+    assert "traceability" in run_schema["required"]
+
+    traceability_schema = run_schema["$defs"]["ExperimentRunTraceabilityModel"]
+    assert traceability_schema["additionalProperties"] is False
+    assert set(traceability_schema["required"]) >= {"capture_spec_refs", "evidence_record_refs"}
+    assert "run-traceability-refs-unique" in _invariant_ids(traceability_schema)
+
+    disclosure_schema = run_schema["$defs"]["ExperimentRealizedFormDisclosureModel"]
+    assert disclosure_schema["additionalProperties"] is False
+    assert "realized-form-disclosure-substantive" in _invariant_ids(disclosure_schema)
+    assert any(
+        rule.get("if", {}).get("properties", {}).get("basis", {}).get("const") == "processor-realized"
+        for rule in disclosure_schema["allOf"]
+    )
+
+
+def test_experiment_run_provenance_contracts_reject_boundary_blurring():
+    payload = _experiment_fixture("experiment-run-v1")
+
+    missing_traceability = deepcopy(payload)
+    del missing_traceability["traceability"]
+    _assert_schema_and_model_reject("experiment-run-v1", missing_traceability)
+
+    duplicate_evidence_record = deepcopy(payload)
+    duplicate_evidence_record["traceability"]["evidence_record_refs"].append(
+        deepcopy(duplicate_evidence_record["traceability"]["evidence_record_refs"][0])
+    )
+    with pytest.raises(ValidationError, match="traceability evidence_record_refs must not contain duplicates"):
+        ExperimentRunTraceabilityModel.model_validate(duplicate_evidence_record["traceability"])
+
+    unsupported_realized_form = deepcopy(payload)
+    unsupported_realized_form["realized_form_disclosures"][0]["realized_ref"] = None
+    unsupported_realized_form["realized_form_disclosures"][0]["realized_value_summary"] = None
+    _assert_schema_and_model_reject("experiment-run-v1", unsupported_realized_form)
+
+    processor_disclosure_by_backend = deepcopy(payload)
+    processor_disclosure_by_backend["realized_form_disclosures"][0]["realized_by_ref"]["ref_kind"] = "backend"
+    _assert_schema_and_model_reject("experiment-run-v1", processor_disclosure_by_backend)
+
+    disclosure_without_traced_evidence = deepcopy(payload)
+    disclosure_without_traced_evidence["realized_form_disclosures"][0]["evidence_refs"][0]["ref_id"] = (
+        "untraced-evidence-record"
+    )
+    with pytest.raises(ValidationError, match="realized_form_disclosures evidence_refs must be listed"):
+        ExperimentRunModel.model_validate(disclosure_without_traced_evidence)
+
+
+def test_experiment_evidence_measure_contracts_reject_boundary_blurring():
+    capture_payload = _experiment_fixture("experiment-capture-spec-v1")
+    capture_payload["capture_requirements"]["network-trace"]["requirement_id"] = "different-id"
+    with pytest.raises(ValidationError, match="capture_requirements keys"):
+        ExperimentCaptureSpecModel.model_validate(capture_payload)
+
+    raw_evidence_payload = _experiment_fixture("experiment-evidence-record-v1")
+    raw_evidence_payload["metric_id"] = "latency-ms"
+    _assert_schema_and_model_reject("experiment-evidence-record-v1", raw_evidence_payload)
+
+    derived_payload = _experiment_fixture("experiment-derived-measure-v1")
+    derived_payload["source_evidence_refs"] = []
+    _assert_schema_and_model_reject("experiment-derived-measure-v1", derived_payload)
+
+
 def test_aces_semantic_invariant_annotations_have_published_shape():
     generated = schema_bundle()
     run_schema = generated["experiment-run-v1"]
@@ -645,6 +785,141 @@ def test_experiment_core_rejects_under_specified_apparatus_contexts():
     )
     with pytest.raises(ValidationError, match="digest-qualified selected_manifests"):
         ExperimentApparatusContextModel.model_validate(extra_digest_manifest_with_supported_processor_subject)
+
+
+def test_experiment_core_rejects_under_specified_capture_specs():
+    payload = _experiment_fixture("experiment-capture-spec-v1")
+
+    mismatched_requirement_key = deepcopy(payload)
+    mismatched_requirement_key["capture_requirements"]["network-trace"]["requirement_id"] = "different-id"
+    with pytest.raises(ValidationError, match="capture_requirements keys"):
+        ExperimentCaptureSpecModel.model_validate(mismatched_requirement_key)
+
+    unresolved_window_ref = deepcopy(payload)
+    unresolved_window_ref["capture_requirements"]["network-trace"]["window_refs"] = ["missing-window"]
+    with pytest.raises(ValidationError, match="window_refs must resolve"):
+        ExperimentCaptureSpecModel.model_validate(unresolved_window_ref)
+
+    reversed_capture_window = deepcopy(payload)
+    reversed_capture_window["capture_windows"][0]["starts_at"] = "2026-05-26T00:40:00Z"
+    reversed_capture_window["capture_windows"][0]["ends_at"] = "2026-05-26T00:10:00Z"
+    with pytest.raises(ValidationError, match="ends_at must be greater"):
+        ExperimentCaptureSpecModel.model_validate(reversed_capture_window)
+
+    under_specified_window = deepcopy(payload)
+    under_specified_window["capture_windows"][0].pop("starts_at", None)
+    under_specified_window["capture_windows"][0].pop("ends_at", None)
+    under_specified_window["capture_windows"][0].pop("trigger_ref", None)
+    _assert_schema_and_model_reject("experiment-capture-spec-v1", under_specified_window)
+
+
+def test_experiment_core_rejects_under_specified_evidence_records():
+    payload = _experiment_fixture("experiment-evidence-record-v1")
+
+    content_uri_without_checksum = deepcopy(payload)
+    content_uri_without_checksum["raw_content"].pop("content_checksum", None)
+    with pytest.raises(ValidationError, match="content_checksum"):
+        ExperimentEvidenceRecordModel.model_validate(content_uri_without_checksum)
+
+    empty_source_refs = deepcopy(payload)
+    empty_source_refs["source_refs"] = []
+    _assert_schema_and_model_reject("experiment-evidence-record-v1", empty_source_refs)
+
+    invalid_captured_at = deepcopy(payload)
+    invalid_captured_at["captured_at"] = "not-a-timestamp"
+    _assert_schema_and_model_reject("experiment-evidence-record-v1", invalid_captured_at)
+
+    redacted_without_loss_disclosure = deepcopy(payload)
+    redacted_without_loss_disclosure["redaction_state"] = "redacted"
+    redacted_without_loss_disclosure["raw_content"].pop("loss_disclosure", None)
+    with pytest.raises(ValidationError, match="loss_disclosure"):
+        ExperimentEvidenceRecordModel.model_validate(redacted_without_loss_disclosure)
+
+
+def test_experiment_core_rejects_under_specified_derived_measures():
+    payload = _experiment_fixture("experiment-derived-measure-v1")
+
+    reported_without_value = deepcopy(payload)
+    reported_without_value["value_status"] = "reported"
+    reported_without_value.pop("value", None)
+    with pytest.raises(ValidationError, match="reported derived measures must include value"):
+        ExperimentDerivedMeasureModel.model_validate(reported_without_value)
+
+    non_reported_with_value = deepcopy(payload)
+    non_reported_with_value["value_status"] = "withheld"
+    non_reported_with_value["value"] = True
+    with pytest.raises(ValidationError, match="non-reported derived measures must not include value"):
+        ExperimentDerivedMeasureModel.model_validate(non_reported_with_value)
+
+    invalid_generated_at = deepcopy(payload)
+    invalid_generated_at["generated_at"] = "not-a-timestamp"
+    _assert_schema_and_model_reject("experiment-derived-measure-v1", invalid_generated_at)
+
+    empty_source_evidence_refs = deepcopy(payload)
+    empty_source_evidence_refs["source_evidence_refs"] = []
+    _assert_schema_and_model_reject("experiment-derived-measure-v1", empty_source_evidence_refs)
+
+
+def test_experiment_core_rejects_under_specified_run_provenance():
+    payload = _experiment_fixture("experiment-run-v1")
+
+    claim_without_derived_measure = deepcopy(payload)
+    claim_without_derived_measure["traceability"]["claim_refs"] = [{"ref_kind": "result", "ref_id": "claim-ungrounded"}]
+    claim_without_derived_measure["traceability"]["derived_measure_refs"] = []
+    with pytest.raises(ValidationError, match="claim_refs require at least one derived_measure_refs entry"):
+        ExperimentRunModel.model_validate(claim_without_derived_measure)
+
+    duplicate_capture_spec_ref = deepcopy(payload)
+    duplicate_capture_spec_ref["traceability"]["capture_spec_refs"].append(
+        deepcopy(duplicate_capture_spec_ref["traceability"]["capture_spec_refs"][0])
+    )
+    with pytest.raises(ValidationError, match="traceability capture_spec_refs must not contain duplicates"):
+        ExperimentRunTraceabilityModel.model_validate(duplicate_capture_spec_ref["traceability"])
+
+    realized_form_missing_target = deepcopy(payload)
+    realized_form_missing_target["realized_form_disclosures"][0]["realized_ref"] = None
+    realized_form_missing_target["realized_form_disclosures"][0]["realized_value_summary"] = None
+    _assert_schema_and_model_reject("experiment-run-v1", realized_form_missing_target)
+
+    backend_realized_by_processor = deepcopy(payload)
+    backend_realized_by_processor["realized_form_disclosures"][0]["basis"] = "backend-realized"
+    _assert_schema_and_model_reject("experiment-run-v1", backend_realized_by_processor)
+
+    empty_traceability_capture_specs = deepcopy(payload)
+    empty_traceability_capture_specs["traceability"]["capture_spec_refs"] = []
+    _assert_schema_and_model_reject("experiment-run-v1", empty_traceability_capture_specs)
+
+
+def test_experiment_core_rejects_under_specified_realized_form_disclosures():
+    # EXP-722: realized forms chosen for underspecified concerns must be preserved
+    # substantively, attributed to the right processor/backend authority, and grounded
+    # in run-traced evidence so they stay distinct from the authored scenario and from
+    # derived results. The model and published schema shipped under #89; this is the
+    # conformance test of record and must not change them.
+    payload = _experiment_fixture("experiment-run-v1")
+
+    missing_realized_target = deepcopy(payload)
+    missing_realized_target["realized_form_disclosures"][0]["realized_ref"] = None
+    missing_realized_target["realized_form_disclosures"][0]["realized_value_summary"] = None
+    _assert_schema_and_model_reject("experiment-run-v1", missing_realized_target)
+
+    processor_realized_by_backend = deepcopy(payload)
+    processor_realized_by_backend["realized_form_disclosures"][0]["realized_by_ref"]["ref_kind"] = "backend"
+    _assert_schema_and_model_reject("experiment-run-v1", processor_realized_by_backend)
+
+    disclosure_evidence_not_traced = deepcopy(payload)
+    disclosure_evidence_not_traced["realized_form_disclosures"][0]["evidence_refs"][0]["ref_id"] = (
+        "evidence-realized-form-untraced"
+    )
+    with pytest.raises(ValidationError, match="realized_form_disclosures evidence_refs must be listed"):
+        ExperimentRunModel.model_validate(disclosure_evidence_not_traced)
+
+    duplicate_disclosure_evidence = deepcopy(payload)
+    duplicate_disclosure_evidence["realized_form_disclosures"][0]["evidence_refs"].append(
+        deepcopy(duplicate_disclosure_evidence["realized_form_disclosures"][0]["evidence_refs"][0])
+    )
+    with pytest.raises(ValidationError, match="realized form disclosure evidence_refs must not contain duplicates"):
+        ExperimentRunModel.model_validate(duplicate_disclosure_evidence)
 
 
 def test_experiment_core_rejects_under_specified_task_disclosure_surfaces():

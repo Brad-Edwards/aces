@@ -11,11 +11,14 @@ from aces_contracts.apparatus import (
 )
 from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
 from aces_contracts.manifest_authority import validate_backend_supported_contract_versions
-from aces_contracts.vocabulary import WorkflowFeature, WorkflowStatePredicateFeature
+from aces_contracts.vocabulary import ParticipantFeatureSupportLevel, WorkflowFeature, WorkflowStatePredicateFeature
 
 PARTICIPANT_RUNTIME_ROLE_SCOPE = "capabilities.participant_runtime.supported_participant_roles"
 PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE = "capabilities.participant_runtime.supported_behavior_features"
 PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE = "capabilities.participant_runtime.supported_interaction_features"
+OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE = "capabilities.observation.supported_capture_kinds"
+OBSERVATION_CAPABILITY_CHANNEL_KIND_SCOPE = "capabilities.observation.supported_channel_kinds"
+OBSERVATION_CAPABILITY_SEALING_MODE_SCOPE = "capabilities.observation.supported_sealing_modes"
 
 _PARTICIPANT_EPISODE_CONTRACTS = frozenset(
     {
@@ -27,6 +30,15 @@ _PARTICIPANT_EPISODE_CONTRACTS = frozenset(
 _PARTICIPANT_BEHAVIOR_CONTRACTS = frozenset(
     {
         "participant-behavior-history-event-stream-v1",
+        "runtime-snapshot-v1",
+    }
+)
+_PARTICIPANT_INTERACTION_CONTRACTS = frozenset(
+    {
+        "participant-behavior-history-event-stream-v1",
+        "participant-shared-state-record-v1",
+        "participant-joint-action-record-v1",
+        "participant-time-management-context-v1",
         "runtime-snapshot-v1",
     }
 )
@@ -51,10 +63,10 @@ PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
         "temporal_contracts": _PARTICIPANT_BEHAVIOR_CONTRACTS,
     },
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE: {
-        "contention": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "coordination": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "interference": _PARTICIPANT_BEHAVIOR_CONTRACTS,
-        "shared_state_change": _PARTICIPANT_BEHAVIOR_CONTRACTS,
+        "contention": _PARTICIPANT_INTERACTION_CONTRACTS,
+        "coordination": _PARTICIPANT_INTERACTION_CONTRACTS,
+        "interference": _PARTICIPANT_INTERACTION_CONTRACTS,
+        "shared_state_change": _PARTICIPANT_INTERACTION_CONTRACTS,
     },
 }
 """Minimum published contract surfaces needed to make API-405 claims checkable.
@@ -65,11 +77,17 @@ floor for standard terms, so a manifest cannot claim ACES participant support
 while omitting the contracts that carry the corresponding runtime evidence.
 """
 
+OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS = frozenset(
+    {
+        "experiment-capture-spec-v1",
+        "experiment-evidence-record-v1",
+        "experiment-derived-measure-v1",
+    }
+)
+
 
 @dataclass(frozen=True)
 class ProvisionerCapabilities:
-    """Provisioning support declaration."""
-
     name: str
     supported_node_types: frozenset[str] = frozenset()
     supported_os_families: frozenset[str] = frozenset()
@@ -186,6 +204,66 @@ class EvaluatorCapabilities:
             raise ValueError("EvaluatorCapabilities must support scoring, objectives, or both")
 
 
+def _validate_unique_non_empty_strings(field_name: str, values: tuple[str, ...]) -> None:
+    if any(not value.strip() for value in values):
+        raise ValueError(f"{field_name} must not contain empty strings")
+    if len(set(values)) != len(values):
+        raise ValueError(f"{field_name} must not contain duplicate values")
+
+
+def _validate_participant_feature_support_term(feature: str) -> None:
+    errors: list[str] = []
+    for scope in (PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE, PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE):
+        try:
+            validate_controlled_vocabulary_scope_values(scope, (feature,))
+        except ValueError as exc:
+            errors.append(str(exc))
+            continue
+        return
+    raise ValueError(
+        "ParticipantFeatureSupport.feature must be a governed participant behavior or interaction feature "
+        f"term, or match the governed extension pattern; got {feature!r}; "
+        f"validation details: {'; '.join(errors)}"
+    )
+
+
+@dataclass(frozen=True)
+class ParticipantFeatureSupport:
+    """API-407 per-feature participant runtime support declaration."""
+
+    feature: str
+    support_level: ParticipantFeatureSupportLevel | str
+    constraint_refs: tuple[str, ...] = ()
+    disclosure_refs: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.feature.strip():
+            raise ValueError("ParticipantFeatureSupport.feature must be non-empty")
+        _validate_participant_feature_support_term(self.feature)
+
+        try:
+            support_level = (
+                self.support_level
+                if isinstance(self.support_level, ParticipantFeatureSupportLevel)
+                else ParticipantFeatureSupportLevel(str(self.support_level))
+            )
+        except ValueError as exc:
+            raise ValueError("ParticipantFeatureSupport.support_level must be a valid support level") from exc
+
+        constraint_refs = tuple(self.constraint_refs)
+        disclosure_refs = tuple(self.disclosure_refs)
+        _validate_unique_non_empty_strings("ParticipantFeatureSupport.constraint_refs", constraint_refs)
+        _validate_unique_non_empty_strings("ParticipantFeatureSupport.disclosure_refs", disclosure_refs)
+        if support_level != ParticipantFeatureSupportLevel.EXACT and not disclosure_refs:
+            raise ValueError(
+                "ParticipantFeatureSupport disclosure_refs must be non-empty when support_level is below exact"
+            )
+
+        object.__setattr__(self, "support_level", support_level)
+        object.__setattr__(self, "constraint_refs", constraint_refs)
+        object.__setattr__(self, "disclosure_refs", disclosure_refs)
+
+
 @dataclass(frozen=True)
 class ParticipantRuntimeCapabilities:
     """Participant-episode lifecycle support declaration.
@@ -208,6 +286,7 @@ class ParticipantRuntimeCapabilities:
     supported_participant_roles: frozenset[str] = frozenset()
     supported_behavior_features: frozenset[str] = frozenset()
     supported_interaction_features: frozenset[str] = frozenset()
+    feature_support: tuple[ParticipantFeatureSupport, ...] = ()
     constraints: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -243,6 +322,82 @@ class ParticipantRuntimeCapabilities:
             PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
             self.supported_interaction_features,
         )
+        feature_support = tuple(
+            entry if isinstance(entry, ParticipantFeatureSupport) else ParticipantFeatureSupport(**entry)
+            for entry in self.feature_support
+        )
+        feature_names = tuple(entry.feature for entry in feature_support)
+        _validate_unique_non_empty_strings("ParticipantRuntimeCapabilities.feature_support", feature_names)
+        supported_features = self.supported_behavior_features | self.supported_interaction_features
+        for entry in feature_support:
+            if (
+                entry.support_level == ParticipantFeatureSupportLevel.UNSUPPORTED
+                and entry.feature in supported_features
+            ):
+                raise ValueError(
+                    "ParticipantRuntimeCapabilities.feature_support cannot declare a supported feature unsupported"
+                )
+        object.__setattr__(self, "feature_support", feature_support)
+
+
+@dataclass(frozen=True)
+class ObservationCapabilities:
+    """Backend observation and evidence-collection support declaration (EXP-715)."""
+
+    name: str
+    supported_capture_kinds: frozenset[str] = frozenset()
+    supported_channel_kinds: frozenset[str] = frozenset()
+    supported_evidence_contracts: frozenset[str] = frozenset()
+    supported_media_types: frozenset[str] = frozenset()
+    supported_sealing_modes: frozenset[str] = frozenset()
+    supports_redaction: bool = False
+    supports_loss_disclosure: bool = False
+    supports_chain_of_custody: bool = False
+    constraints: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.name.strip():
+            raise ValueError("ObservationCapabilities.name must be non-empty")
+        _validate_unique_non_empty_strings(
+            "ObservationCapabilities.supported_capture_kinds", self.supported_capture_kinds
+        )
+        _validate_unique_non_empty_strings(
+            "ObservationCapabilities.supported_channel_kinds", self.supported_channel_kinds
+        )
+        _validate_unique_non_empty_strings(
+            "ObservationCapabilities.supported_evidence_contracts",
+            self.supported_evidence_contracts,
+        )
+        _validate_unique_non_empty_strings("ObservationCapabilities.supported_media_types", self.supported_media_types)
+        _validate_unique_non_empty_strings(
+            "ObservationCapabilities.supported_sealing_modes", self.supported_sealing_modes
+        )
+        if not self.supported_capture_kinds:
+            raise ValueError("ObservationCapabilities.supported_capture_kinds must not be empty")
+        if not self.supported_channel_kinds:
+            raise ValueError("ObservationCapabilities.supported_channel_kinds must not be empty")
+        if not self.supported_evidence_contracts:
+            raise ValueError("ObservationCapabilities.supported_evidence_contracts must not be empty")
+        if not self.supported_media_types:
+            raise ValueError("ObservationCapabilities.supported_media_types must not be empty")
+        if not self.supported_sealing_modes:
+            raise ValueError("ObservationCapabilities.supported_sealing_modes must not be empty")
+        validate_controlled_vocabulary_scope_values(
+            OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE,
+            self.supported_capture_kinds,
+        )
+        validate_controlled_vocabulary_scope_values(
+            OBSERVATION_CAPABILITY_CHANNEL_KIND_SCOPE,
+            self.supported_channel_kinds,
+        )
+        validate_controlled_vocabulary_scope_values(
+            OBSERVATION_CAPABILITY_SEALING_MODE_SCOPE,
+            self.supported_sealing_modes,
+        )
+        validate_backend_supported_contract_versions(self.supported_evidence_contracts)
+        for contract_id in self.supported_evidence_contracts:
+            if not contract_id.startswith("experiment-"):
+                raise ValueError("ObservationCapabilities.supported_evidence_contracts must be experiment contracts")
 
 
 @dataclass(frozen=True)
@@ -253,6 +408,7 @@ class BackendCapabilitySet:
     orchestrator: OrchestratorCapabilities | None = None
     evaluator: EvaluatorCapabilities | None = None
     participant_runtime: ParticipantRuntimeCapabilities | None = None
+    observation: ObservationCapabilities | None = None
 
 
 @dataclass(frozen=True)
@@ -297,6 +453,7 @@ class BackendManifest:
         orchestrator: OrchestratorCapabilities | None = None,
         evaluator: EvaluatorCapabilities | None = None,
         participant_runtime: ParticipantRuntimeCapabilities | None = None,
+        observation: ObservationCapabilities | None = None,
     ) -> None:
         if identity is None:
             if name is None:
@@ -312,6 +469,7 @@ class BackendManifest:
                 orchestrator=orchestrator,
                 evaluator=evaluator,
                 participant_runtime=participant_runtime,
+                observation=observation,
             )
         supported_contract_versions = frozenset(supported_contract_versions)
         if not supported_contract_versions:
@@ -362,6 +520,10 @@ class BackendManifest:
         return self.capabilities.participant_runtime
 
     @property
+    def observation(self) -> ObservationCapabilities | None:
+        return self.capabilities.observation
+
+    @property
     def has_orchestrator(self) -> bool:
         return self.orchestrator is not None
 
@@ -372,6 +534,10 @@ class BackendManifest:
     @property
     def has_participant_runtime(self) -> bool:
         return self.participant_runtime is not None
+
+    @property
+    def has_observation(self) -> bool:
+        return self.observation is not None
 
     @property
     def evaluator_supported_sections(self) -> frozenset[str]:
@@ -416,4 +582,19 @@ def participant_runtime_capability_contract_gaps(manifest: BackendManifest) -> t
             missing = sorted(required_contracts - manifest.supported_contract_versions)
             if missing:
                 gaps.append(f"{scope}.{term} missing required contracts: {', '.join(missing)}")
+    return tuple(gaps)
+
+
+def observation_capability_contract_gaps(manifest: BackendManifest) -> tuple[str, ...]:
+    """Return missing contract surfaces for declared EXP-715 observation claims."""
+
+    observation = manifest.observation
+    if observation is None:
+        return ()
+
+    required_contracts = set(observation.supported_evidence_contracts) | set(OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS)
+    missing = sorted(required_contracts - manifest.supported_contract_versions)
+    gaps: list[str] = []
+    if missing:
+        gaps.append(f"capabilities.observation missing required contracts: {', '.join(missing)}")
     return tuple(gaps)

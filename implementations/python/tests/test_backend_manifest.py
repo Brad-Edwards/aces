@@ -3,18 +3,25 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from aces_backend_protocols.capabilities import (
+    OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE,
+    OBSERVATION_CAPABILITY_CHANNEL_KIND_SCOPE,
+    OBSERVATION_CAPABILITY_SEALING_MODE_SCOPE,
     PARTICIPANT_RUNTIME_BEHAVIOR_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS,
     PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE,
     PARTICIPANT_RUNTIME_ROLE_SCOPE,
     BackendManifest,
+    ObservationCapabilities,
     OrchestratorCapabilities,
+    ParticipantFeatureSupport,
     ParticipantRuntimeCapabilities,
     ProvisionerCapabilities,
+    observation_capability_contract_gaps,
     participant_runtime_capability_contract_gaps,
 )
 from aces_backend_protocols.manifest import backend_manifest_payload
@@ -125,6 +132,7 @@ def test_backend_manifest_v2_declares_participant_capability_dimensions():
         "interference",
         "shared_state_change",
     ]
+    assert participant_runtime["feature_support"] == []
 
     model = BackendManifestV2Model.model_validate(payload)
     assert model.capabilities.participant_runtime is not None
@@ -136,12 +144,100 @@ def test_backend_manifest_v2_declares_participant_capability_dimensions():
     ]
 
 
+def test_backend_manifest_v2_declares_observation_capability_dimensions():
+    """EXP-715: observation and evidence-collection support is a separate
+    backend capability block, not an execution or evaluator side effect."""
+
+    payload = backend_manifest_payload(create_stub_manifest())
+    observation = payload["capabilities"]["observation"]
+
+    assert observation["supported_capture_kinds"] == ["artifact", "log", "observation", "telemetry", "trace"]
+    assert observation["supported_channel_kinds"] == [
+        "backend-log",
+        "evaluation-history",
+        "file-artifact",
+        "participant-observation",
+        "runtime-snapshot",
+        "workflow-history",
+    ]
+    assert observation["supported_evidence_contracts"] == [
+        "experiment-capture-spec-v1",
+        "experiment-derived-measure-v1",
+        "experiment-evidence-record-v1",
+    ]
+    assert observation["supported_sealing_modes"] == ["digest", "immutable-store"]
+    assert observation["supports_redaction"] is True
+    assert observation["supports_loss_disclosure"] is True
+
+    model = BackendManifestV2Model.model_validate(payload)
+    assert model.capabilities.observation is not None
+    assert model.capabilities.observation.supported_capture_kinds == [
+        "artifact",
+        "log",
+        "observation",
+        "telemetry",
+        "trace",
+    ]
+
+
 def test_backend_manifest_without_participant_runtime_declares_no_participant_runtime_surface():
     payload = backend_manifest_payload(create_stub_manifest(with_participant_runtime=False))
 
     assert payload["capabilities"]["participant_runtime"] is None
     model = BackendManifestV2Model.model_validate(payload)
     assert model.capabilities.participant_runtime is None
+
+
+def test_backend_manifest_without_observation_declares_no_observation_surface():
+    payload = backend_manifest_payload(create_stub_manifest(with_observation=False))
+
+    assert payload["capabilities"]["observation"] is None
+    model = BackendManifestV2Model.model_validate(payload)
+    assert model.capabilities.observation is None
+
+
+def test_observation_capabilities_validate_exp_715_vocabularies():
+    capability = ObservationCapabilities(
+        name="observation",
+        supported_capture_kinds=frozenset({"observation", "x-acme:custom-capture"}),
+        supported_channel_kinds=frozenset({"participant-observation", "x-acme:custom-channel"}),
+        supported_evidence_contracts=frozenset({"experiment-evidence-record-v1"}),
+        supported_media_types=frozenset({"application/json"}),
+        supported_sealing_modes=frozenset({"digest", "x-acme:attested-store"}),
+        supports_redaction=True,
+        supports_loss_disclosure=True,
+    )
+
+    assert "x-acme:custom-capture" in capability.supported_capture_kinds
+    assert "x-acme:custom-channel" in capability.supported_channel_kinds
+    assert "x-acme:attested-store" in capability.supported_sealing_modes
+
+    with pytest.raises(ValueError, match="observation-capture-kinds"):
+        ObservationCapabilities(
+            name="observation",
+            supported_capture_kinds=frozenset({"custom_capture"}),
+            supported_channel_kinds=frozenset({"participant-observation"}),
+            supported_evidence_contracts=frozenset({"experiment-evidence-record-v1"}),
+            supported_media_types=frozenset({"application/json"}),
+            supported_sealing_modes=frozenset({"digest"}),
+        )
+
+
+def test_observation_capability_claims_require_published_contract_evidence():
+    manifest = create_stub_manifest()
+    weak_manifest = BackendManifest(
+        identity=manifest.identity,
+        supported_contract_versions=manifest.supported_contract_versions - frozenset({"experiment-evidence-record-v1"}),
+        compatibility=manifest.compatibility,
+        realization_support=manifest.realization_support,
+        concept_bindings=manifest.concept_bindings,
+        constraints=manifest.constraints,
+        capabilities=manifest.capabilities,
+    )
+
+    assert observation_capability_contract_gaps(manifest) == ()
+    gaps = observation_capability_contract_gaps(weak_manifest)
+    assert any("experiment-evidence-record-v1" in gap for gap in gaps)
 
 
 @pytest.mark.parametrize(
@@ -189,6 +285,89 @@ def test_participant_runtime_capabilities_validate_api_405_vocabularies():
         )
 
 
+def test_participant_feature_support_validates_api_407_declarations():
+    declaration = ParticipantFeatureSupport(
+        feature="coordination",
+        support_level=ParticipantFeatureSupportLevel.EXACT,
+    )
+
+    assert declaration.support_level == ParticipantFeatureSupportLevel.EXACT
+
+    with pytest.raises(ValueError, match="governed participant behavior or interaction feature"):
+        ParticipantFeatureSupport(
+            feature="custom_feature",
+            support_level=ParticipantFeatureSupportLevel.EXACT,
+        )
+
+    with pytest.raises(ValueError, match="disclosure_refs"):
+        ParticipantFeatureSupport(
+            feature="coordination",
+            support_level=ParticipantFeatureSupportLevel.BOUNDED,
+        )
+
+    unsupported_declaration = ParticipantFeatureSupport(
+        feature="coordination",
+        support_level=ParticipantFeatureSupportLevel.UNSUPPORTED,
+        disclosure_refs=("disclosures.coordination.unsupported.v1",),
+    )
+    with pytest.raises(ValueError, match="supported feature unsupported"):
+        ParticipantRuntimeCapabilities(
+            name="participant-runtime",
+            supported_participant_roles=frozenset({"blue"}),
+            supported_behavior_features=frozenset({"action_contracts"}),
+            supported_interaction_features=frozenset({"coordination"}),
+            feature_support=(unsupported_declaration,),
+        )
+
+
+def test_backend_manifest_payload_renders_api_407_feature_support_entries():
+    manifest = create_stub_manifest()
+    assert manifest.participant_runtime is not None
+    participant_runtime = replace(
+        manifest.participant_runtime,
+        feature_support=(
+            ParticipantFeatureSupport(
+                feature="behavior_history",
+                support_level=ParticipantFeatureSupportLevel.BOUNDED,
+                constraint_refs=("constraints.behavior-history.retention-window",),
+                disclosure_refs=("disclosures.behavior-history.bounded.v1",),
+            ),
+            ParticipantFeatureSupport(
+                feature="coordination",
+                support_level=ParticipantFeatureSupportLevel.EXACT,
+            ),
+        ),
+    )
+    capabilities = replace(manifest.capabilities, participant_runtime=participant_runtime)
+    manifest = BackendManifest(
+        identity=manifest.identity,
+        supported_contract_versions=manifest.supported_contract_versions,
+        compatibility=manifest.compatibility,
+        realization_support=manifest.realization_support,
+        concept_bindings=manifest.concept_bindings,
+        constraints=manifest.constraints,
+        capabilities=capabilities,
+    )
+
+    payload = backend_manifest_payload(manifest)
+
+    assert payload["capabilities"]["participant_runtime"]["feature_support"] == [
+        {
+            "feature": "behavior_history",
+            "support_level": "bounded",
+            "constraint_refs": ["constraints.behavior-history.retention-window"],
+            "disclosure_refs": ["disclosures.behavior-history.bounded.v1"],
+        },
+        {
+            "feature": "coordination",
+            "support_level": "exact",
+            "constraint_refs": [],
+            "disclosure_refs": [],
+        },
+    ]
+    BackendManifestV2Model.model_validate(payload)
+
+
 def test_participant_runtime_capability_evidence_covers_standard_vocabularies():
     catalog_path = FIXTURES_ROOT / "concept-authority" / "controlled-vocabularies-v1" / "valid" / "reference.json"
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
@@ -211,6 +390,18 @@ def test_participant_runtime_capability_evidence_covers_standard_vocabularies():
         set(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE])
         == terms_by_scope[PARTICIPANT_RUNTIME_INTERACTION_FEATURE_SCOPE]
     )
+
+
+def test_observation_capability_evidence_covers_standard_vocabularies():
+    catalog_path = FIXTURES_ROOT / "concept-authority" / "controlled-vocabularies-v1" / "valid" / "reference.json"
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    scopes = {
+        scope for definition in catalog["vocabularies"].values() for scope in definition.get("governed_scopes", ())
+    }
+
+    assert OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE in scopes
+    assert OBSERVATION_CAPABILITY_CHANNEL_KIND_SCOPE in scopes
+    assert OBSERVATION_CAPABILITY_SEALING_MODE_SCOPE in scopes
 
 
 def test_participant_runtime_capability_claims_require_published_contract_evidence():
@@ -621,6 +812,6 @@ def test_backend_manifest_v2_rejects_duplicate_binding_scopes():
 def test_backend_manifest_v2_concept_bindings_roundtrip():
     payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
     model = BackendManifestV2Model.model_validate(payload)
-    assert len(model.concept_bindings) == 9
+    assert len(model.concept_bindings) == 12
     assert model.concept_bindings[0].scope == "capabilities.provisioner.supported_node_types"
     assert model.concept_bindings[0].family == "assets"
