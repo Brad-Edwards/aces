@@ -7,9 +7,8 @@ evidence records and they are not proof that capture occurred.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from ._base import SDLModel, parse_enum_or_var
 from .runtime_filesystem import RuntimeSensitivityClassification
@@ -86,7 +85,7 @@ class EvidenceLossDisclosureExpectation(str, Enum):
     OTHER = "other"
 
 
-def _coerce_string_list(value: Any) -> Any:
+def _coerce_string_list(value: object) -> object:
     return coerce_string_list(value)
 
 
@@ -130,51 +129,51 @@ class EvidenceRequirement(SDLModel):
 
     @field_validator("source_refs", "scope_refs", "channel_refs", "media_types", "notes", mode="before")
     @classmethod
-    def _coerce_lists(cls, value: Any) -> Any:
+    def _coerce_lists(cls, value: object) -> object:
         return _coerce_string_list(value)
 
     @field_validator("source_refs", "scope_refs", "channel_refs", "media_types", "notes")
     @classmethod
-    def _validate_lists(cls, values: list[str], info) -> list[str]:
+    def _validate_lists(cls, values: list[str], info: ValidationInfo) -> list[str]:
         return _validate_string_list(values, field_name=info.field_name)
 
     @field_validator("source_class", mode="before")
     @classmethod
-    def _parse_source_class(cls, value: Any) -> Any:
+    def _parse_source_class(cls, value: object) -> object:
         if value is None:
             return value
         return parse_enum_or_var(value, EvidenceRequirementSourceClass, field_name="source_class")
 
     @field_validator("channel", mode="before")
     @classmethod
-    def _parse_channel(cls, value: Any) -> Any:
+    def _parse_channel(cls, value: object) -> object:
         if value is None:
             return value
         return parse_enum_or_var(value, EvidenceRequirementChannel, field_name="channel")
 
     @field_validator("sensitivity", mode="before")
     @classmethod
-    def _parse_sensitivity(cls, value: Any) -> Any:
+    def _parse_sensitivity(cls, value: object) -> object:
         return parse_enum_or_var(value, RuntimeSensitivityClassification, field_name="sensitivity")
 
     @field_validator("redaction", mode="before")
     @classmethod
-    def _parse_redaction(cls, value: Any) -> Any:
+    def _parse_redaction(cls, value: object) -> object:
         return parse_enum_or_var(value, EvidenceRedactionExpectation, field_name="redaction")
 
     @field_validator("integrity", mode="before")
     @classmethod
-    def _parse_integrity(cls, value: Any) -> Any:
+    def _parse_integrity(cls, value: object) -> object:
         return parse_enum_or_var(value, EvidenceIntegrityExpectation, field_name="integrity")
 
     @field_validator("retention", mode="before")
     @classmethod
-    def _parse_retention(cls, value: Any) -> Any:
+    def _parse_retention(cls, value: object) -> object:
         return parse_enum_or_var(value, EvidenceRetentionExpectation, field_name="retention")
 
     @field_validator("loss_disclosure", mode="before")
     @classmethod
-    def _parse_loss_disclosure(cls, value: Any) -> Any:
+    def _parse_loss_disclosure(cls, value: object) -> object:
         return parse_enum_or_var(value, EvidenceLossDisclosureExpectation, field_name="loss_disclosure")
 
     @model_validator(mode="after")
