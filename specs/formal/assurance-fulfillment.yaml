@@ -55,6 +55,9 @@ subsystems:
   - id: participant-semantics
     path: specs/formal/participant-semantics
     fm_level: FM3
+  - id: participant-behavior-model
+    path: specs/formal/participant-behavior-model
+    fm_level: FM2
   - id: realization
     path: specs/formal/realization
     fm_level: FM2
@@ -230,6 +233,49 @@ entries:
         rationale: >-
           No executable abstract model exists; #487 tracks the executable
           invariant oracle (I1-I18) for the abstract model.
+
+  - subsystem: participant-behavior-model
+    # Design coverage only (ACT-602/603/606/607/608): the README delivers the
+    # invariant and clause matrix; executable artifacts are owned by the spawned
+    # implementation issues.
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/participant-behavior-model/README.md
+    waived_artifacts:
+      - kind: unit_tests
+        date: 2026-06-23
+        tracking:
+          - "#204"
+          - "#205"
+          - "#206"
+          - "#207"
+          - "#208"
+        rationale: >-
+          Issue #77 publishes the joint design artifact; executable
+          behavior-model tests are owned by the per-UID implementation issues.
+      - kind: typed_ir_or_contract_coverage
+        date: 2026-06-23
+        tracking:
+          - "#204"
+          - "#205"
+          - "#206"
+          - "#207"
+          - "#208"
+        rationale: >-
+          Issue #77 does not publish SDL fields, contract schemas, or runtime
+          carriers; typed coverage is owned by the per-UID implementation issues.
+      - kind: property_based_or_differential_tests
+        date: 2026-06-23
+        tracking:
+          - "#204"
+          - "#205"
+          - "#206"
+          - "#207"
+          - "#208"
+        rationale: >-
+          No property-based or differential behavior-model coverage ships with
+          the joint design artifact; that evidence is owned by the per-UID
+          implementation issues.
 
   - subsystem: realization
     # SEM-218 realization enforcement is in flight across #489/#490/#491; the
