@@ -32,6 +32,7 @@ HASHMAP_SECTIONS = (
     "accounts",
     "relationships",
     "agents",
+    "evidence_requirements",
     "objectives",
     "workflows",
 )
@@ -174,6 +175,7 @@ def symbol_index(
         "accounts": section_maps.get("accounts", {}),
         "relationships": section_maps.get("relationships", {}),
         "agents": section_maps.get("agents", {}),
+        "evidence_requirements": section_maps.get("evidence_requirements", {}),
         "objectives": section_maps.get("objectives", {}),
         "workflows": section_maps.get("workflows", {}),
         "named": named,

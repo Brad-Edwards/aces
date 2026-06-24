@@ -48,12 +48,18 @@ child-ref tree, owning ADR, schema, validation, and tests.
 An authored evidence requirement says what data, evidence, or output must be
 captured. It is an authoring obligation, not proof of capture.
 
+SDL carries authored evidence requirements in the map-keyed
+`evidence_requirements` section. Each entry is a portable capture-intent
+declaration. It may cite a scenario-native observability runtime-family ref as
+one source, but that source remains an in-world system and does not satisfy the
+requirement merely by existing.
+
 An authored evidence requirement MUST declare:
 
-- the source or source class;
-- the scope;
-- the capture window, trigger, or comparable boundary;
-- the channel, modality, or boundary kind;
+- the source refs or source class;
+- the scope refs or scope;
+- the capture window, trigger ref, boundary ref, or comparable boundary kind;
+- the channel, channel refs, modality, or boundary kind;
 - expected artifact role or media kind when applicable;
 - sensitivity and redaction expectation;
 - integrity or chain-of-custody expectation when applicable; and
@@ -66,6 +72,7 @@ Authored evidence requirements:
   contracts are generated;
 - MUST remain independent of participant objectives, metrics, evaluations,
   TLOs, and goals;
+- MUST NOT be objective targets or implied by objective success criteria;
 - MUST remain distinct from `experiment-evidence-record-v1` raw evidence; and
 - MUST remain distinct from `experiment-derived-measure-v1` interpreted
   outputs.

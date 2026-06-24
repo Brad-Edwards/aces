@@ -132,10 +132,10 @@
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "fae2bab70f056a20a211b752f40e2886e1d3be9afa14c2d9d0722efc6be6e7ba",
+      "content_hash": "01d31eb7f80b4b1ca7790e435f7583f69a2c7f69fdbd9383ef3a59b2c03e7107",
       "last_change": {
-        "summary": "Differentiate instantiated-scenario from authoring-input: the instantiated contract now rejects unresolved variable placeholders in string values (issue #500).",
-        "content_hash": "fae2bab70f056a20a211b752f40e2886e1d3be9afa14c2d9d0722efc6be6e7ba"
+        "summary": "Added the DSL-124 authored evidence-requirements section to instantiated SDL scenarios.",
+        "content_hash": "01d31eb7f80b4b1ca7790e435f7583f69a2c7f69fdbd9383ef3a59b2c03e7107"
       }
     },
     {
@@ -318,10 +318,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "805355fa8df9c0ca360f89c1379fb55052dcc176c83d80a0b8963096ffa38134",
+      "content_hash": "92486bd2e5c185b0065be18e859db1f25e0cd3f307c00a20b5b9a2b7433652b1",
       "last_change": {
-        "summary": "Extended the SDL authoring-input scenario schema for the DSL-132/DSL-141 runtime datastore-node surface: per-node engine provenance, listener topology, datastore cardinality, and structured index/template mapping manifests.",
-        "content_hash": "805355fa8df9c0ca360f89c1379fb55052dcc176c83d80a0b8963096ffa38134"
+        "summary": "Added the DSL-124 authored evidence-requirements section to SDL authoring input.",
+        "content_hash": "92486bd2e5c185b0065be18e859db1f25e0cd3f307c00a20b5b9a2b7433652b1"
       }
     },
     {

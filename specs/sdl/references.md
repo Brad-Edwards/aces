@@ -155,6 +155,21 @@ an evaluation's minimum score MUST NOT exceed the sum of its metrics' maxima.
 | `outcome_interpretation_rules` | source | `action_contracts`/`objectives`/`workflows`/`evaluations` |
 | `outcome_interpretation_rules` | target | `objectives`/`workflows`/`evaluations` |
 
+### Observability and evidence authoring
+
+| Source | Field | Target |
+|--------|-------|--------|
+| `evidence_requirements` | source refs | targetable elements, including scenario-native observability runtime-family refs |
+| `evidence_requirements` | scope refs | targetable elements |
+| `evidence_requirements` | channel refs | targetable elements |
+| `evidence_requirements` | trigger / boundary refs | targetable elements |
+
+`evidence_requirements` entries are authored capture obligations. They are not
+objective targets, workflow steps, variables, or evidence records. Bare
+runtime-family child identifiers do not resolve; authors use the qualified
+`nodes.<node>.runtime.<collection>.<id>` form when a node-scoped runtime-family
+element is the source or channel.
+
 ### Workflows
 
 | Source | Field | Target |
