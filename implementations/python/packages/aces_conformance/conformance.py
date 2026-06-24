@@ -621,7 +621,7 @@ def _participant_behavior_history_diagnostics(
 
 def _participant_behavior_binding_diagnostics(
     participant_address: str,
-    history: Any,
+    history: object,
     *,
     has_participant_action_binding: bool,
     has_participant_boundary_binding: bool,
