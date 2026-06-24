@@ -3906,6 +3906,182 @@ class ExperimentRealizedFormDisclosureModel(ContractModel):
         return json_schema
 
 
+_SEM_225_PORTABLE_CARRIER_KINDS = frozenset(
+    {
+        "apparatus-context",
+        "capture-spec",
+        "derived-measure",
+        "evidence-record",
+        "manifest",
+        "measurement-channel",
+        "profile",
+        "run",
+        "scenario-snapshot",
+    }
+)
+
+
+def _validate_sem_225_claim_evidence(
+    classifications: set[str],
+    evidence_refs: list[ExperimentEvidenceRecordReferenceModel],
+) -> None:
+    if classifications - {"apparatus_only"} and not evidence_refs:
+        raise ValueError("environment, participant, or comparability augmentations require evidence_refs")
+
+
+def _validate_sem_225_environment_visible(disclosure: ExperimentAugmentationDisclosureModel) -> None:
+    if disclosure.environment_effect is None:
+        raise ValueError("environment_visible augmentation disclosures require environment_effect")
+    if not any(ref.ref_kind in _SEM_225_PORTABLE_CARRIER_KINDS for ref in disclosure.carrier_refs):
+        raise ValueError("environment_visible augmentation disclosures require a portable carrier_ref")
+
+
+def _validate_sem_225_participant_visible(disclosure: ExperimentAugmentationDisclosureModel) -> None:
+    if disclosure.participant_visibility is None:
+        raise ValueError("participant_visible augmentation disclosures require participant_visibility")
+    if not disclosure.markings:
+        raise ValueError("participant_visible augmentation disclosures require markings")
+
+
+def _validate_sem_225_comparability_relevant(disclosure: ExperimentAugmentationDisclosureModel) -> None:
+    if disclosure.comparability_effect is None:
+        raise ValueError("comparability_relevant augmentation disclosures require comparability_effect")
+    if disclosure.observer_effect is None:
+        raise ValueError("comparability_relevant augmentation disclosures require observer_effect")
+
+
+class ExperimentAugmentationDisclosureModel(ContractModel):
+    """Disclosure for processor/backend augmentation used by a run."""
+
+    augmentation_id: NonEmptyString
+    purpose: Literal["evidence", "evaluation", "operational", "comparability", "other"]
+    realization_layer: Literal[
+        "processor",
+        "backend",
+        "apparatus",
+        "runtime-environment",
+        "participant-runtime",
+        "measurement-channel",
+        "analysis",
+        "other",
+    ]
+    classifications: list[
+        Literal["apparatus_only", "environment_visible", "participant_visible", "comparability_relevant"]
+    ] = Field(min_length=1, json_schema_extra={"uniqueItems": True})
+    augmented_by_ref: ExperimentReferenceModel
+    carrier_refs: list[ExperimentReferenceModel] = Field(min_length=1)
+    affected_refs: list[ExperimentReferenceModel] = Field(default_factory=list)
+    evidence_refs: list[ExperimentEvidenceRecordReferenceModel] = Field(default_factory=list)
+    disclosure_policy: NonEmptyString
+    markings: list[NonEmptyString] = Field(default_factory=list, json_schema_extra={"uniqueItems": True})
+    observer_effect: NonEmptyString | None = None
+    environment_effect: NonEmptyString | None = None
+    participant_visibility: NonEmptyString | None = None
+    comparability_effect: NonEmptyString | None = None
+    notes: list[NonEmptyString] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_augmentation_disclosure(self) -> ExperimentAugmentationDisclosureModel:
+        _validate_unique_string_values("augmentation classifications", self.classifications)
+        _validate_unique_string_values("augmentation disclosure markings", self.markings)
+        _validate_unique_string_values("augmentation disclosure notes", self.notes)
+        _validate_unique_experiment_references("augmentation disclosure carrier_refs", self.carrier_refs)
+        _validate_unique_experiment_references("augmentation disclosure affected_refs", self.affected_refs)
+        _validate_unique_experiment_references("augmentation disclosure evidence_refs", self.evidence_refs)
+
+        if self.augmented_by_ref.ref_kind not in {"processor", "backend"}:
+            raise ValueError("augmentation disclosures must use a processor or backend augmented_by_ref")
+
+        classification_set = set(self.classifications)
+        _validate_sem_225_claim_evidence(classification_set, self.evidence_refs)
+        if "environment_visible" in classification_set:
+            _validate_sem_225_environment_visible(self)
+        if "participant_visible" in classification_set:
+            _validate_sem_225_participant_visible(self)
+        if "comparability_relevant" in classification_set:
+            _validate_sem_225_comparability_relevant(self)
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "properties": {
+                        "augmented_by_ref": {
+                            "required": ["ref_kind"],
+                            "properties": {"ref_kind": {"enum": ["processor", "backend"]}},
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {"classifications": {"contains": {"const": "environment_visible"}}},
+                        "required": ["classifications"],
+                    },
+                    "then": {
+                        "required": ["carrier_refs", "environment_effect", "evidence_refs"],
+                        "properties": {
+                            "environment_effect": {"type": "string", "minLength": 1},
+                            "carrier_refs": {
+                                "contains": {
+                                    "required": ["ref_kind"],
+                                    "properties": {"ref_kind": {"enum": sorted(_SEM_225_PORTABLE_CARRIER_KINDS)}},
+                                }
+                            },
+                            "evidence_refs": {"minItems": 1},
+                        },
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"classifications": {"contains": {"const": "participant_visible"}}},
+                        "required": ["classifications"],
+                    },
+                    "then": {
+                        "required": ["participant_visibility", "markings", "evidence_refs"],
+                        "properties": {
+                            "participant_visibility": {"type": "string", "minLength": 1},
+                            "markings": {"minItems": 1},
+                            "evidence_refs": {"minItems": 1},
+                        },
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"classifications": {"contains": {"const": "comparability_relevant"}}},
+                        "required": ["classifications"],
+                    },
+                    "then": {
+                        "required": ["comparability_effect", "observer_effect", "evidence_refs"],
+                        "properties": {
+                            "comparability_effect": {"type": "string", "minLength": 1},
+                            "observer_effect": {"type": "string", "minLength": 1},
+                            "evidence_refs": {"minItems": 1},
+                        },
+                    },
+                },
+            ]
+        )
+        _add_aces_invariant(
+            json_schema,
+            "augmentation-disclosure-semantics-valid",
+            "Augmentation disclosures must keep environment-visible, participant-visible, and "
+            "comparability-relevant semantics explicit and must use processor/backend authority.",
+            validator=(
+                "aces_contracts.contracts.ExperimentAugmentationDisclosureModel._validate_augmentation_disclosure"
+            ),
+            inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/augmentation_disclosures"}],
+        )
+        return json_schema
+
+
 class ExperimentMetricDefinitionModel(ContractModel):
     """Metric definition bound to a measured construct and unit of analysis."""
 
@@ -4620,6 +4796,7 @@ class ExperimentRunModel(ContractModel):
     outcome_status: Literal["succeeded", "failed", "partial", "inconclusive", "not-evaluated"]
     traceability: ExperimentRunTraceabilityModel
     realized_form_disclosures: list[ExperimentRealizedFormDisclosureModel] = Field(default_factory=list)
+    augmentation_disclosures: list[ExperimentAugmentationDisclosureModel] = Field(default_factory=list)
     evidence_artifacts: list[ExperimentArtifactRefModel] = Field(min_length=1)
     result_summaries: dict[NonEmptyString, ExperimentResultSummaryModel] = Field(min_length=1)
     deviations: list[NonEmptyString] = Field(default_factory=list)
@@ -4694,6 +4871,21 @@ class ExperimentRunModel(ContractModel):
             raise ValueError(
                 f"realized_form_disclosures evidence_refs must be listed in traceability evidence_record_refs: {joined}"
             )
+        _validate_unique_string_values(
+            "augmentation_disclosures augmentation_id",
+            [disclosure.augmentation_id for disclosure in self.augmentation_disclosures],
+        )
+        missing_augmentation_evidence_refs = sorted(
+            _format_reference(evidence_ref)
+            for disclosure in self.augmentation_disclosures
+            for evidence_ref in disclosure.evidence_refs
+            if _experiment_reference_key(evidence_ref) not in traced_evidence_record_refs
+        )
+        if missing_augmentation_evidence_refs:
+            joined = ", ".join(missing_augmentation_evidence_refs)
+            raise ValueError(
+                f"augmentation_disclosures evidence_refs must be listed in traceability evidence_record_refs: {joined}"
+            )
         return self
 
     @classmethod
@@ -4741,6 +4933,14 @@ class ExperimentRunModel(ContractModel):
             json_schema,
             "realized-form-evidence-refs-traced",
             "Every realized-form disclosure evidence ref must also appear in the run traceability evidence refs.",
+            validator="aces_contracts.contracts.ExperimentRunModel._validate_archival_run",
+            inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
+        )
+        _add_aces_invariant(
+            json_schema,
+            "augmentation-disclosure-evidence-refs-traced",
+            "Every augmentation disclosure evidence ref must also appear in the run traceability evidence refs, "
+            "and augmentation_id values must be unique within the run.",
             validator="aces_contracts.contracts.ExperimentRunModel._validate_archival_run",
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#"}],
         )
@@ -6490,6 +6690,7 @@ __all__ = [
     "ExperimentApparatusConstraintModel",
     "ExperimentApparatusContextModel",
     "ExperimentArtifactRefModel",
+    "ExperimentAugmentationDisclosureModel",
     "ExperimentBackendReferenceModel",
     "ExperimentCaptureRequirementModel",
     "ExperimentCaptureSpecModel",

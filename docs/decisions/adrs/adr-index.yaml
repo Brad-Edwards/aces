@@ -268,3 +268,7 @@ adrs:
   - id: ADR-066
     path: docs/decisions/adrs/adr-066-observability-evidence-plane-separation.md
     pin: c2a8cf0bafdf53007df8a6c40f60bd63114656887b3c2feaca6f678ef6ae6d65
+    amendments:
+      - date: 2026-06-23
+        ref: "#335"
+        summary: "Recorded SEM-225 run-level augmentation disclosure implementation coverage."
