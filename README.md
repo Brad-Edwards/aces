@@ -19,6 +19,11 @@ The repository is not a managed cyber range and does not include a production
 backend. Backend contracts, stubs, conformance checks, and examples are present;
 real deployment backends remain separate implementations.
 
+A worked example of ACES SDL driving a concrete range is
+[APTL (Advanced Purple Team Lab)](https://github.com/Brad-Edwards/aptl), a
+separate project that specifies its scenarios as ACES SDL documents and
+realizes the selected topology on a Docker Compose backend.
+
 ## Contents
 
 - [What ACES SDL Describes](#what-aces-sdl-describes)
