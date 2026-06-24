@@ -46,6 +46,11 @@ PLANE_BY_CONTRACT_ID: dict[str, ObservabilityEvidencePlane] = {
     "experiment-apparatus-context-v1": ObservabilityEvidencePlane.PROCESSOR_BACKEND_OPERATIONAL,
 }
 
+# SDL authoring sections whose carrier role decides a single primary plane.
+PLANE_BY_SDL_SECTION: dict[str, ObservabilityEvidencePlane] = {
+    "evidence_requirements": ObservabilityEvidencePlane.AUTHORED_EVIDENCE_REQUIREMENT,
+}
+
 # Contracts whose ``x-aces-plane`` annotation is published as portable
 # traceability (the three experiment-core carriers that map 1:1 to a plane).
 PLANE_ANNOTATED_CONTRACT_IDS: tuple[str, ...] = (
@@ -142,6 +147,18 @@ def classify_runtime_family(collection_name: str) -> ObservabilityEvidencePlane:
     raise ValueError(f"runtime family '{collection_name}' is not a scenario-native observability surface")
 
 
+def classify_sdl_section_plane(section_name: str) -> ObservabilityEvidencePlane:
+    """Return the primary plane for a registered SDL authoring carrier."""
+
+    try:
+        return PLANE_BY_SDL_SECTION[section_name]
+    except KeyError:
+        raise ValueError(
+            f"no observability/evidence plane is registered for SDL section '{section_name}'; "
+            "plane ownership is decided by carrier role, not inferred"
+        ) from None
+
+
 def collect_scenario_native_observability_refs(scenario: object) -> set[str]:
     """Return targetable refs for scenario-native observability runtime families.
 
@@ -184,11 +201,13 @@ __all__ = [
     "AMBIGUOUS_PLANE_TOKENS",
     "PLANE_ANNOTATED_CONTRACT_IDS",
     "PLANE_BY_CONTRACT_ID",
+    "PLANE_BY_SDL_SECTION",
     "SCENARIO_NATIVE_OBSERVABILITY_FAMILIES",
     "ObservabilityEvidencePlane",
     "assert_single_primary_plane",
     "classify_contract_plane",
     "classify_runtime_family",
+    "classify_sdl_section_plane",
     "collect_scenario_native_observability_refs",
     "token_decides_plane",
 ]

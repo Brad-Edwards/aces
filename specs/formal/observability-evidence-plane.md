@@ -208,5 +208,21 @@ participant action interaction targets.
 | Participant actions can interact with in-world observability systems | `ParticipantInteractionDeclaration.target` and `shared_state_refs` validation through the targetable index | `test_dsl_123_observability_refs_are_targetable_relationship_objective_and_action_refs` | test coverage new |
 | Bare runtime ids do not resolve by first match | Fail-closed targetable reference resolution requires the qualified runtime-family path | `test_dsl_123_observability_refs_do_not_resolve_by_bare_runtime_id` | test coverage new |
 
-DSL-124 authored evidence-requirement surfaces (#337) extend the
-carrier-to-plane registry rather than re-implementing it.
+## Implementation Coverage (#337 / DSL-124)
+
+DSL-124 is realized as the SDL `evidence_requirements` section. It records
+authored capture intent and remains separate from participant objectives,
+scenario-native observability systems, raw evidence records, and derived
+analysis. Concrete source, scope, channel, trigger, and boundary refs reuse the
+existing fail-closed targetable reference resolver; class-level requirements use
+closed source/channel/redaction/integrity/retention/loss-disclosure
+vocabularies instead of free-form observability bags.
+
+| Invariant / matrix row | Realizing artifact | Test | New in #337? |
+| --- | --- | --- | --- |
+| Authored evidence requirements are first-class SDL authoring surfaces | `Scenario.evidence_requirements`, `EvidenceRequirement` | `test_dsl_124_accepts_authored_evidence_requirement_independent_of_objectives` | yes |
+| Requirement records source/scope/window or comparable boundary plus channel and handling expectations | `EvidenceRequirement._validate_capture_intent` and required sensitivity/redaction/integrity/retention/loss fields | `test_dsl_124_rejects_capture_requirement_without_window_trigger_or_boundary` | yes |
+| Scenario-native observability can be a source without satisfying capture | `collect_scenario_native_observability_refs()` plus `EvidenceRequirement.source_refs` | `test_dsl_124_accepts_authored_evidence_requirement_independent_of_objectives` | yes |
+| Source refs fail closed and bare runtime ids do not first-match | `SemanticValidator._verify_evidence_requirements` over `_validate_named_ref(targetable=True)` | `test_dsl_124_source_refs_fail_closed` | yes |
+| Evidence requirements are independent of participant objectives | `evidence_requirements.` is excluded from targetable refs | `test_dsl_124_evidence_requirements_are_not_objective_targets` | yes |
+| SDL section plane ownership is carrier-based | `PLANE_BY_SDL_SECTION`, `classify_sdl_section_plane()` | `test_dsl_124_accepts_authored_evidence_requirement_independent_of_objectives` | yes |
