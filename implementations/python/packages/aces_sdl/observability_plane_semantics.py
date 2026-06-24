@@ -20,7 +20,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from enum import Enum
 
-from ._runtime_service_families import RUNTIME_SERVICE_FAMILIES
+from ._runtime_service_families import RUNTIME_SERVICE_FAMILIES, collect_qualified_runtime_family_refs
 
 
 class ObservabilityEvidencePlane(str, Enum):
@@ -142,6 +142,20 @@ def classify_runtime_family(collection_name: str) -> ObservabilityEvidencePlane:
     raise ValueError(f"runtime family '{collection_name}' is not a scenario-native observability surface")
 
 
+def collect_scenario_native_observability_refs(scenario: object) -> set[str]:
+    """Return targetable refs for scenario-native observability runtime families.
+
+    This is a filtered view over the canonical runtime-family ref collector. It
+    gives DSL-123 callers an explicit observability surface without creating a
+    second resolver or registry.
+    """
+
+    return collect_qualified_runtime_family_refs(
+        scenario,
+        family_keys=SCENARIO_NATIVE_OBSERVABILITY_FAMILIES,
+    )
+
+
 def assert_single_primary_plane(
     planes: Iterable[ObservabilityEvidencePlane],
 ) -> ObservabilityEvidencePlane:
@@ -175,5 +189,6 @@ __all__ = [
     "assert_single_primary_plane",
     "classify_contract_plane",
     "classify_runtime_family",
+    "collect_scenario_native_observability_refs",
     "token_decides_plane",
 ]

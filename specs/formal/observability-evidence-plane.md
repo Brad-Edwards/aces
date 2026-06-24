@@ -190,6 +190,23 @@ The model keeps the three SEM-225 axes separate:
 | Processor/backend authority boundary | `augmented_by_ref` constrained to processor/backend refs | `test_sem_225_rejects_non_processor_backend_augmentation_authority` | yes |
 | Evidence provenance remains traced | run-level augmentation evidence refs checked against traceability | `test_sem_225_augmentation_evidence_refs_must_be_run_traced` | yes |
 
-DSL-123 scenario-native authoring surfaces (#336) and DSL-124 authored
-evidence-requirement surfaces (#337) extend the carrier-to-plane registry rather
-than re-implementing it.
+## Implementation Coverage (#336 / DSL-123)
+
+DSL-123 is realized as SDL scenario-native observability over existing runtime
+families and targetable reference edges. It does not add a generic top-level
+`observability`, `telemetry`, `logs`, or `traces` bag. The implementation keeps
+the carrier-oriented plane classifier from SEM-224, exposes an explicit
+scenario-native observability reference collector, and proves that qualified
+runtime-family refs can be relationship endpoints, objective targets, and
+participant action interaction targets.
+
+| Invariant / matrix row | Realizing artifact | Test | New in #336? |
+| --- | --- | --- | --- |
+| Scenario-native observability systems are first-class SDL elements | `SCENARIO_NATIVE_OBSERVABILITY_FAMILIES` validated against `RUNTIME_SERVICE_FAMILIES`; `classify_runtime_family()` | `test_dsl_123_exposes_scenario_native_observability_refs_without_second_resolver` | helper/test coverage new; classifier reused |
+| Observability target refs are explicit runtime-family refs | `collect_scenario_native_observability_refs()` as a filtered view over `collect_qualified_runtime_family_refs()` | `test_dsl_123_exposes_scenario_native_observability_refs_without_second_resolver` | yes |
+| In-world observability systems can be depended on or targeted | `SemanticValidator._named_ref_index(targetable=True)` and relationship endpoint validation | `test_dsl_123_observability_refs_are_targetable_relationship_objective_and_action_refs` | test coverage new; resolver reused |
+| Participant actions can interact with in-world observability systems | `ParticipantInteractionDeclaration.target` and `shared_state_refs` validation through the targetable index | `test_dsl_123_observability_refs_are_targetable_relationship_objective_and_action_refs` | test coverage new |
+| Bare runtime ids do not resolve by first match | Fail-closed targetable reference resolution requires the qualified runtime-family path | `test_dsl_123_observability_refs_do_not_resolve_by_bare_runtime_id` | test coverage new |
+
+DSL-124 authored evidence-requirement surfaces (#337) extend the
+carrier-to-plane registry rather than re-implementing it.
