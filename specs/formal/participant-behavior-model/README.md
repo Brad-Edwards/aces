@@ -116,6 +116,81 @@ Rules:
 - Outcome interpretation is participant-local until a named rule relates it to
   scenario, workflow, objective, evaluation, evidence, or reward surfaces.
 
+### ACT-603 Implementation Preflight Guardrails
+
+Executable ACT-603 work must be a binding over existing ACES surfaces, not a
+new participant stack. The canonical incumbents are:
+
+- SDL authored semantics: `agents.*`, `action_contracts`,
+  `observation_boundaries`, and `outcome_interpretation_rules` in
+  `implementations/python/packages/aces_sdl/`.
+- SDL shape and reference validation: `SDLModel`, `parse_sdl`,
+  `SemanticValidator`, `analyze_participant_behavior`, and
+  `analyze_participant_outcome_interpretations`.
+- Compiled runtime addresses: `participant.action-contract.*`,
+  `participant.observation-boundary.*`,
+  `participant.outcome-interpretation-rule.*`, and
+  `participant.behavior.*` from `aces_processor.compiler`.
+- Runtime interaction evidence: `ParticipantActionResult`,
+  precondition/effect/result records, outcome interpretation records, and
+  `iter_participant_behavior_history_violations` in
+  `aces_processor.models`.
+- Published contract authority: `ContractModel`, `schema_bundle()`,
+  `contracts/schemas/`, `contracts/schema-publication-manifest.json`, and the
+  `contracts/fixtures/` positive/negative fixture pattern.
+- Governed terms: `controlled-vocabularies-v1`, especially participant
+  decision-surface modes, runtime behavior features, runtime interaction
+  features, and participant runtime feature support levels.
+- Runtime/control-plane boundaries: `RuntimeSnapshot`, participant result
+  contract diagnostics, participant retrieval views, `OperationReceipt`,
+  `OperationStatus`, control-plane audit records, and conformance semantic
+  diagnostics.
+
+Security and boundary gates that any ACT-603 implementation touches must remain
+in force:
+
+- SDL authoring is closed by `SDLModel(extra="forbid")`; instantiated scenarios
+  reject unresolved `${name}` tokens; `SemanticValidator` resolves participant
+  refs and fails closed on unknown action contracts, observation boundaries,
+  targetable refs, authority anchors, operating scope, and outcome-rule refs.
+- Published exchange payloads are closed `ContractModel` payloads and must
+  validate through JSON Schema plus semantic validators; a schema change must
+  update the publication manifest ledger and fixtures, not only Python models.
+- Runtime behavior history must pass participant episode/state/history,
+  shared-state, concurrency, visibility, temporal, precondition/effect,
+  failure-class, attribution, and outcome-grounding checks through the existing
+  participant runtime validators.
+- Control-plane exposure must use the existing FastAPI security model: strict
+  auth defaults, read vs mutating role dependencies, request-size guard,
+  idempotency fingerprinting, redacted internal-error envelopes, and audit
+  records. Participant authority is not control-plane authorization.
+- Credentials, bearer tokens, hidden prompts, answer keys, raw secret-bearing
+  argv/env/config values, backend-private objects, and raw logs are not
+  portable interaction data. They require refs, digests, markings, redaction
+  policy, disclosure basis, or evidence records through the existing runtime
+  value and evidence surfaces.
+
+The extensibility seam is declaration plus disclosure, not a backend-specific
+DTO. New or weaker realizations should be expressed through governed feature
+support, support level, disclosure refs, mapping-loss labels, limitations, and
+`x-<owner>:<term>` governed extensions where the vocabulary allows them. New
+portable concepts must extend the existing typed precondition, effect, failure,
+observation, attribution, temporal, outcome, interaction, or controlled
+vocabulary surface before they appear in runtime evidence.
+
+Anti-patterns for ACT-603 implementations:
+
+- introducing a second action/precondition/effect/failure taxonomy;
+- treating action names, tool labels, ATT&CK/CVE labels, backend commands,
+  scheduler order, timestamps, rewards, or raw logs as portable semantics;
+- adding participant-specific persistence, exceptions, audit, schema
+  publication, or validation paths when the runtime snapshot, diagnostics,
+  control-plane store, schemas, and validators already cover the boundary;
+- weakening hidden-truth, evidence-only, disclosure, or redaction boundaries in
+  order to make observations easier to emit; or
+- making backend capability declarations prove that a specific participant
+  implementation ran. Use provenance and runtime evidence for that claim.
+
 ## ACT-602 - Executable Participant Behavior Model
 
 Executable behavior means the model is machine-checkable through ACES gates.
