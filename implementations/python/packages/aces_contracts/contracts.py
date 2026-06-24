@@ -3921,6 +3921,35 @@ _SEM_225_PORTABLE_CARRIER_KINDS = frozenset(
 )
 
 
+def _validate_sem_225_claim_evidence(
+    classifications: set[str],
+    evidence_refs: list[ExperimentEvidenceRecordReferenceModel],
+) -> None:
+    if classifications - {"apparatus_only"} and not evidence_refs:
+        raise ValueError("environment, participant, or comparability augmentations require evidence_refs")
+
+
+def _validate_sem_225_environment_visible(disclosure: ExperimentAugmentationDisclosureModel) -> None:
+    if disclosure.environment_effect is None:
+        raise ValueError("environment_visible augmentation disclosures require environment_effect")
+    if not any(ref.ref_kind in _SEM_225_PORTABLE_CARRIER_KINDS for ref in disclosure.carrier_refs):
+        raise ValueError("environment_visible augmentation disclosures require a portable carrier_ref")
+
+
+def _validate_sem_225_participant_visible(disclosure: ExperimentAugmentationDisclosureModel) -> None:
+    if disclosure.participant_visibility is None:
+        raise ValueError("participant_visible augmentation disclosures require participant_visibility")
+    if not disclosure.markings:
+        raise ValueError("participant_visible augmentation disclosures require markings")
+
+
+def _validate_sem_225_comparability_relevant(disclosure: ExperimentAugmentationDisclosureModel) -> None:
+    if disclosure.comparability_effect is None:
+        raise ValueError("comparability_relevant augmentation disclosures require comparability_effect")
+    if disclosure.observer_effect is None:
+        raise ValueError("comparability_relevant augmentation disclosures require observer_effect")
+
+
 class ExperimentAugmentationDisclosureModel(ContractModel):
     """Disclosure for processor/backend augmentation used by a run."""
 
@@ -3964,24 +3993,13 @@ class ExperimentAugmentationDisclosureModel(ContractModel):
             raise ValueError("augmentation disclosures must use a processor or backend augmented_by_ref")
 
         classification_set = set(self.classifications)
-        claim_bearing = classification_set - {"apparatus_only"}
-        if claim_bearing and not self.evidence_refs:
-            raise ValueError("environment, participant, or comparability augmentations require evidence_refs")
+        _validate_sem_225_claim_evidence(classification_set, self.evidence_refs)
         if "environment_visible" in classification_set:
-            if self.environment_effect is None:
-                raise ValueError("environment_visible augmentation disclosures require environment_effect")
-            if not any(ref.ref_kind in _SEM_225_PORTABLE_CARRIER_KINDS for ref in self.carrier_refs):
-                raise ValueError("environment_visible augmentation disclosures require a portable carrier_ref")
+            _validate_sem_225_environment_visible(self)
         if "participant_visible" in classification_set:
-            if self.participant_visibility is None:
-                raise ValueError("participant_visible augmentation disclosures require participant_visibility")
-            if not self.markings:
-                raise ValueError("participant_visible augmentation disclosures require markings")
+            _validate_sem_225_participant_visible(self)
         if "comparability_relevant" in classification_set:
-            if self.comparability_effect is None:
-                raise ValueError("comparability_relevant augmentation disclosures require comparability_effect")
-            if self.observer_effect is None:
-                raise ValueError("comparability_relevant augmentation disclosures require observer_effect")
+            _validate_sem_225_comparability_relevant(self)
         return self
 
     @classmethod
@@ -4056,7 +4074,9 @@ class ExperimentAugmentationDisclosureModel(ContractModel):
             "augmentation-disclosure-semantics-valid",
             "Augmentation disclosures must keep environment-visible, participant-visible, and "
             "comparability-relevant semantics explicit and must use processor/backend authority.",
-            validator="aces_contracts.contracts.ExperimentAugmentationDisclosureModel._validate_augmentation_disclosure",
+            validator=(
+                "aces_contracts.contracts.ExperimentAugmentationDisclosureModel._validate_augmentation_disclosure"
+            ),
             inputs=[{"contract_id": "experiment-run-v1", "instance_path": "#/augmentation_disclosures"}],
         )
         return json_schema
