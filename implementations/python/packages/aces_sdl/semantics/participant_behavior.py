@@ -42,6 +42,15 @@ class ParticipantBehaviorAnalysis:
         return bool(self.issues)
 
 
+@dataclass(frozen=True)
+class _BehaviorSpecificationReferenceContext:
+    participant_names: set[str]
+    participant_roles: set[str]
+    action_names: set[str]
+    observation_boundary_names: set[str]
+    outcome_rule_names: set[str]
+
+
 def _action_references_for_agent(
     *,
     participant_name: str,
@@ -347,37 +356,33 @@ def _behavior_specification_reference_issues(
     *,
     spec_name: str,
     behavior_spec: object,
-    participant_names: set[str],
-    participant_roles: set[str],
-    action_names: set[str],
-    observation_boundary_names: set[str],
-    outcome_rule_names: set[str],
+    reference_context: _BehaviorSpecificationReferenceContext,
     is_unresolved: Callable[[object], bool],
 ) -> list[ParticipantBehaviorIssue]:
     reference_sets = (
         (
             list(getattr(behavior_spec, "participant_refs", []) or []),
-            participant_names,
+            reference_context.participant_names,
             "participant.behavior-spec-participant-unbound",
         ),
         (
             list(getattr(behavior_spec, "participant_role_refs", []) or []),
-            participant_roles,
+            reference_context.participant_roles,
             "participant.behavior-spec-role-unbound",
         ),
         (
             list(getattr(behavior_spec, "action_contract_refs", []) or []),
-            action_names,
+            reference_context.action_names,
             "participant.behavior-spec-action-unbound",
         ),
         (
             list(getattr(behavior_spec, "observation_boundary_refs", []) or []),
-            observation_boundary_names,
+            reference_context.observation_boundary_names,
             "participant.behavior-spec-observation-boundary-unbound",
         ),
         (
             list(getattr(behavior_spec, "outcome_interpretation_rule_refs", []) or []),
-            outcome_rule_names,
+            reference_context.outcome_rule_names,
             "participant.behavior-spec-outcome-rule-unbound",
         ),
     )
@@ -471,21 +476,20 @@ def _behavior_specification_issues(
     is_unresolved: Callable[[object], bool],
 ) -> list[ParticipantBehaviorIssue]:
     issues: list[ParticipantBehaviorIssue] = []
-    participant_names = {str(name) for name in agents_by_name}
-    action_names = {str(name) for name in action_contracts}
-    observation_boundary_names = {str(name) for name in observation_boundaries}
-    outcome_rule_names = {str(name) for name in outcome_interpretation_rules}
+    reference_context = _BehaviorSpecificationReferenceContext(
+        participant_names={str(name) for name in agents_by_name},
+        participant_roles=participant_roles,
+        action_names={str(name) for name in action_contracts},
+        observation_boundary_names={str(name) for name in observation_boundaries},
+        outcome_rule_names={str(name) for name in outcome_interpretation_rules},
+    )
     for spec_name, behavior_spec in behavior_specifications.items():
         normalized_spec_name = str(spec_name)
         issues.extend(
             _behavior_specification_reference_issues(
                 spec_name=normalized_spec_name,
                 behavior_spec=behavior_spec,
-                participant_names=participant_names,
-                participant_roles=participant_roles,
-                action_names=action_names,
-                observation_boundary_names=observation_boundary_names,
-                outcome_rule_names=outcome_rule_names,
+                reference_context=reference_context,
                 is_unresolved=is_unresolved,
             )
         )
