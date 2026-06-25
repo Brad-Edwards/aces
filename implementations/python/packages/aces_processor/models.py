@@ -576,6 +576,15 @@ class ParticipantBehaviorRuntime(ResolvedResource):
 
     participant_name: str = ""
     entity_name: str = ""
+    starting_account_refs: tuple[str, ...] = ()
+    starting_account_addresses: tuple[str, ...] = ()
+    initial_knowledge_addresses: tuple[str, ...] = ()
+    starting_condition_refs: tuple[str, ...] = ()
+    starting_condition_addresses: tuple[str, ...] = ()
+    authority_anchor_refs: tuple[str, ...] = ()
+    authority_anchor_addresses: tuple[str, ...] = ()
+    operating_scope_refs: tuple[str, ...] = ()
+    operating_scope_addresses: tuple[str, ...] = ()
     action_contract_addresses: tuple[str, ...] = ()
     observation_boundary_addresses: tuple[str, ...] = ()
     interpretation_mode: str = "role-neutral-projection"
@@ -594,6 +603,7 @@ class ParticipantBehaviorSpecificationRuntime(ResolvedResource):
     observation_boundary_addresses: tuple[str, ...] = ()
     outcome_interpretation_rule_addresses: tuple[str, ...] = ()
     authority_scope_refs: tuple[str, ...] = ()
+    authority_scope_addresses: tuple[str, ...] = ()
     behavior_mode: str = ""
     realization_profile_ref: str = ""
     backend_feature_support_refs: tuple[str, ...] = ()

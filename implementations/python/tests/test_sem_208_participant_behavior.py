@@ -229,6 +229,161 @@ def _scenario_yaml(*, actions: str = "[scan]", boundaries: str = "[red-view]") -
     )
 
 
+def _act607_authority_scope_scenario_yaml() -> str:
+    return textwrap.dedent(
+        """
+        name: act-607-authority-scope
+        nodes:
+          net:
+            type: switch
+          web:
+            type: VM
+            resources: {ram: 1 GiB, cpu: 1}
+            services: [{port: 80, name: http}]
+        infrastructure:
+          net:
+            count: 1
+            properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}
+          web:
+            count: 1
+            links: [net]
+        entities:
+          red-team:
+            role: red
+        accounts:
+          operator:
+            username: red
+            node: web
+        conditions:
+          beacon-online:
+            command: /usr/local/bin/check-beacon
+            interval: 30
+        relationships:
+          red-controls-web:
+            type: manages
+            source: red-team
+            target: web
+        content:
+          docs:
+            type: dataset
+            target: web
+            items:
+              - name: playbook
+        action-contracts:
+          scan:
+            semantic-version: 1.0.0
+            lifecycle-state: active
+            behavioral-granularity: atomic
+            procedure-basis: scan contract
+            realization-profile: backend-declared
+            fidelity-claim: records scan intent
+            preconditions:
+              - precondition-id: authority-in-scope
+                precondition-class: authority
+                description: participant authority is declared in SDL
+            effects:
+              - effect-id: no-effect
+                effect-class: no_effect
+                description: compilation-only contract
+            failure-classes: [authority_denied, unknown]
+        observation-boundaries:
+          red-view:
+            projection-basis: participant view
+            evidence-refs: [evidence.scan-output]
+            redaction-policy: hidden refs are not disclosed
+            latency-profile: immediate
+        agents:
+          red-agent:
+            entity: red-team
+            actions: [scan]
+            starting-accounts: [operator]
+            initial-knowledge:
+              hosts: [web]
+              subnets: [net]
+              services: [http]
+              accounts: [operator]
+            starting-conditions: [beacon-online]
+            authority-anchors:
+              - red-team
+              - red-controls-web
+              - operator
+              - scan
+              - red-view
+              - docs
+              - nodes.web.services.http
+            operating-scope:
+              - web
+              - net
+              - nodes.web.services.http
+              - docs
+              - playbook
+            observation-boundaries: [red-view]
+        behavior-specifications:
+          red-scan-behavior:
+            semantic-version: 1.0.0
+            lifecycle-state: active
+            participant-refs: [red-agent]
+            action-contract-refs: [scan]
+            observation-boundary-refs: [red-view]
+            authority-scope-refs:
+              - nodes.web.services.http
+              - operator
+              - scan
+              - red-view
+              - docs
+              - playbook
+              - red-controls-web
+            extension-policy: governed-extension
+        """
+    )
+
+
+def _act607_typed_ref_collision_scenario_yaml() -> str:
+    return textwrap.dedent(
+        """
+        name: act-607-typed-ref-collisions
+        nodes:
+          web:
+            type: VM
+            resources: {ram: 1 GiB, cpu: 1}
+            services: [{port: 80, name: http}]
+        entities:
+          red-team:
+            role: red
+        accounts:
+          operator:
+            username: red
+            node: web
+        conditions:
+          beacon-online:
+            command: /usr/local/bin/check-beacon
+            interval: 30
+        content:
+          operator:
+            type: dataset
+            target: web
+            source: file:///tmp/operator.txt
+          beacon-online:
+            type: dataset
+            target: web
+            source: file:///tmp/beacon-online.txt
+          http:
+            type: dataset
+            target: web
+            source: file:///tmp/http.txt
+        agents:
+          red-agent:
+            entity: red-team
+            starting-accounts: [operator]
+            initial-knowledge:
+              hosts: [web]
+              services: [http]
+              accounts: [operator]
+            starting-conditions: [beacon-online]
+        """
+    )
+
+
 def test_participant_behavior_contracts_parse_and_validate():
     scenario = parse_sdl(_scenario_yaml())
 
@@ -282,6 +437,117 @@ def test_behavior_specifications_parse_validate_and_compile():
     assert compiled.authority_scope_refs == ("nodes.web.services.http",)
     assert compiled.behavior_mode == "policy-directed"
     assert compiled.spec["participant_refs"] == ["red-agent"]
+
+
+def test_participant_behavior_runtime_carries_act607_authority_scope_metadata():
+    model = compile_runtime_model(parse_sdl(_act607_authority_scope_scenario_yaml()))
+
+    compiled = model.participant_behaviors[PARTICIPANT_ADDRESS]
+
+    assert compiled.starting_account_refs == ("operator",)
+    assert compiled.starting_account_addresses == ("provision.account.operator",)
+    assert compiled.initial_knowledge_addresses == (
+        "provision.node.web",
+        "provision.network.net",
+        "provision.node.web.service.http",
+        "provision.account.operator",
+    )
+    assert compiled.starting_condition_refs == ("beacon-online",)
+    assert compiled.starting_condition_addresses == ("template.condition.beacon-online",)
+    assert compiled.authority_anchor_refs == (
+        "red-team",
+        "red-controls-web",
+        "operator",
+        "scan",
+        "red-view",
+        "docs",
+        "nodes.web.services.http",
+    )
+    assert compiled.authority_anchor_addresses == (
+        "provision.account.operator",
+        ACTION_ADDRESS,
+        OBSERVATION_ADDRESS,
+        "provision.content.docs",
+        "provision.node.web.service.http",
+    )
+    assert compiled.operating_scope_refs == (
+        "web",
+        "net",
+        "nodes.web.services.http",
+        "docs",
+        "playbook",
+    )
+    assert compiled.operating_scope_addresses == (
+        "provision.node.web",
+        "provision.network.net",
+        "provision.node.web.service.http",
+        "provision.content.docs",
+        "provision.content.docs.items.playbook",
+    )
+    assert compiled.refresh_dependencies == (
+        ACTION_ADDRESS,
+        OBSERVATION_ADDRESS,
+        "provision.account.operator",
+        "provision.node.web",
+        "provision.network.net",
+        "provision.node.web.service.http",
+        "template.condition.beacon-online",
+        "provision.content.docs",
+        "provision.content.docs.items.playbook",
+    )
+
+
+def test_participant_typed_authority_refs_ignore_global_alias_collisions():
+    model = compile_runtime_model(parse_sdl(_act607_typed_ref_collision_scenario_yaml()))
+
+    compiled = model.participant_behaviors[PARTICIPANT_ADDRESS]
+
+    assert compiled.starting_account_addresses == ("provision.account.operator",)
+    assert compiled.initial_knowledge_addresses == (
+        "provision.node.web",
+        "provision.node.web.service.http",
+        "provision.account.operator",
+    )
+    assert compiled.starting_condition_addresses == ("template.condition.beacon-online",)
+    assert compiled.refresh_dependencies == (
+        "provision.account.operator",
+        "provision.node.web",
+        "provision.node.web.service.http",
+        "template.condition.beacon-online",
+    )
+
+
+def test_behavior_specification_runtime_carries_authority_scope_addresses():
+    model = compile_runtime_model(parse_sdl(_act607_authority_scope_scenario_yaml()))
+
+    compiled = model.behavior_specifications["participant.behavior-specification.red-scan-behavior"]
+
+    assert compiled.authority_scope_refs == (
+        "nodes.web.services.http",
+        "operator",
+        "scan",
+        "red-view",
+        "docs",
+        "playbook",
+        "red-controls-web",
+    )
+    assert compiled.authority_scope_addresses == (
+        "provision.node.web.service.http",
+        "provision.account.operator",
+        ACTION_ADDRESS,
+        OBSERVATION_ADDRESS,
+        "provision.content.docs",
+        "provision.content.docs.items.playbook",
+    )
+    assert compiled.refresh_dependencies == (
+        PARTICIPANT_ADDRESS,
+        ACTION_ADDRESS,
+        OBSERVATION_ADDRESS,
+        "provision.node.web.service.http",
+        "provision.account.operator",
+        "provision.content.docs",
+        "provision.content.docs.items.playbook",
+    )
 
 
 def test_behavior_specification_refs_are_namespaced_during_module_composition(tmp_path):

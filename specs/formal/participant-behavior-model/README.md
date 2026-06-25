@@ -301,6 +301,81 @@ Rules:
 Implementation issue #207 owns executable authority/scope extensions beyond
 the ACT-601 fields already shipped.
 
+### ACT-607 Implementation Preflight Guardrails
+
+Executable ACT-607 work must extend the existing participant-authoring and
+behavior surfaces. The canonical incumbents are:
+
+- SDL authored semantics: `agents.*.starting_accounts`,
+  `initial_knowledge`, `starting_conditions`, `authority_anchors`,
+  `operating_scope`, and behavior-specification `authority_scope_refs`.
+- Action and observation semantics: typed participant action preconditions,
+  governed failure classes such as `authority_denied`, observation boundaries,
+  view rules, and view transitions.
+- Parser and model gates: `parse_sdl`, `SDLModel(extra="forbid")`,
+  variable-key rejection, `Scenario`, and `InstantiatedScenario`.
+- Semantic validation: `SemanticValidator`, `_validate_named_ref`,
+  `_validate_operating_scope_ref`, `_verify_agent`,
+  `_verify_behavior_specification_authority_refs`, and
+  `analyze_participant_behavior`.
+- Runtime compilation: stable participant behavior, action-contract,
+  observation-boundary, outcome-rule, and behavior-specification addresses from
+  `aces_processor.compiler`.
+- Published contract authority: closed `ContractModel` payloads,
+  `schema_bundle()`, generated schemas, the schema-publication manifest, and
+  valid/invalid fixtures.
+- Runtime evidence and conformance: participant action precondition/result
+  records, behavior history, observation envelopes, shared-state records,
+  runtime snapshots, diagnostics, and existing participant-runtime validators.
+- Control-plane and persistence boundaries: `ControlPlaneSecurityConfig`,
+  read/mutating identity dependencies, request-size guards, idempotency
+  fingerprints, audit records, redacted 500 envelopes, and
+  `ControlPlaneStore`.
+
+Security and boundary gates remain in force:
+
+- SDL authoring must fail closed on unknown fields, variable-created keys,
+  unresolved refs, ambiguous authority anchors, and invalid operating-scope
+  targets. Instantiated scenarios must not carry unresolved `${name}` tokens.
+- Participant authority is not control-plane authorization. Bearer tokens,
+  proxy headers, control-plane identities, OS users, process boundaries, and
+  backend sandbox settings may enforce or observe a boundary, but they do not
+  define the authored authority/scope boundary.
+- Secrets and private material stay out of portable authority evidence:
+  credentials, tokens, hidden prompts, answer keys, backend-private
+  configuration, raw command output, raw logs, argv/env values, and
+  adjudication assets require refs, digests, markings, redaction policy, and
+  evidence boundaries.
+- Error surfaces must use existing collected `SDLValidationError`,
+  `Diagnostic`, `HTTPException`, audit, and redacted internal-error patterns.
+  New checks must not create a participant-specific exception hierarchy or
+  leak raw secret/config values through diagnostics or fixtures.
+- Published exchange shapes must remain closed contracts. A schema-facing
+  change updates model source, generated schema bundle, publication-manifest
+  ledger, and fixtures together.
+
+The extensibility seam is a parameterized authority/scope reference resolver:
+reuse the named-reference index for authority anchors, the spatial/resource
+operating-scope index for scope, and add explicit allowed-target/facet
+parameters when a future boundary type needs a narrower target set. If runtime
+claims need normalized addresses, add that normalization at the compiler
+addressing boundary rather than copying raw, possibly ambiguous authoring refs
+into a second resolver.
+
+Anti-patterns for ACT-607 implementations:
+
+- introducing a new top-level `participants` or `authority` stack for the same
+  authored participant concept;
+- treating credential possession, account login, backend capability,
+  participant implementation identity, or control-plane auth as authored
+  authority;
+- duplicating controlled vocabularies, schema publication, validation passes,
+  persistence, audit, or exception machinery;
+- placing trust anchors or access/control anchors in free-form `metadata`,
+  diagnostics, raw logs, or backend-local DTOs; or
+- proving conformance only through schema acceptance without semantic negative
+  tests, runtime evidence, and redaction/leakage checks.
+
 ## ACT-608 - Participant Behavior Modes
 
 Behavior mode declares how decisions are selected or controlled at the
