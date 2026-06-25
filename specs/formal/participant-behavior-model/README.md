@@ -29,16 +29,17 @@ Existing coverage:
   define backend-facing carrier, retrieval, support, and outcome surfaces.
 - `controlled-vocabularies-v1` already defines
   `participant-decision-surface-modes`.
+- Issue #206 adds SDL `behavior-specifications` authoring, semantic
+  validation, generated schema coverage, and compiled
+  `participant.behavior-specification.*` runtime records for ACT-606.
 
-Remaining issue #77 gap:
+Remaining child-issue boundaries:
 
-- no single behavior-model composition binding these surfaces to ACT-602,
-  ACT-603, ACT-606, ACT-607, and ACT-608;
-- no first-class behavior specification aggregate;
-- no clause matrix tying authority/scope and mode selection to the behavior
-  model; and
-- no child-issue boundary that prevents each UID from publishing local behavior
-  semantics.
+- child issues must not publish local behavior semantics outside this model;
+- authority/scope and mode work beyond ACT-606 must continue to bind through
+  the governed refs and vocabularies defined here; and
+- executable behavior-model gates for ACT-602, ACT-607, and ACT-608 remain
+  owned by their child issues.
 
 ## Model Summary
 
@@ -260,8 +261,13 @@ Rules:
   claim in a run or conformance report.
 - Extension fields follow the governed `x-<owner>:<term>` discipline.
 
-Implementation issue #206 owns the executable authoring and validation surface
-for this aggregate.
+Implementation issue #206 adds the executable SDL authoring and validation
+surface for this aggregate. The Python reference implementation parses
+`behavior-specifications`, validates participant, role, action, observation,
+outcome, authority, extension, and governed-mode refs, includes the surface in
+generated SDL schemas, and compiles stable
+`participant.behavior-specification.<name>` runtime records without creating a
+parallel participant stack.
 
 ## ACT-607 - Authority And Scope Boundaries
 
@@ -346,7 +352,7 @@ and conformance for behavior modes.
 | --- | --- | --- |
 | #204 | ACT-602 | Machine-checkable behavior model gates, fixtures, and conformance evidence. |
 | #205 | ACT-603 | Abstract interaction implementation coverage over actions, observations, state, preconditions, effects, failure classes, and joint interactions. |
-| #206 | ACT-606 | First-class behavior specification authoring, validation, versioning, and traceability. |
+| #206 | ACT-606 | First-class behavior specification authoring, validation, versioning, traceability, and compiled runtime records. |
 | #207 | ACT-607 | Authority/scope boundary authoring, validation, evidence, and failure mapping. |
 | #208 | ACT-608 | Behavior-mode declaration, selection, controlled-vocabulary validation, and conformance. |
 
@@ -366,5 +372,5 @@ Any executable issue that claims this model must provide:
   to the artifact.
 
 Issue #77 satisfies the design requirement by publishing ADR-067 and this
-formal spec. It does not claim runtime emission, SDL syntax, schema, fixture,
-or conformance implementation for #204 through #208.
+formal spec. Child issues provide executable SDL syntax, schema, fixture,
+runtime emission, and conformance implementation for #204 through #208.

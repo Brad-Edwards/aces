@@ -5,6 +5,7 @@ Part of the SemanticValidator mixin composition; see __init__.py.
 
 from collections.abc import Callable
 
+from ..entities import flatten_entities
 from ..semantics.objective_semantics import (
     AssessmentResourceCatalog,
     ObjectiveIssue,
@@ -134,6 +135,53 @@ _PARTICIPANT_BEHAVIOR_ISSUE_RENDERERS = {
         lambda i: (
             f"Observation boundary '{i.boundary_name}' view_transition '{i.transition_id}' "
             f"evidence_ref '{i.ref}' is not declared by evidence_refs"
+        )
+    ),
+    "participant.behavior-spec-participant-unbound": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' participant_ref '{i.ref}' does not reference a declared agent"
+        )
+    ),
+    "participant.behavior-spec-role-unbound": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' participant_role_ref '{i.ref}' "
+            "does not match a declared participant role"
+        )
+    ),
+    "participant.behavior-spec-action-unbound": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' action_contract_ref '{i.ref}' "
+            "does not reference a declared action_contract"
+        )
+    ),
+    "participant.behavior-spec-observation-boundary-unbound": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' observation_boundary_ref '{i.ref}' "
+            "does not reference a declared observation_boundary"
+        )
+    ),
+    "participant.behavior-spec-outcome-rule-unbound": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' outcome_interpretation_rule_ref '{i.ref}' "
+            "does not reference a declared outcome_interpretation_rule"
+        )
+    ),
+    "participant.behavior-spec-mode-ungoverned": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' behavior_mode '{i.ref}' is not in "
+            f"participant-decision-surface-modes: {i.message}"
+        )
+    ),
+    "participant.behavior-spec-feature-ungoverned": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' backend_feature_support_ref '{i.ref}' is not a governed "
+            f"participant runtime feature: {i.message}"
+        )
+    ),
+    "participant.behavior-spec-evidence-contract-unbound": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' evidence_contract_ref '{i.ref}' "
+            f"does not reference a published contract: {i.message}"
         )
     ),
 }
@@ -284,11 +332,36 @@ class _ContentObjectivesMixin:
             agents_by_name=self._s.agents,
             action_contracts=self._s.action_contracts,
             observation_boundaries=self._s.observation_boundaries,
+            outcome_interpretation_rules=self._s.outcome_interpretation_rules,
+            behavior_specifications=self._s.behavior_specifications,
+            participant_roles=self._participant_role_refs(),
             is_unresolved=self._is_unresolved_var,
         )
         for issue in analysis.issues:
             self._err(self._format_participant_behavior_issue(issue))
         self._verify_participant_interaction_refs()
+        self._verify_behavior_specification_authority_refs()
+
+    def _participant_role_refs(self) -> set[str]:
+        entities = flatten_entities(self._s.entities)
+        roles: set[str] = set()
+        for agent in self._s.agents.values():
+            if self._is_unresolved_var(agent.entity):
+                continue
+            entity = entities.get(agent.entity)
+            role = getattr(entity, "role", None)
+            if role is None or self._is_unresolved_var(role):
+                continue
+            roles.add(str(getattr(role, "value", role)))
+        return roles
+
+    def _verify_behavior_specification_authority_refs(self) -> None:
+        for spec_name, behavior_spec in self._s.behavior_specifications.items():
+            label = f"Behavior specification '{spec_name}'"
+            for ref in behavior_spec.authority_scope_refs:
+                if self._is_unresolved_var(ref):
+                    continue
+                self._validate_named_ref(ref, owner_label=label, ref_label="authority_scope_ref", targetable=True)
 
     def _verify_participant_interaction_refs(self) -> None:
         for action_name, action_contract in self._s.action_contracts.items():

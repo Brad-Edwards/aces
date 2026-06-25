@@ -44,6 +44,7 @@ _HASHMAP_SECTIONS = frozenset(
         "action_contracts",
         "observation_boundaries",
         "outcome_interpretation_rules",
+        "behavior_specifications",
         "evidence_requirements",
         "objectives",
         "workflows",
@@ -66,6 +67,8 @@ _NESTED_HASHMAP_FIELDS = frozenset(
         "entities",  # Entity.entities (dict[str, Entity])
         "events",  # Script.events (dict[str, int])
         "steps",  # Workflow.steps (dict[str, WorkflowStep])
+        # ParticipantBehaviorSpecification.extensions preserves governed x-owner:term keys.
+        "extensions",
     }
 )
 

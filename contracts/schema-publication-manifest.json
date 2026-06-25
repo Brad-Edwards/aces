@@ -132,10 +132,10 @@
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "01d31eb7f80b4b1ca7790e435f7583f69a2c7f69fdbd9383ef3a59b2c03e7107",
+      "content_hash": "8243c11f33d5707bd79ce7f50367152041ad67a038c9959fe6d3f37c918924d9",
       "last_change": {
-        "summary": "Added the DSL-124 authored evidence-requirements section to instantiated SDL scenarios.",
-        "content_hash": "01d31eb7f80b4b1ca7790e435f7583f69a2c7f69fdbd9383ef3a59b2c03e7107"
+        "summary": "Added ACT-606 behavior specifications to instantiated SDL scenarios with typed governed extension values.",
+        "content_hash": "8243c11f33d5707bd79ce7f50367152041ad67a038c9959fe6d3f37c918924d9"
       }
     },
     {
@@ -318,10 +318,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "92486bd2e5c185b0065be18e859db1f25e0cd3f307c00a20b5b9a2b7433652b1",
+      "content_hash": "bf758023686f25a4fb0ff6f67de62d1cb2769f08a483ac6783057a0fc80b64c4",
       "last_change": {
-        "summary": "Added the DSL-124 authored evidence-requirements section to SDL authoring input.",
-        "content_hash": "92486bd2e5c185b0065be18e859db1f25e0cd3f307c00a20b5b9a2b7433652b1"
+        "summary": "Added ACT-606 behavior specifications to SDL authoring input with typed governed extension values.",
+        "content_hash": "bf758023686f25a4fb0ff6f67de62d1cb2769f08a483ac6783057a0fc80b64c4"
       }
     },
     {

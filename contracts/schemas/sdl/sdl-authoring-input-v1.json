@@ -293,6 +293,37 @@
       "title": "AssetValueLevel",
       "type": "string"
     },
+    "BehaviorSpecificationExtensionValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/BehaviorSpecificationExtensionValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/BehaviorSpecificationExtensionValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "Condition": {
       "additionalProperties": false,
       "description": "A monitoring check deployed to a VM.\n\nEither ``command`` + ``interval`` or ``source`` must be set, not both.",
@@ -4067,6 +4098,127 @@
         "unsupported_guarantee"
       ],
       "title": "ParticipantBackendTimingDisclosureKind",
+      "type": "string"
+    },
+    "ParticipantBehaviorSpecification": {
+      "additionalProperties": false,
+      "description": "First-class authored aggregate over participant behavior surfaces.",
+      "properties": {
+        "action_contract_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Action Contract Refs",
+          "type": "array"
+        },
+        "authority_scope_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Authority Scope Refs",
+          "type": "array"
+        },
+        "backend_feature_support_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Backend Feature Support Refs",
+          "type": "array"
+        },
+        "behavior_mode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Behavior Mode"
+        },
+        "evidence_contract_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Contract Refs",
+          "type": "array"
+        },
+        "extension_policy": {
+          "default": "governed-extension",
+          "title": "Extension Policy",
+          "type": "string"
+        },
+        "extensions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/BehaviorSpecificationExtensionValue"
+          },
+          "title": "Extensions",
+          "type": "object"
+        },
+        "lifecycle_state": {
+          "$ref": "#/$defs/ParticipantBehaviorSpecificationLifecycle",
+          "default": "active"
+        },
+        "observation_boundary_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Observation Boundary Refs",
+          "type": "array"
+        },
+        "outcome_interpretation_rule_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Outcome Interpretation Rule Refs",
+          "type": "array"
+        },
+        "participant_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Participant Refs",
+          "type": "array"
+        },
+        "participant_role_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Participant Role Refs",
+          "type": "array"
+        },
+        "realization_profile_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Realization Profile Ref"
+        },
+        "semantic_version": {
+          "title": "Semantic Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "semantic_version"
+      ],
+      "title": "ParticipantBehaviorSpecification",
+      "type": "object"
+    },
+    "ParticipantBehaviorSpecificationLifecycle": {
+      "description": "Governance lifecycle for participant behavior specifications.",
+      "enum": [
+        "draft",
+        "active",
+        "deprecated"
+      ],
+      "title": "ParticipantBehaviorSpecificationLifecycle",
       "type": "string"
     },
     "ParticipantEffectClass": {
@@ -17249,7 +17401,7 @@
   "$id": "https://aces.dev/schemas/sdl-authoring-input-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Top-level scenario specification.\n\nA YAML document with up to 21 named sections. Only ``name``\nis required. All sections are optional dicts keyed by\nuser-defined identifiers.",
+  "description": "Top-level scenario specification.\n\nA YAML document with up to 23 named sections. Only ``name``\nis required. All sections are optional dicts keyed by\nuser-defined identifiers.",
   "properties": {
     "accounts": {
       "additionalProperties": {
@@ -17270,6 +17422,13 @@
         "$ref": "#/$defs/Agent"
       },
       "title": "Agents",
+      "type": "object"
+    },
+    "behavior_specifications": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParticipantBehaviorSpecification"
+      },
+      "title": "Behavior Specifications",
       "type": "object"
     },
     "conditions": {

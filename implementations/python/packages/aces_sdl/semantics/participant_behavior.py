@@ -26,6 +26,8 @@ class ParticipantBehaviorIssue:
     action_name: str = ""
     boundary_name: str = ""
     transition_id: str = ""
+    spec_name: str = ""
+    message: str = ""
 
 
 @dataclass(frozen=True)
@@ -38,6 +40,15 @@ class ParticipantBehaviorAnalysis:
     @property
     def has_issues(self) -> bool:
         return bool(self.issues)
+
+
+@dataclass(frozen=True)
+class _BehaviorSpecificationReferenceContext:
+    participant_names: set[str]
+    participant_roles: set[str]
+    action_names: set[str]
+    observation_boundary_names: set[str]
+    outcome_rule_names: set[str]
 
 
 def _action_references_for_agent(
@@ -249,11 +260,257 @@ def _visibility_issues_for_observation_boundaries(
     return issues
 
 
+def _behavior_mode_issue(*, spec_name: str, behavior_mode: object) -> ParticipantBehaviorIssue | None:
+    if not behavior_mode:
+        return None
+    try:
+        from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_value
+
+        validate_controlled_vocabulary_value("participant-decision-surface-modes", str(behavior_mode))
+    except ValueError as exc:
+        return ParticipantBehaviorIssue(
+            code="participant.behavior-spec-mode-ungoverned",
+            participant_name="",
+            spec_name=spec_name,
+            ref=str(behavior_mode),
+            message=str(exc),
+        )
+    return None
+
+
+def _backend_feature_support_issue(*, spec_name: str, feature_ref: object) -> ParticipantBehaviorIssue | None:
+    try:
+        from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_value
+
+        validation_errors: list[str] = []
+        for vocabulary_id in (
+            "participant-runtime-behavior-features",
+            "participant-runtime-interaction-features",
+        ):
+            try:
+                validate_controlled_vocabulary_value(vocabulary_id, str(feature_ref))
+                return None
+            except ValueError as exc:
+                validation_errors.append(str(exc))
+    except ValueError as exc:
+        validation_errors = [str(exc)]
+    return ParticipantBehaviorIssue(
+        code="participant.behavior-spec-feature-ungoverned",
+        participant_name="",
+        spec_name=spec_name,
+        ref=str(feature_ref),
+        message="; ".join(validation_errors),
+    )
+
+
+def _evidence_contract_issue(*, spec_name: str, evidence_contract_ref: object) -> ParticipantBehaviorIssue | None:
+    from aces_contracts.manifest_authority import (
+        BACKEND_SUPPORTED_CONTRACT_IDS,
+        PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
+        PROCESSOR_SUPPORTED_CONTRACT_IDS,
+    )
+
+    allowed_contract_ids = frozenset(
+        [
+            *BACKEND_SUPPORTED_CONTRACT_IDS,
+            *PARTICIPANT_IMPLEMENTATION_SUPPORTED_CONTRACT_IDS,
+            *PROCESSOR_SUPPORTED_CONTRACT_IDS,
+        ]
+    )
+    if str(evidence_contract_ref) in allowed_contract_ids:
+        return None
+    return ParticipantBehaviorIssue(
+        code="participant.behavior-spec-evidence-contract-unbound",
+        participant_name="",
+        spec_name=spec_name,
+        ref=str(evidence_contract_ref),
+        message="evidence_contract_refs must reference published processor, backend, or participant contracts",
+    )
+
+
+def _behavior_specification_named_ref_issues(
+    *,
+    spec_name: str,
+    refs: list[object],
+    known_names: set[str],
+    code: str,
+    is_unresolved: Callable[[object], bool],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    for ref in refs:
+        if is_unresolved(ref):
+            continue
+        if str(ref) not in known_names:
+            issues.append(
+                ParticipantBehaviorIssue(
+                    code=code,
+                    participant_name="",
+                    spec_name=spec_name,
+                    ref=str(ref),
+                )
+            )
+    return issues
+
+
+def _behavior_specification_reference_issues(
+    *,
+    spec_name: str,
+    behavior_spec: object,
+    reference_context: _BehaviorSpecificationReferenceContext,
+    is_unresolved: Callable[[object], bool],
+) -> list[ParticipantBehaviorIssue]:
+    reference_sets = (
+        (
+            list(getattr(behavior_spec, "participant_refs", []) or []),
+            reference_context.participant_names,
+            "participant.behavior-spec-participant-unbound",
+        ),
+        (
+            list(getattr(behavior_spec, "participant_role_refs", []) or []),
+            reference_context.participant_roles,
+            "participant.behavior-spec-role-unbound",
+        ),
+        (
+            list(getattr(behavior_spec, "action_contract_refs", []) or []),
+            reference_context.action_names,
+            "participant.behavior-spec-action-unbound",
+        ),
+        (
+            list(getattr(behavior_spec, "observation_boundary_refs", []) or []),
+            reference_context.observation_boundary_names,
+            "participant.behavior-spec-observation-boundary-unbound",
+        ),
+        (
+            list(getattr(behavior_spec, "outcome_interpretation_rule_refs", []) or []),
+            reference_context.outcome_rule_names,
+            "participant.behavior-spec-outcome-rule-unbound",
+        ),
+    )
+    issues: list[ParticipantBehaviorIssue] = []
+    for refs, known_names, code in reference_sets:
+        issues.extend(
+            _behavior_specification_named_ref_issues(
+                spec_name=spec_name,
+                refs=refs,
+                known_names=known_names,
+                code=code,
+                is_unresolved=is_unresolved,
+            )
+        )
+    return issues
+
+
+def _behavior_specification_feature_issues(
+    *,
+    spec_name: str,
+    behavior_spec: object,
+    is_unresolved: Callable[[object], bool],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    for feature_ref in getattr(behavior_spec, "backend_feature_support_refs", []) or []:
+        if is_unresolved(feature_ref):
+            continue
+        feature_issue = _backend_feature_support_issue(spec_name=spec_name, feature_ref=feature_ref)
+        if feature_issue is not None:
+            issues.append(feature_issue)
+    return issues
+
+
+def _behavior_specification_evidence_contract_issues(
+    *,
+    spec_name: str,
+    behavior_spec: object,
+    is_unresolved: Callable[[object], bool],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    for evidence_contract_ref in getattr(behavior_spec, "evidence_contract_refs", []) or []:
+        if is_unresolved(evidence_contract_ref):
+            continue
+        evidence_issue = _evidence_contract_issue(
+            spec_name=spec_name,
+            evidence_contract_ref=evidence_contract_ref,
+        )
+        if evidence_issue is not None:
+            issues.append(evidence_issue)
+    return issues
+
+
+def _behavior_specification_vocabulary_issues(
+    *,
+    spec_name: str,
+    behavior_spec: object,
+    is_unresolved: Callable[[object], bool],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    mode_issue = _behavior_mode_issue(
+        spec_name=spec_name,
+        behavior_mode=getattr(behavior_spec, "behavior_mode", None),
+    )
+    if mode_issue is not None:
+        issues.append(mode_issue)
+    issues.extend(
+        _behavior_specification_feature_issues(
+            spec_name=spec_name,
+            behavior_spec=behavior_spec,
+            is_unresolved=is_unresolved,
+        )
+    )
+    issues.extend(
+        _behavior_specification_evidence_contract_issues(
+            spec_name=spec_name,
+            behavior_spec=behavior_spec,
+            is_unresolved=is_unresolved,
+        )
+    )
+    return issues
+
+
+def _behavior_specification_issues(
+    *,
+    behavior_specifications: Mapping[str, object],
+    agents_by_name: Mapping[str, object],
+    participant_roles: set[str],
+    action_contracts: Mapping[str, object],
+    observation_boundaries: Mapping[str, object],
+    outcome_interpretation_rules: Mapping[str, object],
+    is_unresolved: Callable[[object], bool],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    reference_context = _BehaviorSpecificationReferenceContext(
+        participant_names={str(name) for name in agents_by_name},
+        participant_roles=participant_roles,
+        action_names={str(name) for name in action_contracts},
+        observation_boundary_names={str(name) for name in observation_boundaries},
+        outcome_rule_names={str(name) for name in outcome_interpretation_rules},
+    )
+    for spec_name, behavior_spec in behavior_specifications.items():
+        normalized_spec_name = str(spec_name)
+        issues.extend(
+            _behavior_specification_reference_issues(
+                spec_name=normalized_spec_name,
+                behavior_spec=behavior_spec,
+                reference_context=reference_context,
+                is_unresolved=is_unresolved,
+            )
+        )
+        issues.extend(
+            _behavior_specification_vocabulary_issues(
+                spec_name=normalized_spec_name,
+                behavior_spec=behavior_spec,
+                is_unresolved=is_unresolved,
+            )
+        )
+    return issues
+
+
 def analyze_participant_behavior(
     *,
     agents_by_name: Mapping[str, object],
     action_contracts: Mapping[str, object],
     observation_boundaries: Mapping[str, object],
+    outcome_interpretation_rules: Mapping[str, object],
+    behavior_specifications: Mapping[str, object],
+    participant_roles: set[str],
     is_unresolved: Callable[[object], bool],
 ) -> ParticipantBehaviorAnalysis:
     """Validate and normalize participant action/observation references.
@@ -295,6 +552,17 @@ def analyze_participant_behavior(
     issues.extend(
         _visibility_issues_for_observation_boundaries(
             observation_boundaries=observation_boundaries,
+            is_unresolved=is_unresolved,
+        )
+    )
+    issues.extend(
+        _behavior_specification_issues(
+            behavior_specifications=behavior_specifications,
+            agents_by_name=agents_by_name,
+            participant_roles=participant_roles,
+            action_contracts=action_contracts,
+            observation_boundaries=observation_boundaries,
+            outcome_interpretation_rules=outcome_interpretation_rules,
             is_unresolved=is_unresolved,
         )
     )

@@ -258,6 +258,26 @@ def _namespace_payload(
             agent["operating_scope"] = [
                 _maybe_rename(name, symbols["named"]) for name in agent.get("operating_scope", [])
             ]
+    for behavior_spec in namespaced.get("behavior_specifications", {}).values():
+        if isinstance(behavior_spec, dict):
+            behavior_spec["participant_refs"] = [
+                _maybe_rename(name, symbols["agents"]) for name in behavior_spec.get("participant_refs", [])
+            ]
+            behavior_spec["action_contract_refs"] = [
+                _maybe_rename(name, symbols["action_contracts"])
+                for name in behavior_spec.get("action_contract_refs", [])
+            ]
+            behavior_spec["observation_boundary_refs"] = [
+                _maybe_rename(name, symbols["observation_boundaries"])
+                for name in behavior_spec.get("observation_boundary_refs", [])
+            ]
+            behavior_spec["outcome_interpretation_rule_refs"] = [
+                _maybe_rename(name, symbols["outcome_interpretation_rules"])
+                for name in behavior_spec.get("outcome_interpretation_rule_refs", [])
+            ]
+            behavior_spec["authority_scope_refs"] = [
+                _maybe_rename(name, symbols["named"]) for name in behavior_spec.get("authority_scope_refs", [])
+            ]
     for requirement in namespaced.get("evidence_requirements", {}).values():
         if isinstance(requirement, dict):
             _rewrite_evidence_requirement(requirement, symbols)
