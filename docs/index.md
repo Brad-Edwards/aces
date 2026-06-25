@@ -173,6 +173,7 @@ decisions/issue-248-sem-216-boundary-semantics-preflight
 decisions/sem-213-temporal-participant-preflight
 decisions/issue-508-related-work-comparison-preflight
 decisions/issue-42-validator-package-split-preflight
+decisions/issue-567-pr-title-guard-preflight
 ```
 
 ```{toctree}
