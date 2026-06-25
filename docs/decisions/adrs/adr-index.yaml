@@ -272,3 +272,6 @@ adrs:
       - date: 2026-06-23
         ref: "#335"
         summary: "Recorded SEM-225 run-level augmentation disclosure implementation coverage."
+  - id: ADR-068
+    path: docs/decisions/adrs/adr-068-experiment-trials-replication-and-replay-claims.md
+    pin: 2cd46b67fb86a8d5d5c089e2b2f492a94e6141470706f33a2bb14d7268c49d02

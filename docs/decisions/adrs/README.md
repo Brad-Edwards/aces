@@ -112,6 +112,7 @@ adr-064-experiment-evidence-and-measure-contract-boundary
 adr-065-experiment-run-provenance-contract-boundary
 adr-066-observability-evidence-plane-separation
 adr-067-participant-behavior-model
+adr-068-experiment-trials-replication-and-replay-claims
 ```
 
 | ADR | Title | Status | Date |
@@ -184,3 +185,4 @@ adr-067-participant-behavior-model
 | [065](adr-065-experiment-run-provenance-contract-boundary.md) | Experiment Run Provenance Contract Boundary | accepted | 2026-06-22 |
 | [066](adr-066-observability-evidence-plane-separation.md) | Observability and Evidence Plane Separation | accepted | 2026-06-23 |
 | [067](adr-067-participant-behavior-model.md) | Participant Behavior Model | proposed | 2026-06-23 |
+| [068](adr-068-experiment-trials-replication-and-replay-claims.md) | Experiment Trials, Replication, and Replay Claims | accepted | 2026-06-25 |
