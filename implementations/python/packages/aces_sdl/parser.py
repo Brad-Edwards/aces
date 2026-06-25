@@ -67,7 +67,8 @@ _NESTED_HASHMAP_FIELDS = frozenset(
         "entities",  # Entity.entities (dict[str, Entity])
         "events",  # Script.events (dict[str, int])
         "steps",  # Workflow.steps (dict[str, WorkflowStep])
-        "extensions",  # ParticipantBehaviorSpecification.extensions preserves governed x-owner:term keys
+        # ParticipantBehaviorSpecification.extensions preserves governed x-owner:term keys.
+        "extensions",
     }
 )
 

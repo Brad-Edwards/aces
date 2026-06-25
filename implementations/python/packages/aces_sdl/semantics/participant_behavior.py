@@ -319,6 +319,147 @@ def _evidence_contract_issue(*, spec_name: str, evidence_contract_ref: object) -
     )
 
 
+def _behavior_specification_named_ref_issues(
+    *,
+    spec_name: str,
+    refs: list[object],
+    known_names: set[str],
+    code: str,
+    is_unresolved: Callable[[object], bool],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    for ref in refs:
+        if is_unresolved(ref):
+            continue
+        if str(ref) not in known_names:
+            issues.append(
+                ParticipantBehaviorIssue(
+                    code=code,
+                    participant_name="",
+                    spec_name=spec_name,
+                    ref=str(ref),
+                )
+            )
+    return issues
+
+
+def _behavior_specification_reference_issues(
+    *,
+    spec_name: str,
+    behavior_spec: object,
+    participant_names: set[str],
+    participant_roles: set[str],
+    action_names: set[str],
+    observation_boundary_names: set[str],
+    outcome_rule_names: set[str],
+    is_unresolved: Callable[[object], bool],
+) -> list[ParticipantBehaviorIssue]:
+    reference_sets = (
+        (
+            list(getattr(behavior_spec, "participant_refs", []) or []),
+            participant_names,
+            "participant.behavior-spec-participant-unbound",
+        ),
+        (
+            list(getattr(behavior_spec, "participant_role_refs", []) or []),
+            participant_roles,
+            "participant.behavior-spec-role-unbound",
+        ),
+        (
+            list(getattr(behavior_spec, "action_contract_refs", []) or []),
+            action_names,
+            "participant.behavior-spec-action-unbound",
+        ),
+        (
+            list(getattr(behavior_spec, "observation_boundary_refs", []) or []),
+            observation_boundary_names,
+            "participant.behavior-spec-observation-boundary-unbound",
+        ),
+        (
+            list(getattr(behavior_spec, "outcome_interpretation_rule_refs", []) or []),
+            outcome_rule_names,
+            "participant.behavior-spec-outcome-rule-unbound",
+        ),
+    )
+    issues: list[ParticipantBehaviorIssue] = []
+    for refs, known_names, code in reference_sets:
+        issues.extend(
+            _behavior_specification_named_ref_issues(
+                spec_name=spec_name,
+                refs=refs,
+                known_names=known_names,
+                code=code,
+                is_unresolved=is_unresolved,
+            )
+        )
+    return issues
+
+
+def _behavior_specification_feature_issues(
+    *,
+    spec_name: str,
+    behavior_spec: object,
+    is_unresolved: Callable[[object], bool],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    for feature_ref in getattr(behavior_spec, "backend_feature_support_refs", []) or []:
+        if is_unresolved(feature_ref):
+            continue
+        feature_issue = _backend_feature_support_issue(spec_name=spec_name, feature_ref=feature_ref)
+        if feature_issue is not None:
+            issues.append(feature_issue)
+    return issues
+
+
+def _behavior_specification_evidence_contract_issues(
+    *,
+    spec_name: str,
+    behavior_spec: object,
+    is_unresolved: Callable[[object], bool],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    for evidence_contract_ref in getattr(behavior_spec, "evidence_contract_refs", []) or []:
+        if is_unresolved(evidence_contract_ref):
+            continue
+        evidence_issue = _evidence_contract_issue(
+            spec_name=spec_name,
+            evidence_contract_ref=evidence_contract_ref,
+        )
+        if evidence_issue is not None:
+            issues.append(evidence_issue)
+    return issues
+
+
+def _behavior_specification_vocabulary_issues(
+    *,
+    spec_name: str,
+    behavior_spec: object,
+    is_unresolved: Callable[[object], bool],
+) -> list[ParticipantBehaviorIssue]:
+    issues: list[ParticipantBehaviorIssue] = []
+    mode_issue = _behavior_mode_issue(
+        spec_name=spec_name,
+        behavior_mode=getattr(behavior_spec, "behavior_mode", None),
+    )
+    if mode_issue is not None:
+        issues.append(mode_issue)
+    issues.extend(
+        _behavior_specification_feature_issues(
+            spec_name=spec_name,
+            behavior_spec=behavior_spec,
+            is_unresolved=is_unresolved,
+        )
+    )
+    issues.extend(
+        _behavior_specification_evidence_contract_issues(
+            spec_name=spec_name,
+            behavior_spec=behavior_spec,
+            is_unresolved=is_unresolved,
+        )
+    )
+    return issues
+
+
 def _behavior_specification_issues(
     *,
     behavior_specifications: Mapping[str, object],
@@ -330,88 +471,31 @@ def _behavior_specification_issues(
     is_unresolved: Callable[[object], bool],
 ) -> list[ParticipantBehaviorIssue]:
     issues: list[ParticipantBehaviorIssue] = []
+    participant_names = {str(name) for name in agents_by_name}
+    action_names = {str(name) for name in action_contracts}
+    observation_boundary_names = {str(name) for name in observation_boundaries}
+    outcome_rule_names = {str(name) for name in outcome_interpretation_rules}
     for spec_name, behavior_spec in behavior_specifications.items():
-        for participant_ref in getattr(behavior_spec, "participant_refs", []) or []:
-            if is_unresolved(participant_ref):
-                continue
-            if participant_ref not in agents_by_name:
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.behavior-spec-participant-unbound",
-                        participant_name="",
-                        spec_name=str(spec_name),
-                        ref=str(participant_ref),
-                    )
-                )
-        for role_ref in getattr(behavior_spec, "participant_role_refs", []) or []:
-            if is_unresolved(role_ref):
-                continue
-            if str(role_ref) not in participant_roles:
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.behavior-spec-role-unbound",
-                        participant_name="",
-                        spec_name=str(spec_name),
-                        ref=str(role_ref),
-                    )
-                )
-        for action_ref in getattr(behavior_spec, "action_contract_refs", []) or []:
-            if is_unresolved(action_ref):
-                continue
-            if action_ref not in action_contracts:
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.behavior-spec-action-unbound",
-                        participant_name="",
-                        spec_name=str(spec_name),
-                        ref=str(action_ref),
-                    )
-                )
-        for boundary_ref in getattr(behavior_spec, "observation_boundary_refs", []) or []:
-            if is_unresolved(boundary_ref):
-                continue
-            if boundary_ref not in observation_boundaries:
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.behavior-spec-observation-boundary-unbound",
-                        participant_name="",
-                        spec_name=str(spec_name),
-                        ref=str(boundary_ref),
-                    )
-                )
-        for rule_ref in getattr(behavior_spec, "outcome_interpretation_rule_refs", []) or []:
-            if is_unresolved(rule_ref):
-                continue
-            if rule_ref not in outcome_interpretation_rules:
-                issues.append(
-                    ParticipantBehaviorIssue(
-                        code="participant.behavior-spec-outcome-rule-unbound",
-                        participant_name="",
-                        spec_name=str(spec_name),
-                        ref=str(rule_ref),
-                    )
-                )
-        mode_issue = _behavior_mode_issue(
-            spec_name=str(spec_name),
-            behavior_mode=getattr(behavior_spec, "behavior_mode", None),
-        )
-        if mode_issue is not None:
-            issues.append(mode_issue)
-        for feature_ref in getattr(behavior_spec, "backend_feature_support_refs", []) or []:
-            if is_unresolved(feature_ref):
-                continue
-            feature_issue = _backend_feature_support_issue(spec_name=str(spec_name), feature_ref=feature_ref)
-            if feature_issue is not None:
-                issues.append(feature_issue)
-        for evidence_contract_ref in getattr(behavior_spec, "evidence_contract_refs", []) or []:
-            if is_unresolved(evidence_contract_ref):
-                continue
-            evidence_issue = _evidence_contract_issue(
-                spec_name=str(spec_name),
-                evidence_contract_ref=evidence_contract_ref,
+        normalized_spec_name = str(spec_name)
+        issues.extend(
+            _behavior_specification_reference_issues(
+                spec_name=normalized_spec_name,
+                behavior_spec=behavior_spec,
+                participant_names=participant_names,
+                participant_roles=participant_roles,
+                action_names=action_names,
+                observation_boundary_names=observation_boundary_names,
+                outcome_rule_names=outcome_rule_names,
+                is_unresolved=is_unresolved,
             )
-            if evidence_issue is not None:
-                issues.append(evidence_issue)
+        )
+        issues.extend(
+            _behavior_specification_vocabulary_issues(
+                spec_name=normalized_spec_name,
+                behavior_spec=behavior_spec,
+                is_unresolved=is_unresolved,
+            )
+        )
     return issues
 
 
