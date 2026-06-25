@@ -29,8 +29,19 @@ _CONCRETE = {"name": "concrete-scenario", "description": "a fully concrete scena
 _EMBEDDED_VAR = {"name": "concrete-scenario", "description": "deploy ${region} cluster"}
 _FULL_VAR = {"name": "concrete-scenario", "description": "${environment}"}
 _COUNT_VAR = {"name": "concrete-scenario", "infrastructure": {"net": {"count": "${replicas}"}}}
+_BEHAVIOR_SPEC_EXTENSION_VAR = {
+    "name": "concrete-scenario",
+    "behavior_specifications": {
+        "blue-response": {
+            "semantic_version": "1.0.0",
+            "participant_refs": ["blue-operator"],
+            "action_contract_refs": ["triage"],
+            "extensions": {"x-acme:note": {"nested": ["ready", "${secret}"]}},
+        }
+    },
+}
 
-_VAR_PAYLOADS = [_EMBEDDED_VAR, _FULL_VAR, _COUNT_VAR]
+_VAR_PAYLOADS = [_EMBEDDED_VAR, _FULL_VAR, _COUNT_VAR, _BEHAVIOR_SPEC_EXTENSION_VAR]
 
 
 def _load(path: Path) -> dict:
@@ -45,10 +56,11 @@ _PATTERN_IN_JSON = json.dumps(VARIABLE_TOKEN_PATTERN)[1:-1]
 # --- Model boundary -------------------------------------------------------
 
 
-def test_authoring_model_accepts_unresolved_variables() -> None:
+@pytest.mark.parametrize("payload", _VAR_PAYLOADS)
+def test_authoring_model_accepts_unresolved_variables(payload: dict) -> None:
     """No regression: the authoring model still accepts ``${var}`` placeholders."""
-    for payload in _VAR_PAYLOADS:
-        Scenario.model_validate(payload)  # must not raise
+    scenario = Scenario.model_validate(payload)
+    assert scenario.name == payload["name"]
 
 
 def test_instantiated_model_accepts_concrete_scenario() -> None:

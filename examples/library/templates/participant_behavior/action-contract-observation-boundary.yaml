@@ -2,11 +2,11 @@ template: aces-library-template
 version: 1
 id: action-contract-observation-boundary
 surface: participant_behavior
-requirement_refs: [AUT-806]
+requirement_refs: [AUT-806, ACT-606]
 source_refs:
   - docs/explain/sdl/validation.md
   - implementations/python/tests/test_sem_208_participant_behavior.py
-summary: Participant behavior template binding an agent action to an action contract and observation boundary.
+summary: Participant behavior template binding an agent action to an action contract, observation boundary, and behavior specification.
 body:
   name: library-participant-behavior-template
   description: Participant behavior template with governed action and observation semantics.
@@ -116,3 +116,17 @@ body:
       entity: red-team
       actions: [scan]
       observation-boundaries: [red-view]
+  behavior-specifications:
+    red-scan-behavior:
+      semantic-version: 1.0.0
+      lifecycle-state: active
+      participant-refs: [red-agent]
+      participant-role-refs: [red]
+      action-contract-refs: [scan]
+      observation-boundary-refs: [red-view]
+      authority-scope-refs: [nodes.web.services.http]
+      behavior-mode: policy-directed
+      realization-profile-ref: participant-implementation-manifest:red-agent
+      backend-feature-support-refs: [behavior_history]
+      evidence-contract-refs: [participant-behavior-history-event-stream-v1]
+      extension-policy: governed-extension

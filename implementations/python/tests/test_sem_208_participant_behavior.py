@@ -15,7 +15,7 @@ from aces_processor.models import (
     iter_participant_behavior_history_violations,
 )
 from aces_sdl._errors import SDLParseError, SDLValidationError
-from aces_sdl.parser import parse_sdl
+from aces_sdl.parser import parse_sdl, parse_sdl_file
 from aces_sdl.participant_behavior import ParticipantInteractionClass
 
 T0 = "2026-05-18T18:30:00Z"
@@ -238,6 +238,297 @@ def test_participant_behavior_contracts_parse_and_validate():
     assert scenario.observation_boundaries["red-view"].projection_basis.startswith("participant-local")
     assert scenario.observation_boundaries["red-view"].view_rules[1].disposition.value == "hidden"
     assert scenario.agents["red-agent"].observation_boundaries == ["red-view"]
+
+
+def test_behavior_specifications_parse_validate_and_compile():
+    scenario = parse_sdl(
+        _scenario_yaml()
+        + textwrap.dedent(
+            """
+        behavior-specifications:
+          red-scan-behavior:
+            semantic-version: 1.0.0
+            lifecycle-state: active
+            participant-refs: [red-agent]
+            participant-role-refs: [red]
+            action-contract-refs: [scan]
+            observation-boundary-refs: [red-view]
+            authority-scope-refs: [nodes.web.services.http]
+            behavior-mode: policy-directed
+            realization-profile-ref: participant-implementation-manifest:reference-red-agent
+            backend-feature-support-refs: [action_contracts]
+            evidence-contract-refs: [participant-behavior-history-event-stream-v1]
+            extension-policy: governed-extension
+            extensions:
+              x-acme:review-note:
+                owner: acme
+                note: reference-only extension
+        """
+        )
+    )
+
+    spec = scenario.behavior_specifications["red-scan-behavior"]
+    assert spec.semantic_version == "1.0.0"
+    assert spec.participant_refs == ["red-agent"]
+    assert spec.participant_role_refs == ["red"]
+    assert spec.behavior_mode == "policy-directed"
+    assert spec.extensions["x-acme:review-note"]["note"] == "reference-only extension"
+
+    model = compile_runtime_model(scenario)
+    compiled = model.behavior_specifications["participant.behavior-specification.red-scan-behavior"]
+    assert compiled.participant_addresses == (PARTICIPANT_ADDRESS,)
+    assert compiled.action_contract_addresses == (ACTION_ADDRESS,)
+    assert compiled.observation_boundary_addresses == (OBSERVATION_ADDRESS,)
+    assert compiled.authority_scope_refs == ("nodes.web.services.http",)
+    assert compiled.behavior_mode == "policy-directed"
+    assert compiled.spec["participant_refs"] == ["red-agent"]
+
+
+def test_behavior_specification_refs_are_namespaced_during_module_composition(tmp_path):
+    module = tmp_path / "shared.yaml"
+    module.write_text(
+        textwrap.dedent(
+            """
+            name: shared
+            module:
+              id: acme/shared
+              version: 1.0.0
+              exports:
+                entities: [red-team]
+                agents: [red-agent]
+                action-contracts: [scan]
+                observation-boundaries: [red-view]
+                behavior-specifications: [red-scan-behavior]
+            entities:
+              red-team:
+                role: red
+            agents:
+              red-agent:
+                entity: red-team
+            action-contracts:
+              scan:
+                semantic-version: 1.0.0
+                lifecycle-state: active
+                behavioral-granularity: atomic
+                procedure-basis: scan contract
+                realization-profile: backend-declared
+                fidelity-claim: records scan intent
+                preconditions:
+                  - precondition-id: authority-in-scope
+                    precondition-class: authority
+                    description: participant has authority
+                effects:
+                  - effect-id: no-effect
+                    effect-class: no_effect
+                    description: composition-only contract
+                failure-classes: [unknown]
+            observation-boundaries:
+              red-view:
+                projection-basis: participant view
+                evidence-refs: [evidence.scan-output]
+                redaction-policy: no hidden refs are disclosed
+                latency-profile: immediate
+            behavior-specifications:
+              red-scan-behavior:
+                semantic-version: 1.0.0
+                lifecycle-state: active
+                participant-refs: [red-agent]
+                action-contract-refs: [scan]
+                observation-boundary-refs: [red-view]
+                extension-policy: governed-extension
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    root = tmp_path / "root.yaml"
+    root.write_text(
+        textwrap.dedent(
+            """
+            name: root
+            imports:
+              - source: local:shared.yaml
+                namespace: shared
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+    scenario = parse_sdl_file(root)
+    spec = scenario.behavior_specifications["shared.red-scan-behavior"]
+    assert spec.participant_refs == ["shared.red-agent"]
+    assert spec.action_contract_refs == ["shared.scan"]
+    assert spec.observation_boundary_refs == ["shared.red-view"]
+
+    compiled = compile_runtime_model(scenario).behavior_specifications[
+        "participant.behavior-specification.shared.red-scan-behavior"
+    ]
+    assert compiled.participant_addresses == ("participant.behavior.shared.red-agent",)
+    assert compiled.action_contract_addresses == ("participant.action-contract.shared.scan",)
+    assert compiled.observation_boundary_addresses == ("participant.observation-boundary.shared.red-view",)
+
+
+def test_behavior_specification_optional_fields_compile_empty_when_omitted():
+    scenario = parse_sdl(
+        _scenario_yaml()
+        + textwrap.dedent(
+            """
+        behavior-specifications:
+          red-scan-behavior:
+            semantic-version: 1.0.0
+            lifecycle-state: active
+            participant-refs: [red-agent]
+            action-contract-refs: [scan]
+            extension-policy: governed-extension
+        """
+        )
+    )
+
+    compiled = compile_runtime_model(scenario).behavior_specifications[
+        "participant.behavior-specification.red-scan-behavior"
+    ]
+    assert compiled.behavior_mode == ""
+    assert compiled.realization_profile_ref == ""
+
+
+@pytest.mark.parametrize(
+    ("field", "replacement", "expected"),
+    [
+        (
+            "participant-refs: [red-agent]",
+            "participant-refs: [blue-agent]",
+            "Behavior specification 'red-scan-behavior' participant_ref 'blue-agent' "
+            "does not reference a declared agent",
+        ),
+        (
+            "action-contract-refs: [scan]",
+            "action-contract-refs: [exploit]",
+            "Behavior specification 'red-scan-behavior' action_contract_ref 'exploit' "
+            "does not reference a declared action_contract",
+        ),
+        (
+            "observation-boundary-refs: [red-view]",
+            "observation-boundary-refs: [leaked-view]",
+            "Behavior specification 'red-scan-behavior' observation_boundary_ref 'leaked-view' "
+            "does not reference a declared observation_boundary",
+        ),
+        (
+            "authority-scope-refs: [nodes.web.services.http]",
+            "authority-scope-refs: [nodes.missing.services.http]",
+            "Behavior specification 'red-scan-behavior' authority_scope_ref 'nodes.missing.services.http' "
+            "does not reference any defined targetable element",
+        ),
+    ],
+)
+def test_behavior_specification_references_fail_closed(field: str, replacement: str, expected: str):
+    behavior_spec = textwrap.dedent(
+        """
+        behavior-specifications:
+          red-scan-behavior:
+            semantic-version: 1.0.0
+            lifecycle-state: active
+            participant-refs: [red-agent]
+            participant-role-refs: [red]
+            action-contract-refs: [scan]
+            observation-boundary-refs: [red-view]
+            authority-scope-refs: [nodes.web.services.http]
+            behavior-mode: policy-directed
+            extension-policy: governed-extension
+        """
+    )
+    scenario = _scenario_yaml() + behavior_spec.replace(field, replacement)
+
+    with pytest.raises(SDLValidationError) as excinfo:
+        parse_sdl(scenario)
+
+    assert expected in str(excinfo.value)
+
+
+def test_behavior_specification_behavior_mode_uses_governed_vocabulary():
+    scenario = _scenario_yaml() + textwrap.dedent(
+        """
+        behavior-specifications:
+          red-scan-behavior:
+            semantic-version: 1.0.0
+            lifecycle-state: active
+            participant-refs: [red-agent]
+            action-contract-refs: [scan]
+            behavior-mode: supervised
+            extension-policy: governed-extension
+        """
+    )
+
+    with pytest.raises(SDLValidationError) as excinfo:
+        parse_sdl(scenario)
+
+    assert "participant-decision-surface-modes" in str(excinfo.value)
+
+
+def test_behavior_specification_backend_feature_refs_use_governed_vocabulary():
+    scenario = _scenario_yaml() + textwrap.dedent(
+        """
+        behavior-specifications:
+          red-scan-behavior:
+            semantic-version: 1.0.0
+            lifecycle-state: active
+            participant-refs: [red-agent]
+            action-contract-refs: [scan]
+            backend-feature-support-refs: [participant-behavior-history]
+            extension-policy: governed-extension
+        """
+    )
+
+    with pytest.raises(SDLValidationError) as excinfo:
+        parse_sdl(scenario)
+
+    assert (
+        "backend_feature_support_ref 'participant-behavior-history' is not a governed participant runtime feature"
+        in str(excinfo.value)
+    )
+
+
+def test_behavior_specification_evidence_contract_refs_use_published_contract_ids():
+    scenario = _scenario_yaml() + textwrap.dedent(
+        """
+        behavior-specifications:
+          red-scan-behavior:
+            semantic-version: 1.0.0
+            lifecycle-state: active
+            participant-refs: [red-agent]
+            action-contract-refs: [scan]
+            evidence-contract-refs: [raw-terminal-log-v1]
+            extension-policy: governed-extension
+        """
+    )
+
+    with pytest.raises(SDLValidationError) as excinfo:
+        parse_sdl(scenario)
+
+    assert (
+        "Behavior specification 'red-scan-behavior' evidence_contract_ref 'raw-terminal-log-v1' "
+        "does not reference a published contract"
+    ) in str(excinfo.value)
+
+
+def test_behavior_specification_extension_keys_are_governed():
+    scenario = _scenario_yaml() + textwrap.dedent(
+        """
+        behavior-specifications:
+          red-scan-behavior:
+            semantic-version: 1.0.0
+            lifecycle-state: active
+            participant-refs: [red-agent]
+            action-contract-refs: [scan]
+            extension-policy: governed-extension
+            extensions:
+              custom-mode:
+                note: ungoverned
+        """
+    )
+
+    with pytest.raises(SDLParseError) as excinfo:
+        parse_sdl(scenario)
+
+    assert "behavior specification extension keys must match" in str(excinfo.value)
 
 
 def test_agent_actions_must_resolve_to_governed_action_contracts():

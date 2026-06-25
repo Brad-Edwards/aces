@@ -35,7 +35,7 @@ surfaces:
       - id: workflow-explicit-control-graph
         path: examples/library/patterns/workflow-explicit-control-graph.yaml
   participant_behavior:
-    summary: Participant action contracts, observation boundaries, and agent bindings.
+    summary: Participant action contracts, observation boundaries, behavior specifications, and agent bindings.
     worked_examples:
       - id: sem-208-participant-behavior
         path: implementations/python/tests/test_sem_208_participant_behavior.py

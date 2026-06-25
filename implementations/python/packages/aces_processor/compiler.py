@@ -49,6 +49,7 @@ from .models import (
     ObjectiveWindowReferenceRuntime,
     ParticipantActionContractRuntime,
     ParticipantBehaviorRuntime,
+    ParticipantBehaviorSpecificationRuntime,
     ParticipantObservationBoundaryRuntime,
     ParticipantOutcomeInterpretationRuleRuntime,
     RuntimeModel,
@@ -234,6 +235,10 @@ def _outcome_interpretation_rule_address(name: str) -> str:
 
 def _participant_behavior_address(name: str) -> str:
     return _address("participant", "behavior", name)
+
+
+def _behavior_specification_address(name: str) -> str:
+    return _address("participant", "behavior-specification", name)
 
 
 def _condition_binding_address(node_name: str, condition_name: str) -> str:
@@ -1254,6 +1259,109 @@ def _compile_participant_behaviors(
             spec={"agent": _dump(agent), "interpretation_mode": "role-neutral-projection"},
         )
     return participant_behaviors
+
+
+def _resolve_behavior_spec_refs(
+    *,
+    refs: list[str],
+    declared: Mapping[str, object],
+    address_for_ref: Callable[[str], str],
+    owner_address: str,
+    diagnostic_code: str,
+    diagnostic_label: str,
+    diagnostics: list[Diagnostic],
+) -> tuple[str, ...]:
+    addresses: list[str] = []
+    for ref in dict.fromkeys(refs):
+        if ref in declared:
+            addresses.append(address_for_ref(ref))
+            continue
+        if ref:
+            diagnostics.append(
+                Diagnostic(
+                    code=diagnostic_code,
+                    domain="participant",
+                    address=owner_address,
+                    message=f"Reference '{ref}' does not resolve to a declared {diagnostic_label}.",
+                )
+            )
+    return tuple(addresses)
+
+
+def _compile_behavior_specifications(
+    scenario: InstantiatedScenario,
+    diagnostics: list[Diagnostic],
+) -> dict[str, ParticipantBehaviorSpecificationRuntime]:
+    behavior_specifications: dict[str, ParticipantBehaviorSpecificationRuntime] = {}
+    for name, behavior_spec in scenario.behavior_specifications.items():
+        address = _behavior_specification_address(name)
+        spec = _dump(behavior_spec)
+        participant_addresses = _resolve_behavior_spec_refs(
+            refs=list(behavior_spec.participant_refs),
+            declared=scenario.agents,
+            address_for_ref=_participant_behavior_address,
+            owner_address=address,
+            diagnostic_code="participant.behavior-specification-participant-ref-unbound",
+            diagnostic_label="agent",
+            diagnostics=diagnostics,
+        )
+        action_addresses = _resolve_behavior_spec_refs(
+            refs=list(behavior_spec.action_contract_refs),
+            declared=scenario.action_contracts,
+            address_for_ref=_action_contract_address,
+            owner_address=address,
+            diagnostic_code="participant.behavior-specification-action-contract-ref-unbound",
+            diagnostic_label="participant action contract",
+            diagnostics=diagnostics,
+        )
+        observation_addresses = _resolve_behavior_spec_refs(
+            refs=list(behavior_spec.observation_boundary_refs),
+            declared=scenario.observation_boundaries,
+            address_for_ref=_observation_boundary_address,
+            owner_address=address,
+            diagnostic_code="participant.behavior-specification-observation-boundary-ref-unbound",
+            diagnostic_label="participant observation boundary",
+            diagnostics=diagnostics,
+        )
+        outcome_rule_addresses = _resolve_behavior_spec_refs(
+            refs=list(behavior_spec.outcome_interpretation_rule_refs),
+            declared=scenario.outcome_interpretation_rules,
+            address_for_ref=_outcome_interpretation_rule_address,
+            owner_address=address,
+            diagnostic_code="participant.behavior-specification-outcome-rule-ref-unbound",
+            diagnostic_label="participant outcome interpretation rule",
+            diagnostics=diagnostics,
+        )
+        dependencies = _dedupe(
+            [
+                *participant_addresses,
+                *action_addresses,
+                *observation_addresses,
+                *outcome_rule_addresses,
+            ]
+        )
+        behavior_specifications[address] = ParticipantBehaviorSpecificationRuntime(
+            address=address,
+            name=name,
+            spec_name=name,
+            semantic_version=str(behavior_spec.semantic_version),
+            lifecycle_state=str(getattr(behavior_spec.lifecycle_state, "value", behavior_spec.lifecycle_state)),
+            participant_addresses=participant_addresses,
+            participant_role_refs=tuple(behavior_spec.participant_role_refs),
+            action_contract_addresses=action_addresses,
+            observation_boundary_addresses=observation_addresses,
+            outcome_interpretation_rule_addresses=outcome_rule_addresses,
+            authority_scope_refs=tuple(behavior_spec.authority_scope_refs),
+            behavior_mode=str(behavior_spec.behavior_mode or ""),
+            realization_profile_ref=str(behavior_spec.realization_profile_ref or ""),
+            backend_feature_support_refs=tuple(behavior_spec.backend_feature_support_refs),
+            evidence_contract_refs=tuple(behavior_spec.evidence_contract_refs),
+            extension_policy=str(behavior_spec.extension_policy),
+            extension_keys=tuple(sorted(behavior_spec.extensions)),
+            refresh_dependencies=dependencies,
+            spec=spec,
+        )
+    return behavior_specifications
 
 
 def _compile_events(
@@ -2292,6 +2400,7 @@ def compile_runtime_model(scenario: Scenario | InstantiatedScenario) -> RuntimeM
     observation_boundaries = _compile_observation_boundaries(scenario)
     outcome_interpretation_rules = _compile_outcome_interpretation_rules(scenario)
     participant_behaviors = _compile_participant_behaviors(scenario, diagnostics)
+    behavior_specifications = _compile_behavior_specifications(scenario, diagnostics)
     events = _compile_events(scenario, condition_bindings, injects, inject_bindings, diagnostics)
     scripts = _compile_scripts(scenario, diagnostics)
     stories = _compile_stories(scenario, diagnostics)
@@ -2325,6 +2434,7 @@ def compile_runtime_model(scenario: Scenario | InstantiatedScenario) -> RuntimeM
         observation_boundaries=observation_boundaries,
         outcome_interpretation_rules=outcome_interpretation_rules,
         participant_behaviors=participant_behaviors,
+        behavior_specifications=behavior_specifications,
         events=events,
         scripts=scripts,
         stories=stories,

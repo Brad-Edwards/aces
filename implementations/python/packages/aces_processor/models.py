@@ -582,6 +582,27 @@ class ParticipantBehaviorRuntime(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class ParticipantBehaviorSpecificationRuntime(ResolvedResource):
+    """Compiled first-class participant behavior specification aggregate."""
+
+    spec_name: str = ""
+    semantic_version: str = ""
+    lifecycle_state: str = ""
+    participant_addresses: tuple[str, ...] = ()
+    participant_role_refs: tuple[str, ...] = ()
+    action_contract_addresses: tuple[str, ...] = ()
+    observation_boundary_addresses: tuple[str, ...] = ()
+    outcome_interpretation_rule_addresses: tuple[str, ...] = ()
+    authority_scope_refs: tuple[str, ...] = ()
+    behavior_mode: str = ""
+    realization_profile_ref: str = ""
+    backend_feature_support_refs: tuple[str, ...] = ()
+    evidence_contract_refs: tuple[str, ...] = ()
+    extension_policy: str = ""
+    extension_keys: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class EventRuntime(ResolvedResource):
     """Resolved orchestration event."""
 
@@ -4247,6 +4268,7 @@ class RuntimeModel:
     observation_boundaries: dict[str, ParticipantObservationBoundaryRuntime] = field(default_factory=dict)
     outcome_interpretation_rules: dict[str, ParticipantOutcomeInterpretationRuleRuntime] = field(default_factory=dict)
     participant_behaviors: dict[str, ParticipantBehaviorRuntime] = field(default_factory=dict)
+    behavior_specifications: dict[str, ParticipantBehaviorSpecificationRuntime] = field(default_factory=dict)
     events: dict[str, EventRuntime] = field(default_factory=dict)
     scripts: dict[str, ScriptRuntime] = field(default_factory=dict)
     stories: dict[str, StoryRuntime] = field(default_factory=dict)

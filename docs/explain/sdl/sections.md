@@ -1,7 +1,7 @@
 # SDL Sections Reference
 
 A scenario is a YAML document with a required top-level `name`, optional
-top-level composition fields (`version`, `module`, `imports`), and up to 21 named SDL
+top-level composition fields (`version`, `module`, `imports`), and up to 22 named SDL
 sections. Aside from `name`, all sections are optional.
 
 Top-level composition fields are:
@@ -37,7 +37,7 @@ Canonical `imports.source` classes are:
 | `scripts` | `dict[str, Script]` | Timed event sequences with human-readable durations |
 | `stories` | `dict[str, Story]` | Top-level exercise orchestration grouping scripts |
 
-### Extended Sections (7 sections)
+### Extended Sections (8 sections)
 
 | Section | Type | Purpose | Adapted From |
 |---------|------|---------|--------------|
@@ -45,6 +45,7 @@ Canonical `imports.source` classes are:
 | `accounts` | `dict[str, Account]` | Curated scenario/provisioning accounts on nodes, not full runtime identity inventory | CyRIS `add_account` |
 | `relationships` | `dict[str, Relationship]` | Typed edges between elements (auth, trust, federation) | STIX Relationship SRO |
 | `agents` | `dict[str, Agent]` | Autonomous participants (actions, knowledge, scope) | CybORG Agents |
+| `behavior-specifications` | `dict[str, ParticipantBehaviorSpecification]` | Versioned aggregates over participant action, observation, outcome, authority, and mode surfaces | ACES ACT-606 |
 | `objectives` | `dict[str, Objective]` | Scenario-local objectives binding actors, targets, windows, and success; not EXP task records | OCR scoring + CACAO action/target/agent |
 | `workflows` | `dict[str, Workflow]` | Branching and parallel control graphs over declared objectives | CACAO workflow graph patterns; semantics tightened using Step Functions / Argo / SCXML style control-flow rules |
 | `variables` | `dict[str, Variable]` | Parameterization (types, defaults, substitution) | CACAO playbook_variables |
@@ -1666,7 +1667,8 @@ must not be variables.
 This section captures the authoring-layer guarantees of ACT-601. Broader
 participant concerns — behavior semantics, visibility, trajectories,
 budgets, verifier/reward — remain owned by separate ecosystem requirements
-(ACT-602, SEM-208, ...) and are not fully represented by the `agents` section.
+(ACT-602, ACT-606, SEM-208, ...) and are not fully represented by the `agents`
+section.
 
 Broader participant concerns are treated as first-class ecosystem surfaces,
 even where the current SDL syntax does not expose their full shape. Those
@@ -1683,6 +1685,52 @@ concerns include:
 That distinction is important: the SDL describes participant intent and
 scenario meaning, while processors, backends, and participant implementations
 remain separate apparatus surfaces.
+
+---
+
+## Behavior Specifications
+
+First-class participant behavior specifications name, version, and validate an
+aggregate over existing participant behavior surfaces. They do not replace
+`agents`, action contracts, observation boundaries, outcome interpretation
+rules, authority refs, backend feature claims, or runtime evidence.
+
+```yaml
+behavior-specifications:
+  red-scan-behavior:
+    semantic-version: 1.0.0
+    lifecycle-state: active
+    participant-refs: [red-agent]
+    participant-role-refs: [red]
+    action-contract-refs: [scan]
+    observation-boundary-refs: [red-view]
+    outcome-interpretation-rule-refs: [red-outcome]
+    authority-scope-refs:
+      - nodes.web-server.services.https
+    behavior-mode: policy-directed
+    realization-profile-ref: participant-implementation-manifest:red-agent
+    backend-feature-support-refs: [behavior_history]
+    evidence-contract-refs: [participant-behavior-history-event-stream-v1]
+    extension-policy: governed-extension
+    extensions:
+      x-acme:review-note:
+        owner: acme
+        note: behavior spec reviewed for the exercise package
+```
+
+Refs fail closed: participants must resolve to declared `agents`, roles must
+match roles of agent-bound entities, action contracts and observation
+boundaries must resolve to their registries, outcome rules must resolve to
+`outcome_interpretation_rules`, and `authority_scope_refs` must resolve to
+targetable named scenario elements. `behavior_mode` is validated against the
+governed `participant-decision-surface-modes` vocabulary. Extensions are only
+allowed when `extension_policy` permits them, and extension keys must use
+`x-<owner>:<term>`.
+
+Compiled behavior specifications use stable
+`participant.behavior-specification.<name>` addresses and preserve dependency
+links to the participant behavior, action contract, observation boundary, and
+outcome-rule runtime addresses.
 
 ---
 

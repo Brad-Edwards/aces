@@ -120,6 +120,7 @@ class _ValidatorCore:
         ("agents", True),
         ("action_contracts", True),
         ("observation_boundaries", True),
+        ("behavior_specifications", True),
         ("objectives", True),
         ("workflows", True),
         ("relationships", True),
