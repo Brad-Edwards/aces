@@ -484,11 +484,17 @@ def test_participant_behavior_runtime_carries_act607_authority_scope_metadata():
         "provision.content.docs",
         "provision.content.docs.items.playbook",
     )
-    assert "red-team" not in compiled.authority_anchor_addresses
-    assert "red-controls-web" not in compiled.authority_anchor_addresses
-    assert "provision.account.operator" in compiled.refresh_dependencies
-    assert "provision.network.net" in compiled.refresh_dependencies
-    assert "provision.node.web.service.http" in compiled.refresh_dependencies
+    assert compiled.refresh_dependencies == (
+        ACTION_ADDRESS,
+        OBSERVATION_ADDRESS,
+        "provision.account.operator",
+        "provision.node.web",
+        "provision.network.net",
+        "provision.node.web.service.http",
+        "template.condition.beacon-online",
+        "provision.content.docs",
+        "provision.content.docs.items.playbook",
+    )
 
 
 def test_participant_typed_authority_refs_ignore_global_alias_collisions():
@@ -503,9 +509,12 @@ def test_participant_typed_authority_refs_ignore_global_alias_collisions():
         "provision.account.operator",
     )
     assert compiled.starting_condition_addresses == ("template.condition.beacon-online",)
-    assert "provision.account.operator" in compiled.refresh_dependencies
-    assert "provision.node.web.service.http" in compiled.refresh_dependencies
-    assert "template.condition.beacon-online" in compiled.refresh_dependencies
+    assert compiled.refresh_dependencies == (
+        "provision.account.operator",
+        "provision.node.web",
+        "provision.node.web.service.http",
+        "template.condition.beacon-online",
+    )
 
 
 def test_behavior_specification_runtime_carries_authority_scope_addresses():
@@ -530,9 +539,15 @@ def test_behavior_specification_runtime_carries_authority_scope_addresses():
         "provision.content.docs",
         "provision.content.docs.items.playbook",
     )
-    assert "red-controls-web" not in compiled.authority_scope_addresses
-    assert "provision.account.operator" in compiled.refresh_dependencies
-    assert "provision.content.docs.items.playbook" in compiled.refresh_dependencies
+    assert compiled.refresh_dependencies == (
+        PARTICIPANT_ADDRESS,
+        ACTION_ADDRESS,
+        OBSERVATION_ADDRESS,
+        "provision.node.web.service.http",
+        "provision.account.operator",
+        "provision.content.docs",
+        "provision.content.docs.items.playbook",
+    )
 
 
 def test_behavior_specification_refs_are_namespaced_during_module_composition(tmp_path):
