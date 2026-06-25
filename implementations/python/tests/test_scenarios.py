@@ -8,6 +8,7 @@ name: test-scenario
 description: Minimal SDL scenario
 """
 EXAMPLE_SCENARIOS = sorted(EXAMPLES_DIR.glob("*.sdl.yaml"))
+PAPER_REFERENCE_SCENARIO = EXAMPLES_DIR / "paper-agent-loop.sdl.yaml"
 COMPLEX_EXAMPLES = [
     EXAMPLES_DIR / "hospital-ransomware-surgery-day.sdl.yaml",
     EXAMPLES_DIR / "satcom-release-poisoning.sdl.yaml",
@@ -170,6 +171,22 @@ def test_complex_examples_cover_new_sdl_surfaces():
     assert any(
         target.startswith("infrastructure.") for objective in port.objectives.values() for target in objective.targets
     )
+
+
+def test_paper_reference_scenario_compiles_participant_loop():
+    """Issue #598: the paper reference scenario proves the participant handoff surface."""
+    from aces_processor.compiler import compile_runtime_model
+    from aces_sdl.scenarios import load_scenario
+
+    scenario = load_scenario(PAPER_REFERENCE_SCENARIO)
+    model = compile_runtime_model(scenario)
+
+    assert model.participant_behaviors
+    assert model.action_contracts
+    assert model.observation_boundaries
+    assert "participant.behavior.paper-agent" in model.participant_behaviors
+    assert "participant.action-contract.inspect-service" in model.action_contracts
+    assert "participant.observation-boundary.paper-agent-view" in model.observation_boundaries
 
 
 class TestScenarioExceptions:
