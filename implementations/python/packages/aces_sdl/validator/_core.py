@@ -121,6 +121,7 @@ class _ValidatorCore:
         ("action_contracts", True),
         ("observation_boundaries", True),
         ("behavior_specifications", True),
+        ("evidence_requirements", True),
         ("objectives", True),
         ("workflows", True),
         ("relationships", True),
@@ -133,6 +134,7 @@ class _ValidatorCore:
 
     _TARGETABLE_DISALLOWED_PREFIXES = (
         "variables.",
+        "evidence_requirements.",
         "objectives.",
         "workflows.",
     )
@@ -341,6 +343,7 @@ class _ValidatorCore:
         self._verify_objectives()
         self._verify_workflows()
         self._verify_participant_outcomes()
+        self._verify_evidence_requirements()
         self._verify_variables()
         self._verify_explicitness()
         self._collect_advisories()

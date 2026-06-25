@@ -142,6 +142,17 @@ def _rewrite_workflow(payload: dict[str, Any], symbols: dict[str, dict[str, str]
             when["objectives"] = [_maybe_rename(name, symbols["objectives"]) for name in when.get("objectives", [])]
 
 
+def _rewrite_evidence_requirement(
+    payload: dict[str, Any],
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> None:
+    for field_name in ("source_refs", "scope_refs", "channel_refs"):
+        payload[field_name] = [_maybe_rename(name, symbols["named"]) for name in payload.get(field_name, [])]
+    for field_name in ("trigger_ref", "boundary_ref"):
+        if payload.get(field_name):
+            payload[field_name] = _maybe_rename(str(payload[field_name]), symbols["named"])
+
+
 def _namespace_payload(
     payload: dict[str, Any],
     imported: Scenario,
@@ -267,6 +278,9 @@ def _namespace_payload(
             behavior_spec["authority_scope_refs"] = [
                 _maybe_rename(name, symbols["named"]) for name in behavior_spec.get("authority_scope_refs", [])
             ]
+    for requirement in namespaced.get("evidence_requirements", {}).values():
+        if isinstance(requirement, dict):
+            _rewrite_evidence_requirement(requirement, symbols)
     for objective in namespaced.get("objectives", {}).values():
         if not isinstance(objective, dict):
             continue

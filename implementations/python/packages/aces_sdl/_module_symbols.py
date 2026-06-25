@@ -36,6 +36,7 @@ HASHMAP_SECTIONS = (
     "observation_boundaries",
     "outcome_interpretation_rules",
     "behavior_specifications",
+    "evidence_requirements",
     "objectives",
     "workflows",
 )
@@ -182,6 +183,7 @@ def symbol_index(
         "observation_boundaries": section_maps.get("observation_boundaries", {}),
         "outcome_interpretation_rules": section_maps.get("outcome_interpretation_rules", {}),
         "behavior_specifications": section_maps.get("behavior_specifications", {}),
+        "evidence_requirements": section_maps.get("evidence_requirements", {}),
         "objectives": section_maps.get("objectives", {}),
         "workflows": section_maps.get("workflows", {}),
         "named": named,

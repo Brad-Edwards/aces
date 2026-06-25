@@ -45,6 +45,7 @@ _HASHMAP_SECTIONS = frozenset(
         "observation_boundaries",
         "outcome_interpretation_rules",
         "behavior_specifications",
+        "evidence_requirements",
         "objectives",
         "workflows",
         "variables",

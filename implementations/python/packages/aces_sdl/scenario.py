@@ -1,6 +1,6 @@
 """Top-level Scenario model — the root of the SDL.
 
-The Scenario combines 22 specification sections covering
+The Scenario combines 23 specification sections covering
 who (entities, accounts, agents), what (nodes, features,
 vulnerabilities, content), when (scripts, stories, events),
 and declarative experiment semantics (objectives, scoring
@@ -20,6 +20,7 @@ from .agents import Agent
 from .conditions import Condition
 from .content import Content
 from .entities import Entity
+from .evidence_requirements import EvidenceRequirement
 from .explicitness import ExplicitnessRecord
 from .features import Feature
 from .infrastructure import InfraNode
@@ -112,7 +113,7 @@ class ImportDecl(SDLModel):
 class Scenario(SDLModel):
     """Top-level scenario specification.
 
-    A YAML document with up to 22 named sections. Only ``name``
+    A YAML document with up to 23 named sections. Only ``name``
     is required. All sections are optional dicts keyed by
     user-defined identifiers.
     """
@@ -150,6 +151,7 @@ class Scenario(SDLModel):
     observation_boundaries: dict[str, ParticipantObservationBoundary] = Field(default_factory=dict)
     outcome_interpretation_rules: dict[str, OutcomeInterpretationRule] = Field(default_factory=dict)
     behavior_specifications: dict[str, ParticipantBehaviorSpecification] = Field(default_factory=dict)
+    evidence_requirements: dict[str, EvidenceRequirement] = Field(default_factory=dict)
     objectives: dict[str, Objective] = Field(default_factory=dict)
     workflows: dict[str, Workflow] = Field(default_factory=dict)
     variables: dict[str, Variable] = Field(default_factory=dict)
