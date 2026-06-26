@@ -7,7 +7,7 @@ from aces_contracts.planning import ChangeAction, ProvisioningPlan, RuntimeDomai
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
 
 from .driver import DriverResult, LibvirtDriver
-from .realization import NETWORK_RESOURCE_TYPE, NODE_RESOURCE_TYPE, interpret_provisioning_plan
+from .realization import NETWORK_RESOURCE_TYPE, NODE_RESOURCE_TYPE, Realization, interpret_provisioning_plan
 
 _DOMAIN = "runtime"
 INVALID_PLAN_CODE = "libvirt-backend.invalid-plan"
@@ -30,56 +30,61 @@ class LibvirtProvisioner:
 
     def apply(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> ApplyResult:
         if not isinstance(plan, ProvisioningPlan):
-            return ApplyResult(success=False, snapshot=snapshot, diagnostics=[_invalid_plan_diagnostic()])
+            result = ApplyResult(success=False, snapshot=snapshot, diagnostics=[_invalid_plan_diagnostic()])
+        else:
+            result = self._apply_provisioning_plan(plan, snapshot)
+        return result
 
+    def _apply_provisioning_plan(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> ApplyResult:
         realization = interpret_provisioning_plan(plan)
         diagnostics: list[Diagnostic] = list(realization.diagnostics)
-        if any(diag.is_error for diag in diagnostics):
-            return ApplyResult(success=False, snapshot=snapshot, diagnostics=diagnostics)
-
         entries = dict(snapshot.entries)
         changed_addresses: list[str] = []
         delete_networks: list[str] = []
         delete_domains: list[str] = []
 
-        for op in plan.operations:
-            if op.action == ChangeAction.DELETE:
-                entries.pop(op.address, None)
-                changed_addresses.append(op.address)
-                if op.resource_type == NETWORK_RESOURCE_TYPE:
-                    delete_networks.append(op.address)
-                elif op.resource_type == NODE_RESOURCE_TYPE:
-                    delete_domains.append(op.address)
-                continue
-            status = "unchanged" if op.action == ChangeAction.UNCHANGED else "applied"
-            entries[op.address] = SnapshotEntry(
-                address=op.address,
-                domain=RuntimeDomain.PROVISIONING,
-                resource_type=op.resource_type,
-                payload=op.payload,
-                ordering_dependencies=op.ordering_dependencies,
-                refresh_dependencies=op.refresh_dependencies,
-                status=status,
-            )
-            if op.action != ChangeAction.UNCHANGED:
-                changed_addresses.append(op.address)
+        if not any(diag.is_error for diag in diagnostics):
+            for op in plan.operations:
+                if op.action == ChangeAction.DELETE:
+                    entries.pop(op.address, None)
+                    changed_addresses.append(op.address)
+                    if op.resource_type == NETWORK_RESOURCE_TYPE:
+                        delete_networks.append(op.address)
+                    elif op.resource_type == NODE_RESOURCE_TYPE:
+                        delete_domains.append(op.address)
+                    continue
+                status = "unchanged" if op.action == ChangeAction.UNCHANGED else "applied"
+                entries[op.address] = SnapshotEntry(
+                    address=op.address,
+                    domain=RuntimeDomain.PROVISIONING,
+                    resource_type=op.resource_type,
+                    payload=op.payload,
+                    ordering_dependencies=op.ordering_dependencies,
+                    refresh_dependencies=op.refresh_dependencies,
+                    status=status,
+                )
+                if op.action != ChangeAction.UNCHANGED:
+                    changed_addresses.append(op.address)
 
-        driver_diagnostics = self._drive(plan, realization, delete_networks, delete_domains)
-        diagnostics.extend(driver_diagnostics)
+            driver_diagnostics = self._drive(plan, realization, delete_networks, delete_domains)
+            diagnostics.extend(driver_diagnostics)
+
         if any(diag.is_error for diag in diagnostics):
-            return ApplyResult(success=False, snapshot=snapshot, diagnostics=diagnostics)
+            result = ApplyResult(success=False, snapshot=snapshot, diagnostics=diagnostics)
+        else:
+            result = ApplyResult(
+                success=True,
+                snapshot=snapshot.with_entries(entries),
+                diagnostics=diagnostics,
+                changed_addresses=changed_addresses,
+            )
 
-        return ApplyResult(
-            success=True,
-            snapshot=snapshot.with_entries(entries),
-            diagnostics=diagnostics,
-            changed_addresses=changed_addresses,
-        )
+        return result
 
     def _drive(
         self,
         plan: ProvisioningPlan,
-        realization,
+        realization: Realization,
         delete_networks: list[str],
         delete_domains: list[str],
     ) -> list[Diagnostic]:
@@ -102,7 +107,7 @@ class LibvirtProvisioner:
             diagnostics.extend(
                 _unconfirmed_destroy_diagnostics(
                     result,
-                    requested=tuple((*delete_networks, *delete_domains)),
+                    requested=(*delete_networks, *delete_domains),
                 )
             )
         return diagnostics

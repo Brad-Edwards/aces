@@ -6,7 +6,7 @@ import importlib
 import re
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
-from typing import Any
+from typing import Protocol, cast
 
 from aces_contracts.diagnostics import Diagnostic, Severity
 
@@ -24,7 +24,30 @@ _CODE_UNAVAILABLE = "libvirt-backend.driver.unavailable"
 _DEFAULT_CONNECTION_URI = "qemu:///system"
 _SAFE_NAME_RE = re.compile(r"[^a-zA-Z0-9_.-]+")
 
-Connector = Callable[[str], Any]
+
+class _NativeResource(Protocol):
+    def create(self) -> None: ...
+
+    def destroy(self) -> None: ...
+
+    def undefine(self) -> None: ...
+
+
+class _LibvirtConnection(Protocol):
+    def networkDefineXML(self, xml: str) -> _NativeResource: ...  # noqa: N802 - mirrors libvirt API
+
+    def defineXML(self, xml: str) -> _NativeResource: ...  # noqa: N802 - mirrors libvirt API
+
+    def networkLookupByName(self, name: str) -> _NativeResource: ...  # noqa: N802 - mirrors libvirt API
+
+    def lookupByName(self, name: str) -> _NativeResource: ...  # noqa: N802 - mirrors libvirt API
+
+
+class _LibvirtModule(Protocol):
+    def open(self, connection_uri: str) -> _LibvirtConnection | None: ...
+
+
+Connector = Callable[[str], _LibvirtConnection | None]
 
 
 class LibvirtDeploymentDriver:
@@ -33,7 +56,7 @@ class LibvirtDeploymentDriver:
     def __init__(
         self,
         *,
-        connection: Any | None = None,
+        connection: _LibvirtConnection | None = None,
         connection_uri: str = _DEFAULT_CONNECTION_URI,
         connector: Connector | None = None,
         name_prefix: str = "aces",
@@ -139,7 +162,7 @@ class LibvirtDeploymentDriver:
     def realized_addresses(self) -> frozenset[str]:
         return frozenset(self._realized)
 
-    def _conn(self) -> Any:
+    def _conn(self) -> _LibvirtConnection:
         if self._connection is None:
             self._connection = self._connector(self._connection_uri)
         if self._connection is None:
@@ -152,7 +175,7 @@ class LibvirtDeploymentDriver:
     def _name_for(self, address: str) -> str:
         return self._names.get(address, self._runtime_name(address, address.rsplit(".", 1)[-1]))
 
-    def _destroy_one(self, lookup: Callable[[str], Any], address: str) -> bool:
+    def _destroy_one(self, lookup: Callable[[str], _NativeResource], address: str) -> bool:
         try:
             native = lookup(self._name_for(address))
             native.destroy()
@@ -168,8 +191,8 @@ class LibvirtDeploymentDriver:
             self.destroy(networks=realized_networks, domains=realized_domains)
 
 
-def _default_connector(connection_uri: str) -> Any:
-    libvirt = importlib.import_module("libvirt")
+def _default_connector(connection_uri: str) -> _LibvirtConnection | None:
+    libvirt = cast(_LibvirtModule, importlib.import_module("libvirt"))
     return libvirt.open(connection_uri)
 
 
