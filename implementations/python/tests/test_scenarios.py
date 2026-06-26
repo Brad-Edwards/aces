@@ -181,6 +181,28 @@ def test_paper_reference_scenario_compiles_participant_loop():
     scenario = load_scenario(PAPER_REFERENCE_SCENARIO)
     model = compile_runtime_model(scenario)
 
+    assert {
+        "participant-workbench",
+        "target-web",
+        "target-db",
+        "security-sensor",
+        "model-defense-gate",
+    } <= set(scenario.nodes)
+    assert {
+        "participant-observation",
+        "sensor-telemetry",
+        "defense-decision-log",
+    } <= set(scenario.content)
+    boundary = scenario.observation_boundaries["paper-agent-view"]
+    assert "nodes.target-db.services.postgres" in boundary.hidden_refs
+    assert "nodes.security-sensor" in boundary.hidden_refs
+    assert "nodes.model-defense-gate" in boundary.hidden_refs
+    assert {
+        "content.participant-observation",
+        "content.sensor-telemetry",
+        "content.defense-decision-log",
+    } <= set(boundary.evidence_refs)
+
     assert model.participant_behaviors
     assert model.action_contracts
     assert model.observation_boundaries
