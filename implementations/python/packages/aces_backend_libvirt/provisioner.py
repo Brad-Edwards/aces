@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from aces_contracts.diagnostics import Diagnostic, Severity
-from aces_contracts.planning import ChangeAction, ProvisioningPlan, RuntimeDomain
+from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
 
 from .driver import DriverResult, LibvirtDriver
@@ -13,6 +15,14 @@ _DOMAIN = "runtime"
 INVALID_PLAN_CODE = "libvirt-backend.invalid-plan"
 UNCONFIRMED_DESTROY_CODE = "libvirt-backend.driver.unconfirmed-destroy"
 UNCONFIRMED_REALIZATION_CODE = "libvirt-backend.driver.unconfirmed-realization"
+
+
+@dataclass
+class _SnapshotReconciliation:
+    entries: dict[str, SnapshotEntry]
+    changed_addresses: list[str]
+    delete_networks: list[str]
+    delete_domains: list[str]
 
 
 class LibvirtProvisioner:
@@ -38,48 +48,27 @@ class LibvirtProvisioner:
     def _apply_provisioning_plan(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> ApplyResult:
         realization = interpret_provisioning_plan(plan)
         diagnostics: list[Diagnostic] = list(realization.diagnostics)
-        entries = dict(snapshot.entries)
-        changed_addresses: list[str] = []
-        delete_networks: list[str] = []
-        delete_domains: list[str] = []
+        if _has_error(diagnostics):
+            return ApplyResult(success=False, snapshot=snapshot, diagnostics=diagnostics)
 
-        if not any(diag.is_error for diag in diagnostics):
-            for op in plan.operations:
-                if op.action == ChangeAction.DELETE:
-                    entries.pop(op.address, None)
-                    changed_addresses.append(op.address)
-                    if op.resource_type == NETWORK_RESOURCE_TYPE:
-                        delete_networks.append(op.address)
-                    elif op.resource_type == NODE_RESOURCE_TYPE:
-                        delete_domains.append(op.address)
-                    continue
-                status = "unchanged" if op.action == ChangeAction.UNCHANGED else "applied"
-                entries[op.address] = SnapshotEntry(
-                    address=op.address,
-                    domain=RuntimeDomain.PROVISIONING,
-                    resource_type=op.resource_type,
-                    payload=op.payload,
-                    ordering_dependencies=op.ordering_dependencies,
-                    refresh_dependencies=op.refresh_dependencies,
-                    status=status,
-                )
-                if op.action != ChangeAction.UNCHANGED:
-                    changed_addresses.append(op.address)
+        reconciliation = _reconcile_snapshot(plan, snapshot)
+        driver_diagnostics = self._drive(
+            plan,
+            realization,
+            reconciliation.delete_networks,
+            reconciliation.delete_domains,
+        )
+        diagnostics.extend(driver_diagnostics)
 
-            driver_diagnostics = self._drive(plan, realization, delete_networks, delete_domains)
-            diagnostics.extend(driver_diagnostics)
+        if _has_error(diagnostics):
+            return ApplyResult(success=False, snapshot=snapshot, diagnostics=diagnostics)
 
-        if any(diag.is_error for diag in diagnostics):
-            result = ApplyResult(success=False, snapshot=snapshot, diagnostics=diagnostics)
-        else:
-            result = ApplyResult(
-                success=True,
-                snapshot=snapshot.with_entries(entries),
-                diagnostics=diagnostics,
-                changed_addresses=changed_addresses,
-            )
-
-        return result
+        return ApplyResult(
+            success=True,
+            snapshot=snapshot.with_entries(reconciliation.entries),
+            diagnostics=diagnostics,
+            changed_addresses=reconciliation.changed_addresses,
+        )
 
     def _drive(
         self,
@@ -129,6 +118,56 @@ def _default_driver() -> LibvirtDriver:
     from .drivers.libvirt import LibvirtDeploymentDriver
 
     return LibvirtDeploymentDriver()
+
+
+def _reconcile_snapshot(plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> _SnapshotReconciliation:
+    reconciliation = _SnapshotReconciliation(
+        entries=dict(snapshot.entries),
+        changed_addresses=[],
+        delete_networks=[],
+        delete_domains=[],
+    )
+    for op in plan.operations:
+        _reconcile_operation(reconciliation, op)
+    return reconciliation
+
+
+def _reconcile_operation(reconciliation: _SnapshotReconciliation, op: ProvisionOp) -> None:
+    if op.action == ChangeAction.DELETE:
+        _record_delete(reconciliation, op)
+        return
+    _record_snapshot_entry(reconciliation, op)
+
+
+def _record_delete(reconciliation: _SnapshotReconciliation, op: ProvisionOp) -> None:
+    reconciliation.entries.pop(op.address, None)
+    reconciliation.changed_addresses.append(op.address)
+    delete_targets = {
+        NETWORK_RESOURCE_TYPE: reconciliation.delete_networks,
+        NODE_RESOURCE_TYPE: reconciliation.delete_domains,
+    }
+    target = delete_targets.get(op.resource_type)
+    if target is not None:
+        target.append(op.address)
+
+
+def _record_snapshot_entry(reconciliation: _SnapshotReconciliation, op: ProvisionOp) -> None:
+    status = "unchanged" if op.action == ChangeAction.UNCHANGED else "applied"
+    reconciliation.entries[op.address] = SnapshotEntry(
+        address=op.address,
+        domain=RuntimeDomain.PROVISIONING,
+        resource_type=op.resource_type,
+        payload=op.payload,
+        ordering_dependencies=op.ordering_dependencies,
+        refresh_dependencies=op.refresh_dependencies,
+        status=status,
+    )
+    if op.action != ChangeAction.UNCHANGED:
+        reconciliation.changed_addresses.append(op.address)
+
+
+def _has_error(diagnostics: list[Diagnostic]) -> bool:
+    return any(diag.is_error for diag in diagnostics)
 
 
 def _invalid_plan_diagnostic() -> Diagnostic:

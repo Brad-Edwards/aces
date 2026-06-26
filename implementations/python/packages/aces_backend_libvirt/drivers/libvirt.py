@@ -33,21 +33,11 @@ class _NativeResource(Protocol):
     def undefine(self) -> None: ...
 
 
-class _LibvirtConnection(Protocol):
-    def networkDefineXML(self, xml: str) -> _NativeResource: ...  # noqa: N802 - mirrors libvirt API
-
-    def defineXML(self, xml: str) -> _NativeResource: ...  # noqa: N802 - mirrors libvirt API
-
-    def networkLookupByName(self, name: str) -> _NativeResource: ...  # noqa: N802 - mirrors libvirt API
-
-    def lookupByName(self, name: str) -> _NativeResource: ...  # noqa: N802 - mirrors libvirt API
-
-
 class _LibvirtModule(Protocol):
-    def open(self, connection_uri: str) -> _LibvirtConnection | None: ...
+    def open(self, connection_uri: str) -> object | None: ...
 
 
-Connector = Callable[[str], _LibvirtConnection | None]
+Connector = Callable[[str], object | None]
 
 
 class LibvirtDeploymentDriver:
@@ -56,7 +46,7 @@ class LibvirtDeploymentDriver:
     def __init__(
         self,
         *,
-        connection: _LibvirtConnection | None = None,
+        connection: object | None = None,
         connection_uri: str = _DEFAULT_CONNECTION_URI,
         connector: Connector | None = None,
         name_prefix: str = "aces",
@@ -89,7 +79,7 @@ class LibvirtDeploymentDriver:
         for spec in networks:
             name = self._runtime_name(spec.address, spec.name)
             try:
-                native = connection.networkDefineXML(_network_xml(spec, name))
+                native = _call_libvirt(connection, "networkDefineXML", _network_xml(spec, name))
                 native.create()
             except Exception:
                 diagnostics.append(_failure(spec.address, _CODE_OPERATION_FAILED))
@@ -102,7 +92,7 @@ class LibvirtDeploymentDriver:
             name = self._runtime_name(spec.address, spec.name)
             network_names = tuple(self._name_for(address) for address in spec.networks)
             try:
-                native = connection.defineXML(_domain_xml(spec, name, network_names))
+                native = _call_libvirt(connection, "defineXML", _domain_xml(spec, name, network_names))
                 native.create()
             except Exception:
                 diagnostics.append(_failure(spec.address, _CODE_OPERATION_FAILED))
@@ -135,7 +125,7 @@ class LibvirtDeploymentDriver:
 
         domain_handles: list[DomainHandle] = []
         for address in domains:
-            ok = self._destroy_one(connection.lookupByName, address)
+            ok = self._destroy_one(connection, "lookupByName", address)
             if ok:
                 self._realized.discard(address)
                 self._names.pop(address, None)
@@ -145,7 +135,7 @@ class LibvirtDeploymentDriver:
 
         network_handles: list[NetworkHandle] = []
         for address in networks:
-            ok = self._destroy_one(connection.networkLookupByName, address)
+            ok = self._destroy_one(connection, "networkLookupByName", address)
             if ok:
                 self._realized.discard(address)
                 self._names.pop(address, None)
@@ -162,7 +152,7 @@ class LibvirtDeploymentDriver:
     def realized_addresses(self) -> frozenset[str]:
         return frozenset(self._realized)
 
-    def _conn(self) -> _LibvirtConnection:
+    def _conn(self) -> object:
         if self._connection is None:
             self._connection = self._connector(self._connection_uri)
         if self._connection is None:
@@ -175,9 +165,9 @@ class LibvirtDeploymentDriver:
     def _name_for(self, address: str) -> str:
         return self._names.get(address, self._runtime_name(address, address.rsplit(".", 1)[-1]))
 
-    def _destroy_one(self, lookup: Callable[[str], _NativeResource], address: str) -> bool:
+    def _destroy_one(self, connection: object, lookup_method: str, address: str) -> bool:
         try:
-            native = lookup(self._name_for(address))
+            native = _call_libvirt(connection, lookup_method, self._name_for(address))
             native.destroy()
             native.undefine()
         except Exception:
@@ -191,9 +181,14 @@ class LibvirtDeploymentDriver:
             self.destroy(networks=realized_networks, domains=realized_domains)
 
 
-def _default_connector(connection_uri: str) -> _LibvirtConnection | None:
+def _default_connector(connection_uri: str) -> object | None:
     libvirt = cast(_LibvirtModule, importlib.import_module("libvirt"))
     return libvirt.open(connection_uri)
+
+
+def _call_libvirt(connection: object, method_name: str, payload: str) -> _NativeResource:
+    method = cast(Callable[[str], _NativeResource], getattr(connection, method_name))
+    return method(payload)
 
 
 def _safe_name(candidate: str, *, fallback: str, prefix: str) -> str:
