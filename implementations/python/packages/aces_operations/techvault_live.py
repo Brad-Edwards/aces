@@ -107,10 +107,14 @@ def validate_techvault_live(
     if not run_id_check.passed:
         return TechVaultLiveReport(str(scenario_path), str(project_dir), run_id, tuple(checks))
 
-    driver = driver_factory() if driver_factory else TechVaultComposeDriver(
-        project_dir=project_dir,
-        scenario_path=scenario_path,
-        clean_boot=clean_boot,
+    driver = (
+        driver_factory()
+        if driver_factory
+        else TechVaultComposeDriver(
+            project_dir=project_dir,
+            scenario_path=scenario_path,
+            clean_boot=clean_boot,
+        )
     )
     target = create_libvirt_target(driver=driver, name_prefix="techvault-live")
     scenario, plan_check = _plan_scenario(target, scenario_path)
@@ -137,7 +141,11 @@ def validate_techvault_live(
     evidence.update(soc_evidence)
     checks.append(_variation_check(driver))
     manifest_path = _write_manifest(project_dir, run_id, scenario_path, driver, checks, evidence)
-    checks.append(LiveCheck("run_archive_manifest", manifest_path is not None, () if manifest_path else ("manifest write failed",)))
+    checks.append(
+        LiveCheck(
+            "run_archive_manifest", manifest_path is not None, () if manifest_path else ("manifest write failed",)
+        )
+    )
     return TechVaultLiveReport(str(scenario_path), str(project_dir), run_id, tuple(checks), manifest_path)
 
 
@@ -172,7 +180,9 @@ def _apply_plan(target: object, scenario_path: Path, driver: TechVaultComposeDri
         return LiveCheck("aces_libvirt_driven_boot", False, ("control plane did not record provisioning status",))
     diagnostics = tuple(f"{diag.code}: {diag.message}" for diag in status.diagnostics if diag.is_error)
     if status.state.value != "succeeded" or diagnostics:
-        return LiveCheck("aces_libvirt_driven_boot", False, diagnostics or (f"provisioning state={status.state.value}",))
+        return LiveCheck(
+            "aces_libvirt_driven_boot", False, diagnostics or (f"provisioning state={status.state.value}",)
+        )
     if not driver.last_snapshot.get("containers"):
         return LiveCheck("aces_libvirt_driven_boot", False, ("driver returned no post-boot container snapshot",))
     return LiveCheck("aces_libvirt_driven_boot", True)
@@ -240,7 +250,9 @@ def _telemetry_check(
         }
     }
     if evidence["telemetry"]["suricata_traffic_event_count"] + len(alerts) < 1:  # type: ignore[index, operator]
-        return LiveCheck("telemetry_evidence_path", False, ("no traffic-derived Suricata event or Wazuh alert observed",)), evidence
+        return LiveCheck(
+            "telemetry_evidence_path", False, ("no traffic-derived Suricata event or Wazuh alert observed",)
+        ), evidence
     return LiveCheck("telemetry_evidence_path", True), evidence
 
 
@@ -368,9 +380,7 @@ def _suricata_eve(probe: DockerProbe, start: datetime, end: datetime) -> list[di
     if result.returncode != 0:
         return []
     return [
-        entry
-        for entry in _json_lines(result.stdout)
-        if start <= _entry_time(str(entry.get("timestamp", ""))) <= end
+        entry for entry in _json_lines(result.stdout) if start <= _entry_time(str(entry.get("timestamp", ""))) <= end
     ]
 
 
@@ -378,7 +388,9 @@ def _wazuh_alerts(probe: DockerProbe, start: datetime, end: datetime) -> list[di
     result = probe.exec("aptl-wazuh-manager", ["tail", "-n", "5000", "/var/ossec/logs/alerts/alerts.json"], timeout=30)
     if result.returncode != 0:
         return []
-    return [entry for entry in _json_lines(result.stdout) if start <= _entry_time(str(entry.get("timestamp", ""))) <= end]
+    return [
+        entry for entry in _json_lines(result.stdout) if start <= _entry_time(str(entry.get("timestamp", ""))) <= end
+    ]
 
 
 def _json_lines(raw: str) -> list[dict[str, Any]]:
@@ -430,7 +442,11 @@ def _is_traffic_event(entry: object) -> bool:
 
 def _containers(snapshot: Mapping[str, Any]) -> Sequence[Mapping[str, Any]]:
     containers = snapshot.get("containers", ())
-    return tuple(container for container in containers if isinstance(container, Mapping)) if isinstance(containers, list) else ()
+    return (
+        tuple(container for container in containers if isinstance(container, Mapping))
+        if isinstance(containers, list)
+        else ()
+    )
 
 
 def _networks(container: Mapping[str, Any]) -> Mapping[str, str]:
@@ -474,8 +490,7 @@ def _write_manifest(
         "validation": {
             "ok": all(check.passed for check in checks),
             "checks": [
-                {"name": check.name, "ok": check.passed, "diagnostics": list(check.diagnostics)}
-                for check in checks
+                {"name": check.name, "ok": check.passed, "diagnostics": list(check.diagnostics)} for check in checks
             ],
         },
         "snapshot": driver.last_snapshot,

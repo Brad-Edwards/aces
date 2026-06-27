@@ -333,7 +333,7 @@ def _write_operational_compose_fixture(tmp_path):
         services.extend(
             [
                 f"  {service_name}:",
-                f"    profiles: [\"{profile}\"]",
+                f'    profiles: ["{profile}"]',
                 f"    container_name: aptl-{node}",
                 f"    hostname: {node}",
             ]

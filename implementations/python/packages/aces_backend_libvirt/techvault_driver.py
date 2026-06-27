@@ -207,7 +207,9 @@ def _decode_helper_payload(stdout: str) -> TechVaultLifecycleResult:
         success=payload.get("success") is True,
         profiles=tuple(str(item) for item in profiles) if isinstance(profiles, list) else (),
         snapshot=payload.get("snapshot") if isinstance(payload.get("snapshot"), dict) else {},
-        diagnostics=tuple(item for item in diagnostics if isinstance(item, dict)) if isinstance(diagnostics, list) else (),
+        diagnostics=tuple(item for item in diagnostics if isinstance(item, dict))
+        if isinstance(diagnostics, list)
+        else (),
         error=str(payload.get("error", "")),
     )
 

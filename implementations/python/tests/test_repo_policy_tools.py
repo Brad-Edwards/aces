@@ -106,6 +106,7 @@ def setup_policy_repo(tmp_path: Path) -> Path:
         "aces_backend_protocols",
         "aces_backend_stubs",
         "aces_backend_libvirt",
+        "aces_operations",
         "aces_reference_backend",
         "aces_conformance",
         "aces_cli",
