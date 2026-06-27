@@ -111,10 +111,11 @@ def _infrastructure_spec(payload: Mapping[str, object]) -> Mapping[str, object]:
 
 
 def _network_refs(infrastructure: Mapping[str, object]) -> tuple[str, ...]:
-    raw = infrastructure.get("networks")
-    if not isinstance(raw, (list, tuple)):
-        return ()
-    return tuple(ref for ref in raw if isinstance(ref, str) and ref)
+    for field_name in ("networks", "links"):
+        raw = infrastructure.get(field_name)
+        if isinstance(raw, (list, tuple)):
+            return tuple(ref for ref in raw if isinstance(ref, str) and ref)
+    return ()
 
 
 def _node_resources(payload: Mapping[str, object]) -> Mapping[str, object]:

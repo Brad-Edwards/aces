@@ -36,3 +36,9 @@ def test_libvirt_manifest_declares_only_provisioning_contract_surface():
             "runtime-snapshot-v1",
         }
     )
+
+
+def test_libvirt_manifest_supports_vm_domains_and_switch_networks():
+    manifest = create_libvirt_manifest()
+
+    assert manifest.provisioner.supported_node_types == frozenset({"switch", "vm"})

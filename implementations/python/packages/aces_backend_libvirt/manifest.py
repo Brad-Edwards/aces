@@ -59,7 +59,7 @@ def create_libvirt_manifest(**config) -> BackendManifest:
         capabilities=BackendCapabilitySet(
             provisioner=ProvisionerCapabilities(
                 name="libvirt-provisioner",
-                supported_node_types=frozenset({"vm"}),
+                supported_node_types=frozenset({"switch", "vm"}),
                 supported_os_families=frozenset({"linux", "windows", "freebsd", "other"}),
                 supported_content_types=frozenset(),
                 supported_account_features=frozenset(),
