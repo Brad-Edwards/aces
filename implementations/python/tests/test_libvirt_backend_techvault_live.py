@@ -47,6 +47,27 @@ class _Probe:
 
     def exec(self, container, cmd, timeout=30):
         self.commands.append((container, tuple(cmd)))
+        if container == "aptl-wazuh-manager":
+            return subprocess.CompletedProcess(
+                cmd,
+                0,
+                """
+ID: 000, Name: wazuh.manager (server), IP: 127.0.0.1, Active/Local
+ID: 001, Name: aptl-webapp-agent, IP: any, Active
+ID: 002, Name: aptl-suricata-agent, IP: any, Active
+ID: 003, Name: aptl-db-agent, IP: any, Active
+""",
+                "",
+            )
+        if container == "aptl-suricata":
+            stats = {
+                "event_type": "stats",
+                "stats": {
+                    "capture": {"kernel_packets": 10, "kernel_drops": 0},
+                    "detect": {"engines": [{"rules_loaded": 42, "rules_failed": 0}]},
+                },
+            }
+            return subprocess.CompletedProcess(cmd, 0, json.dumps(stats) + "\n", "")
         if cmd and cmd[0] == "ping":
             return subprocess.CompletedProcess(cmd, 0, "", "")
         return subprocess.CompletedProcess(cmd, 1, "", "")

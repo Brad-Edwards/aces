@@ -1,8 +1,8 @@
 # Issue 601 TechVault Live Verification
 
 This note records the live TechVault smoke used while implementing the
-libvirt provisioning backend. It is evidence for the full operational
-TechVault bar that the libvirt planning/provisioning regression now mirrors.
+libvirt provisioning backend. It includes both the baseline APTL live gate and
+the ACES/libvirt operational parity gate added for issue 601.
 
 ## APTL full live gate
 
@@ -62,7 +62,68 @@ Manual readback after the gate:
 - Suricata stats reported 96 kernel packets, 0 kernel drops, 49,954 rules
   loaded, and 0 failed rules.
 
-## ACES/libvirt parity regression
+## ACES/libvirt operational parity gate
+
+Command run from `/home/atomik/src/aces5` on 2026-06-27:
+
+```bash
+uv run --project implementations/python --frozen aces libvirt techvault validate-live \
+  --scenario /home/atomik/src/aces5/examples/scenarios/techvault-operational.sdl.yaml \
+  --project-dir /home/atomik/src/aptl \
+  --run-id aces-libvirt-techvault-live-20260627T0218Z \
+  --yes
+```
+
+Result: PASS.
+
+The command performed a destructive clean boot and drove the scenario through
+the ACES/libvirt provisioning path before running the live checks:
+
+- `run_id_input`
+- `planning`
+- `aces_libvirt_driven_boot`
+- `defensive_stack_readiness`
+- `kali_reachability`
+- `telemetry_evidence_path`
+- `scenario_variation`
+- `run_archive_manifest`
+
+The run archive manifest was written to:
+
+```text
+/home/atomik/src/aptl/runs/aces-libvirt-techvault-live-20260627T0218Z/live-gate/manifest.json
+```
+
+A follow-up non-destructive readback run exercised the strengthened SOC check:
+
+```bash
+uv run --project implementations/python --frozen aces libvirt techvault validate-live \
+  --scenario /home/atomik/src/aces5/examples/scenarios/techvault-operational.sdl.yaml \
+  --project-dir /home/atomik/src/aptl \
+  --run-id aces-libvirt-techvault-live-readback-20260627T0218Z \
+  --skip-clean-boot
+```
+
+Result: PASS, including `soc_stack_readback`.
+
+Readback manifest summary:
+
+- Selected profiles: `wazuh`, `victim`, `kali`, `enterprise`, `soc`,
+  `fileshare`, `dns`, `otel`
+- Snapshot containers: 31
+- Networks: 4
+- Telemetry window: `2026-06-27T03:58:29.804184+00:00` to
+  `2026-06-27T03:58:41.259287+00:00`
+- Wazuh alert count in the gate summary: 3
+- Wazuh active agents in SOC readback: `wazuh.manager`,
+  `aptl-webapp-agent`, `aptl-suricata-agent`, `aptl-db-agent`,
+  `aptl-dns-agent`, `aptl-fileshare-agent`, `aptl-ad-agent`,
+  `ns1.techvault.local`, `dc.techvault.local`, `files.techvault.local`,
+  `webapp`
+- Suricata readback: 86 events, 48 alerts, 36 stats records, 186 kernel
+  packets, 0 kernel drops, 49,954 rules loaded, 0 failed rules
+
+## ACES/libvirt regression coverage
 
 The ACES regression in
 `implementations/python/tests/test_libvirt_backend_techvault_integration.py`
@@ -73,10 +134,10 @@ now drives `examples/scenarios/techvault-operational.sdl.yaml`, the same
 2. runtime planning
 3. provisioning-plan generation
 4. `RuntimeControlPlane.submit_provisioning`
-5. libvirt driver realization intent
+5. the TechVault operational libvirt driver
 6. runtime snapshot reconciliation
 
-That regression proves dynamic composition through the issue-601 libvirt
-provisioning boundary. A live libvirt VM boot of the SOC stack is not claimed
-by this issue because the current branch does not ship TechVault VM images,
-guest boot configuration, or SOC service/readiness probes for libvirt.
+The live command proves that the new reference backend can deliver TechVault
+through ACES to the same operational level as the APTL smoke: startup,
+readiness, Kali reachability, telemetry generation, Wazuh readback, Suricata
+readback, and a run-archive manifest.

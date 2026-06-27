@@ -120,6 +120,9 @@ def validate_techvault_live(
     evidence: dict[str, object] = {}
     telemetry_check, evidence = _telemetry_check(snapshot, docker_probe, event_window_seconds)
     checks.append(telemetry_check)
+    soc_check, soc_evidence = _soc_stack_readback_check(docker_probe)
+    checks.append(soc_check)
+    evidence.update(soc_evidence)
     checks.append(_variation_check(driver))
     manifest_path = _write_manifest(project_dir, run_id, scenario_path, driver, checks, evidence)
     checks.append(LiveCheck("run_archive_manifest", manifest_path is not None, () if manifest_path else ("manifest write failed",)))
@@ -236,6 +239,62 @@ def _variation_check(driver: TechVaultComposeDriver) -> LiveCheck:
     return LiveCheck("scenario_variation", True)
 
 
+def _soc_stack_readback_check(probe: DockerProbe) -> tuple[LiveCheck, dict[str, object]]:
+    diagnostics: list[str] = []
+    agents = _wazuh_active_agents(probe)
+    required_agents = {"wazuh.manager", "aptl-webapp-agent", "aptl-suricata-agent", "aptl-db-agent"}
+    missing_agents = sorted(required_agents - set(agents))
+    if missing_agents:
+        diagnostics.append("missing active Wazuh agents: " + ", ".join(missing_agents))
+    suricata = _suricata_runtime_summary(probe)
+    if suricata.get("rules_loaded", 0) <= 0:
+        diagnostics.append("Suricata did not report loaded rules")
+    if suricata.get("rules_failed", 0) != 0:
+        diagnostics.append(f"Suricata reported failed rules: {suricata.get('rules_failed')}")
+    if suricata.get("kernel_drops", 0) != 0:
+        diagnostics.append(f"Suricata reported kernel drops: {suricata.get('kernel_drops')}")
+    evidence = {"soc_readback": {"wazuh_active_agents": agents, "suricata": suricata}}
+    return LiveCheck("soc_stack_readback", not diagnostics, tuple(diagnostics)), evidence
+
+
+def _wazuh_active_agents(probe: DockerProbe) -> tuple[str, ...]:
+    result = probe.exec("aptl-wazuh-manager", ["/var/ossec/bin/agent_control", "-l"], timeout=30)
+    if result.returncode != 0:
+        return ()
+    active: list[str] = []
+    for line in result.stdout.splitlines():
+        if "Active" not in line:
+            continue
+        marker = "Name:"
+        if marker not in line:
+            continue
+        name = line.split(marker, 1)[1].split(",", 1)[0].strip()
+        name = name.removesuffix(" (server)")
+        if name:
+            active.append(name)
+    return tuple(sorted(set(active)))
+
+
+def _suricata_runtime_summary(probe: DockerProbe) -> dict[str, int]:
+    result = probe.exec("aptl-suricata", ["tail", "-n", "5000", "/var/log/suricata/eve.json"], timeout=30)
+    if result.returncode != 0:
+        return {}
+    entries = _json_lines(result.stdout)
+    stats_entries = [entry for entry in entries if entry.get("event_type") == "stats"]
+    latest_stats = stats_entries[-1] if stats_entries else {}
+    capture = _nested_mapping(latest_stats, ("stats", "capture"))
+    engine = _nested_mapping(latest_stats, ("stats", "detect", "engines", 0))
+    return {
+        "events": len(entries),
+        "alerts": sum(1 for entry in entries if entry.get("event_type") == "alert"),
+        "stats": len(stats_entries),
+        "kernel_packets": _int_value(capture.get("kernel_packets")),
+        "kernel_drops": _int_value(capture.get("kernel_drops")),
+        "rules_loaded": _int_value(engine.get("rules_loaded")),
+        "rules_failed": _int_value(engine.get("rules_failed")),
+    }
+
+
 def _shared_targets(snapshot: Mapping[str, Any]) -> tuple[Mapping[str, Any] | None, list[tuple[str, str]], list[str]]:
     containers = _containers(snapshot)
     kali = next((container for container in containers if container.get("name") == _KALI_CONTAINER), None)
@@ -311,6 +370,24 @@ def _json_lines(raw: str) -> list[dict[str, Any]]:
         if isinstance(entry, dict):
             entries.append(entry)
     return entries
+
+
+def _nested_mapping(root: Mapping[str, Any], path: tuple[str | int, ...]) -> Mapping[str, Any]:
+    value: object = root
+    for part in path:
+        if isinstance(part, int):
+            if not isinstance(value, list) or len(value) <= part:
+                return {}
+            value = value[part]
+        else:
+            if not isinstance(value, Mapping):
+                return {}
+            value = value.get(part, {})
+    return value if isinstance(value, Mapping) else {}
+
+
+def _int_value(raw: object) -> int:
+    return raw if isinstance(raw, int) else 0
 
 
 def _entry_time(raw: str) -> datetime:
