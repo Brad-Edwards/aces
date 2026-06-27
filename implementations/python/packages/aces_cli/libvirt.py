@@ -19,7 +19,7 @@ scenario and write a live-gate archive under the output directory.
 
 
 @techvault_app.command("validate-live")
-def validate_live(  # NOSONAR: Typer command parameters intentionally mirror CLI options.
+def validate_live(
     scenario: Path = typer.Option(
         Path("examples/scenarios/techvault-operational.sdl.yaml"),
         "--scenario",
@@ -35,11 +35,6 @@ def validate_live(  # NOSONAR: Typer command parameters intentionally mirror CLI
         None,
         "--run-id",
         help="Run id for the live-gate archive.",
-    ),
-    skip_clean_boot: bool = typer.Option(
-        False,
-        "--skip-clean-boot",
-        help="Record the run as non-clean without changing the native archive layout.",
     ),
     yes: bool = typer.Option(
         False,
@@ -67,7 +62,7 @@ def validate_live(  # NOSONAR: Typer command parameters intentionally mirror CLI
 ) -> None:
     """Boot TechVault through native ACES/libvirt and run the live validation gate."""
 
-    if not skip_clean_boot and not yes:
+    if not yes:
         typer.echo(_LIVE_WARNING)
         if not typer.confirm("Continue?", default=False):
             typer.echo("Aborted.")
@@ -78,7 +73,6 @@ def validate_live(  # NOSONAR: Typer command parameters intentionally mirror CLI
         project_dir=project_dir.resolve(),
         run_id=resolved_run_id,
         config=TechVaultLiveConfig(
-            clean_boot=not skip_clean_boot,
             connection_uri=connection_uri,
             appliance_memory_mib=appliance_memory_mib,
             boot_timeout_seconds=boot_timeout_seconds,

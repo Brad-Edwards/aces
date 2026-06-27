@@ -55,7 +55,7 @@ def copy_kernel_for_libvirt(source: Path, target: Path) -> Path:
 def make_libvirt_readable(path: Path) -> None:
     """Set a generated boot artifact mode that the libvirt QEMU user can read."""
 
-    os.chmod(path, _LIBVIRT_BOOT_ARTIFACT_MODE)  # NOSONAR: generated boot artifacts contain no secrets.
+    os.chmod(path, _LIBVIRT_BOOT_ARTIFACT_MODE)
 
 
 def _write_appliance_root(root: Path, busybox_path: Path, domain: Mapping[str, object]) -> None:
