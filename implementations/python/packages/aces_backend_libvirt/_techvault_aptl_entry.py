@@ -57,55 +57,98 @@ def _start(args: argparse.Namespace) -> dict[str, Any]:
 
     project_dir = Path(args.project_dir)
     profiles = _profiles(args.profiles_json)
+    setup_steps: tuple[Callable[[Any], Any], ...] = (
+        _step_load_env,
+        _step_load_config,
+        _step_ensure_ssh_keys,
+        _step_check_sysreqs,
+        _step_sync_credentials,
+        _step_seed_suricata_volumes,
+        _step_generate_certs,
+        _step_generate_soc_certs,
+        _step_check_bind_mounts,
+        _step_pull_images,
+    )
+    readiness_steps = (_step_wait_for_services, _step_test_ssh, _step_capture_snapshot)
+    ctx, payload = _start_lifecycle(
+        context_factory=_LabStartContext,
+        stop_lab=stop_lab,
+        project_dir=project_dir,
+        profiles=profiles,
+        scenario_path_raw=args.scenario_path,
+        clean_volumes=args.clean_volumes,
+        setup_steps=setup_steps,
+        readiness_steps=readiness_steps,
+    )
+    if payload is None:
+        payload = _success_payload(ctx, profiles)
+    return payload
+
+
+def _start_lifecycle(
+    *,
+    context_factory: Callable[..., Any],
+    stop_lab: Callable[..., Any],
+    project_dir: Path,
+    profiles: list[str],
+    scenario_path_raw: str,
+    clean_volumes: bool,
+    setup_steps: tuple[Callable[[Any], Any], ...],
+    readiness_steps: tuple[Callable[[Any], Any], ...],
+) -> tuple[Any, dict[str, Any] | None]:
+    ctx: Any | None = None
+    payload = _clean_start_state(clean_volumes=clean_volumes, stop_lab=stop_lab, project_dir=project_dir)
+    if payload is None:
+        scenario_path = Path(scenario_path_raw) if scenario_path_raw else None
+        ctx = context_factory(project_dir=project_dir, skip_seed=False, scenario_path=scenario_path)
+        payload = _run_steps(ctx, setup_steps)
+    if payload is None:
+        assert ctx is not None
+        payload = _start_compose(ctx, profiles)
+    if payload is None:
+        assert ctx is not None
+        payload = _run_readiness(ctx, profiles, readiness_steps)
+    return ctx, payload
+
+
+def _clean_start_state(
+    *, clean_volumes: bool, stop_lab: Callable[..., Any], project_dir: Path
+) -> dict[str, Any] | None:
     payload: dict[str, Any] | None = None
-    if args.clean_volumes:
+    if clean_volumes:
         stop_result = stop_lab(remove_volumes=True, project_dir=project_dir)
         if not stop_result.success:
             payload = _failure(f"clean-state cleanup failed: {stop_result.error}")
-
-    if payload is None:
-        scenario_path = Path(args.scenario_path) if args.scenario_path else None
-        ctx = _LabStartContext(project_dir=project_dir, skip_seed=False, scenario_path=scenario_path)
-        setup_steps: tuple[Callable[[Any], Any], ...] = (
-            _step_load_env,
-            _step_load_config,
-            _step_ensure_ssh_keys,
-            _step_check_sysreqs,
-            _step_sync_credentials,
-            _step_seed_suricata_volumes,
-            _step_generate_certs,
-            _step_generate_soc_certs,
-            _step_check_bind_mounts,
-            _step_pull_images,
-        )
-        setup_failure = _run_steps(ctx, setup_steps)
-        if setup_failure is not None:
-            payload = setup_failure
-
-    if payload is None:
-        assert ctx.backend is not None
-        result = ctx.backend.start(profiles)
-        if not result.success and "soc" in profiles:
-            time.sleep(60)
-            result = ctx.backend.start(profiles)
-        if not result.success:
-            payload = _failure(f"compose start failed: {result.error}")
-
-    if payload is None:
-        ctx.selected_profiles = set(profiles)
-        readiness_failure = _run_steps(ctx, (_step_wait_for_services, _step_test_ssh, _step_capture_snapshot))
-        if readiness_failure is not None:
-            payload = readiness_failure
-
-    if payload is None:
-        snapshot = ctx.snapshot.to_dict() if ctx.snapshot is not None else {}
-        payload = {
-            "success": True,
-            "profiles": profiles,
-            "snapshot": snapshot,
-            "diagnostics": [_diagnostic_payload(diag) for diag in ctx.diagnostics],
-        }
     return payload
+
+
+def _start_compose(ctx: Any, profiles: list[str]) -> dict[str, Any] | None:
+    assert ctx.backend is not None
+    result = ctx.backend.start(profiles)
+    if not result.success and "soc" in profiles:
+        time.sleep(60)
+        result = ctx.backend.start(profiles)
+    payload = None if result.success else _failure(f"compose start failed: {result.error}")
+    return payload
+
+
+def _run_readiness(
+    ctx: Any,
+    profiles: list[str],
+    readiness_steps: tuple[Callable[[Any], Any], ...],
+) -> dict[str, Any] | None:
+    ctx.selected_profiles = set(profiles)
+    return _run_steps(ctx, readiness_steps)
+
+
+def _success_payload(ctx: Any, profiles: list[str]) -> dict[str, Any]:
+    snapshot = ctx.snapshot.to_dict() if ctx.snapshot is not None else {}
+    return {
+        "success": True,
+        "profiles": profiles,
+        "snapshot": snapshot,
+        "diagnostics": [_diagnostic_payload(diag) for diag in ctx.diagnostics],
+    }
 
 
 def _stop(args: argparse.Namespace) -> dict[str, Any]:

@@ -333,28 +333,56 @@ def _suricata_runtime_summary(probe: DockerProbe) -> dict[str, int]:
 
 def _shared_targets(snapshot: Mapping[str, Any]) -> tuple[Mapping[str, Any] | None, list[tuple[str, str]], list[str]]:
     containers = _containers(snapshot)
-    kali = next((container for container in containers if container.get("name") == _KALI_CONTAINER), None)
-    targets: list[tuple[str, str]] = []
+    kali = _find_container(containers, _KALI_CONTAINER)
+    diagnostics = _kali_network_diagnostics(kali)
+    targets = _targets_sharing_kali_networks(containers, kali) if not diagnostics else []
+    if kali is not None and not diagnostics and not targets:
+        diagnostics = ["no containers share a network with Kali"]
+    return kali, targets, diagnostics
+
+
+def _find_container(containers: Sequence[Mapping[str, Any]], name: str) -> Mapping[str, Any] | None:
+    return next((container for container in containers if container.get("name") == name), None)
+
+
+def _kali_network_diagnostics(kali: Mapping[str, Any] | None) -> list[str]:
     diagnostics: list[str] = []
     if kali is None:
         diagnostics.append("Kali container not present")
-    else:
-        kali_networks = set(_networks(kali))
-        if not kali_networks:
-            diagnostics.append("Kali container has no network attachments")
-        else:
-            for container in containers:
-                if container.get("name") == _KALI_CONTAINER:
-                    continue
-                shared = kali_networks & set(_networks(container))
-                for network in sorted(shared):
-                    ip = _networks(container).get(network)
-                    if ip:
-                        targets.append((str(container.get("name", "?")), str(ip)))
-                        break
-    if kali is not None and not diagnostics and not targets:
-        diagnostics.append("no containers share a network with Kali")
-    return kali, targets, diagnostics
+    elif not _networks(kali):
+        diagnostics.append("Kali container has no network attachments")
+    return diagnostics
+
+
+def _targets_sharing_kali_networks(
+    containers: Sequence[Mapping[str, Any]],
+    kali: Mapping[str, Any] | None,
+) -> list[tuple[str, str]]:
+    kali_networks = set(_networks(kali or {}))
+    targets: list[tuple[str, str]] = []
+    for container in containers:
+        target = _shared_kali_target(container, kali_networks)
+        if target is not None:
+            targets.append(target)
+    return targets
+
+
+def _shared_kali_target(container: Mapping[str, Any], kali_networks: set[str]) -> tuple[str, str] | None:
+    target: tuple[str, str] | None = None
+    if container.get("name") != _KALI_CONTAINER:
+        target = _first_shared_address(container, kali_networks)
+    return target
+
+
+def _first_shared_address(container: Mapping[str, Any], kali_networks: set[str]) -> tuple[str, str] | None:
+    container_networks = _networks(container)
+    target: tuple[str, str] | None = None
+    for network in sorted(kali_networks & set(container_networks)):
+        ip = container_networks.get(network)
+        if ip:
+            target = (str(container.get("name", "?")), str(ip))
+            break
+    return target
 
 
 def _generate_event(probe: DockerProbe, targets: list[tuple[str, str]]) -> None:
