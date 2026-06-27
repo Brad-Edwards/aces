@@ -123,6 +123,37 @@ Readback manifest summary:
 - Suricata readback: 86 events, 48 alerts, 36 stats records, 186 kernel
   packets, 0 kernel drops, 49,954 rules loaded, 0 failed rules
 
+A final destructive run after moving the live orchestration into
+`aces_operations` and strengthening the SOC readback gate also passed:
+
+```bash
+uv run --project implementations/python --frozen aces libvirt techvault validate-live \
+  --scenario /home/atomik/src/aces5/examples/scenarios/techvault-operational.sdl.yaml \
+  --project-dir /home/atomik/src/aptl \
+  --run-id aces-libvirt-techvault-final-strict-20260627T0415Z \
+  --yes
+```
+
+Result: PASS, including `soc_stack_readback`.
+
+The run archive manifest was written to:
+
+```text
+/home/atomik/src/aptl/runs/aces-libvirt-techvault-final-strict-20260627T0415Z/live-gate/manifest.json
+```
+
+Strict SOC readback summary:
+
+- Wazuh active agents: `wazuh.manager`, `aptl-dns-agent`,
+  `aptl-fileshare-agent`, `aptl-ad-agent`, `aptl-webapp-agent`,
+  `aptl-suricata-agent`, `aptl-db-agent`, `ns1.techvault.local`,
+  `dc.techvault.local`, `files.techvault.local`, and `webapp`
+- Telemetry window: `2026-06-27T04:10:16.739674+00:00` to
+  `2026-06-27T04:10:28.150274+00:00`
+- Wazuh alert count in the gate summary: 3
+- Suricata readback: 45 events, 24 alerts, 19 stats records, 88 kernel
+  packets, 0 kernel drops, 49,954 rules loaded, 0 failed rules
+
 ## ACES/libvirt regression coverage
 
 The ACES regression in

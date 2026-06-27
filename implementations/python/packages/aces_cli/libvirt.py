@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import typer
-from aces_backend_libvirt.techvault_live import validate_techvault_live
+from aces_operations.techvault_live import validate_techvault_live
 
 app = typer.Typer(help="Libvirt backend operations.")
 techvault_app = typer.Typer(help="TechVault operational scenario checks.")

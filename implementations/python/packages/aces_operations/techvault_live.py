@@ -13,19 +13,31 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from aces_backend_libvirt.target import create_libvirt_target
+from aces_backend_libvirt.techvault_driver import TechVaultComposeDriver
+from aces_backend_libvirt.techvault_profiles import normalize_identifier
 from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.manager import RuntimeManager
 from aces_sdl.parser import parse_sdl_file
 
-from .target import create_libvirt_target
-from .techvault_driver import TechVaultComposeDriver
-from .techvault_profiles import normalize_identifier
-
 DEFAULT_EVENT_WINDOW_SECONDS = 180
 _KALI_CONTAINER = "aptl-kali"
 _POLL_STEP_SECONDS = 10
+_SOC_READBACK_WINDOW_SECONDS = 180
 _RUN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 _NON_TRAFFIC_EVENT_TYPES = frozenset({"stats"})
+_REQUIRED_WAZUH_AGENTS = frozenset(
+    {
+        "wazuh.manager",
+        "aptl-dns-agent",
+        "aptl-fileshare-agent",
+        "aptl-ad-agent",
+        "aptl-webapp-agent",
+        "aptl-suricata-agent",
+        "aptl-db-agent",
+        "ns1.techvault.local",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -241,9 +253,8 @@ def _variation_check(driver: TechVaultComposeDriver) -> LiveCheck:
 
 def _soc_stack_readback_check(probe: DockerProbe) -> tuple[LiveCheck, dict[str, object]]:
     diagnostics: list[str] = []
-    agents = _wazuh_active_agents(probe)
-    required_agents = {"wazuh.manager", "aptl-webapp-agent", "aptl-suricata-agent", "aptl-db-agent"}
-    missing_agents = sorted(required_agents - set(agents))
+    agents = _wait_for_wazuh_agents(probe)
+    missing_agents = sorted(_REQUIRED_WAZUH_AGENTS - set(agents))
     if missing_agents:
         diagnostics.append("missing active Wazuh agents: " + ", ".join(missing_agents))
     suricata = _suricata_runtime_summary(probe)
@@ -255,6 +266,16 @@ def _soc_stack_readback_check(probe: DockerProbe) -> tuple[LiveCheck, dict[str, 
         diagnostics.append(f"Suricata reported kernel drops: {suricata.get('kernel_drops')}")
     evidence = {"soc_readback": {"wazuh_active_agents": agents, "suricata": suricata}}
     return LiveCheck("soc_stack_readback", not diagnostics, tuple(diagnostics)), evidence
+
+
+def _wait_for_wazuh_agents(probe: DockerProbe) -> tuple[str, ...]:
+    agents: tuple[str, ...] = ()
+    for _ in range(max(1, _SOC_READBACK_WINDOW_SECONDS // _POLL_STEP_SECONDS)):
+        agents = _wazuh_active_agents(probe)
+        if _REQUIRED_WAZUH_AGENTS.issubset(agents):
+            return agents
+        time.sleep(_POLL_STEP_SECONDS)
+    return agents
 
 
 def _wazuh_active_agents(probe: DockerProbe) -> tuple[str, ...]:

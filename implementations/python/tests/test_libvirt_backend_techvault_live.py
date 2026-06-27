@@ -7,7 +7,7 @@ import subprocess
 from datetime import UTC, datetime
 
 from aces_backend_libvirt.techvault_driver import TechVaultComposeDriver, TechVaultLifecycleResult
-from aces_backend_libvirt.techvault_live import validate_techvault_live
+from aces_operations.techvault_live import validate_techvault_live
 
 
 class _Runner:
@@ -53,9 +53,13 @@ class _Probe:
                 0,
                 """
 ID: 000, Name: wazuh.manager (server), IP: 127.0.0.1, Active/Local
-ID: 001, Name: aptl-webapp-agent, IP: any, Active
-ID: 002, Name: aptl-suricata-agent, IP: any, Active
-ID: 003, Name: aptl-db-agent, IP: any, Active
+ID: 001, Name: aptl-dns-agent, IP: any, Active
+ID: 002, Name: aptl-fileshare-agent, IP: any, Active
+ID: 003, Name: aptl-ad-agent, IP: any, Active
+ID: 004, Name: aptl-webapp-agent, IP: any, Active
+ID: 005, Name: aptl-suricata-agent, IP: any, Active
+ID: 006, Name: aptl-db-agent, IP: any, Active
+ID: 007, Name: ns1.techvault.local, IP: any, Active
 """,
                 "",
             )
@@ -74,12 +78,12 @@ ID: 003, Name: aptl-db-agent, IP: any, Active
 
 
 def test_validate_techvault_live_applies_scenario_and_records_manifest(tmp_path, monkeypatch):
-    monkeypatch.setattr("aces_backend_libvirt.techvault_live.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("aces_operations.techvault_live.time.sleep", lambda _seconds: None)
     monkeypatch.setattr(
-        "aces_backend_libvirt.techvault_live._suricata_eve",
+        "aces_operations.techvault_live._suricata_eve",
         lambda _probe, _start, _end: [{"timestamp": datetime.now(UTC).isoformat(), "event_type": "alert"}],
     )
-    monkeypatch.setattr("aces_backend_libvirt.techvault_live._wazuh_alerts", lambda _probe, _start, _end: [])
+    monkeypatch.setattr("aces_operations.techvault_live._wazuh_alerts", lambda _probe, _start, _end: [])
     _write_project_fixture(tmp_path)
     scenario = tmp_path / "mini-techvault.sdl.yaml"
     scenario.write_text(
