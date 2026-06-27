@@ -22,6 +22,7 @@ nodes:
   wazuh-manager:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: wazuh-api, port: 55000, protocol: tcp}
       - {name: agent-events, port: 1514, protocol: tcp}
@@ -33,95 +34,114 @@ nodes:
   wazuh-indexer:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: indexer-api, port: 9200, protocol: tcp}
   wazuh-dashboard:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: dashboard, port: 5601, protocol: tcp}
 
   suricata:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services: []
   misp:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: https, port: 443, protocol: tcp}
   misp-db:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: mysql, port: 3306, protocol: tcp}
   misp-redis:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: redis, port: 6379, protocol: tcp}
   misp-suricata-sync:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services: []
   thehive:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: thehive-api, port: 9000, protocol: tcp}
   thehive-cassandra:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: cassandra, port: 9042, protocol: tcp}
   thehive-es:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: elasticsearch, port: 9200, protocol: tcp}
   cortex:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: cortex-api, port: 9001, protocol: tcp}
   shuffle-backend:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: shuffle-api, port: 5001, protocol: tcp}
   shuffle-frontend:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: https, port: 443, protocol: tcp}
       - {name: http, port: 80, protocol: tcp}
   shuffle-orborus:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services: []
   shuffle-opensearch:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: opensearch-rest, port: 9200, protocol: tcp}
       - {name: opensearch-transport, port: 9300, protocol: tcp}
   wazuh-sidecar-db:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services: []
   wazuh-sidecar-suricata:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services: []
 
   webapp:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: http, port: 8080, protocol: tcp}
   ad:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: ldap, port: 389, protocol: tcp}
       - {name: kerberos, port: 88, protocol: tcp}
@@ -129,53 +149,63 @@ nodes:
   db:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: postgres, port: 5432, protocol: tcp}
   workstation:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: ssh, port: 22, protocol: tcp}
   fileshare:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: smb, port: 445, protocol: tcp}
   dns:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: dns, port: 53, protocol: udp}
   victim:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: ssh, port: 22, protocol: tcp}
 
   kali:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: ssh, port: 22, protocol: tcp}
   kali-capture:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services: []
 
   aptl-otel-collector:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: otlp-grpc, port: 4317, protocol: tcp}
       - {name: otlp-http, port: 4318, protocol: tcp}
   aptl-tempo:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: tempo-http, port: 3200, protocol: tcp}
   aptl-grafana-otel:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: grafana, port: 3000, protocol: tcp}
 
