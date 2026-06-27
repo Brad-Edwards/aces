@@ -11,9 +11,55 @@ from __future__ import annotations
 import argparse
 import json
 import time
-from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
+
+
+class _LifecycleResult(Protocol):
+    success: bool
+    error: str
+
+
+class _Backend(Protocol):
+    def start(self, profiles: list[str]) -> _LifecycleResult: ...
+
+
+class _Snapshot(Protocol):
+    def to_dict(self) -> dict[str, object]: ...
+
+
+class _StartContext(Protocol):
+    backend: _Backend | None
+    selected_profiles: set[str]
+    snapshot: _Snapshot | None
+    diagnostics: list[object]
+
+
+class _ContextFactory(Protocol):
+    def __call__(self, *, project_dir: Path, skip_seed: bool, scenario_path: Path | None) -> _StartContext: ...
+
+
+class _StopLab(Protocol):
+    def __call__(self, *, remove_volumes: bool, project_dir: Path) -> _LifecycleResult: ...
+
+
+class _LifecycleStep(Protocol):
+    __name__: str
+
+    def __call__(self, ctx: _StartContext) -> _LifecycleResult | None: ...
+
+
+@dataclass(frozen=True)
+class _LifecycleConfig:
+    context_factory: _ContextFactory
+    stop_lab: _StopLab
+    project_dir: Path
+    profiles: list[str]
+    scenario_path_raw: str
+    clean_volumes: bool
+    setup_steps: tuple[_LifecycleStep, ...]
+    readiness_steps: tuple[_LifecycleStep, ...]
 
 
 def main() -> None:
@@ -57,7 +103,7 @@ def _start(args: argparse.Namespace) -> dict[str, Any]:
 
     project_dir = Path(args.project_dir)
     profiles = _profiles(args.profiles_json)
-    setup_steps: tuple[Callable[[Any], Any], ...] = (
+    setup_steps: tuple[_LifecycleStep, ...] = (
         _step_load_env,
         _step_load_config,
         _step_ensure_ssh_keys,
@@ -71,49 +117,42 @@ def _start(args: argparse.Namespace) -> dict[str, Any]:
     )
     readiness_steps = (_step_wait_for_services, _step_test_ssh, _step_capture_snapshot)
     ctx, payload = _start_lifecycle(
-        context_factory=_LabStartContext,
-        stop_lab=stop_lab,
-        project_dir=project_dir,
-        profiles=profiles,
-        scenario_path_raw=args.scenario_path,
-        clean_volumes=args.clean_volumes,
-        setup_steps=setup_steps,
-        readiness_steps=readiness_steps,
+        _LifecycleConfig(
+            context_factory=_LabStartContext,
+            stop_lab=stop_lab,
+            project_dir=project_dir,
+            profiles=profiles,
+            scenario_path_raw=args.scenario_path,
+            clean_volumes=args.clean_volumes,
+            setup_steps=setup_steps,
+            readiness_steps=readiness_steps,
+        )
     )
     if payload is None:
+        assert ctx is not None
         payload = _success_payload(ctx, profiles)
     return payload
 
 
-def _start_lifecycle(
-    *,
-    context_factory: Callable[..., Any],
-    stop_lab: Callable[..., Any],
-    project_dir: Path,
-    profiles: list[str],
-    scenario_path_raw: str,
-    clean_volumes: bool,
-    setup_steps: tuple[Callable[[Any], Any], ...],
-    readiness_steps: tuple[Callable[[Any], Any], ...],
-) -> tuple[Any, dict[str, Any] | None]:
-    ctx: Any | None = None
-    payload = _clean_start_state(clean_volumes=clean_volumes, stop_lab=stop_lab, project_dir=project_dir)
+def _start_lifecycle(config: _LifecycleConfig) -> tuple[_StartContext | None, dict[str, Any] | None]:
+    ctx: _StartContext | None = None
+    payload = _clean_start_state(
+        clean_volumes=config.clean_volumes, stop_lab=config.stop_lab, project_dir=config.project_dir
+    )
     if payload is None:
-        scenario_path = Path(scenario_path_raw) if scenario_path_raw else None
-        ctx = context_factory(project_dir=project_dir, skip_seed=False, scenario_path=scenario_path)
-        payload = _run_steps(ctx, setup_steps)
+        scenario_path = Path(config.scenario_path_raw) if config.scenario_path_raw else None
+        ctx = config.context_factory(project_dir=config.project_dir, skip_seed=False, scenario_path=scenario_path)
+        payload = _run_steps(ctx, config.setup_steps)
     if payload is None:
         assert ctx is not None
-        payload = _start_compose(ctx, profiles)
+        payload = _start_compose(ctx, config.profiles)
     if payload is None:
         assert ctx is not None
-        payload = _run_readiness(ctx, profiles, readiness_steps)
+        payload = _run_readiness(ctx, config.profiles, config.readiness_steps)
     return ctx, payload
 
 
-def _clean_start_state(
-    *, clean_volumes: bool, stop_lab: Callable[..., Any], project_dir: Path
-) -> dict[str, Any] | None:
+def _clean_start_state(*, clean_volumes: bool, stop_lab: _StopLab, project_dir: Path) -> dict[str, Any] | None:
     payload: dict[str, Any] | None = None
     if clean_volumes:
         stop_result = stop_lab(remove_volumes=True, project_dir=project_dir)
@@ -122,7 +161,7 @@ def _clean_start_state(
     return payload
 
 
-def _start_compose(ctx: Any, profiles: list[str]) -> dict[str, Any] | None:
+def _start_compose(ctx: _StartContext, profiles: list[str]) -> dict[str, Any] | None:
     assert ctx.backend is not None
     result = ctx.backend.start(profiles)
     if not result.success and "soc" in profiles:
@@ -133,15 +172,15 @@ def _start_compose(ctx: Any, profiles: list[str]) -> dict[str, Any] | None:
 
 
 def _run_readiness(
-    ctx: Any,
+    ctx: _StartContext,
     profiles: list[str],
-    readiness_steps: tuple[Callable[[Any], Any], ...],
+    readiness_steps: tuple[_LifecycleStep, ...],
 ) -> dict[str, Any] | None:
     ctx.selected_profiles = set(profiles)
     return _run_steps(ctx, readiness_steps)
 
 
-def _success_payload(ctx: Any, profiles: list[str]) -> dict[str, Any]:
+def _success_payload(ctx: _StartContext, profiles: list[str]) -> dict[str, Any]:
     snapshot = ctx.snapshot.to_dict() if ctx.snapshot is not None else {}
     return {
         "success": True,
@@ -165,7 +204,7 @@ def _stop(args: argparse.Namespace) -> dict[str, Any]:
     return {"success": True, "profiles": profiles, "snapshot": {}, "diagnostics": []}
 
 
-def _run_steps(ctx: object, steps: tuple[Callable[[Any], Any], ...]) -> dict[str, Any] | None:
+def _run_steps(ctx: _StartContext, steps: tuple[_LifecycleStep, ...]) -> dict[str, Any] | None:
     for step in steps:
         result = step(ctx)
         if result is not None and not result.success:
