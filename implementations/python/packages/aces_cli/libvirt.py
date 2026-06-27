@@ -13,8 +13,8 @@ techvault_app = typer.Typer(help="TechVault operational scenario checks.")
 app.add_typer(techvault_app, name="techvault")
 
 _LIVE_WARNING = """\
-This will stop the target TechVault lab and remove Compose-managed volumes
-before booting it again through the ACES/libvirt provisioning path.
+This will create native libvirt/QEMU resources for the selected TechVault
+scenario and write a live-gate archive under the output directory.
 """
 
 
@@ -28,7 +28,8 @@ def validate_live(
     project_dir: Path = typer.Option(
         Path("."),
         "--project-dir",
-        help="TechVault/APTL project directory that owns docker-compose.yml.",
+        "--output-dir",
+        help="Output directory for native libvirt live-gate archives.",
     ),
     run_id: str | None = typer.Option(
         None,
@@ -38,16 +39,33 @@ def validate_live(
     skip_clean_boot: bool = typer.Option(
         False,
         "--skip-clean-boot",
-        help="Validate/start without the destructive stop -v cleanup.",
+        help="Record the run as non-clean without changing the native archive layout.",
     ),
     yes: bool = typer.Option(
         False,
         "--yes",
         "-y",
-        help="Skip the destructive-clean-boot confirmation prompt.",
+        help="Skip the native libvirt resource confirmation prompt.",
+    ),
+    connection_uri: str = typer.Option(
+        "qemu:///system",
+        "--connection-uri",
+        help="libvirt connection URI.",
+    ),
+    appliance_memory_mib: int = typer.Option(
+        128,
+        "--appliance-memory-mib",
+        min=64,
+        help="Memory per generated TechVault appliance VM.",
+    ),
+    boot_timeout_seconds: int = typer.Option(
+        180,
+        "--boot-timeout-seconds",
+        min=1,
+        help="Maximum native appliance readiness wait.",
     ),
 ) -> None:
-    """Boot TechVault through ACES/libvirt and run the live validation gate."""
+    """Boot TechVault through native ACES/libvirt and run the live validation gate."""
 
     if not skip_clean_boot and not yes:
         typer.echo(_LIVE_WARNING)
@@ -60,6 +78,9 @@ def validate_live(
         project_dir=project_dir.resolve(),
         run_id=resolved_run_id,
         clean_boot=not skip_clean_boot,
+        connection_uri=connection_uri,
+        appliance_memory_mib=appliance_memory_mib,
+        boot_timeout_seconds=boot_timeout_seconds,
     )
     typer.echo(report.render())
     if not report.passed:

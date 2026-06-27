@@ -41,6 +41,12 @@ def test_libvirt_techvault_validate_live_cli_invokes_gate(monkeypatch, tmp_path)
             "--run-id",
             "cli-run",
             "--skip-clean-boot",
+            "--connection-uri",
+            "qemu:///session",
+            "--appliance-memory-mib",
+            "96",
+            "--boot-timeout-seconds",
+            "7",
         ],
     )
 
@@ -52,5 +58,8 @@ def test_libvirt_techvault_validate_live_cli_invokes_gate(monkeypatch, tmp_path)
             "project_dir": tmp_path.resolve(),
             "run_id": "cli-run",
             "clean_boot": False,
+            "connection_uri": "qemu:///session",
+            "appliance_memory_mib": 96,
+            "boot_timeout_seconds": 7,
         }
     ]

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
 
-from .driver import DomainSpec, NetworkSpec
+from .driver import DomainSpec, NetworkSpec, ServiceSpec
 
 _DOMAIN = "runtime"
 NODE_RESOURCE_TYPE = "node"
@@ -73,7 +73,15 @@ def _network_spec(resource: PlannedResource, payload: Mapping[str, object]) -> N
     labels: dict[str, str] = {}
     if isinstance(properties, Mapping) and properties.get("internal") is True:
         labels["internal"] = "true"
-    return NetworkSpec(address=resource.address, name=_resource_name(resource, payload), labels=labels)
+    cidr = properties.get("cidr") if isinstance(properties, Mapping) else None
+    gateway = properties.get("gateway") if isinstance(properties, Mapping) else None
+    return NetworkSpec(
+        address=resource.address,
+        name=_resource_name(resource, payload),
+        cidr=cidr if isinstance(cidr, str) and cidr else None,
+        gateway=gateway if isinstance(gateway, str) and gateway else None,
+        labels=labels,
+    )
 
 
 def _domain_spec(
@@ -92,6 +100,7 @@ def _domain_spec(
         memory_mib=_memory_mib(resources.get("ram")),
         vcpus=_vcpus(resources.get("cpu")),
         networks=network_addresses,
+        services=_services(payload),
     )
 
 
@@ -123,6 +132,38 @@ def _node_resources(payload: Mapping[str, object]) -> Mapping[str, object]:
     node = spec.get("node") if isinstance(spec, Mapping) else None
     resources = node.get("resources") if isinstance(node, Mapping) else None
     return resources if isinstance(resources, Mapping) else {}
+
+
+def _services(payload: Mapping[str, object]) -> tuple[ServiceSpec, ...]:
+    spec = payload.get("spec")
+    node = spec.get("node") if isinstance(spec, Mapping) else None
+    raw_services = node.get("services") if isinstance(node, Mapping) else None
+    if not isinstance(raw_services, list | tuple):
+        return ()
+    services: list[ServiceSpec] = []
+    for item in raw_services:
+        service = _service(item)
+        if service is not None:
+            services.append(service)
+    return tuple(sorted(services, key=lambda service: (service.protocol, service.port, service.name)))
+
+
+def _service(raw: object) -> ServiceSpec | None:
+    if not isinstance(raw, Mapping):
+        return None
+    name = raw.get("name")
+    port = raw.get("port")
+    protocol = raw.get("protocol", "tcp")
+    if not isinstance(name, str) or not name:
+        return None
+    if not isinstance(port, int | float) or int(port) <= 0:
+        return None
+    if not isinstance(protocol, str) or not protocol:
+        protocol = "tcp"
+    normalized_protocol = protocol.lower()
+    if normalized_protocol not in {"tcp", "udp"}:
+        normalized_protocol = "tcp"
+    return ServiceSpec(name=name, port=int(port), protocol=normalized_protocol)
 
 
 def _memory_mib(raw: object) -> int:

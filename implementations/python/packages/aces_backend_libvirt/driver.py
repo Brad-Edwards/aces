@@ -14,7 +14,18 @@ class NetworkSpec:
 
     address: str
     name: str
+    cidr: str | None = None
+    gateway: str | None = None
     labels: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ServiceSpec:
+    """Portable service listener intent derived from an ACES node resource."""
+
+    name: str
+    port: int
+    protocol: str = "tcp"
 
 
 @dataclass(frozen=True)
@@ -27,6 +38,7 @@ class DomainSpec:
     memory_mib: int = 512
     vcpus: int = 1
     networks: tuple[str, ...] = ()
+    services: tuple[ServiceSpec, ...] = ()
     labels: dict[str, str] = field(default_factory=dict)
 
 

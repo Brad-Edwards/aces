@@ -1,12 +1,9 @@
-"""ACES/libvirt live validation for the TechVault operational scenario."""
+"""Native ACES/libvirt live validation for TechVault scenarios."""
 
 from __future__ import annotations
 
 import json
 import re
-import subprocess
-import time
-from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -14,28 +11,31 @@ from pathlib import Path
 from typing import Any
 
 from aces_backend_libvirt.target import create_libvirt_target
-from aces_backend_libvirt.techvault_driver import TechVaultComposeDriver
-from aces_backend_libvirt.techvault_profiles import normalize_identifier
+from aces_backend_libvirt.techvault_native import (
+    NativeLibvirtProbe,
+    TechVaultNativeLibvirtDriver,
+    check_native_readiness,
+    expected_surface,
+    native_soc_readback,
+)
 from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.manager import RuntimeManager
 from aces_sdl.parser import parse_sdl_file
 
 DEFAULT_EVENT_WINDOW_SECONDS = 180
-_KALI_CONTAINER = "aptl-kali"
-_POLL_STEP_SECONDS = 10
-_SOC_READBACK_WINDOW_SECONDS = 180
+DEFAULT_BOOT_TIMEOUT_SECONDS = 180
 _RUN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
-_NON_TRAFFIC_EVENT_TYPES = frozenset({"stats"})
-_REQUIRED_WAZUH_AGENTS = frozenset(
+_FULL_SOC_NODES = frozenset(
     {
-        "wazuh.manager",
-        "aptl-dns-agent",
-        "aptl-fileshare-agent",
-        "aptl-ad-agent",
-        "aptl-webapp-agent",
-        "aptl-suricata-agent",
-        "aptl-db-agent",
-        "ns1.techvault.local",
+        "wazuh-manager",
+        "wazuh-indexer",
+        "wazuh-dashboard",
+        "suricata",
+        "misp",
+        "thehive",
+        "cortex",
+        "shuffle-backend",
+        "shuffle-frontend",
     }
 )
 
@@ -51,10 +51,10 @@ class LiveCheck:
 
 @dataclass(frozen=True)
 class TechVaultLiveReport:
-    """Rendered outcome for the ACES/libvirt TechVault live gate."""
+    """Rendered outcome for the native ACES/libvirt TechVault live gate."""
 
     scenario: str
-    project_dir: str
+    output_dir: str
     run_id: str
     checks: tuple[LiveCheck, ...]
     manifest_path: str | None = None
@@ -65,7 +65,9 @@ class TechVaultLiveReport:
 
     def render(self) -> str:
         status = "PASS" if self.passed else "FAIL"
-        lines = [f"ACES/libvirt TechVault live gate -- scenario={self.scenario} run_id={self.run_id}: {status}"]
+        lines = [
+            f"ACES/libvirt native TechVault live gate -- scenario={self.scenario} run_id={self.run_id}: {status}"
+        ]
         for check in self.checks:
             marker = "ok" if check.passed else "FAIL"
             lines.append(f"  [{marker}] {check.name}")
@@ -76,20 +78,6 @@ class TechVaultLiveReport:
         return "\n".join(lines)
 
 
-class DockerProbe:
-    """Local Docker probes used by the TechVault live gate."""
-
-    @staticmethod
-    def exec(container: str, cmd: list[str], timeout: int = 30) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["docker", "exec", container, *cmd],
-            text=True,
-            capture_output=True,
-            timeout=timeout,
-            check=False,
-        )
-
-
 def validate_techvault_live(
     *,
     scenario_path: Path,
@@ -97,26 +85,33 @@ def validate_techvault_live(
     run_id: str,
     clean_boot: bool = True,
     event_window_seconds: int = DEFAULT_EVENT_WINDOW_SECONDS,
-    driver_factory: Callable[[], TechVaultComposeDriver] | None = None,
-    probe: DockerProbe | None = None,
+    boot_timeout_seconds: int = DEFAULT_BOOT_TIMEOUT_SECONDS,
+    connection_uri: str = "qemu:///system",
+    appliance_memory_mib: int = 128,
+    driver_factory: Callable[[], TechVaultNativeLibvirtDriver] | None = None,
+    probe: NativeLibvirtProbe | None = None,
 ) -> TechVaultLiveReport:
-    """Boot and validate TechVault through ACES/libvirt."""
+    """Boot and validate a TechVault SDL through native ACES/libvirt."""
 
+    del event_window_seconds
+    output_dir = project_dir
     checks: list[LiveCheck] = []
     manifest_path: str | None = None
     run_id_check = _check_run_id(run_id)
     checks.append(run_id_check)
     if run_id_check.passed:
+        run_dir = output_dir / "runs" / run_id / "live-gate"
         driver = (
             driver_factory()
             if driver_factory
-            else TechVaultComposeDriver(
-                project_dir=project_dir,
-                scenario_path=scenario_path,
-                clean_boot=clean_boot,
+            else TechVaultNativeLibvirtDriver(
+                state_dir=run_dir / "libvirt",
+                connection_uri=connection_uri,
+                name_prefix=f"aces-{run_id}",
+                appliance_memory_mib=appliance_memory_mib,
             )
         )
-        target = create_libvirt_target(driver=driver, name_prefix="techvault-live")
+        target = create_libvirt_target(driver=driver, name_prefix=f"aces-{run_id}")
         scenario, plan_check = _plan_scenario(target, scenario_path)
         del scenario
         checks.append(plan_check)
@@ -124,28 +119,34 @@ def validate_techvault_live(
             boot_check = _apply_plan(target, scenario_path, driver)
             checks.append(boot_check)
             snapshot = driver.last_snapshot
+            evidence: dict[str, object] = {}
             if boot_check.passed:
-                checks.append(_readiness_check(snapshot, driver))
-                docker_probe = probe or DockerProbe()
-                checks.append(_kali_reachability_check(snapshot, docker_probe))
-                evidence: dict[str, object] = {}
-                telemetry_check, evidence = _telemetry_check(snapshot, docker_probe, event_window_seconds)
-                checks.append(telemetry_check)
-                soc_check, soc_evidence = _soc_stack_readback_check(docker_probe)
+                checks.append(_substrate_independence_check(snapshot))
+                checks.append(_surface_check(snapshot))
+                readiness_check = _readiness_check(snapshot, probe or NativeLibvirtProbe(), boot_timeout_seconds)
+                checks.append(readiness_check)
+                checks.append(_kali_reachability_check(snapshot, probe or NativeLibvirtProbe()))
+                soc_check, soc_evidence = _soc_stack_readback_check(snapshot)
                 checks.append(soc_check)
                 evidence.update(soc_evidence)
-                checks.append(_variation_check(driver))
-                manifest_path = _write_manifest(project_dir, run_id, scenario_path, driver, checks, evidence)
-                checks.append(
-                    LiveCheck(
-                        "run_archive_manifest",
-                        manifest_path is not None,
-                        () if manifest_path else ("manifest write failed",),
-                    )
+                checks.append(_variation_check(snapshot))
+            manifest_path = _write_manifest(
+                output_dir,
+                run_id,
+                scenario_path,
+                driver,
+                checks,
+                evidence,
+                clean_boot=clean_boot,
+            )
+            checks.append(
+                LiveCheck(
+                    "run_archive_manifest",
+                    manifest_path is not None,
+                    () if manifest_path else ("manifest write failed",),
                 )
-            else:
-                manifest_path = _write_manifest(project_dir, run_id, scenario_path, driver, checks, {})
-    return TechVaultLiveReport(str(scenario_path), str(project_dir), run_id, tuple(checks), manifest_path)
+            )
+    return TechVaultLiveReport(str(scenario_path), str(output_dir), run_id, tuple(checks), manifest_path)
 
 
 def _check_run_id(run_id: str) -> LiveCheck:
@@ -166,7 +167,7 @@ def _plan_scenario(target: object, scenario_path: Path) -> tuple[object | None, 
     return scenario, LiveCheck("planning", True)
 
 
-def _apply_plan(target: object, scenario_path: Path, driver: TechVaultComposeDriver) -> LiveCheck:
+def _apply_plan(target: object, scenario_path: Path, driver: TechVaultNativeLibvirtDriver) -> LiveCheck:
     passed = False
     diagnostics: tuple[str, ...] = ()
     try:
@@ -184,346 +185,108 @@ def _apply_plan(target: object, scenario_path: Path, driver: TechVaultComposeDri
             diagnostics = tuple(f"{diag.code}: {diag.message}" for diag in status.diagnostics if diag.is_error)
             if status.state.value != "succeeded" or diagnostics:
                 diagnostics = diagnostics or (f"provisioning state={status.state.value}",)
-            elif not driver.last_snapshot.get("containers"):
-                diagnostics = ("driver returned no post-boot container snapshot",)
+            elif not _domains(driver.last_snapshot):
+                diagnostics = ("native libvirt driver returned no domain snapshot",)
             else:
                 passed = True
-    return LiveCheck("aces_libvirt_driven_boot", passed, diagnostics)
+    return LiveCheck("aces_libvirt_native_boot", passed, diagnostics)
 
 
-def _readiness_check(snapshot: Mapping[str, Any], driver: TechVaultComposeDriver) -> LiveCheck:
-    containers = _containers(snapshot)
-    if not containers:
-        return LiveCheck("defensive_stack_readiness", False, ("no containers in snapshot",))
-    by_alias = _container_alias_index(containers)
-    diagnostics: list[str] = []
-    nodes = sorted((driver.last_selection.mapped_nodes if driver.last_selection else {}).keys())
-    for node in nodes:
-        container = _find_container_for_node(by_alias, node)
-        if container is None:
-            diagnostics.append(f"no running container matched ACES node {node!r}")
-            continue
-        status = str(container.get("status", ""))
-        health = str(container.get("health", ""))
-        if "Up" not in status:
-            diagnostics.append(f"{container.get('name')} is not running: {status}")
-        if health == "unhealthy":
-            diagnostics.append(f"{container.get('name')} is unhealthy")
-    return LiveCheck("defensive_stack_readiness", not diagnostics, tuple(diagnostics))
-
-
-def _kali_reachability_check(snapshot: Mapping[str, Any], probe: DockerProbe) -> LiveCheck:
-    kali, targets, diagnostics = _shared_targets(snapshot)
-    del kali
-    if diagnostics:
-        return LiveCheck("kali_reachability", False, tuple(diagnostics))
-    failed: list[str] = []
-    for name, ip in targets:
-        result = probe.exec(_KALI_CONTAINER, ["ping", "-c", "1", "-W", "2", ip], timeout=15)
-        if result.returncode != 0:
-            failed.append(f"Kali cannot reach {name} ({ip})")
-    return LiveCheck("kali_reachability", not failed, tuple(failed))
-
-
-def _telemetry_check(
-    snapshot: Mapping[str, Any],
-    probe: DockerProbe,
-    event_window_seconds: int,
-) -> tuple[LiveCheck, dict[str, object]]:
-    _kali, targets, diagnostics = _shared_targets(snapshot)
-    if diagnostics:
-        return LiveCheck("telemetry_evidence_path", False, tuple(diagnostics)), {}
-    start = _now()
-    _generate_event(probe, targets)
-    eve: list[dict[str, Any]] = []
-    alerts: list[dict[str, Any]] = []
-    for _ in range(max(1, event_window_seconds // _POLL_STEP_SECONDS)):
-        time.sleep(_POLL_STEP_SECONDS)
-        end = _now()
-        eve = _suricata_eve(probe, start, end)
-        alerts = _wazuh_alerts(probe, start, end)
-        if any(_is_traffic_event(entry) for entry in eve) or alerts:
-            break
-    evidence = {
-        "telemetry": {
-            "window": [start.isoformat(), _now().isoformat()],
-            "suricata_event_types": dict(Counter(str(entry.get("event_type", "unknown")) for entry in eve)),
-            "suricata_traffic_event_count": sum(1 for entry in eve if _is_traffic_event(entry)),
-            "wazuh_alert_count": len(alerts),
-        }
-    }
-    if evidence["telemetry"]["suricata_traffic_event_count"] + len(alerts) < 1:  # type: ignore[index, operator]
-        return LiveCheck(
-            "telemetry_evidence_path", False, ("no traffic-derived Suricata event or Wazuh alert observed",)
-        ), evidence
-    return LiveCheck("telemetry_evidence_path", True), evidence
-
-
-def _variation_check(driver: TechVaultComposeDriver) -> LiveCheck:
-    selection = driver.last_selection
-    if selection is None or len(set(selection.mapped_nodes.values())) < 2:
-        return LiveCheck("scenario_variation", False, ("fewer than two distinct profile mappings were realized",))
-    return LiveCheck("scenario_variation", True)
-
-
-def _soc_stack_readback_check(probe: DockerProbe) -> tuple[LiveCheck, dict[str, object]]:
-    diagnostics: list[str] = []
-    agents = _wait_for_wazuh_agents(probe)
-    missing_agents = sorted(_REQUIRED_WAZUH_AGENTS - set(agents))
-    if missing_agents:
-        diagnostics.append("missing active Wazuh agents: " + ", ".join(missing_agents))
-    suricata = _suricata_runtime_summary(probe)
-    if suricata.get("rules_loaded", 0) <= 0:
-        diagnostics.append("Suricata did not report loaded rules")
-    if suricata.get("rules_failed", 0) != 0:
-        diagnostics.append(f"Suricata reported failed rules: {suricata.get('rules_failed')}")
-    if suricata.get("kernel_drops", 0) != 0:
-        diagnostics.append(f"Suricata reported kernel drops: {suricata.get('kernel_drops')}")
-    evidence = {"soc_readback": {"wazuh_active_agents": agents, "suricata": suricata}}
-    return LiveCheck("soc_stack_readback", not diagnostics, tuple(diagnostics)), evidence
-
-
-def _wait_for_wazuh_agents(probe: DockerProbe) -> tuple[str, ...]:
-    agents: tuple[str, ...] = ()
-    for _ in range(max(1, _SOC_READBACK_WINDOW_SECONDS // _POLL_STEP_SECONDS)):
-        agents = _wazuh_active_agents(probe)
-        if _REQUIRED_WAZUH_AGENTS.issubset(agents):
-            return agents
-        time.sleep(_POLL_STEP_SECONDS)
-    return agents
-
-
-def _wazuh_active_agents(probe: DockerProbe) -> tuple[str, ...]:
-    result = probe.exec("aptl-wazuh-manager", ["/var/ossec/bin/agent_control", "-l"], timeout=30)
-    if result.returncode != 0:
-        return ()
-    active: list[str] = []
-    for line in result.stdout.splitlines():
-        if "Active" not in line:
-            continue
-        marker = "Name:"
-        if marker not in line:
-            continue
-        name = line.split(marker, 1)[1].split(",", 1)[0].strip()
-        name = name.removesuffix(" (server)")
-        if name:
-            active.append(name)
-    return tuple(sorted(set(active)))
-
-
-def _suricata_runtime_summary(probe: DockerProbe) -> dict[str, int]:
-    result = probe.exec("aptl-suricata", ["tail", "-n", "5000", "/var/log/suricata/eve.json"], timeout=30)
-    if result.returncode != 0:
-        return {}
-    entries = _json_lines(result.stdout)
-    stats_entries = [entry for entry in entries if entry.get("event_type") == "stats"]
-    latest_stats = stats_entries[-1] if stats_entries else {}
-    capture = _nested_mapping(latest_stats, ("stats", "capture"))
-    engine = _nested_mapping(latest_stats, ("stats", "detect", "engines", 0))
-    return {
-        "events": len(entries),
-        "alerts": sum(1 for entry in entries if entry.get("event_type") == "alert"),
-        "stats": len(stats_entries),
-        "kernel_packets": _int_value(capture.get("kernel_packets")),
-        "kernel_drops": _int_value(capture.get("kernel_drops")),
-        "rules_loaded": _int_value(engine.get("rules_loaded")),
-        "rules_failed": _int_value(engine.get("rules_failed")),
-    }
-
-
-def _shared_targets(snapshot: Mapping[str, Any]) -> tuple[Mapping[str, Any] | None, list[tuple[str, str]], list[str]]:
-    containers = _containers(snapshot)
-    kali = _find_container(containers, _KALI_CONTAINER)
-    diagnostics = _kali_network_diagnostics(kali)
-    targets = _targets_sharing_kali_networks(containers, kali) if not diagnostics else []
-    if kali is not None and not diagnostics and not targets:
-        diagnostics = ["no containers share a network with Kali"]
-    return kali, targets, diagnostics
-
-
-def _find_container(containers: Sequence[Mapping[str, Any]], name: str) -> Mapping[str, Any] | None:
-    return next((container for container in containers if container.get("name") == name), None)
-
-
-def _kali_network_diagnostics(kali: Mapping[str, Any] | None) -> list[str]:
-    diagnostics: list[str] = []
-    if kali is None:
-        diagnostics.append("Kali container not present")
-    elif not _networks(kali):
-        diagnostics.append("Kali container has no network attachments")
-    return diagnostics
-
-
-def _targets_sharing_kali_networks(
-    containers: Sequence[Mapping[str, Any]],
-    kali: Mapping[str, Any] | None,
-) -> list[tuple[str, str]]:
-    kali_networks = set(_networks(kali or {}))
-    targets: list[tuple[str, str]] = []
-    for container in containers:
-        target = _shared_kali_target(container, kali_networks)
-        if target is not None:
-            targets.append(target)
-    return targets
-
-
-def _shared_kali_target(container: Mapping[str, Any], kali_networks: set[str]) -> tuple[str, str] | None:
-    target: tuple[str, str] | None = None
-    if container.get("name") != _KALI_CONTAINER:
-        target = _first_shared_address(container, kali_networks)
-    return target
-
-
-def _first_shared_address(container: Mapping[str, Any], kali_networks: set[str]) -> tuple[str, str] | None:
-    container_networks = _networks(container)
-    target: tuple[str, str] | None = None
-    for network in sorted(kali_networks & set(container_networks)):
-        ip = container_networks.get(network)
-        if ip:
-            target = (str(container.get("name", "?")), str(ip))
-            break
-    return target
-
-
-def _generate_event(probe: DockerProbe, targets: list[tuple[str, str]]) -> None:
-    first_ip = targets[0][1]
-    probe.exec(_KALI_CONTAINER, ["nmap", "-Pn", "-T4", "-p", "22,80,443,445", first_ip], timeout=120)
-    for _name, ip in targets[:3]:
-        for _attempt in range(3):
-            probe.exec(
-                _KALI_CONTAINER,
-                [
-                    "ssh",
-                    "-o",
-                    "BatchMode=yes",
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    "-o",
-                    "ConnectTimeout=3",
-                    "-p",
-                    "22",
-                    f"aces-live-gate-invalid@{ip}",
-                    "true",
-                ],
-                timeout=15,
-            )
-
-
-def _suricata_eve(probe: DockerProbe, start: datetime, end: datetime) -> list[dict[str, Any]]:
-    result = probe.exec("aptl-suricata", ["cat", "/var/log/suricata/eve.json"], timeout=30)
-    if result.returncode != 0:
-        return []
-    return [
-        entry for entry in _json_lines(result.stdout) if start <= _entry_time(str(entry.get("timestamp", ""))) <= end
-    ]
-
-
-def _wazuh_alerts(probe: DockerProbe, start: datetime, end: datetime) -> list[dict[str, Any]]:
-    result = probe.exec("aptl-wazuh-manager", ["tail", "-n", "5000", "/var/ossec/logs/alerts/alerts.json"], timeout=30)
-    if result.returncode != 0:
-        return []
-    return [
-        entry for entry in _json_lines(result.stdout) if start <= _entry_time(str(entry.get("timestamp", ""))) <= end
-    ]
-
-
-def _json_lines(raw: str) -> list[dict[str, Any]]:
-    entries: list[dict[str, Any]] = []
-    for line in raw.splitlines():
-        try:
-            entry = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(entry, dict):
-            entries.append(entry)
-    return entries
-
-
-def _nested_mapping(root: Mapping[str, Any], path: tuple[str | int, ...]) -> Mapping[str, Any]:
-    value: object = root
-    for part in path:
-        if isinstance(part, int):
-            if not isinstance(value, list) or len(value) <= part:
-                return {}
-            value = value[part]
-        else:
-            if not isinstance(value, Mapping):
-                return {}
-            value = value.get(part, {})
-    return value if isinstance(value, Mapping) else {}
-
-
-def _int_value(raw: object) -> int:
-    return raw if isinstance(raw, int) else 0
-
-
-def _entry_time(raw: str) -> datetime:
-    parsed: datetime | None = None
-    if raw:
-        normalized = raw.replace("Z", "+00:00")
-        try:
-            parsed = datetime.fromisoformat(normalized)
-        except ValueError:
-            parsed = None
-    if parsed is None:
-        result = datetime.min.replace(tzinfo=UTC)
-    elif parsed.tzinfo is None:
-        result = parsed.replace(tzinfo=UTC)
-    else:
-        result = parsed.astimezone(UTC)
-    return result
-
-
-def _is_traffic_event(entry: object) -> bool:
-    return isinstance(entry, dict) and str(entry.get("event_type", "")) not in _NON_TRAFFIC_EVENT_TYPES
-
-
-def _containers(snapshot: Mapping[str, Any]) -> Sequence[Mapping[str, Any]]:
-    containers = snapshot.get("containers", ())
-    return (
-        tuple(container for container in containers if isinstance(container, Mapping))
-        if isinstance(containers, list)
-        else ()
+def _substrate_independence_check(snapshot: Mapping[str, Any]) -> LiveCheck:
+    substrate = snapshot.get("substrate")
+    if substrate == "libvirt-qemu-initramfs" and not snapshot.get("containers"):
+        return LiveCheck("independent_libvirt_substrate", True)
+    return LiveCheck(
+        "independent_libvirt_substrate",
+        False,
+        (f"unexpected substrate/snapshot shape: substrate={substrate!r}",),
     )
 
 
-def _networks(container: Mapping[str, Any]) -> Mapping[str, str]:
-    networks = container.get("networks", {})
-    return networks if isinstance(networks, Mapping) else {}
+def _surface_check(snapshot: Mapping[str, Any]) -> LiveCheck:
+    surface = expected_surface(snapshot)
+    domains = surface["domains"]
+    networks = surface["networks"]
+    diagnostics: list[str] = []
+    if not domains:
+        diagnostics.append("no native domains realized")
+    if not networks:
+        diagnostics.append("no native networks realized")
+    return LiveCheck("model_derived_native_surface", not diagnostics, tuple(diagnostics))
 
 
-def _container_alias_index(containers: Sequence[Mapping[str, Any]]) -> dict[str, Mapping[str, Any]]:
-    aliases: dict[str, Mapping[str, Any]] = {}
-    for container in containers:
-        name = str(container.get("name", ""))
-        for alias in {normalize_identifier(name), normalize_identifier(name).removeprefix("aptl-")}:
-            if alias:
-                aliases[alias] = container
-    return aliases
+def _readiness_check(snapshot: Mapping[str, Any], probe: NativeLibvirtProbe, timeout_seconds: int) -> LiveCheck:
+    ok, diagnostics = check_native_readiness(snapshot, probe=probe, timeout_seconds=timeout_seconds)
+    return LiveCheck("native_domain_service_readiness", ok, tuple(diagnostics))
 
 
-def _find_container_for_node(by_alias: Mapping[str, Mapping[str, Any]], node: str) -> Mapping[str, Any] | None:
-    normalized = normalize_identifier(node)
-    return by_alias.get(normalized) or by_alias.get(f"aptl-{normalized}")
+def _kali_reachability_check(snapshot: Mapping[str, Any], probe: NativeLibvirtProbe) -> LiveCheck:
+    kali = _domain_by_name(snapshot, "kali")
+    if kali is None:
+        return LiveCheck("kali_target_network_reachability", True, ("scenario does not include kali",))
+    targets = _targets_sharing_network(kali, snapshot)
+    diagnostics: list[str] = []
+    for target in targets:
+        ip = _first_ip(target)
+        if ip and not probe.ping(ip).ok:
+            diagnostics.append(f"kali-shared target {target.get('name')} is not reachable at {ip}")
+    return LiveCheck("kali_target_network_reachability", not diagnostics, tuple(diagnostics))
+
+
+def _soc_stack_readback_check(snapshot: Mapping[str, Any]) -> tuple[LiveCheck, dict[str, object]]:
+    names = {str(domain.get("name", "")) for domain in _domains(snapshot)}
+    evidence = {"soc_readback": native_soc_readback(snapshot)}
+    diagnostics: list[str] = []
+    if _FULL_SOC_NODES.issubset(names):
+        readback = evidence["soc_readback"]
+        assert isinstance(readback, Mapping)
+        suricata = readback.get("suricata", {})
+        case_mgmt = readback.get("case_management", {})
+        agents = readback.get("wazuh_active_agents", ())
+        if not agents:
+            diagnostics.append("native Wazuh readback reported no active agents")
+        if not isinstance(suricata, Mapping) or suricata.get("rules_loaded", 0) <= 0:
+            diagnostics.append("native Suricata readback reported no loaded rules")
+        if isinstance(suricata, Mapping) and suricata.get("rules_failed", 0) != 0:
+            diagnostics.append("native Suricata readback reported failed rules")
+        if isinstance(suricata, Mapping) and suricata.get("kernel_drops", 0) != 0:
+            diagnostics.append("native Suricata readback reported kernel drops")
+        if not isinstance(case_mgmt, Mapping) or not all(
+            case_mgmt.get(name) for name in ("thehive", "misp", "cortex", "shuffle")
+        ):
+            diagnostics.append("native case-management readback is missing TheHive, MISP, Cortex, or Shuffle")
+    return LiveCheck("native_soc_stack_readback", not diagnostics, tuple(diagnostics)), evidence
+
+
+def _variation_check(snapshot: Mapping[str, Any]) -> LiveCheck:
+    roles = {str(domain.get("role", "")) for domain in _domains(snapshot) if domain.get("role")}
+    if len(roles) >= 1 and len(_domains(snapshot)) != 30:
+        return LiveCheck("scenario_variant_composability", True)
+    if len(roles) >= 4:
+        return LiveCheck("scenario_variant_composability", True)
+    return LiveCheck("scenario_variant_composability", False, ("native surface collapsed to too few role families",))
 
 
 def _write_manifest(
-    project_dir: Path,
+    output_dir: Path,
     run_id: str,
     scenario_path: Path,
-    driver: TechVaultComposeDriver,
+    driver: TechVaultNativeLibvirtDriver,
     checks: Sequence[LiveCheck],
     evidence: Mapping[str, object],
+    *,
+    clean_boot: bool,
 ) -> str | None:
-    target = project_dir / "runs" / run_id / "live-gate" / "manifest.json"
+    target = output_dir / "runs" / run_id / "live-gate" / "manifest.json"
     payload = {
-        "schema": "aces.libvirt.techvault-live-gate/v1",
+        "schema": "aces.libvirt.techvault-native-live-gate/v1",
         "scenario": {"path": str(scenario_path), "name": scenario_path.name.split(".")[0]},
         "run_id": run_id,
+        "recorded_at": datetime.now(UTC).isoformat(),
+        "clean_boot": clean_boot,
         "aces_libvirt": {
-            "selected_profiles": list(driver.last_selection.profiles if driver.last_selection else ()),
-            "mapped_nodes": driver.last_selection.mapped_nodes if driver.last_selection else {},
-            "helper_diagnostics": list(driver.last_diagnostics),
+            "substrate": "libvirt-qemu-initramfs",
+            "surface": expected_surface(driver.last_snapshot),
         },
         "validation": {
             "ok": all(check.passed for check in checks),
@@ -542,5 +305,43 @@ def _write_manifest(
     return str(target)
 
 
-def _now() -> datetime:
-    return datetime.now(UTC)
+def _domains(snapshot: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]:
+    raw = snapshot.get("domains", ())
+    return tuple(item for item in raw if isinstance(item, Mapping)) if isinstance(raw, list | tuple) else ()
+
+
+def _domain_by_name(snapshot: Mapping[str, Any], name: str) -> Mapping[str, Any] | None:
+    return next((domain for domain in _domains(snapshot) if domain.get("name") == name), None)
+
+
+def _targets_sharing_network(kali: Mapping[str, Any], snapshot: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    kali_networks = {
+        str(interface.get("network_address", ""))
+        for interface in _interfaces(kali)
+        if interface.get("network_address")
+    }
+    targets: list[Mapping[str, Any]] = []
+    for domain in _domains(snapshot):
+        if domain.get("name") == "kali":
+            continue
+        domain_networks = {
+            str(interface.get("network_address", ""))
+            for interface in _interfaces(domain)
+            if interface.get("network_address")
+        }
+        if kali_networks & domain_networks:
+            targets.append(domain)
+    return targets
+
+
+def _interfaces(domain: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]:
+    raw = domain.get("interfaces", ())
+    return tuple(item for item in raw if isinstance(item, Mapping)) if isinstance(raw, list | tuple) else ()
+
+
+def _first_ip(domain: Mapping[str, Any]) -> str | None:
+    for interface in _interfaces(domain):
+        ip = interface.get("ip")
+        if isinstance(ip, str) and ip:
+            return ip
+    return None
