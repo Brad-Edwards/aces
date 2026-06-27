@@ -57,49 +57,55 @@ def _start(args: argparse.Namespace) -> dict[str, Any]:
 
     project_dir = Path(args.project_dir)
     profiles = _profiles(args.profiles_json)
+    payload: dict[str, Any] | None = None
     if args.clean_volumes:
         stop_result = stop_lab(remove_volumes=True, project_dir=project_dir)
         if not stop_result.success:
-            return _failure(f"clean-state cleanup failed: {stop_result.error}")
+            payload = _failure(f"clean-state cleanup failed: {stop_result.error}")
 
-    scenario_path = Path(args.scenario_path) if args.scenario_path else None
-    ctx = _LabStartContext(project_dir=project_dir, skip_seed=False, scenario_path=scenario_path)
-    setup_steps: tuple[Callable[[Any], Any], ...] = (
-        _step_load_env,
-        _step_load_config,
-        _step_ensure_ssh_keys,
-        _step_check_sysreqs,
-        _step_sync_credentials,
-        _step_seed_suricata_volumes,
-        _step_generate_certs,
-        _step_generate_soc_certs,
-        _step_check_bind_mounts,
-        _step_pull_images,
-    )
-    setup_failure = _run_steps(ctx, setup_steps)
-    if setup_failure is not None:
-        return setup_failure
+    if payload is None:
+        scenario_path = Path(args.scenario_path) if args.scenario_path else None
+        ctx = _LabStartContext(project_dir=project_dir, skip_seed=False, scenario_path=scenario_path)
+        setup_steps: tuple[Callable[[Any], Any], ...] = (
+            _step_load_env,
+            _step_load_config,
+            _step_ensure_ssh_keys,
+            _step_check_sysreqs,
+            _step_sync_credentials,
+            _step_seed_suricata_volumes,
+            _step_generate_certs,
+            _step_generate_soc_certs,
+            _step_check_bind_mounts,
+            _step_pull_images,
+        )
+        setup_failure = _run_steps(ctx, setup_steps)
+        if setup_failure is not None:
+            payload = setup_failure
 
-    assert ctx.backend is not None
-    result = ctx.backend.start(profiles)
-    if not result.success and "soc" in profiles:
-        time.sleep(60)
+    if payload is None:
+        assert ctx.backend is not None
         result = ctx.backend.start(profiles)
-    if not result.success:
-        return _failure(f"compose start failed: {result.error}")
+        if not result.success and "soc" in profiles:
+            time.sleep(60)
+            result = ctx.backend.start(profiles)
+        if not result.success:
+            payload = _failure(f"compose start failed: {result.error}")
 
-    ctx.selected_profiles = set(profiles)
-    readiness_failure = _run_steps(ctx, (_step_wait_for_services, _step_test_ssh, _step_capture_snapshot))
-    if readiness_failure is not None:
-        return readiness_failure
+    if payload is None:
+        ctx.selected_profiles = set(profiles)
+        readiness_failure = _run_steps(ctx, (_step_wait_for_services, _step_test_ssh, _step_capture_snapshot))
+        if readiness_failure is not None:
+            payload = readiness_failure
 
-    snapshot = ctx.snapshot.to_dict() if ctx.snapshot is not None else {}
-    return {
-        "success": True,
-        "profiles": profiles,
-        "snapshot": snapshot,
-        "diagnostics": [_diagnostic_payload(diag) for diag in ctx.diagnostics],
-    }
+    if payload is None:
+        snapshot = ctx.snapshot.to_dict() if ctx.snapshot is not None else {}
+        payload = {
+            "success": True,
+            "profiles": profiles,
+            "snapshot": snapshot,
+            "diagnostics": [_diagnostic_payload(diag) for diag in ctx.diagnostics],
+        }
+    return payload
 
 
 def _stop(args: argparse.Namespace) -> dict[str, Any]:

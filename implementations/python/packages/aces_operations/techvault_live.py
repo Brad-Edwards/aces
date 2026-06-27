@@ -79,7 +79,8 @@ class TechVaultLiveReport:
 class DockerProbe:
     """Local Docker probes used by the TechVault live gate."""
 
-    def exec(self, container: str, cmd: list[str], timeout: int = 30) -> subprocess.CompletedProcess[str]:
+    @staticmethod
+    def exec(container: str, cmd: list[str], timeout: int = 30) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             ["docker", "exec", container, *cmd],
             text=True,
@@ -102,50 +103,48 @@ def validate_techvault_live(
     """Boot and validate TechVault through ACES/libvirt."""
 
     checks: list[LiveCheck] = []
+    manifest_path: str | None = None
     run_id_check = _check_run_id(run_id)
     checks.append(run_id_check)
-    if not run_id_check.passed:
-        return TechVaultLiveReport(str(scenario_path), str(project_dir), run_id, tuple(checks))
-
-    driver = (
-        driver_factory()
-        if driver_factory
-        else TechVaultComposeDriver(
-            project_dir=project_dir,
-            scenario_path=scenario_path,
-            clean_boot=clean_boot,
+    if run_id_check.passed:
+        driver = (
+            driver_factory()
+            if driver_factory
+            else TechVaultComposeDriver(
+                project_dir=project_dir,
+                scenario_path=scenario_path,
+                clean_boot=clean_boot,
+            )
         )
-    )
-    target = create_libvirt_target(driver=driver, name_prefix="techvault-live")
-    scenario, plan_check = _plan_scenario(target, scenario_path)
-    del scenario
-    checks.append(plan_check)
-    if not plan_check.passed:
-        return TechVaultLiveReport(str(scenario_path), str(project_dir), run_id, tuple(checks))
-
-    boot_check = _apply_plan(target, scenario_path, driver)
-    checks.append(boot_check)
-    snapshot = driver.last_snapshot
-    if not boot_check.passed:
-        manifest_path = _write_manifest(project_dir, run_id, scenario_path, driver, checks, {})
-        return TechVaultLiveReport(str(scenario_path), str(project_dir), run_id, tuple(checks), manifest_path)
-
-    checks.append(_readiness_check(snapshot, driver))
-    docker_probe = probe or DockerProbe()
-    checks.append(_kali_reachability_check(snapshot, docker_probe))
-    evidence: dict[str, object] = {}
-    telemetry_check, evidence = _telemetry_check(snapshot, docker_probe, event_window_seconds)
-    checks.append(telemetry_check)
-    soc_check, soc_evidence = _soc_stack_readback_check(docker_probe)
-    checks.append(soc_check)
-    evidence.update(soc_evidence)
-    checks.append(_variation_check(driver))
-    manifest_path = _write_manifest(project_dir, run_id, scenario_path, driver, checks, evidence)
-    checks.append(
-        LiveCheck(
-            "run_archive_manifest", manifest_path is not None, () if manifest_path else ("manifest write failed",)
-        )
-    )
+        target = create_libvirt_target(driver=driver, name_prefix="techvault-live")
+        scenario, plan_check = _plan_scenario(target, scenario_path)
+        del scenario
+        checks.append(plan_check)
+        if plan_check.passed:
+            boot_check = _apply_plan(target, scenario_path, driver)
+            checks.append(boot_check)
+            snapshot = driver.last_snapshot
+            if boot_check.passed:
+                checks.append(_readiness_check(snapshot, driver))
+                docker_probe = probe or DockerProbe()
+                checks.append(_kali_reachability_check(snapshot, docker_probe))
+                evidence: dict[str, object] = {}
+                telemetry_check, evidence = _telemetry_check(snapshot, docker_probe, event_window_seconds)
+                checks.append(telemetry_check)
+                soc_check, soc_evidence = _soc_stack_readback_check(docker_probe)
+                checks.append(soc_check)
+                evidence.update(soc_evidence)
+                checks.append(_variation_check(driver))
+                manifest_path = _write_manifest(project_dir, run_id, scenario_path, driver, checks, evidence)
+                checks.append(
+                    LiveCheck(
+                        "run_archive_manifest",
+                        manifest_path is not None,
+                        () if manifest_path else ("manifest write failed",),
+                    )
+                )
+            else:
+                manifest_path = _write_manifest(project_dir, run_id, scenario_path, driver, checks, {})
     return TechVaultLiveReport(str(scenario_path), str(project_dir), run_id, tuple(checks), manifest_path)
 
 
@@ -168,6 +167,8 @@ def _plan_scenario(target: object, scenario_path: Path) -> tuple[object | None, 
 
 
 def _apply_plan(target: object, scenario_path: Path, driver: TechVaultComposeDriver) -> LiveCheck:
+    passed = False
+    diagnostics: tuple[str, ...] = ()
     try:
         scenario = parse_sdl_file(scenario_path)
         execution_plan = RuntimeManager(target).plan(scenario)
@@ -175,17 +176,19 @@ def _apply_plan(target: object, scenario_path: Path, driver: TechVaultComposeDri
         receipt = control_plane.submit_provisioning(execution_plan.provisioning)
         status = control_plane.get_operation(receipt.operation_id)
     except Exception as exc:
-        return LiveCheck("aces_libvirt_driven_boot", False, (f"provisioning raised: {exc}",))
-    if status is None:
-        return LiveCheck("aces_libvirt_driven_boot", False, ("control plane did not record provisioning status",))
-    diagnostics = tuple(f"{diag.code}: {diag.message}" for diag in status.diagnostics if diag.is_error)
-    if status.state.value != "succeeded" or diagnostics:
-        return LiveCheck(
-            "aces_libvirt_driven_boot", False, diagnostics or (f"provisioning state={status.state.value}",)
-        )
-    if not driver.last_snapshot.get("containers"):
-        return LiveCheck("aces_libvirt_driven_boot", False, ("driver returned no post-boot container snapshot",))
-    return LiveCheck("aces_libvirt_driven_boot", True)
+        diagnostics = (f"provisioning raised: {exc}",)
+    else:
+        if status is None:
+            diagnostics = ("control plane did not record provisioning status",)
+        else:
+            diagnostics = tuple(f"{diag.code}: {diag.message}" for diag in status.diagnostics if diag.is_error)
+            if status.state.value != "succeeded" or diagnostics:
+                diagnostics = diagnostics or (f"provisioning state={status.state.value}",)
+            elif not driver.last_snapshot.get("containers"):
+                diagnostics = ("driver returned no post-boot container snapshot",)
+            else:
+                passed = True
+    return LiveCheck("aces_libvirt_driven_boot", passed, diagnostics)
 
 
 def _readiness_check(snapshot: Mapping[str, Any], driver: TechVaultComposeDriver) -> LiveCheck:
@@ -331,24 +334,27 @@ def _suricata_runtime_summary(probe: DockerProbe) -> dict[str, int]:
 def _shared_targets(snapshot: Mapping[str, Any]) -> tuple[Mapping[str, Any] | None, list[tuple[str, str]], list[str]]:
     containers = _containers(snapshot)
     kali = next((container for container in containers if container.get("name") == _KALI_CONTAINER), None)
-    if kali is None:
-        return None, [], ["Kali container not present"]
-    kali_networks = set(_networks(kali))
-    if not kali_networks:
-        return kali, [], ["Kali container has no network attachments"]
     targets: list[tuple[str, str]] = []
-    for container in containers:
-        if container.get("name") == _KALI_CONTAINER:
-            continue
-        shared = kali_networks & set(_networks(container))
-        for network in sorted(shared):
-            ip = _networks(container).get(network)
-            if ip:
-                targets.append((str(container.get("name", "?")), str(ip)))
-                break
-    if not targets:
-        return kali, [], ["no containers share a network with Kali"]
-    return kali, targets, []
+    diagnostics: list[str] = []
+    if kali is None:
+        diagnostics.append("Kali container not present")
+    else:
+        kali_networks = set(_networks(kali))
+        if not kali_networks:
+            diagnostics.append("Kali container has no network attachments")
+        else:
+            for container in containers:
+                if container.get("name") == _KALI_CONTAINER:
+                    continue
+                shared = kali_networks & set(_networks(container))
+                for network in sorted(shared):
+                    ip = _networks(container).get(network)
+                    if ip:
+                        targets.append((str(container.get("name", "?")), str(ip)))
+                        break
+    if kali is not None and not diagnostics and not targets:
+        diagnostics.append("no containers share a network with Kali")
+    return kali, targets, diagnostics
 
 
 def _generate_event(probe: DockerProbe, targets: list[tuple[str, str]]) -> None:
@@ -424,16 +430,20 @@ def _int_value(raw: object) -> int:
 
 
 def _entry_time(raw: str) -> datetime:
-    if not raw:
-        return datetime.min.replace(tzinfo=UTC)
-    normalized = raw.replace("Z", "+00:00")
-    try:
-        parsed = datetime.fromisoformat(normalized)
-    except ValueError:
-        return datetime.min.replace(tzinfo=UTC)
-    if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=UTC)
-    return parsed.astimezone(UTC)
+    parsed: datetime | None = None
+    if raw:
+        normalized = raw.replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            parsed = None
+    if parsed is None:
+        result = datetime.min.replace(tzinfo=UTC)
+    elif parsed.tzinfo is None:
+        result = parsed.replace(tzinfo=UTC)
+    else:
+        result = parsed.astimezone(UTC)
+    return result
 
 
 def _is_traffic_event(entry: object) -> bool:

@@ -193,25 +193,33 @@ class TechVaultComposeDriver:
 
 def _decode_helper_payload(stdout: str) -> TechVaultLifecycleResult:
     lines = [line for line in stdout.splitlines() if line.strip()]
+    payload: object | None = None
+    error = ""
     if not lines:
-        return TechVaultLifecycleResult(success=False, error="APTL helper produced no JSON result.")
-    try:
-        payload = json.loads(lines[-1])
-    except json.JSONDecodeError:
-        return TechVaultLifecycleResult(success=False, error="APTL helper produced invalid JSON.")
-    if not isinstance(payload, dict):
-        return TechVaultLifecycleResult(success=False, error="APTL helper JSON result was not an object.")
-    profiles = payload.get("profiles", ())
-    diagnostics = payload.get("diagnostics", ())
-    return TechVaultLifecycleResult(
-        success=payload.get("success") is True,
-        profiles=tuple(str(item) for item in profiles) if isinstance(profiles, list) else (),
-        snapshot=payload.get("snapshot") if isinstance(payload.get("snapshot"), dict) else {},
-        diagnostics=tuple(item for item in diagnostics if isinstance(item, dict))
-        if isinstance(diagnostics, list)
-        else (),
-        error=str(payload.get("error", "")),
-    )
+        error = "APTL helper produced no JSON result."
+    else:
+        try:
+            payload = json.loads(lines[-1])
+        except json.JSONDecodeError:
+            error = "APTL helper produced invalid JSON."
+    if not error and not isinstance(payload, dict):
+        error = "APTL helper JSON result was not an object."
+    if error:
+        result = TechVaultLifecycleResult(success=False, error=error)
+    else:
+        assert isinstance(payload, dict)
+        profiles = payload.get("profiles", ())
+        diagnostics = payload.get("diagnostics", ())
+        result = TechVaultLifecycleResult(
+            success=payload.get("success") is True,
+            profiles=tuple(str(item) for item in profiles) if isinstance(profiles, list) else (),
+            snapshot=payload.get("snapshot") if isinstance(payload.get("snapshot"), dict) else {},
+            diagnostics=tuple(item for item in diagnostics if isinstance(item, dict))
+            if isinstance(diagnostics, list)
+            else (),
+            error=str(payload.get("error", "")),
+        )
+    return result
 
 
 def _unmapped_diagnostics(nodes: tuple[str, ...]) -> list[Diagnostic]:
