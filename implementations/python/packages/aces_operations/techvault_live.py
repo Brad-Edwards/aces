@@ -76,22 +76,29 @@ class TechVaultLiveReport:
         return "\n".join(lines)
 
 
+@dataclass(frozen=True)
+class TechVaultLiveConfig:
+    """Runtime controls for the native ACES/libvirt TechVault live gate."""
+
+    clean_boot: bool = True
+    event_window_seconds: int = DEFAULT_EVENT_WINDOW_SECONDS
+    boot_timeout_seconds: int = DEFAULT_BOOT_TIMEOUT_SECONDS
+    connection_uri: str = "qemu:///system"
+    appliance_memory_mib: int = 128
+
+
 def validate_techvault_live(
     *,
     scenario_path: Path,
     project_dir: Path,
     run_id: str,
-    clean_boot: bool = True,
-    event_window_seconds: int = DEFAULT_EVENT_WINDOW_SECONDS,
-    boot_timeout_seconds: int = DEFAULT_BOOT_TIMEOUT_SECONDS,
-    connection_uri: str = "qemu:///system",
-    appliance_memory_mib: int = 128,
+    config: TechVaultLiveConfig | None = None,
     driver_factory: Callable[[], TechVaultNativeLibvirtDriver] | None = None,
     probe: NativeLibvirtProbe | None = None,
 ) -> TechVaultLiveReport:
     """Boot and validate a TechVault SDL through native ACES/libvirt."""
 
-    del event_window_seconds
+    settings = config or TechVaultLiveConfig()
     output_dir = project_dir
     checks: list[LiveCheck] = []
     manifest_path: str | None = None
@@ -104,10 +111,10 @@ def validate_techvault_live(
             if driver_factory
             else TechVaultNativeLibvirtDriver(
                 state_dir=run_dir / "libvirt",
-                connection_uri=connection_uri,
+                connection_uri=settings.connection_uri,
                 name_prefix="aces-techvault",
-                appliance_memory_mib=appliance_memory_mib,
-                clean_existing=clean_boot,
+                appliance_memory_mib=settings.appliance_memory_mib,
+                clean_existing=settings.clean_boot,
             )
         )
         target = create_libvirt_target(driver=driver, name_prefix="aces-techvault")
@@ -122,7 +129,9 @@ def validate_techvault_live(
             if boot_check.passed:
                 checks.append(_substrate_independence_check(snapshot))
                 checks.append(_surface_check(snapshot))
-                readiness_check = _readiness_check(snapshot, probe or NativeLibvirtProbe(), boot_timeout_seconds)
+                readiness_check = _readiness_check(
+                    snapshot, probe or NativeLibvirtProbe(), settings.boot_timeout_seconds
+                )
                 checks.append(readiness_check)
                 checks.append(_kali_reachability_check(snapshot, probe or NativeLibvirtProbe()))
                 soc_check, soc_evidence = _soc_stack_readback_check(snapshot)
@@ -136,7 +145,7 @@ def validate_techvault_live(
                 driver,
                 checks,
                 evidence,
-                clean_boot=clean_boot,
+                clean_boot=settings.clean_boot,
             )
             checks.append(
                 LiveCheck(
@@ -237,24 +246,42 @@ def _soc_stack_readback_check(snapshot: Mapping[str, Any]) -> tuple[LiveCheck, d
     evidence = {"soc_readback": native_soc_readback(snapshot)}
     diagnostics: list[str] = []
     if _FULL_SOC_NODES.issubset(names):
-        readback = evidence["soc_readback"]
-        assert isinstance(readback, Mapping)
-        suricata = readback.get("suricata", {})
-        case_mgmt = readback.get("case_management", {})
-        agents = readback.get("wazuh_active_agents", ())
-        if not agents:
-            diagnostics.append("native Wazuh readback reported no active agents")
-        if not isinstance(suricata, Mapping) or suricata.get("rules_loaded", 0) <= 0:
-            diagnostics.append("native Suricata readback reported no loaded rules")
-        if isinstance(suricata, Mapping) and suricata.get("rules_failed", 0) != 0:
-            diagnostics.append("native Suricata readback reported failed rules")
-        if isinstance(suricata, Mapping) and suricata.get("kernel_drops", 0) != 0:
-            diagnostics.append("native Suricata readback reported kernel drops")
-        if not isinstance(case_mgmt, Mapping) or not all(
-            case_mgmt.get(name) for name in ("thehive", "misp", "cortex", "shuffle")
-        ):
-            diagnostics.append("native case-management readback is missing TheHive, MISP, Cortex, or Shuffle")
+        diagnostics.extend(_full_soc_diagnostics(evidence["soc_readback"]))
     return LiveCheck("native_soc_stack_readback", not diagnostics, tuple(diagnostics)), evidence
+
+
+def _full_soc_diagnostics(readback: object) -> tuple[str, ...]:
+    if not isinstance(readback, Mapping):
+        return ("native SOC readback is not structured",)
+    diagnostics: list[str] = []
+    suricata = readback.get("suricata", {})
+    case_mgmt = readback.get("case_management", {})
+    agents = readback.get("wazuh_active_agents", ())
+    if not agents:
+        diagnostics.append("native Wazuh readback reported no active agents")
+    diagnostics.extend(_suricata_diagnostics(suricata))
+    if not _has_case_management(case_mgmt):
+        diagnostics.append("native case-management readback is missing TheHive, MISP, Cortex, or Shuffle")
+    return tuple(diagnostics)
+
+
+def _suricata_diagnostics(suricata: object) -> tuple[str, ...]:
+    if not isinstance(suricata, Mapping):
+        return ("native Suricata readback is not structured",)
+    diagnostics: list[str] = []
+    if suricata.get("rules_loaded", 0) <= 0:
+        diagnostics.append("native Suricata readback reported no loaded rules")
+    if suricata.get("rules_failed", 0) != 0:
+        diagnostics.append("native Suricata readback reported failed rules")
+    if suricata.get("kernel_drops", 0) != 0:
+        diagnostics.append("native Suricata readback reported kernel drops")
+    return tuple(diagnostics)
+
+
+def _has_case_management(case_mgmt: object) -> bool:
+    return isinstance(case_mgmt, Mapping) and all(
+        case_mgmt.get(name) for name in ("thehive", "misp", "cortex", "shuffle")
+    )
 
 
 def _variation_check(snapshot: Mapping[str, Any]) -> LiveCheck:

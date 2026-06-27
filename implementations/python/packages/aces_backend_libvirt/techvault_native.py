@@ -102,9 +102,6 @@ class TechVaultNativeLibvirtDriver:
         self.state_dir.mkdir(parents=True, exist_ok=True)
         matrix = _native_matrix(networks=networks, domains=domains, name_prefix=self.name_prefix)
         self.last_matrix = matrix
-        diagnostics: list[Diagnostic] = []
-        network_handles: list[NetworkHandle] = []
-        domain_handles: list[DomainHandle] = []
         try:
             connection = self._conn()
         except Exception:
@@ -112,47 +109,72 @@ class TechVaultNativeLibvirtDriver:
         if self.clean_existing:
             _destroy_existing_with_prefix(connection, self.name_prefix)
 
-        for network in _as_sequence(matrix.get("networks")):
-            if not isinstance(network, Mapping):
-                continue
-            address = str(network.get("address", ""))
-            try:
-                native = _call(connection, "networkDefineXML", _network_xml(network))
-                if not self.define_only:
-                    native.create()
-            except Exception:
-                diagnostics.append(_diagnostic(_CODE_OPERATION_FAILED, address))
-                continue
-            self._names[address] = str(network.get("runtime_name", ""))
-            self._realized.add(address)
-            network_handles.append(NetworkHandle(address=address, realized=True))
-
-        for domain in _as_sequence(matrix.get("domains")):
-            if not isinstance(domain, Mapping):
-                continue
-            address = str(domain.get("address", ""))
-            try:
-                kernel = copy_kernel_for_libvirt(self.kernel_path, self.state_dir / "kernel" / self.kernel_path.name)
-                initrd = self.initramfs_builder.build(
-                    domain=domain,
-                    target=self.state_dir / "initramfs" / f"{domain.get('runtime_name')}.cpio.gz",
-                )
-                make_libvirt_readable(initrd)
-                native = _call(connection, "defineXML", _domain_xml(domain, kernel=kernel, initrd=initrd))
-                if not self.define_only:
-                    native.create()
-            except Exception:
-                diagnostics.append(_diagnostic(_CODE_OPERATION_FAILED, address))
-                continue
-            self._names[address] = str(domain.get("runtime_name", ""))
-            self._realized.add(address)
-            domain_handles.append(DomainHandle(address=address, realized=True))
-
+        network_handles, network_diagnostics = self._define_networks(connection, matrix)
+        domain_handles, domain_diagnostics = self._define_domains(connection, matrix)
+        diagnostics = network_diagnostics + domain_diagnostics
         if diagnostics:
             self._rollback(connection, network_handles, domain_handles)
             return DriverResult(diagnostics=tuple(diagnostics))
         self.last_snapshot = _snapshot_from_matrix(matrix, domain_handles, network_handles)
         return DriverResult(networks=tuple(network_handles), domains=tuple(domain_handles))
+
+    def _define_networks(
+        self, connection: object, matrix: Mapping[str, object]
+    ) -> tuple[list[NetworkHandle], list[Diagnostic]]:
+        handles: list[NetworkHandle] = []
+        diagnostics: list[Diagnostic] = []
+        for network in _as_sequence(matrix.get("networks")):
+            if isinstance(network, Mapping):
+                handle = self._define_network(connection, network)
+                if isinstance(handle, NetworkHandle):
+                    handles.append(handle)
+                else:
+                    diagnostics.append(handle)
+        return handles, diagnostics
+
+    def _define_network(self, connection: object, network: Mapping[str, object]) -> NetworkHandle | Diagnostic:
+        address = str(network.get("address", ""))
+        try:
+            native = _call(connection, "networkDefineXML", _network_xml(network))
+            if not self.define_only:
+                native.create()
+        except Exception:
+            return _diagnostic(_CODE_OPERATION_FAILED, address)
+        self._names[address] = str(network.get("runtime_name", ""))
+        self._realized.add(address)
+        return NetworkHandle(address=address, realized=True)
+
+    def _define_domains(
+        self, connection: object, matrix: Mapping[str, object]
+    ) -> tuple[list[DomainHandle], list[Diagnostic]]:
+        handles: list[DomainHandle] = []
+        diagnostics: list[Diagnostic] = []
+        for domain in _as_sequence(matrix.get("domains")):
+            if isinstance(domain, Mapping):
+                handle = self._define_domain(connection, domain)
+                if isinstance(handle, DomainHandle):
+                    handles.append(handle)
+                else:
+                    diagnostics.append(handle)
+        return handles, diagnostics
+
+    def _define_domain(self, connection: object, domain: Mapping[str, object]) -> DomainHandle | Diagnostic:
+        address = str(domain.get("address", ""))
+        try:
+            kernel = copy_kernel_for_libvirt(self.kernel_path, self.state_dir / "kernel" / self.kernel_path.name)
+            initrd = self.initramfs_builder.build(
+                domain=domain,
+                target=self.state_dir / "initramfs" / f"{domain.get('runtime_name')}.cpio.gz",
+            )
+            make_libvirt_readable(initrd)
+            native = _call(connection, "defineXML", _domain_xml(domain, kernel=kernel, initrd=initrd))
+            if not self.define_only:
+                native.create()
+        except Exception:
+            return _diagnostic(_CODE_OPERATION_FAILED, address)
+        self._names[address] = str(domain.get("runtime_name", ""))
+        self._realized.add(address)
+        return DomainHandle(address=address, realized=True)
 
     def destroy(
         self,
@@ -261,7 +283,7 @@ def _allocate_interfaces(
     name_prefix: str,
 ) -> dict[str, tuple[dict[str, object], ...]]:
     allocations: dict[str, list[dict[str, object]]] = {domain.address: [] for domain in domains}
-    next_host: dict[str, int] = {address: 10 for address in networks}
+    next_host: dict[str, int] = dict.fromkeys(networks, 10)
     for domain in domains:
         for network_address in domain.networks:
             network = networks.get(network_address)
@@ -459,15 +481,16 @@ def _gateway(gateway: str | None, network: ipaddress.IPv4Network) -> ipaddress.I
 
 
 def _role(name: str) -> str:
+    role = "enterprise"
     if name in {"misp", "thehive", "cortex"} or name.startswith("shuffle-"):
-        return "soc-case-management"
-    if name.startswith("wazuh") or name == "suricata":
-        return "soc-monitoring"
-    if name in {"kali", "kali-capture"}:
-        return "red-team"
-    if name.startswith("aptl-"):
-        return "observability"
-    return "enterprise"
+        role = "soc-case-management"
+    elif name.startswith("wazuh") or name == "suricata":
+        role = "soc-monitoring"
+    elif name in {"kali", "kali-capture"}:
+        role = "red-team"
+    elif name.startswith("aptl-"):
+        role = "observability"
+    return role
 
 
 def _runtime_name(prefix: str, address: str, preferred: str | None = None) -> str:

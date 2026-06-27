@@ -149,21 +149,17 @@ def _services(payload: Mapping[str, object]) -> tuple[ServiceSpec, ...]:
 
 
 def _service(raw: object) -> ServiceSpec | None:
-    if not isinstance(raw, Mapping):
-        return None
-    name = raw.get("name")
-    port = raw.get("port")
-    protocol = raw.get("protocol", "tcp")
-    if not isinstance(name, str) or not name:
-        return None
-    if not isinstance(port, int | float) or int(port) <= 0:
-        return None
-    if not isinstance(protocol, str) or not protocol:
-        protocol = "tcp"
-    normalized_protocol = protocol.lower()
-    if normalized_protocol not in {"tcp", "udp"}:
-        normalized_protocol = "tcp"
-    return ServiceSpec(name=name, port=int(port), protocol=normalized_protocol)
+    service: ServiceSpec | None = None
+    if isinstance(raw, Mapping):
+        name = raw.get("name")
+        port = raw.get("port")
+        protocol = raw.get("protocol", "tcp")
+        if isinstance(name, str) and name and isinstance(port, int | float) and int(port) > 0:
+            normalized_protocol = protocol.lower() if isinstance(protocol, str) and protocol else "tcp"
+            if normalized_protocol not in {"tcp", "udp"}:
+                normalized_protocol = "tcp"
+            service = ServiceSpec(name=name, port=int(port), protocol=normalized_protocol)
+    return service
 
 
 def _memory_mib(raw: object) -> int:

@@ -14,7 +14,7 @@ from aces_backend_libvirt.techvault_native import (
     expected_surface,
 )
 from aces_operations import techvault_live
-from aces_operations.techvault_live import validate_techvault_live
+from aces_operations.techvault_live import TechVaultLiveConfig, validate_techvault_live
 from paths import EXAMPLES_DIR
 
 from aces.core.runtime.control_plane import RuntimeControlPlane
@@ -173,9 +173,9 @@ def test_validate_techvault_live_records_native_manifest(tmp_path):
         scenario_path=scenario,
         project_dir=tmp_path,
         run_id="native-live",
+        config=TechVaultLiveConfig(boot_timeout_seconds=1),
         driver_factory=_driver_factory,
         probe=_Probe(),
-        boot_timeout_seconds=1,
     )
 
     assert report.passed, report.render()

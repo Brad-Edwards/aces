@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import typer
-from aces_operations.techvault_live import validate_techvault_live
+from aces_operations.techvault_live import TechVaultLiveConfig, validate_techvault_live
 
 app = typer.Typer(help="Libvirt backend operations.")
 techvault_app = typer.Typer(help="TechVault operational scenario checks.")
@@ -19,7 +19,7 @@ scenario and write a live-gate archive under the output directory.
 
 
 @techvault_app.command("validate-live")
-def validate_live(
+def validate_live(  # NOSONAR: Typer command parameters intentionally mirror CLI options.
     scenario: Path = typer.Option(
         Path("examples/scenarios/techvault-operational.sdl.yaml"),
         "--scenario",
@@ -77,10 +77,12 @@ def validate_live(
         scenario_path=scenario.resolve(),
         project_dir=project_dir.resolve(),
         run_id=resolved_run_id,
-        clean_boot=not skip_clean_boot,
-        connection_uri=connection_uri,
-        appliance_memory_mib=appliance_memory_mib,
-        boot_timeout_seconds=boot_timeout_seconds,
+        config=TechVaultLiveConfig(
+            clean_boot=not skip_clean_boot,
+            connection_uri=connection_uri,
+            appliance_memory_mib=appliance_memory_mib,
+            boot_timeout_seconds=boot_timeout_seconds,
+        ),
     )
     typer.echo(report.render())
     if not report.passed:

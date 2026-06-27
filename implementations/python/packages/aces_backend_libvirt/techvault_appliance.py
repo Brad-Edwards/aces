@@ -39,6 +39,9 @@ class BusyboxInitramfsBuilder:
         return target
 
 
+_LIBVIRT_BOOT_ARTIFACT_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+
+
 def copy_kernel_for_libvirt(source: Path, target: Path) -> Path:
     """Copy ``source`` to a libvirt-readable run-local kernel path."""
 
@@ -52,7 +55,7 @@ def copy_kernel_for_libvirt(source: Path, target: Path) -> Path:
 def make_libvirt_readable(path: Path) -> None:
     """Set a generated boot artifact mode that the libvirt QEMU user can read."""
 
-    os.chmod(path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
+    os.chmod(path, _LIBVIRT_BOOT_ARTIFACT_MODE)  # NOSONAR: generated boot artifacts contain no secrets.
 
 
 def _write_appliance_root(root: Path, busybox_path: Path, domain: Mapping[str, object]) -> None:

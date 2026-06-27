@@ -100,29 +100,43 @@ def native_soc_readback(snapshot: Mapping[str, object]) -> dict[str, object]:
 def _readiness_diagnostics(snapshot: Mapping[str, object], probe: NativeLibvirtProbe) -> list[str]:
     diagnostics: list[str] = []
     for domain in _as_sequence(snapshot.get("domains")):
-        if not isinstance(domain, Mapping):
-            continue
-        addresses = _domain_ips(domain)
-        if not addresses:
-            continue
-        first_ip = addresses[0]
-        ping = probe.ping(first_ip)
-        if not ping.ok:
-            diagnostics.append(f"{domain.get('name')} is not reachable at {first_ip}: {ping.detail}")
-            continue
-        for service in _as_sequence(domain.get("services")):
-            if not isinstance(service, Mapping):
-                continue
-            protocol = str(service.get("protocol", "tcp")).lower()
+        if isinstance(domain, Mapping):
+            diagnostics.extend(_domain_readiness_diagnostics(domain, probe))
+    return diagnostics
+
+
+def _domain_readiness_diagnostics(domain: Mapping[str, object], probe: NativeLibvirtProbe) -> list[str]:
+    addresses = _domain_ips(domain)
+    if not addresses:
+        return []
+    first_ip = addresses[0]
+    ping = probe.ping(first_ip)
+    if not ping.ok:
+        return [f"{domain.get('name')} is not reachable at {first_ip}: {ping.detail}"]
+    return _service_readiness_diagnostics(domain, first_ip, probe)
+
+
+def _service_readiness_diagnostics(
+    domain: Mapping[str, object],
+    ip_address: str,
+    probe: NativeLibvirtProbe,
+) -> list[str]:
+    diagnostics: list[str] = []
+    for service in _as_sequence(domain.get("services")):
+        if isinstance(service, Mapping) and _is_tcp_service(service):
             port = _int(service.get("port"))
-            if protocol != "tcp" or port <= 0:
-                continue
-            result = probe.tcp(first_ip, port)
+            result = probe.tcp(ip_address, port)
             if not result.ok:
                 diagnostics.append(
                     f"{domain.get('name')} service {service.get('name')}:{port}/tcp not reachable: {result.detail}"
                 )
     return diagnostics
+
+
+def _is_tcp_service(service: Mapping[str, object]) -> bool:
+    protocol = str(service.get("protocol", "tcp")).lower()
+    port = _int(service.get("port"))
+    return protocol == "tcp" and port > 0
 
 
 def _domain_ips(domain: Mapping[str, object]) -> list[str]:
