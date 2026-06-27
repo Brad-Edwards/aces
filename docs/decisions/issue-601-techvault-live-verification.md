@@ -154,6 +154,46 @@ Strict SOC readback summary:
 - Suricata readback: 45 events, 24 alerts, 19 stats records, 88 kernel
   packets, 0 kernel drops, 49,954 rules loaded, 0 failed rules
 
+A final current-head destructive run after the SonarCloud hardening commits
+also passed from commit `43a4d5b`:
+
+```bash
+uv run --project implementations/python --frozen aces libvirt techvault validate-live \
+  --scenario /home/atomik/src/aces5/examples/scenarios/techvault-operational.sdl.yaml \
+  --project-dir /home/atomik/src/aptl \
+  --run-id aces-libvirt-techvault-final-head-20260627T0550Z \
+  --yes
+```
+
+Result: PASS, including `soc_stack_readback`.
+
+The run archive manifest was written to:
+
+```text
+/home/atomik/src/aptl/runs/aces-libvirt-techvault-final-head-20260627T0550Z/live-gate/manifest.json
+```
+
+Current-head SOC readback summary:
+
+- Selected profiles: `wazuh`, `victim`, `kali`, `enterprise`, `soc`,
+  `fileshare`, `dns`, `otel`
+- ACES/libvirt mapped TechVault nodes: 30
+- Running `aptl-*` containers after the gate: 30
+- Telemetry window: `2026-06-27T05:47:45.851134+00:00` to
+  `2026-06-27T05:47:57.261119+00:00`
+- Wazuh alert count in the gate summary: 4
+- Wazuh active agents: `wazuh.manager`, `aptl-dns-agent`,
+  `aptl-webapp-agent`, `aptl-ad-agent`, `aptl-fileshare-agent`,
+  `aptl-db-agent`, `aptl-suricata-agent`, `dc.techvault.local`,
+  `files.techvault.local`, and `ns1.techvault.local`
+- Wazuh manual readback in the telemetry window: 4 alerts, including
+  three rule `5710` failed SSH events and one rule `19003` SCA summary event
+- Suricata gate readback: 45 events, 24 alerts, 19 stats records, 89 kernel
+  packets, 0 kernel drops, 49,954 rules loaded, 0 failed rules
+- Suricata manual readback after the gate: 51 events, including 24 alerts,
+  1 flow, 1 netflow, and 25 stats records; latest stats still reported
+  89 kernel packets, 0 kernel drops, 49,954 rules loaded, and 0 failed rules
+
 ## ACES/libvirt regression coverage
 
 The ACES regression in
