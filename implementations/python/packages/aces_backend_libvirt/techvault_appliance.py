@@ -82,10 +82,10 @@ def _init_script(domain: Mapping[str, object]) -> str:
         "ip link set lo up",
         "for iface_path in /sys/class/net/*; do",
         "  iface=${iface_path##*/}",
-        "  [ \"$iface\" = lo ] && continue",
-        "  mac=$(cat \"$iface_path/address\")",
-        "  ip link set \"$iface\" up",
-        "  case \"$mac\" in",
+        '  [ "$iface" = lo ] && continue',
+        '  mac=$(cat "$iface_path/address")',
+        '  ip link set "$iface" up',
+        '  case "$mac" in',
     ]
     for interface in _as_sequence(domain.get("interfaces")):
         if not isinstance(interface, Mapping):
@@ -93,7 +93,7 @@ def _init_script(domain: Mapping[str, object]) -> str:
         lines.extend(
             [
                 f"    {interface.get('mac')})",
-                f"      ip addr add {interface.get('ip')}/{interface.get('cidr_prefix')} dev \"$iface\"",
+                f'      ip addr add {interface.get("ip")}/{interface.get("cidr_prefix")} dev "$iface"',
                 "      ;;",
             ]
         )

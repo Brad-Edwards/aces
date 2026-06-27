@@ -76,7 +76,9 @@ def check_native_readiness(
 def native_soc_readback(snapshot: Mapping[str, object]) -> dict[str, object]:
     """Return SOC readback derived from the native scenario surface."""
 
-    names = {str(domain.get("name", "")) for domain in _as_sequence(snapshot.get("domains")) if isinstance(domain, Mapping)}
+    names = {
+        str(domain.get("name", "")) for domain in _as_sequence(snapshot.get("domains")) if isinstance(domain, Mapping)
+    }
     active_agents = tuple(sorted(name for name in names if name in _wazuh_agent_names(names)))
     return {
         "wazuh_active_agents": active_agents,

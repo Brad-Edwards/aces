@@ -18,16 +18,19 @@ nodes:
   webapp:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: http, port: 8080, protocol: tcp}
   db:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: postgres, port: 5432, protocol: tcp}
   ad:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: ldap, port: 389, protocol: tcp}
       - {name: kerberos, port: 88, protocol: tcp}
@@ -35,12 +38,14 @@ nodes:
   workstation:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: ssh, port: 22, protocol: tcp}
 
   wazuh-manager:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: wazuh-api, port: 55000, protocol: tcp}
       - {name: agent-events, port: 1514, protocol: tcp}
@@ -52,23 +57,27 @@ nodes:
   wazuh-indexer:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: indexer-api, port: 9200, protocol: tcp}
 
   aptl-otel-collector:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: otlp-grpc, port: 4317, protocol: tcp}
       - {name: otlp-http, port: 4318, protocol: tcp}
   aptl-tempo:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: tempo-http, port: 3200, protocol: tcp}
   aptl-grafana-otel:
     type: vm
     os: linux
+    resources: {ram: 1 GiB, cpu: 1}
     services:
       - {name: grafana, port: 3000, protocol: tcp}
 

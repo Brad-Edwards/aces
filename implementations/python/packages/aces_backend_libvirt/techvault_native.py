@@ -196,7 +196,9 @@ class TechVaultNativeLibvirtDriver:
 
     def _destroy_one(self, connection: object, lookup_method: str, address: str) -> bool:
         try:
-            native = _call(connection, lookup_method, self._names.get(address, _runtime_name(self.name_prefix, address)))
+            native = _call(
+                connection, lookup_method, self._names.get(address, _runtime_name(self.name_prefix, address))
+            )
             native.destroy()
             native.undefine()
         except Exception:

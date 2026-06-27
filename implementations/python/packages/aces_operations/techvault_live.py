@@ -65,9 +65,7 @@ class TechVaultLiveReport:
 
     def render(self) -> str:
         status = "PASS" if self.passed else "FAIL"
-        lines = [
-            f"ACES/libvirt native TechVault live gate -- scenario={self.scenario} run_id={self.run_id}: {status}"
-        ]
+        lines = [f"ACES/libvirt native TechVault live gate -- scenario={self.scenario} run_id={self.run_id}: {status}"]
         for check in self.checks:
             marker = "ok" if check.passed else "FAIL"
             lines.append(f"  [{marker}] {check.name}")
@@ -317,9 +315,7 @@ def _domain_by_name(snapshot: Mapping[str, Any], name: str) -> Mapping[str, Any]
 
 def _targets_sharing_network(kali: Mapping[str, Any], snapshot: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     kali_networks = {
-        str(interface.get("network_address", ""))
-        for interface in _interfaces(kali)
-        if interface.get("network_address")
+        str(interface.get("network_address", "")) for interface in _interfaces(kali) if interface.get("network_address")
     }
     targets: list[Mapping[str, Any]] = []
     for domain in _domains(snapshot):
