@@ -164,8 +164,7 @@ module_boundaries:
       public_import_prefixes:
         aces_backend_libvirt:
           - aces_backend_libvirt.target
-          - aces_backend_libvirt.techvault_driver
-          - aces_backend_libvirt.techvault_profiles
+          - aces_backend_libvirt.techvault_native
         aces_runtime:
           - aces_runtime.control_plane
           - aces_runtime.manager

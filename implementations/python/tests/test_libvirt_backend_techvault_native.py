@@ -7,7 +7,12 @@ from pathlib import Path
 
 import pytest
 from aces_backend_libvirt import create_libvirt_target
-from aces_backend_libvirt.techvault_native import ProbeResult, TechVaultNativeLibvirtDriver, expected_surface
+from aces_backend_libvirt.techvault_native import (
+    BusyboxInitramfsBuilder,
+    ProbeResult,
+    TechVaultNativeLibvirtDriver,
+    expected_surface,
+)
 from aces_operations import techvault_live
 from aces_operations.techvault_live import validate_techvault_live
 from paths import EXAMPLES_DIR
@@ -18,10 +23,14 @@ from aces.core.sdl import parse_sdl
 
 
 class _NativeObject:
-    def __init__(self) -> None:
+    def __init__(self, name: str = "") -> None:
+        self._name = name
         self.created = False
         self.destroyed = False
         self.undefined = False
+
+    def name(self):
+        return self._name
 
     def create(self):
         self.created = True
@@ -42,14 +51,16 @@ class _FakeConnection:
 
     def networkDefineXML(self, xml: str):  # noqa: N802 - mirrors libvirt API
         self.network_xml.append(xml)
-        native = _NativeObject()
-        self.networks[_name_from_xml(xml)] = native
+        name = _name_from_xml(xml)
+        native = _NativeObject(name)
+        self.networks[name] = native
         return native
 
     def defineXML(self, xml: str):  # noqa: N802 - mirrors libvirt API
         self.domain_xml.append(xml)
-        native = _NativeObject()
-        self.domains[_name_from_xml(xml)] = native
+        name = _name_from_xml(xml)
+        native = _NativeObject(name)
+        self.domains[name] = native
         return native
 
     def networkLookupByName(self, name: str):  # noqa: N802 - mirrors libvirt API
@@ -57,6 +68,12 @@ class _FakeConnection:
 
     def lookupByName(self, name: str):  # noqa: N802 - mirrors libvirt API
         return self.domains[name]
+
+    def listAllDomains(self):  # noqa: N802 - mirrors libvirt API
+        return list(self.domains.values())
+
+    def listAllNetworks(self):  # noqa: N802 - mirrors libvirt API
+        return list(self.networks.values())
 
 
 class _Builder:
@@ -82,9 +99,12 @@ def _name_from_xml(xml: str) -> str:
 
 def _apply_native_scenario(path: Path, tmp_path: Path):
     connection = _FakeConnection()
+    kernel = tmp_path / "vmlinuz"
+    kernel.write_bytes(b"kernel")
     driver = TechVaultNativeLibvirtDriver(
         state_dir=tmp_path / "state",
         connection=connection,
+        kernel_path=kernel,
         name_prefix="native-test",
         initramfs_builder=_Builder(),
     )
@@ -139,9 +159,12 @@ def test_validate_techvault_live_records_native_manifest(tmp_path):
     scenario = EXAMPLES_DIR / "techvault-attacker-target.sdl.yaml"
 
     def _driver_factory():
+        kernel = tmp_path / "vmlinuz-live"
+        kernel.write_bytes(b"kernel")
         return TechVaultNativeLibvirtDriver(
             state_dir=tmp_path / "state",
             connection=_FakeConnection(),
+            kernel_path=kernel,
             name_prefix="live-test",
             initramfs_builder=_Builder(),
         )
@@ -170,3 +193,43 @@ def test_live_gate_has_no_aptl_or_docker_probe_dependency():
     assert "TechVaultComposeDriver" not in source
     assert "docker" not in source.lower()
     assert "aptl" not in source.lower()
+
+
+def test_native_driver_clean_boot_removes_previous_prefixed_resources(tmp_path):
+    connection = _FakeConnection()
+    old_domain = _NativeObject("native-test-old-domain")
+    old_network = _NativeObject("native-test-old-network")
+    connection.domains[old_domain.name()] = old_domain
+    connection.networks[old_network.name()] = old_network
+    kernel = tmp_path / "vmlinuz"
+    kernel.write_bytes(b"kernel")
+    driver = TechVaultNativeLibvirtDriver(
+        state_dir=tmp_path / "state",
+        connection=connection,
+        kernel_path=kernel,
+        name_prefix="native-test",
+        initramfs_builder=_Builder(),
+        clean_existing=True,
+    )
+
+    result = driver.realize(networks=(), domains=())
+
+    assert not result.diagnostics
+    assert old_domain.destroyed is True
+    assert old_domain.undefined is True
+    assert old_network.destroyed is True
+    assert old_network.undefined is True
+
+
+def test_busybox_initramfs_builder_writes_gzip_cpio(tmp_path):
+    domain = {
+        "name": "webapp",
+        "role": "enterprise",
+        "interfaces": [{"mac": "52:54:00:00:00:01", "ip": "192.0.2.10", "cidr_prefix": 24}],
+        "services": [{"name": "http", "port": 8080, "protocol": "tcp"}],
+    }
+
+    target = BusyboxInitramfsBuilder().build(domain=domain, target=tmp_path / "webapp.cpio.gz")
+
+    assert target.read_bytes().startswith(b"\x1f\x8b")
+    assert target.stat().st_size > 1000

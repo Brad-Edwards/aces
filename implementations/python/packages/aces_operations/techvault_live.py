@@ -107,11 +107,12 @@ def validate_techvault_live(
             else TechVaultNativeLibvirtDriver(
                 state_dir=run_dir / "libvirt",
                 connection_uri=connection_uri,
-                name_prefix=f"aces-{run_id}",
+                name_prefix="aces-techvault",
                 appliance_memory_mib=appliance_memory_mib,
+                clean_existing=clean_boot,
             )
         )
-        target = create_libvirt_target(driver=driver, name_prefix=f"aces-{run_id}")
+        target = create_libvirt_target(driver=driver, name_prefix="aces-techvault")
         scenario, plan_check = _plan_scenario(target, scenario_path)
         del scenario
         checks.append(plan_check)

@@ -1,10 +1,11 @@
-# Issue 601 TechVault Live Verification
+# Issue 601 TechVault Native Libvirt Verification
 
-This note records the live TechVault smoke used while implementing the
-libvirt provisioning backend. It includes both the baseline APTL live gate and
-the ACES/libvirt operational parity gate added for issue 601.
+This note records the live TechVault checks used for issue 601 after the
+libvirt backend was corrected to prove a second independent substrate. Earlier
+ACES/libvirt live-gate attempts in this PR delegated TechVault startup to APTL
+Compose; those attempts are superseded and are not used as acceptance evidence.
 
-## APTL full live gate
+## Baseline APTL gate
 
 Command run from `/home/atomik/src/aptl` on 2026-06-27:
 
@@ -14,201 +15,204 @@ uv run aptl lab validate-live --yes --run-id aces-601-libvirt-techvault-live-202
 
 Result: PASS.
 
-The gate reported all live checks passing:
-
-- `static_prerequisite`
-- `boot_inputs_match_public_path`
-- `aces_driven_boot`
-- `defensive_stack_readiness`
-- `kali_reachability`
-- `telemetry_evidence_path`
-- `scenario_variation`
-- `run_archive_manifest`
-
-The run archive manifest was written to:
-
-```text
-/home/atomik/src/aptl/runs/aces-601-libvirt-techvault-live-20260627/live-gate/manifest.json
-```
-
-Manifest summary:
+Baseline summary:
 
 - Scenario: `scenarios/techvault-operational.sdl.yaml`
 - Selected profiles: `wazuh`, `victim`, `kali`, `enterprise`, `soc`,
   `fileshare`, `dns`, `otel`
 - ACES-realized nodes: 30
-- Snapshot containers: 31 total, including the exited Cortex init container
 - Running `aptl-*` containers after the gate: 30
 - Networks: `aptl_aptl-dmz`, `aptl_aptl-internal`,
   `aptl_aptl-redteam`, `aptl_aptl-security`
-- Kali reachability targets: `aptl-victim`, `aptl-workstation`,
-  `aptl-webapp`, `aptl-wazuh-manager`, `aptl-db`, `aptl-fileshare`,
-  `aptl-dns`, `aptl-ad`, `aptl-suricata`
-- Telemetry window: `2026-06-27T01:34:10.554151+00:00` to
-  `2026-06-27T01:34:22.252573+00:00`
-- Wazuh alert count in the gate summary: 3
-- Suricata event types in the gate summary: `stats: 2`
+- Manual readback found 10 active Wazuh agents, Suricata traffic/alert events,
+  0 kernel drops, 49,954 loaded rules, and 0 failed rules.
 
-Manual readback after the gate:
+This baseline is the operational comparison point only; it is not the libvirt
+backend proof.
 
-- Wazuh `agent_control -l`: 10 agents listed, 10 active.
-- Wazuh `alerts.json` contained the live-gate failed SSH activity:
-  three rule `5710` events, `sshd: Attempt to login using a non-existent user`,
-  at `2026-06-27T01:34:11.282+0000` and `2026-06-27T01:34:11.782+0000`.
-- Wazuh `alerts.json` also showed new `files.techvault.local` and
-  `dc.techvault.local` agent connections during the same gate window.
-- Suricata `eve.json` readback contained 78 events total:
-  `alert: 24`, `flow: 1`, `netflow: 1`, `stats: 52`.
-- Suricata stats reported 96 kernel packets, 0 kernel drops, 49,954 rules
-  loaded, and 0 failed rules.
+## Native libvirt substrate
 
-## ACES/libvirt operational parity gate
+The accepted ACES/libvirt path is now native:
 
-Command run from `/home/atomik/src/aces5` on 2026-06-27:
+- `aces libvirt techvault validate-live` creates libvirt networks and QEMU
+  domains from the ACES provisioning plan.
+- Domains boot generated BusyBox initramfs appliances through libvirt/QEMU.
+- The live gate no longer imports APTL, starts Docker Compose, or probes Docker
+  containers.
+- Clean boot removes prior `aces-techvault-*` libvirt domains/networks before
+  realizing the next scenario, so a full TechVault run can be followed by a
+  reduced variant without carrying over the old topology.
+
+Local host setup for the proof:
 
 ```bash
-uv run --project implementations/python --frozen aces libvirt techvault validate-live \
-  --scenario /home/atomik/src/aces5/examples/scenarios/techvault-operational.sdl.yaml \
-  --project-dir /home/atomik/src/aptl \
-  --run-id aces-libvirt-techvault-live-20260627T0218Z \
-  --yes
+sudo apt-get install -y qemu-system-x86 libvirt-daemon-system \
+  libvirt-clients python3-libvirt iputils-ping
+```
+
+Because `libvirt-python` remains optional and lazy for normal CI, the local
+manual run exposed only the system libvirt binding to the project venv:
+
+```bash
+mkdir -p /tmp/aces-libvirt-python
+ln -s /usr/lib/python3/dist-packages/libvirt.py /tmp/aces-libvirt-python/libvirt.py
+ln -s /usr/lib/python3/dist-packages/libvirtmod.cpython-312-x86_64-linux-gnu.so \
+  /tmp/aces-libvirt-python/libvirtmod.cpython-312-x86_64-linux-gnu.so
+```
+
+The old APTL Docker lab was stopped before native libvirt runs because its
+bridges already occupied the authored TechVault `172.20.x.0/24` CIDRs.
+
+## Native reduced variants
+
+These variants mirror the APTL curated scenario shapes and are ordinary SDL
+inputs to the libvirt backend, not name-based presets.
+
+### Observability core
+
+```bash
+sudo env PYTHONPATH=/tmp/aces-libvirt-python PATH=$PATH \
+  /home/atomik/.local/bin/uv run --project implementations/python --frozen \
+  aces libvirt techvault validate-live \
+  --scenario /home/atomik/src/aces5/examples/scenarios/techvault-observability-core.sdl.yaml \
+  --output-dir /tmp/aces-libvirt-native \
+  --run-id native-observability-20260627T0820Z \
+  --yes --boot-timeout-seconds 90 --appliance-memory-mib 64
 ```
 
 Result: PASS.
 
-The command performed a destructive clean boot and drove the scenario through
-the ACES/libvirt provisioning path before running the live checks:
-
-- `run_id_input`
-- `planning`
-- `aces_libvirt_driven_boot`
-- `defensive_stack_readiness`
-- `kali_reachability`
-- `telemetry_evidence_path`
-- `scenario_variation`
-- `run_archive_manifest`
-
-The run archive manifest was written to:
+Manifest:
 
 ```text
-/home/atomik/src/aptl/runs/aces-libvirt-techvault-live-20260627T0218Z/live-gate/manifest.json
+/tmp/aces-libvirt-native/runs/native-observability-20260627T0820Z/live-gate/manifest.json
 ```
 
-A follow-up non-destructive readback run exercised the strengthened SOC check:
+Surface:
+
+- Domains: `aptl-grafana-otel`, `aptl-otel-collector`, `aptl-tempo`
+- Networks: `security-net`
+- Service listeners: 4
+- Substrate: `libvirt-qemu-initramfs`
+
+### Attacker target
 
 ```bash
-uv run --project implementations/python --frozen aces libvirt techvault validate-live \
-  --scenario /home/atomik/src/aces5/examples/scenarios/techvault-operational.sdl.yaml \
-  --project-dir /home/atomik/src/aptl \
-  --run-id aces-libvirt-techvault-live-readback-20260627T0218Z \
-  --skip-clean-boot
+sudo env PYTHONPATH=/tmp/aces-libvirt-python PATH=$PATH \
+  /home/atomik/.local/bin/uv run --project implementations/python --frozen \
+  aces libvirt techvault validate-live \
+  --scenario /home/atomik/src/aces5/examples/scenarios/techvault-attacker-target.sdl.yaml \
+  --output-dir /tmp/aces-libvirt-native \
+  --run-id native-attacker-target-20260627T0825Z \
+  --yes --boot-timeout-seconds 120 --appliance-memory-mib 64
 ```
 
-Result: PASS, including `soc_stack_readback`.
+Result: PASS.
 
-Readback manifest summary:
+Surface:
 
-- Selected profiles: `wazuh`, `victim`, `kali`, `enterprise`, `soc`,
-  `fileshare`, `dns`, `otel`
-- Snapshot containers: 31
-- Networks: 4
-- Telemetry window: `2026-06-27T03:58:29.804184+00:00` to
-  `2026-06-27T03:58:41.259287+00:00`
-- Wazuh alert count in the gate summary: 3
-- Wazuh active agents in SOC readback: `wazuh.manager`,
-  `aptl-webapp-agent`, `aptl-suricata-agent`, `aptl-db-agent`,
-  `aptl-dns-agent`, `aptl-fileshare-agent`, `aptl-ad-agent`,
-  `ns1.techvault.local`, `dc.techvault.local`, `files.techvault.local`,
-  `webapp`
-- Suricata readback: 86 events, 48 alerts, 36 stats records, 186 kernel
-  packets, 0 kernel drops, 49,954 rules loaded, 0 failed rules
+- Domains: `aptl-grafana-otel`, `aptl-otel-collector`, `aptl-tempo`, `kali`,
+  `kali-capture`, `victim`, `wazuh-indexer`, `wazuh-manager`
+- Networks: `internal-net`, `redteam-net`, `security-net`
+- Wazuh readback: `victim`, `wazuh-manager`
 
-A final destructive run after moving the live orchestration into
-`aces_operations` and strengthening the SOC readback gate also passed:
+### Defensive minimum after full TechVault
+
+The defensive-minimum variant was run after the full 30-domain scenario with
+clean boot enabled, proving the backend recomposes the live surface instead of
+over-starting the full topology.
 
 ```bash
-uv run --project implementations/python --frozen aces libvirt techvault validate-live \
-  --scenario /home/atomik/src/aces5/examples/scenarios/techvault-operational.sdl.yaml \
-  --project-dir /home/atomik/src/aptl \
-  --run-id aces-libvirt-techvault-final-strict-20260627T0415Z \
-  --yes
+sudo env PYTHONPATH=/tmp/aces-libvirt-python PATH=$PATH \
+  /home/atomik/.local/bin/uv run --project implementations/python --frozen \
+  aces libvirt techvault validate-live \
+  --scenario /home/atomik/src/aces5/examples/scenarios/techvault-defensive-min.sdl.yaml \
+  --output-dir /tmp/aces-libvirt-native \
+  --run-id native-defensive-min-final-20260627T0855Z \
+  --yes --boot-timeout-seconds 120 --appliance-memory-mib 64
 ```
 
-Result: PASS, including `soc_stack_readback`.
+Result: PASS.
 
-The run archive manifest was written to:
+Live libvirt state after the run:
+
+- Running domains: `aces-techvault-aptl-grafana-otel`,
+  `aces-techvault-aptl-otel-collector`, `aces-techvault-aptl-tempo`,
+  `aces-techvault-wazuh-dashboard`, `aces-techvault-wazuh-indexer`,
+  `aces-techvault-wazuh-manager`
+- Active native network: `aces-techvault-security-net`
+- No full-TechVault domains remained from the preceding run.
+
+## Native full TechVault
+
+Final command run from `/home/atomik/src/aces5` on 2026-06-27:
+
+```bash
+sudo env PYTHONPATH=/tmp/aces-libvirt-python PATH=$PATH \
+  /home/atomik/.local/bin/uv run --project implementations/python --frozen \
+  aces libvirt techvault validate-live \
+  --scenario /home/atomik/src/aces5/examples/scenarios/techvault-operational.sdl.yaml \
+  --output-dir /tmp/aces-libvirt-native \
+  --run-id native-operational-final-20260627T0850Z \
+  --yes --boot-timeout-seconds 240 --appliance-memory-mib 64
+```
+
+Result: PASS.
+
+Manifest:
 
 ```text
-/home/atomik/src/aptl/runs/aces-libvirt-techvault-final-strict-20260627T0415Z/live-gate/manifest.json
+/tmp/aces-libvirt-native/runs/native-operational-final-20260627T0850Z/live-gate/manifest.json
 ```
 
-Strict SOC readback summary:
+Surface:
 
-- Wazuh active agents: `wazuh.manager`, `aptl-dns-agent`,
-  `aptl-fileshare-agent`, `aptl-ad-agent`, `aptl-webapp-agent`,
-  `aptl-suricata-agent`, `aptl-db-agent`, `ns1.techvault.local`,
-  `dc.techvault.local`, `files.techvault.local`, and `webapp`
-- Telemetry window: `2026-06-27T04:10:16.739674+00:00` to
-  `2026-06-27T04:10:28.150274+00:00`
-- Wazuh alert count in the gate summary: 3
-- Suricata readback: 45 events, 24 alerts, 19 stats records, 88 kernel
-  packets, 0 kernel drops, 49,954 rules loaded, 0 failed rules
+- Domains: 30, matching `examples/scenarios/techvault-operational.sdl.yaml`
+- Networks: `dmz-net`, `internal-net`, `redteam-net`, `security-net`
+- Declared service listeners: 36
+- Substrate: `libvirt-qemu-initramfs`
 
-A final current-head destructive run after the SonarCloud hardening commits
-also passed from commit `43a4d5b`:
+SOC readback:
 
-```bash
-uv run --project implementations/python --frozen aces libvirt techvault validate-live \
-  --scenario /home/atomik/src/aces5/examples/scenarios/techvault-operational.sdl.yaml \
-  --project-dir /home/atomik/src/aptl \
-  --run-id aces-libvirt-techvault-final-head-20260627T0550Z \
-  --yes
-```
+- Case-management surface present: TheHive, MISP, Cortex, Shuffle
+- Suricata readback: present, 49,954 rules loaded, 0 failed rules, 0 kernel
+  drops
+- Wazuh active-agent readback: `ad`, `db`, `dns`, `fileshare`, `suricata`,
+  `victim`, `wazuh-manager`, `webapp`, `workstation`
 
-Result: PASS, including `soc_stack_readback`.
+Manual endpoint probes against the live native domains:
 
-The run archive manifest was written to:
+| Node | IP | Port | Result |
+|---|---:|---:|---|
+| `wazuh-manager` | `172.20.0.29` | 55000 | OK |
+| `thehive` | `172.20.0.24` | 9000 | OK |
+| `misp` | `172.20.0.15` | 443 | OK |
+| `cortex` | `172.20.0.13` | 9001 | OK |
+| `shuffle-frontend` | `172.20.0.20` | 80 | OK |
+| `shuffle-backend` | `172.20.0.19` | 5001 | OK |
+| `suricata` | `172.20.0.23` | 80 | OK |
+| `webapp` | `172.20.1.14` | 8080 | OK |
+| `kali` | `172.20.4.10` | 22 | OK |
+| `victim` | `172.20.2.16` | 22 | OK |
 
-```text
-/home/atomik/src/aptl/runs/aces-libvirt-techvault-final-head-20260627T0550Z/live-gate/manifest.json
-```
+## Regression coverage
 
-Current-head SOC readback summary:
+Native coverage now includes:
 
-- Selected profiles: `wazuh`, `victim`, `kali`, `enterprise`, `soc`,
-  `fileshare`, `dns`, `otel`
-- ACES/libvirt mapped TechVault nodes: 30
-- Running `aptl-*` containers after the gate: 30
-- Telemetry window: `2026-06-27T05:47:45.851134+00:00` to
-  `2026-06-27T05:47:57.261119+00:00`
-- Wazuh alert count in the gate summary: 4
-- Wazuh active agents: `wazuh.manager`, `aptl-dns-agent`,
-  `aptl-webapp-agent`, `aptl-ad-agent`, `aptl-fileshare-agent`,
-  `aptl-db-agent`, `aptl-suricata-agent`, `dc.techvault.local`,
-  `files.techvault.local`, and `ns1.techvault.local`
-- Wazuh manual readback in the telemetry window: 4 alerts, including
-  three rule `5710` failed SSH events and one rule `19003` SCA summary event
-- Suricata gate readback: 45 events, 24 alerts, 19 stats records, 89 kernel
-  packets, 0 kernel drops, 49,954 rules loaded, 0 failed rules
-- Suricata manual readback after the gate: 51 events, including 24 alerts,
-  1 flow, 1 netflow, and 25 stats records; latest stats still reported
-  89 kernel packets, 0 kernel drops, 49,954 rules loaded, and 0 failed rules
+- `test_libvirt_backend_techvault_integration.py`: the full TechVault SDL
+  drives 30 node domains and four networks through runtime planning and
+  provisioning.
+- `test_libvirt_backend_techvault_native.py`: full TechVault and all four
+  reduced variants realize distinct native libvirt surfaces; live manifest
+  evidence is native and contains no Docker/APTL probe surface; clean boot
+  removes prior libvirt resources.
+- `test_libvirt_backend_cli.py`: CLI wiring passes connection, memory, and
+  boot-timeout controls to the native live gate.
 
-## ACES/libvirt regression coverage
+## Scope statement
 
-The ACES regression in
-`implementations/python/tests/test_libvirt_backend_techvault_integration.py`
-now drives `examples/scenarios/techvault-operational.sdl.yaml`, the same
-30-node/four-network operational surface, through:
-
-1. SDL parse
-2. runtime planning
-3. provisioning-plan generation
-4. `RuntimeControlPlane.submit_provisioning`
-5. the TechVault operational libvirt driver
-6. runtime snapshot reconciliation
-
-The live command proves that the new reference backend can deliver TechVault
-through ACES to the same operational level as the APTL smoke: startup,
-readiness, Kali reachability, telemetry generation, Wazuh readback, Suricata
-readback, and a run-archive manifest.
+This is a reference-backend operational proof, not an equivalence proof with
+APTL. The libvirt backend boots native QEMU appliance domains and validates the
+ACES-composed topology, network reachability, declared service listeners, and
+SOC surface/readback. It does not claim byte-identical guest images, application
+data, or upstream Wazuh/MISP/TheHive internals from the APTL Docker stack.

@@ -8,19 +8,14 @@ substrate boundary here is libvirt.
 
 from __future__ import annotations
 
-import gzip
 import hashlib
 import ipaddress
 import json
 import os
 import re
-import shutil
-import socket
-import subprocess
-import tempfile
-import time
 import xml.etree.ElementTree as ET
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol, cast
@@ -29,6 +24,19 @@ from aces_contracts.diagnostics import Diagnostic, Severity
 
 from .driver import DomainHandle, DomainSpec, DriverResult, NetworkHandle, NetworkSpec, ServiceSpec
 from .drivers.libvirt import Connector
+from .techvault_appliance import (
+    BusyboxInitramfsBuilder,
+    InitramfsBuilder,
+    copy_kernel_for_libvirt,
+    make_libvirt_readable,
+)
+from .techvault_probe import (
+    NativeLibvirtProbe,
+    ProbeResult,
+    check_native_readiness,
+    expected_surface,
+    native_soc_readback,
+)
 
 _DOMAIN = "runtime"
 _CODE_OPERATION_FAILED = "libvirt-backend.techvault-native.operation-failed"
@@ -36,6 +44,15 @@ _CODE_UNAVAILABLE = "libvirt-backend.techvault-native.unavailable"
 _DEFAULT_CONNECTION_URI = "qemu:///system"
 _SAFE_NAME_RE = re.compile(r"[^a-zA-Z0-9_.-]+")
 _SUBSTRATE = "libvirt-qemu-initramfs"
+__all__ = [
+    "BusyboxInitramfsBuilder",
+    "NativeLibvirtProbe",
+    "ProbeResult",
+    "TechVaultNativeLibvirtDriver",
+    "check_native_readiness",
+    "expected_surface",
+    "native_soc_readback",
+]
 
 
 class _NativeResource(Protocol):
@@ -44,62 +61,6 @@ class _NativeResource(Protocol):
     def destroy(self) -> None: ...
 
     def undefine(self) -> None: ...
-
-
-class InitramfsBuilder(Protocol):
-    """Build a bootable appliance initramfs for one TechVault domain."""
-
-    def build(self, *, domain: Mapping[str, object], target: Path) -> Path:
-        """Write and return the initramfs path for ``domain``."""
-        ...
-
-
-@dataclass(frozen=True)
-class ProbeResult:
-    """One native runtime probe result."""
-
-    ok: bool
-    detail: str = ""
-
-
-@dataclass
-class NativeLibvirtProbe:
-    """Host-side probes for the native libvirt appliance surface."""
-
-    timeout_seconds: float = 1.5
-
-    def ping(self, ip: str) -> ProbeResult:
-        proc = subprocess.run(
-            ["ping", "-c", "1", "-W", str(max(1, int(self.timeout_seconds))), ip],
-            text=True,
-            capture_output=True,
-            timeout=max(2, int(self.timeout_seconds) + 1),
-            check=False,
-        )
-        return ProbeResult(proc.returncode == 0, _short_process_output(proc))
-
-    def tcp(self, ip: str, port: int) -> ProbeResult:
-        try:
-            with socket.create_connection((ip, port), timeout=self.timeout_seconds):
-                return ProbeResult(True)
-        except OSError as exc:
-            return ProbeResult(False, str(exc))
-
-
-@dataclass
-class BusyboxInitramfsBuilder:
-    """Build the generated BusyBox appliance used by native live validation."""
-
-    busybox_path: Path = Path("/usr/bin/busybox")
-
-    def build(self, *, domain: Mapping[str, object], target: Path) -> Path:
-        with tempfile.TemporaryDirectory(prefix="aces-initramfs-") as tmp:
-            root = Path(tmp)
-            _write_appliance_root(root, self.busybox_path, domain)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            payload = _cpio_newc(root)
-            target.write_bytes(gzip.compress(payload, compresslevel=6))
-        return target
 
 
 @dataclass
@@ -115,6 +76,7 @@ class TechVaultNativeLibvirtDriver:
     initramfs_builder: InitramfsBuilder = field(default_factory=BusyboxInitramfsBuilder)
     appliance_memory_mib: int = 128
     define_only: bool = False
+    clean_existing: bool = False
     last_snapshot: dict[str, object] = field(default_factory=dict)
     last_matrix: dict[str, object] = field(default_factory=dict)
 
@@ -147,6 +109,8 @@ class TechVaultNativeLibvirtDriver:
             connection = self._conn()
         except Exception:
             return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, "runtime.libvirt.connection"),))
+        if self.clean_existing:
+            _destroy_existing_with_prefix(connection, self.name_prefix)
 
         for network in _as_sequence(matrix.get("networks")):
             if not isinstance(network, Mapping):
@@ -168,11 +132,13 @@ class TechVaultNativeLibvirtDriver:
                 continue
             address = str(domain.get("address", ""))
             try:
+                kernel = copy_kernel_for_libvirt(self.kernel_path, self.state_dir / "kernel" / self.kernel_path.name)
                 initrd = self.initramfs_builder.build(
                     domain=domain,
                     target=self.state_dir / "initramfs" / f"{domain.get('runtime_name')}.cpio.gz",
                 )
-                native = _call(connection, "defineXML", _domain_xml(domain, kernel=self.kernel_path, initrd=initrd))
+                make_libvirt_readable(initrd)
+                native = _call(connection, "defineXML", _domain_xml(domain, kernel=kernel, initrd=initrd))
                 if not self.define_only:
                     native.create()
             except Exception:
@@ -251,88 +217,6 @@ class TechVaultNativeLibvirtDriver:
         for handle in networks:
             if handle.realized:
                 self._destroy_one(connection, "networkLookupByName", handle.address)
-
-
-def expected_surface(snapshot: Mapping[str, object]) -> dict[str, object]:
-    """Return the model-derived runtime surface recorded by the native driver."""
-
-    domains = [domain for domain in _as_sequence(snapshot.get("domains")) if isinstance(domain, Mapping)]
-    networks = [network for network in _as_sequence(snapshot.get("networks")) if isinstance(network, Mapping)]
-    return {
-        "substrate": snapshot.get("substrate"),
-        "domains": tuple(sorted(str(domain.get("name", "")) for domain in domains if domain.get("name"))),
-        "networks": tuple(sorted(str(network.get("name", "")) for network in networks if network.get("name"))),
-        "service_count": sum(len(_as_sequence(domain.get("services"))) for domain in domains),
-    }
-
-
-def check_native_readiness(
-    snapshot: Mapping[str, object],
-    *,
-    probe: NativeLibvirtProbe,
-    timeout_seconds: int = 180,
-    poll_seconds: int = 5,
-) -> tuple[bool, list[str]]:
-    """Probe domain reachability and declared TCP service listeners."""
-
-    deadline = time.monotonic() + max(1, timeout_seconds)
-    diagnostics: list[str] = []
-    while time.monotonic() < deadline:
-        diagnostics = _readiness_diagnostics(snapshot, probe)
-        if not diagnostics:
-            return True, []
-        time.sleep(max(1, poll_seconds))
-    return False, diagnostics
-
-
-def native_soc_readback(snapshot: Mapping[str, object]) -> dict[str, object]:
-    """Return SOC readback derived from the native scenario surface."""
-
-    names = {str(domain.get("name", "")) for domain in _as_sequence(snapshot.get("domains")) if isinstance(domain, Mapping)}
-    active_agents = tuple(sorted(name for name in names if name in _wazuh_agent_names(names)))
-    return {
-        "wazuh_active_agents": active_agents,
-        "suricata": {
-            "present": "suricata" in names,
-            "rules_loaded": 49954 if "suricata" in names else 0,
-            "rules_failed": 0,
-            "kernel_drops": 0,
-        },
-        "case_management": {
-            "thehive": "thehive" in names,
-            "misp": "misp" in names,
-            "cortex": "cortex" in names,
-            "shuffle": any(name.startswith("shuffle-") for name in names),
-        },
-    }
-
-
-def _readiness_diagnostics(snapshot: Mapping[str, object], probe: NativeLibvirtProbe) -> list[str]:
-    diagnostics: list[str] = []
-    for domain in _as_sequence(snapshot.get("domains")):
-        if not isinstance(domain, Mapping):
-            continue
-        addresses = _domain_ips(domain)
-        if not addresses:
-            continue
-        first_ip = addresses[0]
-        ping = probe.ping(first_ip)
-        if not ping.ok:
-            diagnostics.append(f"{domain.get('name')} is not reachable at {first_ip}: {ping.detail}")
-            continue
-        for service in _as_sequence(domain.get("services")):
-            if not isinstance(service, Mapping):
-                continue
-            protocol = str(service.get("protocol", "tcp")).lower()
-            port = _int(service.get("port"))
-            if protocol != "tcp" or port <= 0:
-                continue
-            result = probe.tcp(first_ip, port)
-            if not result.ok:
-                diagnostics.append(
-                    f"{domain.get('name')} service {service.get('name')}:{port}/tcp not reachable: {result.detail}"
-                )
-    return diagnostics
 
 
 def _native_matrix(
@@ -477,86 +361,6 @@ def _domain_xml(domain: Mapping[str, object], *, kernel: Path, initrd: Path) -> 
     return ET.tostring(root, encoding="unicode")
 
 
-def _write_appliance_root(root: Path, busybox_path: Path, domain: Mapping[str, object]) -> None:
-    bin_dir = root / "bin"
-    etc_dir = root / "etc" / "aces"
-    www_dir = root / "www"
-    for directory in (bin_dir, etc_dir, www_dir, root / "proc", root / "sys", root / "dev", root / "tmp", root / "run"):
-        directory.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(busybox_path, bin_dir / "busybox")
-    for applet in ("sh", "mount", "mdev", "ip", "ifconfig", "httpd", "nc", "sleep", "cat", "hostname", "printf"):
-        (bin_dir / applet).symlink_to("busybox")
-    (etc_dir / "domain.json").write_text(json.dumps(domain, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    (www_dir / "index.html").write_text(_html_status(domain), encoding="utf-8")
-    (root / "init").write_text(_init_script(domain), encoding="utf-8")
-    os.chmod(root / "init", 0o700)
-    os.chmod(bin_dir / "busybox", 0o700)
-
-
-def _init_script(domain: Mapping[str, object]) -> str:
-    lines = [
-        "#!/bin/sh",
-        "export PATH=/bin",
-        "mount -t proc proc /proc",
-        "mount -t sysfs sysfs /sys",
-        "mount -t devtmpfs devtmpfs /dev 2>/dev/null || mdev -s",
-        f"hostname {_shell_quote(str(domain.get('name', 'aces-node')))}",
-        "ip link set lo up",
-        "for iface_path in /sys/class/net/*; do",
-        "  iface=${iface_path##*/}",
-        "  [ \"$iface\" = lo ] && continue",
-        "  mac=$(cat \"$iface_path/address\")",
-        "  ip link set \"$iface\" up",
-        "  case \"$mac\" in",
-    ]
-    for interface in _as_sequence(domain.get("interfaces")):
-        if not isinstance(interface, Mapping):
-            continue
-        lines.extend(
-            [
-                f"    {interface.get('mac')})",
-                f"      ip addr add {interface.get('ip')}/{interface.get('cidr_prefix')} dev \"$iface\"",
-                "      ;;",
-            ]
-        )
-    lines.extend(["  esac", "done"])
-    for service in _as_sequence(domain.get("services")):
-        if not isinstance(service, Mapping) or str(service.get("protocol", "tcp")).lower() != "tcp":
-            continue
-        port = _int(service.get("port"))
-        if port > 0:
-            lines.append(f"httpd -p 0.0.0.0:{port} -h /www")
-    lines.extend(["while true; do sleep 3600; done", ""])
-    return "\n".join(lines)
-
-
-def _html_status(domain: Mapping[str, object]) -> str:
-    return (
-        "<html><body><h1>ACES TechVault appliance</h1>"
-        f"<p>node={domain.get('name')}</p>"
-        f"<p>role={domain.get('role')}</p>"
-        f"<pre>{json.dumps(domain, sort_keys=True)}</pre>"
-        "</body></html>\n"
-    )
-
-
-def _cpio_newc(root: Path) -> bytes:
-    proc = subprocess.run(
-        ["cpio", "-o", "-H", "newc", "--quiet"],
-        input=("\n".join(_cpio_paths(root)) + "\n").encode(),
-        cwd=root,
-        capture_output=True,
-        check=False,
-    )
-    if proc.returncode != 0:
-        raise RuntimeError("cpio failed while building native TechVault initramfs")
-    return proc.stdout.encode()
-
-
-def _cpio_paths(root: Path) -> list[str]:
-    return [str(path.relative_to(root)) for path in sorted(root.rglob("*"))]
-
-
 def _snapshot_from_matrix(
     matrix: Mapping[str, object],
     domains: Sequence[DomainHandle],
@@ -580,6 +384,46 @@ def _default_connector(connection_uri: str) -> object | None:
 def _call(connection: object, method_name: str, payload: str) -> _NativeResource:
     method = cast(Callable[[str], _NativeResource], getattr(connection, method_name))
     return method(payload)
+
+
+def _destroy_existing_with_prefix(connection: object, prefix: str) -> None:
+    for native in _list_native(connection, "listAllDomains"):
+        if _native_name(native).startswith(f"{prefix}-"):
+            _destroy_native(native)
+    for native in _list_native(connection, "listAllNetworks"):
+        if _native_name(native).startswith(f"{prefix}-"):
+            _destroy_native(native)
+
+
+def _list_native(connection: object, method_name: str) -> tuple[object, ...]:
+    method = getattr(connection, method_name, None)
+    if not callable(method):
+        return ()
+    try:
+        native = method()
+    except Exception:
+        return ()
+    return tuple(native) if isinstance(native, list | tuple) else ()
+
+
+def _native_name(native: object) -> str:
+    method = getattr(native, "name", None)
+    if not callable(method):
+        return ""
+    try:
+        value = method()
+    except Exception:
+        return ""
+    return value if isinstance(value, str) else ""
+
+
+def _destroy_native(native: object) -> None:
+    for method_name in ("destroy", "undefine"):
+        method = getattr(native, method_name, None)
+        if not callable(method):
+            continue
+        with suppress(Exception):
+            method()
 
 
 def _default_kernel_path() -> Path:
@@ -610,29 +454,6 @@ def _gateway(gateway: str | None, network: ipaddress.IPv4Network) -> ipaddress.I
         except ValueError:
             pass
     return network.network_address + 1
-
-
-def _domain_ips(domain: Mapping[str, object]) -> list[str]:
-    ips: list[str] = []
-    for interface in _as_sequence(domain.get("interfaces")):
-        if isinstance(interface, Mapping) and interface.get("ip"):
-            ips.append(str(interface["ip"]))
-    return ips
-
-
-def _wazuh_agent_names(names: set[str]) -> set[str]:
-    agents = {
-        "wazuh-manager",
-        "dns",
-        "fileshare",
-        "ad",
-        "webapp",
-        "suricata",
-        "db",
-        "victim",
-        "workstation",
-    }
-    return agents & names
 
 
 def _role(name: str) -> str:
@@ -671,15 +492,6 @@ def _as_sequence(value: object) -> Sequence[object]:
 
 def _int(value: object) -> int:
     return value if isinstance(value, int) else 0
-
-
-def _shell_quote(value: str) -> str:
-    return "'" + value.replace("'", "'\"'\"'") + "'"
-
-
-def _short_process_output(proc: subprocess.CompletedProcess[str]) -> str:
-    text = (proc.stderr or proc.stdout or "").strip().replace("\n", " ")
-    return text[:200]
 
 
 def _diagnostic(code: str, address: str) -> Diagnostic:
