@@ -10,6 +10,7 @@ from aces_contracts.contracts import ControlledVocabularyCatalogModel
 from aces_contracts.controlled_vocabularies import (
     controlled_vocabulary_catalog_path,
     load_controlled_vocabulary_catalog,
+    validate_controlled_vocabulary_scope_values,
     validate_controlled_vocabulary_value,
 )
 from aces_contracts.vocabulary import (
@@ -101,6 +102,13 @@ def test_governed_extension_values_are_allowed_for_extensible_vocabularies():
     validate_controlled_vocabulary_value("provisioner-node-types", "x-acme:bare-metal")
     validate_controlled_vocabulary_value("orchestrator-supported-sections", "x-acme:custom-stage")
     validate_controlled_vocabulary_value("participant-decision-surface-modes", "x-acme:swarm-control")
+
+
+def test_behavior_specification_behavior_mode_scope_uses_decision_surface_vocabulary():
+    validate_controlled_vocabulary_scope_values(
+        "behavior_specifications.behavior_mode",
+        ["autonomous", "human-supervised", "x-acme:swarm-control"],
+    )
 
 
 def test_unguarded_extension_values_are_rejected():

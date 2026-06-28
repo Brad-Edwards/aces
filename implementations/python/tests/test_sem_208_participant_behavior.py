@@ -657,6 +657,66 @@ def test_behavior_specification_optional_fields_compile_empty_when_omitted():
 
 
 @pytest.mark.parametrize(
+    "behavior_mode",
+    [
+        "autonomous",
+        "scripted",
+        "policy-directed",
+        "replayed",
+        "human-supervised",
+        "mixed-control",
+    ],
+)
+def test_act_608_behavior_modes_parse_validate_and_compile(behavior_mode: str):
+    scenario = parse_sdl(
+        _scenario_yaml()
+        + textwrap.dedent(
+            f"""
+        behavior-specifications:
+          red-scan-behavior:
+            semantic-version: 1.0.0
+            lifecycle-state: active
+            participant-refs: [red-agent]
+            action-contract-refs: [scan]
+            behavior-mode: {behavior_mode}
+            extension-policy: governed-extension
+        """
+        )
+    )
+
+    spec = scenario.behavior_specifications["red-scan-behavior"]
+    assert spec.behavior_mode == behavior_mode
+
+    compiled = compile_runtime_model(scenario).behavior_specifications[
+        "participant.behavior-specification.red-scan-behavior"
+    ]
+    assert compiled.behavior_mode == behavior_mode
+
+
+def test_behavior_specification_behavior_mode_allows_governed_extensions():
+    scenario = parse_sdl(
+        _scenario_yaml()
+        + textwrap.dedent(
+            """
+        behavior-specifications:
+          red-scan-behavior:
+            semantic-version: 1.0.0
+            lifecycle-state: active
+            participant-refs: [red-agent]
+            action-contract-refs: [scan]
+            behavior-mode: x-acme:swarm-control
+            extension-policy: governed-extension
+        """
+        )
+    )
+
+    compiled = compile_runtime_model(scenario).behavior_specifications[
+        "participant.behavior-specification.red-scan-behavior"
+    ]
+    assert compiled.behavior_mode == "x-acme:swarm-control"
+
+
+@pytest.mark.parametrize(
     ("field", "replacement", "expected"),
     [
         (

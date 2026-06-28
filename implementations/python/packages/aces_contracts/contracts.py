@@ -171,6 +171,7 @@ _PARTICIPANT_IMPLEMENTATION_CONCEPT_BINDING_SCOPES = frozenset(
 
 _CONTROLLED_VOCABULARY_GOVERNED_SCOPES = frozenset(
     {
+        "behavior_specifications.behavior_mode",
         "capabilities.supported_features",
         "implementation_kind",
         "capabilities.supported_participant_contracts",
