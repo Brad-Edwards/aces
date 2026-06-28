@@ -89,6 +89,14 @@ def participant_action_admission_request_violations(
 ) -> tuple[str, ...]:
     """Return manifest/selection compatibility violations for a binding request."""
 
+    return (
+        *_implementation_selection_violations(request),
+        *_exposure_policy_violations(request),
+        *_action_result_violations(request),
+    )
+
+
+def _implementation_selection_violations(request: ParticipantActionAdmissionRequest) -> tuple[str, ...]:
     violations: list[str] = []
     manifest = request.implementation_manifest
     selection = request.implementation_selection
@@ -115,7 +123,12 @@ def participant_action_admission_request_violations(
         violations.append(
             "implementation exposure policy uses kinds unsupported by the manifest: " + ", ".join(unsupported_policies)
         )
-    policy = selection.exposure_policy
+    return tuple(violations)
+
+
+def _exposure_policy_violations(request: ParticipantActionAdmissionRequest) -> tuple[str, ...]:
+    violations: list[str] = []
+    policy = request.implementation_selection.exposure_policy
     action_result_evidence_refs = _action_result_evidence_refs(request.action_result)
     observation_evidence_refs = set(request.evidence_refs) | action_result_evidence_refs
     emitted_refs = set(request.visible_refs) | set(request.disclosed_refs) | observation_evidence_refs
@@ -143,13 +156,20 @@ def participant_action_admission_request_violations(
             "evidence_refs must be declared by the compiled observation boundary: "
             + ", ".join(unauthorized_evidence_refs)
         )
-    if request.action_result is not None:
-        if request.action_result.participant_address != request.participant_address:
-            violations.append("action_result participant_address must match the binding participant_address")
-        if request.action_result.action_instance_id != request.action_instance_id:
-            violations.append("action_result action_instance_id must match the binding action_instance_id")
-        if request.action_result.action_contract_address != request.action_contract_address:
-            violations.append("action_result action_contract_address must match the binding action_contract_address")
+    return tuple(violations)
+
+
+def _action_result_violations(request: ParticipantActionAdmissionRequest) -> tuple[str, ...]:
+    violations: list[str] = []
+    action_result = request.action_result
+    if action_result is None:
+        return ()
+    if action_result.participant_address != request.participant_address:
+        violations.append("action_result participant_address must match the binding participant_address")
+    if action_result.action_instance_id != request.action_instance_id:
+        violations.append("action_result action_instance_id must match the binding action_instance_id")
+    if action_result.action_contract_address != request.action_contract_address:
+        violations.append("action_result action_contract_address must match the binding action_contract_address")
     return tuple(violations)
 
 

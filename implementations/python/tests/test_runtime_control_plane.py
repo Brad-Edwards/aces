@@ -13,6 +13,7 @@ from aces_contracts.contracts import (
     ParticipantImplementationSelectionModel,
     ParticipantStatusViewModel,
 )
+from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
 from aces_contracts.runtime_state import RuntimeSnapshot
 from aces_processor.models import (
     iter_participant_behavior_history_violations,
@@ -366,8 +367,8 @@ class TestParticipantEpisodeControlPlane:
         control_plane = RuntimeControlPlane(create_stub_target())
         control_plane.initialize_participant_episode(behavior.address, episode_id="episode-1")
 
-        receipt = control_plane.admit_participant_action(
-            behavior,
+        admission_request = ParticipantActionAdmissionRequest(
+            participant_address=behavior.address,
             implementation_manifest=_participant_implementation_manifest(),
             implementation_selection=_participant_implementation_selection(behavior.address),
             action_contract_address=action_address,
@@ -382,6 +383,7 @@ class TestParticipantEpisodeControlPlane:
                 action_contract_address=action_address,
             ),
         )
+        receipt = control_plane.admit_participant_action(behavior, admission_request)
         status = control_plane.get_operation(receipt.operation_id)
         snapshot = control_plane.get_snapshot().snapshot
 

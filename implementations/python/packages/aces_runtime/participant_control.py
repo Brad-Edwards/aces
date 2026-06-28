@@ -2,11 +2,6 @@
 
 from __future__ import annotations
 
-from aces_contracts.contracts import (
-    ParticipantActionResultModel,
-    ParticipantImplementationManifestModel,
-    ParticipantImplementationSelectionModel,
-)
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
 from aces_contracts.participant_episode import (
@@ -43,21 +38,100 @@ def _participant_binding_diagnostic(address: str, message: str) -> Diagnostic:
 def _participant_binding_diagnostics(
     participant_behavior: object,
     *,
-    implementation_manifest: ParticipantImplementationManifestModel,
-    implementation_selection: ParticipantImplementationSelectionModel,
-    action_contract_address: str,
-    observation_boundary_address: str,
-) -> list[Diagnostic]:
+    admission_request: object,
+    admission_fields: dict[str, object],
+) -> tuple[ParticipantActionAdmissionRequest | None, list[Diagnostic]]:
     address = _participant_binding_address(participant_behavior)
-    diagnostics: list[Diagnostic] = []
     if not isinstance(participant_behavior, ParticipantBehaviorRuntime):
-        return [
+        return None, [
             _participant_binding_diagnostic(
                 address,
                 "participant_behavior must be a compiled ParticipantBehaviorRuntime",
             )
         ]
-    if action_contract_address not in participant_behavior.action_contract_addresses:
+    request, diagnostics = _participant_admission_request(
+        participant_behavior,
+        admission_request=admission_request,
+        admission_fields=admission_fields,
+    )
+    if diagnostics:
+        return None, diagnostics
+    diagnostics.extend(_participant_binding_request_diagnostics(participant_behavior, request))
+    return (request if not diagnostics else None), diagnostics
+
+
+def _participant_admission_request(
+    participant_behavior: ParticipantBehaviorRuntime,
+    *,
+    admission_request: object,
+    admission_fields: dict[str, object],
+) -> tuple[ParticipantActionAdmissionRequest | None, list[Diagnostic]]:
+    address = _participant_binding_address(participant_behavior)
+    if admission_request is not None:
+        return _explicit_participant_admission_request(address, admission_request, admission_fields)
+    field_diagnostics = _participant_binding_field_diagnostics(participant_behavior, admission_fields)
+    if field_diagnostics:
+        return None, field_diagnostics
+    return _participant_admission_request_from_fields(participant_behavior, admission_fields)
+
+
+def _explicit_participant_admission_request(
+    address: str,
+    admission_request: object,
+    admission_fields: dict[str, object],
+) -> tuple[ParticipantActionAdmissionRequest | None, list[Diagnostic]]:
+    if admission_fields:
+        return None, [
+            _participant_binding_diagnostic(
+                address,
+                "admission_request cannot be combined with admission keyword fields",
+            )
+        ]
+    return _validated_participant_admission_request(address, admission_request)
+
+
+def _participant_admission_request_from_fields(
+    participant_behavior: ParticipantBehaviorRuntime,
+    admission_fields: dict[str, object],
+) -> tuple[ParticipantActionAdmissionRequest | None, list[Diagnostic]]:
+    address = _participant_binding_address(participant_behavior)
+    try:
+        return (
+            ParticipantActionAdmissionRequest(
+                participant_address=participant_behavior.address,
+                **admission_fields,
+            ),
+            [],
+        )
+    except (TypeError, ValueError) as exc:
+        return None, [_participant_binding_diagnostic(address, str(exc))]
+
+
+def _validated_participant_admission_request(
+    address: str,
+    admission_request: object,
+) -> tuple[ParticipantActionAdmissionRequest | None, list[Diagnostic]]:
+    if isinstance(admission_request, ParticipantActionAdmissionRequest):
+        return admission_request, []
+    return None, [
+        _participant_binding_diagnostic(
+            address,
+            "admission_request must be a ParticipantActionAdmissionRequest",
+        )
+    ]
+
+
+def _participant_binding_field_diagnostics(
+    participant_behavior: ParticipantBehaviorRuntime,
+    admission_fields: dict[str, object],
+) -> list[Diagnostic]:
+    address = _participant_binding_address(participant_behavior)
+    diagnostics: list[Diagnostic] = []
+    action_contract_address = admission_fields.get("action_contract_address")
+    if (
+        isinstance(action_contract_address, str)
+        and action_contract_address not in participant_behavior.action_contract_addresses
+    ):
         diagnostics.append(
             _participant_binding_diagnostic(
                 address,
@@ -67,7 +141,11 @@ def _participant_binding_diagnostics(
                 ),
             )
         )
-    if observation_boundary_address not in participant_behavior.observation_boundary_addresses:
+    observation_boundary_address = admission_fields.get("observation_boundary_address")
+    if (
+        isinstance(observation_boundary_address, str)
+        and observation_boundary_address not in participant_behavior.observation_boundary_addresses
+    ):
         diagnostics.append(
             _participant_binding_diagnostic(
                 address,
@@ -77,18 +155,42 @@ def _participant_binding_diagnostics(
                 ),
             )
         )
-    if not isinstance(implementation_manifest, ParticipantImplementationManifestModel):
+    return diagnostics
+
+
+def _participant_binding_request_diagnostics(
+    participant_behavior: ParticipantBehaviorRuntime,
+    request: ParticipantActionAdmissionRequest | None,
+) -> list[Diagnostic]:
+    if request is None:
+        return []
+    address = _participant_binding_address(participant_behavior)
+    diagnostics: list[Diagnostic] = []
+    if request.participant_address != participant_behavior.address:
         diagnostics.append(
             _participant_binding_diagnostic(
                 address,
-                "implementation_manifest must be a ParticipantImplementationManifestModel",
+                "admission_request participant_address must match the compiled participant behavior address",
             )
         )
-    if not isinstance(implementation_selection, ParticipantImplementationSelectionModel):
+    if request.action_contract_address not in participant_behavior.action_contract_addresses:
         diagnostics.append(
             _participant_binding_diagnostic(
                 address,
-                "implementation_selection must be a ParticipantImplementationSelectionModel",
+                (
+                    f"action_contract_address {request.action_contract_address!r} is not declared by compiled "
+                    f"participant behavior {participant_behavior.address!r}"
+                ),
+            )
+        )
+    if request.observation_boundary_address not in participant_behavior.observation_boundary_addresses:
+        diagnostics.append(
+            _participant_binding_diagnostic(
+                address,
+                (
+                    f"observation_boundary_address {request.observation_boundary_address!r} is not declared by compiled "
+                    f"participant behavior {participant_behavior.address!r}"
+                ),
             )
         )
     return diagnostics
@@ -218,19 +320,11 @@ class ParticipantControlMixin:
     def admit_participant_action(
         self,
         participant_behavior: ParticipantBehaviorRuntime,
+        admission_request: ParticipantActionAdmissionRequest | None = None,
         *,
-        implementation_manifest: ParticipantImplementationManifestModel,
-        implementation_selection: ParticipantImplementationSelectionModel,
-        action_contract_address: str,
-        observation_boundary_address: str,
-        action_instance_id: str,
-        observation_boundary_evidence_refs: tuple[str, ...] = (),
-        evidence_refs: tuple[str, ...] = (),
-        visible_refs: tuple[str, ...] = (),
-        disclosed_refs: tuple[str, ...] = (),
-        action_result: ParticipantActionResultModel | None = None,
         idempotency_key: str = "",
         request_fingerprint: str = "",
+        **admission_fields: object,
     ) -> OperationReceipt:
         if self._target.participant_runtime is None:
             return self._reject_submission(
@@ -239,12 +333,10 @@ class ParticipantControlMixin:
                 idempotency_key=idempotency_key,
                 request_fingerprint=request_fingerprint,
             )
-        diagnostics = _participant_binding_diagnostics(
+        request, diagnostics = _participant_binding_diagnostics(
             participant_behavior,
-            implementation_manifest=implementation_manifest,
-            implementation_selection=implementation_selection,
-            action_contract_address=action_contract_address,
-            observation_boundary_address=observation_boundary_address,
+            admission_request=admission_request,
+            admission_fields=admission_fields,
         )
         if diagnostics:
             return self._reject_diagnostics(
@@ -253,37 +345,12 @@ class ParticipantControlMixin:
                 idempotency_key=idempotency_key,
                 request_fingerprint=request_fingerprint,
             )
-        try:
-            request = ParticipantActionAdmissionRequest(
-                participant_address=participant_behavior.address,
-                action_contract_address=action_contract_address,
-                observation_boundary_address=observation_boundary_address,
-                action_instance_id=action_instance_id,
-                implementation_manifest=implementation_manifest,
-                implementation_selection=implementation_selection,
-                evidence_refs=evidence_refs,
-                visible_refs=visible_refs,
-                disclosed_refs=disclosed_refs,
-                observation_boundary_evidence_refs=observation_boundary_evidence_refs,
-                action_result=action_result,
-            )
-        except (TypeError, ValueError) as exc:
-            return self._reject_diagnostics(
-                domain=RuntimeDomain.PARTICIPANT,
-                diagnostics=[
-                    _participant_binding_diagnostic(
-                        _participant_binding_address(participant_behavior),
-                        str(exc),
-                    )
-                ],
-                idempotency_key=idempotency_key,
-                request_fingerprint=request_fingerprint,
-            )
+        assert request is not None
         return execute_participant_action(
             self,
             method=self._target.participant_runtime.admit_action,
             request=request,
-            address=f"runtime.control-plane.participant.{participant_behavior.address}.admit-action",
+            address=f"runtime.control-plane.participant.{request.participant_address}.admit-action",
             idempotency_key=idempotency_key,
             request_fingerprint=request_fingerprint,
         )

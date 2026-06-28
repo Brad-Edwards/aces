@@ -790,19 +790,13 @@ class StubParticipantRuntime:
         snapshot: RuntimeSnapshot,
     ) -> ApplyResult:
         address = request.participant_address
-        if not address:
-            return self._reject(snapshot, "participant_address must be non-empty", address)
-        current = snapshot.participant_episode_results.get(address)
-        if current is None:
-            return self._reject(
-                snapshot,
-                f"cannot admit participant action for {address!r}: no live episode",
-                address,
-            )
-        try:
-            current_state = ParticipantEpisodeExecutionState.from_payload(current)
-        except (TypeError, ValueError) as exc:
-            return self._reject(snapshot, f"current state is invalid: {exc}", address)
+        current_state = self._live_predecessor(
+            snapshot,
+            address,
+            "cannot admit participant action for {address!r}: no live episode",
+        )
+        if isinstance(current_state, ApplyResult):
+            return current_state
         if current_state.status == ParticipantEpisodeStatus.TERMINATED:
             return self._reject(
                 snapshot,
@@ -843,6 +837,23 @@ class StubParticipantRuntime:
 
     def history(self) -> dict[str, list[dict[str, object]]]:
         return {address: list(events) for address, events in self._history.items()}
+
+    def _live_predecessor(
+        self,
+        snapshot: RuntimeSnapshot,
+        address: str,
+        no_episode_message: str,
+    ) -> ParticipantEpisodeExecutionState | ApplyResult:
+        current = snapshot.participant_episode_results.get(address) if address else None
+        if current is None:
+            message = (
+                "participant_address must be non-empty" if not address else no_episode_message.format(address=address)
+            )
+            return self._reject(snapshot, message, address)
+        try:
+            return ParticipantEpisodeExecutionState.from_payload(current)
+        except (TypeError, ValueError) as exc:
+            return self._reject(snapshot, f"current state is invalid: {exc}", address)
 
     def _apply(
         self,
