@@ -4,7 +4,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 import typer
 
-from aces_cli import conformance, processor, sdl
+from aces_cli import conformance, libvirt, processor, sdl
 
 app = typer.Typer(
     name="aces",
@@ -15,6 +15,7 @@ app = typer.Typer(
 app.add_typer(sdl.app, name="sdl")
 app.add_typer(processor.app, name="processor")
 app.add_typer(conformance.app, name="conformance")
+app.add_typer(libvirt.app, name="libvirt")
 
 
 def _version_callback(value: bool) -> None:
