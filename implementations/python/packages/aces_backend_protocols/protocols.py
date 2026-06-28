@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
 from aces_contracts.participant_episode import (
     ParticipantEpisodeInitializeRequest,
     ParticipantEpisodeResetRequest,
@@ -140,6 +141,14 @@ class ParticipantRuntime(Protocol):
         snapshot: RuntimeSnapshot,
     ) -> ApplyResult:
         """Drive the current episode to ``TERMINATED`` with the given reason."""
+        ...
+
+    def admit_action(
+        self,
+        request: ParticipantActionAdmissionRequest,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        """Admit one implementation-bound participant action attempt."""
         ...
 
     def status(self) -> dict[str, object]:
