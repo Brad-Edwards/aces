@@ -7,10 +7,10 @@ Issue: #598.
 Requirement: none. The GitHub issue title, body, and acceptance criteria are
 the contract.
 
-This note records architecture guardrails for adding the canonical paper
-reference scenario that demonstrates authored SDL -> processor -> runtime ->
-backend handoff for an agent-driven participant loop. It is guidance only: it
-does not add the scenario, README, tests, backend bindings, APTL realization,
+This note records architecture guardrails for the canonical paper reference
+scenario that demonstrates authored SDL -> processor -> runtime -> backend
+handoff for an enterprise participant/evidence loop. It is guidance only: it
+does not add backend bindings, APTL realization, libvirt participant runtime,
 or proof artifacts.
 
 ## Binding Sources
@@ -44,10 +44,11 @@ or proof artifacts.
 - Place the reference scenario in the existing positive corpus
   `examples/scenarios/*.sdl.yaml`. It is a worked SDL artifact, not a contract
   fixture, invalid-control specimen, backend profile, or APTL-private asset.
-- Keep the SDL compact but semantically complete: small topology, explicit
-  entities/roles, at least one SDL `agent`, declared `action_contracts`,
-  declared `observation_boundaries`, and outcome/objective material enough to
-  explain the paper handoff.
+- Keep the SDL focused but semantically complete: a red participant workbench,
+  DMZ portal, internal database, Wazuh evaluator evidence surface, optional
+  policy-provenance surface, explicit entities/roles, at least one SDL `agent`,
+  declared `action_contracts`, declared `observation_boundaries`, and
+  outcome/objective material enough to explain the paper handoff.
 - Reuse the current participant authoring surface. Do not add a new top-level
   `participants`, `agent_runtime`, `llm_runner`, `aptl`, or benchmark-specific
   SDL section for this issue.
@@ -62,15 +63,17 @@ or proof artifacts.
   `load_scenario()` and compiles with `compile_runtime_model()`, asserting
   non-empty `participant_behaviors`, `action_contracts`, and
   `observation_boundaries`.
-- Treat reference-backend/APTL realizability as bounded compatibility, not as
-  a new backend capability claim. The scenario should fit the existing
-  `reference-emulation` manifest: small VM/switch topology, supported content
-  and account shapes, ordinary objective/workflow/evaluation surfaces, and
-  participant runtime feature terms already declared by the backend manifest.
-- The short scenario README should explain the participant, declared actions,
-  observation boundary, expected evidence, limitations, downstream APTL
-  realization/n=2 proof links, and the fact that this ACES issue does not close
-  Brad-Edwards/aptl#554.
+- Treat APTL/libvirt realizability as bounded compatibility, not as a new
+  backend capability claim. The scenario should fit small VM/switch enterprise
+  topologies: participant/DMZ/internal/security network separation, supported
+  content shapes, ordinary objective/workflow/evaluation surfaces, and
+  participant runtime feature terms already declared by the backend manifest or
+  allowed governed extension terms.
+- The short scenario README should explain the participant, declared action,
+  physically grounded observation boundary, Wazuh/evaluator evidence, optional
+  policy provenance, negative boundary evidence, limitations, downstream
+  APTL/libvirt realization and n=2 proof links, and the fact that the authored
+  scenario is generic rather than TechVault-specific.
 
 ## Required Incumbents
 
@@ -139,9 +142,12 @@ Reuse these repo surfaces before adding anything new:
   published evidence contract ids.
 - Observation/security layer: hidden truth, answer keys, scaffolds, task
   statements, evidence, and participant-visible observations must be separated
-  with observation boundary rules. Do not expose hidden adjudication material,
-  raw prompts, private runner configuration, credentials, backend inspect data,
-  or evaluator state as participant-observable data.
+  with observation boundary rules and backed by topology where the claim is
+  physical. The participant host must not be attached to the internal or
+  security networks when the scenario says database or Wazuh API access is
+  outside the participant's observable world. Do not expose hidden adjudication
+  material, raw prompts, private runner configuration, credentials, backend
+  inspect data, or evaluator state as participant-observable data.
 - Outcome/evidence layer: participant-local action outcome, objective result,
   workflow result, evaluation result, reward, and evidence claim must remain
   distinct. Outcome interpretation rules should map between layers explicitly
@@ -186,6 +192,8 @@ runtime binding:
 - SDL fields parameterize participant refs, role refs, action contract refs,
   observation boundary refs, outcome interpretation refs, authority/scope refs,
   behavior mode, backend feature-support refs, and evidence contract refs.
+  Wazuh evidence, policy provenance, and negative boundary evidence are
+  evidence/evaluator surfaces, not participant-visible task context.
 - The sidecar README parameterizes the participant implementation/runtime
   binding and downstream issue refs. It should name the binding without
   embedding private runner config or backend commands in the SDL body.
@@ -210,6 +218,9 @@ Avoid:
   action name to an action contract;
 - treating backend participant-runtime capability as proof that a coding-agent
   participant implementation ran;
+- using "hidden" or "not observable" language for database, Wazuh, or policy
+  internals unless the topology, agent operating scope, and observation
+  boundary all support that claim;
 - hiding the coding-agent runner, prompt, command, OS sandbox, or APTL action
   adapter in free-form SDL fields, runtime metadata, diagnostics, or README
   prose that implies authored semantics;
@@ -224,8 +235,9 @@ Avoid:
 - exposing hidden truth, answer keys, prompt content, canaries, private traces,
   operator secrets, process argv, environment dumps, or backend-native object
   reprs in scenario artifacts or diagnostics;
-- claiming broad purple-team benchmark capability, agent capability, or
-  backend conformance from this compact reference scenario alone.
+- claiming broad purple-team benchmark capability, agent capability, Wazuh
+  effectiveness, model-defense robustness, TechVault coverage, or backend
+  semantic equivalence from this focused reference scenario alone.
 
 ## Non-Goals
 

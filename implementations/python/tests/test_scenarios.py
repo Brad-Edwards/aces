@@ -182,32 +182,59 @@ def test_paper_reference_scenario_compiles_participant_loop():
     model = compile_runtime_model(scenario)
 
     assert {
-        "participant-workbench",
-        "target-web",
-        "target-db",
-        "security-sensor",
-        "model-defense-gate",
+        "red-workbench",
+        "customer-portal",
+        "customer-db",
+        "wazuh-manager",
+        "wazuh-indexer",
+        "participant-policy-gate",
     } <= set(scenario.nodes)
+    assert set(scenario.infrastructure["red-workbench"].links) == {"redteam-net", "dmz-net"}
+    assert set(scenario.infrastructure["customer-portal"].links) == {"dmz-net", "internal-net"}
+    assert scenario.infrastructure["customer-db"].links == ["internal-net"]
+    assert set(scenario.infrastructure["wazuh-manager"].links) == {"security-net", "internal-net"}
+    assert scenario.infrastructure["wazuh-indexer"].links == ["security-net"]
+    assert scenario.infrastructure["participant-policy-gate"].links == ["security-net"]
+
     assert {
         "participant-observation",
-        "sensor-telemetry",
-        "defense-decision-log",
+        "wazuh-evidence",
+        "policy-decision-log",
+        "boundary-check-evidence",
     } <= set(scenario.content)
+    assert scenario.agents["paper-agent"].actions == ["probe-customer-portal-login"]
+    assert scenario.agents["paper-agent"].allowed_subnets == ["dmz-net"]
+    assert set(scenario.agents["paper-agent"].operating_scope) == {
+        "nodes.customer-portal.services.http",
+        "content.task-brief",
+    }
+
+    contract = scenario.action_contracts["probe-customer-portal-login"]
+    assert {effect.effect_id for effect in contract.effects} >= {
+        "wazuh-evidence-retained",
+        "policy-decision-retained",
+        "boundary-checks-retained",
+        "internal-db-not-disclosed",
+        "wazuh-internals-not-disclosed",
+    }
+
     boundary = scenario.observation_boundaries["paper-agent-view"]
-    assert "nodes.target-db.services.postgres" in boundary.hidden_refs
-    assert "nodes.security-sensor" in boundary.hidden_refs
-    assert "nodes.model-defense-gate" in boundary.hidden_refs
+    assert "nodes.customer-db.services.postgres" in boundary.hidden_refs
+    assert "nodes.wazuh-manager" in boundary.hidden_refs
+    assert "nodes.wazuh-indexer" in boundary.hidden_refs
+    assert "nodes.participant-policy-gate" in boundary.hidden_refs
     assert {
         "content.participant-observation",
-        "content.sensor-telemetry",
-        "content.defense-decision-log",
+        "content.wazuh-evidence",
+        "content.policy-decision-log",
+        "content.boundary-check-evidence",
     } <= set(boundary.evidence_refs)
 
     assert model.participant_behaviors
     assert model.action_contracts
     assert model.observation_boundaries
     assert "participant.behavior.paper-agent" in model.participant_behaviors
-    assert "participant.action-contract.inspect-service" in model.action_contracts
+    assert "participant.action-contract.probe-customer-portal-login" in model.action_contracts
     assert "participant.observation-boundary.paper-agent-view" in model.observation_boundaries
 
 
