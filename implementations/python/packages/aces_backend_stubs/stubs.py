@@ -96,6 +96,7 @@ def create_stub_manifest(
         supported_contract_versions.discard("experiment-capture-spec-v1")
         supported_contract_versions.discard("experiment-evidence-record-v1")
         supported_contract_versions.discard("experiment-derived-measure-v1")
+        supported_contract_versions.discard("experiment-run-v1")
     concept_bindings = (
         ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
         ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
@@ -238,6 +239,7 @@ def create_stub_manifest(
                             "experiment-capture-spec-v1",
                             "experiment-evidence-record-v1",
                             "experiment-derived-measure-v1",
+                            "experiment-run-v1",
                         }
                     ),
                     supported_media_types=frozenset({"application/json", "text/plain"}),
