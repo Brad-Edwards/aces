@@ -188,7 +188,8 @@ def _participant_binding_request_diagnostics(
             _participant_binding_diagnostic(
                 address,
                 (
-                    f"observation_boundary_address {request.observation_boundary_address!r} is not declared by compiled "
+                    f"observation_boundary_address {request.observation_boundary_address!r} "
+                    "is not declared by compiled "
                     f"participant behavior {participant_behavior.address!r}"
                 ),
             )
