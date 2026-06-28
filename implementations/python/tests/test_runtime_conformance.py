@@ -159,6 +159,9 @@ def test_live_probe_catches_participant_runtime_that_does_not_populate_snapshot(
         def terminate(self, request, snapshot):
             return ApplyResult(success=True, snapshot=snapshot)
 
+        def admit_action(self, request, snapshot):
+            return ApplyResult(success=True, snapshot=snapshot)
+
         def status(self):
             return {}
 

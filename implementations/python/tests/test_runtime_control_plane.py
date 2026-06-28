@@ -6,12 +6,18 @@ import textwrap
 
 from aces_backend_stubs.stubs import create_stub_components, create_stub_manifest
 from aces_contracts.contracts import (
+    ParticipantActionResultModel,
     ParticipantContextViewModel,
     ParticipantHistoryViewModel,
+    ParticipantImplementationManifestModel,
+    ParticipantImplementationSelectionModel,
     ParticipantStatusViewModel,
 )
 from aces_contracts.runtime_state import RuntimeSnapshot
-from aces_processor.models import iter_participant_episode_snapshot_violations
+from aces_processor.models import (
+    iter_participant_behavior_history_violations,
+    iter_participant_episode_snapshot_violations,
+)
 
 from aces.backends.stubs import create_stub_target
 from aces.core.runtime.compiler import compile_runtime_model
@@ -31,6 +37,164 @@ from aces.core.sdl import parse_sdl
 
 def _scenario(yaml_str: str):
     return parse_sdl(textwrap.dedent(yaml_str))
+
+
+def _participant_binding_scenario_yaml() -> str:
+    return """
+name: participant-binding
+nodes:
+  web:
+    type: VM
+    resources: {ram: 1 GiB, cpu: 1}
+    services: [{port: 80, name: http}]
+entities:
+  red-team:
+    role: red
+action-contracts:
+  scan:
+    semantic-version: 1.0.0
+    lifecycle-state: active
+    behavioral-granularity: atomic
+    procedure-basis: governed service discovery
+    realization-profile: backend-declared
+    fidelity-claim: records participant discovery intent and terminal observation
+    preconditions:
+      - precondition-id: authority-in-scope
+        precondition-class: authority
+        description: red participant is authorized to scan the web service
+    effects:
+      - effect-id: terminal-scan-observation
+        effect-class: observation_effect
+        description: terminal scan observation
+        evidence-refs: [evidence.scan-output]
+    failure-classes: [backend_error, unknown]
+observation-boundaries:
+  red-view:
+    projection-basis: participant-local projection over observed services
+    evidence-refs: [evidence.scan-output]
+    redaction-policy: hidden refs never project without explicit disclosure
+    latency-profile: terminal observation emitted after state transition commit
+agents:
+  red-agent:
+    entity: red-team
+    actions: [scan]
+    observation-boundaries: [red-view]
+"""
+
+
+def _participant_implementation_manifest() -> ParticipantImplementationManifestModel:
+    return ParticipantImplementationManifestModel.model_validate(
+        {
+            "schema_version": "participant-implementation-manifest/v1",
+            "identity": {"name": "reference-red-agent", "version": "1.0.0"},
+            "implementation_kind": "agent",
+            "supported_contract_versions": [
+                "participant-implementation-manifest-v1",
+                "participant-implementation-provenance-v1",
+                "participant-episode-state-envelope-v1",
+                "participant-episode-history-event-stream-v1",
+                "participant-behavior-history-event-stream-v1",
+            ],
+            "compatibility": {
+                "participant_runtimes": ["stub-participant-runtime"],
+                "processors": ["aces-reference-processor"],
+                "backends": ["stub"],
+            },
+            "concept_bindings": [
+                {"scope": "implementation_kind", "family": "apparatus-declarations"},
+                {
+                    "scope": "capabilities.supported_participant_contracts",
+                    "family": "apparatus-declarations",
+                },
+                {
+                    "scope": "capabilities.supported_decision_surface_modes",
+                    "family": "apparatus-declarations",
+                },
+                {
+                    "scope": "capabilities.tool_affordance_expectations",
+                    "family": "tools-and-artifacts",
+                },
+                {"scope": "capabilities.exposure_policy_kinds", "family": "provenance-and-evidence"},
+            ],
+            "constraints": {"max_parallel_episodes": "1"},
+            "capabilities": {
+                "supported_participant_contracts": [
+                    "participant-episode-state-envelope-v1",
+                    "participant-episode-history-event-stream-v1",
+                    "participant-behavior-history-event-stream-v1",
+                ],
+                "supported_decision_surface_modes": ["autonomous", "policy-directed"],
+                "tool_affordance_expectations": ["shell", "http-api"],
+                "exposure_policy_kinds": ["task-statement", "observation-stream"],
+            },
+        }
+    )
+
+
+def _participant_implementation_selection(participant_address: str) -> ParticipantImplementationSelectionModel:
+    return ParticipantImplementationSelectionModel.model_validate(
+        {
+            "participant_address": participant_address,
+            "implementation_identity": {"name": "reference-red-agent", "version": "1.0.0"},
+            "manifest_ref": "contracts/fixtures/participant-implementation-manifest/reference.json",
+            "manifest_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "selected_decision_surface_mode": "policy-directed",
+            "participant_contract_versions": [
+                "participant-episode-state-envelope-v1",
+                "participant-behavior-history-event-stream-v1",
+            ],
+            "exposure_policy": {
+                "policy_id": "red-agent-policy",
+                "policy_version": "1.0.0",
+                "policy_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+                "exposure_policy_kinds": ["task-statement", "observation-stream"],
+                "disclosed_refs": ["scenario.tasks.red"],
+                "withheld_refs": ["scenario.hidden.answer-key"],
+                "tool_affordance_refs": ["tool.shell"],
+                "visibility_scope_refs": ["participants.red.visible"],
+            },
+        }
+    )
+
+
+def _succeeded_scan_result(
+    *,
+    participant_address: str,
+    episode_id: str,
+    action_instance_id: str,
+    action_contract_address: str,
+) -> ParticipantActionResultModel:
+    return ParticipantActionResultModel.model_validate(
+        {
+            "status": "succeeded",
+            "participant_address": participant_address,
+            "episode_id": episode_id,
+            "action_instance_id": action_instance_id,
+            "action_contract_address": action_contract_address,
+            "observation_point": f"{action_instance_id}:terminal-observation",
+            "preconditions": [
+                {
+                    "precondition_id": "authority-in-scope",
+                    "precondition_class": "authority",
+                    "status": "satisfied",
+                    "participant_address": participant_address,
+                    "episode_id": episode_id,
+                    "action_contract_address": action_contract_address,
+                    "observation_point": f"{action_instance_id}:precondition-authority",
+                }
+            ],
+            "effects": [
+                {
+                    "effect_id": "terminal-scan-observation",
+                    "effect_class": "observation_effect",
+                    "description": "terminal scan observation",
+                    "evidence_refs": ["evidence.scan-output"],
+                }
+            ],
+            "observations": [f"{action_instance_id}:terminal-observation"],
+            "evidence_refs": ["evidence.scan-output"],
+        }
+    )
 
 
 def _episode_state(participant_address: str, episode_id: str) -> dict[str, object]:
@@ -194,6 +358,117 @@ class TestParticipantEpisodeControlPlane:
             "episode_running",
         ]
 
+    def test_admit_participant_action_records_implementation_bound_behavior_history(self):
+        runtime_model = compile_runtime_model(_scenario(_participant_binding_scenario_yaml()))
+        behavior = runtime_model.participant_behaviors["participant.behavior.red-agent"]
+        action_address = behavior.action_contract_addresses[0]
+        observation_address = behavior.observation_boundary_addresses[0]
+        control_plane = RuntimeControlPlane(create_stub_target())
+        control_plane.initialize_participant_episode(behavior.address, episode_id="episode-1")
+
+        receipt = control_plane.admit_participant_action(
+            behavior,
+            implementation_manifest=_participant_implementation_manifest(),
+            implementation_selection=_participant_implementation_selection(behavior.address),
+            action_contract_address=action_address,
+            observation_boundary_address=observation_address,
+            action_instance_id="scan-0001",
+            observation_boundary_evidence_refs=("evidence.scan-output",),
+            evidence_refs=("evidence.scan-output",),
+            action_result=_succeeded_scan_result(
+                participant_address=behavior.address,
+                episode_id="episode-1",
+                action_instance_id="scan-0001",
+                action_contract_address=action_address,
+            ),
+        )
+        status = control_plane.get_operation(receipt.operation_id)
+        snapshot = control_plane.get_snapshot().snapshot
+
+        assert receipt.accepted is True
+        assert status is not None
+        assert status.state == OperationState.SUCCEEDED
+        behavior_history = snapshot.participant_behavior_history[behavior.address]
+        assert [event["event_type"] for event in behavior_history] == [
+            "action_attempted",
+            "state_transition_recorded",
+            "observation_emitted",
+        ]
+        assert behavior_history[0]["participant_address"] == behavior.address
+        assert behavior_history[0]["action_contract_address"] == action_address
+        assert behavior_history[0]["actor_provenance"] == "participant-implementation:reference-red-agent@1.0.0"
+        assert "stub" not in behavior_history[0]["actor_provenance"]
+        assert behavior_history[-1]["observation_boundary_address"] == observation_address
+        assert behavior_history[-1]["details"]["evidence_refs"] == ["evidence.scan-output"]
+        assert (
+            list(
+                iter_participant_episode_snapshot_violations(
+                    snapshot.participant_episode_results,
+                    snapshot.participant_episode_history,
+                )
+            )
+            == []
+        )
+        assert (
+            list(
+                iter_participant_behavior_history_violations(
+                    behavior_history,
+                    action_contracts=runtime_model.action_contracts,
+                    observation_boundaries=runtime_model.observation_boundaries,
+                    participant_episode_history=snapshot.participant_episode_history[behavior.address],
+                    expected_participant_address=behavior.address,
+                )
+            )
+            == []
+        )
+
+    def test_admit_participant_action_rejects_action_outside_compiled_behavior(self):
+        runtime_model = compile_runtime_model(_scenario(_participant_binding_scenario_yaml()))
+        behavior = runtime_model.participant_behaviors["participant.behavior.red-agent"]
+        control_plane = RuntimeControlPlane(create_stub_target())
+        control_plane.initialize_participant_episode(behavior.address, episode_id="episode-1")
+
+        receipt = control_plane.admit_participant_action(
+            behavior,
+            implementation_manifest=_participant_implementation_manifest(),
+            implementation_selection=_participant_implementation_selection(behavior.address),
+            action_contract_address="participant.action-contract.not-declared",
+            observation_boundary_address=behavior.observation_boundary_addresses[0],
+            action_instance_id="scan-0001",
+            evidence_refs=("evidence.scan-output",),
+        )
+        status = control_plane.get_operation(receipt.operation_id)
+
+        assert receipt.accepted is False
+        assert status is not None
+        assert status.state == OperationState.FAILED
+        assert any("is not declared by compiled participant behavior" in diag.message for diag in status.diagnostics)
+
+    def test_admit_participant_action_rejects_withheld_observation_refs(self):
+        runtime_model = compile_runtime_model(_scenario(_participant_binding_scenario_yaml()))
+        behavior = runtime_model.participant_behaviors["participant.behavior.red-agent"]
+        action_address = behavior.action_contract_addresses[0]
+        observation_address = behavior.observation_boundary_addresses[0]
+        control_plane = RuntimeControlPlane(create_stub_target())
+        control_plane.initialize_participant_episode(behavior.address, episode_id="episode-1")
+
+        receipt = control_plane.admit_participant_action(
+            behavior,
+            implementation_manifest=_participant_implementation_manifest(),
+            implementation_selection=_participant_implementation_selection(behavior.address),
+            action_contract_address=action_address,
+            observation_boundary_address=observation_address,
+            action_instance_id="scan-0001",
+            observation_boundary_evidence_refs=("scenario.hidden.answer-key",),
+            evidence_refs=("scenario.hidden.answer-key",),
+        )
+        status = control_plane.get_operation(receipt.operation_id)
+
+        assert receipt.accepted is False
+        assert status is not None
+        assert status.state == OperationState.FAILED
+        assert any("withheld_refs" in diag.message for diag in status.diagnostics)
+
     def test_initialize_twice_rejects_duplicate(self):
         control_plane = RuntimeControlPlane(create_stub_target())
         control_plane.initialize_participant_episode("participant.alice")
@@ -336,6 +611,21 @@ class TestParticipantEpisodeControlPlane:
         control_plane.restart_participant_episode("participant.alice")
 
         snapshot = control_plane.get_snapshot().snapshot
+        assert set(snapshot.participant_episode_results) == {"participant.alice"}
+        state = snapshot.participant_episode_results["participant.alice"]
+        assert state["sequence_number"] == 2
+        assert state["status"] == "running"
+        assert state["last_control_action"] == "restart"
+        assert state["previous_episode_id"] == "participant.alice-episode-2"
+        assert [event["event_type"] for event in snapshot.participant_episode_history["participant.alice"]] == [
+            "episode_initialized",
+            "episode_running",
+            "episode_reset",
+            "episode_running",
+            "episode_completed",
+            "episode_restarted",
+            "episode_running",
+        ]
         violations = list(
             iter_participant_episode_snapshot_violations(
                 snapshot.participant_episode_results,

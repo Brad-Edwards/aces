@@ -1,6 +1,7 @@
 """Stub runtime backends for compiler/planner testing."""
 
 from datetime import UTC, datetime
+from hashlib import sha256
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as distribution_version
 
@@ -22,6 +23,11 @@ from aces_backend_protocols.capabilities import (
 from aces_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
+from aces_contracts.participant_binding import (
+    ParticipantActionAdmissionRequest,
+    participant_action_binding_events,
+    participant_behavior_event_payload,
+)
 from aces_contracts.participant_episode import (
     ParticipantEpisodeControlAction,
     ParticipantEpisodeExecutionState,
@@ -778,6 +784,54 @@ class StubParticipantRuntime:
         ]
         return self._apply(snapshot, address, new_state, events, replace_history=False)
 
+    def admit_action(
+        self,
+        request: ParticipantActionAdmissionRequest,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        address = request.participant_address
+        if not address:
+            return self._reject(snapshot, "participant_address must be non-empty", address)
+        current = snapshot.participant_episode_results.get(address)
+        if current is None:
+            return self._reject(
+                snapshot,
+                f"cannot admit participant action for {address!r}: no live episode",
+                address,
+            )
+        try:
+            current_state = ParticipantEpisodeExecutionState.from_payload(current)
+        except (TypeError, ValueError) as exc:
+            return self._reject(snapshot, f"current state is invalid: {exc}", address)
+        if current_state.status == ParticipantEpisodeStatus.TERMINATED:
+            return self._reject(
+                snapshot,
+                f"cannot admit participant action for terminated participant {address!r}",
+                address,
+            )
+        now = _now_iso()
+        post_state_digest = request.post_state_digest or _participant_binding_post_state_digest(request)
+        events = participant_action_binding_events(
+            request,
+            episode_id=current_state.episode_id,
+            timestamp=now,
+            post_state_digest=post_state_digest,
+        )
+        behavior_history = {
+            participant_address: list(events)
+            for participant_address, events in snapshot.participant_behavior_history.items()
+        }
+        behavior_history.setdefault(address, [])
+        behavior_history[address].extend(participant_behavior_event_payload(event) for event in events)
+        return ApplyResult(
+            success=True,
+            snapshot=snapshot.with_entries(
+                dict(snapshot.entries),
+                participant_behavior_history=behavior_history,
+            ),
+            changed_addresses=[address],
+        )
+
     def status(self) -> dict[str, object]:
         return {
             "participants": len(self._results),
@@ -847,6 +901,18 @@ _PARTICIPANT_TERMINAL_EVENT_FOR_REASON: dict[
 
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _participant_binding_post_state_digest(request: ParticipantActionAdmissionRequest) -> str:
+    digest_input = "|".join(
+        (
+            request.participant_address,
+            request.action_contract_address,
+            request.observation_boundary_address,
+            request.action_instance_id,
+        )
+    )
+    return "sha256:" + sha256(digest_input.encode("utf-8")).hexdigest()
 
 
 def create_stub_components(
