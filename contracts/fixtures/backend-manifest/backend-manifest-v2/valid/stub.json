@@ -27,7 +27,8 @@
     "participant-outcome-report-v1",
     "experiment-capture-spec-v1",
     "experiment-evidence-record-v1",
-    "experiment-derived-measure-v1"
+    "experiment-derived-measure-v1",
+    "experiment-run-v1"
   ],
   "compatibility": {
     "processors": [
@@ -233,7 +234,8 @@
       "supported_evidence_contracts": [
         "experiment-capture-spec-v1",
         "experiment-derived-measure-v1",
-        "experiment-evidence-record-v1"
+        "experiment-evidence-record-v1",
+        "experiment-run-v1"
       ],
       "supported_media_types": [
         "application/json",

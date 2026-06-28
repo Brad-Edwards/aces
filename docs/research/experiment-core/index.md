@@ -23,4 +23,5 @@ issue-234-exp-708-evidence-record-preflight-guardrails
 issue-235-exp-709-derived-measure-preflight-guardrails
 issue-238-exp-720-run-provenance-preflight-guardrails
 issue-239-exp-722-realized-form-preflight-guardrails
+issue-342-exp-732-evidence-source-augmentation-provenance-preflight-guardrails
 ```

@@ -7,6 +7,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
+from aces_conformance.conformance import observability_evidence_conformance_diagnostics
 from aces_contracts.contracts import (
     AcesSemanticInvariantEntryModel,
     AcesSemanticInvariantProfileReferenceModel,
@@ -48,6 +49,10 @@ EXPERIMENT_CORE_FIXTURE_MODELS = {
     "experiment-run-v1": ExperimentRunModel,
     "experiment-study-v1": ExperimentStudyModel,
     "experiment-task-v1": ExperimentTaskModel,
+}
+
+SEMANTIC_INVALID_EXPERIMENT_CORE_FIXTURES = {
+    ("experiment-run-v1", "augmentation-without-affected-refs.json"),
 }
 
 
@@ -611,6 +616,11 @@ def test_experiment_core_invalid_fixtures_fail_schema_and_model_validation():
         validator = Draft202012Validator(schemas[contract_id])
         for path in sorted((fixture_root / contract_id / "invalid").glob("*.json")):
             payload = json.loads(path.read_text(encoding="utf-8"))
+            if (contract_id, path.name) in SEMANTIC_INVALID_EXPERIMENT_CORE_FIXTURES:
+                assert not list(validator.iter_errors(payload)), path
+                model = model_cls.model_validate(payload)
+                assert observability_evidence_conformance_diagnostics(model)
+                continue
             assert list(validator.iter_errors(payload)), path
             with pytest.raises(ValidationError):
                 model_cls.model_validate(payload)

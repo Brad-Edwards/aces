@@ -12,20 +12,20 @@
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "645831fb013c9450a1354a609b0645f6d045c85b3d92edcdd3cdbce19a0e3064",
+      "content_hash": "4485bf2485e1f98be2c540552d42828a170dc6ff5beeb6b091a4e87a55b922ab",
       "last_change": {
-        "summary": "Added the EXP-715 observation capability declaration and experiment evidence contract identifiers to backend manifest v2.",
-        "content_hash": "645831fb013c9450a1354a609b0645f6d045c85b3d92edcdd3cdbce19a0e3064"
+        "summary": "Added experiment-run-v1 to the governed backend manifest contract vocabulary for run-level observability and augmentation evidence disclosure.",
+        "content_hash": "4485bf2485e1f98be2c540552d42828a170dc6ff5beeb6b091a4e87a55b922ab"
       }
     },
     {
       "contract_id": "backend-profile-v1",
       "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
       "stability": "draft",
-      "content_hash": "85ddac10a896b39cc9c5ef3f73141e84566236d12d0127511007610ccd700694",
+      "content_hash": "3f4152b2d7f1e4a01b30e2782a4d6001654e2785f4b9fe54121ed7e84a37c604",
       "last_change": {
-        "summary": "Added the EXP-707/EXP-708/EXP-709 experiment evidence contracts to the backend profile contract vocabulary.",
-        "content_hash": "85ddac10a896b39cc9c5ef3f73141e84566236d12d0127511007610ccd700694"
+        "summary": "Added experiment-run-v1 to the backend profile contract vocabulary so profile fixture conformance can exercise run-level observability semantics.",
+        "content_hash": "3f4152b2d7f1e4a01b30e2782a4d6001654e2785f4b9fe54121ed7e84a37c604"
       }
     },
     {

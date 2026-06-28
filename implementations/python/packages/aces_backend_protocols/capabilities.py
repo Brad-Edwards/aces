@@ -71,9 +71,8 @@ PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS = {
 }
 """Minimum published contract surfaces needed to make API-405 claims checkable.
 
-The table is intentionally conservative: it does not prove that every backend
-implements every action kind. It gives the conformance runner a falsifiable
-floor for standard terms, so a manifest cannot claim ACES participant support
+The table is intentionally conservative. It gives the conformance runner a
+falsifiable floor for standard terms, so a manifest cannot claim ACES participant support
 while omitting the contracts that carry the corresponding runtime evidence.
 """
 
@@ -82,6 +81,7 @@ OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS = frozenset(
         "experiment-capture-spec-v1",
         "experiment-evidence-record-v1",
         "experiment-derived-measure-v1",
+        "experiment-run-v1",
     }
 )
 

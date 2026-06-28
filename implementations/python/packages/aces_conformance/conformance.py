@@ -30,6 +30,7 @@ from aces_contracts.contracts import (
     ExperimentCaptureSpecModel,
     ExperimentDerivedMeasureModel,
     ExperimentEvidenceRecordModel,
+    ExperimentRunModel,
     OperationReceiptModel,
     OperationStatusModel,
     OrchestrationPlanModel,
@@ -79,6 +80,21 @@ from aces_sdl.parser import parse_sdl
 from pydantic import ValidationError
 
 _SEMANTIC_INVALID_DIAGNOSTIC_CODE = "conformance.semantic-invalid"
+_OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE = "conformance.observability-evidence-invalid"
+_PORTABLE_AUGMENTATION_CARRIER_KINDS = frozenset(
+    {
+        "apparatus-context",
+        "capture-spec",
+        "derived-measure",
+        "evidence-record",
+        "manifest",
+        "measurement-channel",
+        "profile",
+        "run",
+        "scenario-snapshot",
+    }
+)
+_RUN_REFINEMENT_CONCERN_KINDS = frozenset({"capture-window", "measurement-channel"})
 
 
 class BackendCapabilityProfile(str, Enum):
@@ -178,6 +194,7 @@ _MODEL_VALIDATORS = {
     "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_validate,
     "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_validate,
     "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_validate,
+    "experiment-run-v1": ExperimentRunModel.model_validate,
 }
 
 
@@ -808,6 +825,87 @@ def _runtime_snapshot_semantic_diagnostics(payload: Any) -> list[Diagnostic]:
     ]
 
 
+def observability_evidence_conformance_diagnostics(
+    payload: ExperimentRunModel | Mapping[str, Any],
+) -> tuple[Diagnostic, ...]:
+    """Return ASR-525 diagnostics for issue #128 observability/evidence semantics.
+
+    The individual contract models already enforce the closed-world shape and
+    SEM-225 baseline rules. This helper adds the conformance-level checks that
+    tie the existing carriers together for issue #128: augmentation reports
+    must name their portable affected carriers, and run-scoped capture
+    refinements must preserve the authored/base requirement plus evidence.
+    """
+
+    run = payload if isinstance(payload, ExperimentRunModel) else ExperimentRunModel.model_validate(payload)
+    diagnostics: list[Diagnostic] = []
+    diagnostics.extend(_augmentation_conformance_diagnostics(run))
+    diagnostics.extend(_run_refinement_conformance_diagnostics(run))
+    return tuple(diagnostics)
+
+
+def _augmentation_conformance_diagnostics(run: ExperimentRunModel) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    for disclosure in run.augmentation_disclosures:
+        address = f"experiment-run-v1.augmentation_disclosures.{disclosure.augmentation_id}"
+        if not disclosure.affected_refs:
+            diagnostics.append(
+                _diagnostic(
+                    _OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE,
+                    f"{address}.affected_refs",
+                    (
+                        "augmentation disclosures must name affected_refs so added capture surfaces, apparatus, "
+                        "constraints, side effects, and comparability implications are portable"
+                    ),
+                )
+            )
+        if not any(ref.ref_kind in _PORTABLE_AUGMENTATION_CARRIER_KINDS for ref in disclosure.carrier_refs):
+            diagnostics.append(
+                _diagnostic(
+                    _OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE,
+                    f"{address}.carrier_refs",
+                    "augmentation disclosures must cite at least one portable carrier_ref",
+                )
+            )
+        if disclosure.purpose in {"evidence", "evaluation", "comparability"} and not disclosure.evidence_refs:
+            diagnostics.append(
+                _diagnostic(
+                    _OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE,
+                    f"{address}.evidence_refs",
+                    f"{disclosure.purpose} augmentation disclosures must preserve supporting evidence_refs",
+                )
+            )
+    return diagnostics
+
+
+def _run_refinement_conformance_diagnostics(run: ExperimentRunModel) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    for disclosure in run.realized_form_disclosures:
+        if disclosure.concern_kind not in _RUN_REFINEMENT_CONCERN_KINDS:
+            continue
+        address = f"experiment-run-v1.realized_form_disclosures.{disclosure.concern_id}"
+        if disclosure.authored_ref is None:
+            diagnostics.append(
+                _diagnostic(
+                    _OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE,
+                    f"{address}.authored_ref",
+                    (
+                        "run-level evidence requirement refinements must preserve authored_ref instead of "
+                        "rewriting authored scenario meaning"
+                    ),
+                )
+            )
+        if not disclosure.evidence_refs:
+            diagnostics.append(
+                _diagnostic(
+                    _OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE,
+                    f"{address}.evidence_refs",
+                    "run-level evidence requirement refinements must preserve supporting evidence_refs",
+                )
+            )
+    return diagnostics
+
+
 def _semantic_diagnostics(contract_name: str, payload: Any) -> list[Diagnostic]:
     if contract_name == "workflow-result-envelope-v1":
         return _state_semantic_diagnostics(
@@ -840,6 +938,8 @@ def _semantic_diagnostics(contract_name: str, payload: Any) -> list[Diagnostic]:
         )
     if contract_name == "participant-behavior-history-event-stream-v1":
         return _participant_behavior_stream_diagnostics(contract_name, payload)
+    if contract_name == "experiment-run-v1":
+        return list(observability_evidence_conformance_diagnostics(payload))
     if contract_name != "runtime-snapshot-v1":
         return []
     return _runtime_snapshot_semantic_diagnostics(payload)
