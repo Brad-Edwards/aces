@@ -108,6 +108,7 @@
       "description": "Governed modes by which participant implementations make or relay decisions.",
       "kind": "vocabulary",
       "governed_scopes": [
+        "behavior_specifications.behavior_mode",
         "capabilities.supported_decision_surface_modes"
       ],
       "extension_policy": "governed-extension",

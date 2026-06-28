@@ -264,9 +264,9 @@ def _behavior_mode_issue(*, spec_name: str, behavior_mode: object) -> Participan
     if not behavior_mode:
         return None
     try:
-        from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_value
+        from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
 
-        validate_controlled_vocabulary_value("participant-decision-surface-modes", str(behavior_mode))
+        validate_controlled_vocabulary_scope_values("behavior_specifications.behavior_mode", [str(behavior_mode)])
     except ValueError as exc:
         return ParticipantBehaviorIssue(
             code="participant.behavior-spec-mode-ungoverned",
