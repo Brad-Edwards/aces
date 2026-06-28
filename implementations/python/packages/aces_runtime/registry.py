@@ -12,6 +12,11 @@ from aces_backend_protocols.protocols import (
     ParticipantRuntime,
     Provisioner,
 )
+from aces_contracts.contracts import (
+    ParticipantImplementationManifestModel,
+    ParticipantImplementationSelectionModel,
+)
+from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
 
 
 def _require_invokable_method(
@@ -68,10 +73,13 @@ def _validate_runtime_target_shape(
     sample_plan = object()
     sample_snapshot = object()
     sample_request = object()
+    sample_admission_request = _sample_participant_action_admission_request()
     _validate_provisioner_methods(provisioner, sample_plan, sample_snapshot)
     _validate_orchestrator_methods(orchestrator, sample_plan, sample_snapshot)
     _validate_evaluator_methods(evaluator, sample_plan, sample_snapshot)
-    _validate_participant_runtime_methods(participant_runtime, sample_request, sample_snapshot)
+    _validate_participant_runtime_methods(
+        participant_runtime, sample_request, sample_admission_request, sample_snapshot
+    )
 
 
 def _validate_optional_component_presence(
@@ -185,6 +193,7 @@ def _validate_evaluator_methods(
 def _validate_participant_runtime_methods(
     participant_runtime: ParticipantRuntime | None,
     sample_request: object,
+    sample_admission_request: ParticipantActionAdmissionRequest,
     sample_snapshot: object,
 ) -> None:
     _require_invokable_method(
@@ -214,6 +223,12 @@ def _validate_participant_runtime_methods(
     _require_invokable_method(
         participant_runtime,
         label="participant_runtime",
+        method_name="admit_action",
+        invocation_args=(sample_admission_request, sample_snapshot),
+    )
+    _require_invokable_method(
+        participant_runtime,
+        label="participant_runtime",
         method_name="status",
         invocation_args=(),
     )
@@ -228,6 +243,74 @@ def _validate_participant_runtime_methods(
         label="participant_runtime",
         method_name="history",
         invocation_args=(),
+    )
+
+
+def _sample_participant_action_admission_request() -> ParticipantActionAdmissionRequest:
+    manifest = ParticipantImplementationManifestModel.model_validate(
+        {
+            "schema_version": "participant-implementation-manifest/v1",
+            "identity": {"name": "registry-shape-probe", "version": "1.0.0"},
+            "implementation_kind": "agent",
+            "supported_contract_versions": [
+                "participant-implementation-manifest-v1",
+                "participant-implementation-provenance-v1",
+                "participant-episode-state-envelope-v1",
+                "participant-behavior-history-event-stream-v1",
+            ],
+            "compatibility": {"participant_runtimes": ["registry"], "processors": [], "backends": []},
+            "concept_bindings": [
+                {"scope": "implementation_kind", "family": "apparatus-declarations"},
+                {
+                    "scope": "capabilities.supported_participant_contracts",
+                    "family": "apparatus-declarations",
+                },
+                {
+                    "scope": "capabilities.supported_decision_surface_modes",
+                    "family": "apparatus-declarations",
+                },
+                {
+                    "scope": "capabilities.tool_affordance_expectations",
+                    "family": "tools-and-artifacts",
+                },
+                {"scope": "capabilities.exposure_policy_kinds", "family": "provenance-and-evidence"},
+            ],
+            "capabilities": {
+                "supported_participant_contracts": [
+                    "participant-episode-state-envelope-v1",
+                    "participant-behavior-history-event-stream-v1",
+                ],
+                "supported_decision_surface_modes": ["policy-directed"],
+                "tool_affordance_expectations": ["shell"],
+                "exposure_policy_kinds": ["task-statement"],
+            },
+        }
+    )
+    selection = ParticipantImplementationSelectionModel.model_validate(
+        {
+            "participant_address": "participant.behavior.registry-probe",
+            "implementation_identity": {"name": "registry-shape-probe", "version": "1.0.0"},
+            "manifest_ref": "registry://participant-implementation-manifest",
+            "manifest_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "selected_decision_surface_mode": "policy-directed",
+            "participant_contract_versions": [
+                "participant-episode-state-envelope-v1",
+                "participant-behavior-history-event-stream-v1",
+            ],
+            "exposure_policy": {
+                "policy_id": "registry-shape-probe-policy",
+                "exposure_policy_kinds": ["task-statement"],
+                "disclosed_refs": ["scenario.registry-probe"],
+            },
+        }
+    )
+    return ParticipantActionAdmissionRequest(
+        participant_address="participant.behavior.registry-probe",
+        action_contract_address="participant.action-contract.registry-probe",
+        observation_boundary_address="participant.observation-boundary.registry-probe",
+        action_instance_id="registry-probe-action",
+        implementation_manifest=manifest,
+        implementation_selection=selection,
     )
 
 
