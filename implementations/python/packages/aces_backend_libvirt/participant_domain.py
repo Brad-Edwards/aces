@@ -12,28 +12,26 @@ from __future__ import annotations
 from typing import Protocol
 
 from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
-from aces_contracts.participant_episode import ParticipantEpisodeExecutionState
 
 
 class LibvirtParticipantDomainAdapter(Protocol):
     """Domain side-effect boundary for ``LibvirtParticipantRuntime``.
 
     Implementations model what happens to the libvirt domain when the
-    participant takes an action. The runtime calls ``model_action`` before
-    recording behavior history events, so the adapter can inject
-    evidence_refs, action_result, or other admission-request fields derived
-    from the domain outcome.
+    participant takes an action. ``LibvirtParticipantRuntime.admit_action``
+    calls ``model_action`` before recording behavior history events, so the
+    adapter can inject ``evidence_refs``, ``action_result``, or other
+    admission-request fields derived from the domain outcome.
 
-    The returned request must remain structurally valid (same participant
-    and action contract addresses as the original). Implementations that
-    cannot realize the full domain effect MUST disclose the limitation in
-    the manifest's ``feature_support`` disclosure_refs.
+    The returned request must remain structurally valid (same participant and
+    action contract addresses as the original). Implementations that cannot
+    realize the full domain effect MUST disclose the limitation in the
+    manifest's ``feature_support`` disclosure_refs.
     """
 
     def model_action(
         self,
         request: ParticipantActionAdmissionRequest,
-        episode_state: ParticipantEpisodeExecutionState,
     ) -> ParticipantActionAdmissionRequest:
         """Return an updated admission request with domain-side artifacts.
 
@@ -60,9 +58,8 @@ class DeterministicParticipantDomainAdapter:
     ``docs/decisions/issue-614-libvirt-participant-runtime.md``.
     """
 
+    @staticmethod
     def model_action(
-        self,
         request: ParticipantActionAdmissionRequest,
-        episode_state: ParticipantEpisodeExecutionState,
     ) -> ParticipantActionAdmissionRequest:
         return request

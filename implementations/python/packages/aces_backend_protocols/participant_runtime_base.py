@@ -261,13 +261,10 @@ class BaseParticipantRuntime:
                 f"cannot admit participant action for terminated participant {address!r}",
                 address,
             )
-        effective_request = self._model_action(request, current_state)
         now = _now_iso()
-        post_state_digest = effective_request.post_state_digest or _participant_binding_post_state_digest(
-            effective_request
-        )
+        post_state_digest = request.post_state_digest or _participant_binding_post_state_digest(request)
         events = participant_action_binding_events(
-            effective_request,
+            request,
             episode_id=current_state.episode_id,
             timestamp=now,
             post_state_digest=post_state_digest,
@@ -286,21 +283,6 @@ class BaseParticipantRuntime:
             ),
             changed_addresses=[address],
         )
-
-    def _model_action(
-        self,
-        request: ParticipantActionAdmissionRequest,
-        current_state: ParticipantEpisodeExecutionState,
-    ) -> ParticipantActionAdmissionRequest:
-        """Hook for subclasses to model the domain side of an action.
-
-        The default implementation returns the request unchanged, corresponding
-        to a pure in-process runtime with no external domain effects. Backend
-        subclasses override this to transform the request (injecting
-        evidence_refs, action_result, etc.) from actual domain execution before
-        behavior history events are recorded.
-        """
-        return request
 
     def status(self) -> dict[str, object]:
         return {

@@ -46,8 +46,10 @@ binding.  Specifically:
 **Rationale:** The lifecycle logic (initialize → reset/restart → terminate,
 action admission with binding events, history tracking) is backend-neutral.
 Duplicating it in the libvirt backend would create maintenance debt and risk
-divergence.  A shared base with a `_model_action` hook gives the libvirt
-backend a clean injection point without leaking contracts.
+divergence.  The base carries no backend-specific hook; `LibvirtParticipantRuntime`
+overrides `admit_action` to model the domain side-effect (via the injected
+adapter) and then delegates to `super().admit_action`, so the shared machinery
+stays free of unused extension parameters.
 
 ### 2. Domain adapter protocol boundary
 
