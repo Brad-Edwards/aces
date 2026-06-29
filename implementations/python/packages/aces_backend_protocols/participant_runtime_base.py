@@ -1,0 +1,380 @@
+"""Shared participant episode lifecycle base for ACES backends.
+
+Provides ``BaseParticipantRuntime``, which implements the complete RUN-311
+episode state machine. Backend-specific runtimes subclass this and override
+``_model_action`` to inject domain side-effects (e.g. actual libvirt domain
+calls) before behavior history events are recorded.
+"""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from hashlib import sha256
+
+from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.participant_binding import (
+    ParticipantActionAdmissionRequest,
+    participant_action_binding_events,
+    participant_behavior_event_payload,
+)
+from aces_contracts.participant_episode import (
+    ParticipantEpisodeControlAction,
+    ParticipantEpisodeExecutionState,
+    ParticipantEpisodeHistoryEvent,
+    ParticipantEpisodeHistoryEventType,
+    ParticipantEpisodeInitializeRequest,
+    ParticipantEpisodeResetRequest,
+    ParticipantEpisodeRestartRequest,
+    ParticipantEpisodeStatus,
+    ParticipantEpisodeTerminalReason,
+    ParticipantEpisodeTerminateRequest,
+)
+from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot
+
+_EMPTY_ADDRESS_MSG = "participant_address must be non-empty"
+
+_TERMINAL_EVENT_FOR_REASON: dict[ParticipantEpisodeTerminalReason, ParticipantEpisodeHistoryEventType] = {
+    ParticipantEpisodeTerminalReason.COMPLETED: ParticipantEpisodeHistoryEventType.EPISODE_COMPLETED,
+    ParticipantEpisodeTerminalReason.TIMED_OUT: ParticipantEpisodeHistoryEventType.EPISODE_TIMED_OUT,
+    ParticipantEpisodeTerminalReason.TRUNCATED: ParticipantEpisodeHistoryEventType.EPISODE_TRUNCATED,
+    ParticipantEpisodeTerminalReason.INTERRUPTED: ParticipantEpisodeHistoryEventType.EPISODE_INTERRUPTED,
+}
+
+
+def _now_iso() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _participant_binding_post_state_digest(request: ParticipantActionAdmissionRequest) -> str:
+    digest_input = "|".join(
+        (
+            request.participant_address,
+            request.action_contract_address,
+            request.observation_boundary_address,
+            request.action_instance_id,
+        )
+    )
+    return "sha256:" + sha256(digest_input.encode("utf-8")).hexdigest()
+
+
+class BaseParticipantRuntime:
+    """Shared RUN-311 episode lifecycle base for ACES participant runtimes.
+
+    Implements the full episode state machine (initialize, reset, restart,
+    terminate, admit_action) using the RUN-311 invariants that
+    ``iter_participant_episode_snapshot_violations`` enforces. Subclasses that
+    need to inject domain side-effects before behavior history events are
+    recorded override ``_model_action``.
+
+    This class is backend-neutral; the concrete driver connection, libvirt
+    domain calls, or any other infrastructure concerns belong in subclasses.
+    """
+
+    def __init__(self) -> None:
+        self._results: dict[str, dict[str, object]] = {}
+        self._history: dict[str, list[dict[str, object]]] = {}
+        self._episode_counter: dict[str, int] = {}
+
+    def initialize(
+        self,
+        request: ParticipantEpisodeInitializeRequest,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        address = request.participant_address
+        if not address:
+            return self._reject(snapshot, _EMPTY_ADDRESS_MSG, address)
+        if address in snapshot.participant_episode_results:
+            return self._reject(
+                snapshot,
+                f"participant {address!r} already has a live episode; use reset or restart",
+                address,
+            )
+        now = _now_iso()
+        episode_id = request.episode_id or self._allocate_episode_id(address)
+        state = ParticipantEpisodeExecutionState(
+            participant_address=address,
+            episode_id=episode_id,
+            sequence_number=0,
+            status=ParticipantEpisodeStatus.RUNNING,
+            initialized_at=now,
+            updated_at=now,
+            last_control_action=ParticipantEpisodeControlAction.INITIALIZE,
+        )
+        events = [
+            ParticipantEpisodeHistoryEvent(
+                event_type=ParticipantEpisodeHistoryEventType.EPISODE_INITIALIZED,
+                timestamp=now,
+                participant_address=address,
+                episode_id=episode_id,
+                sequence_number=0,
+                control_action=ParticipantEpisodeControlAction.INITIALIZE,
+            ),
+            ParticipantEpisodeHistoryEvent(
+                event_type=ParticipantEpisodeHistoryEventType.EPISODE_RUNNING,
+                timestamp=now,
+                participant_address=address,
+                episode_id=episode_id,
+                sequence_number=0,
+            ),
+        ]
+        return self._apply(snapshot, address, state, events, replace_history=True)
+
+    def reset(
+        self,
+        request: ParticipantEpisodeResetRequest,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        return self._new_episode(
+            request,
+            snapshot,
+            control_action=ParticipantEpisodeControlAction.RESET,
+            reset_event=ParticipantEpisodeHistoryEventType.EPISODE_RESET,
+            require_terminated=False,
+            no_episode_message="cannot reset participant {address!r}: no live episode",
+            wrong_state_message="cannot reset terminated participant {address!r}; use restart",
+        )
+
+    def restart(
+        self,
+        request: ParticipantEpisodeRestartRequest,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        return self._new_episode(
+            request,
+            snapshot,
+            control_action=ParticipantEpisodeControlAction.RESTART,
+            reset_event=ParticipantEpisodeHistoryEventType.EPISODE_RESTARTED,
+            require_terminated=True,
+            no_episode_message="cannot restart participant {address!r}: no live episode",
+            wrong_state_message="cannot restart non-terminated participant {address!r}; use reset",
+        )
+
+    def _new_episode(
+        self,
+        request: ParticipantEpisodeResetRequest | ParticipantEpisodeRestartRequest,
+        snapshot: RuntimeSnapshot,
+        *,
+        control_action: ParticipantEpisodeControlAction,
+        reset_event: ParticipantEpisodeHistoryEventType,
+        require_terminated: bool,
+        no_episode_message: str,
+        wrong_state_message: str,
+    ) -> ApplyResult:
+        address = request.participant_address
+        current_state = self._live_predecessor(snapshot, address, no_episode_message)
+        if isinstance(current_state, ApplyResult):
+            return current_state
+        if (current_state.status == ParticipantEpisodeStatus.TERMINATED) != require_terminated:
+            return self._reject(snapshot, wrong_state_message.format(address=address), address)
+        now = _now_iso()
+        new_episode_id = request.episode_id or self._allocate_episode_id(address)
+        new_sequence = current_state.sequence_number + 1
+        new_state = ParticipantEpisodeExecutionState(
+            participant_address=address,
+            episode_id=new_episode_id,
+            sequence_number=new_sequence,
+            status=ParticipantEpisodeStatus.RUNNING,
+            initialized_at=now,
+            updated_at=now,
+            last_control_action=control_action,
+            previous_episode_id=current_state.episode_id,
+        )
+        events = [
+            ParticipantEpisodeHistoryEvent(
+                event_type=reset_event,
+                timestamp=now,
+                participant_address=address,
+                episode_id=new_episode_id,
+                sequence_number=new_sequence,
+                control_action=control_action,
+                details={
+                    "previous_episode_id": current_state.episode_id,
+                    "reason": request.reason,
+                },
+            ),
+            ParticipantEpisodeHistoryEvent(
+                event_type=ParticipantEpisodeHistoryEventType.EPISODE_RUNNING,
+                timestamp=now,
+                participant_address=address,
+                episode_id=new_episode_id,
+                sequence_number=new_sequence,
+            ),
+        ]
+        return self._apply(snapshot, address, new_state, events, replace_history=False)
+
+    def terminate(
+        self,
+        request: ParticipantEpisodeTerminateRequest,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        address = request.participant_address
+        current_state = self._live_predecessor(
+            snapshot, address, "cannot terminate participant {address!r}: no live episode"
+        )
+        if isinstance(current_state, ApplyResult):
+            return current_state
+        if current_state.status == ParticipantEpisodeStatus.TERMINATED:
+            return self._reject(snapshot, f"participant {address!r} is already terminated", address)
+        now = _now_iso()
+        terminal_reason = request.terminal_reason
+        new_state = ParticipantEpisodeExecutionState(
+            participant_address=address,
+            episode_id=current_state.episode_id,
+            sequence_number=current_state.sequence_number,
+            status=ParticipantEpisodeStatus.TERMINATED,
+            terminal_reason=terminal_reason,
+            initialized_at=current_state.initialized_at,
+            updated_at=now,
+            terminated_at=now,
+            last_control_action=current_state.last_control_action,
+            previous_episode_id=current_state.previous_episode_id,
+        )
+        events = [
+            ParticipantEpisodeHistoryEvent(
+                event_type=_TERMINAL_EVENT_FOR_REASON[terminal_reason],
+                timestamp=now,
+                participant_address=address,
+                episode_id=current_state.episode_id,
+                sequence_number=current_state.sequence_number,
+                terminal_reason=terminal_reason,
+                details={"detail": request.detail},
+            ),
+        ]
+        return self._apply(snapshot, address, new_state, events, replace_history=False)
+
+    def admit_action(
+        self,
+        request: ParticipantActionAdmissionRequest,
+        snapshot: RuntimeSnapshot,
+    ) -> ApplyResult:
+        address = request.participant_address
+        current_state = self._live_predecessor(
+            snapshot,
+            address,
+            "cannot admit participant action for {address!r}: no live episode",
+        )
+        if isinstance(current_state, ApplyResult):
+            return current_state
+        if current_state.status == ParticipantEpisodeStatus.TERMINATED:
+            return self._reject(
+                snapshot,
+                f"cannot admit participant action for terminated participant {address!r}",
+                address,
+            )
+        effective_request = self._model_action(request, current_state)
+        now = _now_iso()
+        post_state_digest = effective_request.post_state_digest or _participant_binding_post_state_digest(
+            effective_request
+        )
+        events = participant_action_binding_events(
+            effective_request,
+            episode_id=current_state.episode_id,
+            timestamp=now,
+            post_state_digest=post_state_digest,
+        )
+        behavior_history = {
+            participant_address: list(events)
+            for participant_address, events in snapshot.participant_behavior_history.items()
+        }
+        behavior_history.setdefault(address, [])
+        behavior_history[address].extend(participant_behavior_event_payload(event) for event in events)
+        return ApplyResult(
+            success=True,
+            snapshot=snapshot.with_entries(
+                dict(snapshot.entries),
+                participant_behavior_history=behavior_history,
+            ),
+            changed_addresses=[address],
+        )
+
+    def _model_action(
+        self,
+        request: ParticipantActionAdmissionRequest,
+        current_state: ParticipantEpisodeExecutionState,
+    ) -> ParticipantActionAdmissionRequest:
+        """Hook for subclasses to model the domain side of an action.
+
+        The default implementation returns the request unchanged, corresponding
+        to a pure in-process runtime with no external domain effects. Backend
+        subclasses override this to transform the request (injecting
+        evidence_refs, action_result, etc.) from actual domain execution before
+        behavior history events are recorded.
+        """
+        return request
+
+    def status(self) -> dict[str, object]:
+        return {
+            "participants": len(self._results),
+            "running": sum(1 for result in self._results.values() if result.get("status") == "running"),
+        }
+
+    def results(self) -> dict[str, dict[str, object]]:
+        return {address: dict(result) for address, result in self._results.items()}
+
+    def history(self) -> dict[str, list[dict[str, object]]]:
+        return {address: list(events) for address, events in self._history.items()}
+
+    def _live_predecessor(
+        self,
+        snapshot: RuntimeSnapshot,
+        address: str,
+        no_episode_message: str,
+    ) -> ParticipantEpisodeExecutionState | ApplyResult:
+        """Resolve the participant's current episode state, or return an error result.
+
+        Collapses the empty-address, no-live-episode, and invalid-payload guards
+        into a single resolver so each caller has one error-return path plus its
+        own state-specific check.
+        """
+        current = snapshot.participant_episode_results.get(address) if address else None
+        if current is None:
+            message = _EMPTY_ADDRESS_MSG if not address else no_episode_message.format(address=address)
+            return self._reject(snapshot, message, address)
+        try:
+            return ParticipantEpisodeExecutionState.from_payload(current)
+        except (TypeError, ValueError) as exc:
+            return self._reject(snapshot, f"current state is invalid: {exc}", address)
+
+    def _apply(
+        self,
+        snapshot: RuntimeSnapshot,
+        address: str,
+        state: ParticipantEpisodeExecutionState,
+        new_events: list[ParticipantEpisodeHistoryEvent],
+        *,
+        replace_history: bool,
+    ) -> ApplyResult:
+        results = {addr: dict(result) for addr, result in snapshot.participant_episode_results.items()}
+        history = {addr: list(events) for addr, events in snapshot.participant_episode_history.items()}
+        results[address] = state.to_payload()
+        if replace_history:
+            history[address] = [event.to_payload() for event in new_events]
+        else:
+            history.setdefault(address, [])
+            history[address].extend(event.to_payload() for event in new_events)
+        self._results = results
+        self._history = history
+        return ApplyResult(
+            success=True,
+            snapshot=snapshot.with_entries(
+                dict(snapshot.entries),
+                participant_episode_results=results,
+                participant_episode_history=history,
+            ),
+            changed_addresses=[address],
+        )
+
+    @staticmethod
+    def _reject(snapshot: RuntimeSnapshot, message: str, address: str) -> ApplyResult:
+        diagnostic = Diagnostic(
+            code="runtime.participant-runtime.rejected",
+            domain="runtime",
+            address=address or "runtime.participant-runtime",
+            message=message,
+        )
+        return ApplyResult(success=False, snapshot=snapshot, diagnostics=[diagnostic])
+
+    def _allocate_episode_id(self, address: str) -> str:
+        next_index = self._episode_counter.get(address, 0) + 1
+        self._episode_counter[address] = next_index
+        return f"{address}-episode-{next_index}"
