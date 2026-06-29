@@ -16,15 +16,16 @@ from aces_backend_libvirt.participant_runtime import LibvirtParticipantRuntime
 from aces_backend_libvirt.target import create_libvirt_components
 from aces_backend_protocols.capabilities import participant_runtime_capability_contract_gaps
 from aces_conformance.conformance import run_target_conformance
-from aces_contracts.contracts import (
-    ParticipantActionResultModel,
-    ParticipantImplementationManifestModel,
-    ParticipantImplementationSelectionModel,
-)
 from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
 from aces_processor.models import (
     iter_participant_behavior_history_violations,
     iter_participant_episode_snapshot_violations,
+)
+from libvirt_participant_fixtures import (
+    NullLibvirtDriver,
+    build_action_result,
+    build_implementation_manifest,
+    build_implementation_selection,
 )
 from libvirt_participant_proof import LibvirtParticipantProofResult, run_libvirt_participant_proof
 
@@ -43,188 +44,18 @@ _DISCLOSURE_REF = "docs/decisions/issue-614-libvirt-participant-runtime.md"
 
 
 # ---------------------------------------------------------------------------
-# Null driver — no real libvirt daemon needed for these structural tests
-# ---------------------------------------------------------------------------
-
-
-class _NullLibvirtDriver:
-    """No-op libvirt driver for structural tests that do not call realize()."""
-
-    def realize(self, *, networks, domains):
-        from aces_backend_libvirt.driver import DriverResult
-
-        return DriverResult()
-
-    def destroy(self, *, networks, domains):
-        from aces_backend_libvirt.driver import DriverResult
-
-        return DriverResult()
-
-    def realized_addresses(self):
-        return frozenset()
-
-
-# ---------------------------------------------------------------------------
-# Helpers
+# Helpers (shared deterministic fixtures live in libvirt_participant_fixtures)
 # ---------------------------------------------------------------------------
 
 
 def _libvirt_target_with_participant_runtime() -> RuntimeTarget:
     manifest = create_libvirt_manifest(participant_runtime=True)
-    components = create_libvirt_components(manifest=manifest, driver=_NullLibvirtDriver())
+    components = create_libvirt_components(manifest=manifest, driver=NullLibvirtDriver())
     return RuntimeTarget(
         name=manifest.name,
         manifest=manifest,
         provisioner=components.provisioner,
         participant_runtime=components.participant_runtime,
-    )
-
-
-def _libvirt_implementation_manifest() -> ParticipantImplementationManifestModel:
-    return ParticipantImplementationManifestModel.model_validate(
-        {
-            "schema_version": "participant-implementation-manifest/v1",
-            "identity": {"name": "libvirt-deterministic-agent", "version": "1.0.0"},
-            "implementation_kind": "agent",
-            "supported_contract_versions": [
-                "participant-implementation-manifest-v1",
-                "participant-implementation-provenance-v1",
-                "participant-episode-state-envelope-v1",
-                "participant-episode-history-event-stream-v1",
-                "participant-behavior-history-event-stream-v1",
-            ],
-            "compatibility": {
-                "participant_runtimes": ["libvirt-qemu"],
-                "processors": ["aces-reference-processor"],
-                "backends": ["libvirt-qemu"],
-            },
-            "concept_bindings": [
-                {"scope": "implementation_kind", "family": "apparatus-declarations"},
-                {
-                    "scope": "capabilities.supported_participant_contracts",
-                    "family": "apparatus-declarations",
-                },
-                {
-                    "scope": "capabilities.supported_decision_surface_modes",
-                    "family": "apparatus-declarations",
-                },
-                {
-                    "scope": "capabilities.tool_affordance_expectations",
-                    "family": "tools-and-artifacts",
-                },
-                {"scope": "capabilities.exposure_policy_kinds", "family": "provenance-and-evidence"},
-            ],
-            "constraints": {
-                "max_parallel_episodes": "1",
-                "simulation_disclosure": "deterministic-simulation: no live libvirt domain execution",
-            },
-            "capabilities": {
-                "supported_participant_contracts": [
-                    "participant-episode-state-envelope-v1",
-                    "participant-episode-history-event-stream-v1",
-                    "participant-behavior-history-event-stream-v1",
-                ],
-                "supported_decision_surface_modes": ["policy-directed"],
-                "tool_affordance_expectations": ["http-api"],
-                "exposure_policy_kinds": ["task-statement", "observation-stream"],
-            },
-        }
-    )
-
-
-def _libvirt_implementation_selection(participant_address: str) -> ParticipantImplementationSelectionModel:
-    return ParticipantImplementationSelectionModel.model_validate(
-        {
-            "participant_address": participant_address,
-            "implementation_identity": {"name": "libvirt-deterministic-agent", "version": "1.0.0"},
-            "manifest_ref": "contracts/fixtures/participant-implementation-manifest/libvirt-deterministic.json",
-            "manifest_digest": "sha256:" + "1" * 64,
-            "selected_decision_surface_mode": "policy-directed",
-            "participant_contract_versions": [
-                "participant-episode-state-envelope-v1",
-                "participant-behavior-history-event-stream-v1",
-            ],
-            "exposure_policy": {
-                "policy_id": "libvirt-paper-agent-policy",
-                "policy_version": "1.0.0",
-                "policy_digest": "sha256:" + "3" * 64,
-                "exposure_policy_kinds": ["task-statement", "observation-stream"],
-                "disclosed_refs": [],
-                "withheld_refs": [
-                    "content.evaluator-notes",
-                    "nodes.customer-db.services.postgres",
-                    "nodes.wazuh-manager",
-                    "nodes.wazuh-indexer",
-                    "nodes.participant-policy-gate",
-                ],
-                "tool_affordance_refs": [],
-                "visibility_scope_refs": [],
-            },
-        }
-    )
-
-
-def _paper_scenario_action_result(
-    *,
-    participant_address: str,
-    episode_id: str,
-    action_instance_id: str,
-    action_contract_address: str,
-    contract_spec: dict,
-) -> ParticipantActionResultModel:
-    """Build a deterministic succeeded action_result for the paper scenario action contract.
-
-    Reports all declared preconditions with empty refs and only the ``no_effect``
-    effects (which require no target_refs or evidence_refs). This avoids any
-    hidden-ref violations while satisfying the SEM-211 precondition completeness check.
-    """
-    preconditions_raw = contract_spec.get("preconditions", ())
-    effects_raw = contract_spec.get("effects", ())
-
-    preconditions = []
-    for pc in preconditions_raw:
-        if not isinstance(pc, dict) or not pc.get("precondition_id") or not pc.get("precondition_class"):
-            continue
-        preconditions.append(
-            {
-                "precondition_id": pc["precondition_id"],
-                "precondition_class": pc["precondition_class"],
-                "status": "satisfied",
-                "participant_address": participant_address,
-                "episode_id": episode_id,
-                "action_contract_address": action_contract_address,
-                "observation_point": f"{action_instance_id}:pc-{pc['precondition_id']}",
-                "support_refs": [],
-                "evidence_refs": [],
-            }
-        )
-
-    effects = []
-    for eff in effects_raw:
-        if not isinstance(eff, dict) or not eff.get("effect_id") or not eff.get("effect_class"):
-            continue
-        if eff["effect_class"] == "no_effect":
-            effects.append(
-                {
-                    "effect_id": eff["effect_id"],
-                    "effect_class": eff["effect_class"],
-                    "description": eff.get("description", "No effect (deterministic proof)."),
-                }
-            )
-
-    return ParticipantActionResultModel.model_validate(
-        {
-            "status": "succeeded",
-            "participant_address": participant_address,
-            "episode_id": episode_id,
-            "action_instance_id": action_instance_id,
-            "action_contract_address": action_contract_address,
-            "observation_point": f"{action_instance_id}:terminal-observation",
-            "preconditions": preconditions,
-            "effects": effects,
-            "observations": [f"{action_instance_id}:terminal-observation"],
-            "evidence_refs": [],
-        }
     )
 
 
@@ -274,7 +105,7 @@ def test_ac2_conformance_passes_with_participant_runtime_manifest():
 
 def test_ac3_components_construction_succeeds_with_participant_runtime():
     manifest = create_libvirt_manifest(participant_runtime=True)
-    components = create_libvirt_components(manifest=manifest, driver=_NullLibvirtDriver())
+    components = create_libvirt_components(manifest=manifest, driver=NullLibvirtDriver())
 
     assert components.participant_runtime is not None
     assert isinstance(components.participant_runtime, LibvirtParticipantRuntime)
@@ -285,7 +116,7 @@ def test_ac3_components_construction_still_raises_for_orchestrator():
 
     orchestrator_manifest = create_stub_manifest()
     with pytest.raises(ValueError, match="orchestrator"):
-        create_libvirt_components(manifest=orchestrator_manifest, driver=_NullLibvirtDriver())
+        create_libvirt_components(manifest=orchestrator_manifest, driver=NullLibvirtDriver())
 
 
 # ---------------------------------------------------------------------------
@@ -376,7 +207,7 @@ def test_ac5_admit_action_records_behavior_history_without_internal_refs():
     control_plane = RuntimeControlPlane(target)
     control_plane.initialize_participant_episode(behavior.address, episode_id="ep-5")
 
-    action_result = _paper_scenario_action_result(
+    action_result = build_action_result(
         participant_address=behavior.address,
         episode_id="ep-5",
         action_instance_id="probe-0001",
@@ -388,8 +219,8 @@ def test_ac5_admit_action_records_behavior_history_without_internal_refs():
         action_contract_address=action_address,
         observation_boundary_address=boundary_address,
         action_instance_id="probe-0001",
-        implementation_manifest=_libvirt_implementation_manifest(),
-        implementation_selection=_libvirt_implementation_selection(behavior.address),
+        implementation_manifest=build_implementation_manifest(),
+        implementation_selection=build_implementation_selection(behavior.address),
         visible_refs=(),
         disclosed_refs=(),
         evidence_refs=(),
@@ -480,7 +311,7 @@ def test_ac_missing_episode_binding_fails_with_redacted_diagnostic():
     control_plane = RuntimeControlPlane(target)
 
     # No initialize_participant_episode() — the binding has no live episode.
-    action_result = _paper_scenario_action_result(
+    action_result = build_action_result(
         participant_address=behavior.address,
         episode_id="ep-missing",
         action_instance_id="probe-0001",
@@ -492,8 +323,8 @@ def test_ac_missing_episode_binding_fails_with_redacted_diagnostic():
         action_contract_address=action_address,
         observation_boundary_address=boundary_address,
         action_instance_id="probe-0001",
-        implementation_manifest=_libvirt_implementation_manifest(),
-        implementation_selection=_libvirt_implementation_selection(behavior.address),
+        implementation_manifest=build_implementation_manifest(),
+        implementation_selection=build_implementation_selection(behavior.address),
         visible_refs=(),
         disclosed_refs=(),
         evidence_refs=(),
