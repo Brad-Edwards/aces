@@ -5,12 +5,19 @@ from __future__ import annotations
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as distribution_version
 
-from aces_backend_protocols.capabilities import BackendCapabilitySet, BackendManifest, ProvisionerCapabilities
+from aces_backend_protocols.capabilities import (
+    BackendCapabilitySet,
+    BackendManifest,
+    ParticipantFeatureSupport,
+    ParticipantRuntimeCapabilities,
+    ProvisionerCapabilities,
+)
 from aces_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
-from aces_contracts.vocabulary import RealizationSupportMode
+from aces_contracts.vocabulary import ParticipantFeatureSupportLevel, RealizationSupportMode
 
 LIBVIRT_BACKEND_NAME = "libvirt-qemu"
-LIBVIRT_SUPPORTED_CONTRACT_VERSIONS = frozenset(
+
+_LIBVIRT_BASE_CONTRACT_VERSIONS = frozenset(
     {
         "backend-manifest-v2",
         "operation-receipt-v1",
@@ -20,6 +27,22 @@ LIBVIRT_SUPPORTED_CONTRACT_VERSIONS = frozenset(
     }
 )
 
+_LIBVIRT_PARTICIPANT_CONTRACT_VERSIONS = frozenset(
+    {
+        "participant-episode-state-envelope-v1",
+        "participant-episode-history-event-stream-v1",
+        "participant-behavior-history-event-stream-v1",
+        "participant-shared-state-record-v1",
+        "participant-joint-action-record-v1",
+        "participant-time-management-context-v1",
+    }
+)
+
+# Union used when participant_runtime=True is requested
+LIBVIRT_SUPPORTED_CONTRACT_VERSIONS = _LIBVIRT_BASE_CONTRACT_VERSIONS
+
+_LIBVIRT_PARTICIPANT_RUNTIME_DISCLOSURE_REF = "docs/decisions/issue-614-libvirt-participant-runtime.md"
+
 
 def _current_backend_version() -> str:
     try:
@@ -28,23 +51,84 @@ def _current_backend_version() -> str:
         return "0.0.0+unknown"
 
 
-def create_libvirt_manifest(**config) -> BackendManifest:
+def _participant_runtime_capabilities() -> ParticipantRuntimeCapabilities:
+    """Return ParticipantRuntimeCapabilities for the libvirt deterministic participant runtime."""
+    disclosure_ref = _LIBVIRT_PARTICIPANT_RUNTIME_DISCLOSURE_REF
+    return ParticipantRuntimeCapabilities(
+        name="libvirt-deterministic-participant-runtime",
+        supported_participant_roles=frozenset({"red"}),
+        supported_behavior_features=frozenset(
+            {
+                "action_contracts",
+                "observation_boundaries",
+                "behavior_history",
+                "state_transitions",
+            }
+        ),
+        supported_interaction_features=frozenset({"contention"}),
+        feature_support=(
+            ParticipantFeatureSupport(
+                feature="action_contracts",
+                support_level=ParticipantFeatureSupportLevel.DISCLOSED_WEAK,
+                disclosure_refs=(disclosure_ref,),
+            ),
+            ParticipantFeatureSupport(
+                feature="observation_boundaries",
+                support_level=ParticipantFeatureSupportLevel.DISCLOSED_WEAK,
+                disclosure_refs=(disclosure_ref,),
+            ),
+            ParticipantFeatureSupport(
+                feature="behavior_history",
+                support_level=ParticipantFeatureSupportLevel.DISCLOSED_WEAK,
+                disclosure_refs=(disclosure_ref,),
+            ),
+            ParticipantFeatureSupport(
+                feature="state_transitions",
+                support_level=ParticipantFeatureSupportLevel.DISCLOSED_WEAK,
+                disclosure_refs=(disclosure_ref,),
+            ),
+            ParticipantFeatureSupport(
+                feature="contention",
+                support_level=ParticipantFeatureSupportLevel.DISCLOSED_WEAK,
+                disclosure_refs=(disclosure_ref,),
+            ),
+        ),
+        constraints={
+            "simulation_disclosure": (
+                "deterministic-simulation: no live libvirt domain execution; "
+                "see docs/decisions/issue-614-libvirt-participant-runtime.md"
+            )
+        },
+    )
+
+
+def create_libvirt_manifest(**config: object) -> BackendManifest:
     """Return the libvirt backend manifest.
 
     The manifest declares the *maximum* governed provisioning vocabulary the
     libvirt/QEMU driver realizes through cloud-init: all node types, all OS
     families, all content types (file/dataset/directory), and all account
     features. Because every declared term is genuinely realized, the manifest
-    cannot over-claim. "Provisioning-only" here is domain scope only — the
-    backend implements the Provisioner protocol, not the orchestrator,
-    evaluator, or participant runtime.
+    cannot over-claim. "Provisioning-only" here is domain scope only — by default
+    the backend implements the Provisioner protocol, not the orchestrator or
+    evaluator. Pass ``participant_runtime=True`` to additionally declare
+    participant episode support (``LibvirtParticipantRuntime`` with the
+    deterministic domain adapter).
     """
+    enable_participant_runtime = bool(config.get("participant_runtime", False))
 
-    del config
+    supported_contract_versions = (
+        _LIBVIRT_BASE_CONTRACT_VERSIONS | _LIBVIRT_PARTICIPANT_CONTRACT_VERSIONS
+        if enable_participant_runtime
+        else _LIBVIRT_BASE_CONTRACT_VERSIONS
+    )
+
+    participant_runtime_cap = _participant_runtime_capabilities() if enable_participant_runtime else None
+
     return BackendManifest(
         name=LIBVIRT_BACKEND_NAME,
         version=_current_backend_version(),
-        supported_contract_versions=LIBVIRT_SUPPORTED_CONTRACT_VERSIONS,
+        supported_contract_versions=supported_contract_versions,
         compatible_processors=frozenset({"aces-reference-processor"}),
         concept_bindings=(
             ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
@@ -79,6 +163,7 @@ def create_libvirt_manifest(**config) -> BackendManifest:
                 max_total_nodes=None,
                 supports_acls=True,
                 supports_accounts=True,
-            )
+            ),
+            participant_runtime=participant_runtime_cap,
         ),
     )

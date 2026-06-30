@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -22,9 +20,14 @@ from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.manager import RuntimeManager
 from aces_sdl.parser import parse_sdl_file
 
+from aces_operations.run_artifacts import (
+    atomic_write_json_artifact,
+    is_valid_run_id_label,
+    run_artifact_path,
+)
+
 DEFAULT_EVENT_WINDOW_SECONDS = 180
 DEFAULT_BOOT_TIMEOUT_SECONDS = 180
-_RUN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 _FULL_SOC_NODES = frozenset(
     {
         "wazuh-manager",
@@ -158,7 +161,7 @@ def validate_techvault_live(
 
 
 def _check_run_id(run_id: str) -> LiveCheck:
-    if _RUN_ID_RE.match(run_id):
+    if is_valid_run_id_label(run_id):
         return LiveCheck("run_id_input", True)
     return LiveCheck("run_id_input", False, ("run id must be a safe filesystem label",))
 
@@ -303,7 +306,7 @@ def _write_manifest(
     *,
     clean_boot: bool,
 ) -> str | None:
-    target = output_dir / "runs" / run_id / "live-gate" / "manifest.json"
+    target = run_artifact_path(output_dir, run_id, "live-gate", "manifest.json")
     payload = {
         "schema": "aces.libvirt.techvault-native-live-gate/v1",
         "scenario": {"path": str(scenario_path), "name": scenario_path.name.split(".")[0]},
@@ -324,8 +327,7 @@ def _write_manifest(
         "evidence": dict(evidence),
     }
     try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        atomic_write_json_artifact(target, payload)
     except OSError:
         return None
     return str(target)

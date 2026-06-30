@@ -10,6 +10,7 @@ from aces_runtime.registry import BackendRegistry, RuntimeTarget, RuntimeTargetC
 from .driver import LibvirtDriver
 from .drivers.libvirt import LibvirtDeploymentDriver
 from .manifest import LIBVIRT_BACKEND_NAME, create_libvirt_manifest
+from .participant_runtime import LibvirtParticipantRuntime
 from .provisioner import LibvirtProvisioner
 
 
@@ -22,9 +23,13 @@ def create_libvirt_components(
     """Build libvirt backend components for a manifest."""
 
     deployment_driver = driver if driver is not None else LibvirtDeploymentDriver(**_driver_config(config))
-    if manifest.has_orchestrator or manifest.has_evaluator or manifest.has_participant_runtime:
-        raise ValueError("libvirt backend is provisioning-only for issue #601.")
-    return RuntimeTargetComponents(provisioner=LibvirtProvisioner(deployment_driver))
+    if manifest.has_orchestrator or manifest.has_evaluator:
+        raise ValueError("libvirt backend does not support orchestrator or evaluator.")
+    participant_runtime = LibvirtParticipantRuntime() if manifest.has_participant_runtime else None
+    return RuntimeTargetComponents(
+        provisioner=LibvirtProvisioner(deployment_driver),
+        participant_runtime=participant_runtime,
+    )
 
 
 def create_libvirt_target(**config: Any) -> RuntimeTarget:
