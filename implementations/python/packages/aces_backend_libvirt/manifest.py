@@ -29,7 +29,16 @@ def _current_backend_version() -> str:
 
 
 def create_libvirt_manifest(**config) -> BackendManifest:
-    """Return the provisioning-only libvirt backend manifest."""
+    """Return the libvirt backend manifest.
+
+    The manifest declares the *maximum* governed provisioning vocabulary the
+    libvirt/QEMU driver realizes through cloud-init: all node types, all OS
+    families, all content types (file/dataset/directory), and all account
+    features. Because every declared term is genuinely realized, the manifest
+    cannot over-claim. "Provisioning-only" here is domain scope only — the
+    backend implements the Provisioner protocol, not the orchestrator,
+    evaluator, or participant runtime.
+    """
 
     del config
     return BackendManifest(
@@ -40,12 +49,14 @@ def create_libvirt_manifest(**config) -> BackendManifest:
         concept_bindings=(
             ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
             ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
+            ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
+            ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
         ),
         realization_support=(
             RealizationSupportDeclaration(
                 domain="runtime-realization",
                 support_mode=RealizationSupportMode.CONSTRAINED,
-                supported_constraint_kinds=frozenset({"node-type", "os-family"}),
+                supported_constraint_kinds=frozenset({"node-type", "os-family", "content-type", "account-feature"}),
                 supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
                 disclosure_kinds=frozenset(
                     {
@@ -60,12 +71,14 @@ def create_libvirt_manifest(**config) -> BackendManifest:
             provisioner=ProvisionerCapabilities(
                 name="libvirt-provisioner",
                 supported_node_types=frozenset({"switch", "vm"}),
-                supported_os_families=frozenset({"linux", "windows", "freebsd", "other"}),
-                supported_content_types=frozenset(),
-                supported_account_features=frozenset(),
+                supported_os_families=frozenset({"linux", "windows", "macos", "freebsd", "other"}),
+                supported_content_types=frozenset({"file", "dataset", "directory"}),
+                supported_account_features=frozenset(
+                    {"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}
+                ),
                 max_total_nodes=None,
-                supports_acls=False,
-                supports_accounts=False,
+                supports_acls=True,
+                supports_accounts=True,
             )
         ),
     )

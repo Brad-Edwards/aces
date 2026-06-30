@@ -42,3 +42,16 @@ def test_libvirt_manifest_supports_vm_domains_and_switch_networks():
     manifest = create_libvirt_manifest()
 
     assert manifest.provisioner.supported_node_types == frozenset({"switch", "vm"})
+
+
+def test_libvirt_manifest_declares_full_content_and_account_realization():
+    """Issue #603: cloud-init realizes the full governed content/account vocabulary."""
+    provisioner = create_libvirt_manifest().provisioner
+
+    assert provisioner.supported_os_families == frozenset({"linux", "windows", "macos", "freebsd", "other"})
+    assert provisioner.supported_content_types == frozenset({"file", "dataset", "directory"})
+    assert provisioner.supported_account_features == frozenset(
+        {"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}
+    )
+    assert provisioner.supports_accounts is True
+    assert provisioner.supports_acls is True

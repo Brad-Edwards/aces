@@ -54,23 +54,25 @@ not implement the manifest, add schemas, or change runtime behavior.
 - Do not conflate realization kinds with capability values. `realization_support`
   declares which requirement kinds the planner may check; `ProvisionerCapabilities`
   declares which concrete vocabulary terms the backend can provision.
-- The current libvirt interpreter handles provisioning resource types `node` and
-  `network`. A manifest that claims content or account realization must be
-  backed by corresponding provisioner/driver behavior, not only by adding
-  `file`, `dataset`, `directory`, or account feature strings to the manifest.
+- The libvirt interpreter realizes provisioning resource types `node`,
+  `network`, `content-placement`, `account-placement`, and `feature-binding`
+  (issue #603, via cloud-init). A manifest that claims content or account
+  realization must be backed by corresponding provisioner/driver behavior — as
+  it now is — not only by adding `file`, `dataset`, `directory`, or account
+  feature strings to the manifest.
 - VM image/source handling is not SDL `content` placement support. Do not use
   `DomainSpec.image_ref`, TechVault parameters, or generated initramfs contents
   as evidence that generic `provision.content.*` resources are realized.
 - Account claims must pass the existing account gate:
   `supported_account_features` is valid only when `supports_accounts=True`, and
-  every listed feature must be a governed term or governed extension. If libvirt
-  does not actually create guest accounts and feature attributes, leave account
-  support unclaimed and let account-using plans fail at the existing planner
-  diagnostic.
+  every listed feature must be a governed term or governed extension. Libvirt
+  creates guest accounts and feature attributes via cloud-init (issue #603), so
+  `supports_accounts=True` and the full governed account-feature set are
+  declared and realized.
 - Concept bindings must describe every claimed governed capability surface:
-  node types and OS families for the existing provisioner surface, plus content
-  types or account features only if those capability fields are honestly
-  non-empty. Do not add duplicate bindings or bind absent optional surfaces.
+  node types, OS families, content types, and account features — all of which
+  are honestly non-empty under issue #603. Do not add duplicate bindings or
+  bind absent optional surfaces.
 
 ## Required Incumbents
 
@@ -184,8 +186,9 @@ Avoid:
 
 ## Non-Goals
 
-- Implementing content placement, account creation, orchestration, evaluation,
-  participant runtime, observation, or experiment evidence capture.
+- Implementing orchestration, evaluation, participant runtime, observation, or
+  experiment evidence capture. (Content placement and account creation were
+  non-goals of #602's manifest-publication step; they are realized in #603.)
 - Publishing new contracts, backend profiles, schemas, vocabularies, concept
   families, or SDL authoring fields.
 - Redesigning `BackendManifest`, `ProvisioningPlan`, `RuntimeSnapshot`,

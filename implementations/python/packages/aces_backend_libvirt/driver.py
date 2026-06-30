@@ -7,6 +7,8 @@ from typing import Protocol
 
 from aces_contracts.diagnostics import Diagnostic
 
+from .cloudinit import CloudInitSpec
+
 
 @dataclass(frozen=True)
 class NetworkSpec:
@@ -29,6 +31,19 @@ class ServiceSpec:
 
 
 @dataclass(frozen=True)
+class NetworkAcl:
+    """Portable network access-control rule realized as a libvirt nwfilter rule."""
+
+    name: str
+    action: str  # "accept" | "drop"
+    direction: str  # "in" | "out" | "inout"
+    protocol: str  # "tcp" | "udp" | "all"
+    src_cidr: str | None = None
+    dst_cidr: str | None = None
+    ports: tuple[int, ...] = ()
+
+
+@dataclass(frozen=True)
 class DomainSpec:
     """Portable libvirt domain intent derived from an ACES node resource."""
 
@@ -39,6 +54,8 @@ class DomainSpec:
     vcpus: int = 1
     networks: tuple[str, ...] = ()
     services: tuple[ServiceSpec, ...] = ()
+    cloud_init: CloudInitSpec | None = None
+    network_acls: tuple[NetworkAcl, ...] = ()
     labels: dict[str, str] = field(default_factory=dict)
 
 

@@ -79,6 +79,11 @@ class LibvirtProvisioner:
     ) -> list[Diagnostic]:
         diagnostics: list[Diagnostic] = []
         active = {op.address for op in plan.operations if op.action in {ChangeAction.CREATE, ChangeAction.UPDATE}}
+        # A changed placement must realize its target domain even when the node
+        # itself is UNCHANGED: the domain's seed now carries different cloud-init.
+        for placement_address, node_address in realization.placement_targets.items():
+            if placement_address in active:
+                active.add(node_address)
         networks = tuple(spec for spec in realization.networks if spec.address in active)
         domains = tuple(spec for spec in realization.domains if spec.address in active)
         if networks or domains:
