@@ -87,6 +87,69 @@ participant/Wazuh/policy evidence, and record negative boundary evidence where
 the backend supports live checks. That binding must not require new SDL syntax,
 a new backend manifest shape, or APTL-private keys inside the scenario body.
 
+## Libvirt Paper Evidence Artifact (#615)
+
+`aces_operations.libvirt_paper_evidence.run_libvirt_paper_evidence` (CLI: `aces
+libvirt paper validate-evidence`) produces a stable, validated evaluator-evidence
+run artifact for this scenario — `aces.libvirt.paper-evidence-run/v1`, written to
+`runs/<run-id>/paper-evidence/libvirt-paper-evidence-run.json`. It composes the
+existing ACES surfaces (libvirt deterministic participant runtime #614, native
+substrate realization #601, backend manifest/capability contracts, and the
+experiment/evaluation contracts) into one artifact carrying scenario+compiled
+identity, backend manifest/capability profile and realization provenance, the
+realized/planned topology and network-attachment matrix, the participant action
+proof, the terminal behavior-history-equivalent observation, evaluator-only
+Wazuh/SOC evidence, negative boundary checks, an evaluator outcome record, and
+redaction/provenance metadata. Embedded published-contract payloads
+(`BackendManifestV2Model`, `EvaluationResultStateModel`,
+`EvaluationHistoryEventModel`, `ExperimentRealizedFormDisclosureModel`)
+re-validate against their contracts; the artifact carries a strict redaction gate
+(no raw libvirt XML, domain UUIDs, QEMU command lines, host paths, connection
+URIs, credentials, or private keys).
+
+### Evidence-source modes
+
+- `deterministic` (default; no libvirt daemon; used by CI): participant proof,
+  compiled topology, structural negative-boundary evidence, and an evaluator-only
+  translated SOC-readback record explicitly marked as not upstream Wazuh.
+- `native-live` (operator-run): additionally realizes the libvirt VM/network
+  substrate and records the native topology and native SOC readback. Native
+  realization is **gating** — the run only reports `PASS` when the libvirt driver
+  actually realizes substrate, so the mode can never claim success without
+  realizing. The libvirt backend declares no content-type support, so the *paper*
+  scenario's content, orchestration, and evaluation planes are not
+  backend-realized: native-live against this scenario therefore reports the
+  realization gate as **failed** and surfaces the unrealized planes under
+  `unrealized_capabilities` (disclosed, not faked). The artifact is still written
+  and validates, recording the attempt and the disclosure. Native realization
+  passes for a scenario the libvirt backend can fully provision (e.g. a
+  VM/network-only substrate scenario).
+
+### How libvirt evidence differs from APTL Docker/Wazuh evidence
+
+APTL realizes the scenario as Docker/Compose containers with a full upstream
+Wazuh stack, so its paper proof artifact (Brad-Edwards/aptl#558) carries live
+container-native Wazuh detection telemetry and Docker-network reachability
+evidence. The libvirt proof realizes a different substrate — native libvirt/QEMU
+appliances — and its participant runtime is deterministic (#614), so:
+
+- the **substrate** is genuinely different (VM/network appliances vs.
+  containers), which is the point of the n=2 backend-diversity claim;
+- the **defensive evidence** is an evaluator-only *translated/native* SOC
+  readback (or, in deterministic mode, the declared evaluator-only evidence
+  channels), explicitly disclosed as not upstream Wazuh detection output — the
+  artifact makes no Wazuh detection-quality claim;
+- the **participant action proof** is structural (deterministic domain adapter),
+  disclosed as such.
+
+The paper claim that this difference supports is narrow and explicit: ACES can
+drive the *same authored scenario, action contract, and observation/evaluator
+boundary* across two independent backends, producing comparable evaluator
+evidence shapes for the Brad-Edwards/aces#600 cross-backend **invariant ledger**.
+It is **not** a claim of byte-equivalence, application-internals equivalence,
+Wazuh detection-quality parity, model-defense robustness, or full
+semantic-equivalence between the libvirt and APTL realizations.
+
 ## Downstream Links
 
 - ACES issue: Brad-Edwards/aces#598
