@@ -35,7 +35,7 @@ Artifact assembly lives in ``_paper_evidence_artifact`` and validation in
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -48,6 +48,7 @@ from aces_runtime.manager import RuntimeManager
 from aces_sdl.parser import parse_sdl_file
 
 from aces_operations._paper_evidence_artifact import EVIDENCE_RUN_SCHEMA, assemble_artifact
+from aces_operations._paper_evidence_types import CompiledModel, EvidenceArtifactInputs, ExecutionPlan
 from aces_operations._paper_evidence_validation import validate_libvirt_paper_evidence_artifact
 from aces_operations.deterministic_participant_fixtures import (
     build_participant_admission_request,
@@ -156,7 +157,7 @@ def run_libvirt_paper_evidence(
         target = create_libvirt_target(participant_runtime=True, driver=native_driver)
         execution_plan = RuntimeManager(target).plan(parse_sdl_file(scenario_path))
         control_plane = RuntimeControlPlane(target)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         checks.append(EvidenceCheck("scenario_plan", False, (f"failed to plan scenario: {exc}",)))
         return LibvirtPaperEvidenceReport(scenario_path.name, run_id, str(project_dir), mode, tuple(checks))
 
@@ -172,11 +173,10 @@ def run_libvirt_paper_evidence(
         )
         checks.append(realize_check)
 
-    recorded_at = datetime.now(UTC).isoformat()
-    artifact = assemble_artifact(
+    inputs = EvidenceArtifactInputs(
         scenario_path=scenario_path,
         run_id=run_id,
-        recorded_at=recorded_at,
+        recorded_at=datetime.now(UTC).isoformat(),
         mode=mode,
         model=model,
         manifest=execution_plan.manifest,
@@ -185,31 +185,43 @@ def run_libvirt_paper_evidence(
         probe=probe if mode == "native-live" else None,
         unrealized_capabilities=unrealized_capabilities,
     )
-
-    violations = validate_libvirt_paper_evidence_artifact(artifact)
-    checks.append(EvidenceCheck("artifact_contract_validation", not violations, tuple(violations)))
-
-    # Fail closed: a redaction/contract-invalid artifact is never persisted, so
-    # forbidden content the validator detected can never reach the artifact path.
-    artifact_path: str | None = None
-    if violations:
-        checks.append(EvidenceCheck("artifact_write", False, ("artifact not written: contract validation failed",)))
-    else:
-        try:
-            target_path = run_artifact_path(project_dir, run_id, "paper-evidence", "libvirt-paper-evidence-run.json")
-            atomic_write_json_artifact(target_path, artifact)
-            artifact_path = str(target_path)
-        except OSError as exc:
-            checks.append(EvidenceCheck("artifact_write", False, (f"artifact write failed: {exc}",)))
-        else:
-            checks.append(EvidenceCheck("artifact_write", True))
-
+    artifact, artifact_path = _finalize_artifact(inputs, project_dir, checks)
     return LibvirtPaperEvidenceReport(
         scenario_path.name, run_id, str(project_dir), mode, tuple(checks), artifact, artifact_path
     )
 
 
-def _run_participant_lifecycle(model: Any, control_plane: RuntimeControlPlane) -> dict[str, Any]:
+def _finalize_artifact(
+    inputs: EvidenceArtifactInputs, project_dir: Path, checks: list[EvidenceCheck]
+) -> tuple[dict[str, Any], str | None]:
+    """Assemble, validate, and (fail-closed) persist the artifact, appending the gating checks."""
+    artifact = assemble_artifact(inputs)
+    violations = validate_libvirt_paper_evidence_artifact(artifact)
+    checks.append(EvidenceCheck("artifact_contract_validation", not violations, tuple(violations)))
+    artifact_path, write_check = _persist_artifact(project_dir, inputs.run_id, artifact, violations)
+    checks.append(write_check)
+    return artifact, artifact_path
+
+
+def _persist_artifact(
+    project_dir: Path, run_id: str, artifact: Mapping[str, Any], violations: list[str]
+) -> tuple[str | None, EvidenceCheck]:
+    """Persist the artifact only when it is contract-valid.
+
+    Fail closed: a redaction/contract-invalid artifact is never written, so forbidden
+    content the validator detected can never reach the artifact path.
+    """
+    if violations:
+        return None, EvidenceCheck("artifact_write", False, ("artifact not written: contract validation failed",))
+    try:
+        target_path = run_artifact_path(project_dir, run_id, "paper-evidence", "libvirt-paper-evidence-run.json")
+        atomic_write_json_artifact(target_path, artifact)
+    except OSError as exc:
+        return None, EvidenceCheck("artifact_write", False, (f"artifact write failed: {exc}",))
+    return str(target_path), EvidenceCheck("artifact_write", True)
+
+
+def _run_participant_lifecycle(model: CompiledModel, control_plane: RuntimeControlPlane) -> dict[str, Any]:
     """Drive the libvirt participant episode lifecycle via the runtime control plane.
 
     Records the lifecycle outcome (all receipts accepted), the admitted actions,
@@ -288,7 +300,7 @@ def _default_native_driver_factory(
 
 
 def _realize_native_substrate(
-    execution_plan: Any,
+    execution_plan: ExecutionPlan,
     control_plane: RuntimeControlPlane,
     native_driver: TechVaultNativeLibvirtDriver | None,
 ) -> tuple[Mapping[str, Any] | None, EvidenceCheck, tuple[str, ...]]:
@@ -308,12 +320,8 @@ def _realize_native_substrate(
     try:
         receipt = control_plane.submit_provisioning(execution_plan.provisioning)
         status = control_plane.get_operation(receipt.operation_id)
-    except Exception as exc:  # noqa: BLE001
-        return (
-            None,
-            EvidenceCheck("native_substrate_realization", False, (f"native realization raised: {exc}",)),
-            (),
-        )
+    except Exception as exc:
+        return None, EvidenceCheck("native_substrate_realization", False, (f"native realization raised: {exc}",)), ()
     unrealized = _dedupe(
         f"{d.code}: {d.message}"
         for source in (execution_plan.diagnostics, () if status is None else status.diagnostics)
@@ -321,20 +329,18 @@ def _realize_native_substrate(
         if d.is_error
     )
     snapshot = native_driver.last_snapshot
-    if _snapshot_has_domains(snapshot):
-        return snapshot, EvidenceCheck("native_substrate_realization", True), unrealized
-    return (
-        None,
-        EvidenceCheck(
-            "native_substrate_realization",
-            False,
-            ("libvirt backend realized no native substrate for this scenario; capabilities disclosed as unrealized",),
-        ),
-        unrealized,
+    realized = _snapshot_has_domains(snapshot)
+    check = EvidenceCheck(
+        "native_substrate_realization",
+        realized,
+        ()
+        if realized
+        else ("libvirt backend realized no native substrate for this scenario; capabilities disclosed as unrealized",),
     )
+    return (snapshot if realized else None), check, unrealized
 
 
-def _dedupe(items: Any) -> tuple[str, ...]:
+def _dedupe(items: Iterable[str]) -> tuple[str, ...]:
     seen: dict[str, None] = {}
     for item in items:
         seen.setdefault(item, None)

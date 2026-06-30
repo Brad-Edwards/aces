@@ -20,6 +20,7 @@ from aces_contracts.contracts import (
     EvaluationResultStateModel,
     ExperimentRealizedFormDisclosureModel,
 )
+from pydantic import BaseModel
 
 from aces_operations._paper_evidence_artifact import EVIDENCE_RUN_SCHEMA
 
@@ -79,32 +80,59 @@ def validate_libvirt_paper_evidence_artifact(payload: Mapping[str, Any]) -> list
     return problems
 
 
-def _validate_embedded_contracts(payload: Mapping[str, Any]) -> list[str]:
-    problems: list[str] = []
-    backend = payload.get("backend", {})
-    if isinstance(backend, Mapping):
-        try:
-            BackendManifestV2Model.model_validate(backend.get("manifest", {}))
-        except Exception as exc:  # noqa: BLE001
-            problems.append(f"backend.manifest is not a valid BackendManifestV2Model: {exc}")
-    outcome = payload.get("evaluator_outcome", {})
-    if isinstance(outcome, Mapping):
-        try:
-            EvaluationResultStateModel.model_validate(outcome.get("result", {}))
-        except Exception as exc:  # noqa: BLE001
-            problems.append(f"evaluator_outcome.result is not a valid EvaluationResultStateModel: {exc}")
-        for index, event in enumerate(outcome.get("history", []) or []):
-            try:
-                EvaluationHistoryEventModel.model_validate(event)
-            except Exception as exc:  # noqa: BLE001
-                problems.append(f"evaluator_outcome.history[{index}] invalid: {exc}")
+def _try_validate(model_cls: type[BaseModel], value: object, label: str) -> list[str]:
+    """Validate ``value`` against ``model_cls``; return a one-item problem list on failure."""
+    try:
+        model_cls.model_validate(value)
+    except Exception as exc:
+        return [f"{label}: {exc}"]
+    return []
 
-    for index, disclosure in enumerate(payload.get("realized_form_disclosures", []) or []):
-        try:
-            ExperimentRealizedFormDisclosureModel.model_validate(disclosure)
-        except Exception as exc:  # noqa: BLE001
-            problems.append(f"realized_form_disclosures[{index}] invalid: {exc}")
+
+def _validate_backend_manifest(payload: Mapping[str, Any]) -> list[str]:
+    backend = payload.get("backend", {})
+    if not isinstance(backend, Mapping):
+        return []
+    return _try_validate(
+        BackendManifestV2Model,
+        backend.get("manifest", {}),
+        "backend.manifest is not a valid BackendManifestV2Model",
+    )
+
+
+def _validate_evaluator_outcome(payload: Mapping[str, Any]) -> list[str]:
+    outcome = payload.get("evaluator_outcome", {})
+    if not isinstance(outcome, Mapping):
+        return []
+    problems = _try_validate(
+        EvaluationResultStateModel,
+        outcome.get("result", {}),
+        "evaluator_outcome.result is not a valid EvaluationResultStateModel",
+    )
+    for index, event in enumerate(outcome.get("history", []) or []):
+        problems.extend(
+            _try_validate(EvaluationHistoryEventModel, event, f"evaluator_outcome.history[{index}] invalid")
+        )
     return problems
+
+
+def _validate_disclosures(payload: Mapping[str, Any]) -> list[str]:
+    problems: list[str] = []
+    for index, disclosure in enumerate(payload.get("realized_form_disclosures", []) or []):
+        problems.extend(
+            _try_validate(
+                ExperimentRealizedFormDisclosureModel, disclosure, f"realized_form_disclosures[{index}] invalid"
+            )
+        )
+    return problems
+
+
+def _validate_embedded_contracts(payload: Mapping[str, Any]) -> list[str]:
+    return [
+        *_validate_backend_manifest(payload),
+        *_validate_evaluator_outcome(payload),
+        *_validate_disclosures(payload),
+    ]
 
 
 def _validate_redaction(payload: Mapping[str, Any]) -> list[str]:

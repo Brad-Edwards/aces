@@ -32,6 +32,15 @@ from aces_contracts.contracts import (
     ExperimentRealizedFormDisclosureModel,
 )
 
+from aces_operations._paper_evidence_types import (
+    BackendManifest,
+    CompiledModel,
+    EvidenceArtifactInputs,
+    NodeDeployment,
+    RealizedNetwork,
+    TerminalSnapshot,
+)
+
 EVIDENCE_RUN_SCHEMA = "aces.libvirt.paper-evidence-run/v1"
 _LIBVIRT_BACKEND_NAME = "libvirt-qemu"
 
@@ -49,20 +58,19 @@ _NON_CLAIMS = (
 )
 
 
-def assemble_artifact(
-    *,
-    scenario_path: Path,
-    run_id: str,
-    recorded_at: str,
-    mode: str,
-    model: Any,
-    manifest: Any,
-    proof: Mapping[str, Any],
-    native_snapshot: Mapping[str, Any] | None,
-    probe: NativeLibvirtProbe | None,
-    unrealized_capabilities: tuple[str, ...] = (),
-) -> dict[str, Any]:
+def assemble_artifact(inputs: EvidenceArtifactInputs) -> dict[str, Any]:
     """Assemble the full paper-evidence artifact payload."""
+    scenario_path = inputs.scenario_path
+    run_id = inputs.run_id
+    recorded_at = inputs.recorded_at
+    mode = inputs.mode
+    model = inputs.model
+    manifest = inputs.manifest
+    proof = inputs.proof
+    native_snapshot = inputs.native_snapshot
+    probe = inputs.probe
+    unrealized_capabilities = inputs.unrealized_capabilities
+
     substrate_realized = native_snapshot is not None
     scenario_section = _scenario_section(scenario_path, model)
     boundary_refs = _boundary_hidden_refs(model)
@@ -89,21 +97,21 @@ def assemble_artifact(
     }
 
 
-def _manifest_name(manifest: Any) -> str:
+def _manifest_name(manifest: BackendManifest) -> str:
     identity = getattr(manifest, "identity", None)
     if identity is not None and getattr(identity, "name", None):
         return str(identity.name)
     return str(getattr(manifest, "name", _LIBVIRT_BACKEND_NAME))
 
 
-def _manifest_version(manifest: Any) -> str:
+def _manifest_version(manifest: BackendManifest) -> str:
     identity = getattr(manifest, "identity", None)
     if identity is not None and getattr(identity, "version", None):
         return str(identity.version)
     return str(getattr(manifest, "version", "0.0.0+unknown"))
 
 
-def _backend_section(manifest: Any, mode: str, substrate_realized: bool) -> dict[str, Any]:
+def _backend_section(manifest: BackendManifest, mode: str, substrate_realized: bool) -> dict[str, Any]:
     """Embed the canonical BackendManifestV2 payload + capability-gap report.
 
     The manifest is rendered through ``backend_manifest_payload`` — the same
@@ -129,14 +137,14 @@ def _backend_section(manifest: Any, mode: str, substrate_realized: bool) -> dict
     }
 
 
-def _scenario_section(scenario_path: Path, model: Any) -> dict[str, Any]:
+def _scenario_section(scenario_path: Path, model: CompiledModel) -> dict[str, Any]:
     from aces_sdl.parser import parse_sdl_file
 
     content = scenario_path.read_bytes()
     version: str | None = None
     try:
         version = getattr(parse_sdl_file(scenario_path), "version", None)
-    except Exception:  # noqa: BLE001
+    except Exception:
         version = None
     return {
         "name": model.scenario_name,
@@ -155,7 +163,7 @@ def _portable_scenario_ref(scenario_path: Path) -> str:
     return scenario_path.name
 
 
-def _compiled_artifact_section(model: Any) -> dict[str, Any]:
+def _compiled_artifact_section(model: CompiledModel) -> dict[str, Any]:
     addresses = {
         "participant_behaviors": sorted(model.participant_behaviors),
         "action_contracts": sorted(model.action_contracts),
@@ -173,7 +181,7 @@ def _compiled_artifact_section(model: Any) -> dict[str, Any]:
     }
 
 
-def _node_services(node: Any) -> list[dict[str, Any]]:
+def _node_services(node: NodeDeployment) -> list[dict[str, Any]]:
     spec = getattr(node, "spec", {}) or {}
     node_spec = spec.get("node", {}) if isinstance(spec, Mapping) else {}
     services = node_spec.get("services", []) if isinstance(node_spec, Mapping) else []
@@ -184,14 +192,14 @@ def _node_services(node: Any) -> list[dict[str, Any]]:
     ]
 
 
-def _node_network_links(node: Any) -> list[str]:
+def _node_network_links(node: NodeDeployment) -> list[str]:
     spec = getattr(node, "spec", {}) or {}
     infra = spec.get("infrastructure", {}) if isinstance(spec, Mapping) else {}
     links = infra.get("links", []) if isinstance(infra, Mapping) else []
     return [str(link) for link in links]
 
 
-def _network_properties(network: Any) -> dict[str, Any]:
+def _network_properties(network: RealizedNetwork) -> dict[str, Any]:
     spec = getattr(network, "spec", {}) or {}
     infra = spec.get("infrastructure", {}) if isinstance(spec, Mapping) else {}
     props = infra.get("properties") if isinstance(infra, Mapping) else None
@@ -201,7 +209,7 @@ def _network_properties(network: Any) -> dict[str, Any]:
 
 
 def _topology_section(
-    model: Any,
+    model: CompiledModel,
     native_snapshot: Mapping[str, Any] | None,
     unrealized_capabilities: tuple[str, ...] = (),
 ) -> dict[str, Any]:
@@ -266,7 +274,7 @@ def _participant_proof_section(proof: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _redact_episode_state(state: Any) -> dict[str, Any]:
+def _redact_episode_state(state: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(state, Mapping):
         return {}
     keep = (
@@ -281,7 +289,7 @@ def _redact_episode_state(state: Any) -> dict[str, Any]:
     return {key: state.get(key) for key in keep if key in state}
 
 
-def _terminal_observation_section(snapshot: Any) -> dict[str, Any]:
+def _terminal_observation_section(snapshot: TerminalSnapshot) -> dict[str, Any]:
     behavior_history = {
         addr: _redact_behavior_history(events) for addr, events in snapshot.participant_behavior_history.items()
     }
@@ -295,7 +303,7 @@ def _terminal_observation_section(snapshot: Any) -> dict[str, Any]:
     }
 
 
-def _redact_behavior_history(events: Any) -> list[dict[str, Any]]:
+def _redact_behavior_history(events: Sequence[Any]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     if not isinstance(events, Sequence):
         return out
@@ -314,7 +322,7 @@ def _redact_behavior_history(events: Any) -> list[dict[str, Any]]:
 
 
 def _defensive_evidence_section(
-    native_snapshot: Mapping[str, Any] | None, model: Any, recorded_at: str
+    native_snapshot: Mapping[str, Any] | None, model: CompiledModel, recorded_at: str
 ) -> dict[str, Any]:
     # captured_at is the run's recorded_at timestamp threaded through artifact
     # assembly, not a freshly synthesized one, so every section shares one
@@ -439,7 +447,7 @@ def _evaluator_outcome_section(lifecycle_clean: bool, recorded_at: str) -> dict[
     }
 
 
-def _realized_form_disclosures(manifest: Any, substrate_realized: bool) -> list[dict[str, Any]]:
+def _realized_form_disclosures(manifest: BackendManifest, substrate_realized: bool) -> list[dict[str, Any]]:
     backend_version = _manifest_version(manifest)
     backend_name = _manifest_name(manifest)
     backend_ref = {"ref_kind": "backend", "ref_id": backend_name, "ref_version": backend_version}
@@ -520,7 +528,7 @@ def _redaction_provenance() -> dict[str, Any]:
     }
 
 
-def _invariant_ledger_refs(model: Any, scenario_section: Mapping[str, Any]) -> dict[str, Any]:
+def _invariant_ledger_refs(model: CompiledModel, scenario_section: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "scenario_name": model.scenario_name,
         "scenario_content_sha256": scenario_section["content_sha256"],
@@ -542,15 +550,15 @@ def _invariant_ledger_refs(model: Any, scenario_section: Mapping[str, Any]) -> d
     }
 
 
-def _boundary_hidden_refs(model: Any) -> list[str]:
+def _boundary_hidden_refs(model: CompiledModel) -> list[str]:
     return _boundary_spec_refs(model, "hidden_refs")
 
 
-def _boundary_evidence_refs(model: Any) -> list[str]:
+def _boundary_evidence_refs(model: CompiledModel) -> list[str]:
     return _boundary_spec_refs(model, "evidence_refs")
 
 
-def _boundary_spec_refs(model: Any, key: str) -> list[str]:
+def _boundary_spec_refs(model: CompiledModel, key: str) -> list[str]:
     refs: list[str] = []
     for boundary in model.observation_boundaries.values():
         spec = getattr(boundary, "spec", None)
