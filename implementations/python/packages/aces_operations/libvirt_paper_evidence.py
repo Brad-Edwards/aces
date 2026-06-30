@@ -308,10 +308,11 @@ def _admit_one_action(
         )
     except (TypeError, ValueError) as exc:
         return None, f"invalid admission for {behavior_address}/{action_address}: {exc}"
-    admit_receipt = control_plane.admit_participant_action(behavior, request)
-    if admit_receipt.accepted:
-        return action_address, None
-    return None, f"admit rejected for {behavior_address}/{action_address}"
+    accepted = control_plane.admit_participant_action(behavior, request).accepted
+    return (
+        action_address if accepted else None,
+        None if accepted else f"admit rejected for {behavior_address}/{action_address}",
+    )
 
 
 def _default_native_driver_factory(
