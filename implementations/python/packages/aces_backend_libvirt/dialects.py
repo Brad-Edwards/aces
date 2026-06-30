@@ -45,11 +45,13 @@ class GuestDialect:
 
     def enable_feature(self, package: str) -> GuestEmit:
         safe = safe_path_component(package, fallback="feature")
-        return GuestEmit(write_files=(_descriptor(f"/etc/aces/features/{safe}.json", {"service": package}),))
+        body = {"os_family": self.os_family, "service": package}
+        return GuestEmit(write_files=(_descriptor(f"/etc/aces/features/{safe}.json", body),))
 
     def mail_alias(self, username: str, mail: str) -> GuestEmit:
         safe = safe_path_component(username, fallback="user")
-        return GuestEmit(write_files=(_descriptor(f"/etc/aces/mail/{safe}.json", {"user": username, "mail": mail}),))
+        body = {"os_family": self.os_family, "user": username, "mail": mail}
+        return GuestEmit(write_files=(_descriptor(f"/etc/aces/mail/{safe}.json", body),))
 
 
 class LinuxDialect(GuestDialect):

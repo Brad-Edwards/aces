@@ -481,15 +481,16 @@ def _str(value: object) -> str:
 def _ssh_authorized_keys(spec: Mapping[str, object]) -> tuple[str, ...]:
     """Collect any authorized SSH keys the account placement carries."""
 
+    keys: list[str] = []
     for key in ("ssh_authorized_keys", "ssh_keys", "authorized_keys"):
         raw = spec.get(key)
         if isinstance(raw, str) and raw:
-            return (raw,)
-        if isinstance(raw, list | tuple):
-            keys = tuple(entry for entry in raw if isinstance(entry, str) and entry)
-            if keys:
-                return keys
-    return ()
+            keys.append(raw)
+        elif isinstance(raw, list | tuple):
+            keys.extend(entry for entry in raw if isinstance(entry, str) and entry)
+        if keys:
+            break
+    return tuple(keys)
 
 
 def _truthy(value: object) -> bool:

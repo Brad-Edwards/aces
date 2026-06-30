@@ -62,8 +62,6 @@ class _NativeResource(Protocol):
 
     def undefine(self) -> None: ...
 
-    def UUIDString(self) -> str: ...  # noqa: N802 - mirrors the libvirt API name
-
 
 def _existing_uuid(native: object) -> str | None:
     """Return an existing object's UUID string, or None when it cannot be read.
@@ -309,7 +307,8 @@ class LibvirtDeploymentDriver:
         self._filters[spec.address] = filter_name
         return filter_name
 
-    def _converge_existing(self, connection: object, lookup_method: str, name: str, address: str) -> None:
+    @staticmethod
+    def _converge_existing(connection: object, lookup_method: str, name: str, address: str) -> None:
         """Stop and undefine the ACES object this apply owns at ``name``.
 
         Convergence is destructive, so it only proceeds when the existing object's

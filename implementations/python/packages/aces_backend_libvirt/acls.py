@@ -117,7 +117,8 @@ def _acl_ports(raw: Mapping[str, object]) -> tuple[int, ...]:
 def _acl_endpoint(raw: Mapping[str, object], key: str, cidr_lookup: dict[str, str]) -> str | None:
     ref = _as_str(raw.get(key))
     if not ref:
-        return None  # omitted endpoint == the plan's own "any"; preserve it
+        # An omitted endpoint is the plan's own "any"; preserve it.
+        return None
     cidr = cidr_lookup.get(ref)
     if cidr is None:
         raise _AclRejected(f"'{key}' references network '{ref}' with no resolvable CIDR")

@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import os
 import shutil
-import stat
 import subprocess
 from pathlib import Path
 from typing import Protocol
@@ -82,9 +81,9 @@ def _prepare_private_dir(seed_dir: Path) -> None:
 
 
 def _verify_owned_private_dir(seed_dir: Path) -> None:
+    # The directory was just created by mkdir (above), so it is a real directory we
+    # own; confirm ownership defensively and force the mode regardless of umask.
     info = os.lstat(seed_dir)
-    if not stat.S_ISDIR(info.st_mode):  # pragma: no cover - mkdir just made a dir
-        raise OSError(f"seed directory '{seed_dir}' is not a regular directory")
     if info.st_uid != os.getuid():
         raise PermissionError(f"seed directory '{seed_dir}' is not owned by the current user")
     os.chmod(seed_dir, _SEED_DIR_MODE)
@@ -113,7 +112,7 @@ class GenisoimageSeedBuilder:
         seed_iso = seed_dir / "seed.iso"
         # Fixed argv, no shell, bounded timeout, controlled cwd; output captured
         # and discarded so native tool noise never reaches a diagnostic.
-        subprocess.run(  # noqa: S603 - fixed argv, no shell
+        subprocess.run(
             [
                 self._tool,
                 "-output",

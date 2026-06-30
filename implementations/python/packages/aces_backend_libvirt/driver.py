@@ -35,9 +35,11 @@ class NetworkAcl:
     """Portable network access-control rule realized as a libvirt nwfilter rule."""
 
     name: str
-    action: str  # "accept" | "drop"
-    direction: str  # "in" | "out" | "inout"
-    protocol: str  # "tcp" | "udp" | "all"
+    # action is "accept" | "drop"; direction is "in" | "out" | "inout";
+    # protocol is "tcp" | "udp" | "all".
+    action: str
+    direction: str
+    protocol: str
     src_cidr: str | None = None
     dst_cidr: str | None = None
     ports: tuple[int, ...] = ()
