@@ -48,7 +48,12 @@ from aces_runtime.manager import RuntimeManager
 from aces_sdl.parser import parse_sdl_file
 
 from aces_operations._paper_evidence_artifact import EVIDENCE_RUN_SCHEMA, assemble_artifact
-from aces_operations._paper_evidence_types import CompiledModel, EvidenceArtifactInputs, ExecutionPlan
+from aces_operations._paper_evidence_types import (
+    CompiledModel,
+    EvidenceArtifactInputs,
+    ExecutionPlan,
+    ParticipantBehavior,
+)
 from aces_operations._paper_evidence_validation import validate_libvirt_paper_evidence_artifact
 from aces_operations.deterministic_participant_fixtures import (
     build_participant_admission_request,
@@ -230,42 +235,10 @@ def _run_participant_lifecycle(model: CompiledModel, control_plane: RuntimeContr
     """
     diagnostics: list[str] = []
     admitted: list[str] = []
-
     for behavior_address, behavior in model.participant_behaviors.items():
-        init_receipt = control_plane.initialize_participant_episode(behavior_address, episode_id=_PROOF_EPISODE_ID)
-        if not init_receipt.accepted:
-            diagnostics.append(f"initialize rejected for {behavior_address}")
-            continue
-        boundary_address = (
-            behavior.observation_boundary_addresses[0] if behavior.observation_boundary_addresses else None
-        )
-        if boundary_address is None:
-            diagnostics.append(f"no observation boundary for {behavior_address}")
-            control_plane.terminate_participant_episode(behavior_address)
-            continue
-        for action_address, action_instance_id in iter_admission_pairs(behavior, model.observation_boundaries):
-            contract = model.action_contracts.get(action_address)
-            if contract is None:
-                continue
-            try:
-                request = build_participant_admission_request(
-                    behavior_address=behavior_address,
-                    action_address=action_address,
-                    action_instance_id=action_instance_id,
-                    boundary_address=boundary_address,
-                    contract=contract,
-                )
-            except (TypeError, ValueError) as exc:
-                diagnostics.append(f"invalid admission for {behavior_address}/{action_address}: {exc}")
-                continue
-            admit_receipt = control_plane.admit_participant_action(behavior, request)
-            if admit_receipt.accepted:
-                admitted.append(action_address)
-            else:
-                diagnostics.append(f"admit rejected for {behavior_address}/{action_address}")
-        term_receipt = control_plane.terminate_participant_episode(behavior_address)
-        if not term_receipt.accepted:
-            diagnostics.append(f"terminate rejected for {behavior_address}")
+        episode_admitted, episode_diagnostics = _run_behavior_episode(model, control_plane, behavior_address, behavior)
+        admitted.extend(episode_admitted)
+        diagnostics.extend(episode_diagnostics)
 
     snapshot = control_plane.get_snapshot().snapshot
     return {
@@ -274,6 +247,71 @@ def _run_participant_lifecycle(model: CompiledModel, control_plane: RuntimeContr
         "admitted_action_addresses": admitted,
         "snapshot": snapshot,
     }
+
+
+def _run_behavior_episode(
+    model: CompiledModel,
+    control_plane: RuntimeControlPlane,
+    behavior_address: str,
+    behavior: ParticipantBehavior,
+) -> tuple[list[str], list[str]]:
+    """Run one participant behavior's episode (init -> admit actions -> terminate).
+
+    Returns ``(admitted_action_addresses, diagnostics)``; a non-empty diagnostics
+    list means some receipt was rejected.
+    """
+    init_receipt = control_plane.initialize_participant_episode(behavior_address, episode_id=_PROOF_EPISODE_ID)
+    if not init_receipt.accepted:
+        return [], [f"initialize rejected for {behavior_address}"]
+    boundary_address = behavior.observation_boundary_addresses[0] if behavior.observation_boundary_addresses else None
+    if boundary_address is None:
+        control_plane.terminate_participant_episode(behavior_address)
+        return [], [f"no observation boundary for {behavior_address}"]
+
+    admitted: list[str] = []
+    diagnostics: list[str] = []
+    for action_address, action_instance_id in iter_admission_pairs(behavior, model.observation_boundaries):
+        admitted_address, diagnostic = _admit_one_action(
+            model, control_plane, behavior, behavior_address, boundary_address, action_address, action_instance_id
+        )
+        if admitted_address is not None:
+            admitted.append(admitted_address)
+        if diagnostic is not None:
+            diagnostics.append(diagnostic)
+
+    term_receipt = control_plane.terminate_participant_episode(behavior_address)
+    if not term_receipt.accepted:
+        diagnostics.append(f"terminate rejected for {behavior_address}")
+    return admitted, diagnostics
+
+
+def _admit_one_action(
+    model: CompiledModel,
+    control_plane: RuntimeControlPlane,
+    behavior: ParticipantBehavior,
+    behavior_address: str,
+    boundary_address: str,
+    action_address: str,
+    action_instance_id: str,
+) -> tuple[str | None, str | None]:
+    """Admit one participant action; return ``(admitted_address_or_None, diagnostic_or_None)``."""
+    contract = model.action_contracts.get(action_address)
+    if contract is None:
+        return None, None
+    try:
+        request = build_participant_admission_request(
+            behavior_address=behavior_address,
+            action_address=action_address,
+            action_instance_id=action_instance_id,
+            boundary_address=boundary_address,
+            contract=contract,
+        )
+    except (TypeError, ValueError) as exc:
+        return None, f"invalid admission for {behavior_address}/{action_address}: {exc}"
+    admit_receipt = control_plane.admit_participant_action(behavior, request)
+    if admit_receipt.accepted:
+        return action_address, None
+    return None, f"admit rejected for {behavior_address}/{action_address}"
 
 
 def _default_native_driver_factory(
