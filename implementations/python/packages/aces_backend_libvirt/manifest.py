@@ -17,6 +17,21 @@ from aces_contracts.vocabulary import ParticipantFeatureSupportLevel, Realizatio
 
 LIBVIRT_BACKEND_NAME = "libvirt-qemu"
 
+# The libvirt provisioning capability envelope: the maximum governed provisioning
+# vocabulary the driver realizes through cloud-init. Single source of truth for
+# both the rendered manifest and the backend's capability-envelope diagnostics
+# (issue #605), so the declared envelope and the enforced envelope cannot drift.
+LIBVIRT_PROVISIONER_CAPABILITIES = ProvisionerCapabilities(
+    name="libvirt-provisioner",
+    supported_node_types=frozenset({"switch", "vm"}),
+    supported_os_families=frozenset({"linux", "windows", "macos", "freebsd", "other"}),
+    supported_content_types=frozenset({"file", "dataset", "directory"}),
+    supported_account_features=frozenset({"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}),
+    max_total_nodes=None,
+    supports_acls=True,
+    supports_accounts=True,
+)
+
 _LIBVIRT_BASE_CONTRACT_VERSIONS = frozenset(
     {
         "backend-manifest-v2",
@@ -152,18 +167,7 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
             ),
         ),
         capabilities=BackendCapabilitySet(
-            provisioner=ProvisionerCapabilities(
-                name="libvirt-provisioner",
-                supported_node_types=frozenset({"switch", "vm"}),
-                supported_os_families=frozenset({"linux", "windows", "macos", "freebsd", "other"}),
-                supported_content_types=frozenset({"file", "dataset", "directory"}),
-                supported_account_features=frozenset(
-                    {"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}
-                ),
-                max_total_nodes=None,
-                supports_acls=True,
-                supports_accounts=True,
-            ),
+            provisioner=LIBVIRT_PROVISIONER_CAPABILITIES,
             participant_runtime=participant_runtime_cap,
         ),
     )
