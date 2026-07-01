@@ -45,6 +45,17 @@
           "title": "Kind",
           "type": "string"
         },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ControlledVocabularySourceModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "terms": {
           "minProperties": 1,
           "patternProperties": {
@@ -71,6 +82,77 @@
       "title": "ControlledVocabularyDefinitionModel",
       "type": "object"
     },
+    "ControlledVocabularySourceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "minLength": 1,
+          "title": "Authority",
+          "type": "string"
+        },
+        "authority_version": {
+          "minLength": 1,
+          "title": "Authority Version",
+          "type": "string"
+        },
+        "citation_urls": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Citation Urls",
+          "type": "array"
+        },
+        "license_notice": {
+          "minLength": 1,
+          "title": "License Notice",
+          "type": "string"
+        },
+        "license_url": {
+          "minLength": 1,
+          "title": "License Url",
+          "type": "string"
+        },
+        "provenance": {
+          "enum": [
+            "adopted",
+            "adapted"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "source_artifact_ref": {
+          "minLength": 1,
+          "title": "Source Artifact Ref",
+          "type": "string"
+        },
+        "source_digest": {
+          "minLength": 1,
+          "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+          "title": "Source Digest",
+          "type": "string"
+        },
+        "source_url": {
+          "minLength": 1,
+          "title": "Source Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provenance",
+        "authority",
+        "authority_version",
+        "source_artifact_ref",
+        "source_url",
+        "source_digest",
+        "citation_urls",
+        "license_url",
+        "license_notice"
+      ],
+      "title": "ControlledVocabularySourceModel",
+      "type": "object"
+    },
     "ControlledVocabularyTermModel": {
       "additionalProperties": false,
       "properties": {
@@ -78,6 +160,32 @@
           "minLength": 1,
           "title": "Description",
           "type": "string"
+        },
+        "source_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Id"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Url"
         },
         "title": {
           "minLength": 1,

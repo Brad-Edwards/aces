@@ -36,7 +36,10 @@ routes, or conformance behavior.
 
 - Treat ACT-609 as a governed participant behavior vocabulary addition, not as
   a new task model, goal model, participant role taxonomy, backend feature flag,
-  ATT&CK wrapper, or runtime history type.
+  technique wrapper, or runtime history type. The base offensive behavior terms
+  should directly adopt pinned MITRE ATT&CK Enterprise tactics; ACES owns the
+  behavior-specification binding and governed extension namespace, not a
+  mutated tactic taxonomy.
 - The authoring seam should be the existing behavior specification aggregate.
   A first-class ACT-609 field belongs on
   `ParticipantBehaviorSpecification`/`behavior_specifications.*`, with values
@@ -51,10 +54,12 @@ routes, or conformance behavior.
 - Use governed-extension vocabulary discipline unless the term set is proven
   closed. Local extension terms must use the existing `x-<owner>:<term>`
   pattern and the shared controlled-vocabulary helpers.
-- Map to external cyber-domain vocabularies, including ATT&CK-like technique
-  labels, through explicit mapping/loss fields or concept bindings where the
-  owning surface already supports them. Do not make an external label the
-  portable ACES semantic value unless it is governed by the catalog.
+- Adopt ATT&CK Enterprise tactics through a pinned, cited, digest-checked source
+  artifact. Map external cyber-domain vocabularies beyond those adopted tactics,
+  including ATT&CK technique labels, through explicit mapping/loss fields or
+  concept bindings where the owning surface already supports them. Do not make
+  any other external label the portable ACES semantic value unless it is
+  governed by the catalog.
 - Schema validity is necessary but insufficient. If ACT-609 publishes a new
   field or contract surface, it needs semantic validation, positive/negative
   fixtures, generated-schema parity, and conformance evidence at the owning
@@ -140,7 +145,9 @@ The intended design must pass every layer it touches:
 - Controlled-vocabulary validation: the new scope must be declared in
   `controlled-vocabularies-v1`, added to the central governed-scope allowlist,
   and validated through `validate_controlled_vocabulary_scope_values()` or
-  `validate_controlled_vocabulary_value()`. A catalog-only edit is not enough.
+  `validate_controlled_vocabulary_value()`. The ATT&CK tactic source artifact
+  and conformance checker must prove that adopted base terms match the pinned
+  ATT&CK release. A catalog-only edit is not enough.
 - Contract/schema validation: if a portable field or contract changes, update
   the normative schema, `schema_bundle()` parity, publication manifest
   `last_change`, valid and invalid fixtures, and JSON artifact checks. Do not
@@ -153,8 +160,8 @@ The intended design must pass every layer it touches:
 - Runtime/conformance validation: runtime behavior history remains evidence of
   realized behavior. Offensive terms may be projected into compiled behavior
   specification records or evidence expectations, but runtime logs, backend
-  tool names, ATT&CK labels, scheduler order, and raw action names are not the
-  authored vocabulary.
+  tool names, ATT&CK technique labels, scheduler order, and raw action names are
+  not the authored vocabulary.
 - Control-plane security, if exposed: routes must use
   `ControlPlaneSecurityConfig.strict_defaults()`, read versus mutating identity
   dependencies, request-size guards, idempotency fingerprints for mutations,
@@ -223,9 +230,9 @@ Avoid:
   observation boundaries, outcome interpretation, authority/scope semantics,
   behavior modes, participant implementation manifests, backend capabilities,
   experiment tasks, evaluation goals, or workflow activities.
-- Standardizing ATT&CK, CVE, exploit-framework, malware, tool, command, or
-  backend-native taxonomies as ACES semantics outside the governed vocabulary
-  and mapping process.
+- Standardizing ATT&CK techniques, CVE, exploit-framework, malware, tool,
+  command, or backend-native taxonomies as ACES semantics outside the governed
+  vocabulary and mapping process.
 - Publishing private backend implementation details, credentials, prompts,
   answer keys, raw exploit material, raw command output, hidden truth, or
   backend-private logs as portable offensive behavior data.

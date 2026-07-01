@@ -59,6 +59,7 @@ from .participant_behavior import (
     participant_lifecycle_field_violation_messages,
 )
 from .versions import (
+    ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION,
     BACKEND_MANIFEST_V2_SCHEMA_VERSION,
     CONCEPT_FAMILIES_SCHEMA_VERSION,
     CONTROLLED_VOCABULARIES_SCHEMA_VERSION,
@@ -112,6 +113,7 @@ Rfc3339DateTimeString = Annotated[
         json_schema_extra={"format": "date-time"},
     ),
 ]
+CalendarDateString = Annotated[str, Field(pattern=r"^\d{4}-\d{2}-\d{2}$")]
 HexDigestString = Annotated[str, Field(min_length=1, pattern=r"^[A-Fa-f0-9]+$")]
 PrefixedDigestString = Annotated[
     str,
@@ -6207,14 +6209,29 @@ class UcoAlignmentCatalogModel(ContractModel):
         return json_schema
 
 
+class ControlledVocabularySourceModel(ContractModel):
+    provenance: Literal["adopted", "adapted"]
+    authority: NonEmptyString
+    authority_version: NonEmptyString
+    source_artifact_ref: NonEmptyString
+    source_url: NonEmptyString
+    source_digest: PrefixedDigestString
+    citation_urls: list[NonEmptyString] = Field(min_length=1)
+    license_url: NonEmptyString
+    license_notice: NonEmptyString
+
+
 class ControlledVocabularyTermModel(ContractModel):
     title: NonEmptyString
     description: NonEmptyString
+    source_id: NonEmptyString | None = None
+    source_url: NonEmptyString | None = None
 
 
 class ControlledVocabularyDefinitionModel(ContractModel):
     title: NonEmptyString
     description: NonEmptyString
+    source: ControlledVocabularySourceModel | None = None
     kind: Literal["enumeration", "vocabulary"]
     governed_scopes: list[NonEmptyString] = Field(default_factory=list)
     extension_policy: Literal["closed", "governed-extension"]
@@ -6278,6 +6295,42 @@ class ControlledVocabularyCatalogModel(ContractModel):
         if isinstance(vocabularies_schema, dict):
             vocabularies_schema.setdefault("propertyNames", {"minLength": 1})
         return json_schema
+
+
+class AttackEnterpriseTacticSourceTermModel(ContractModel):
+    tactic_id: Annotated[str, Field(pattern=r"^TA[0-9]{4}$")]
+    shortname: ControlledVocabularyTermId
+    name: NonEmptyString
+    description: NonEmptyString
+    url: NonEmptyString
+    stix_id: NonEmptyString
+
+
+class AttackEnterpriseTacticsSourceModel(ContractModel):
+    schema_version: Literal[ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION] = (
+        ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION
+    )
+    source_authority: Literal["MITRE ATT&CK"]
+    source_domain: Literal["enterprise-attack"]
+    source_version: NonEmptyString
+    source_url: NonEmptyString
+    source_digest: PrefixedDigestString
+    citation_urls: list[NonEmptyString] = Field(min_length=1)
+    retrieved_at: CalendarDateString
+    license_url: NonEmptyString
+    license_notice: NonEmptyString
+    tactics: list[AttackEnterpriseTacticSourceTermModel] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _validate_attack_tactics_source(self) -> AttackEnterpriseTacticsSourceModel:
+        tactic_ids = [tactic.tactic_id for tactic in self.tactics]
+        if len(tactic_ids) != len(set(tactic_ids)):
+            raise ValueError("ATT&CK Enterprise tactic source must not contain duplicate tactic_id values")
+
+        shortnames = [tactic.shortname for tactic in self.tactics]
+        if len(shortnames) != len(set(shortnames)):
+            raise ValueError("ATT&CK Enterprise tactic source must not contain duplicate shortname values")
+        return self
 
 
 class SemanticBehaviorAssumptionModel(ContractModel):
@@ -6604,6 +6657,7 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "reference-models-v1": ReferenceModelCatalogModel.model_json_schema(),
         "uco-alignment-v1": UcoAlignmentCatalogModel.model_json_schema(),
         "controlled-vocabularies-v1": ControlledVocabularyCatalogModel.model_json_schema(),
+        "attack-enterprise-tactics-source-v1": AttackEnterpriseTacticsSourceModel.model_json_schema(),
         "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
@@ -6669,6 +6723,9 @@ __all__ = [
     "AcesSemanticInvariantInputModel",
     "AcesSemanticInvariantProfileModel",
     "AcesSemanticInvariantProfileReferenceModel",
+    "ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION",
+    "AttackEnterpriseTacticSourceTermModel",
+    "AttackEnterpriseTacticsSourceModel",
     "BACKEND_MANIFEST_V2_SCHEMA_VERSION",
     "ApparatusIdentityModel",
     "BackendCompatibilityModel",
@@ -6683,6 +6740,7 @@ __all__ = [
     "CONTROLLED_VOCABULARIES_SCHEMA_VERSION",
     "ControlledVocabularyCatalogModel",
     "ControlledVocabularyDefinitionModel",
+    "ControlledVocabularySourceModel",
     "ControlledVocabularyTermId",
     "ControlledVocabularyTermModel",
     "ContractModel",

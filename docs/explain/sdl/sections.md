@@ -1726,11 +1726,14 @@ boundaries must resolve to their registries, outcome rules must resolve to
 targetable named scenario elements. `behavior_mode` is validated against the
 governed `participant-decision-surface-modes` vocabulary.
 `offensive_behavior_refs` is validated against the governed
-`participant-offensive-behavior-activities` vocabulary and classifies authored
-attack-oriented participant tasks, goals, or activities without replacing
-action contracts, SDL `goals`, experiment tasks, workflow steps, or runtime
-history. Extensions are only allowed when `extension_policy` permits them, and
-extension keys must use `x-<owner>:<term>`.
+`participant-offensive-behavior-activities` vocabulary. Its base values are a
+direct adoption of MITRE ATT&CK Enterprise tactics v19.1, pinned by
+`contracts/concept-authority/attack-enterprise-tactics-source-v1.json` and
+checked by `tools/check_attack_tactic_vocabulary.py`. These refs classify
+authored attack-oriented participant tasks, goals, or activities without
+replacing action contracts, SDL `goals`, experiment tasks, workflow steps, or
+runtime history. Extensions are only allowed when `extension_policy` permits
+them, and extension keys must use `x-<owner>:<term>`.
 
 Compiled behavior specifications use stable
 `participant.behavior-specification.<name>` addresses and preserve dependency

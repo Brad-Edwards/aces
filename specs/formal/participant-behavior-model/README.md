@@ -418,9 +418,18 @@ and conformance for behavior modes.
 Offensive behavior refs declare attack-oriented participant tasks, goals, or
 activities as governed vocabulary values on a behavior specification.
 
+The base terms in `participant-offensive-behavior-activities` are a direct
+adoption of MITRE ATT&CK Enterprise tactics v19.1. The pinned source artifact is
+`contracts/concept-authority/attack-enterprise-tactics-source-v1.json`; it
+records the upstream STIX bundle URL, ATT&CK version, retrieval date, SHA-256
+digest, MITRE terms URL, and citation URLs. The source artifact was extracted
+from the ATT&CK Enterprise matrix order, not hand-curated by ACES.
+
 Rules:
 
 - Values resolve through `participant-offensive-behavior-activities`.
+- Base vocabulary values preserve ATT&CK tactic shortnames, IDs, names, URLs,
+  descriptions, and matrix order from the pinned v19.1 source artifact.
 - Governed extensions must use the shared `x-<owner>:<term>` syntax.
 - Offensive behavior refs classify authored behavior intent; they do not
   replace action contracts, observation boundaries, outcome rules, authority
@@ -429,6 +438,30 @@ Rules:
 - External technique, tool, CVE, or command identifiers require explicit
   mapping or loss metadata on the owning surface; they are not accepted as raw
   portable ACES semantics by this field.
+- Future ATT&CK release updates must update the pinned source artifact,
+  catalog terms, fixture, docs, schema metadata as needed, and
+  `tools/check_attack_tactic_vocabulary.py` validation evidence in one
+  reviewable change.
+
+Pinned ATT&CK v19.1 tactics:
+
+| ATT&CK ID | Shortname | Name |
+| --- | --- | --- |
+| TA0043 | `reconnaissance` | Reconnaissance |
+| TA0042 | `resource-development` | Resource Development |
+| TA0001 | `initial-access` | Initial Access |
+| TA0002 | `execution` | Execution |
+| TA0003 | `persistence` | Persistence |
+| TA0004 | `privilege-escalation` | Privilege Escalation |
+| TA0005 | `stealth` | Stealth |
+| TA0112 | `defense-impairment` | Defense Impairment |
+| TA0006 | `credential-access` | Credential Access |
+| TA0007 | `discovery` | Discovery |
+| TA0008 | `lateral-movement` | Lateral Movement |
+| TA0009 | `collection` | Collection |
+| TA0011 | `command-and-control` | Command and Control |
+| TA0010 | `exfiltration` | Exfiltration |
+| TA0040 | `impact` | Impact |
 
 Implementation issue #209 owns executable declaration, validation, generated
 schema coverage, and compiler carry-through for offensive behavior refs.
