@@ -89,6 +89,8 @@ echo "=== wait for ssh + userdata ==="
 for _ in $(seq 1 30); do ssh "${SSHOPT[@]}" ubuntu@"$IP" "test -f /var/lib/cloud/userdata-done" 2>/dev/null && break; sleep 10; done
 
 echo "=== deploy code ==="
+# rsync does not create multiple missing parent levels; pre-create the tree.
+ssh "${SSHOPT[@]}" ubuntu@"$IP" "mkdir -p /home/ubuntu/aces/implementations/python /home/ubuntu/aces/contracts"
 rsync -az --delete --exclude '.venv' --exclude '__pycache__' --exclude '.git' --exclude '.pytest_cache' --exclude '.nox' --exclude '*.pyc' \
   -e "ssh ${SSHOPT[*]}" "$REPO_ROOT/implementations/python/" ubuntu@"$IP":/home/ubuntu/aces/implementations/python/
 rsync -az --delete --exclude '.git' -e "ssh ${SSHOPT[*]}" "$REPO_ROOT/contracts/" ubuntu@"$IP":/home/ubuntu/aces/contracts/
