@@ -8,7 +8,7 @@ workflow:
   format_command: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s hygiene
   review_disposition:
     enabled: true
-    mode: shadow
+    mode: authoritative
     max_auto_overrides: 1
     judge:
       enabled: true
