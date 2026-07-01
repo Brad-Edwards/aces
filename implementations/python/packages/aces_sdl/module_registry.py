@@ -10,7 +10,7 @@ import os
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -269,7 +269,18 @@ class _OCIResourceLimits:
 _OCI_LIMITS = _OCIResourceLimits()
 
 
-def _declared_content_length(response: Any) -> int | None:
+class _CappableResponse(Protocol):
+    """Minimal HTTP-response surface the bounded reader depends on.
+
+    Structural view of ``http.client.HTTPResponse`` (the ``urlopen`` return) so the
+    reader is typed without a bare ``Any``: it only needs a size-capped ``read`` and,
+    optionally, response headers for the advisory Content-Length pre-check.
+    """
+
+    def read(self, amt: int = ..., /) -> bytes: ...
+
+
+def _declared_content_length(response: _CappableResponse) -> int | None:
     """Return a validated Content-Length, or ``None`` when the header is absent.
 
     Content-Length is advisory and attacker-controlled, so it is only ever used to
@@ -289,7 +300,7 @@ def _declared_content_length(response: Any) -> int | None:
     return value
 
 
-def _read_capped(response: Any, *, url: str, max_bytes: int) -> bytes:
+def _read_capped(response: _CappableResponse, *, url: str, max_bytes: int) -> bytes:
     """Read at most ``max_bytes`` from ``response``, failing closed if exceeded.
 
     Rejecting an oversized advisory ``Content-Length`` avoids even starting the
@@ -308,7 +319,7 @@ def _read_capped(response: Any, *, url: str, max_bytes: int) -> bytes:
     return data
 
 
-def _json_request(url: str, *, headers: dict[str, str] | None = None, max_bytes: int | None = None) -> Any:
+def _json_request(url: str, *, headers: dict[str, str] | None = None, max_bytes: int | None = None) -> dict[str, Any]:
     request = Request(url, headers=headers or {})
     limit = _OCI_LIMITS.max_metadata_bytes if max_bytes is None else max_bytes
     try:
@@ -359,6 +370,39 @@ def _oci_cache_dir(base_dir: Path) -> Path:
     return base_dir / ".aces" / "module-cache"
 
 
+def _validate_tar_member_shape(
+    member: tarfile.TarInfo,
+    *,
+    dest: Path,
+    resolved_dest: Path,
+    seen_paths: set[str],
+    limits: _OCIResourceLimits,
+) -> None:
+    """Fail closed on an unsafe or oversized single tar member (issues #12/#13).
+
+    Rejects path traversal, symlinks, hard links, special files, and duplicate
+    normalized paths, and enforces the per-member extracted-size cap. Records the
+    member's normalized path in ``seen_paths`` so a later duplicate is caught.
+    """
+    member_path = (dest / member.name).resolve()
+    if not member_path.is_relative_to(resolved_dest):
+        raise SDLParseError(f"Path traversal detected in OCI bundle tar member: {member.name!r}")
+    if member.issym() or member.islnk():
+        raise SDLParseError(f"Links are not allowed in OCI bundle tar: {member.name!r}")
+    if not (member.isfile() or member.isdir()):
+        raise SDLParseError(f"Unsupported tar member type in OCI bundle: {member.name!r}")
+    normalized = member_path.as_posix()
+    if normalized in seen_paths:
+        raise SDLParseError(f"Duplicate tar member path in OCI bundle: {member.name!r}")
+    seen_paths.add(normalized)
+    # Account by the logical member size so a sparse or padded member cannot
+    # understate the bytes it will extract.
+    if member.isfile() and member.size > limits.max_member_bytes:
+        raise SDLParseError(
+            f"OCI bundle member {member.name!r} exceeds the {limits.max_member_bytes}-byte per-member limit"
+        )
+
+
 def _safe_tar_members(
     tar: tarfile.TarFile,
     dest: Path,
@@ -391,24 +435,14 @@ def _safe_tar_members(
     for member_count, member in enumerate(tar, start=1):
         if member_count > limits.max_bundle_members:
             raise SDLParseError(f"OCI bundle exceeds the maximum of {limits.max_bundle_members} archive members")
-        member_path = (dest / member.name).resolve()
-        if not member_path.is_relative_to(resolved_dest):
-            raise SDLParseError(f"Path traversal detected in OCI bundle tar member: {member.name!r}")
-        if member.issym() or member.islnk():
-            raise SDLParseError(f"Links are not allowed in OCI bundle tar: {member.name!r}")
-        if not (member.isfile() or member.isdir()):
-            raise SDLParseError(f"Unsupported tar member type in OCI bundle: {member.name!r}")
-        normalized = member_path.as_posix()
-        if normalized in seen_paths:
-            raise SDLParseError(f"Duplicate tar member path in OCI bundle: {member.name!r}")
-        seen_paths.add(normalized)
+        _validate_tar_member_shape(
+            member,
+            dest=dest,
+            resolved_dest=resolved_dest,
+            seen_paths=seen_paths,
+            limits=limits,
+        )
         if member.isfile():
-            # Account by the logical member size so a sparse or padded member cannot
-            # understate the bytes it will extract.
-            if member.size > limits.max_member_bytes:
-                raise SDLParseError(
-                    f"OCI bundle member {member.name!r} exceeds the {limits.max_member_bytes}-byte per-member limit"
-                )
             total_bytes += member.size
             if total_bytes > limits.max_total_bytes:
                 raise SDLParseError(f"OCI bundle exceeds the {limits.max_total_bytes}-byte total extraction limit")
