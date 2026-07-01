@@ -374,6 +374,42 @@ def test_libvirt_convergence_refuses_to_replace_a_foreign_object(tmp_path):
     assert connection.domain_xml == []  # nothing redefined
 
 
+def test_libvirt_convergence_fails_closed_when_stopping_owned_object_fails():
+    # Issue #604 (codex post-push finding): convergence stops an owned object
+    # before undefining/redefining it. A stop that fails for a non-benign reason
+    # (permission/internal) must NOT be suppressed-then-undefined — the apply fails
+    # closed and the still-running owned domain is left intact for retry.
+    connection = _FakeConnection()
+    existing = _NativeObject(uuid=_aces_uuid("provision.node.web"), fail_destroy_code=_VIR_ERR_INTERNAL_ERROR)
+    connection.domains["aces-test-web"] = existing
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
+
+    result = driver.realize(
+        networks=(), domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),)
+    )
+
+    assert [d.code for d in result.diagnostics] == ["libvirt-backend.driver.operation-failed"]
+    assert existing.undefined is False  # never undefined a domain we could not stop
+    assert driver.realized_addresses() == frozenset()
+
+
+def test_libvirt_convergence_tolerates_stopping_an_inactive_owned_object():
+    # The benign side of the same path: converging an owned object that is already
+    # inactive (stop raises VIR_ERR_OPERATION_INVALID) still undefines + redefines.
+    connection = _FakeConnection()
+    existing = _NativeObject(uuid=_aces_uuid("provision.node.web"), fail_destroy_code=_VIR_ERR_OPERATION_INVALID)
+    connection.domains["aces-test-web"] = existing
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
+
+    result = driver.realize(
+        networks=(), domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),)
+    )
+
+    assert not result.diagnostics
+    assert existing.undefined is True  # inactive object converged (undefined) then redefined
+    assert driver.realized_addresses() == {"provision.node.web"}
+
+
 def test_libvirt_domain_xml_carries_deterministic_aces_uuid():
     connection = _FakeConnection()
     driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())

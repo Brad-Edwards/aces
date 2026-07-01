@@ -395,8 +395,10 @@ class LibvirtDeploymentDriver:
         whose UUID is absent or different — a foreign object, or one realized for a
         different ACES address that merely normalizes to the same name — raises
         :class:`_OwnershipConflict` so the apply fails closed instead of replacing
-        an object it does not own. A running object we own is stopped first;
-        ``destroy()`` on an inactive object raises and is benignly suppressed.
+        an object it does not own. A running object we own is stopped first via
+        :func:`_stop_native`, which tolerates an already-inactive object but lets a
+        permission/internal stop failure propagate — so convergence never undefines
+        (and silently replaces) a domain it could not actually stop.
 
         Returns True when an existing ACES-owned object was converged (this address
         is an UPDATE of a pre-existing resource) and False when none existed (a
@@ -409,8 +411,7 @@ class LibvirtDeploymentDriver:
             return False
         if _existing_uuid(native) != _aces_uuid(address):
             raise _OwnershipConflict(name)
-        with contextlib.suppress(Exception):
-            cast(_NativeResource, native).destroy()
+        _stop_native(native)
         cast(_NativeResource, native).undefine()
         return True
 
