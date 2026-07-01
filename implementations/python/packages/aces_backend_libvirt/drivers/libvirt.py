@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import contextlib
 import importlib
-import ipaddress
 import os
 import re
 import shutil
 import tempfile
 import uuid
-import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol, cast
@@ -21,11 +19,11 @@ from aces_backend_libvirt.driver import (
     DomainHandle,
     DomainSpec,
     DriverResult,
-    NetworkAcl,
     NetworkHandle,
     NetworkSpec,
 )
 
+from ._libvirt_xml import _domain_xml, _network_xml, _nwfilter_xml
 from .seed import _SEED_DIR_MODE, GenisoimageSeedBuilder, SeedBuilder, write_seed_files
 
 _DOMAIN = "runtime"
@@ -40,9 +38,54 @@ _SAFE_NAME_RE = re.compile(r"[^a-zA-Z0-9_.-]+")
 # never destroys a foreign or another-address object that merely shares a name.
 _ACES_UUID_NAMESPACE = uuid.UUID("ace50000-0000-5000-8000-000000000001")
 
+# libvirt signals a missing object with a stable VIR_ERR_NO_* code (part of its
+# public C ABI) on ``libvirtError.get_error_code()``. Idempotent teardown treats
+# only these as "already absent"; every other libvirtError — connection loss,
+# permission denial, an ambiguous or internal lookup failure — stays a fail-closed
+# diagnostic that preserves the snapshot for retry (issue #604 guardrail:
+# "do not treat every libvirt lookup exception as not found").
+_VIR_ERR_NO_DOMAIN = 42
+_VIR_ERR_NO_NETWORK = 43
+# Raised by destroy() on an object that is not running; stopping an already-stopped
+# object is a benign no-op on the teardown path, distinct from a permission/internal
+# stop failure that must fail closed.
+_VIR_ERR_OPERATION_INVALID = 55
+_ABSENCE_ERROR_CODES: frozenset[int] = frozenset({_VIR_ERR_NO_DOMAIN, _VIR_ERR_NO_NETWORK})
+
 
 class _OwnershipConflict(Exception):
     """An existing host object at this name is not the ACES object for this address."""
+
+
+class _NativeLookupError(Exception):
+    """A libvirt lookup failed for a reason other than the object being absent."""
+
+
+def _error_code(exc: BaseException) -> int | None:
+    """Return a libvirtError's ``get_error_code()`` as an int, or None otherwise.
+
+    A non-libvirt exception (no ``get_error_code``), or one whose code is not an
+    int, yields None so callers treat it as an unclassified real failure.
+    """
+
+    getter = getattr(exc, "get_error_code", None)
+    if not callable(getter):
+        return None
+    try:
+        code = getter()
+    except Exception:
+        return None
+    return code if isinstance(code, int) else None
+
+
+def _is_absence_error(exc: BaseException) -> bool:
+    """Return True when ``exc`` is a libvirt "no such object" error.
+
+    Absence is an idempotent teardown success. A non-libvirt exception, or a
+    libvirtError with any other code, is a real failure and returns False.
+    """
+
+    return _error_code(exc) in _ABSENCE_ERROR_CODES
 
 
 def _aces_uuid(address: str) -> str:
@@ -123,65 +166,101 @@ class LibvirtDeploymentDriver:
         diagnostics: list[Diagnostic] = []
         network_handles: list[NetworkHandle] = []
         domain_handles: list[DomainHandle] = []
+        # Addresses this call newly created (no owned object pre-existed). Only
+        # these are rolled back on failure — never a pre-existing resource an
+        # UPDATE converged, whose destruction would contradict the baseline
+        # snapshot the failed apply preserves.
+        created_networks: list[str] = []
+        created_domains: list[str] = []
         try:
             connection = self._conn()
         except Exception:
             return DriverResult(diagnostics=(_failure("runtime.libvirt.connection", _CODE_UNAVAILABLE),))
 
         for spec in networks:
-            name = self._runtime_name(spec.address, spec.name)
-            try:
-                # The provisioner only dispatches CREATE/UPDATE specs (UNCHANGED is
-                # filtered upstream), so a spec that reaches the driver must be
-                # (re)applied to enforce its desired state. Converge any object a
-                # prior apply left behind — stop it and drop its stale definition —
-                # before redefining, so the new state is genuinely enforced rather
-                # than recorded-but-skipped, and no duplicate is ever created.
-                self._converge_existing(connection, "networkLookupByName", name, spec.address)
-                native = _call_libvirt(connection, "networkDefineXML", _network_xml(spec, name))
-                native.create()
-            except _OwnershipConflict:
-                diagnostics.append(_failure(spec.address, _CODE_OWNERSHIP_CONFLICT))
-                continue
-            except Exception:
-                diagnostics.append(_failure(spec.address, _CODE_OPERATION_FAILED))
-                continue
-            self._names[spec.address] = name
-            self._realized.add(spec.address)
-            network_handles.append(NetworkHandle(address=spec.address, realized=True))
+            failure = self._realize_network(connection, spec, created_networks)
+            if failure is not None:
+                diagnostics.append(failure)
+            else:
+                network_handles.append(NetworkHandle(address=spec.address, realized=True))
 
         for spec in domains:
-            name = self._runtime_name(spec.address, spec.name)
-            network_names = tuple(self._name_for(address) for address in spec.networks)
-            try:
-                # Converge first so a tightened ACL, a disabled account, a changed
-                # seed/image, or an existing-but-inactive domain is actually applied
-                # — never silently skipped while reporting realized.
-                self._converge_existing(connection, "lookupByName", name, spec.address)
-                seed_path = self._build_seed(spec, name)
-                filter_name = self._define_nwfilter(connection, spec, name)
-                xml = _domain_xml(spec, name, network_names, seed_path, filter_name)
-                native = _call_libvirt(connection, "defineXML", xml)
-                native.create()
-            except _OwnershipConflict:
-                diagnostics.append(_failure(spec.address, _CODE_OWNERSHIP_CONFLICT))
-                continue
-            except Exception:
-                diagnostics.append(_failure(spec.address, _CODE_OPERATION_FAILED))
-                continue
-            self._names[spec.address] = name
-            self._realized.add(spec.address)
-            domain_handles.append(DomainHandle(address=spec.address, realized=True))
+            failure = self._realize_domain(connection, spec, created_domains)
+            if failure is not None:
+                diagnostics.append(failure)
+            else:
+                domain_handles.append(DomainHandle(address=spec.address, realized=True))
 
-        result = DriverResult(
-            networks=tuple(network_handles),
-            domains=tuple(domain_handles),
-            diagnostics=tuple(diagnostics),
-        )
-        if result.diagnostics:
-            self._rollback(network_handles, domain_handles)
-            return DriverResult(diagnostics=result.diagnostics)
-        return result
+        if diagnostics:
+            # Roll back only newly-created objects — including a domain whose XML was
+            # defined before native.create() failed — so a partial CREATE never
+            # orphans a defined domain, its seed media, or its nwfilter, while a
+            # pre-existing resource an UPDATE converged is left intact (its baseline
+            # snapshot entry remains truthful). destroy() is idempotent and
+            # ownership-safe, so a never-defined address is a harmless no-op.
+            self._rollback(created_networks, created_domains)
+            return DriverResult(diagnostics=tuple(diagnostics))
+        return DriverResult(networks=tuple(network_handles), domains=tuple(domain_handles))
+
+    def _realize_network(self, connection: object, spec: NetworkSpec, created: list[str]) -> Diagnostic | None:
+        """Realize one network, or return a redacted failure diagnostic.
+
+        Records the address in ``created`` when no owned object pre-existed so a
+        partial define is rolled back; on success adds it to the realized set.
+        """
+
+        name = self._runtime_name(spec.address, spec.name)
+        # Record the runtime name before touching the host so a partial define can
+        # still be located and rolled back by address; the value is deterministic,
+        # so re-setting it on success is a no-op.
+        self._names[spec.address] = name
+        try:
+            # The provisioner only dispatches CREATE/UPDATE specs (UNCHANGED is
+            # filtered upstream), so a spec that reaches the driver must be
+            # (re)applied. Converge any object a prior apply left behind — stop it
+            # and drop its stale definition — before redefining, so the new state is
+            # genuinely enforced and no duplicate is ever created.
+            pre_existing = self._converge_existing(connection, "networkLookupByName", name, spec.address)
+            if not pre_existing:
+                created.append(spec.address)
+            network_xml = _network_xml(spec, name, _aces_uuid(spec.address))
+            native = _call_libvirt(connection, "networkDefineXML", network_xml)
+            native.create()
+        except _OwnershipConflict:
+            return _failure(spec.address, _CODE_OWNERSHIP_CONFLICT)
+        except Exception:
+            return _failure(spec.address, _CODE_OPERATION_FAILED)
+        self._realized.add(spec.address)
+        return None
+
+    def _realize_domain(self, connection: object, spec: DomainSpec, created: list[str]) -> Diagnostic | None:
+        """Realize one domain (plus its seed media and nwfilter), or return a failure.
+
+        Records the address in ``created`` when no owned object pre-existed so a
+        partial define is rolled back; on success adds it to the realized set.
+        """
+
+        name = self._runtime_name(spec.address, spec.name)
+        self._names[spec.address] = name
+        network_names = tuple(self._name_for(address) for address in spec.networks)
+        try:
+            # Converge first so a tightened ACL, a disabled account, a changed
+            # seed/image, or an existing-but-inactive domain is actually applied —
+            # never silently skipped while reporting realized.
+            pre_existing = self._converge_existing(connection, "lookupByName", name, spec.address)
+            if not pre_existing:
+                created.append(spec.address)
+            seed_path = self._build_seed(spec, name)
+            filter_name = self._define_nwfilter(connection, spec, name)
+            xml = _domain_xml(spec, name, network_names, seed_path, _aces_uuid(spec.address), filter_name)
+            native = _call_libvirt(connection, "defineXML", xml)
+            native.create()
+        except _OwnershipConflict:
+            return _failure(spec.address, _CODE_OWNERSHIP_CONFLICT)
+        except Exception:
+            return _failure(spec.address, _CODE_OPERATION_FAILED)
+        self._realized.add(spec.address)
+        return None
 
     def destroy(
         self,
@@ -308,7 +387,7 @@ class LibvirtDeploymentDriver:
         return filter_name
 
     @staticmethod
-    def _converge_existing(connection: object, lookup_method: str, name: str, address: str) -> None:
+    def _converge_existing(connection: object, lookup_method: str, name: str, address: str) -> bool:
         """Stop and undefine the ACES object this apply owns at ``name``.
 
         Convergence is destructive, so it only proceeds when the existing object's
@@ -316,18 +395,25 @@ class LibvirtDeploymentDriver:
         whose UUID is absent or different — a foreign object, or one realized for a
         different ACES address that merely normalizes to the same name — raises
         :class:`_OwnershipConflict` so the apply fails closed instead of replacing
-        an object it does not own. A running object we own is stopped first;
-        ``destroy()`` on an inactive object raises and is benignly suppressed.
+        an object it does not own. A running object we own is stopped first via
+        :func:`_stop_native`, which tolerates an already-inactive object but lets a
+        permission/internal stop failure propagate — so convergence never undefines
+        (and silently replaces) a domain it could not actually stop.
+
+        Returns True when an existing ACES-owned object was converged (this address
+        is an UPDATE of a pre-existing resource) and False when none existed (a
+        fresh CREATE). Callers use this to roll back only newly-created objects on
+        failure, never a pre-existing resource an UPDATE would otherwise destroy.
         """
 
         native = _lookup(connection, lookup_method, name)
         if native is None:
-            return
+            return False
         if _existing_uuid(native) != _aces_uuid(address):
             raise _OwnershipConflict(name)
-        with contextlib.suppress(Exception):
-            cast(_NativeResource, native).destroy()
+        _stop_native(native)
         cast(_NativeResource, native).undefine()
+        return True
 
     def _undefine_nwfilter(self, connection: object, address: str) -> None:
         filter_name = self._filters.pop(address, None)
@@ -345,26 +431,31 @@ class LibvirtDeploymentDriver:
             cast(_NativeResource, native).undefine()
 
     def _destroy_one(self, connection: object, lookup_method: str, address: str) -> bool:
-        native = _lookup(connection, lookup_method, self._name_for(address))
-        if native is None:
-            return False
-        # Apply the same ownership invariant as convergence: never destroy an
-        # object whose UUID does not prove it is the ACES object for this address.
-        if _existing_uuid(native) != _aces_uuid(address):
-            raise _OwnershipConflict(address)
         try:
-            with contextlib.suppress(Exception):
-                cast(_NativeResource, native).destroy()
-            cast(_NativeResource, native).undefine()
-        except Exception:
+            native = _find_native(connection, lookup_method, self._name_for(address))
+        except _NativeLookupError:
+            # Connection/permission/internal lookup failure: fail closed so the
+            # snapshot is preserved for retry instead of claiming the object gone.
             return False
+        # A None result is genuine absence — teardown is idempotently satisfied.
+        # A present object is torn down only when its UUID proves ACES ownership
+        # (the same invariant as convergence), never a foreign name collision.
+        if native is not None:
+            if _existing_uuid(native) != _aces_uuid(address):
+                raise _OwnershipConflict(address)
+            try:
+                _stop_native(native)
+                cast(_NativeResource, native).undefine()
+            except Exception as exc:
+                # An object that vanished between lookup and undefine is still torn
+                # down; a stop/undefine that failed for permission or an internal
+                # reason fails closed and preserves the snapshot for retry.
+                return _is_absence_error(exc)
         return True
 
-    def _rollback(self, networks: list[NetworkHandle], domains: list[DomainHandle]) -> None:
-        realized_domains = tuple(handle.address for handle in domains if handle.realized)
-        realized_networks = tuple(handle.address for handle in networks if handle.realized)
-        if realized_domains or realized_networks:
-            self.destroy(networks=realized_networks, domains=realized_domains)
+    def _rollback(self, networks: list[str], domains: list[str]) -> None:
+        if networks or domains:
+            self.destroy(networks=tuple(networks), domains=tuple(domains))
 
 
 def _default_connector(connection_uri: str) -> object | None:
@@ -394,6 +485,47 @@ def _lookup(connection: object, method_name: str, name: str) -> object | None:
         return None
 
 
+def _stop_native(native: object) -> None:
+    """Stop a running native object before it is undefined.
+
+    Stopping an object that is already inactive is a benign no-op (libvirt raises
+    ``VIR_ERR_OPERATION_INVALID``), and one that has already vanished is absent;
+    either lets teardown proceed to ``undefine()``. Any other stop failure —
+    permission, internal — propagates so teardown fails closed instead of
+    undefining (and dropping the snapshot entry for) a still-running resource
+    (issue #604: permission and unconfirmed teardown failures must fail closed).
+    """
+
+    try:
+        cast(_NativeResource, native).destroy()
+    except Exception as exc:
+        code = _error_code(exc)
+        if code == _VIR_ERR_OPERATION_INVALID or code in _ABSENCE_ERROR_CODES:
+            return
+        raise
+
+
+def _find_native(connection: object, method_name: str, name: str) -> object | None:
+    """Return an existing native resource by name, or None when genuinely absent.
+
+    Unlike :func:`_lookup`, this distinguishes idempotent absence from a real
+    lookup failure: a libvirt "no such object" error maps to None, while a
+    connection/permission/internal lookup failure is raised as
+    :class:`_NativeLookupError` so teardown fails closed and preserves the snapshot for
+    retry rather than falsely reporting the object gone (issue #604).
+    """
+
+    method = getattr(connection, method_name, None)
+    if method is None:
+        return None
+    try:
+        return method(name)
+    except Exception as exc:
+        if _is_absence_error(exc):
+            return None
+        raise _NativeLookupError(method_name) from exc
+
+
 def _safe_name(candidate: str, *, fallback: str, prefix: str) -> str:
     raw = candidate.strip() or fallback.strip() or "resource"
     normalized = _SAFE_NAME_RE.sub("-", raw).strip("-._")
@@ -401,115 +533,6 @@ def _safe_name(candidate: str, *, fallback: str, prefix: str) -> str:
         normalized = _SAFE_NAME_RE.sub("-", fallback).strip("-._") or "resource"
     prefixed = f"{prefix}-{normalized}" if prefix else normalized
     return prefixed[:63].strip("-._") or "resource"
-
-
-def _network_xml(spec: NetworkSpec, name: str) -> str:
-    root = ET.Element("network")
-    ET.SubElement(root, "name").text = name
-    # Deterministic per-address UUID stamps ACES ownership for safe convergence.
-    ET.SubElement(root, "uuid").text = _aces_uuid(spec.address)
-    if spec.labels.get("internal") == "true":
-        ET.SubElement(root, "forward", {"mode": "nat"})
-    _append_network_ip(root, spec)
-    return ET.tostring(root, encoding="unicode")
-
-
-def _append_network_ip(root: ET.Element, spec: NetworkSpec) -> None:
-    """Realize CIDR/gateway into a libvirt ``<ip>`` block with a DHCP range."""
-
-    if not spec.cidr:
-        return
-    try:
-        network = ipaddress.ip_network(spec.cidr, strict=False)
-    except ValueError:
-        return
-    if not isinstance(network, ipaddress.IPv4Network) or network.num_addresses < 4:
-        return
-    host_ip = spec.gateway or str(network.network_address + 1)
-    ip_node = ET.SubElement(root, "ip", {"address": host_ip, "netmask": str(network.netmask)})
-    dhcp = ET.SubElement(ip_node, "dhcp")
-    ET.SubElement(
-        dhcp,
-        "range",
-        {"start": str(network.network_address + 2), "end": str(network.broadcast_address - 1)},
-    )
-
-
-def _nwfilter_xml(filter_name: str, owner_uuid: str, acls: tuple[NetworkAcl, ...]) -> str:
-    root = ET.Element("filter", {"name": filter_name, "chain": "root"})
-    # Owner UUID stamps ACES ownership so convergence/cleanup never touches a
-    # foreign filter that merely shares this name.
-    ET.SubElement(root, "uuid").text = owner_uuid
-    priority = 400
-    for acl in acls:
-        for rule in _acl_rules(acl, priority):
-            root.append(rule)
-        priority += 10
-    return ET.tostring(root, encoding="unicode")
-
-
-def _acl_rules(acl: NetworkAcl, priority: int) -> list[ET.Element]:
-    protocol = acl.protocol if acl.protocol in {"tcp", "udp"} else "all"
-    ports: tuple[int | None, ...] = acl.ports if (acl.ports and protocol != "all") else (None,)
-    rules: list[ET.Element] = []
-    for port in ports:
-        rule = ET.Element("rule", {"action": acl.action, "direction": acl.direction, "priority": str(priority)})
-        match = ET.SubElement(rule, protocol)
-        if acl.src_cidr:
-            address, mask = _cidr_address_mask(acl.src_cidr)
-            match.set("srcipaddr", address)
-            match.set("srcipmask", mask)
-        if acl.dst_cidr:
-            address, mask = _cidr_address_mask(acl.dst_cidr)
-            match.set("dstipaddr", address)
-            match.set("dstipmask", mask)
-        if port is not None:
-            match.set("dstportstart", str(port))
-            match.set("dstportend", str(port))
-        rules.append(rule)
-    return rules
-
-
-def _cidr_address_mask(cidr: str) -> tuple[str, str]:
-    network = ipaddress.ip_network(cidr, strict=False)
-    return str(network.network_address), str(network.netmask)
-
-
-def _domain_xml(
-    spec: DomainSpec,
-    name: str,
-    network_names: tuple[str, ...],
-    seed_path: Path | None,
-    filter_name: str | None = None,
-) -> str:
-    root = ET.Element("domain", {"type": "qemu"})
-    ET.SubElement(root, "name").text = name
-    # Deterministic per-address UUID stamps ACES ownership for safe convergence.
-    ET.SubElement(root, "uuid").text = _aces_uuid(spec.address)
-    ET.SubElement(root, "memory", {"unit": "MiB"}).text = str(spec.memory_mib)
-    ET.SubElement(root, "vcpu").text = str(spec.vcpus)
-    os_node = ET.SubElement(root, "os")
-    ET.SubElement(os_node, "type", {"arch": "x86_64"}).text = "hvm"
-    devices = ET.SubElement(root, "devices")
-    if spec.image_ref:
-        disk = ET.SubElement(devices, "disk", {"type": "file", "device": "disk"})
-        ET.SubElement(disk, "driver", {"name": "qemu", "type": "qcow2"})
-        ET.SubElement(disk, "source", {"file": spec.image_ref})
-        ET.SubElement(disk, "target", {"dev": "vda", "bus": "virtio"})
-    if seed_path is not None:
-        cdrom = ET.SubElement(devices, "disk", {"type": "file", "device": "cdrom"})
-        ET.SubElement(cdrom, "driver", {"name": "qemu", "type": "raw"})
-        ET.SubElement(cdrom, "source", {"file": str(seed_path)})
-        # libvirt requires the target dev prefix to match the bus (sd*→sata).
-        ET.SubElement(cdrom, "target", {"dev": "sda", "bus": "sata"})
-        ET.SubElement(cdrom, "readonly")
-    for network_name in network_names:
-        interface = ET.SubElement(devices, "interface", {"type": "network"})
-        ET.SubElement(interface, "source", {"network": network_name})
-        ET.SubElement(interface, "model", {"type": "virtio"})
-        if filter_name is not None:
-            ET.SubElement(interface, "filterref", {"filter": filter_name})
-    return ET.tostring(root, encoding="unicode")
 
 
 _FAILURE_MESSAGES = {
