@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import dataclasses
 import io
 import json
 import shutil
@@ -422,8 +423,10 @@ def test_oci_registry_requests_use_bounded_timeouts(monkeypatch: pytest.MonkeyPa
         def __exit__(self, exc_type, exc, tb) -> None:
             del exc_type, exc, tb
 
-        def read(self) -> bytes:
-            return self._payload
+        def read(self, amt: int = -1) -> bytes:
+            if amt is None or amt < 0:
+                return self._payload
+            return self._payload[:amt]
 
     def fake_urlopen(request, *, timeout=None):
         del request
@@ -805,3 +808,148 @@ def test_database_and_application_refs_survive_module_namespacing():
         "nodes.shared.db.runtime.database_services.tv-pg.databases.tv-db"
     )
     assert named["nodes.web.runtime.applications.webapp"] == ("nodes.shared.web.runtime.applications.webapp")
+
+
+# ---------------------------------------------------------------------------
+# Issue #12: bound OCI import fetches (memory/disk exhaustion).
+# ---------------------------------------------------------------------------
+
+
+class _FakeResponse:
+    """Minimal urlopen-response double for the bounded reader (issue #12)."""
+
+    def __init__(self, payload: bytes, *, content_length: str | None = None) -> None:
+        self._payload = payload
+        self.headers = {} if content_length is None else {"Content-Length": content_length}
+
+    def __enter__(self) -> _FakeResponse:
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        del exc_type, exc, tb
+
+    def read(self, amt: int = -1) -> bytes:
+        if amt is None or amt < 0:
+            return self._payload
+        return self._payload[:amt]
+
+
+def _fake_urlopen_returning(response: _FakeResponse):
+    def fake_urlopen(request, *, timeout=None):
+        del request, timeout
+        return response
+
+    return fake_urlopen
+
+
+def _gzip_tar(members: list[tuple[str, bytes]]) -> io.BytesIO:
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
+        for name, payload in members:
+            info = tarfile.TarInfo(name=name)
+            info.size = len(payload)
+            tar.addfile(info, io.BytesIO(payload))
+    buffer.seek(0)
+    return buffer
+
+
+def test_oci_resource_limits_separate_compressed_from_extracted():
+    limits = module_registry._OCI_LIMITS
+    # Compressed-download and extracted-archive caps are deliberately distinct so a
+    # small gzip cannot smuggle a large extraction past the download limit.
+    assert limits.max_bundle_bytes > limits.max_metadata_bytes
+    assert limits.max_total_bytes >= limits.max_member_bytes
+
+
+def test_oci_metadata_request_rejects_oversized_response(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        module_registry, "urlopen", _fake_urlopen_returning(_FakeResponse(b'{"tags":["' + b"a" * 64 + b'"]}'))
+    )
+    with pytest.raises(SDLParseError, match="exceeds"):
+        module_registry._json_request("https://registry.example/v2/acme/tags/list", max_bytes=16)
+
+
+def test_oci_bytes_request_rejects_oversized_response(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(module_registry, "urlopen", _fake_urlopen_returning(_FakeResponse(b"x" * 64)))
+    with pytest.raises(SDLParseError, match="exceeds"):
+        module_registry._bytes_request("https://registry.example/v2/acme/blobs/sha256:abc", max_bytes=16)
+
+
+def test_oci_bytes_request_accepts_payload_at_limit(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(module_registry, "urlopen", _fake_urlopen_returning(_FakeResponse(b"x" * 16)))
+    assert (
+        module_registry._bytes_request("https://registry.example/v2/acme/blobs/sha256:abc", max_bytes=16) == b"x" * 16
+    )
+
+
+def test_oci_response_rejects_oversized_content_length(monkeypatch: pytest.MonkeyPatch):
+    # A registry cannot force a large buffer by declaring a huge Content-Length: the
+    # advisory header is rejected before any bytes are read.
+    monkeypatch.setattr(
+        module_registry,
+        "urlopen",
+        _fake_urlopen_returning(_FakeResponse(b"x", content_length="1048576")),
+    )
+    with pytest.raises(SDLParseError, match="Content-Length"):
+        module_registry._bytes_request("https://registry.example/v2/acme/blobs/sha256:abc", max_bytes=16)
+
+
+def test_oci_response_rejects_invalid_content_length(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        module_registry,
+        "urlopen",
+        _fake_urlopen_returning(_FakeResponse(b"x", content_length="not-a-number")),
+    )
+    with pytest.raises(SDLParseError, match="Content-Length"):
+        module_registry._bytes_request("https://registry.example/v2/acme/blobs/sha256:abc", max_bytes=16)
+
+
+def test_oci_bundle_rejects_excess_member_count(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        module_registry,
+        "_OCI_LIMITS",
+        dataclasses.replace(module_registry._OCI_LIMITS, max_bundle_members=1),
+    )
+    buffer = _gzip_tar([("a.yaml", b"a\n"), ("b.yaml", b"b\n")])
+    with (
+        tarfile.open(fileobj=buffer, mode="r:gz") as tar,
+        pytest.raises(SDLParseError, match="archive members"),
+    ):
+        module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+
+def test_oci_bundle_rejects_oversized_member(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        module_registry,
+        "_OCI_LIMITS",
+        dataclasses.replace(module_registry._OCI_LIMITS, max_member_bytes=4),
+    )
+    buffer = _gzip_tar([("big.yaml", b"x" * 16)])
+    with (
+        tarfile.open(fileobj=buffer, mode="r:gz") as tar,
+        pytest.raises(SDLParseError, match="per-member"),
+    ):
+        module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+
+def test_oci_bundle_rejects_excess_total_bytes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        module_registry,
+        "_OCI_LIMITS",
+        dataclasses.replace(module_registry._OCI_LIMITS, max_member_bytes=100, max_total_bytes=8),
+    )
+    buffer = _gzip_tar([("a.yaml", b"x" * 6), ("b.yaml", b"y" * 6)])
+    with (
+        tarfile.open(fileobj=buffer, mode="r:gz") as tar,
+        pytest.raises(SDLParseError, match="total extraction"),
+    ):
+        module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+
+def test_oci_bundle_rejects_duplicate_member(tmp_path: Path):
+    buffer = _gzip_tar([("dup.yaml", b"a\n"), ("dup.yaml", b"b\n")])
+    with (
+        tarfile.open(fileobj=buffer, mode="r:gz") as tar,
+        pytest.raises(SDLParseError, match="Duplicate"),
+    ):
+        module_registry._safe_tar_members(tar, tmp_path / "cache")
