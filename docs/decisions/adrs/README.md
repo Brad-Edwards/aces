@@ -113,6 +113,7 @@ adr-065-experiment-run-provenance-contract-boundary
 adr-066-observability-evidence-plane-separation
 adr-067-participant-behavior-model
 adr-068-experiment-trials-replication-and-replay-claims
+adr-069-cage-2-replication-architecture
 ```
 
 | ADR | Title | Status | Date |
@@ -186,3 +187,4 @@ adr-068-experiment-trials-replication-and-replay-claims
 | [066](adr-066-observability-evidence-plane-separation.md) | Observability and Evidence Plane Separation | accepted | 2026-06-23 |
 | [067](adr-067-participant-behavior-model.md) | Participant Behavior Model | proposed | 2026-06-23 |
 | [068](adr-068-experiment-trials-replication-and-replay-claims.md) | Experiment Trials, Replication, and Replay Claims | accepted | 2026-06-25 |
+| [069](adr-069-cage-2-replication-architecture.md) | CAGE-2 Replication Architecture | accepted | 2026-07-01 |
