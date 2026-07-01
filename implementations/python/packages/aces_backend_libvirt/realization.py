@@ -1,19 +1,49 @@
-"""Pure interpretation of provisioning plans for the libvirt backend."""
+"""Pure interpretation of provisioning plans for the libvirt backend.
+
+Maps an ACES :class:`ProvisioningPlan` into a driver-neutral :class:`Realization`
+of portable network/domain specs. Node resources become libvirt domains; network
+resources become libvirt networks; and the three placement resource types are
+realized into the target domain's cloud-init seed:
+
+- ``account-placement`` → cloud-init ``users`` (groups, shell, home, disabled,
+  auth_method) plus ``/etc/aliases.d`` (mail) and ``/etc/aces/spn`` (spn) files;
+- ``content-placement`` → cloud-init ``write_files`` (file/text) or ``runcmd``
+  and a descriptor file (dataset/directory/source-backed);
+- ``feature-binding`` → cloud-init ``packages``/``runcmd`` (service) or a
+  descriptor file (artifact/configuration).
+
+The module is pure (no driver, no IO): the provisioner validates a plan without
+realizing it, and the driver renders seed media from the same data.
+"""
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
 
-from .driver import DomainSpec, NetworkSpec, ServiceSpec
+from .acls import realize_node_acls
+from .cloudinit import CloudInitFile, CloudInitSpec, CloudInitUser, safe_path_component
+from .dialects import GuestDialect, GuestEmit, dialect_for
+from .driver import DomainSpec, NetworkAcl, NetworkSpec, ServiceSpec
 
 _DOMAIN = "runtime"
 NODE_RESOURCE_TYPE = "node"
 NETWORK_RESOURCE_TYPE = "network"
-SUPPORTED_RESOURCE_TYPES = frozenset({NODE_RESOURCE_TYPE, NETWORK_RESOURCE_TYPE})
+ACCOUNT_PLACEMENT_RESOURCE_TYPE = "account-placement"
+CONTENT_PLACEMENT_RESOURCE_TYPE = "content-placement"
+FEATURE_BINDING_RESOURCE_TYPE = "feature-binding"
+PLACEMENT_RESOURCE_TYPES = frozenset(
+    {
+        ACCOUNT_PLACEMENT_RESOURCE_TYPE,
+        CONTENT_PLACEMENT_RESOURCE_TYPE,
+        FEATURE_BINDING_RESOURCE_TYPE,
+    }
+)
+SUPPORTED_RESOURCE_TYPES = frozenset({NODE_RESOURCE_TYPE, NETWORK_RESOURCE_TYPE}) | PLACEMENT_RESOURCE_TYPES
 
 
 @dataclass(frozen=True)
@@ -23,6 +53,29 @@ class Realization:
     networks: tuple[NetworkSpec, ...] = ()
     domains: tuple[DomainSpec, ...] = ()
     diagnostics: tuple[Diagnostic, ...] = ()
+    # placement address -> the node (domain) address its cloud-init contributes to.
+    # Lets the provisioner realize a domain when a placement targeting it changes,
+    # even if the node itself is UNCHANGED.
+    placement_targets: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class _CloudInitAccumulator:
+    """Mutable per-domain cloud-init contributions, aggregated across placements."""
+
+    users: list[CloudInitUser] = field(default_factory=list)
+    write_files: list[CloudInitFile] = field(default_factory=list)
+    packages: list[str] = field(default_factory=list)
+    runcmd: list[tuple[str, ...]] = field(default_factory=list)
+
+    def build(self, *, hostname: str) -> CloudInitSpec:
+        return CloudInitSpec(
+            hostname=hostname,
+            users=tuple(sorted(self.users, key=lambda user: user.name)),
+            write_files=tuple(sorted(self.write_files, key=lambda file: file.path)),
+            packages=tuple(dict.fromkeys(self.packages)),
+            runcmd=tuple(self.runcmd),
+        )
 
 
 def interpret_provisioning_plan(plan: ProvisioningPlan) -> Realization:
@@ -31,8 +84,9 @@ def interpret_provisioning_plan(plan: ProvisioningPlan) -> Realization:
     diagnostics: list[Diagnostic] = []
     network_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
     node_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
+    placement_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
 
-    for resource in plan.resources.values():
+    for resource in sorted(plan.resources.values(), key=lambda item: item.address):
         if resource.domain != RuntimeDomain.PROVISIONING:
             continue
         if resource.resource_type not in SUPPORTED_RESOURCE_TYPES:
@@ -44,17 +98,35 @@ def interpret_provisioning_plan(plan: ProvisioningPlan) -> Realization:
             continue
         if resource.resource_type == NETWORK_RESOURCE_TYPE:
             network_resources.append((resource, payload))
-        else:
+        elif resource.resource_type == NODE_RESOURCE_TYPE:
             node_resources.append((resource, payload))
+        else:
+            placement_resources.append((resource, payload))
 
     networks = [_network_spec(resource, payload) for resource, payload in network_resources]
     network_lookup = _network_address_lookup(networks)
-    domains = [_domain_spec(resource, payload, network_lookup) for resource, payload in node_resources]
+    cidr_lookup = _network_cidr_lookup(networks)
+    node_lookup = _node_address_lookup(node_resources)
+    node_addresses = {resource.address for resource, _ in node_resources}
+    node_os = {resource.address: _os_family(payload) for resource, payload in node_resources}
+    cloud_init, placement_diagnostics, placement_targets = _aggregate_cloud_init(
+        placement_resources, node_lookup, node_os, node_addresses
+    )
+    diagnostics.extend(placement_diagnostics)
+    acls: dict[str, tuple[NetworkAcl, ...]] = {}
+    for resource, payload in node_resources:
+        node_acls, acl_diagnostics = realize_node_acls(resource, _infrastructure_spec(payload).get("acls"), cidr_lookup)
+        acls[resource.address] = node_acls
+        diagnostics.extend(acl_diagnostics)
+    domains = [
+        _domain_spec(resource, payload, network_lookup, cloud_init, acls) for resource, payload in node_resources
+    ]
 
     return Realization(
         networks=tuple(sorted(networks, key=lambda spec: spec.address)),
         domains=tuple(sorted(domains, key=lambda spec: spec.address)),
         diagnostics=tuple(diagnostics),
+        placement_targets=placement_targets,
     )
 
 
@@ -84,24 +156,230 @@ def _network_spec(resource: PlannedResource, payload: Mapping[str, object]) -> N
     )
 
 
+def _node_address_lookup(
+    node_resources: list[tuple[PlannedResource, Mapping[str, object]]],
+) -> dict[str, str]:
+    """Map every handle a placement might reference a node by to its address."""
+
+    lookup: dict[str, str] = {}
+    for resource, payload in node_resources:
+        name = _resource_name(resource, payload)
+        for key in (resource.address, name, resource.address.rsplit(".", 1)[-1]):
+            if key:
+                lookup[key] = resource.address
+    return lookup
+
+
+def _aggregate_cloud_init(
+    placement_resources: list[tuple[PlannedResource, Mapping[str, object]]],
+    node_lookup: dict[str, str],
+    node_os: dict[str, str],
+    node_addresses: set[str],
+) -> tuple[dict[str, _CloudInitAccumulator], list[Diagnostic], dict[str, str]]:
+    """Fold each placement into its target domain's cloud-init contributions.
+
+    Service and mail realization is routed through the target node's OS dialect
+    so a Windows or BSD guest gets its native mechanism, not a Linux primitive.
+
+    A placement whose target cannot be resolved to a node in this plan is *not*
+    silently dropped: it yields an ERROR diagnostic so apply fails closed rather
+    than reporting success while leaving the placement unrealized.
+
+    Also returns a ``placement address -> node address`` map so the provisioner
+    can realize a domain whose cloud-init changed because a placement changed.
+    """
+
+    accumulators: dict[str, _CloudInitAccumulator] = {}
+    diagnostics: list[Diagnostic] = []
+    placement_targets: dict[str, str] = {}
+    for resource, payload in placement_resources:
+        target = _placement_target(payload, node_lookup)
+        if target is None or target not in node_addresses:
+            diagnostics.append(_unbound_placement(resource, target))
+            continue
+        placement_targets[resource.address] = target
+        dialect = dialect_for(node_os.get(target, ""))
+        accumulator = accumulators.setdefault(target, _CloudInitAccumulator())
+        if resource.resource_type == ACCOUNT_PLACEMENT_RESOURCE_TYPE:
+            _realize_account(accumulator, payload, dialect)
+        elif resource.resource_type == CONTENT_PLACEMENT_RESOURCE_TYPE:
+            _realize_content(accumulator, resource, payload)
+        else:
+            _realize_feature(accumulator, resource, payload, dialect)
+    return accumulators, diagnostics, placement_targets
+
+
+def _merge_emit(accumulator: _CloudInitAccumulator, emit: GuestEmit) -> None:
+    accumulator.packages.extend(emit.packages)
+    accumulator.write_files.extend(emit.write_files)
+    accumulator.runcmd.extend(emit.runcmd)
+
+
+def _placement_target(payload: Mapping[str, object], node_lookup: dict[str, str]) -> str | None:
+    for key in ("target_address", "node_address", "target_node", "node_name", "node", "target"):
+        ref = payload.get(key)
+        if isinstance(ref, str) and ref:
+            return node_lookup.get(ref, ref)
+    return None
+
+
+def _realize_account(accumulator: _CloudInitAccumulator, payload: Mapping[str, object], dialect: GuestDialect) -> None:
+    spec = _spec(payload)
+    username = _str(spec.get("username")) or _str(payload.get("account_name")) or _str(payload.get("name"))
+    if not username:
+        return
+    groups = tuple(str(group) for group in spec.get("groups", ()) if isinstance(group, str) and group)
+    disabled = _truthy(spec.get("disabled"))
+    # A disabled account installs no usable credential; otherwise key material is
+    # the only credential we render, so password login is always locked.
+    ssh_keys = () if disabled else _ssh_authorized_keys(spec)
+    # Fail closed on credentials: we never provision a password, so lock_passwd
+    # stays True for every account. Unlocking a password account without a hash
+    # would leave a known (often privileged) username reachable with no secret —
+    # potentially a blank-password login. Key-based auth still works via the
+    # rendered authorized keys, which do not require an unlocked password.
+    accumulator.users.append(
+        CloudInitUser(
+            name=username,
+            groups=groups,
+            shell=_str(spec.get("shell")),
+            home=_str(spec.get("home")),
+            lock_passwd=True,
+            ssh_authorized_keys=ssh_keys,
+        )
+    )
+    mail = _str(spec.get("mail"))
+    if mail:
+        _merge_emit(accumulator, dialect.mail_alias(username, mail))
+    spn = _str(spec.get("spn"))
+    if spn:
+        # A real Kerberos SPN needs an AD/realm join; absent a domain, the
+        # portable maximum is a host-side principal descriptor the guest can join with.
+        safe_user = safe_path_component(username, fallback="user")
+        accumulator.write_files.append(
+            CloudInitFile(path=f"/etc/aces/spn/{safe_user}", content=f"{spn}\n", permissions="0600")
+        )
+
+
+def _realize_content(
+    accumulator: _CloudInitAccumulator,
+    resource: PlannedResource,
+    payload: Mapping[str, object],
+) -> None:
+    spec = _spec(payload)
+    content_type = _str(spec.get("type"))
+    if content_type == "file":
+        path = _str(spec.get("path"))
+        if not path:
+            return
+        text = spec.get("text")
+        if isinstance(text, str):
+            accumulator.write_files.append(CloudInitFile(path=path, content=text))
+        else:
+            accumulator.runcmd.append(("mkdir", "-p", _dirname(path)))
+            accumulator.write_files.append(_content_descriptor(resource, payload, path))
+    elif content_type == "directory":
+        destination = _str(spec.get("destination"))
+        if not destination:
+            return
+        accumulator.runcmd.append(("mkdir", "-p", destination))
+        accumulator.write_files.append(_content_descriptor(resource, payload, destination))
+    elif content_type == "dataset":
+        accumulator.write_files.append(_content_descriptor(resource, payload, None))
+
+
+def _realize_feature(
+    accumulator: _CloudInitAccumulator,
+    resource: PlannedResource,
+    payload: Mapping[str, object],
+    dialect: GuestDialect,
+) -> None:
+    spec = _spec(payload)
+    template = spec.get("template")
+    template = template if isinstance(template, Mapping) else {}
+    feature_type = _str(template.get("type"))
+    source = template.get("source")
+    package = _str(source.get("name")) if isinstance(source, Mapping) else ""
+    name = _resource_name(resource, payload)
+    if feature_type == "service" and package:
+        _merge_emit(accumulator, dialect.enable_feature(package))
+    else:
+        destination = _str(template.get("destination"))
+        if destination:
+            accumulator.runcmd.append(("mkdir", "-p", _dirname(destination)))
+        accumulator.write_files.append(
+            CloudInitFile(
+                path=f"/etc/aces/features/{safe_path_component(name, fallback='feature')}.json",
+                content=_descriptor_body({"feature": name, "type": feature_type, "destination": destination}),
+                permissions="0644",
+            )
+        )
+
+
+def _content_descriptor(
+    resource: PlannedResource,
+    payload: Mapping[str, object],
+    location: str | None,
+) -> CloudInitFile:
+    spec = _spec(payload)
+    name = _resource_name(resource, payload)
+    descriptor = {
+        "content": name,
+        "type": _str(spec.get("type")),
+        "location": location or "",
+    }
+    safe_name = safe_path_component(name, fallback="content")
+    return CloudInitFile(path=f"/etc/aces/content/{safe_name}.json", content=_descriptor_body(descriptor))
+
+
+def _descriptor_body(descriptor: Mapping[str, object]) -> str:
+    return json.dumps(dict(descriptor), indent=2, sort_keys=True) + "\n"
+
+
 def _domain_spec(
     resource: PlannedResource,
     payload: Mapping[str, object],
     network_lookup: dict[str, str],
+    cloud_init: dict[str, _CloudInitAccumulator],
+    acls: dict[str, tuple[NetworkAcl, ...]],
 ) -> DomainSpec:
     infrastructure = _infrastructure_spec(payload)
     references = _network_refs(infrastructure)
     network_addresses = tuple(network_lookup.get(ref, ref) for ref in references)
     resources = _node_resources(payload)
+    name = _resource_name(resource, payload)
+    accumulator = cloud_init.get(resource.address, _CloudInitAccumulator())
     return DomainSpec(
         address=resource.address,
-        name=_resource_name(resource, payload),
+        name=name,
         image_ref=_image_ref(payload),
         memory_mib=_memory_mib(resources.get("ram")),
         vcpus=_vcpus(resources.get("cpu")),
         networks=network_addresses,
         services=_services(payload),
+        cloud_init=accumulator.build(hostname=name),
+        network_acls=acls.get(resource.address, ()),
     )
+
+
+def _os_family(payload: Mapping[str, object]) -> str:
+    family = payload.get("os_family")
+    if isinstance(family, str) and family:
+        return family
+    node = _spec(payload).get("node")
+    node_os = node.get("os") if isinstance(node, Mapping) else None
+    return node_os if isinstance(node_os, str) else ""
+
+
+def _network_cidr_lookup(networks: list[NetworkSpec]) -> dict[str, str]:
+    lookup: dict[str, str] = {}
+    for spec in networks:
+        if not spec.cidr:
+            continue
+        for key in (spec.address, spec.name, spec.address.rsplit(".", 1)[-1]):
+            if key:
+                lookup[key] = spec.cidr
+    return lookup
 
 
 def _resource_name(resource: PlannedResource, payload: Mapping[str, object]) -> str:
@@ -191,6 +469,39 @@ def _image_ref(payload: Mapping[str, object]) -> str | None:
     return None
 
 
+def _spec(payload: Mapping[str, object]) -> Mapping[str, object]:
+    spec = payload.get("spec")
+    return spec if isinstance(spec, Mapping) else {}
+
+
+def _str(value: object) -> str:
+    return value if isinstance(value, str) else ""
+
+
+def _ssh_authorized_keys(spec: Mapping[str, object]) -> tuple[str, ...]:
+    """Collect any authorized SSH keys the account placement carries."""
+
+    keys: list[str] = []
+    for key in ("ssh_authorized_keys", "ssh_keys", "authorized_keys"):
+        raw = spec.get(key)
+        if isinstance(raw, str) and raw:
+            keys.append(raw)
+        elif isinstance(raw, list | tuple):
+            keys.extend(entry for entry in raw if isinstance(entry, str) and entry)
+        if keys:
+            break
+    return tuple(keys)
+
+
+def _truthy(value: object) -> bool:
+    return value is True
+
+
+def _dirname(path: str) -> str:
+    head = path.rsplit("/", 1)[0]
+    return head or "/"
+
+
 def _unsupported_resource(resource: PlannedResource) -> Diagnostic:
     return Diagnostic(
         code="libvirt-backend.realization.unsupported-resource",
@@ -199,6 +510,24 @@ def _unsupported_resource(resource: PlannedResource) -> Diagnostic:
         message=(
             "Libvirt backend does not realize provisioning resource type "
             f"'{resource.resource_type}' for '{resource.address}'."
+        ),
+        severity=Severity.ERROR,
+    )
+
+
+def _unbound_placement(resource: PlannedResource, target: str | None) -> Diagnostic:
+    detail = (
+        "carries no resolvable target node reference"
+        if target is None
+        else f"names target node '{target}', which is not present in this plan"
+    )
+    return Diagnostic(
+        code="libvirt-backend.realization.unbound-placement",
+        domain=_DOMAIN,
+        address=resource.address,
+        message=(
+            f"Libvirt backend cannot realize placement '{resource.address}' of type "
+            f"'{resource.resource_type}': it {detail}."
         ),
         severity=Severity.ERROR,
     )

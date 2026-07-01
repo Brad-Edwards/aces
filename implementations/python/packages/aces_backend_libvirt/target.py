@@ -59,6 +59,8 @@ def _driver_config(config: dict[str, Any]) -> dict[str, Any]:
         "connection_uri",
         "connector",
         "name_prefix",
+        "workspace",
+        "seed_builder",
     }
     driver_config = {key: value for key, value in config.items() if key in accepted}
     if "uri" in config and "connection_uri" not in driver_config:

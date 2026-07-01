@@ -24,10 +24,11 @@ Two honestly-disclosed evidence-source modes:
   evaluator-only translated SOC-readback record explicitly marked as not upstream
   Wazuh.
 * ``native-live`` (operator-run; injected/default native driver + probe):
-  additionally realizes the libvirt VM/network substrate and records the native
-  topology and native SOC readback. The libvirt backend declares no content-type
-  support, so the scenario's content/orchestration/evaluation planes are not
-  backend-realized; those are disclosed as ``unrealized_capabilities``, not faked.
+  additionally realizes the libvirt VM/network substrate (including the scenario's
+  content and account placements, via cloud-init) and records the native topology
+  and native SOC readback. Any provisioning capability the backend genuinely cannot
+  realize is disclosed as ``unrealized_capabilities`` (and fails native-live), not
+  faked; orchestration/evaluation planes are outside a provisioning-only target.
 
 Artifact assembly lives in ``_paper_evidence_artifact`` and validation in
 ``_paper_evidence_validation`` (kept separate for the ADR-015 source-size cap).
@@ -345,14 +346,15 @@ def _realize_native_substrate(
 ) -> tuple[Mapping[str, Any] | None, EvidenceCheck, tuple[str, ...]]:
     """Realize the libvirt provisioning substrate (VMs + networks) for the scenario.
 
-    The libvirt backend realizes the provisioning substrate only; the paper scenario
-    additionally declares content/orchestration/evaluation that this backend does
-    not realize. Those are returned as ``unrealized_capabilities`` (disclosed in the
-    artifact). The check is gating and passes only when the native driver realized at
-    least one domain — native-live must never report success without realizing. A
-    scenario the libvirt backend cannot provision (e.g. the paper scenario's content
-    plane) therefore fails native-live and surfaces its unrealized capabilities,
-    rather than silently passing.
+    The libvirt backend realizes the full provisioning plane — nodes, networks, and
+    content/account/feature placements (via cloud-init) — so a governed provisioning
+    capability is realized rather than disclosed. Any capability the backend still
+    cannot realize (an ungoverned provisioning term, or orchestration/evaluation
+    outside a provisioning-only target) is returned as ``unrealized_capabilities``
+    and disclosed in the artifact. The check is gating and passes only when the
+    native driver realized at least one domain — native-live must never report
+    success without realizing — so a scenario the backend cannot provision fails
+    native-live and surfaces its unrealized capabilities rather than silently passing.
     """
     if native_driver is None:
         return None, EvidenceCheck("native_substrate_realization", False, ("no native driver",)), ()

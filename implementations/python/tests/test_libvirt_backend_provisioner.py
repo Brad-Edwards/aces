@@ -125,6 +125,111 @@ def test_apply_reconciles_snapshot_and_drives_libvirt_driver_for_create():
     assert [spec.address for spec in networks] == ["provision.network.lan"]
 
 
+def _account_resource() -> PlannedResource:
+    return PlannedResource(
+        address="provision.account.admin",
+        domain=RuntimeDomain.PROVISIONING,
+        resource_type="account-placement",
+        payload={
+            "name": "admin",
+            "account_name": "admin",
+            "target_address": "provision.node.web",
+            "spec": {"username": "administrator", "groups": ["sudo"], "shell": "/bin/bash"},
+        },
+    )
+
+
+def _content_resource() -> PlannedResource:
+    return PlannedResource(
+        address="provision.content.flag",
+        domain=RuntimeDomain.PROVISIONING,
+        resource_type="content-placement",
+        payload={
+            "name": "flag",
+            "target_address": "provision.node.web",
+            "spec": {"type": "file", "path": "/srv/flag.txt", "text": "ctf{x}\n"},
+        },
+    )
+
+
+def _feature_resource() -> PlannedResource:
+    return PlannedResource(
+        address="provision.feature.wazuh",
+        domain=RuntimeDomain.PROVISIONING,
+        resource_type="feature-binding",
+        payload={
+            "name": "wazuh-agent",
+            "node_address": "provision.node.web",
+            "spec": {"template": {"type": "service", "source": {"name": "wazuh-agent"}}},
+        },
+    )
+
+
+def test_apply_realizes_placements_into_domain_cloud_init_and_snapshot():
+    driver = _RecordingDriver()
+    plan = _plan(_node_resource(), _account_resource(), _content_resource(), _feature_resource())
+
+    result = LibvirtProvisioner(driver).apply(plan, RuntimeSnapshot())
+
+    assert result.success is True
+    domain = driver.realize_calls[0]["domains"][0]
+    cloud_init = domain.cloud_init
+    assert cloud_init.users[0].name == "administrator"
+    assert any(file.path == "/srv/flag.txt" for file in cloud_init.write_files)
+    assert "wazuh-agent" in cloud_init.packages
+    # Every placement is reflected back into the snapshot as a portable entry.
+    assert result.snapshot.entries["provision.account.admin"].status == "applied"
+    assert result.snapshot.entries["provision.content.flag"].resource_type == "content-placement"
+    assert result.snapshot.entries["provision.feature.wazuh"].status == "applied"
+
+
+def test_apply_unchanged_placement_is_noop_with_unchanged_status():
+    driver = _RecordingDriver()
+    # The target node is part of the plan's desired state (here also UNCHANGED), so
+    # the placement is bound; nothing is CREATE/UPDATE, so the host is never driven.
+    plan = _plan(_node_resource(), _account_resource(), action=ChangeAction.UNCHANGED)
+
+    result = LibvirtProvisioner(driver).apply(plan, RuntimeSnapshot())
+
+    assert result.success is True
+    assert driver.realize_calls == []  # UNCHANGED never drives the host
+    assert result.changed_addresses == []
+    assert result.snapshot.entries["provision.account.admin"].status == "unchanged"
+
+
+def test_apply_realizes_target_domain_when_only_a_placement_changes():
+    driver = _RecordingDriver()
+    node = _node_resource()
+    account = _account_resource()
+    # Node is UNCHANGED, but a new account placement targets it: the domain's seed
+    # now carries different cloud-init, so the domain must still be realized.
+    plan = ProvisioningPlan(
+        resources={node.address: node, account.address: account},
+        operations=[
+            ProvisionOp(
+                action=ChangeAction.UNCHANGED,
+                address=node.address,
+                resource_type=node.resource_type,
+                payload=node.payload,
+            ),
+            ProvisionOp(
+                action=ChangeAction.CREATE,
+                address=account.address,
+                resource_type=account.resource_type,
+                payload=account.payload,
+            ),
+        ],
+    )
+
+    result = LibvirtProvisioner(driver).apply(plan, RuntimeSnapshot())
+
+    assert result.success is True
+    assert driver.realize_calls, "the placement change must drive realization of its target domain"
+    realized_domains = [spec.address for spec in driver.realize_calls[0]["domains"]]
+    assert realized_domains == ["provision.node.web"]
+    assert driver.realize_calls[0]["domains"][0].cloud_init.users[0].name == "administrator"
+
+
 def test_apply_delete_removes_snapshot_entry_and_drives_destroy():
     driver = _RecordingDriver()
     snapshot = RuntimeSnapshot(

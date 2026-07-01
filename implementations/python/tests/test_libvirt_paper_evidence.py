@@ -283,7 +283,7 @@ def test_validator_flags_participant_boundary_exposure(tmp_path):
 # --- native-live mode ----------------------------------------------------------
 
 
-def test_native_live_paper_scenario_fails_realization_and_discloses_unrealized_content_plane(tmp_path):
+def test_native_live_paper_scenario_realizes_content_plane(tmp_path):
     report = run_libvirt_paper_evidence(
         scenario_path=_PAPER_SCENARIO,
         project_dir=tmp_path,
@@ -292,17 +292,21 @@ def test_native_live_paper_scenario_fails_realization_and_discloses_unrealized_c
         driver_factory=_native_driver_factory(tmp_path),
         probe=_Probe(),
     )
-    # The libvirt backend cannot realize the paper scenario's content plane, so the
-    # gating native-realization check fails: native-live must never claim success
-    # without realizing. The artifact is still written and validates, recording the
-    # attempt and the disclosed unrealized capabilities.
-    assert not report.passed, report.render()
+    # Issue #603: the libvirt backend now realizes the paper scenario's content and
+    # account placements through cloud-init, so native-live realizes the provisioning
+    # substrate. The disclosure remains honest: only the orchestration/evaluation
+    # planes (outside a provisioning-only target) are still surfaced as unrealized —
+    # no content/account provisioning capability is disclosed as unrealized anymore.
+    assert report.passed, report.render()
     artifact = report.artifact
     assert artifact is not None
     assert validate_libvirt_paper_evidence_artifact(artifact) == []
     provenance = artifact["backend"]["realization_provenance"]
-    assert provenance["substrate_realized"] is False
-    assert artifact["realized_topology"]["unrealized_capabilities"], "expected disclosed unrealized capabilities"
+    assert provenance["substrate_realized"] is True
+    unrealized = artifact["realized_topology"]["unrealized_capabilities"]
+    assert unrealized, "orchestration/evaluation planes must still be disclosed, not faked"
+    assert all(cap.split(".", 1)[0] in {"orchestrator", "evaluator", "evaluation"} for cap in unrealized), unrealized
+    assert not any("content" in cap.lower() or "account" in cap.lower() for cap in unrealized)
 
 
 def test_native_live_realizes_substrate_for_provisionable_scenario(tmp_path):

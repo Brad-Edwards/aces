@@ -10,15 +10,18 @@ so the issue #602 acceptance criteria are locked against regression:
    ``contracts/schemas/backend-manifest/backend-manifest-v2.json``;
 2. ``supported_contract_versions`` covers the published provisioning-only
    profile contract set;
-3. ``realization_support`` declares only the node-type / os-family /
-   content-type / account-feature kinds the substrate can genuinely realize,
-   with no hollow (unbacked) declaration.
+3. ``realization_support`` declares the node-type / os-family / content-type /
+   account-feature kinds the substrate genuinely realizes, with no hollow
+   (unbacked) declaration.
 
 The manifest is the capability surface the planner checks plans against, so this
-bar is the SEM-218 realization-honesty guard: the libvirt interpreter realizes
-only ``node`` and ``network`` provisioning resources (see
-``aces_backend_libvirt/realization.py``), so the manifest must not over-claim
-content placement or account creation.
+bar is the SEM-218 realization-honesty guard. Under issue #603 the libvirt
+interpreter realizes ``node``, ``network``, ``account-placement``,
+``content-placement``, and ``feature-binding`` provisioning resources via
+cloud-init (see ``aces_backend_libvirt/realization.py``), so the manifest
+declares the full governed vocabulary it actually realizes — every declared term
+is backed, so it cannot over-claim. "Provisioning-only" remains true in the
+domain sense (no orchestrator / evaluator / participant runtime).
 """
 
 from __future__ import annotations
@@ -44,10 +47,10 @@ BACKEND_MANIFEST_V2_SCHEMA = REPO_ROOT / "contracts" / "schemas" / "backend-mani
 PROVISIONING_ONLY_PROFILE = "provisioning-only"
 
 # A realization-support constraint kind is truthful only when the provisioner
-# capability surface that backs it is non-empty. The libvirt interpreter
-# realizes only node/network resources, so today only the first two kinds are
-# legitimately declarable; the map is exhaustive so a future honest expansion
-# (via the driver seam) is checked rather than silently accepted.
+# capability surface that backs it is non-empty. The libvirt interpreter realizes
+# all four kinds via cloud-init; this map validates that the manifest stays honest
+# (every declared kind backed by a non-empty capability surface) after any future
+# capability change.
 _CONSTRAINT_KIND_TO_PROVISIONER_SURFACE = {
     "node-type": "supported_node_types",
     "os-family": "supported_os_families",
@@ -113,8 +116,8 @@ def test_realization_support_is_not_hollow():
             )
 
 
-def test_manifest_does_not_overclaim_unrealized_substrate():
-    """AC3: libvirt realizes only node/network, so no content/account claims appear."""
+def test_manifest_declares_full_realization_envelope():
+    """AC3: libvirt declares — and realizes via cloud-init — the full governed vocabulary."""
     manifest = create_libvirt_manifest()
     provisioner = manifest.provisioner
     declared_kinds = {
@@ -123,11 +126,12 @@ def test_manifest_does_not_overclaim_unrealized_substrate():
         for kind in declaration.get("supported_constraint_kinds", ())
     }
 
-    # Keyed off the live provisioner surface so an honest future expansion (the
-    # driver realizing content placement / account creation) relaxes the guard
-    # automatically instead of forcing a test rewrite.
-    if not provisioner.supported_content_types:
-        assert "content-type" not in declared_kinds
-    if not provisioner.supports_accounts:
-        assert "account-feature" not in declared_kinds
-        assert not provisioner.supported_account_features
+    assert "content-type" in declared_kinds
+    assert "account-feature" in declared_kinds
+    assert provisioner.supported_content_types == frozenset({"file", "dataset", "directory"})
+    assert provisioner.supported_account_features == frozenset(
+        {"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}
+    )
+    assert provisioner.supports_accounts is True
+    assert provisioner.supports_acls is True
+    assert "macos" in provisioner.supported_os_families
