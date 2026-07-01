@@ -1,5 +1,6 @@
 """Planner for compiled SDL runtime models."""
 
+from aces_backend_protocols.account_features import provisioner_account_features
 from aces_backend_protocols.capabilities import BackendManifest
 from aces_sdl.infrastructure import MINIMUM_NODE_COUNT
 from aces_sdl.nodes import OSFamily
@@ -511,24 +512,9 @@ def _resource_count_upper_bound(
 
 
 def _account_features(account_spec: dict[str, object]) -> set[str]:
-    features: set[str] = set()
-    if account_spec.get("groups"):
-        features.add("groups")
-    if account_spec.get("mail"):
-        features.add("mail")
-    if account_spec.get("spn"):
-        features.add("spn")
-    if account_spec.get("shell"):
-        features.add("shell")
-    if account_spec.get("home"):
-        features.add("home")
-    disabled = account_spec.get("disabled")
-    if disabled not in (False, None, ""):
-        features.add("disabled")
-    auth_method = account_spec.get("auth_method")
-    if auth_method not in ("", None, "password"):
-        features.add("auth_method")
-    return features
+    # Delegates to the shared canonical extractor so the planner gate and the
+    # libvirt backend's capability-envelope diagnostics never diverge (issue #605).
+    return set(provisioner_account_features(account_spec))
 
 
 def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[Diagnostic]:

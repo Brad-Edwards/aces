@@ -284,6 +284,65 @@ def test_apply_delete_of_already_absent_entry_is_idempotent_success():
     assert driver.destroy_calls == [{"networks": (), "domains": ("provision.node.web",)}]
 
 
+def _out_of_envelope_node(address: str = "provision.node.gw") -> PlannedResource:
+    return PlannedResource(
+        address=address,
+        domain=RuntimeDomain.PROVISIONING,
+        resource_type="node",
+        payload={
+            "name": "gw",
+            "node_name": "gw",
+            "node_type": "router",
+            "os_family": "linux",
+            "spec": {"node": {"type": "router"}, "infrastructure": {}},
+        },
+    )
+
+
+def test_apply_fails_closed_on_out_of_envelope_node_type():
+    driver = _RecordingDriver()
+    snapshot = RuntimeSnapshot()
+
+    result = LibvirtProvisioner(driver).apply(_plan(_out_of_envelope_node()), snapshot)
+
+    assert result.success is False
+    assert result.snapshot is snapshot
+    assert driver.realize_calls == []  # no partial/silent realization on error
+    assert [diag.code for diag in result.diagnostics] == ["libvirt-backend.realization.unsupported-node-type"]
+
+
+def test_validate_reports_out_of_envelope_node_type():
+    diagnostics = LibvirtProvisioner(_RecordingDriver()).validate(_plan(_out_of_envelope_node()))
+
+    assert [diag.code for diag in diagnostics] == ["libvirt-backend.realization.unsupported-node-type"]
+
+
+def test_apply_validates_operation_payloads_not_only_resources():
+    # An out-of-envelope term carried by a CREATE operation whose address is absent
+    # from plan.resources must still fail closed before any snapshot is persisted:
+    # operations, not just resources, materialize snapshot entries and driver work.
+    driver = _RecordingDriver()
+    snapshot = RuntimeSnapshot()
+    plan = ProvisioningPlan(
+        resources={},
+        operations=[
+            ProvisionOp(
+                action=ChangeAction.CREATE,
+                address="provision.node.gw",
+                resource_type="node",
+                payload={"name": "gw", "node_type": "router", "os_family": "linux", "spec": {}},
+            )
+        ],
+    )
+
+    result = LibvirtProvisioner(driver).apply(plan, snapshot)
+
+    assert result.success is False
+    assert driver.realize_calls == []
+    assert "provision.node.gw" not in result.snapshot.entries
+    assert [diag.code for diag in result.diagnostics] == ["libvirt-backend.realization.unsupported-node-type"]
+
+
 def test_apply_fails_closed_when_driver_omits_realization_confirmation():
     class _SilentRealizeDriver(_RecordingDriver):
         def realize(self, *, networks, domains):

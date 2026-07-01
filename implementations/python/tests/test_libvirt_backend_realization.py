@@ -3,9 +3,31 @@
 from __future__ import annotations
 
 from aces_backend_libvirt.realization import interpret_provisioning_plan
+from aces_backend_protocols.capabilities import ProvisionerCapabilities
 from aces_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
 
 NODE_ADDRESS = "provision.node.web"
+
+
+def _narrowed_capabilities(**overrides) -> ProvisionerCapabilities:
+    """A libvirt-shaped provisioner envelope narrowed for out-of-envelope tests.
+
+    Libvirt's real manifest declares every governed account feature and both node
+    types, so an out-of-envelope account-feature or switch term is only reachable
+    against a deliberately narrower envelope injected via ``provisioner_capabilities``.
+    """
+
+    base: dict = {
+        "name": "narrowed-provisioner",
+        "supported_node_types": frozenset({"vm", "switch"}),
+        "supported_os_families": frozenset({"linux"}),
+        "supported_content_types": frozenset({"file"}),
+        "supported_account_features": frozenset({"groups", "shell"}),
+        "supports_acls": True,
+        "supports_accounts": True,
+    }
+    base.update(overrides)
+    return ProvisionerCapabilities(**base)
 
 
 def _resource(resource_type: str, address: str, payload: dict) -> PlannedResource:
@@ -404,3 +426,130 @@ def test_placement_without_target_reference_fails_closed_with_diagnostic():
     realization = interpret_provisioning_plan(_plan(_node(), untargeted))
 
     assert [d.code for d in realization.diagnostics] == ["libvirt-backend.realization.unbound-placement"]
+
+
+# --- issue #605: typed capability-envelope diagnostics --------------------------
+
+
+def test_out_of_envelope_node_type_fails_closed():
+    # A node type outside the declared manifest envelope (an ungoverned/extension
+    # term the backend does not realize) must block rather than realize a domain.
+    node = _resource(
+        "node",
+        NODE_ADDRESS,
+        {
+            "name": "gw",
+            "node_name": "gw",
+            "node_type": "router",
+            "os_family": "linux",
+            "spec": {"node": {"type": "router"}, "infrastructure": {}},
+        },
+    )
+
+    realization = interpret_provisioning_plan(_plan(node))
+
+    assert [d.code for d in realization.diagnostics] == ["libvirt-backend.realization.unsupported-node-type"]
+    assert realization.diagnostics[0].severity.name == "ERROR"
+    assert realization.diagnostics[0].address == NODE_ADDRESS
+    assert "router" in realization.diagnostics[0].message
+
+
+def test_out_of_envelope_os_family_fails_closed():
+    realization = interpret_provisioning_plan(_plan(_node_os("solaris")))
+
+    assert [d.code for d in realization.diagnostics] == ["libvirt-backend.realization.unsupported-os-family"]
+    assert "solaris" in realization.diagnostics[0].message
+
+
+def test_out_of_envelope_content_type_fails_closed():
+    # An unsupported content type must NOT fall through to a silent no-op cloud-init
+    # contribution: it yields a blocking diagnostic.
+    content = _resource(
+        "content-placement",
+        "provision.content.disk",
+        {"name": "disk", "target_address": NODE_ADDRESS, "spec": {"type": "raw-disk"}},
+    )
+
+    realization = interpret_provisioning_plan(_plan(_node(), content))
+
+    assert [d.code for d in realization.diagnostics] == ["libvirt-backend.realization.unsupported-content-type"]
+    assert "raw-disk" in realization.diagnostics[0].message
+    # The unsupported content contributed nothing to the domain's cloud-init.
+    assert _domain(realization).cloud_init.write_files == ()
+
+
+def test_governed_vocabulary_realizes_without_envelope_error():
+    # The full issue #603 governed vocabulary (all content types + account features)
+    # is in-envelope and must realize without any capability-envelope diagnostic.
+    account = _resource(
+        "account-placement",
+        "provision.account.admin",
+        {
+            "name": "admin",
+            "target_address": NODE_ADDRESS,
+            "spec": {
+                "username": "administrator",
+                "groups": ["sudo"],
+                "shell": "/bin/bash",
+                "home": "/home/administrator",
+                "disabled": True,
+                "auth_method": "ssh-key",
+                "mail": "admin@example.test",
+                "spn": "HTTP/web.example.test",
+            },
+        },
+    )
+    file_content = _resource(
+        "content-placement",
+        "provision.content.f",
+        {"name": "f", "target_address": NODE_ADDRESS, "spec": {"type": "file", "path": "/srv/f", "text": "x\n"}},
+    )
+    dir_content = _resource(
+        "content-placement",
+        "provision.content.d",
+        {"name": "d", "target_address": NODE_ADDRESS, "spec": {"type": "directory", "destination": "/opt/d"}},
+    )
+    dataset_content = _resource(
+        "content-placement",
+        "provision.content.ds",
+        {"name": "ds", "target_address": NODE_ADDRESS, "spec": {"type": "dataset"}},
+    )
+
+    realization = interpret_provisioning_plan(_plan(_node(), account, file_content, dir_content, dataset_content))
+
+    envelope_codes = [d.code for d in realization.diagnostics if "unsupported-" in d.code]
+    assert envelope_codes == []
+
+
+def test_account_feature_outside_narrowed_envelope_fails_closed():
+    caps = _narrowed_capabilities(supported_account_features=frozenset({"groups"}))
+    account = _resource(
+        "account-placement",
+        "provision.account.admin",
+        {
+            "name": "admin",
+            "target_address": NODE_ADDRESS,
+            "spec": {"username": "administrator", "groups": ["sudo"], "shell": "/bin/bash"},
+        },
+    )
+
+    realization = interpret_provisioning_plan(_plan(_node(), account), provisioner_capabilities=caps)
+
+    # 'groups' is in the narrowed envelope; 'shell' is not.
+    assert [d.code for d in realization.diagnostics] == ["libvirt-backend.realization.unsupported-account-feature"]
+    assert "shell" in realization.diagnostics[0].message
+    assert realization.diagnostics[0].address == "provision.account.admin"
+
+
+def test_switch_node_type_outside_narrowed_envelope_fails_closed():
+    caps = _narrowed_capabilities(supported_node_types=frozenset({"vm"}))
+    network = _resource(
+        "network",
+        "provision.network.lan",
+        {"name": "lan", "spec": {"infrastructure": {"properties": {}}}},
+    )
+
+    realization = interpret_provisioning_plan(_plan(network), provisioner_capabilities=caps)
+
+    assert [d.code for d in realization.diagnostics] == ["libvirt-backend.realization.unsupported-node-type"]
+    assert "switch" in realization.diagnostics[0].message
