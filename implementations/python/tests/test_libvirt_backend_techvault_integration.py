@@ -195,3 +195,76 @@ def test_techvault_operational_scenario_drives_full_libvirt_surface():
     snapshot = control_plane.snapshot
     assert len(snapshot.entries) == 34
     assert driver.realized_addresses() == frozenset(snapshot.entries)
+
+
+def _techvault_manager() -> tuple[RuntimeManager, _RecordingLibvirtDriver, object]:
+    driver = _RecordingLibvirtDriver()
+    target = create_libvirt_target(driver=driver, name_prefix="techvault-recon")
+    manager = RuntimeManager(target)
+    scenario = parse_sdl((EXAMPLES_DIR / "techvault.sdl.yaml").read_text(encoding="utf-8"))
+    return manager, driver, scenario
+
+
+def test_libvirt_reapply_of_unchanged_plan_is_a_full_stack_noop():
+    # Issue #604: re-applying an unchanged scenario re-plans to all-UNCHANGED and
+    # never drives the host a second time.
+    manager, driver, scenario = _techvault_manager()
+
+    first = manager.apply(manager.plan(scenario, parameters=_TECHVAULT_PARAMETERS))
+    second = manager.apply(manager.plan(scenario, parameters=_TECHVAULT_PARAMETERS))
+
+    assert first.success and second.success
+    assert len(driver.realize_calls) == 1  # the second apply drove nothing
+    assert set(manager.snapshot.entries) == {
+        "provision.network.aptl-dmz",
+        "provision.network.aptl-internal",
+        "provision.node.techvault-webapp",
+    }
+
+
+def test_libvirt_update_reconverges_only_the_changed_node_through_runtime_manager():
+    # Issue #604: a changed input re-plans the affected node to UPDATE while the
+    # unchanged networks stay UNCHANGED; the backend re-converges only the node
+    # and the snapshot reflects the new realized state.
+    manager, driver, scenario = _techvault_manager()
+    changed_parameters = {**_TECHVAULT_PARAMETERS, "app_py_sha256": "f" * 64}
+
+    create = manager.apply(manager.plan(scenario, parameters=_TECHVAULT_PARAMETERS))
+    update = manager.apply(manager.plan(scenario, parameters=changed_parameters))
+
+    assert create.success and update.success
+    assert len(driver.realize_calls) == 2
+    reconverged = driver.realize_calls[1]
+    assert [spec.address for spec in reconverged["networks"]] == []
+    assert [spec.address for spec in reconverged["domains"]] == ["provision.node.techvault-webapp"]
+    node_payload = repr(manager.snapshot.entries["provision.node.techvault-webapp"].payload)
+    assert "f" * 64 in node_payload
+    assert _TECHVAULT_PARAMETERS["app_py_sha256"] not in node_payload
+    assert driver.realized_addresses() == frozenset(manager.snapshot.entries)
+
+
+def test_libvirt_teardown_removes_all_resources_and_is_idempotent():
+    # Issue #604: destroy tears down every realized domain/network, empties the
+    # snapshot so it stays consistent with realized state, and a repeated destroy
+    # against the now-empty snapshot is a clean idempotent no-op.
+    manager, driver, scenario = _techvault_manager()
+    manager.apply(manager.plan(scenario, parameters=_TECHVAULT_PARAMETERS))
+    realized_addresses = set(manager.snapshot.entries)
+    assert realized_addresses  # sanity: something was realized
+
+    teardown = manager.destroy()
+
+    assert teardown.success
+    assert not teardown.diagnostics
+    assert manager.snapshot.entries == {}
+    assert driver.realized_addresses() == frozenset()
+    assert len(driver.destroy_calls) == 1
+    destroyed = set(driver.destroy_calls[0]["networks"]) | set(driver.destroy_calls[0]["domains"])
+    assert destroyed == realized_addresses
+
+    idempotent = manager.destroy()
+
+    assert idempotent.success
+    assert not idempotent.diagnostics
+    assert manager.snapshot.entries == {}
+    assert len(driver.destroy_calls) == 1  # empty snapshot drives no further destroy

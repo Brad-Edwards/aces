@@ -260,6 +260,30 @@ def test_apply_delete_removes_snapshot_entry_and_drives_destroy():
     assert driver.destroy_calls == [{"networks": (), "domains": ("provision.node.web",)}]
 
 
+def test_apply_delete_of_already_absent_entry_is_idempotent_success():
+    # Issue #604: re-running a DELETE for an address that is no longer in the
+    # snapshot (already torn down) is a clean, idempotent success — the driver
+    # confirms "not realized" and no error is surfaced.
+    driver = _RecordingDriver()
+    plan = ProvisioningPlan(
+        operations=[
+            ProvisionOp(
+                action=ChangeAction.DELETE,
+                address="provision.node.web",
+                resource_type="node",
+                payload={},
+            )
+        ]
+    )
+
+    result = LibvirtProvisioner(driver).apply(plan, RuntimeSnapshot())
+
+    assert result.success is True
+    assert not result.diagnostics
+    assert "provision.node.web" not in result.snapshot.entries
+    assert driver.destroy_calls == [{"networks": (), "domains": ("provision.node.web",)}]
+
+
 def test_apply_fails_closed_when_driver_omits_realization_confirmation():
     class _SilentRealizeDriver(_RecordingDriver):
         def realize(self, *, networks, domains):

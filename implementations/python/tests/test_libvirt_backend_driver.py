@@ -7,7 +7,29 @@ from pathlib import Path
 
 from aces_backend_libvirt.cloudinit import CloudInitSpec, CloudInitUser
 from aces_backend_libvirt.driver import DomainSpec, NetworkAcl, NetworkSpec
-from aces_backend_libvirt.drivers.libvirt import LibvirtDeploymentDriver
+from aces_backend_libvirt.drivers.libvirt import LibvirtDeploymentDriver, _aces_uuid
+
+# Real libvirt reports a missing object with these stable VIR_ERR_NO_* codes via
+# libvirtError.get_error_code(); VIR_ERR_OPERATION_INVALID is raised by destroy()
+# on an inactive object; anything else (e.g. an internal error) is a real failure.
+# The fake mirrors that contract so tests exercise the driver's genuine
+# absence-vs-error classification rather than a Python KeyError artifact.
+_VIR_ERR_INTERNAL_ERROR = 1
+_VIR_ERR_NO_DOMAIN = 42
+_VIR_ERR_NO_NETWORK = 43
+_VIR_ERR_OPERATION_INVALID = 55
+_VIR_ERR_NO_NWFILTER = 620
+
+
+class _FakeLibvirtError(Exception):
+    """Stand-in for ``libvirt.libvirtError`` exposing ``get_error_code()``."""
+
+    def __init__(self, code: int) -> None:
+        super().__init__(f"libvirt error {code}")
+        self._code = code
+
+    def get_error_code(self) -> int:
+        return self._code
 
 
 def _xml_attr(xml: str, attr: str) -> str:
@@ -16,16 +38,22 @@ def _xml_attr(xml: str, attr: str) -> str:
 
 
 class _NativeObject:
-    def __init__(self, uuid: str = "") -> None:
+    def __init__(self, uuid: str = "", *, fail_create: bool = False, fail_destroy_code: int | None = None) -> None:
         self.uuid = uuid
+        self.fail_create = fail_create
+        self.fail_destroy_code = fail_destroy_code
         self.created = False
         self.destroyed = False
         self.undefined = False
 
     def create(self):
+        if self.fail_create:
+            raise RuntimeError("native start failure with /secret/path and TOKEN")
         self.created = True
 
     def destroy(self):
+        if self.fail_destroy_code is not None:
+            raise _FakeLibvirtError(self.fail_destroy_code)
         self.destroyed = True
 
     def undefine(self):
@@ -36,8 +64,9 @@ class _NativeObject:
 
 
 class _FakeConnection:
-    def __init__(self, *, fail_define: bool = False) -> None:
+    def __init__(self, *, fail_define: bool = False, fail_create: bool = False) -> None:
         self.fail_define = fail_define
+        self.fail_create = fail_create
         self.network_xml: list[str] = []
         self.domain_xml: list[str] = []
         self.nwfilter_xml: list[str] = []
@@ -52,13 +81,16 @@ class _FakeConnection:
         return native
 
     def nwfilterLookupByName(self, name: str):  # noqa: N802 - mirrors libvirt API
-        return self.nwfilters[name]
+        try:
+            return self.nwfilters[name]
+        except KeyError:
+            raise _FakeLibvirtError(_VIR_ERR_NO_NWFILTER) from None
 
     def networkDefineXML(self, xml: str):  # noqa: N802 - mirrors libvirt API
         if self.fail_define:
             raise RuntimeError("native failure with /secret/path and TOKEN")
         self.network_xml.append(xml)
-        native = _NativeObject(_uuid_from_xml(xml))
+        native = _NativeObject(_uuid_from_xml(xml), fail_create=self.fail_create)
         self.networks[_name_from_xml(xml)] = native
         return native
 
@@ -66,15 +98,21 @@ class _FakeConnection:
         if self.fail_define:
             raise RuntimeError("native failure with /secret/path and TOKEN")
         self.domain_xml.append(xml)
-        native = _NativeObject(_uuid_from_xml(xml))
+        native = _NativeObject(_uuid_from_xml(xml), fail_create=self.fail_create)
         self.domains[_name_from_xml(xml)] = native
         return native
 
     def networkLookupByName(self, name: str):  # noqa: N802 - mirrors libvirt API
-        return self.networks[name]
+        try:
+            return self.networks[name]
+        except KeyError:
+            raise _FakeLibvirtError(_VIR_ERR_NO_NETWORK) from None
 
     def lookupByName(self, name: str):  # noqa: N802 - mirrors libvirt API
-        return self.domains[name]
+        try:
+            return self.domains[name]
+        except KeyError:
+            raise _FakeLibvirtError(_VIR_ERR_NO_DOMAIN) from None
 
 
 def _name_from_xml(xml: str) -> str:
@@ -507,3 +545,168 @@ def test_libvirt_driver_destroy_uses_previously_realized_names():
     assert connection.domains["aces-test-web"].destroyed is True
     assert connection.domains["aces-test-web"].undefined is True
     assert driver.realized_addresses() == frozenset()
+
+
+def test_libvirt_driver_teardown_of_absent_domain_is_idempotent_success():
+    # Issue #604: a DELETE for a domain whose native object is already absent
+    # (never realized, or torn down by a prior run) succeeds as "not realized"
+    # with no diagnostic — teardown is idempotent, not a hard failure.
+    connection = _FakeConnection()
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+
+    result = driver.destroy(networks=(), domains=("provision.node.web",))
+
+    assert not result.diagnostics
+    assert [handle.realized for handle in result.domains] == [False]
+
+
+def test_libvirt_driver_teardown_of_absent_network_is_idempotent_success():
+    # Issue #604: same idempotent-absence contract for networks.
+    connection = _FakeConnection()
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+
+    result = driver.destroy(networks=("provision.network.lan",), domains=())
+
+    assert not result.diagnostics
+    assert [handle.realized for handle in result.networks] == [False]
+
+
+def test_libvirt_driver_teardown_is_idempotent_across_repeated_realize_and_destroy():
+    # Issue #604: realize -> destroy -> destroy again. The second destroy sees an
+    # absent object and still succeeds; the snapshot/realized set stays consistent.
+    connection = _FakeConnection()
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
+    specs = dict(
+        networks=(NetworkSpec(address="provision.network.lan", name="lan"),),
+        domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),),
+    )
+    driver.realize(**specs)
+    # The fake keeps torn-down objects in its dict, so model real removal here to
+    # prove idempotence against a genuinely-absent second lookup.
+    connection.domains.clear()
+    connection.networks.clear()
+
+    first = driver.destroy(networks=("provision.network.lan",), domains=("provision.node.web",))
+    second = driver.destroy(networks=("provision.network.lan",), domains=("provision.node.web",))
+
+    assert not first.diagnostics
+    assert not second.diagnostics
+    assert all(not handle.realized for handle in (*second.networks, *second.domains))
+    assert driver.realized_addresses() == frozenset()
+
+
+def test_libvirt_driver_teardown_fails_closed_on_non_absence_lookup_error():
+    # Issue #604 guardrail: absence is idempotent, but a connection/permission/
+    # internal lookup error is NOT — it stays a diagnostic and preserves the
+    # object as still-realized so the snapshot is kept for retry.
+    class _ConnectionThatFailsLookup:
+        def lookupByName(self, name: str):  # noqa: N802 - mirrors libvirt API
+            raise _FakeLibvirtError(_VIR_ERR_INTERNAL_ERROR)
+
+        def networkLookupByName(self, name: str):  # noqa: N802 - mirrors libvirt API
+            raise _FakeLibvirtError(_VIR_ERR_INTERNAL_ERROR)
+
+    driver = LibvirtDeploymentDriver(connection=_ConnectionThatFailsLookup(), name_prefix="aces-test")
+
+    result = driver.destroy(networks=(), domains=("provision.node.web",))
+
+    assert [d.code for d in result.diagnostics] == ["libvirt-backend.driver.operation-failed"]
+    assert [handle.realized for handle in result.domains] == [True]
+
+
+def test_libvirt_driver_realize_rolls_back_partially_defined_domain_on_create_failure(tmp_path):
+    # Issue #604: if defineXML succeeds but native.create() fails, the domain is
+    # defined in libvirt but never started. Realize must roll it back — undefining
+    # the definition and clearing its seed media — so a partial CREATE leaves no
+    # orphaned domain or network behind.
+    connection = _FakeConnection(fail_create=True)
+    driver = LibvirtDeploymentDriver(
+        connection=connection,
+        name_prefix="aces-test",
+        workspace=tmp_path,
+        seed_builder=_FakeSeedBuilder(),
+    )
+
+    result = driver.realize(
+        networks=(),
+        domains=(
+            DomainSpec(
+                address="provision.node.web",
+                name="web",
+                image_ref=None,
+                cloud_init=CloudInitSpec(hostname="web", users=(CloudInitUser(name="alice"),)),
+            ),
+        ),
+    )
+
+    assert [d.code for d in result.diagnostics] == ["libvirt-backend.driver.operation-failed"]
+    # The just-defined domain was undefined (rolled back), not left orphaned.
+    defined = connection.domains["aces-test-web"]
+    assert defined.undefined is True
+    # Its private seed media was cleaned up too.
+    assert not (tmp_path / "aces-test-web").exists()
+    assert driver.realized_addresses() == frozenset()
+
+
+def test_libvirt_realize_rollback_leaves_a_pre_existing_updated_object_intact():
+    # Issue #604 (codex finding 1): the driver sees both CREATE and UPDATE specs
+    # without an action, so rollback must not tear down a pre-existing resource an
+    # UPDATE converged. Here an UPDATE of an existing owned domain succeeds, then a
+    # second (foreign-named) domain fails; the updated domain must survive so the
+    # preserved baseline snapshot that still claims it realized stays truthful.
+    connection = _FakeConnection()
+    existing = _NativeObject(uuid=_aces_uuid("provision.node.web"))
+    connection.domains["aces-test-web"] = existing
+    foreign = _NativeObject(uuid="11111111-2222-3333-4444-555555555555")
+    connection.domains["aces-test-other"] = foreign
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test", seed_builder=_FakeSeedBuilder())
+
+    result = driver.realize(
+        networks=(),
+        domains=(
+            DomainSpec(address="provision.node.web", name="web", image_ref=None),
+            DomainSpec(address="provision.node.other", name="other", image_ref=None),
+        ),
+    )
+
+    # The foreign collision fails the apply closed.
+    assert [d.code for d in result.diagnostics] == ["libvirt-backend.driver.ownership-conflict"]
+    # The updated domain's fresh definition is NOT rolled back (its snapshot entry
+    # remains truthful); the foreign object is never touched.
+    updated = connection.domains["aces-test-web"]
+    assert updated.created is True
+    assert updated.undefined is False
+    assert not foreign.destroyed and not foreign.undefined
+
+
+def test_libvirt_driver_teardown_fails_closed_when_stop_fails_for_a_running_object():
+    # Issue #604 (codex finding 2): a destroy() that fails for permission/internal
+    # reasons must NOT be masked — the object may still be running, so teardown
+    # fails closed (diagnostic + realized) and never undefines it, keeping the
+    # snapshot entry for retry.
+    connection = _FakeConnection()
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver.realize(networks=(), domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),))
+    connection.domains["aces-test-web"].fail_destroy_code = _VIR_ERR_INTERNAL_ERROR
+
+    result = driver.destroy(networks=(), domains=("provision.node.web",))
+
+    assert [d.code for d in result.diagnostics] == ["libvirt-backend.driver.operation-failed"]
+    assert [handle.realized for handle in result.domains] == [True]
+    assert connection.domains["aces-test-web"].undefined is False  # never undefined a still-running domain
+
+
+def test_libvirt_driver_teardown_undefines_an_already_inactive_object():
+    # Issue #604 (codex finding 2): stopping an object that is already inactive
+    # (VIR_ERR_OPERATION_INVALID) is benign — teardown still undefines it and
+    # succeeds.
+    connection = _FakeConnection()
+    driver = LibvirtDeploymentDriver(connection=connection, name_prefix="aces-test")
+    driver.realize(networks=(), domains=(DomainSpec(address="provision.node.web", name="web", image_ref=None),))
+    connection.domains["aces-test-web"].fail_destroy_code = _VIR_ERR_OPERATION_INVALID
+
+    result = driver.destroy(networks=(), domains=("provision.node.web",))
+
+    assert not result.diagnostics
+    assert [handle.realized for handle in result.domains] == [False]
+    assert connection.domains["aces-test-web"].undefined is True
