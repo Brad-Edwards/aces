@@ -178,67 +178,20 @@ class LibvirtDeploymentDriver:
             return DriverResult(diagnostics=(_failure("runtime.libvirt.connection", _CODE_UNAVAILABLE),))
 
         for spec in networks:
-            name = self._runtime_name(spec.address, spec.name)
-            # Record the runtime name before touching the host so a partial define
-            # (define succeeds but create fails) can still be located and rolled
-            # back by address; the value is deterministic, so re-setting it on
-            # success is a no-op.
-            self._names[spec.address] = name
-            try:
-                # The provisioner only dispatches CREATE/UPDATE specs (UNCHANGED is
-                # filtered upstream), so a spec that reaches the driver must be
-                # (re)applied to enforce its desired state. Converge any object a
-                # prior apply left behind — stop it and drop its stale definition —
-                # before redefining, so the new state is genuinely enforced rather
-                # than recorded-but-skipped, and no duplicate is ever created.
-                pre_existing = self._converge_existing(connection, "networkLookupByName", name, spec.address)
-                if not pre_existing:
-                    # A fresh create: mark for rollback before defining so a define
-                    # that outlives a failed create is not orphaned.
-                    created_networks.append(spec.address)
-                network_xml = _network_xml(spec, name, _aces_uuid(spec.address))
-                native = _call_libvirt(connection, "networkDefineXML", network_xml)
-                native.create()
-            except _OwnershipConflict:
-                diagnostics.append(_failure(spec.address, _CODE_OWNERSHIP_CONFLICT))
-                continue
-            except Exception:
-                diagnostics.append(_failure(spec.address, _CODE_OPERATION_FAILED))
-                continue
-            self._realized.add(spec.address)
-            network_handles.append(NetworkHandle(address=spec.address, realized=True))
+            failure = self._realize_network(connection, spec, created_networks)
+            if failure is not None:
+                diagnostics.append(failure)
+            else:
+                network_handles.append(NetworkHandle(address=spec.address, realized=True))
 
         for spec in domains:
-            name = self._runtime_name(spec.address, spec.name)
-            self._names[spec.address] = name
-            network_names = tuple(self._name_for(address) for address in spec.networks)
-            try:
-                # Converge first so a tightened ACL, a disabled account, a changed
-                # seed/image, or an existing-but-inactive domain is actually applied
-                # — never silently skipped while reporting realized.
-                pre_existing = self._converge_existing(connection, "lookupByName", name, spec.address)
-                if not pre_existing:
-                    created_domains.append(spec.address)
-                seed_path = self._build_seed(spec, name)
-                filter_name = self._define_nwfilter(connection, spec, name)
-                xml = _domain_xml(spec, name, network_names, seed_path, _aces_uuid(spec.address), filter_name)
-                native = _call_libvirt(connection, "defineXML", xml)
-                native.create()
-            except _OwnershipConflict:
-                diagnostics.append(_failure(spec.address, _CODE_OWNERSHIP_CONFLICT))
-                continue
-            except Exception:
-                diagnostics.append(_failure(spec.address, _CODE_OPERATION_FAILED))
-                continue
-            self._realized.add(spec.address)
-            domain_handles.append(DomainHandle(address=spec.address, realized=True))
+            failure = self._realize_domain(connection, spec, created_domains)
+            if failure is not None:
+                diagnostics.append(failure)
+            else:
+                domain_handles.append(DomainHandle(address=spec.address, realized=True))
 
-        result = DriverResult(
-            networks=tuple(network_handles),
-            domains=tuple(domain_handles),
-            diagnostics=tuple(diagnostics),
-        )
-        if result.diagnostics:
+        if diagnostics:
             # Roll back only newly-created objects — including a domain whose XML was
             # defined before native.create() failed — so a partial CREATE never
             # orphans a defined domain, its seed media, or its nwfilter, while a
@@ -246,8 +199,68 @@ class LibvirtDeploymentDriver:
             # snapshot entry remains truthful). destroy() is idempotent and
             # ownership-safe, so a never-defined address is a harmless no-op.
             self._rollback(created_networks, created_domains)
-            return DriverResult(diagnostics=result.diagnostics)
-        return result
+            return DriverResult(diagnostics=tuple(diagnostics))
+        return DriverResult(networks=tuple(network_handles), domains=tuple(domain_handles))
+
+    def _realize_network(self, connection: object, spec: NetworkSpec, created: list[str]) -> Diagnostic | None:
+        """Realize one network, or return a redacted failure diagnostic.
+
+        Records the address in ``created`` when no owned object pre-existed so a
+        partial define is rolled back; on success adds it to the realized set.
+        """
+
+        name = self._runtime_name(spec.address, spec.name)
+        # Record the runtime name before touching the host so a partial define can
+        # still be located and rolled back by address; the value is deterministic,
+        # so re-setting it on success is a no-op.
+        self._names[spec.address] = name
+        try:
+            # The provisioner only dispatches CREATE/UPDATE specs (UNCHANGED is
+            # filtered upstream), so a spec that reaches the driver must be
+            # (re)applied. Converge any object a prior apply left behind — stop it
+            # and drop its stale definition — before redefining, so the new state is
+            # genuinely enforced and no duplicate is ever created.
+            pre_existing = self._converge_existing(connection, "networkLookupByName", name, spec.address)
+            if not pre_existing:
+                created.append(spec.address)
+            network_xml = _network_xml(spec, name, _aces_uuid(spec.address))
+            native = _call_libvirt(connection, "networkDefineXML", network_xml)
+            native.create()
+        except _OwnershipConflict:
+            return _failure(spec.address, _CODE_OWNERSHIP_CONFLICT)
+        except Exception:
+            return _failure(spec.address, _CODE_OPERATION_FAILED)
+        self._realized.add(spec.address)
+        return None
+
+    def _realize_domain(self, connection: object, spec: DomainSpec, created: list[str]) -> Diagnostic | None:
+        """Realize one domain (plus its seed media and nwfilter), or return a failure.
+
+        Records the address in ``created`` when no owned object pre-existed so a
+        partial define is rolled back; on success adds it to the realized set.
+        """
+
+        name = self._runtime_name(spec.address, spec.name)
+        self._names[spec.address] = name
+        network_names = tuple(self._name_for(address) for address in spec.networks)
+        try:
+            # Converge first so a tightened ACL, a disabled account, a changed
+            # seed/image, or an existing-but-inactive domain is actually applied —
+            # never silently skipped while reporting realized.
+            pre_existing = self._converge_existing(connection, "lookupByName", name, spec.address)
+            if not pre_existing:
+                created.append(spec.address)
+            seed_path = self._build_seed(spec, name)
+            filter_name = self._define_nwfilter(connection, spec, name)
+            xml = _domain_xml(spec, name, network_names, seed_path, _aces_uuid(spec.address), filter_name)
+            native = _call_libvirt(connection, "defineXML", xml)
+            native.create()
+        except _OwnershipConflict:
+            return _failure(spec.address, _CODE_OWNERSHIP_CONFLICT)
+        except Exception:
+            return _failure(spec.address, _CODE_OPERATION_FAILED)
+        self._realized.add(spec.address)
+        return None
 
     def destroy(
         self,
@@ -423,21 +436,20 @@ class LibvirtDeploymentDriver:
             # Connection/permission/internal lookup failure: fail closed so the
             # snapshot is preserved for retry instead of claiming the object gone.
             return False
-        if native is None:
-            # Already absent: teardown for this address is idempotently satisfied.
-            return True
-        # Apply the same ownership invariant as convergence: never destroy an
-        # object whose UUID does not prove it is the ACES object for this address.
-        if _existing_uuid(native) != _aces_uuid(address):
-            raise _OwnershipConflict(address)
-        try:
-            _stop_native(native)
-            cast(_NativeResource, native).undefine()
-        except Exception as exc:
-            # An object that vanished between lookup and undefine is still torn
-            # down; a stop/undefine that failed for permission or an internal
-            # reason fails closed and preserves the snapshot for retry.
-            return _is_absence_error(exc)
+        # A None result is genuine absence — teardown is idempotently satisfied.
+        # A present object is torn down only when its UUID proves ACES ownership
+        # (the same invariant as convergence), never a foreign name collision.
+        if native is not None:
+            if _existing_uuid(native) != _aces_uuid(address):
+                raise _OwnershipConflict(address)
+            try:
+                _stop_native(native)
+                cast(_NativeResource, native).undefine()
+            except Exception as exc:
+                # An object that vanished between lookup and undefine is still torn
+                # down; a stop/undefine that failed for permission or an internal
+                # reason fails closed and preserves the snapshot for retry.
+                return _is_absence_error(exc)
         return True
 
     def _rollback(self, networks: list[str], domains: list[str]) -> None:
