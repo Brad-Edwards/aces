@@ -5190,6 +5190,16 @@
           "title": "Observation Boundary Refs",
           "type": "array"
         },
+        "offensive_behavior_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{([A-Za-z_][A-Za-z0-9_-]*)\\}"
+            },
+            "type": "string"
+          },
+          "title": "Offensive Behavior Refs",
+          "type": "array"
+        },
         "outcome_interpretation_rule_refs": {
           "items": {
             "not": {

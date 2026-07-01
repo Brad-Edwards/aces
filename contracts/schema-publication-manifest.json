@@ -132,10 +132,10 @@
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "8243c11f33d5707bd79ce7f50367152041ad67a038c9959fe6d3f37c918924d9",
+      "content_hash": "4bc758c0a8409ba4a6fa9dbe3c17ae609be8dbdf396560d451144314a056db7e",
       "last_change": {
-        "summary": "Added ACT-606 behavior specifications to instantiated SDL scenarios with typed governed extension values.",
-        "content_hash": "8243c11f33d5707bd79ce7f50367152041ad67a038c9959fe6d3f37c918924d9"
+        "summary": "Added ACT-609 offensive behavior refs to instantiated SDL behavior specifications as governed vocabulary values.",
+        "content_hash": "4bc758c0a8409ba4a6fa9dbe3c17ae609be8dbdf396560d451144314a056db7e"
       }
     },
     {
@@ -318,10 +318,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "bf758023686f25a4fb0ff6f67de62d1cb2769f08a483ac6783057a0fc80b64c4",
+      "content_hash": "26b158251fe88a79594d4f127d827b3a3e2c467b8f88b35cfcaec716f567b741",
       "last_change": {
-        "summary": "Added ACT-606 behavior specifications to SDL authoring input with typed governed extension values.",
-        "content_hash": "bf758023686f25a4fb0ff6f67de62d1cb2769f08a483ac6783057a0fc80b64c4"
+        "summary": "Added ACT-609 offensive behavior refs to authored SDL behavior specifications as governed vocabulary values.",
+        "content_hash": "26b158251fe88a79594d4f127d827b3a3e2c467b8f88b35cfcaec716f567b741"
       }
     },
     {

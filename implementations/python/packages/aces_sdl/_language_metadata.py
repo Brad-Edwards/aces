@@ -72,6 +72,7 @@ SECTION_FIELD_COMPLETIONS = {
         "outcome_interpretation_rule_refs",
         "authority_scope_refs",
         "behavior_mode",
+        "offensive_behavior_refs",
         "realization_profile_ref",
         "backend_feature_support_refs",
         "evidence_contract_refs",

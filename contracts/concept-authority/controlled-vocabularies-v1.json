@@ -144,6 +144,74 @@
         }
       }
     },
+    "participant-offensive-behavior-activities": {
+      "title": "Participant Offensive Behavior Activities",
+      "description": "Governed offensive behavior terms for attack-oriented participant tasks, goals, or activities declared by behavior specifications.",
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "behavior_specifications.offensive_behavior_refs"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "command-and-control": {
+          "title": "Command And Control",
+          "description": "Establish or use a governed command-and-control activity within participant behavior semantics."
+        },
+        "collection": {
+          "title": "Collection",
+          "description": "Collect participant-visible or scenario-declared information, artifacts, or state."
+        },
+        "credential-access": {
+          "title": "Credential Access",
+          "description": "Attempt to obtain, use, or validate credential material within declared participant authority and observation boundaries."
+        },
+        "defense-evasion": {
+          "title": "Defense Evasion",
+          "description": "Attempt to avoid, bypass, or reduce detection or defensive controls within declared scenario semantics."
+        },
+        "discovery": {
+          "title": "Discovery",
+          "description": "Discover participant-visible environment, service, identity, or configuration information."
+        },
+        "execution": {
+          "title": "Execution",
+          "description": "Run a declared action, tool, or procedure as part of an offensive participant behavior."
+        },
+        "exfiltration": {
+          "title": "Exfiltration",
+          "description": "Move or disclose declared data, artifacts, or evidence out of a scoped target or boundary."
+        },
+        "impact": {
+          "title": "Impact",
+          "description": "Attempt to degrade, deny, alter, or destroy declared systems, data, or services."
+        },
+        "initial-access": {
+          "title": "Initial Access",
+          "description": "Attempt to gain an initial declared foothold or entry path into a scoped target."
+        },
+        "lateral-movement": {
+          "title": "Lateral Movement",
+          "description": "Move between declared hosts, services, accounts, or trust scopes."
+        },
+        "persistence": {
+          "title": "Persistence",
+          "description": "Attempt to maintain participant access or presence across scenario state changes."
+        },
+        "privilege-escalation": {
+          "title": "Privilege Escalation",
+          "description": "Attempt to expand declared permissions, authority, or execution capability."
+        },
+        "reconnaissance": {
+          "title": "Reconnaissance",
+          "description": "Gather information about declared targets, participants, services, or environment state before or during offensive behavior."
+        },
+        "resource-development": {
+          "title": "Resource Development",
+          "description": "Prepare or acquire declared resources, infrastructure, artifacts, or capabilities for later offensive behavior."
+        }
+      }
+    },
     "participant-tool-affordance-expectations": {
       "title": "Participant Tool Affordance Expectations",
       "description": "Governed tool and affordance expectations declared by participant implementations.",

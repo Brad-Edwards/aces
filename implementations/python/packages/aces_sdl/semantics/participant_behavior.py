@@ -448,6 +448,26 @@ def _behavior_specification_vocabulary_issues(
     )
     if mode_issue is not None:
         issues.append(mode_issue)
+    try:
+        from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
+
+        for offensive_behavior_ref in getattr(behavior_spec, "offensive_behavior_refs", []) or []:
+            if is_unresolved(offensive_behavior_ref):
+                continue
+            validate_controlled_vocabulary_scope_values(
+                "behavior_specifications.offensive_behavior_refs",
+                [str(offensive_behavior_ref)],
+            )
+    except ValueError as exc:
+        issues.append(
+            ParticipantBehaviorIssue(
+                code="participant.behavior-spec-offensive-behavior-ungoverned",
+                participant_name="",
+                spec_name=spec_name,
+                ref=str(offensive_behavior_ref),
+                message=str(exc),
+            )
+        )
     issues.extend(
         _behavior_specification_feature_issues(
             spec_name=spec_name,

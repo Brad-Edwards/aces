@@ -38,6 +38,7 @@ def test_load_controlled_vocabulary_catalog():
         "processor-features",
         "participant-implementation-kinds",
         "participant-decision-surface-modes",
+        "participant-offensive-behavior-activities",
         "participant-tool-affordance-expectations",
         "participant-exposure-policy-kinds",
         "workflow-features",
@@ -108,6 +109,13 @@ def test_behavior_specification_behavior_mode_scope_uses_decision_surface_vocabu
     validate_controlled_vocabulary_scope_values(
         "behavior_specifications.behavior_mode",
         ["autonomous", "human-supervised", "x-acme:swarm-control"],
+    )
+
+
+def test_behavior_specification_offensive_behavior_scope_uses_governed_vocabulary():
+    validate_controlled_vocabulary_scope_values(
+        "behavior_specifications.offensive_behavior_refs",
+        ["reconnaissance", "exfiltration", "x-acme:phishing-campaign"],
     )
 
 

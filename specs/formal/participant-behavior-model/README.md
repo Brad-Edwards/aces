@@ -7,6 +7,7 @@ This document is the issue #77 formal design artifact for:
 - `ACT-606` - First-Class Participant Behavior Specifications
 - `ACT-607` - Participant Authority And Scope Boundaries
 - `ACT-608` - Participant Behavior Modes
+- `ACT-609` - Offensive Behavior Vocabularies
 
 It is governed by ADR-067. It composes the participant semantics from ADR-022
 with SDL participant framing, participant runtime records, backend-facing
@@ -28,7 +29,8 @@ Existing coverage:
 - ADR-060 and `specs/formal/runtime-contracts/participant-backend-contracts.md`
   define backend-facing carrier, retrieval, support, and outcome surfaces.
 - `controlled-vocabularies-v1` already defines
-  `participant-decision-surface-modes`.
+  `participant-decision-surface-modes` and
+  `participant-offensive-behavior-activities`.
 - Issue #206 adds SDL `behavior-specifications` authoring, semantic
   validation, generated schema coverage, and compiled
   `participant.behavior-specification.*` runtime records for ACT-606.
@@ -241,6 +243,7 @@ BehaviorSpecification =
   outcome_interpretation_rule_ref*
   authority_scope_ref*
   behavior_mode?
+  offensive_behavior_ref*
   realization_profile_ref?
   backend_feature_support_ref*
   evidence_contract_ref*
@@ -255,6 +258,8 @@ Rules:
   contracts, observation boundaries, outcome rules, manifests, backend
   capabilities, or runtime evidence.
 - `behavior_mode` binds to the controlled vocabulary described in ACT-608.
+- `offensive_behavior_ref` values bind to the ACT-609 offensive behavior
+  vocabulary for attack-oriented participant tasks, goals, or activities.
 - `realization_profile_ref` records how the behavior can be realized without
   exposing private implementation configuration.
 - `evidence_contract_ref` names the contracts needed to prove the behavior
@@ -408,6 +413,26 @@ Rules:
 Implementation issue #208 owns executable declaration, selection, validation,
 and conformance for behavior modes.
 
+## ACT-609 - Offensive Behavior Vocabularies
+
+Offensive behavior refs declare attack-oriented participant tasks, goals, or
+activities as governed vocabulary values on a behavior specification.
+
+Rules:
+
+- Values resolve through `participant-offensive-behavior-activities`.
+- Governed extensions must use the shared `x-<owner>:<term>` syntax.
+- Offensive behavior refs classify authored behavior intent; they do not
+  replace action contracts, observation boundaries, outcome rules, authority
+  refs, SDL `goals`, experiment tasks, workflow steps, participant roles,
+  behavior modes, backend feature support, or runtime history.
+- External technique, tool, CVE, or command identifiers require explicit
+  mapping or loss metadata on the owning surface; they are not accepted as raw
+  portable ACES semantics by this field.
+
+Implementation issue #209 owns executable declaration, validation, generated
+schema coverage, and compiler carry-through for offensive behavior refs.
+
 ## Cross-Clause Invariants
 
 | ID | Invariant | Primary clauses |
@@ -420,6 +445,7 @@ and conformance for behavior modes.
 | PBM-06 | Backend support claims require governed feature terms, support levels, disclosure refs, and evidence contracts. | ACT-602, ACT-608 |
 | PBM-07 | Hidden prompts, credentials, answer keys, raw command output, backend-private objects, and adjudication assets stay out of portable behavior artifacts. | ACT-606, ACT-607 |
 | PBM-08 | Unknown, opaque, unsupported, not applicable, bounded, lossy, and exact are distinct claims. | ACT-602, ACT-603, ACT-608 |
+| PBM-09 | Offensive behavior refs are governed vocabulary classifications, not raw action names, roles, goals, tasks, commands, or external technique labels. | ACT-609 |
 
 ## Child-Issue Mapping
 
@@ -430,6 +456,7 @@ and conformance for behavior modes.
 | #206 | ACT-606 | First-class behavior specification authoring, validation, versioning, traceability, and compiled runtime records. |
 | #207 | ACT-607 | Authority/scope boundary authoring, validation, evidence, and failure mapping. |
 | #208 | ACT-608 | Behavior-mode declaration, selection, controlled-vocabulary validation, and conformance. |
+| #209 | ACT-609 | Offensive behavior vocabulary declaration, validation, and compiler carry-through. |
 
 ## Verification Expectations
 

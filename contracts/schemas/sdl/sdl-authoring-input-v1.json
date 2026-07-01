@@ -4167,6 +4167,13 @@
           "title": "Observation Boundary Refs",
           "type": "array"
         },
+        "offensive_behavior_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Offensive Behavior Refs",
+          "type": "array"
+        },
         "outcome_interpretation_rule_refs": {
           "items": {
             "type": "string"
