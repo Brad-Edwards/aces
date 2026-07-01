@@ -111,22 +111,28 @@ def capability_envelope_diagnostics(
     DELETE never realizes a term, so its payload is not gated.
     """
 
-    diagnostics: list[Diagnostic] = []
-    seen: set[tuple[str, str, str]] = set()
+    deduped: dict[tuple[str, str, str], Diagnostic] = {}
     for address, resource_type, payload in _materialized_payloads(plan):
-        for dimension in _ENVELOPE_DIMENSIONS:
-            if resource_type not in dimension.resource_types:
-                continue
-            supported = dimension.supported(capabilities)
-            for term in dimension.extract(payload):
-                if not term or term in supported:
-                    continue
-                key = (dimension.code, address, term)
-                if key in seen:
-                    continue
-                seen.add(key)
-                diagnostics.append(_envelope_diagnostic(dimension, address, term))
-    return diagnostics
+        for key, diagnostic in _out_of_envelope_terms(address, resource_type, payload, capabilities):
+            deduped.setdefault(key, diagnostic)
+    return list(deduped.values())
+
+
+def _out_of_envelope_terms(
+    address: str,
+    resource_type: str,
+    payload: Mapping[str, object],
+    capabilities: ProvisionerCapabilities,
+) -> Iterator[tuple[tuple[str, str, str], Diagnostic]]:
+    """Yield ``((code, address, term), diagnostic)`` for each unsupported term of a payload."""
+
+    for dimension in _ENVELOPE_DIMENSIONS:
+        if resource_type not in dimension.resource_types:
+            continue
+        supported = dimension.supported(capabilities)
+        for term in dimension.extract(payload):
+            if term and term not in supported:
+                yield (dimension.code, address, term), _envelope_diagnostic(dimension, address, term)
 
 
 def _materialized_payloads(plan: ProvisioningPlan) -> Iterator[tuple[str, str, Mapping[str, object]]]:
