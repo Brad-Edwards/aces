@@ -71,6 +71,11 @@ def _test_security(target_name: str, *, max_request_bytes: int = 1_000_000) -> C
                 roles=frozenset({ControlPlaneRole.OPERATOR, ControlPlaneRole.AUDITOR}),
                 target_name=target_name,
             ),
+            "test-auditor-token": ControlPlaneIdentity(
+                identity="auditor",
+                roles=frozenset({ControlPlaneRole.AUDITOR}),
+                target_name=target_name,
+            ),
         },
     )
 
@@ -134,6 +139,7 @@ def test_control_plane_api_openapi_documents_explicit_error_responses():
     history_path = "/participants/{participant_address}/episodes/{episode_id}/history"
     assert "404" in operation_responses[history_path]["get"]["responses"]
     assert "404" in operation_responses["/participants/{participant_address}/context"]["get"]["responses"]
+    assert "/apparatus/operational-summary" in operation_responses
 
 
 def test_control_plane_api_accepts_orchestration_plan_and_exposes_snapshot():
@@ -207,6 +213,104 @@ workflows:
         assert snapshot_response.status_code == 200
         snapshot = snapshot_response.json()
         assert snapshot["orchestration_results"]
+        assert snapshot["orchestration_results"]["orchestration.workflow.response"]["workflow_status"] == "running"
+
+
+def test_control_plane_api_exposes_operational_apparatus_summary_to_auditors():
+    scenario = _scenario("""
+name: workflow
+nodes:
+  vm:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+    conditions: {health: ops}
+    roles: {ops: operator}
+conditions:
+  health: {command: /bin/true, interval: 15}
+entities:
+  blue: {role: blue}
+objectives:
+  validate:
+    entity: blue
+    success: {conditions: [health]}
+workflows:
+  response:
+    start: run
+    steps:
+      run:
+        type: objective
+        objective: validate
+        on-success: finish
+      finish: {type: end}
+""")
+    target = create_stub_target()
+    execution_plan = plan(compile_runtime_model(scenario), target.manifest)
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+    backend_headers = {
+        "x-aces-client-verified": "true",
+        "x-aces-client-identity": "backend-service",
+    }
+    auditor_headers = {"authorization": "Bearer test-auditor-token"}
+
+    with TestClient(app) as client:
+        receipt = client.post(
+            "/operations/orchestration",
+            json={
+                "operations": [
+                    {
+                        "action": op.action.value,
+                        "address": op.address,
+                        "resource_type": op.resource_type,
+                        "payload": op.payload,
+                        "ordering_dependencies": list(op.ordering_dependencies),
+                        "refresh_dependencies": list(op.refresh_dependencies),
+                    }
+                    for op in execution_plan.orchestration.operations
+                ],
+                "startup_order": execution_plan.orchestration.startup_order,
+                "diagnostics": [],
+            },
+            headers=backend_headers,
+        ).json()
+        response = client.get("/apparatus/operational-summary", headers=auditor_headers)
+
+    assert response.status_code == 200
+    summary = response.json()
+    assert summary["target"] == target.name
+    assert summary["resources"]["total"] >= 1
+    assert summary["resources"]["by_domain"]["orchestration"] >= 1
+    assert summary["operations"]["by_state"]["succeeded"] == 1
+    assert summary["operations"]["recent"][0]["operation_id"] == receipt["operation_id"]
+    assert summary["operations"]["recent"][0]["diagnostic_count"] == 0
+    assert summary["operations"]["recent"][0]["diagnostic_codes"] == []
+    assert summary["operations"]["recent"][0]["changed_addresses"]
+    assert summary["runtime_surfaces"]["orchestration_results"] >= 1
+    assert summary["runtime_surfaces"]["orchestration_history"] >= 1
+    assert summary["audit"]["allowed"] >= 2
+    assert summary["audit"]["denied"] == 0
+    assert summary["audit"]["recent"][-1]["identity"] == "auditor"
+    assert "details" not in summary["audit"]["recent"][-1]
+
+
+def test_control_plane_api_operational_apparatus_summary_requires_read_role():
+    target = create_stub_target()
+    control_plane = RuntimeControlPlane(target)
+    app = create_control_plane_app(
+        control_plane,
+        security=_test_security(target.name),
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/apparatus/operational-summary")
+
+    assert response.status_code == 401
+    assert control_plane.audit_log()
+    assert control_plane.audit_log()[-1].allowed is False
 
 
 def test_control_plane_api_rejects_unauthenticated_mutations():
