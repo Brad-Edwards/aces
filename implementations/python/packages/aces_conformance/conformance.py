@@ -1346,82 +1346,66 @@ def _drive_participant_episode_probe(
     return cases
 
 
-def _live_target_cases(
-    target: RuntimeTarget,
-    profile: BackendProfileSelector,
-) -> tuple[ConformanceCaseResult, ...]:
-    """Run live probes appropriate for known runtime surfaces only.
+def _provisioning_probe_case(
+    control_plane: RuntimeControlPlane,
+    provisioning_plan: Any,
+) -> ConformanceCaseResult:
+    """Drive live provisioning and prove the operation genuinely realized state.
 
-    Live probes (orchestration, evaluation, participant-episode actions)
-    require knowing the profile's runtime contract. For an unknown profile id
-    we run only the manifest validation case (it's universally safe — just
-    validates against ``backend-manifest-v2``) and skip the rest. Capability
-    inference for known profiles still routes via :class:`BackendCapabilityProfile`.
+    Backend-neutral (issue #606): every known profile requires a provisioner,
+    so target conformance always submits the reference scenario's provisioning
+    plan through the control plane. A backend that accepts the plan but realizes
+    nothing — a failed apply, or a success that reports no changed addresses —
+    fails here rather than certifying clean on manifest validation alone.
     """
 
-    cases: list[ConformanceCaseResult] = []
-    manifest_payload = backend_manifest_payload(target.manifest)
-    manifest_diags = _validate_payload("backend-manifest-v2", manifest_payload)
-    cases.append(
-        ConformanceCaseResult(
-            name="live-manifest",
-            contract_name="backend-manifest-v2",
-            valid=True,
-            passed=not manifest_diags,
-            diagnostics=tuple(manifest_diags),
-        )
-    )
-
-    known = _to_known_profile(profile)
-    if known is None or known == BackendCapabilityProfile.PROVISIONING_ONLY:
-        return tuple(cases)
-
-    scenario = parse_sdl(
-        dedent(
-            """
-            name: conformance
-            nodes:
-              vm:
-                type: vm
-                os: linux
-                resources: {ram: 1 gib, cpu: 1}
-                conditions: {health: ops}
-                roles: {ops: operator}
-            conditions:
-              health: {command: /bin/true, interval: 15}
-            entities:
-              blue: {role: blue}
-            objectives:
-              validate:
-                entity: blue
-                success: {conditions: [health]}
-            workflows:
-              response:
-                start: run
-                steps:
-                  run:
-                    type: objective
-                    objective: validate
-                    on-success: finish
-                  finish: {type: end}
-            """
-        )
-    )
-    execution_plan = run_reference_processor(scenario, target.manifest).execution_plan
-    control_plane = RuntimeControlPlane(target)
-    control_plane.submit_provisioning(execution_plan.provisioning)
-    if target.orchestrator is not None:
-        control_plane.submit_orchestration(execution_plan.orchestration)
-    if target.evaluator is not None:
-        control_plane.submit_evaluation(execution_plan.evaluation)
-    if target.participant_runtime is not None:
-        cases.extend(
-            _drive_participant_episode_probe(
-                control_plane,
-                participant_address="participant.conformance",
+    address = "runtime.control-plane.provisioning"
+    receipt = control_plane.submit_provisioning(provisioning_plan)
+    status = control_plane.get_operation(receipt.operation_id)
+    diagnostics: list[Diagnostic] = []
+    if status is None:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.provisioning-missing-status",
+                address,
+                "Provisioning submission did not produce an OperationStatus record.",
             )
         )
-    snapshot_payload = {
+    elif status.state.value != "succeeded":
+        diagnostics.append(
+            _diagnostic(
+                "conformance.provisioning-failed",
+                address,
+                (
+                    f"Provisioning returned state {status.state.value!r} with diagnostics: "
+                    + "; ".join(diag.message for diag in status.diagnostics)
+                ),
+            )
+        )
+    elif not status.changed_addresses:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.provisioning-empty",
+                address,
+                (
+                    "Provisioning succeeded but reported no changed addresses; the backend "
+                    "did not realize the scenario, so the snapshot was not mutated."
+                ),
+            )
+        )
+    return ConformanceCaseResult(
+        name="live-provisioning",
+        contract_name="operation-status-v1",
+        valid=True,
+        passed=not diagnostics,
+        diagnostics=tuple(diagnostics),
+    )
+
+
+def _live_snapshot_payload(control_plane: RuntimeControlPlane) -> dict[str, Any]:
+    """Serialize the live control-plane snapshot to its portable envelope shape."""
+
+    return {
         "schema_version": RuntimeSnapshotEnvelope().schema_version,
         "entries": {
             address: {
@@ -1457,17 +1441,123 @@ def _live_target_cases(
         "time_management_contexts": dict(control_plane.snapshot.time_management_contexts),
         "metadata": dict(control_plane.snapshot.metadata),
     }
-    snapshot_diags = [
+
+
+def _live_snapshot_case(control_plane: RuntimeControlPlane) -> ConformanceCaseResult:
+    """Validate the post-provisioning snapshot and prove it was mutated.
+
+    Runs the ``runtime-snapshot-v1`` schema + semantic checks on the live
+    snapshot and additionally requires at least one provisioning-domain entry
+    (issue #606), so a target cannot pass with a schema-valid but empty
+    (unmutated) snapshot.
+    """
+
+    snapshot_payload = _live_snapshot_payload(control_plane)
+    diagnostics = [
         *_validate_payload("runtime-snapshot-v1", snapshot_payload),
         *_semantic_diagnostics("runtime-snapshot-v1", snapshot_payload),
     ]
+    has_provisioning_entry = any(
+        entry.domain == RuntimeDomain.PROVISIONING for entry in control_plane.snapshot.entries.values()
+    )
+    if not has_provisioning_entry:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.snapshot-not-mutated",
+                "runtime.snapshot.entries",
+                (
+                    "Live snapshot carries no provisioning-domain entry after the provisioning "
+                    "probe; the backend validated contracts without realizing runtime state."
+                ),
+            )
+        )
+    return ConformanceCaseResult(
+        name="live-snapshot",
+        contract_name="runtime-snapshot-v1",
+        valid=True,
+        passed=not diagnostics,
+        diagnostics=tuple(diagnostics),
+    )
+
+
+def _live_target_cases(
+    target: RuntimeTarget,
+    profile: BackendProfileSelector,
+) -> tuple[ConformanceCaseResult, ...]:
+    """Run live probes appropriate for known runtime surfaces only.
+
+    Every known profile requires a provisioner, so target conformance always
+    runs a backend-neutral provisioning probe that proves real snapshot
+    mutation (issue #606) — provisioning-only backends included, which must not
+    pass on manifest validation alone. Orchestration, evaluation, and the
+    participant-episode probe additionally run for the richer runtime surfaces
+    that declare those roles. For an unknown profile id we run only the
+    universally-safe manifest validation case and skip the live probes, since
+    their runtime contract is not known to this implementation.
+    """
+
+    cases: list[ConformanceCaseResult] = []
+    manifest_payload = backend_manifest_payload(target.manifest)
+    manifest_diags = _validate_payload("backend-manifest-v2", manifest_payload)
     cases.append(
         ConformanceCaseResult(
-            name="live-snapshot",
-            contract_name="runtime-snapshot-v1",
+            name="live-manifest",
+            contract_name="backend-manifest-v2",
             valid=True,
-            passed=not snapshot_diags,
-            diagnostics=tuple(snapshot_diags),
+            passed=not manifest_diags,
+            diagnostics=tuple(manifest_diags),
         )
     )
+
+    known = _to_known_profile(profile)
+    if known is None:
+        return tuple(cases)
+
+    scenario = parse_sdl(
+        dedent(
+            """
+            name: conformance
+            nodes:
+              vm:
+                type: vm
+                os: linux
+                resources: {ram: 1 gib, cpu: 1}
+                conditions: {health: ops}
+                roles: {ops: operator}
+            conditions:
+              health: {command: /bin/true, interval: 15}
+            entities:
+              blue: {role: blue}
+            objectives:
+              validate:
+                entity: blue
+                success: {conditions: [health]}
+            workflows:
+              response:
+                start: run
+                steps:
+                  run:
+                    type: objective
+                    objective: validate
+                    on-success: finish
+                  finish: {type: end}
+            """
+        )
+    )
+    execution_plan = run_reference_processor(scenario, target.manifest).execution_plan
+    control_plane = RuntimeControlPlane(target)
+    cases.append(_provisioning_probe_case(control_plane, execution_plan.provisioning))
+    if known != BackendCapabilityProfile.PROVISIONING_ONLY:
+        if target.orchestrator is not None:
+            control_plane.submit_orchestration(execution_plan.orchestration)
+        if target.evaluator is not None:
+            control_plane.submit_evaluation(execution_plan.evaluation)
+        if target.participant_runtime is not None:
+            cases.extend(
+                _drive_participant_episode_probe(
+                    control_plane,
+                    participant_address="participant.conformance",
+                )
+            )
+    cases.append(_live_snapshot_case(control_plane))
     return tuple(cases)

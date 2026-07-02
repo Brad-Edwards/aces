@@ -35,6 +35,7 @@ from aces_backend_libvirt.target import create_libvirt_target
 from aces_backend_protocols.manifest import backend_manifest_payload
 from aces_contracts.backend_profiles import load_backend_profile
 from aces_contracts.contracts import BackendManifestV2Model
+from libvirt_conformance_fixtures import RecordingLibvirtDriver
 
 from aces.core.runtime.conformance import (
     BackendCapabilityProfile,
@@ -73,8 +74,13 @@ def test_libvirt_manifest_validates_against_published_schema():
 
 
 def test_libvirt_target_passes_provisioning_only_conformance():
-    """AC1: the target conforms to the published provisioning-only profile, daemon-free."""
-    report = run_target_conformance(create_libvirt_target())
+    """AC1: the target conforms to the published provisioning-only profile, daemon-free.
+
+    The live provisioning probe (issue #606) is exercised through a daemon-free
+    recording driver that confirms realization, so conformance proves real
+    snapshot mutation without a libvirt/QEMU daemon.
+    """
+    report = run_target_conformance(create_libvirt_target(driver=RecordingLibvirtDriver()))
 
     assert report.profile == BackendCapabilityProfile.PROVISIONING_ONLY
     assert report.passed is True, [diag.message for diag in report.diagnostics]
