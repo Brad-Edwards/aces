@@ -43,6 +43,7 @@ from .control_plane_store import (
 )
 from .control_plane_timeouts import workflow_timeout_update
 from .control_plane_workflows import maybe_apply_compensation
+from .operational_apparatus import operational_apparatus_summary
 from .participant_control import ParticipantControlMixin
 from .participant_retrieval import ParticipantRetrievalMixin
 from .registry import RuntimeTarget
@@ -84,6 +85,18 @@ class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):
 
     def audit_log(self) -> list[AuditEvent]:
         return self._store.read_audit()
+
+    def operational_apparatus_summary(self) -> dict[str, object]:
+        """Return a compact operational view over existing control-plane carriers."""
+
+        audit_events = self._store.read_audit()
+        operation_records = list(self._operations.values())
+        return operational_apparatus_summary(
+            target_name=self._target.name,
+            snapshot=self._snapshot,
+            operation_records=operation_records,
+            audit_events=audit_events,
+        )
 
     def submit_provisioning(
         self,

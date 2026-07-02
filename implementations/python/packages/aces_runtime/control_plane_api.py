@@ -324,6 +324,19 @@ def _register_operation_read_routes(
         )
         return _snapshot_model(control_plane.get_snapshot())
 
+    @app.get("/apparatus/operational-summary")
+    async def get_operational_apparatus_summary(
+        request: Request,
+        identity: _ReadIdentity,
+    ) -> dict[str, object]:
+        control_plane.record_audit(
+            action="get_operational_apparatus_summary",
+            identity=identity.identity,
+            allowed=True,
+            target=str(request.url.path),
+        )
+        return control_plane.operational_apparatus_summary()
+
 
 def _register_workflow_routes(
     app: FastAPI,
