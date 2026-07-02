@@ -275,3 +275,6 @@ adrs:
   - id: ADR-068
     path: docs/decisions/adrs/adr-068-experiment-trials-replication-and-replay-claims.md
     pin: 2cd46b67fb86a8d5d5c089e2b2f492a94e6141470706f33a2bb14d7268c49d02
+  - id: ADR-069
+    path: docs/decisions/adrs/adr-069-cage-2-replication-architecture.md
+    pin: 305334e5558fb88d1f84317209f0e64d182714ba8e99cdeb5f6781bf3ee384f5
