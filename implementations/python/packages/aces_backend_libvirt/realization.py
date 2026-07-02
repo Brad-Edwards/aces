@@ -22,28 +22,28 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
+from aces_backend_protocols.capabilities import ProvisionerCapabilities
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
 
+from ._payload import (
+    ACCOUNT_PLACEMENT_RESOURCE_TYPE,
+    CONTENT_PLACEMENT_RESOURCE_TYPE,
+    NETWORK_RESOURCE_TYPE,
+    NODE_RESOURCE_TYPE,
+    SUPPORTED_RESOURCE_TYPES,
+    _os_family,
+    _spec,
+    _str,
+)
 from .acls import realize_node_acls
+from .capability_envelope import capability_envelope_diagnostics
 from .cloudinit import CloudInitFile, CloudInitSpec, CloudInitUser, safe_path_component
 from .dialects import GuestDialect, GuestEmit, dialect_for
 from .driver import DomainSpec, NetworkAcl, NetworkSpec, ServiceSpec
+from .manifest import LIBVIRT_PROVISIONER_CAPABILITIES
 
 _DOMAIN = "runtime"
-NODE_RESOURCE_TYPE = "node"
-NETWORK_RESOURCE_TYPE = "network"
-ACCOUNT_PLACEMENT_RESOURCE_TYPE = "account-placement"
-CONTENT_PLACEMENT_RESOURCE_TYPE = "content-placement"
-FEATURE_BINDING_RESOURCE_TYPE = "feature-binding"
-PLACEMENT_RESOURCE_TYPES = frozenset(
-    {
-        ACCOUNT_PLACEMENT_RESOURCE_TYPE,
-        CONTENT_PLACEMENT_RESOURCE_TYPE,
-        FEATURE_BINDING_RESOURCE_TYPE,
-    }
-)
-SUPPORTED_RESOURCE_TYPES = frozenset({NODE_RESOURCE_TYPE, NETWORK_RESOURCE_TYPE}) | PLACEMENT_RESOURCE_TYPES
 
 
 @dataclass(frozen=True)
@@ -78,10 +78,23 @@ class _CloudInitAccumulator:
         )
 
 
-def interpret_provisioning_plan(plan: ProvisioningPlan) -> Realization:
-    """Interpret an ACES provisioning plan as portable libvirt intent."""
+def interpret_provisioning_plan(
+    plan: ProvisioningPlan,
+    *,
+    provisioner_capabilities: ProvisionerCapabilities | None = None,
+) -> Realization:
+    """Interpret an ACES provisioning plan as portable libvirt intent.
 
-    diagnostics: list[Diagnostic] = []
+    ``provisioner_capabilities`` is the backend capability envelope every plan
+    term is validated against; it defaults to the libvirt manifest's declared
+    envelope so a term outside it (an ungoverned/extension node type, OS family,
+    content type, or account feature the backend does not realize) yields a
+    blocking typed diagnostic instead of a silent or partial realization
+    (issue #605).
+    """
+
+    capabilities = provisioner_capabilities or LIBVIRT_PROVISIONER_CAPABILITIES
+    diagnostics: list[Diagnostic] = list(capability_envelope_diagnostics(plan, capabilities))
     network_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
     node_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
     placement_resources: list[tuple[PlannedResource, Mapping[str, object]]] = []
@@ -362,15 +375,6 @@ def _domain_spec(
     )
 
 
-def _os_family(payload: Mapping[str, object]) -> str:
-    family = payload.get("os_family")
-    if isinstance(family, str) and family:
-        return family
-    node = _spec(payload).get("node")
-    node_os = node.get("os") if isinstance(node, Mapping) else None
-    return node_os if isinstance(node_os, str) else ""
-
-
 def _network_cidr_lookup(networks: list[NetworkSpec]) -> dict[str, str]:
     lookup: dict[str, str] = {}
     for spec in networks:
@@ -467,15 +471,6 @@ def _image_ref(payload: Mapping[str, object]) -> str | None:
         if isinstance(name, str) and name:
             return name
     return None
-
-
-def _spec(payload: Mapping[str, object]) -> Mapping[str, object]:
-    spec = payload.get("spec")
-    return spec if isinstance(spec, Mapping) else {}
-
-
-def _str(value: object) -> str:
-    return value if isinstance(value, str) else ""
 
 
 def _ssh_authorized_keys(spec: Mapping[str, object]) -> tuple[str, ...]:

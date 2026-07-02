@@ -27,7 +27,7 @@ def create_libvirt_components(
         raise ValueError("libvirt backend does not support orchestrator or evaluator.")
     participant_runtime = LibvirtParticipantRuntime() if manifest.has_participant_runtime else None
     return RuntimeTargetComponents(
-        provisioner=LibvirtProvisioner(deployment_driver),
+        provisioner=LibvirtProvisioner(deployment_driver, provisioner_capabilities=manifest.provisioner),
         participant_runtime=participant_runtime,
     )
 

@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from aces_backend_protocols.capabilities import ProvisionerCapabilities
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
 
+from ._payload import NETWORK_RESOURCE_TYPE, NODE_RESOURCE_TYPE
 from .driver import DriverResult, LibvirtDriver
-from .realization import NETWORK_RESOURCE_TYPE, NODE_RESOURCE_TYPE, Realization, interpret_provisioning_plan
+from .manifest import LIBVIRT_PROVISIONER_CAPABILITIES
+from .realization import Realization, interpret_provisioning_plan
 
 _DOMAIN = "runtime"
 INVALID_PLAN_CODE = "libvirt-backend.invalid-plan"
@@ -28,14 +31,22 @@ class _SnapshotReconciliation:
 class LibvirtProvisioner:
     """Provisioning-only backend that realizes plans through a libvirt driver."""
 
-    def __init__(self, driver: LibvirtDriver | None = None) -> None:
+    def __init__(
+        self,
+        driver: LibvirtDriver | None = None,
+        *,
+        provisioner_capabilities: ProvisionerCapabilities | None = None,
+    ) -> None:
         self._driver = driver if driver is not None else _default_driver()
+        # The capability envelope every plan term is validated against; defaults to
+        # the libvirt manifest envelope but tracks the manifest the target was built
+        # with when create_libvirt_components passes it in (issue #605).
+        self._provisioner_capabilities = provisioner_capabilities or LIBVIRT_PROVISIONER_CAPABILITIES
 
-    @staticmethod
-    def validate(plan: ProvisioningPlan) -> list[Diagnostic]:
+    def validate(self, plan: ProvisioningPlan) -> list[Diagnostic]:
         if not isinstance(plan, ProvisioningPlan):
             return [_invalid_plan_diagnostic()]
-        realization = interpret_provisioning_plan(plan)
+        realization = interpret_provisioning_plan(plan, provisioner_capabilities=self._provisioner_capabilities)
         return list(realization.diagnostics)
 
     def apply(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> ApplyResult:
@@ -46,7 +57,7 @@ class LibvirtProvisioner:
         return result
 
     def _apply_provisioning_plan(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> ApplyResult:
-        realization = interpret_provisioning_plan(plan)
+        realization = interpret_provisioning_plan(plan, provisioner_capabilities=self._provisioner_capabilities)
         diagnostics: list[Diagnostic] = list(realization.diagnostics)
         if _has_error(diagnostics):
             return ApplyResult(success=False, snapshot=snapshot, diagnostics=diagnostics)
