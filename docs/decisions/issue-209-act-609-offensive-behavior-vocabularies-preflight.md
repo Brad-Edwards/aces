@@ -1,6 +1,6 @@
 # Issue 209 ACT-609 Offensive Behavior Vocabularies Preflight
 
-Date: 2026-07-01
+Date: 2026-07-01; updated 2026-07-02 for MITRE ATLAS.
 
 Issue: #209.
 
@@ -34,18 +34,20 @@ routes, or conformance behavior.
 
 ## Architecture Decisions
 
-- Treat ACT-609 as a governed participant behavior vocabulary addition, not as
-  a new task model, goal model, participant role taxonomy, backend feature flag,
+- Treat ACT-609 as governed participant behavior vocabulary additions, not as a
+  new task model, goal model, participant role taxonomy, backend feature flag,
   technique wrapper, or runtime history type. The base offensive behavior terms
-  should directly adopt pinned MITRE ATT&CK Enterprise tactics; ACES owns the
-  behavior-specification binding and governed extension namespace, not a
-  mutated tactic taxonomy.
+  directly adopt pinned MITRE ATT&CK Enterprise tactics. The AI-offensive base
+  terms directly adopt pinned MITRE ATLAS tactics. ACES owns the
+  behavior-specification bindings and governed extension namespaces, not mutated
+  MITRE taxonomies.
 - The authoring seam should be the existing behavior specification aggregate.
-  A first-class ACT-609 field belongs on
+  First-class ACT-609 fields belong on
   `ParticipantBehaviorSpecification`/`behavior_specifications.*`, with values
-  validated by `controlled-vocabularies-v1`. Do not bury offensive terms only
-  inside free-form `extensions`, action names, objective metadata, backend
-  manifests, or runtime logs.
+  validated by `controlled-vocabularies-v1`. General offensive behavior refs and
+  AI-offensive behavior refs must remain sibling fields with separate governed
+  scopes. Do not bury offensive terms only inside free-form `extensions`, action
+  names, objective metadata, backend manifests, or runtime logs.
 - Offensive vocabulary terms must be references or governed values that attach
   to behavior specifications and their existing action, observation, outcome,
   authority/scope, realization, and evidence refs. They must not inline a
@@ -54,12 +56,15 @@ routes, or conformance behavior.
 - Use governed-extension vocabulary discipline unless the term set is proven
   closed. Local extension terms must use the existing `x-<owner>:<term>`
   pattern and the shared controlled-vocabulary helpers.
-- Adopt ATT&CK Enterprise tactics through a pinned, cited, digest-checked source
-  artifact. Map external cyber-domain vocabularies beyond those adopted tactics,
-  including ATT&CK technique labels, through explicit mapping/loss fields or
-  concept bindings where the owning surface already supports them. Do not make
-  any other external label the portable ACES semantic value unless it is
-  governed by the catalog.
+- Adopt ATT&CK Enterprise tactics and ATLAS tactics through separate pinned,
+  cited, digest-checked source artifacts. Map external cyber-domain vocabularies
+  beyond those adopted tactics, including ATT&CK technique labels, through
+  explicit mapping/loss fields or concept bindings where the owning surface
+  already supports them. Do not make any other external label the portable ACES
+  semantic value unless it is governed by the catalog.
+- Never merge ATT&CK and ATLAS terms into one vocabulary. Overlapping labels
+  such as `reconnaissance`, `initial-access`, or `defense-evasion` only have
+  portable meaning in the governed field whose source authority owns them.
 - Schema validity is necessary but insufficient. If ACT-609 publishes a new
   field or contract surface, it needs semantic validation, positive/negative
   fixtures, generated-schema parity, and conformance evidence at the owning
@@ -142,12 +147,12 @@ The intended design must pass every layer it touches:
   issue path. Diagnostics may name the invalid term and vocabulary; they must
   not include raw scenario dumps, credentials, prompts, backend config, hidden
   truth, raw command output, or tracebacks.
-- Controlled-vocabulary validation: the new scope must be declared in
+- Controlled-vocabulary validation: each new scope must be declared in
   `controlled-vocabularies-v1`, added to the central governed-scope allowlist,
   and validated through `validate_controlled_vocabulary_scope_values()` or
-  `validate_controlled_vocabulary_value()`. The ATT&CK tactic source artifact
-  and conformance checker must prove that adopted base terms match the pinned
-  ATT&CK release. A catalog-only edit is not enough.
+  `validate_controlled_vocabulary_value()`. The ATT&CK and ATLAS tactic source
+  artifacts and conformance checkers must prove that adopted base terms match
+  their pinned MITRE releases. A catalog-only edit is not enough.
 - Contract/schema validation: if a portable field or contract changes, update
   the normative schema, `schema_bundle()` parity, publication manifest
   `last_change`, valid and invalid fixtures, and JSON artifact checks. Do not
@@ -179,11 +184,11 @@ The intended design must pass every layer it touches:
 
 ## Extensibility Seam
 
-The extension seam is the governed vocabulary field on the behavior
+The extension seam is the governed vocabulary field set on the behavior
 specification aggregate, plus optional mapping/disclosure refs:
 
-- one field should carry offensive behavior vocabulary terms as governed
-  values;
+- `offensive_behavior_refs` carries MITRE ATT&CK Enterprise tactic values;
+- `ai_offensive_behavior_refs` carries MITRE ATLAS tactic values;
 - existing refs should continue to bind those terms to participants, action
   contracts, observation boundaries, outcome interpretation rules,
   authority/scope boundaries, realization profiles, backend feature support,
@@ -209,6 +214,8 @@ Avoid:
 - accepting arbitrary ATT&CK technique ids, CVE ids, tool names, exploit names,
   command strings, or action names as portable ACES behavior semantics without
   governed vocabulary or explicit mapping-loss metadata;
+- blending ATLAS tactics into the ATT&CK field, or treating ATLAS and ATT&CK
+  terms as equivalent because their English labels overlap;
 - duplicating action/precondition/effect/failure/outcome schemas inside the
   offensive vocabulary surface;
 - creating a second controlled-vocabulary loader, validator registry,

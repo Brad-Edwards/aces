@@ -9,6 +9,16 @@
       "content_hash": "e7b858c93b7ec763c361439b1d9c7cc3979a1d150ca64a7f41ebc12c050f5cff"
     },
     {
+      "contract_id": "atlas-tactics-source-v1",
+      "schema_path": "contracts/schemas/concept-authority/atlas-tactics-source-v1.json",
+      "stability": "draft",
+      "content_hash": "17e144abf9c8de10fa7342ab8662306ad0d4170a2df1c67829ac641a686bd562",
+      "last_change": {
+        "summary": "Initial publication of the pinned MITRE ATLAS tactics v2026.06 source schema for the ACT-609 adopted AI offensive behavior vocabulary.",
+        "content_hash": "17e144abf9c8de10fa7342ab8662306ad0d4170a2df1c67829ac641a686bd562"
+      }
+    },
+    {
       "contract_id": "attack-enterprise-tactics-source-v1",
       "schema_path": "contracts/schemas/concept-authority/attack-enterprise-tactics-source-v1.json",
       "stability": "draft",
@@ -146,10 +156,10 @@
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "4bc758c0a8409ba4a6fa9dbe3c17ae609be8dbdf396560d451144314a056db7e",
+      "content_hash": "3377c548df57ad3af2b485561c7685b3883b9b93e0673be283005ad29c367e7c",
       "last_change": {
-        "summary": "Added ACT-609 offensive behavior refs to instantiated SDL behavior specifications as governed vocabulary values.",
-        "content_hash": "4bc758c0a8409ba4a6fa9dbe3c17ae609be8dbdf396560d451144314a056db7e"
+        "summary": "Added ai_offensive_behavior_refs to participant behavior specifications for the separately governed MITRE ATLAS tactic vocabulary.",
+        "content_hash": "3377c548df57ad3af2b485561c7685b3883b9b93e0673be283005ad29c367e7c"
       }
     },
     {
@@ -332,10 +342,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "26b158251fe88a79594d4f127d827b3a3e2c467b8f88b35cfcaec716f567b741",
+      "content_hash": "c97cb7d5d9196aaef1628c2a12d9a397dd1e3edca7179399b57487371970ecd8",
       "last_change": {
-        "summary": "Added ACT-609 offensive behavior refs to authored SDL behavior specifications as governed vocabulary values.",
-        "content_hash": "26b158251fe88a79594d4f127d827b3a3e2c467b8f88b35cfcaec716f567b741"
+        "summary": "Added ai_offensive_behavior_refs to authored participant behavior specifications for the separately governed MITRE ATLAS tactic vocabulary.",
+        "content_hash": "c97cb7d5d9196aaef1628c2a12d9a397dd1e3edca7179399b57487371970ecd8"
       }
     },
     {

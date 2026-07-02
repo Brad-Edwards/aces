@@ -102,6 +102,17 @@ It defines:
   `sha256:bdf1ce86a4e604214c5076d37ae4dcb322678afc528df8492e6fdc1b554f5da3`.
   MITRE's ATT&CK version history, data and tools page, and terms of use are
   recorded in the source artifact's `citation_urls`.
+- a separate governed-extension vocabulary for
+  `participant-ai-offensive-behavior-activities`, whose base terms are a direct
+  adoption of MITRE ATLAS tactics release v2026.06 (`collection.version`
+  `2026.06`, `format-version` `6.0.0`). The pinned source artifact is
+  `contracts/concept-authority/atlas-tactics-source-v1.json`; the upstream
+  YAML release asset is
+  `https://github.com/mitre-atlas/atlas-data/releases/download/v2026.06/ATLAS-2026.06.yaml`;
+  the recorded asset digest is
+  `sha256:b771de8b1489564b2838a709c7429849a9575dbd94073928817fe1a21661e70a`.
+  MITRE ATLAS release, data-format, project, and license citations are recorded
+  in the source artifact's `citation_urls`.
 
 The MITRE notice for the adopted ATT&CK terms is recorded in the source
 artifact and catalog metadata:
@@ -123,13 +134,43 @@ another ATT&CK release, a change must update all of the following together:
   changes
 - `tools/check_attack_tactic_vocabulary.py` evidence or test expectations for
   the new pinned release
+
+### ATLAS Adoption Guardrail
+
+The ACT-609 AI-offensive base term set is also not editable by hand. It is a
+separate direct adoption of MITRE ATLAS tactics, not an extension or mutation of
+the ATT&CK vocabulary. To move from ATLAS release v2026.06 to another ATLAS
+release, a change must update all of the following together:
+
+- the pinned ATLAS source artifact, including `source_version`,
+  `source_format_version`, `source_url`, `source_digest`, retrieval date,
+  citations, and license notice
+- the adopted ATLAS vocabulary terms in
+  `contracts/concept-authority/controlled-vocabularies-v1.json`
+- the controlled-vocabulary valid fixture
+- generated schemas and the schema publication manifest when the source schema
+  changes
+- `tools/check_atlas_tactic_vocabulary.py` evidence or test expectations for
+  the new pinned release
 - affected authoring and behavior-model documentation
+
+ATT&CK and ATLAS terms must remain in distinct governed scopes:
+`behavior_specifications.offensive_behavior_refs` for ATT&CK and
+`behavior_specifications.ai_offensive_behavior_refs` for ATLAS. A catalog entry
+must not merge ATLAS terms into the ATT&CK vocabulary or reuse one vocabulary to
+govern both scopes.
 
 `tools/check_attack_tactic_vocabulary.py` is part of the contract verification
 stage. Its default offline mode compares the catalog to the pinned source
 artifact. Its `--verify-remote` mode fetches the pinned upstream STIX bundle,
 verifies the recorded SHA-256 digest, extracts Enterprise tactics in matrix
 order, and compares them to the checked-in source artifact.
+
+`tools/check_atlas_tactic_vocabulary.py` is part of the same contract
+verification stage. Its default offline mode compares the catalog to the pinned
+ATLAS source artifact. Its `--verify-remote` mode fetches the pinned upstream
+YAML release asset, verifies the recorded SHA-256 digest, extracts ATLAS tactics
+in matrix order, and compares them to the checked-in source artifact.
 
 ## Machine-Readable Artifacts
 

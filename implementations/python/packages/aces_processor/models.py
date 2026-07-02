@@ -605,6 +605,7 @@ class ParticipantBehaviorSpecificationRuntime(ResolvedResource):
     authority_scope_refs: tuple[str, ...] = ()
     authority_scope_addresses: tuple[str, ...] = ()
     behavior_mode: str = ""
+    ai_offensive_behavior_refs: tuple[str, ...] = ()
     offensive_behavior_refs: tuple[str, ...] = ()
     realization_profile_ref: str = ""
     backend_feature_support_refs: tuple[str, ...] = ()

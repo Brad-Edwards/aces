@@ -425,23 +425,41 @@ records the upstream STIX bundle URL, ATT&CK version, retrieval date, SHA-256
 digest, MITRE terms URL, and citation URLs. The source artifact was extracted
 from the ATT&CK Enterprise matrix order, not hand-curated by ACES.
 
+The base terms in `participant-ai-offensive-behavior-activities` are a separate
+direct adoption of MITRE ATLAS tactics release v2026.06 (`collection.version`
+`2026.06`, `format-version` `6.0.0`). The pinned source artifact is
+`contracts/concept-authority/atlas-tactics-source-v1.json`; it records the
+upstream YAML release asset URL, ATLAS content and format versions, retrieval
+date, SHA-256 digest, MITRE ATLAS project and license citations, matrix id, and
+term lineage fields. The source artifact was extracted from the ATLAS
+`ATLAS-matrix` sequence order, not hand-curated by ACES.
+
 Rules:
 
-- Values resolve through `participant-offensive-behavior-activities`.
+- `offensive_behavior_refs` values resolve through
+  `participant-offensive-behavior-activities`.
+- `ai_offensive_behavior_refs` values resolve through
+  `participant-ai-offensive-behavior-activities`.
 - Base vocabulary values preserve ATT&CK tactic shortnames, IDs, names, URLs,
   descriptions, and matrix order from the pinned v19.1 source artifact.
+- ATLAS base vocabulary values preserve ATLAS tactic shortnames, IDs, names,
+  URLs, descriptions, UUIDs, creation/modification dates, ATT&CK cross-reference
+  metadata where present, and matrix order from the pinned v2026.06 source
+  artifact.
 - Governed extensions must use the shared `x-<owner>:<term>` syntax.
 - Offensive behavior refs classify authored behavior intent; they do not
   replace action contracts, observation boundaries, outcome rules, authority
   refs, SDL `goals`, experiment tasks, workflow steps, participant roles,
   behavior modes, backend feature support, or runtime history.
+- ATT&CK and ATLAS are distinct adopted authorities. Do not merge ATLAS terms
+  into the ATT&CK vocabulary, use one vocabulary to govern both fields, or treat
+  overlapping labels as interchangeable without an explicit mapping surface.
 - External technique, tool, CVE, or command identifiers require explicit
   mapping or loss metadata on the owning surface; they are not accepted as raw
   portable ACES semantics by this field.
-- Future ATT&CK release updates must update the pinned source artifact,
-  catalog terms, fixture, docs, schema metadata as needed, and
-  `tools/check_attack_tactic_vocabulary.py` validation evidence in one
-  reviewable change.
+- Future ATT&CK or ATLAS release updates must update the matching pinned source
+  artifact, catalog terms, fixture, docs, schema metadata as needed, and
+  checker validation evidence in one reviewable change.
 
 Pinned ATT&CK v19.1 tactics:
 
@@ -462,6 +480,27 @@ Pinned ATT&CK v19.1 tactics:
 | TA0011 | `command-and-control` | Command and Control |
 | TA0010 | `exfiltration` | Exfiltration |
 | TA0040 | `impact` | Impact |
+
+Pinned ATLAS v2026.06 tactics:
+
+| ATLAS ID | Shortname | Name |
+| --- | --- | --- |
+| AML.TA0002 | `reconnaissance` | Reconnaissance |
+| AML.TA0003 | `resource-development` | Resource Development |
+| AML.TA0004 | `initial-access` | Initial Access |
+| AML.TA0000 | `ai-model-access` | AI Model Access |
+| AML.TA0005 | `execution` | Execution |
+| AML.TA0006 | `persistence` | Persistence |
+| AML.TA0012 | `privilege-escalation` | Privilege Escalation |
+| AML.TA0007 | `defense-evasion` | Defense Evasion |
+| AML.TA0013 | `credential-access` | Credential Access |
+| AML.TA0008 | `discovery` | Discovery |
+| AML.TA0015 | `lateral-movement` | Lateral Movement |
+| AML.TA0009 | `collection` | Collection |
+| AML.TA0001 | `ai-attack-staging` | AI Attack Staging |
+| AML.TA0014 | `command-and-control` | Command and Control |
+| AML.TA0010 | `exfiltration` | Exfiltration |
+| AML.TA0011 | `impact` | Impact |
 
 Implementation issue #209 owns executable declaration, validation, generated
 schema coverage, and compiler carry-through for offensive behavior refs.
