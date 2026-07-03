@@ -185,13 +185,23 @@ def _signable_payload(
     module_descriptor: ModuleDescriptor,
     *,
     content_digest: str,
+    root_file: str,
 ) -> bytes:
+    """Canonical bytes an Ed25519 signature binds for an OCI module (issue #14).
+
+    The payload binds ``root_file`` alongside the module identity, exports, and
+    bundle ``content_digest`` so a compromised registry cannot repoint the module
+    entrypoint to a different file inside an otherwise-signed bundle. This is the
+    single canonical signer-payload builder: publishing and resolving must produce
+    the identical shape or verification fails closed.
+    """
     return json.dumps(
         {
             "module_id": module_descriptor.id,
             "module_version": module_descriptor.version,
             "exports": module_descriptor.exports,
             "content_digest": content_digest,
+            "root_file": root_file,
         },
         sort_keys=True,
         separators=(",", ":"),
@@ -204,8 +214,9 @@ def _verify_signatures(
     trust_policy: RegistryTrustPolicy,
     module_descriptor: ModuleDescriptor,
     content_digest: str,
+    root_file: str,
 ) -> str:
-    payload = _signable_payload(module_descriptor, content_digest=content_digest)
+    payload = _signable_payload(module_descriptor, content_digest=content_digest, root_file=root_file)
     for signature_entry in signatures:
         signer_id = str(signature_entry.get("signer_id", ""))
         signature_b64 = str(signature_entry.get("signature", ""))
@@ -651,11 +662,18 @@ def resolve_import(
         raise SDLParseError(f"OCI module '{source}' is missing config or bundle layer")
     config_digest = str(config.get("digest", ""))
     layer_digest = str(layer.get("digest", ""))
-    config_payload = json.loads(
-        _bytes_request(f"{base_url}/v2/{quote(repository, safe='/')}/blobs/{quote(config_digest, safe=':@/')}").decode(
-            "utf-8"
-        )
+    # Verify the config blob bytes hash to the manifest's config.digest BEFORE
+    # decoding the JSON (issue #14). Fetching by digest is not integrity: a
+    # compromised registry can serve arbitrary bytes for the config endpoint, and
+    # those bytes carry the unsigned-by-default root_file that selects the module
+    # entrypoint. Hash the exact bytes received - never a reserialized object -
+    # and reuse the bundle's digest spelling.
+    config_bytes = _bytes_request(
+        f"{base_url}/v2/{quote(repository, safe='/')}/blobs/{quote(config_digest, safe=':@/')}"
     )
+    if f"sha256:{_sha256_digest(config_bytes)}" != config_digest:
+        raise SDLParseError(f"OCI module '{source}' config digest verification failed")
+    config_payload = json.loads(config_bytes.decode("utf-8"))
     bundle_bytes = _bytes_request(
         f"{base_url}/v2/{quote(repository, safe='/')}/blobs/{quote(layer_digest, safe=':@/')}",
         max_bytes=_OCI_LIMITS.max_bundle_bytes,
@@ -677,6 +695,14 @@ def resolve_import(
         )
     content_digest = layer_digest
     _validate_digest_pin(content_digest, import_decl.digest, source=source)
+    # Resolve the config-declared root_file as a single string before it reaches
+    # the signature payload or extraction (issue #14). Signing and extracting the
+    # SAME value closes the gap where a signature verified over a default root_file
+    # while a different attacker-declared root_file was extracted.
+    raw_root_file = config_payload.get("root_file", "module.yaml")
+    if not isinstance(raw_root_file, str):
+        raise SDLParseError(f"OCI module '{source}' declares a non-string root_file")
+    root_file = raw_root_file
     signer_id = ""
     if registry_policy.require_signatures:
         signer_id = _verify_signatures(
@@ -684,8 +710,8 @@ def resolve_import(
             trust_policy=registry_policy,
             module_descriptor=descriptor,
             content_digest=content_digest,
+            root_file=root_file,
         )
-    root_file = str(config_payload.get("root_file", "module.yaml"))
     resolved_root = _extract_bundle_to_cache(
         bundle_bytes=bundle_bytes,
         manifest_digest=manifest_digest.replace("sha256:", ""),
@@ -803,7 +829,9 @@ def publish_module_to_oci_layout(
         )
         if not isinstance(private_key, Ed25519PrivateKey):
             raise SDLParseError("Publishing key must be an Ed25519 private key")
-        signature = private_key.sign(_signable_payload(descriptor, content_digest=content_digest))
+        signature = private_key.sign(
+            _signable_payload(descriptor, content_digest=content_digest, root_file=root_path.name)
+        )
         signatures.append(
             {
                 "signer_id": signer_id,
