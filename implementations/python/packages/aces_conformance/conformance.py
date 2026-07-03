@@ -59,7 +59,7 @@ from aces_contracts.participant_episode import (
     iter_participant_episode_snapshot_violations,
 )
 from aces_contracts.participant_shared_state import iter_participant_shared_state_snapshot_violations
-from aces_contracts.planning import RuntimeDomain
+from aces_contracts.planning import ProvisioningPlan, RuntimeDomain
 from aces_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope, SnapshotEntry
 from aces_contracts.workflow import WorkflowExecutionState
 from aces_processor.models import (
@@ -1348,7 +1348,7 @@ def _drive_participant_episode_probe(
 
 def _provisioning_probe_case(
     control_plane: RuntimeControlPlane,
-    provisioning_plan: Any,
+    provisioning_plan: ProvisioningPlan,
 ) -> ConformanceCaseResult:
     """Drive live provisioning and prove the operation genuinely realized state.
 
