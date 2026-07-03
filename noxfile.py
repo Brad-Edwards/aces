@@ -604,6 +604,14 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
         "contracts / json artifact validation",
         lambda: _run_project_python(session, "tools/check_json_artifacts.py", *json_artifact_args),
     )
+    reporter.run(
+        "contracts / ATT&CK tactic vocabulary conformance",
+        lambda: _run_project_python(session, "tools/check_attack_tactic_vocabulary.py"),
+    )
+    reporter.run(
+        "contracts / ATLAS tactic vocabulary conformance",
+        lambda: _run_project_python(session, "tools/check_atlas_tactic_vocabulary.py"),
+    )
 
 
 def _run_lint(session: nox.Session, reporter: SessionReporter) -> None:

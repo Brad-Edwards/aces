@@ -1644,6 +1644,8 @@ def _compile_behavior_specifications(
             authority_scope_refs=tuple(behavior_spec.authority_scope_refs),
             authority_scope_addresses=authority_scope_addresses,
             behavior_mode=str(behavior_spec.behavior_mode or ""),
+            ai_offensive_behavior_refs=tuple(behavior_spec.ai_offensive_behavior_refs),
+            offensive_behavior_refs=tuple(behavior_spec.offensive_behavior_refs),
             realization_profile_ref=str(behavior_spec.realization_profile_ref or ""),
             backend_feature_support_refs=tuple(behavior_spec.backend_feature_support_refs),
             evidence_contract_refs=tuple(behavior_spec.evidence_contract_refs),

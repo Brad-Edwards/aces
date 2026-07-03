@@ -178,6 +178,18 @@ _PARTICIPANT_BEHAVIOR_ISSUE_RENDERERS = {
             f"participant runtime feature: {i.message}"
         )
     ),
+    "participant.behavior-spec-offensive-behavior-ungoverned": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' offensive_behavior_ref '{i.ref}' is not in "
+            f"participant-offensive-behavior-activities: {i.message}"
+        )
+    ),
+    "participant.behavior-spec-ai-offensive-behavior-ungoverned": (
+        lambda i: (
+            f"Behavior specification '{i.spec_name}' ai_offensive_behavior_ref '{i.ref}' is not in "
+            f"participant-ai-offensive-behavior-activities: {i.message}"
+        )
+    ),
     "participant.behavior-spec-evidence-contract-unbound": (
         lambda i: (
             f"Behavior specification '{i.spec_name}' evidence_contract_ref '{i.ref}' "

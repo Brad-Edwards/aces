@@ -1,0 +1,132 @@
+{
+  "$defs": {
+    "AttackEnterpriseTacticSourceTermModel": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "shortname": {
+          "pattern": "^[a-z0-9]+(?:[-_][a-z0-9]+)*$",
+          "title": "Shortname",
+          "type": "string"
+        },
+        "stix_id": {
+          "minLength": 1,
+          "title": "Stix Id",
+          "type": "string"
+        },
+        "tactic_id": {
+          "pattern": "^TA[0-9]{4}$",
+          "title": "Tactic Id",
+          "type": "string"
+        },
+        "url": {
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tactic_id",
+        "shortname",
+        "name",
+        "description",
+        "url",
+        "stix_id"
+      ],
+      "title": "AttackEnterpriseTacticSourceTermModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/attack-enterprise-tactics-source-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "citation_urls": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Citation Urls",
+      "type": "array"
+    },
+    "license_notice": {
+      "minLength": 1,
+      "title": "License Notice",
+      "type": "string"
+    },
+    "license_url": {
+      "minLength": 1,
+      "title": "License Url",
+      "type": "string"
+    },
+    "retrieved_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "title": "Retrieved At",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "attack-enterprise-tactics-source/v1",
+      "default": "attack-enterprise-tactics-source/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_authority": {
+      "const": "MITRE ATT&CK",
+      "title": "Source Authority",
+      "type": "string"
+    },
+    "source_digest": {
+      "minLength": 1,
+      "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+      "title": "Source Digest",
+      "type": "string"
+    },
+    "source_domain": {
+      "const": "enterprise-attack",
+      "title": "Source Domain",
+      "type": "string"
+    },
+    "source_url": {
+      "minLength": 1,
+      "title": "Source Url",
+      "type": "string"
+    },
+    "source_version": {
+      "minLength": 1,
+      "title": "Source Version",
+      "type": "string"
+    },
+    "tactics": {
+      "items": {
+        "$ref": "#/$defs/AttackEnterpriseTacticSourceTermModel"
+      },
+      "minItems": 1,
+      "title": "Tactics",
+      "type": "array"
+    }
+  },
+  "required": [
+    "source_authority",
+    "source_domain",
+    "source_version",
+    "source_url",
+    "source_digest",
+    "citation_urls",
+    "retrieved_at",
+    "license_url",
+    "license_notice",
+    "tactics"
+  ],
+  "title": "AttackEnterpriseTacticsSourceModel",
+  "type": "object"
+}
