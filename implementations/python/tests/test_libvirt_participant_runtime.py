@@ -21,6 +21,7 @@ from aces_processor.models import (
     iter_participant_behavior_history_violations,
     iter_participant_episode_snapshot_violations,
 )
+from libvirt_conformance_fixtures import RecordingLibvirtDriver
 from libvirt_participant_fixtures import (
     NullLibvirtDriver,
     build_action_result,
@@ -48,9 +49,12 @@ _DISCLOSURE_REF = "docs/decisions/issue-614-libvirt-participant-runtime.md"
 # ---------------------------------------------------------------------------
 
 
-def _libvirt_target_with_participant_runtime() -> RuntimeTarget:
+def _libvirt_target_with_participant_runtime(driver=None) -> RuntimeTarget:
     manifest = create_libvirt_manifest(participant_runtime=True)
-    components = create_libvirt_components(manifest=manifest, driver=NullLibvirtDriver())
+    components = create_libvirt_components(
+        manifest=manifest,
+        driver=driver if driver is not None else NullLibvirtDriver(),
+    )
     return RuntimeTarget(
         name=manifest.name,
         manifest=manifest,
@@ -90,12 +94,24 @@ def test_ac1_manifest_default_is_provisioning_only():
 
 
 def test_ac2_conformance_passes_with_participant_runtime_manifest():
-    target = _libvirt_target_with_participant_runtime()
+    # The live provisioning probe (issue #606) now runs for provisioning-only
+    # targets too, so exercise it through a daemon-free recording driver that
+    # confirms realization.
+    target = _libvirt_target_with_participant_runtime(driver=RecordingLibvirtDriver())
     report = run_target_conformance(target)
 
     assert report.passed is True, f"conformance failed: {report.diagnostics}"
     assert report.unsupported_contract_gaps == ()
     assert report.unsupported_capability_gaps == ()
+
+    # report.passed is vacuously True on an empty case set, so assert the live
+    # pipeline actually ran end-to-end for the participant-runtime manifest:
+    # the provisioning probe + snapshot-mutation cases must be present and green.
+    case_names = {case.name for case in report.cases}
+    assert {"live-manifest", "live-provisioning", "live-snapshot"} <= case_names
+    for case in report.cases:
+        if case.name in {"live-manifest", "live-provisioning", "live-snapshot"}:
+            assert case.passed, [diag.message for diag in case.diagnostics]
 
 
 # ---------------------------------------------------------------------------
