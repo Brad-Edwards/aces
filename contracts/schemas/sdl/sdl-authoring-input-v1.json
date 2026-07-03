@@ -4111,6 +4111,13 @@
           "title": "Action Contract Refs",
           "type": "array"
         },
+        "ai_offensive_behavior_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ai Offensive Behavior Refs",
+          "type": "array"
+        },
         "authority_scope_refs": {
           "items": {
             "type": "string"
@@ -4165,6 +4172,13 @@
             "type": "string"
           },
           "title": "Observation Boundary Refs",
+          "type": "array"
+        },
+        "offensive_behavior_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Offensive Behavior Refs",
           "type": "array"
         },
         "outcome_interpretation_rule_refs": {

@@ -1708,6 +1708,8 @@ behavior-specifications:
     authority-scope-refs:
       - nodes.web-server.services.https
     behavior-mode: policy-directed
+    ai-offensive-behavior-refs: [ai-model-access, defense-evasion]
+    offensive-behavior-refs: [reconnaissance, exfiltration]
     realization-profile-ref: participant-implementation-manifest:red-agent
     backend-feature-support-refs: [behavior_history]
     evidence-contract-refs: [participant-behavior-history-event-stream-v1]
@@ -1723,9 +1725,21 @@ match roles of agent-bound entities, action contracts and observation
 boundaries must resolve to their registries, outcome rules must resolve to
 `outcome_interpretation_rules`, and `authority_scope_refs` must resolve to
 targetable named scenario elements. `behavior_mode` is validated against the
-governed `participant-decision-surface-modes` vocabulary. Extensions are only
-allowed when `extension_policy` permits them, and extension keys must use
-`x-<owner>:<term>`.
+governed `participant-decision-surface-modes` vocabulary.
+`offensive_behavior_refs` is validated against the governed
+`participant-offensive-behavior-activities` vocabulary. Its base values are a
+direct adoption of MITRE ATT&CK Enterprise tactics v19.1, pinned by
+`contracts/concept-authority/attack-enterprise-tactics-source-v1.json` and
+checked by `tools/check_attack_tactic_vocabulary.py`.
+`ai_offensive_behavior_refs` is validated against the separate governed
+`participant-ai-offensive-behavior-activities` vocabulary. Its base values are a
+direct adoption of MITRE ATLAS tactics release v2026.06, pinned by
+`contracts/concept-authority/atlas-tactics-source-v1.json` and checked by
+`tools/check_atlas_tactic_vocabulary.py`. These refs classify authored
+attack-oriented participant tasks, goals, or activities without replacing
+action contracts, SDL `goals`, experiment tasks, workflow steps, or runtime
+history. Extensions are only allowed when `extension_policy` permits them, and
+extension keys must use `x-<owner>:<term>`.
 
 Compiled behavior specifications use stable
 `participant.behavior-specification.<name>` addresses and preserve dependency

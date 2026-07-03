@@ -144,6 +144,250 @@
         }
       }
     },
+    "participant-offensive-behavior-activities": {
+      "title": "Participant Offensive Behavior Activities",
+      "description": "Direct adoption of MITRE ATT&CK Enterprise tactics v19.1 as governed offensive behavior classifications for behavior specifications.",
+      "source": {
+        "provenance": "adopted",
+        "authority": "MITRE ATT&CK Enterprise",
+        "authority_version": "v19.1",
+        "source_artifact_ref": "contracts/concept-authority/attack-enterprise-tactics-source-v1.json",
+        "source_url": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/v19.1/enterprise-attack/enterprise-attack-19.1.json",
+        "source_digest": "sha256:bdf1ce86a4e604214c5076d37ae4dcb322678afc528df8492e6fdc1b554f5da3",
+        "citation_urls": [
+          "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/v19.1/enterprise-attack/enterprise-attack-19.1.json",
+          "https://attack.mitre.org/resources/versions/",
+          "https://attack.mitre.org/resources/updates/",
+          "https://attack.mitre.org/resources/attack-data-and-tools/",
+          "https://attack.mitre.org/resources/legal-and-branding/terms-of-use/"
+        ],
+        "license_url": "https://attack.mitre.org/resources/legal-and-branding/terms-of-use/",
+        "license_notice": "\u00a9 2026 The MITRE Corporation. This work is reproduced and distributed with the permission of The MITRE Corporation."
+      },
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "behavior_specifications.offensive_behavior_refs"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "reconnaissance": {
+          "title": "Reconnaissance",
+          "description": "The adversary is trying to gather information they can use to plan future operations.\n\nReconnaissance consists of techniques that involve adversaries actively or passively gathering information that can be used to support targeting. Such information may include details of the victim organization, infrastructure, or staff/personnel. This information can be leveraged by the adversary to aid in other phases of the adversary lifecycle, such as using gathered information to plan and execute Initial Access, to scope and prioritize post-compromise objectives, or to drive and lead further Reconnaissance efforts.",
+          "source_id": "TA0043",
+          "source_url": "https://attack.mitre.org/tactics/TA0043"
+        },
+        "resource-development": {
+          "title": "Resource Development",
+          "description": "The adversary is trying to establish resources they can use to support operations.\n\nResource Development consists of techniques that involve adversaries creating, purchasing, or compromising/stealing resources that can be used to support targeting. Such resources include infrastructure, accounts, or capabilities. These resources can be leveraged by the adversary to aid in other phases of the adversary lifecycle, such as using purchased domains to support Command and Control, email accounts for phishing as a part of Initial Access, or stealing code signing certificates to help with Defense Evasion.",
+          "source_id": "TA0042",
+          "source_url": "https://attack.mitre.org/tactics/TA0042"
+        },
+        "initial-access": {
+          "title": "Initial Access",
+          "description": "The adversary is trying to get into your network.\n\nInitial Access consists of techniques that use various entry vectors to gain their initial foothold within a network. Techniques used to gain a foothold include targeted spearphishing and exploiting weaknesses on public-facing web servers. Footholds gained through initial access may allow for continued access, like valid accounts and use of external remote services, or may be limited-use due to changing passwords.",
+          "source_id": "TA0001",
+          "source_url": "https://attack.mitre.org/tactics/TA0001"
+        },
+        "execution": {
+          "title": "Execution",
+          "description": "The adversary is trying to run malicious code.\n\nExecution consists of techniques that result in adversary-controlled code running on a local or remote system. Techniques that run malicious code are often paired with techniques from all other tactics to achieve broader goals, like exploring a network or stealing data. For example, an adversary might use a remote access tool to run a PowerShell script that does Remote System Discovery. ",
+          "source_id": "TA0002",
+          "source_url": "https://attack.mitre.org/tactics/TA0002"
+        },
+        "persistence": {
+          "title": "Persistence",
+          "description": "The adversary is trying to maintain their foothold.\n\nPersistence consists of techniques that adversaries use to keep access to systems across restarts, changed credentials, and other interruptions that could cut off their access. Techniques used for persistence include any access, action, or configuration changes that let them maintain their foothold on systems, such as replacing or hijacking legitimate code or adding startup code. ",
+          "source_id": "TA0003",
+          "source_url": "https://attack.mitre.org/tactics/TA0003"
+        },
+        "privilege-escalation": {
+          "title": "Privilege Escalation",
+          "description": "The adversary is trying to gain higher-level permissions.\n\nPrivilege Escalation consists of techniques that adversaries use to gain higher-level permissions on a system or network. Adversaries can often enter and explore a network with unprivileged access but require elevated permissions to follow through on their objectives. Common approaches are to take advantage of system weaknesses, misconfigurations, and vulnerabilities. Examples of elevated access include: \n\n* SYSTEM/root level\n* local administrator\n* user account with admin-like access \n* user accounts with access to specific system or perform specific function\n\nThese techniques often overlap with Persistence techniques, as OS features that let an adversary persist can execute in an elevated context.  ",
+          "source_id": "TA0004",
+          "source_url": "https://attack.mitre.org/tactics/TA0004"
+        },
+        "stealth": {
+          "title": "Stealth",
+          "description": "The adversary is trying to hide and conceal their actions, appearing as normal behavior.\n\nStealth consists of techniques that reduce the likelihood of detection by blending in with legitimate activity or minimizing observable signals. These techniques are characterized by concealment behaviors, such as avoiding, obfuscating, or mimicking normal operations, without modifying security controls or compromising collection and monitoring feeds. The goal is to remain indistinguishable from benign activity while leaving defensive systems intact.",
+          "source_id": "TA0005",
+          "source_url": "https://attack.mitre.org/tactics/TA0005"
+        },
+        "defense-impairment": {
+          "title": "Defense Impairment",
+          "description": "The adversary is trying to break security mechanisms, pipelines, and tooling so defenders can\u2019t see or trust what\u2019s happening.\n\nDefense Impairment consists of techniques that degrade, disable, or undermine the effectiveness and trustworthiness of security controls and monitoring mechanisms. These techniques are characterized by direct interference with defensive systems. The goal is to reduce defenders\u2019 ability to detect, interpret, or respond to adversary activity.",
+          "source_id": "TA0112",
+          "source_url": "https://attack.mitre.org/tactics/TA0112"
+        },
+        "credential-access": {
+          "title": "Credential Access",
+          "description": "The adversary is trying to steal account names and passwords.\n\nCredential Access consists of techniques for stealing credentials like account names and passwords. Techniques used to get credentials include keylogging or credential dumping. Using legitimate credentials can give adversaries access to systems, make them harder to detect, and provide the opportunity to create more accounts to help achieve their goals.",
+          "source_id": "TA0006",
+          "source_url": "https://attack.mitre.org/tactics/TA0006"
+        },
+        "discovery": {
+          "title": "Discovery",
+          "description": "The adversary is trying to figure out your environment.\n\nDiscovery consists of techniques an adversary may use to gain knowledge about the system and internal network. These techniques help adversaries observe the environment and orient themselves before deciding how to act. They also allow adversaries to explore what they can control and what\u2019s around their entry point in order to discover how it could benefit their current objective. Native operating system tools are often used toward this post-compromise information-gathering objective. ",
+          "source_id": "TA0007",
+          "source_url": "https://attack.mitre.org/tactics/TA0007"
+        },
+        "lateral-movement": {
+          "title": "Lateral Movement",
+          "description": "The adversary is trying to move through your environment.\n\nLateral Movement consists of techniques that adversaries use to enter and control remote systems on a network. Following through on their primary objective often requires exploring the network to find their target, then pivoting through multiple systems and accounts to gain access to it. Adversaries might install their own remote access tools to accomplish Lateral Movement or use legitimate credentials with native network and operating system tools, which may be stealthier. ",
+          "source_id": "TA0008",
+          "source_url": "https://attack.mitre.org/tactics/TA0008"
+        },
+        "collection": {
+          "title": "Collection",
+          "description": "The adversary is trying to gather data of interest to their goal.\n\nCollection consists of techniques adversaries may use to gather information and the sources information is collected from that are relevant to following through on the adversary's objectives. Frequently, the next goal after collecting data is to either steal (exfiltrate) the data or to use the data to gain more information about the target environment. Common target sources include various drive types, browsers, audio, video, and email. Common collection methods include capturing screenshots and keyboard input.",
+          "source_id": "TA0009",
+          "source_url": "https://attack.mitre.org/tactics/TA0009"
+        },
+        "command-and-control": {
+          "title": "Command and Control",
+          "description": "The adversary is trying to communicate with compromised systems to control them.\n\nCommand and Control consists of techniques that adversaries may use to communicate with systems under their control within a victim network. Adversaries commonly attempt to mimic normal, expected traffic to avoid detection. There are many ways an adversary can establish command and control with various levels of stealth depending on the victim\u2019s network structure and defenses.",
+          "source_id": "TA0011",
+          "source_url": "https://attack.mitre.org/tactics/TA0011"
+        },
+        "exfiltration": {
+          "title": "Exfiltration",
+          "description": "The adversary is trying to steal data.\n\nExfiltration consists of techniques that adversaries may use to steal data from your network. Once they\u2019ve collected data, adversaries often package it to avoid detection while removing it. This can include compression and encryption. Techniques for getting data out of a target network typically include transferring it over their command and control channel or an alternate channel and may also include putting size limits on the transmission.",
+          "source_id": "TA0010",
+          "source_url": "https://attack.mitre.org/tactics/TA0010"
+        },
+        "impact": {
+          "title": "Impact",
+          "description": "The adversary is trying to manipulate, interrupt, or destroy your systems and data.\n \nImpact consists of techniques that adversaries use to disrupt availability or compromise integrity by manipulating business and operational processes. Techniques used for impact can include destroying or tampering with data. In some cases, business processes can look fine, but may have been altered to benefit the adversaries\u2019 goals. These techniques might be used by adversaries to follow through on their end goal or to provide cover for a confidentiality breach.",
+          "source_id": "TA0040",
+          "source_url": "https://attack.mitre.org/tactics/TA0040"
+        }
+      }
+    },
+    "participant-ai-offensive-behavior-activities": {
+      "title": "Participant AI Offensive Behavior Activities",
+      "description": "Direct adoption of MITRE ATLAS tactics content v2026.06 as governed AI-system offensive behavior classifications for behavior specifications.",
+      "source": {
+        "provenance": "adopted",
+        "authority": "MITRE ATLAS",
+        "authority_version": "2026.06",
+        "source_artifact_ref": "contracts/concept-authority/atlas-tactics-source-v1.json",
+        "source_url": "https://github.com/mitre-atlas/atlas-data/releases/download/v2026.06/ATLAS-2026.06.yaml",
+        "source_digest": "sha256:b771de8b1489564b2838a709c7429849a9575dbd94073928817fe1a21661e70a",
+        "citation_urls": [
+          "https://github.com/mitre-atlas/atlas-data/releases/download/v2026.06/ATLAS-2026.06.yaml",
+          "https://github.com/mitre-atlas/atlas-data/releases/tag/v2026.06",
+          "https://github.com/mitre-atlas/atlas-data/blob/main/README.md",
+          "https://github.com/mitre-atlas/atlas-data/blob/main/LICENSE",
+          "https://atlas.mitre.org/"
+        ],
+        "license_url": "https://github.com/mitre-atlas/atlas-data/blob/main/LICENSE",
+        "license_notice": "Copyright 2021-2026 MITRE. Licensed under the Apache License, Version 2.0. Public Release Case Number 26-1162."
+      },
+      "kind": "vocabulary",
+      "governed_scopes": [
+        "behavior_specifications.ai_offensive_behavior_refs"
+      ],
+      "extension_policy": "governed-extension",
+      "extension_pattern": "^x-[a-z0-9]+(?:-[a-z0-9]+)*:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "terms": {
+        "reconnaissance": {
+          "title": "Reconnaissance",
+          "description": "The adversary is trying to gather information about the AI system they can use to plan future operations.\n\nReconnaissance consists of techniques that involve adversaries actively or passively gathering information that can be used to support targeting.\nSuch information may include details of the victim organizations' AI capabilities and research efforts.\nThis information can be leveraged by the adversary to aid in other phases of the adversary lifecycle, such as using gathered information to obtain relevant AI artifacts, targeting AI capabilities used by the victim, tailoring attacks to the particular models used by the victim, or to drive and lead further Reconnaissance efforts.",
+          "source_id": "AML.TA0002",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0002/"
+        },
+        "resource-development": {
+          "title": "Resource Development",
+          "description": "The adversary is trying to establish resources they can use to support operations.\n\nResource Development consists of techniques that involve adversaries creating,\npurchasing, or compromising/stealing resources that can be used to support targeting.\nSuch resources include AI artifacts, infrastructure, accounts, or capabilities.\nThese resources can be leveraged by the adversary to aid in other phases of the adversary lifecycle, such as [AI Attack Staging](/tactics/AML.TA0001).",
+          "source_id": "AML.TA0003",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0003/"
+        },
+        "initial-access": {
+          "title": "Initial Access",
+          "description": "The adversary is trying to gain access to the AI system.\n\nThe target system could be a network, mobile device, or an edge device such as a sensor platform.\nThe AI capabilities used by the system could be local with onboard or cloud-enabled AI capabilities.\n\nInitial Access consists of techniques that use various entry vectors to gain their initial foothold within the system.",
+          "source_id": "AML.TA0004",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0004/"
+        },
+        "ai-model-access": {
+          "title": "AI Model Access",
+          "description": "The adversary is attempting to gain some level of access to an AI model.\n\nAI Model Access enables techniques that use various types of access to the AI model that can be used by the adversary to gain information, develop attacks, and as a means to input data to the model.\nThe level of access can range from the full knowledge of the internals of the model to access to the physical environment where data is collected for use in the AI model.\nThe adversary may use varying levels of model access during the course of their attack, from staging the attack to impacting the target system.\n\nAccess to an AI model may require access to the system housing the model, the model may be publicly accessible via an API, or it may be accessed indirectly via interaction with a product or service that utilizes AI as part of its processes.",
+          "source_id": "AML.TA0000",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0000/"
+        },
+        "execution": {
+          "title": "Execution",
+          "description": "The adversary is trying to run malicious code embedded in AI artifacts or software.\n\nExecution consists of techniques that result in adversary-controlled code running on a local or remote system.\nTechniques that run malicious code are often paired with techniques from all other tactics to achieve broader goals, like exploring a network or stealing data.\nFor example, an adversary might use a remote access tool to run a PowerShell script that does [Remote System Discovery](https://attack.mitre.org/techniques/T1018/).",
+          "source_id": "AML.TA0005",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0005/"
+        },
+        "persistence": {
+          "title": "Persistence",
+          "description": "The adversary is trying to maintain their foothold via AI artifacts or software.\n\nPersistence consists of techniques that adversaries use to keep access to systems across restarts, changed credentials, and other interruptions that could cut off their access.\nTechniques used for persistence often involve leaving behind modified ML artifacts such as poisoned training data or manipulated AI models.",
+          "source_id": "AML.TA0006",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0006/"
+        },
+        "privilege-escalation": {
+          "title": "Privilege Escalation",
+          "description": "The adversary is trying to gain higher-level permissions.\n\nPrivilege Escalation consists of techniques that adversaries use to gain higher-level permissions on a system or network. Adversaries can often enter and explore a network with unprivileged access but require elevated permissions to follow through on their objectives. Common approaches are to take advantage of system weaknesses, misconfigurations, and vulnerabilities. Examples of elevated access include:\n- SYSTEM/root level\n- local administrator\n- user account with admin-like access\n- user accounts with access to specific system or perform specific function\n\nThese techniques often overlap with Persistence techniques, as OS features that let an adversary persist can execute in an elevated context.",
+          "source_id": "AML.TA0012",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0012/"
+        },
+        "defense-evasion": {
+          "title": "Defense Evasion",
+          "description": "The adversary is trying to avoid being detected by AI-enabled security software.\n\nDefense Evasion consists of techniques that adversaries use to avoid detection throughout their compromise.\nTechniques used for defense evasion include evading AI-enabled security software such as malware detectors.",
+          "source_id": "AML.TA0007",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0007/"
+        },
+        "credential-access": {
+          "title": "Credential Access",
+          "description": "The adversary is trying to steal account names and passwords.\n\nCredential Access consists of techniques for stealing credentials like account names and passwords. Techniques used to get credentials include keylogging or credential dumping. Using legitimate credentials can give adversaries access to systems, make them harder to detect, and provide the opportunity to create more accounts to help achieve their goals.",
+          "source_id": "AML.TA0013",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0013/"
+        },
+        "discovery": {
+          "title": "Discovery",
+          "description": "The adversary is trying to figure out your AI environment.\n\nDiscovery consists of techniques an adversary may use to gain knowledge about the system and internal network.\nThese techniques help adversaries observe the environment and orient themselves before deciding how to act.\nThey also allow adversaries to explore what they can control and what's around their entry point in order to discover how it could benefit their current objective.\nNative operating system tools are often used toward this post-compromise information-gathering objective.",
+          "source_id": "AML.TA0008",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0008/"
+        },
+        "lateral-movement": {
+          "title": "Lateral Movement",
+          "description": "The adversary is trying to move through your AI environment.\n\nLateral Movement consists of techniques that adversaries may use to gain access to and control other systems or components in the environment. Adversaries may pivot towards AI Ops infrastructure such as model registries, experiment trackers, vector databases, notebooks, or training pipelines. As the adversary moves through the environment, they may discover means of accessing additional AI-related tools, services, or applications. AI agents may also be a valuable target as they commonly have more permissions than standard user accounts on the system.",
+          "source_id": "AML.TA0015",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0015/"
+        },
+        "collection": {
+          "title": "Collection",
+          "description": "The adversary is trying to gather AI artifacts and other related information relevant to their goal.\n\nCollection consists of techniques adversaries may use to gather information and the sources information is collected from that are relevant to following through on the adversary's objectives.\nFrequently, the next goal after collecting data is to steal (exfiltrate) the AI artifacts, or use the collected information to stage future operations.\nCommon target sources include software repositories, container registries, model repositories, and object stores.",
+          "source_id": "AML.TA0009",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0009/"
+        },
+        "ai-attack-staging": {
+          "title": "AI Attack Staging",
+          "description": "The adversary is leveraging their knowledge of and access to the target system to tailor the attack.\n\nAI Attack Staging consists of techniques adversaries use to prepare their attack on the target AI model.\nTechniques can include training proxy models, poisoning the target model, and crafting adversarial data to feed the target model.\nSome of these techniques can be performed in an offline manner and are thus difficult to mitigate.\nThese techniques are often used to achieve the adversary's end goal.",
+          "source_id": "AML.TA0001",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0001/"
+        },
+        "command-and-control": {
+          "title": "Command and Control",
+          "description": "The adversary is trying to communicate with compromised AI systems to control them.\n\nCommand and Control consists of techniques that adversaries may use to communicate with systems under their control within a victim network. Adversaries commonly attempt to mimic normal, expected traffic to avoid detection. There are many ways an adversary can establish command and control with various levels of stealth depending on the victim's network structure and defenses.",
+          "source_id": "AML.TA0014",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0014/"
+        },
+        "exfiltration": {
+          "title": "Exfiltration",
+          "description": "The adversary is trying to steal AI artifacts or other information about the AI system.\n\nExfiltration consists of techniques that adversaries may use to steal data from your network.\nData may be stolen for its valuable intellectual property, or for use in staging future operations.\n\nTechniques for getting data out of a target network typically include transferring it over their command and control channel or an alternate channel and may also include putting size limits on the transmission.",
+          "source_id": "AML.TA0010",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0010/"
+        },
+        "impact": {
+          "title": "Impact",
+          "description": "The adversary is trying to manipulate, interrupt, erode confidence in, or destroy your AI systems and data.\n\nImpact consists of techniques that adversaries use to disrupt availability or compromise integrity by manipulating business and operational processes.\nTechniques used for impact can include destroying or tampering with data.\nIn some cases, business processes can look fine, but may have been altered to benefit the adversaries' goals.\nThese techniques might be used by adversaries to follow through on their end goal or to provide cover for a confidentiality breach.",
+          "source_id": "AML.TA0011",
+          "source_url": "https://atlas.mitre.org/tactics/AML.TA0011/"
+        }
+      }
+    },
     "participant-tool-affordance-expectations": {
       "title": "Participant Tool Affordance Expectations",
       "description": "Governed tool and affordance expectations declared by participant implementations.",

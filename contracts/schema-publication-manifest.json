@@ -9,6 +9,26 @@
       "content_hash": "e7b858c93b7ec763c361439b1d9c7cc3979a1d150ca64a7f41ebc12c050f5cff"
     },
     {
+      "contract_id": "atlas-tactics-source-v1",
+      "schema_path": "contracts/schemas/concept-authority/atlas-tactics-source-v1.json",
+      "stability": "draft",
+      "content_hash": "17e144abf9c8de10fa7342ab8662306ad0d4170a2df1c67829ac641a686bd562",
+      "last_change": {
+        "summary": "Initial publication of the pinned MITRE ATLAS tactics v2026.06 source schema for the ACT-609 adopted AI offensive behavior vocabulary.",
+        "content_hash": "17e144abf9c8de10fa7342ab8662306ad0d4170a2df1c67829ac641a686bd562"
+      }
+    },
+    {
+      "contract_id": "attack-enterprise-tactics-source-v1",
+      "schema_path": "contracts/schemas/concept-authority/attack-enterprise-tactics-source-v1.json",
+      "stability": "draft",
+      "content_hash": "32dc4af64f786b3c7a520181f9266cbc3fcfd54d69683faa861c38a495783c7f",
+      "last_change": {
+        "summary": "Initial publication of the pinned MITRE ATT&CK Enterprise tactics v19.1 source schema for the ACT-609 adopted offensive behavior vocabulary.",
+        "content_hash": "32dc4af64f786b3c7a520181f9266cbc3fcfd54d69683faa861c38a495783c7f"
+      }
+    },
+    {
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
@@ -38,7 +58,11 @@
       "contract_id": "controlled-vocabularies-v1",
       "schema_path": "contracts/schemas/concept-authority/controlled-vocabularies-v1.json",
       "stability": "draft",
-      "content_hash": "3c3b4e517c42bd3822a2b9bbc69dc359773ee79da24f67abd4cafe8b205be2b8"
+      "content_hash": "c7565b28b4f3a5511b4b744b17210ddf9d79961d374bfbe1ace5a732cf637758",
+      "last_change": {
+        "summary": "Added external source metadata to controlled vocabularies and pinned ACT-609 offensive behavior base terms to MITRE ATT&CK Enterprise tactics v19.1.",
+        "content_hash": "c7565b28b4f3a5511b4b744b17210ddf9d79961d374bfbe1ace5a732cf637758"
+      }
     },
     {
       "contract_id": "evaluation-history-event-stream-v1",
@@ -132,10 +156,10 @@
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "8243c11f33d5707bd79ce7f50367152041ad67a038c9959fe6d3f37c918924d9",
+      "content_hash": "3377c548df57ad3af2b485561c7685b3883b9b93e0673be283005ad29c367e7c",
       "last_change": {
-        "summary": "Added ACT-606 behavior specifications to instantiated SDL scenarios with typed governed extension values.",
-        "content_hash": "8243c11f33d5707bd79ce7f50367152041ad67a038c9959fe6d3f37c918924d9"
+        "summary": "Added ai_offensive_behavior_refs to participant behavior specifications for the separately governed MITRE ATLAS tactic vocabulary.",
+        "content_hash": "3377c548df57ad3af2b485561c7685b3883b9b93e0673be283005ad29c367e7c"
       }
     },
     {
@@ -318,10 +342,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "bf758023686f25a4fb0ff6f67de62d1cb2769f08a483ac6783057a0fc80b64c4",
+      "content_hash": "c97cb7d5d9196aaef1628c2a12d9a397dd1e3edca7179399b57487371970ecd8",
       "last_change": {
-        "summary": "Added ACT-606 behavior specifications to SDL authoring input with typed governed extension values.",
-        "content_hash": "bf758023686f25a4fb0ff6f67de62d1cb2769f08a483ac6783057a0fc80b64c4"
+        "summary": "Added ai_offensive_behavior_refs to authored participant behavior specifications for the separately governed MITRE ATLAS tactic vocabulary.",
+        "content_hash": "c97cb7d5d9196aaef1628c2a12d9a397dd1e3edca7179399b57487371970ecd8"
       }
     },
     {

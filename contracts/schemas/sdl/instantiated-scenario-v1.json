@@ -5116,6 +5116,16 @@
           "title": "Action Contract Refs",
           "type": "array"
         },
+        "ai_offensive_behavior_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{([A-Za-z_][A-Za-z0-9_-]*)\\}"
+            },
+            "type": "string"
+          },
+          "title": "Ai Offensive Behavior Refs",
+          "type": "array"
+        },
         "authority_scope_refs": {
           "items": {
             "not": {
@@ -5188,6 +5198,16 @@
             "type": "string"
           },
           "title": "Observation Boundary Refs",
+          "type": "array"
+        },
+        "offensive_behavior_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{([A-Za-z_][A-Za-z0-9_-]*)\\}"
+            },
+            "type": "string"
+          },
+          "title": "Offensive Behavior Refs",
           "type": "array"
         },
         "outcome_interpretation_rule_refs": {
