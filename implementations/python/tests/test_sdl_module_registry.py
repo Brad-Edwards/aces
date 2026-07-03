@@ -953,3 +953,203 @@ def test_oci_bundle_rejects_duplicate_member(tmp_path: Path):
         pytest.raises(SDLParseError, match="Duplicate"),
     ):
         module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+
+# ---------------------------------------------------------------------------
+# Issue #14: config-blob integrity + root_file signature binding.
+# ---------------------------------------------------------------------------
+
+
+def _rewrite_config_field(layout_dir: Path, field: str, value: object) -> None:
+    """Rewrite a published OCI layout so the config's ``field`` becomes ``value``.
+
+    Models a compromised registry that keeps the signer's signature intact but
+    alters an unsigned config field, then re-derives the config digest, manifest
+    digest, and index so every served blob is internally consistent. Fix 1
+    (config-digest verification) therefore passes; only a signature that binds
+    ``field`` can catch the tamper.
+    """
+    blobs = layout_dir / "blobs" / "sha256"
+    index = json.loads((layout_dir / "index.json").read_text(encoding="utf-8"))
+    manifest_digest = index["manifests"][0]["digest"]
+    manifest = json.loads((blobs / manifest_digest.removeprefix("sha256:")).read_bytes())
+    config_digest = manifest["config"]["digest"]
+    config = json.loads((blobs / config_digest.removeprefix("sha256:")).read_bytes())
+    config[field] = value
+    new_config_bytes = json.dumps(config, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    new_config_digest = f"sha256:{module_registry._sha256_digest(new_config_bytes)}"
+    (blobs / new_config_digest.removeprefix("sha256:")).write_bytes(new_config_bytes)
+    manifest["config"]["digest"] = new_config_digest
+    manifest["config"]["size"] = len(new_config_bytes)
+    new_manifest_bytes = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    new_manifest_digest = f"sha256:{module_registry._sha256_digest(new_manifest_bytes)}"
+    (blobs / new_manifest_digest.removeprefix("sha256:")).write_bytes(new_manifest_bytes)
+    index["manifests"][0]["digest"] = new_manifest_digest
+    index["manifests"][0]["size"] = len(new_manifest_bytes)
+    (layout_dir / "index.json").write_text(
+        json.dumps(index, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_oci_import_rejects_tampered_config_blob(tmp_path: Path):
+    """A registry serving config bytes that do not hash to manifest ``config.digest``
+    is rejected before the config JSON is trusted (issue #14, fix 1)."""
+    module_path = _local_module(tmp_path / "shared.yaml")
+    published = publish_module_to_oci_layout(module_path, output_dir=tmp_path / "dist")
+    layout_dir = Path(published["layout_dir"])
+
+    # Overwrite the config blob with bytes that no longer match its digest-keyed
+    # filename, so the in-process registry serves them under the advertised
+    # config.digest (the manifest is left untouched).
+    index = json.loads((layout_dir / "index.json").read_text(encoding="utf-8"))
+    manifest_digest = index["manifests"][0]["digest"]
+    blobs = layout_dir / "blobs" / "sha256"
+    manifest = json.loads((blobs / manifest_digest.removeprefix("sha256:")).read_bytes())
+    config_blob = blobs / manifest["config"]["digest"].removeprefix("sha256:")
+    tampered = json.loads(config_blob.read_bytes())
+    tampered["root_file"] = "evil.yaml"
+    config_blob.write_bytes(json.dumps(tampered, sort_keys=True, separators=(",", ":")).encode("utf-8"))
+
+    with _OCIRegistry(layout_dir, repo="acme/shared") as registry:
+        _write(
+            tmp_path / "aces-trust.yaml",
+            f"""
+            schema_version: aces-trust/v1
+            registries:
+              "127.0.0.1:{registry.port}":
+                require_signatures: false
+                allow_insecure_http: true
+            """,
+        )
+        root = _root_import(
+            tmp_path / "root-oci.yaml",
+            f"source: oci:127.0.0.1:{registry.port}/acme/shared\n            namespace: shared\n            version: 1.2.3",
+        )
+        with pytest.raises(SDLParseError, match="config digest verification failed"):
+            parse_sdl_file(root)
+
+
+def test_oci_import_rejects_root_file_tampering(tmp_path: Path):
+    """A compromised registry cannot repoint ``root_file`` inside an otherwise-signed
+    bundle: ``root_file`` is bound into the signature payload, so altering it while
+    keeping the original signature fails verification (issue #14, fix 2)."""
+    module_path = _local_module(tmp_path / "shared.yaml")
+    private_key = Ed25519PrivateKey.generate()
+    private_key_path = tmp_path / "signing-key.pem"
+    private_key_path.write_bytes(
+        private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+    )
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    published = publish_module_to_oci_layout(
+        module_path,
+        output_dir=tmp_path / "dist",
+        signer_id="test-signer",
+        private_key_path=private_key_path,
+    )
+    layout_dir = Path(published["layout_dir"])
+    # Keep the signature intact; only repoint the entrypoint.
+    _rewrite_config_field(layout_dir, "root_file", "smuggled.yaml")
+
+    with _OCIRegistry(layout_dir, repo="acme/shared") as registry:
+        _write(
+            tmp_path / "aces-trust.yaml",
+            f"""
+            schema_version: aces-trust/v1
+            registries:
+              "127.0.0.1:{registry.port}":
+                require_signatures: true
+                allow_insecure_http: true
+                trusted_signers:
+                  test-signer: "{base64.b64encode(public_key).decode("utf-8")}"
+            """,
+        )
+        root = _root_import(
+            tmp_path / "root-oci.yaml",
+            f"source: oci:127.0.0.1:{registry.port}/acme/shared\n            namespace: shared\n            version: 1.2.3",
+        )
+        with pytest.raises(SDLParseError, match="No valid trusted signer signature found"):
+            parse_sdl_file(root)
+
+
+def test_oci_import_rejects_non_string_root_file(tmp_path: Path):
+    """A config declaring a non-string ``root_file`` fails closed with SDLParseError
+    rather than flowing a bad type into the signature payload / extraction and
+    surfacing a confusing downstream TypeError (issue #14)."""
+    module_path = _local_module(tmp_path / "shared.yaml")
+    published = publish_module_to_oci_layout(module_path, output_dir=tmp_path / "dist")
+    layout_dir = Path(published["layout_dir"])
+    # Re-derive the digests so Fix 1 (config-digest verification) passes and the
+    # root_file type check is what rejects the module.
+    _rewrite_config_field(layout_dir, "root_file", ["evil.yaml"])
+
+    with _OCIRegistry(layout_dir, repo="acme/shared") as registry:
+        _write(
+            tmp_path / "aces-trust.yaml",
+            f"""
+            schema_version: aces-trust/v1
+            registries:
+              "127.0.0.1:{registry.port}":
+                require_signatures: false
+                allow_insecure_http: true
+            """,
+        )
+        root = _root_import(
+            tmp_path / "root-oci.yaml",
+            f"source: oci:127.0.0.1:{registry.port}/acme/shared\n            namespace: shared\n            version: 1.2.3",
+        )
+        with pytest.raises(SDLParseError, match="non-string root_file"):
+            parse_sdl_file(root)
+
+
+def test_oci_signature_over_legacy_payload_without_root_file_is_rejected():
+    """A signature computed over the pre-#14 payload (which omitted ``root_file``)
+    fails closed under ``require_signatures`` — no compatibility fallback."""
+    descriptor = module_registry.ModuleDescriptor(id="acme/shared", version="1.2.3", exports={"nodes": ["vm"]})
+    content_digest = "sha256:" + "0" * 64
+    legacy_payload = json.dumps(
+        {
+            "module_id": descriptor.id,
+            "module_version": descriptor.version,
+            "exports": descriptor.exports,
+            "content_digest": content_digest,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    signature = base64.b64encode(private_key.sign(legacy_payload)).decode("utf-8")
+    policy = module_registry.RegistryTrustPolicy(
+        require_signatures=True,
+        trusted_signers={"test-signer": base64.b64encode(public_key).decode("utf-8")},
+    )
+    with pytest.raises(SDLParseError, match="No valid trusted signer signature found"):
+        module_registry._verify_signatures(
+            signatures=[{"signer_id": "test-signer", "signature": signature}],
+            trust_policy=policy,
+            module_descriptor=descriptor,
+            content_digest=content_digest,
+            root_file="module.yaml",
+        )
+
+
+def test_oci_signature_binds_root_file():
+    """The canonical signing payload includes ``root_file`` so a differing
+    ``root_file`` produces a different signable payload (issue #14, fix 2)."""
+    descriptor = module_registry.ModuleDescriptor(id="acme/shared", version="1.2.3", exports={"nodes": ["vm"]})
+    content_digest = "sha256:" + "0" * 64
+    payload_a = module_registry._signable_payload(descriptor, content_digest=content_digest, root_file="module.yaml")
+    payload_b = module_registry._signable_payload(descriptor, content_digest=content_digest, root_file="other.yaml")
+    assert payload_a != payload_b
+    assert b"root_file" in payload_a
