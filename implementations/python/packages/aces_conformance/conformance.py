@@ -69,14 +69,13 @@ from aces_processor.models import (
     iter_participant_behavior_history_violations,
     iter_participant_behavior_joint_action_violations,
 )
-from aces_processor.reference import run_reference_processor
+from aces_processor.reference import ScenarioInput, run_reference_processor
 from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.registry import RuntimeTarget
 from aces_runtime.result_contracts import (
     evaluation_result_contract_diagnostics,
     workflow_result_contract_diagnostics,
 )
-from aces_sdl.parser import parse_sdl
 from pydantic import ValidationError
 
 _SEMANTIC_INVALID_DIAGNOSTIC_CODE = "conformance.semantic-invalid"
@@ -95,6 +94,47 @@ _PORTABLE_AUGMENTATION_CARRIER_KINDS = frozenset(
     }
 )
 _RUN_REFINEMENT_CONCERN_KINDS = frozenset({"capture-window", "measurement-channel"})
+
+# Default reference scenario the target-conformance live probe drives when the
+# caller supplies none. Backend-neutral: a single generic linux vm node.
+#
+# Issue #663 makes this a *default*, not a universal assumption. A fixed-topology
+# emulation or bounded simulation backend that cannot realize this generic
+# scenario supplies one it can realize via
+# ``run_target_conformance(reference_scenario=...)``; the live probe then holds
+# it to full realization of *that* scenario. This is a temporary runner-parameter
+# bridge — superseded by the realizability-envelope design (#667) and the
+# scenario/envelope subsumption relation (#668), which will let the probe
+# negotiate an in-envelope witness instead of carrying a default at all.
+_DEFAULT_CONFORMANCE_SCENARIO = dedent(
+    """
+    name: conformance
+    nodes:
+      vm:
+        type: vm
+        os: linux
+        resources: {ram: 1 gib, cpu: 1}
+        conditions: {health: ops}
+        roles: {ops: operator}
+    conditions:
+      health: {command: /bin/true, interval: 15}
+    entities:
+      blue: {role: blue}
+    objectives:
+      validate:
+        entity: blue
+        success: {conditions: [health]}
+    workflows:
+      response:
+        start: run
+        steps:
+          run:
+            type: objective
+            objective: validate
+            on-success: finish
+          finish: {type: end}
+    """
+)
 
 
 class BackendCapabilityProfile(str, Enum):
@@ -1121,11 +1161,22 @@ def run_target_conformance(
     profile: BackendProfileSelector | None = None,
     root: Path | None = None,
     profiles_root: Path | None = None,
+    reference_scenario: ScenarioInput | None = None,
 ) -> BackendConformanceReport:
     """Run fixture conformance for a target's declared runtime surface.
 
     ``root`` overrides the fixtures tree and ``profiles_root`` overrides the
     backend profile tree; both default to the canonical published roots.
+
+    ``reference_scenario`` selects the scenario the live provisioning/snapshot
+    probes drive (issue #663). It defaults to a generic linux-vm scenario
+    (``_DEFAULT_CONFORMANCE_SCENARIO``). A fixed-topology emulation or bounded
+    simulation backend that cannot realize the generic default supplies a
+    scenario it *can* realize here, instead of being wrongly failed for not
+    realizing an arbitrary hard-coded scenario; the probe still requires full
+    realization (issue #606 mutation guard) of whichever scenario is selected.
+    This is a temporary runner-parameter bridge superseded by the
+    realizability-envelope design (#667/#668).
     """
 
     effective_profile = profile or profile_for_manifest(target.manifest)
@@ -1205,7 +1256,7 @@ def run_target_conformance(
                 + "; ".join(claim_gaps),
             )
         )
-    live_cases = _live_target_cases(target, effective_profile)
+    live_cases = _live_target_cases(target, effective_profile, reference_scenario=reference_scenario)
     cases = tuple((*fixture_report.cases, *live_cases))
     passed = passed and all(case.passed for case in live_cases)
     return BackendConformanceReport(
@@ -1483,6 +1534,8 @@ def _live_snapshot_case(control_plane: RuntimeControlPlane) -> ConformanceCaseRe
 def _live_target_cases(
     target: RuntimeTarget,
     profile: BackendProfileSelector,
+    *,
+    reference_scenario: ScenarioInput | None = None,
 ) -> tuple[ConformanceCaseResult, ...]:
     """Run live probes appropriate for known runtime surfaces only.
 
@@ -1494,6 +1547,12 @@ def _live_target_cases(
     that declare those roles. For an unknown profile id we run only the
     universally-safe manifest validation case and skip the live probes, since
     their runtime contract is not known to this implementation.
+
+    The probe drives ``reference_scenario`` when supplied, else
+    ``_DEFAULT_CONFORMANCE_SCENARIO`` (issue #663). Whichever scenario is
+    selected is held to full realization (the #606 mutation guard is
+    unchanged); the parameter only stops the probe assuming *every* backend can
+    realize one hard-coded scenario.
     """
 
     cases: list[ConformanceCaseResult] = []
@@ -1513,37 +1572,7 @@ def _live_target_cases(
     if known is None:
         return tuple(cases)
 
-    scenario = parse_sdl(
-        dedent(
-            """
-            name: conformance
-            nodes:
-              vm:
-                type: vm
-                os: linux
-                resources: {ram: 1 gib, cpu: 1}
-                conditions: {health: ops}
-                roles: {ops: operator}
-            conditions:
-              health: {command: /bin/true, interval: 15}
-            entities:
-              blue: {role: blue}
-            objectives:
-              validate:
-                entity: blue
-                success: {conditions: [health]}
-            workflows:
-              response:
-                start: run
-                steps:
-                  run:
-                    type: objective
-                    objective: validate
-                    on-success: finish
-                  finish: {type: end}
-            """
-        )
-    )
+    scenario = _DEFAULT_CONFORMANCE_SCENARIO if reference_scenario is None else reference_scenario
     execution_plan = run_reference_processor(scenario, target.manifest).execution_plan
     control_plane = RuntimeControlPlane(target)
     cases.append(_provisioning_probe_case(control_plane, execution_plan.provisioning))

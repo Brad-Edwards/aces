@@ -101,6 +101,31 @@ jobs:
         if: steps.runtime.outputs.available == 'true'
         run: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s integration_docker
 
+  # Advisory OSV-scanner sweep over the Python dependency lockfile (issue #34).
+  # Non-gating: CVE findings surface as an uploaded JSON artifact and never fail
+  # the build. The `osv_scan` nox session is kept out of the hermetic `verify`
+  # graph; genuine scanner/setup failures still fail this job's step (visible as
+  # a soft failure) so the advisory posture never hides a broken scan.
+  supply-chain:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8
+      - name: Run OSV-scanner (advisory)
+        run: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s osv_scan
+      - name: Upload OSV-scanner report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: osv-scanner-report
+          path: implementations/python/osv-scanner-report.json
+          if-no-files-found: warn
+
   sonar:
     runs-on: ubuntu-latest
     needs: [verify]
