@@ -11,7 +11,7 @@ conformance proofs. It lives in the tests layer because it composes the processo
 validation iterators with the libvirt backend runtime, a cross-layer composition
 the ADR-036 module boundaries reserve for tests. The deterministic
 manifest/selection/action-result/admission fixtures are shared with the shipped
-paper-evidence producer via ``aces_operations.deterministic_participant_fixtures``.
+scenario-evidence producer via ``aces_operations.deterministic_participant_fixtures``.
 """
 
 from __future__ import annotations

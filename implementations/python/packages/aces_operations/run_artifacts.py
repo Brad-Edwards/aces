@@ -1,6 +1,6 @@
 """Shared run-archive helpers for operational proof artifacts.
 
-Both the TechVault native live gate and the libvirt paper evidence producer write
+Both the TechVault native live gate and the libvirt scenario-evidence producer write
 JSON artifacts under a ``runs/<run-id>/<subdir>/`` archive. They share one
 definition of a safe run-id filesystem label and one atomic JSON writer here
 rather than carrying parallel copies.

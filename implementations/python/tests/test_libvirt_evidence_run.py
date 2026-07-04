@@ -1,7 +1,7 @@
-"""Coverage for the libvirt paper-proof evaluator-evidence artifact (issue #615).
+"""Coverage for the libvirt evidence-run evaluator-evidence artifact (issue #615).
 
-Exercises the producer in both evidence-source modes against the paper scenario
-(``paper-agent-loop.sdl.yaml``) and asserts every required evidence surface,
+Exercises the producer in both evidence-source modes against the reference scenario
+(``enterprise-participant-evidence-loop.sdl.yaml``) and asserts every required evidence surface,
 embedded-contract validity, the redaction gate, and the participant/evaluator
 boundary. The native-live path is exercised with an injected fake libvirt
 connection (no daemon), mirroring ``test_libvirt_backend_techvault_native``.
@@ -20,11 +20,11 @@ from aces_contracts.contracts import (
     EvaluationResultStateModel,
     ExperimentRealizedFormDisclosureModel,
 )
-from aces_operations.libvirt_paper_evidence import (
+from aces_operations.libvirt_evidence_run import (
     EVIDENCE_RUN_SCHEMA,
-    LibvirtPaperEvidenceConfig,
-    run_libvirt_paper_evidence,
-    validate_libvirt_paper_evidence_artifact,
+    LibvirtEvidenceRunConfig,
+    run_libvirt_evidence_run,
+    validate_libvirt_evidence_run_artifact,
 )
 from aces_operations.run_artifacts import (
     atomic_write_json_artifact,
@@ -33,7 +33,7 @@ from aces_operations.run_artifacts import (
 )
 from paths import EXAMPLES_DIR
 
-_PAPER_SCENARIO = EXAMPLES_DIR / "paper-agent-loop.sdl.yaml"
+_REFERENCE_SCENARIO = EXAMPLES_DIR / "enterprise-participant-evidence-loop.sdl.yaml"
 _TECHVAULT_SCENARIO = EXAMPLES_DIR / "techvault-operational.sdl.yaml"
 
 _REQUIRED_SECTIONS = (
@@ -130,7 +130,7 @@ def _native_driver_factory(tmp_path: Path):
             state_dir=tmp_path / "state",
             connection=_FakeConnection(),
             kernel_path=kernel,
-            name_prefix="paper-test",
+            name_prefix="evidence-test",
             initramfs_builder=_InitramfsBuilder(),
         )
 
@@ -141,7 +141,7 @@ def _native_driver_factory(tmp_path: Path):
 
 
 def test_deterministic_artifact_carries_all_evidence_surfaces(tmp_path):
-    report = run_libvirt_paper_evidence(scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, run_id="paper-det-1")
+    report = run_libvirt_evidence_run(scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, run_id="evidence-det-1")
 
     assert report.passed, report.render()
     artifact = report.artifact
@@ -150,22 +150,22 @@ def test_deterministic_artifact_carries_all_evidence_surfaces(tmp_path):
     assert artifact["evidence_source_mode"] == "deterministic"
     for section in _REQUIRED_SECTIONS:
         assert section in artifact, f"missing evidence surface: {section}"
-    assert validate_libvirt_paper_evidence_artifact(artifact) == []
+    assert validate_libvirt_evidence_run_artifact(artifact) == []
 
 
 def test_scenario_identity_is_portable_and_hashed(tmp_path):
-    report = run_libvirt_paper_evidence(scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, run_id="paper-det-2")
+    report = run_libvirt_evidence_run(scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, run_id="evidence-det-2")
     scenario = report.artifact["scenario"]
-    assert scenario["name"] == "paper-enterprise-participant-evidence-loop"
+    assert scenario["name"] == "enterprise-participant-evidence-loop"
     assert scenario["content_sha256"].startswith("sha256:")
     # Portable ref, never the absolute host path.
-    assert scenario["relative_path"] == "examples/scenarios/paper-agent-loop.sdl.yaml"
+    assert scenario["relative_path"] == "examples/scenarios/enterprise-participant-evidence-loop.sdl.yaml"
     assert not scenario["relative_path"].startswith("/")
 
 
 def test_embedded_published_contracts_revalidate(tmp_path):
-    artifact = run_libvirt_paper_evidence(
-        scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, run_id="paper-det-3"
+    artifact = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, run_id="evidence-det-3"
     ).artifact
 
     # The backend manifest is carried as the canonical BackendManifestV2 payload —
@@ -186,8 +186,8 @@ def test_embedded_published_contracts_revalidate(tmp_path):
 
 
 def test_participant_action_proof_is_from_libvirt_runtime(tmp_path):
-    artifact = run_libvirt_paper_evidence(
-        scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, run_id="paper-det-4"
+    artifact = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, run_id="evidence-det-4"
     ).artifact
     proof = artifact["participant_action_proof"]
     assert proof["lifecycle_clean"] is True
@@ -200,8 +200,8 @@ def test_participant_action_proof_is_from_libvirt_runtime(tmp_path):
 
 
 def test_negative_boundary_withholds_internal_and_evaluator_surfaces(tmp_path):
-    artifact = run_libvirt_paper_evidence(
-        scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, run_id="paper-det-5"
+    artifact = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, run_id="evidence-det-5"
     ).artifact
     boundary = artifact["negative_boundary_checks"]
     refs = {check["ref"] for check in boundary["checks"]}
@@ -213,8 +213,8 @@ def test_negative_boundary_withholds_internal_and_evaluator_surfaces(tmp_path):
 
 
 def test_defensive_evidence_is_evaluator_only_with_disclosure(tmp_path):
-    artifact = run_libvirt_paper_evidence(
-        scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, run_id="paper-det-6"
+    artifact = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, run_id="evidence-det-6"
     ).artifact
     defensive = artifact["defensive_evidence"]
     assert defensive["visibility"] == "evaluator-only"
@@ -228,8 +228,8 @@ def test_defensive_evidence_is_evaluator_only_with_disclosure(tmp_path):
 
 
 def test_non_claims_are_carried_verbatim(tmp_path):
-    artifact = run_libvirt_paper_evidence(
-        scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, run_id="paper-det-7"
+    artifact = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, run_id="evidence-det-7"
     ).artifact
     joined = " ".join(artifact["non_claims"])
     assert "No Wazuh detection-quality claim" in joined
@@ -241,8 +241,8 @@ def test_non_claims_are_carried_verbatim(tmp_path):
 
 
 def test_artifact_contains_no_forbidden_secrets(tmp_path):
-    artifact = run_libvirt_paper_evidence(
-        scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, run_id="paper-redact-1"
+    artifact = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, run_id="evidence-redact-1"
     ).artifact
     blob = json.dumps(artifact)
     assert "/home/" not in blob
@@ -253,46 +253,46 @@ def test_artifact_contains_no_forbidden_secrets(tmp_path):
 
 
 def test_validator_flags_injected_host_path_leak(tmp_path):
-    artifact = run_libvirt_paper_evidence(
-        scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, run_id="paper-redact-2"
+    artifact = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, run_id="evidence-redact-2"
     ).artifact
     artifact["realized_topology"]["leak"] = "/home/operator/.ssh/id_rsa"
-    problems = validate_libvirt_paper_evidence_artifact(artifact)
+    problems = validate_libvirt_evidence_run_artifact(artifact)
     assert any("redaction violation" in p for p in problems)
 
 
 def test_validator_flags_injected_domain_uuid(tmp_path):
-    artifact = run_libvirt_paper_evidence(
-        scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, run_id="paper-redact-3"
+    artifact = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, run_id="evidence-redact-3"
     ).artifact
     artifact["realized_topology"]["leak_uuid"] = "550e8400-e29b-41d4-a716-446655440000"
-    problems = validate_libvirt_paper_evidence_artifact(artifact)
+    problems = validate_libvirt_evidence_run_artifact(artifact)
     assert any("domain UUID" in p for p in problems)
 
 
 def test_validator_flags_participant_boundary_exposure(tmp_path):
-    artifact = run_libvirt_paper_evidence(
-        scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, run_id="paper-redact-4"
+    artifact = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, run_id="evidence-redact-4"
     ).artifact
     # Simulate a regression that leaks a withheld internal ref onto the participant view.
     artifact["participant_action_proof"]["participant_visible_refs"] = ["nodes.wazuh-manager"]
-    problems = validate_libvirt_paper_evidence_artifact(artifact)
+    problems = validate_libvirt_evidence_run_artifact(artifact)
     assert any("boundary violation" in p for p in problems)
 
 
 # --- native-live mode ----------------------------------------------------------
 
 
-def test_native_live_paper_scenario_realizes_content_plane(tmp_path):
-    report = run_libvirt_paper_evidence(
-        scenario_path=_PAPER_SCENARIO,
+def test_native_live_reference_scenario_realizes_content_plane(tmp_path):
+    report = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO,
         project_dir=tmp_path,
-        run_id="paper-live-1",
-        config=LibvirtPaperEvidenceConfig(evidence_source_mode="native-live"),
+        run_id="evidence-live-1",
+        config=LibvirtEvidenceRunConfig(evidence_source_mode="native-live"),
         driver_factory=_native_driver_factory(tmp_path),
         probe=_Probe(),
     )
-    # Issue #603: the libvirt backend now realizes the paper scenario's content and
+    # Issue #603: the libvirt backend now realizes the reference scenario's content and
     # account placements through cloud-init, so native-live realizes the provisioning
     # substrate. The disclosure remains honest: only the orchestration/evaluation
     # planes (outside a provisioning-only target) are still surfaced as unrealized —
@@ -300,7 +300,7 @@ def test_native_live_paper_scenario_realizes_content_plane(tmp_path):
     assert report.passed, report.render()
     artifact = report.artifact
     assert artifact is not None
-    assert validate_libvirt_paper_evidence_artifact(artifact) == []
+    assert validate_libvirt_evidence_run_artifact(artifact) == []
     provenance = artifact["backend"]["realization_provenance"]
     assert provenance["substrate_realized"] is True
     unrealized = artifact["realized_topology"]["unrealized_capabilities"]
@@ -310,11 +310,11 @@ def test_native_live_paper_scenario_realizes_content_plane(tmp_path):
 
 
 def test_native_live_realizes_substrate_for_provisionable_scenario(tmp_path):
-    report = run_libvirt_paper_evidence(
+    report = run_libvirt_evidence_run(
         scenario_path=_TECHVAULT_SCENARIO,
         project_dir=tmp_path,
         run_id="tv-live-1",
-        config=LibvirtPaperEvidenceConfig(evidence_source_mode="native-live"),
+        config=LibvirtEvidenceRunConfig(evidence_source_mode="native-live"),
         driver_factory=_native_driver_factory(tmp_path),
         probe=_Probe(),
     )
@@ -323,7 +323,7 @@ def test_native_live_realizes_substrate_for_provisionable_scenario(tmp_path):
     # redaction/contract validator (the path most able to leak host-private data).
     assert report.passed, report.render()
     artifact = report.artifact
-    assert validate_libvirt_paper_evidence_artifact(artifact) == []
+    assert validate_libvirt_evidence_run_artifact(artifact) == []
     assert artifact["backend"]["realization_provenance"]["substrate_realized"] is True
     native_surface = artifact["realized_topology"]["native_surface"]
     assert len(native_surface["domains"]) == 30
@@ -336,11 +336,11 @@ def test_native_live_realizes_substrate_for_provisionable_scenario(tmp_path):
 
 
 def test_native_live_without_realized_substrate_fails(tmp_path):
-    report = run_libvirt_paper_evidence(
-        scenario_path=_PAPER_SCENARIO,
+    report = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO,
         project_dir=tmp_path,
-        run_id="paper-live-2",
-        config=LibvirtPaperEvidenceConfig(evidence_source_mode="native-live"),
+        run_id="evidence-live-2",
+        config=LibvirtEvidenceRunConfig(evidence_source_mode="native-live"),
     )
     # The default driver factory has no daemon to connect to, so nothing is realized.
     # The gating realization check fails: native-live cannot pass without realizing.
@@ -353,8 +353,10 @@ def test_native_live_without_realized_substrate_fails(tmp_path):
 
 
 def test_artifact_written_to_stable_path(tmp_path):
-    report = run_libvirt_paper_evidence(scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, run_id="paper-write-1")
-    expected = tmp_path / "runs" / "paper-write-1" / "paper-evidence" / "libvirt-paper-evidence-run.json"
+    report = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, run_id="evidence-write-1"
+    )
+    expected = tmp_path / "runs" / "evidence-write-1" / "scenario-evidence" / "libvirt-scenario-evidence-run.json"
     assert report.artifact_path == str(expected)
     assert expected.is_file()
     written = json.loads(expected.read_text())
@@ -362,7 +364,7 @@ def test_artifact_written_to_stable_path(tmp_path):
 
 
 def test_unsafe_run_id_is_rejected_without_write(tmp_path):
-    report = run_libvirt_paper_evidence(scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, run_id="../escape")
+    report = run_libvirt_evidence_run(scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, run_id="../escape")
     assert not report.passed
     assert report.artifact_path is None
     assert not (tmp_path / "runs").exists()
@@ -372,7 +374,7 @@ def test_unsafe_run_id_is_rejected_without_write(tmp_path):
 
 
 def test_run_id_label_validation():
-    assert is_valid_run_id_label("paper-evidence_2026.06.29")
+    assert is_valid_run_id_label("evidence-run_2026.06.29")
     assert not is_valid_run_id_label("../escape")
     assert not is_valid_run_id_label(".hidden")
     assert not is_valid_run_id_label("with/slash")
@@ -381,7 +383,7 @@ def test_run_id_label_validation():
 
 def test_run_artifact_path_rejects_unsafe_label(tmp_path):
     with pytest.raises(ValueError, match="safe filesystem label"):
-        run_artifact_path(tmp_path, "../escape", "paper-evidence", "run.json")
+        run_artifact_path(tmp_path, "../escape", "scenario-evidence", "run.json")
 
 
 def test_atomic_write_json_artifact_round_trips(tmp_path):

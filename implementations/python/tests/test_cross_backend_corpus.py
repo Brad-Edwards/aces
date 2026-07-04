@@ -1,10 +1,11 @@
-"""Coverage for the paper demonstration corpus producer (issue #600).
+"""Coverage for the cross-backend evidence corpus producer (issue #600).
 
-Exercises the cross-backend invariant ledger builder against the authored paper
+Exercises the cross-backend invariant ledger builder against the authored reference
 scenario: the n=2 pairing (libvirt reference backend + APTL) over one authored
 scenario digest, the four ledger sections, the redaction/validation gates, the
-optional APTL evidence-export translation (allowlisted portable fields only), and a
-drift guard that the committed corpus matches a fresh build.
+optional APTL evidence-export translation (allowlisted portable fields only), and
+build determinism (two fresh builds are byte-identical). The canonical published
+corpus lives in Brad-Edwards/research, not in this repo; ACES ships the producer.
 """
 
 from __future__ import annotations
@@ -12,21 +13,20 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from aces_operations.paper_corpus import (
+from aces_operations.cross_backend_corpus import (
     CORPUS_SCHEMA,
-    PaperCorpusConfig,
-    build_paper_demonstration_corpus,
-    validate_paper_demonstration_corpus_artifact,
+    CrossBackendCorpusConfig,
+    build_cross_backend_corpus,
+    validate_cross_backend_corpus_artifact,
 )
 from aces_operations.run_artifacts import serialize_run_artifact
 from paths import EXAMPLES_DIR
 
-_PAPER_SCENARIO = EXAMPLES_DIR / "paper-agent-loop.sdl.yaml"
-_COMMITTED_CORPUS = EXAMPLES_DIR.parent / "corpus" / "paper-demonstration" / "paper-demonstration-corpus.json"
+_REFERENCE_SCENARIO = EXAMPLES_DIR / "enterprise-participant-evidence-loop.sdl.yaml"
 
 
-def _build(tmp_path: Path, config: PaperCorpusConfig | None = None):
-    return build_paper_demonstration_corpus(scenario_path=_PAPER_SCENARIO, project_dir=tmp_path, config=config)
+def _build(tmp_path: Path, config: CrossBackendCorpusConfig | None = None):
+    return build_cross_backend_corpus(scenario_path=_REFERENCE_SCENARIO, project_dir=tmp_path, config=config)
 
 
 def test_build_corpus_passes_and_validates(tmp_path: Path) -> None:
@@ -35,7 +35,7 @@ def test_build_corpus_passes_and_validates(tmp_path: Path) -> None:
     assert report.artifact is not None
     artifact = report.artifact
     assert artifact["schema"] == CORPUS_SCHEMA
-    assert validate_paper_demonstration_corpus_artifact(artifact) == []
+    assert validate_cross_backend_corpus_artifact(artifact) == []
     backend_ids = [run["backend_id"] for run in artifact["backend_runs"]]
     assert backend_ids == ["libvirt-reference", "aptl-docker"]
     assert len(set(backend_ids)) == 2
@@ -82,12 +82,10 @@ def test_validator_requires_two_distinct_backends(tmp_path: Path) -> None:
     artifact = _build(tmp_path).artifact
     assert artifact is not None
     one_run = {**artifact, "backend_runs": artifact["backend_runs"][:1]}
-    assert any("exactly two" in problem for problem in validate_paper_demonstration_corpus_artifact(one_run))
+    assert any("exactly two" in problem for problem in validate_cross_backend_corpus_artifact(one_run))
     duplicated = json.loads(json.dumps(artifact))
     duplicated["backend_runs"][1]["backend_id"] = duplicated["backend_runs"][0]["backend_id"]
-    assert any(
-        "distinct backend_ids" in problem for problem in validate_paper_demonstration_corpus_artifact(duplicated)
-    )
+    assert any("distinct backend_ids" in problem for problem in validate_cross_backend_corpus_artifact(duplicated))
 
 
 def test_validator_requires_matching_scenario_digest(tmp_path: Path) -> None:
@@ -95,7 +93,7 @@ def test_validator_requires_matching_scenario_digest(tmp_path: Path) -> None:
     assert artifact is not None
     tampered = json.loads(json.dumps(artifact))
     tampered["backend_runs"][1]["scenario"]["content_sha256"] = "sha256:deadbeef"
-    problems = validate_paper_demonstration_corpus_artifact(tampered)
+    problems = validate_cross_backend_corpus_artifact(tampered)
     assert any("does not match the authored scenario digest" in problem for problem in problems)
 
 
@@ -104,7 +102,7 @@ def test_validator_redaction_gate_flags_forbidden_content(tmp_path: Path) -> Non
     assert artifact is not None
     leaked = json.loads(json.dumps(artifact))
     leaked["backend_runs"][0]["limitations"].append("-----BEGIN RSA PRIVATE KEY-----")
-    problems = validate_paper_demonstration_corpus_artifact(leaked)
+    problems = validate_cross_backend_corpus_artifact(leaked)
     assert any("redaction violation" in problem for problem in problems)
 
 
@@ -122,7 +120,7 @@ def test_aptl_export_translation_drops_private_fields(tmp_path: Path) -> None:
     export_path = tmp_path / "aptl-export.json"
     export_path.write_text(json.dumps(export), encoding="utf-8")
 
-    report = _build(tmp_path, PaperCorpusConfig(aptl_evidence_path=export_path))
+    report = _build(tmp_path, CrossBackendCorpusConfig(aptl_evidence_path=export_path))
     assert report.passed, report.render()
     artifact = report.artifact
     assert artifact is not None
@@ -136,14 +134,14 @@ def test_aptl_export_translation_drops_private_fields(tmp_path: Path) -> None:
     for private_value in ("a1b2c3d4e5f6", "<domain type='kvm'>", "hunter2"):
         assert private_value not in serialized
     # The private fields never reach the corpus, so the redaction gate also stays clean.
-    assert validate_paper_demonstration_corpus_artifact(artifact) == []
+    assert validate_cross_backend_corpus_artifact(artifact) == []
 
 
 def test_aptl_export_digest_mismatch_fails(tmp_path: Path) -> None:
     export = {"scenario": {"content_sha256": "sha256:not-the-authored-scenario"}}
     export_path = tmp_path / "aptl-export-mismatch.json"
     export_path.write_text(json.dumps(export), encoding="utf-8")
-    report = _build(tmp_path, PaperCorpusConfig(aptl_evidence_path=export_path))
+    report = _build(tmp_path, CrossBackendCorpusConfig(aptl_evidence_path=export_path))
     assert not report.passed
     failed = {check.name for check in report.checks if not check.passed}
     assert "aptl_evidence_descriptor" in failed
@@ -160,7 +158,7 @@ def test_aptl_export_address_divergence_fails(tmp_path: Path) -> None:
     }
     export_path = tmp_path / "aptl-export-addrs.json"
     export_path.write_text(json.dumps(export), encoding="utf-8")
-    report = _build(tmp_path, PaperCorpusConfig(aptl_evidence_path=export_path))
+    report = _build(tmp_path, CrossBackendCorpusConfig(aptl_evidence_path=export_path))
     assert not report.passed
     assert report.artifact is None
     diagnostics = " ".join(
@@ -172,17 +170,18 @@ def test_aptl_export_address_divergence_fails(tmp_path: Path) -> None:
 def test_aptl_export_unreadable_fails_without_writing(tmp_path: Path) -> None:
     export_path = tmp_path / "aptl-export-bad.json"
     export_path.write_text("{not valid json", encoding="utf-8")
-    report = _build(tmp_path, PaperCorpusConfig(aptl_evidence_path=export_path))
+    report = _build(tmp_path, CrossBackendCorpusConfig(aptl_evidence_path=export_path))
     assert not report.passed
     # Read/parse failure falls back to a summary internally, but the artifact must
     # NOT be materialized -- the operator supplied a real export that could not be read.
     assert report.artifact is None
 
 
-def test_committed_corpus_matches_fresh_build(tmp_path: Path) -> None:
-    assert _COMMITTED_CORPUS.exists(), f"committed corpus missing: {_COMMITTED_CORPUS}"
-    committed = json.loads(_COMMITTED_CORPUS.read_text(encoding="utf-8"))
-    fresh = _build(tmp_path).artifact
-    assert fresh is not None
-    # Byte-stable canonical JSON: the committed corpus must equal a fresh build.
-    assert serialize_run_artifact(fresh) == serialize_run_artifact(committed)
+def test_build_is_byte_stable(tmp_path: Path) -> None:
+    # The corpus is regenerable and deterministic: two fresh builds are byte-identical
+    # (only portable, timestamp-free fields cross from the libvirt run). The canonical
+    # published corpus lives in Brad-Edwards/research, not committed in this repo.
+    first = _build(tmp_path).artifact
+    second = _build(tmp_path / "second").artifact
+    assert first is not None and second is not None
+    assert serialize_run_artifact(first) == serialize_run_artifact(second)

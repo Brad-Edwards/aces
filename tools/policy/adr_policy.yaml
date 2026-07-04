@@ -154,7 +154,7 @@ module_boundaries:
         # Pure, side-effect-free manifest/capability renderers only (see
         # public_import_prefixes below). aces_operations embeds the canonical
         # BackendManifestV2 payload + capability-gap report in the libvirt
-        # paper-evidence artifact instead of a hand-rolled summary, so the
+        # scenario-evidence artifact instead of a hand-rolled summary, so the
         # evidence carries the same backend contract the rest of the stack uses.
         - aces_backend_protocols
         - aces_contracts
@@ -211,8 +211,8 @@ module_boundaries:
         - aces_runtime
       public_import_prefixes:
         aces_operations:
-          - aces_operations.libvirt_paper_evidence
-          - aces_operations.paper_corpus
+          - aces_operations.libvirt_evidence_run
+          - aces_operations.cross_backend_corpus
           - aces_operations.techvault_live
         aces_processor:
           - aces_processor.manifest

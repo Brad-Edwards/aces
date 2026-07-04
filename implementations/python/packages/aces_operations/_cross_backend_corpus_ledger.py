@@ -1,4 +1,4 @@
-"""Cross-backend invariant ledger for the paper demonstration corpus (issue #600).
+"""Cross-backend invariant ledger for the cross-backend evidence corpus (issue #600).
 
 Computes the inspectable comparison between two backend-run descriptors (libvirt +
 APTL) over the same authored scenario. The ledger has four sections, matching the
@@ -23,7 +23,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from aces_operations._paper_corpus_backend_runs import ACCEPTED_EVIDENCE_SURFACES
+from aces_operations._cross_backend_corpus_backend_runs import ACCEPTED_EVIDENCE_SURFACES
 
 _ADDRESS_CLASSES: tuple[str, ...] = (
     "participant_behaviors",
