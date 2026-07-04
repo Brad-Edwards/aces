@@ -135,13 +135,24 @@ def _validate_embedded_contracts(payload: Mapping[str, Any]) -> list[str]:
     ]
 
 
-def _validate_redaction(payload: Mapping[str, Any]) -> list[str]:
+def redaction_violations(payload: Mapping[str, Any]) -> list[str]:
+    """Return redaction-gate violations for any JSON-serializable artifact payload.
+
+    Shared by the libvirt paper-evidence validator and the issue #600 corpus
+    validator so both enforce one redaction gate rather than a forked copy (no raw
+    libvirt XML, domain UUIDs, QEMU command lines, host paths, connection URIs,
+    credentials, or private keys).
+    """
     blob = json.dumps(payload, sort_keys=True, default=str)
     return [
         f"redaction violation: {label} present in artifact"
         for pattern, label in _FORBIDDEN_REDACTION_PATTERNS
         if pattern.search(blob)
     ]
+
+
+def _validate_redaction(payload: Mapping[str, Any]) -> list[str]:
+    return redaction_violations(payload)
 
 
 def _validate_boundary(payload: Mapping[str, Any]) -> list[str]:
