@@ -12,6 +12,14 @@ fixture-level and target-level backend conformance. It is guidance only: it
 does not implement the conformance probe, change manifests, add schemas, or add
 live-daemon behavior.
 
+Correction for issue #663: this note's backend-neutral live provisioning probe
+guardrail applies only when the selected probe scenario is within the target's
+declared or supplied realization envelope. Backend conformance must not treat a
+fixed hard-coded VM scenario as universal proof material for scenario-scoped,
+fixed-topology, or simulation backends. See
+`docs/decisions/issue-663-target-conformance-provisioning-scope-preflight.md`
+for the contract-conformance versus scenario-realizability boundary.
+
 ## Binding Sources
 
 - `docs/explain/reference/backend-conformance.md` owns the backend conformance
