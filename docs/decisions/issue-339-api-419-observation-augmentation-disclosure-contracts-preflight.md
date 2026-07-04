@@ -20,6 +20,9 @@ behavior, APIs, storage, fixtures, tests, or coverage claims.
 - `specs/sdl/observability-and-evidence.md` states that run-level
   processor/backend augmentation disclosures are carried by
   `experiment-run-v1` `augmentation_disclosures`.
+- `aces_conformance.conformance` records the executable conformance surface
+  that checks augmentation disclosures name portable affected carriers and
+  supporting evidence where the purpose requires it.
 - ADR-055, ADR-064, and ADR-065 define experiment-core task, apparatus
   context, capture, raw evidence, derived measure, run traceability,
   realized-form, and augmentation boundaries.
@@ -100,6 +103,10 @@ behavior, APIs, storage, fixtures, tests, or coverage claims.
   request-size guards, request fingerprints, idempotency keys, audit events,
   response models, `ControlPlaneStore`, `Diagnostic`, `Severity`, and the
   redacted FastAPI error envelope.
+- Conformance diagnostics: `observability_evidence_conformance_diagnostics()`,
+  `_augmentation_conformance_diagnostics()`, `run_fixture_suite()`,
+  `run_target_conformance()`, and the canonical
+  `conformance.observability-evidence-invalid` diagnostic code.
 
 ## Cross-Cutting Layers
 
@@ -119,6 +126,11 @@ behavior, APIs, storage, fixtures, tests, or coverage claims.
   participant observation/context/history/status contracts, visibility
   projection, source-layer mediation, markings, redaction, loss, authorization
   scope, and comparability disclosure.
+- Conformance layer: API-419 examples and producers must satisfy
+  `observability_evidence_conformance_diagnostics()` in addition to model and
+  schema validation; in particular, augmentation disclosures need
+  `affected_refs`, portable `carrier_refs`, and purpose-appropriate
+  `evidence_refs`.
 - Apparatus/control-plane layer: operational telemetry remains apparatus data
   until projected through manifests, apparatus context, diagnostics, evidence
   records, run traceability, or participant-visible contracts.
@@ -126,6 +138,11 @@ behavior, APIs, storage, fixtures, tests, or coverage claims.
   auth, backend/operator/auditor role checks, request-size limits, idempotency,
   request fingerprints, audit events, response models, and redacted 500
   envelopes.
+- Config/env-binding layer: API-419 must not add a new environment-variable,
+  token-binding, or secret-binding shape. Workflow inputs such as
+  `ACES_REQUIREMENT_UID` remain policy inputs, not contract fields, and any
+  runtime configuration evidence must use existing sensitivity/redaction
+  helpers before it is referenced by a portable disclosure.
 - Secret and OS-exposure layer: contracts, fixtures, logs, diagnostics, audit
   details, command examples, process argv, environment captures, and backend
   inspect payloads must not expose tokens, private keys, credentials, hidden
