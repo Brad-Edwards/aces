@@ -184,6 +184,32 @@ the command can be wired directly into CI gates. The historic
 `python -m aces_conformance.runner` entry point is preserved as a thin
 delegate that forwards to the same Typer command.
 
+## Target Conformance Reference Scenario
+
+Target conformance drives a live provisioning/snapshot probe (issue #606) that
+proves *real* realization — a succeeded provisioning operation, non-empty
+changed addresses, and a mutated snapshot — not merely a valid manifest. The
+probe needs a scenario to realize. By default it uses a generic linux-vm
+scenario (`_DEFAULT_CONFORMANCE_SCENARIO`).
+
+A single hard-coded scenario wrongly assumes *every* backend can realize it.
+Fixed-topology emulation backends (which map ACES nodes onto a pre-built
+environment) and bounded simulation backends legitimately cannot realize an
+arbitrary scenario, yet still honor the provisioning contract. `run_target_conformance`
+therefore accepts an optional `reference_scenario` (issue #663): a backend or
+caller supplies a scenario it declares it can realize, and the probe holds it to
+**full realization of that scenario** — the #606 mutation guard is unchanged, so
+this negotiates *which* scenario is realized without weakening the requirement
+that one is.
+
+This runner parameter is a **temporary bridge**. The durable answer is a portable
+*realizability envelope* — one parameterized/typed SDL semantics with open/closed
+posture that both authored scenarios and backend manifests reference, plus a
+scenario/envelope subsumption relation the probe checks (and from which it derives
+an in-envelope witness). That design is tracked in #667, with the subsumption
+relation in #668; contract conformance and scenario realizability are distinct
+dimensions and must stay separately reportable.
+
 ## Non-Goals
 
 This preflight does not implement `ASR-502`, change requirement status, add new
