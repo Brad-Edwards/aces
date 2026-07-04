@@ -34,6 +34,31 @@ _REQUIRED_LEDGER_SECTIONS: tuple[str, ...] = (
 )
 
 
+def _authored_digest(payload: Mapping[str, Any]) -> str:
+    scenario = payload.get("authored_scenario")
+    return str(scenario.get("content_sha256", "")) if isinstance(scenario, Mapping) else ""
+
+
+def _run_digest(run: Mapping[str, Any]) -> str:
+    scenario = run.get("scenario")
+    return str(scenario.get("content_sha256", "")) if isinstance(scenario, Mapping) else ""
+
+
+def _check_run_digests(runs: list[Any], authored_digest: str) -> list[str]:
+    problems: list[str] = []
+    for index, run in enumerate(runs):
+        if not isinstance(run, Mapping):
+            problems.append(f"backend_runs[{index}] must be an object")
+            continue
+        run_digest = _run_digest(run)
+        if authored_digest and run_digest != authored_digest:
+            problems.append(
+                f"backend_runs[{index}] ({run.get('backend_id')}) scenario digest {run_digest!r} "
+                f"does not match the authored scenario digest {authored_digest!r}"
+            )
+    return problems
+
+
 def _validate_backend_runs(payload: Mapping[str, Any]) -> list[str]:
     runs = payload.get("backend_runs")
     if not isinstance(runs, list):
@@ -45,20 +70,10 @@ def _validate_backend_runs(payload: Mapping[str, Any]) -> list[str]:
     backend_ids = [str(run.get("backend_id")) for run in runs if isinstance(run, Mapping)]
     if len(set(backend_ids)) != 2:
         problems.append(f"the two backend runs must have distinct backend_ids, found {backend_ids}")
-
-    authored_digest = str((payload.get("authored_scenario") or {}).get("content_sha256", ""))
+    authored_digest = _authored_digest(payload)
     if not authored_digest:
         problems.append("authored_scenario.content_sha256 is missing")
-    for index, run in enumerate(runs):
-        if not isinstance(run, Mapping):
-            problems.append(f"backend_runs[{index}] must be an object")
-            continue
-        run_digest = str((run.get("scenario") or {}).get("content_sha256", ""))
-        if authored_digest and run_digest != authored_digest:
-            problems.append(
-                f"backend_runs[{index}] ({run.get('backend_id')}) scenario digest {run_digest!r} "
-                f"does not match the authored scenario digest {authored_digest!r}"
-            )
+    problems.extend(_check_run_digests(runs, authored_digest))
     return problems
 
 

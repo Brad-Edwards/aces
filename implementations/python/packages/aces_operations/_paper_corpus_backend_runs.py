@@ -58,23 +58,24 @@ _APTL_PORTABLE_KEYS: tuple[str, ...] = (
 )
 
 
-def _get(payload: Mapping[str, Any], *path: str, default: Any = None) -> Any:
-    """Safely read a nested value from a mapping tree, returning ``default`` on any miss."""
-    node: Any = payload
-    for key in path:
-        if not isinstance(node, Mapping) or key not in node:
-            return default
-        node = node[key]
-    return node
+def _mapping(value: object) -> Mapping[str, Any]:
+    """Return ``value`` when it is a mapping, else an empty mapping (safe navigation)."""
+    return value if isinstance(value, Mapping) else {}
+
+
+def _sequence(value: object) -> list[Any]:
+    """Return ``value`` as a list when it is a list/tuple, else an empty list."""
+    return list(value) if isinstance(value, list | tuple) else []
 
 
 def _backend_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
     """Extract the libvirt backend id + version from the artifact (no raw manifest internals)."""
-    name = str(_get(artifact, "backend", "realization_provenance", "backend", default="libvirt-qemu"))
+    provenance = _mapping(_mapping(artifact.get("backend")).get("realization_provenance"))
+    name = str(provenance.get("backend") or "libvirt-qemu")
     version = "unknown"
-    for disclosure in _get(artifact, "realized_form_disclosures", default=[]) or []:
-        ref = disclosure.get("realized_by_ref", {}) if isinstance(disclosure, Mapping) else {}
-        if isinstance(ref, Mapping) and ref.get("ref_kind") == "backend" and ref.get("ref_version"):
+    for disclosure in _sequence(artifact.get("realized_form_disclosures")):
+        ref = _mapping(disclosure.get("realized_by_ref") if isinstance(disclosure, Mapping) else None)
+        if ref.get("ref_kind") == "backend" and ref.get("ref_version"):
             version = str(ref["ref_version"])
             break
     return {"name": name, "version": version}
@@ -82,8 +83,8 @@ def _backend_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
 
 def _libvirt_surface_coverage(artifact: Mapping[str, Any]) -> dict[str, str]:
     """Map each accepted evidence surface to a bounded coverage note for the libvirt run."""
-    defensive_source = str(_get(artifact, "defensive_evidence", "evidence_source", default="unknown"))
-    topology_basis = str(_get(artifact, "realized_topology", "basis", default="unknown"))
+    defensive_source = str(_mapping(artifact.get("defensive_evidence")).get("evidence_source", "unknown"))
+    topology_basis = str(_mapping(artifact.get("realized_topology")).get("basis", "unknown"))
     return {
         "scenario_source_hash": "recorded",
         "processor_artifact_identity": "recorded",
@@ -106,6 +107,10 @@ def build_libvirt_backend_run(artifact: Mapping[str, Any]) -> dict[str, Any]:
     corpus) is byte-stable across runs; the full timestamped evidence stays in the
     regenerable ``aces.libvirt.paper-evidence-run/v1`` artifact.
     """
+    backend = _mapping(artifact.get("backend"))
+    compiled = _mapping(artifact.get("compiled_artifact"))
+    topology = _mapping(artifact.get("realized_topology"))
+    proof = _mapping(artifact.get("participant_action_proof"))
     return {
         "backend_id": "libvirt-reference",
         "realization": "aces-libvirt-reference-backend",
@@ -117,25 +122,23 @@ def build_libvirt_backend_run(artifact: Mapping[str, Any]) -> dict[str, Any]:
             "command": "aces libvirt paper validate-evidence",
         },
         "backend_manifest": _backend_identity(artifact),
-        "capability_profile": _get(artifact, "backend", "capability_profile", default={}),
-        "scenario": _get(artifact, "scenario", default={}),
-        "compiled_address_sets": _get(artifact, "compiled_artifact", "compiled_address_sets", default={}),
-        "compiled_model_fingerprint": _get(artifact, "compiled_artifact", "compiled_model_fingerprint", default=""),
+        "capability_profile": _mapping(backend.get("capability_profile")),
+        "scenario": _mapping(artifact.get("scenario")),
+        "compiled_address_sets": _mapping(compiled.get("compiled_address_sets")),
+        "compiled_model_fingerprint": str(compiled.get("compiled_model_fingerprint", "")),
         "topology": {
-            "basis": str(_get(artifact, "realized_topology", "basis", default="unknown")),
-            "network_attachment_matrix": _get(artifact, "realized_topology", "network_attachment_matrix", default={}),
+            "basis": str(topology.get("basis", "unknown")),
+            "network_attachment_matrix": _mapping(topology.get("network_attachment_matrix")),
         },
         "realization_characteristics": {
             "substrate": "native libvirt/QEMU VM and network appliances",
-            "participant_proof": str(_get(artifact, "participant_action_proof", "runtime", default="unknown")),
-            "defensive_evidence": str(_get(artifact, "defensive_evidence", "evidence_source", default="unknown")),
+            "participant_proof": str(proof.get("runtime", "unknown")),
+            "defensive_evidence": str(_mapping(artifact.get("defensive_evidence")).get("evidence_source", "unknown")),
         },
         "evidence_surface_coverage": _libvirt_surface_coverage(artifact),
-        "unsupported_or_degraded_surfaces": list(
-            _get(artifact, "realized_topology", "unrealized_capabilities", default=[]) or []
-        ),
-        "limitations": list(artifact.get("limitations", []) or []),
-        "non_claims": list(artifact.get("non_claims", []) or []),
+        "unsupported_or_degraded_surfaces": list(_sequence(topology.get("unrealized_capabilities"))),
+        "limitations": list(_sequence(artifact.get("limitations"))),
+        "non_claims": list(_sequence(artifact.get("non_claims"))),
     }
 
 
@@ -182,52 +185,80 @@ def _aptl_summary_descriptor(scenario: Mapping[str, Any], address_sets: Mapping[
     }
 
 
+def _apply_export_scenario(
+    descriptor: dict[str, Any], scenario: Mapping[str, Any], export: Mapping[str, Any]
+) -> list[str]:
+    """Record the export's own scenario digest (honest preserved/divergent); diagnose a mismatch."""
+    export_scenario = export.get("scenario")
+    export_digest = export_scenario.get("content_sha256") if isinstance(export_scenario, Mapping) else None
+    if not export_digest:
+        return []
+    descriptor["scenario"] = {**descriptor["scenario"], "content_sha256": str(export_digest)}
+    authored_digest = scenario.get("content_sha256")
+    if str(export_digest) == str(authored_digest):
+        return []
+    return [
+        f"APTL export scenario digest {str(export_digest)!r} does not match the authored scenario digest "
+        f"{str(authored_digest)!r}"
+    ]
+
+
+def _apply_export_addresses(
+    descriptor: dict[str, Any], address_sets: Mapping[str, Any], export: Mapping[str, Any]
+) -> list[str]:
+    """Record the export's own compiled address sets; a per-class mismatch fails the descriptor."""
+    export_addresses = export.get("compiled_address_sets")
+    if not isinstance(export_addresses, Mapping):
+        return []
+    aces_sets = {cls: sorted(str(a) for a in _sequence(values)) for cls, values in address_sets.items()}
+    export_sets = {cls: sorted(str(a) for a in _sequence(export_addresses.get(cls))) for cls in aces_sets}
+    descriptor["compiled_address_sets"] = export_sets
+    return [
+        f"APTL export compiled_address_sets[{cls}] differs from the compiled ACES address set"
+        for cls in aces_sets
+        if export_sets[cls] != aces_sets[cls]
+    ]
+
+
+def _apply_export_scalars(descriptor: dict[str, Any], export: Mapping[str, Any]) -> None:
+    """Copy the remaining allowlisted portable scalars/lists from the export."""
+    mode = export.get("evidence_source_mode")
+    if isinstance(mode, str) and mode:
+        descriptor["evidence_source_mode"] = mode
+    limitations = export.get("limitations")
+    if isinstance(limitations, Sequence) and not isinstance(limitations, str | bytes):
+        descriptor["limitations"] = [str(item) for item in limitations] + descriptor["limitations"]
+
+
 def _aptl_from_export(
     scenario: Mapping[str, Any], address_sets: Mapping[str, Any], export: Mapping[str, Any]
 ) -> tuple[dict[str, Any], list[str]]:
     """Build the APTL descriptor from an operator-supplied export's allowlisted portable fields.
 
     Only ``_APTL_PORTABLE_KEYS`` are read; everything else (including any
-    backend-private field) is ignored. The authored scenario identity/addresses
-    remain the ACES-side values -- the export cannot redefine the authored scenario.
+    backend-private field) is ignored. The authored scenario identity/addresses come
+    from the export when it supplies them, so a divergent export honestly fails
+    rather than silently inheriting the ACES-side values.
     """
     descriptor = _aptl_summary_descriptor(scenario, address_sets)
     descriptor["evidence_provenance"] = "external-artifact-summarized"
-    diagnostics: list[str] = []
-    export_scenario = export.get("scenario") if isinstance(export, Mapping) else None
-    if isinstance(export_scenario, Mapping):
-        export_digest = export_scenario.get("content_sha256")
-        authored_digest = scenario.get("content_sha256")
-        if export_digest:
-            # Record the export's own authored-scenario digest so the ledger honestly
-            # shows preserved vs divergent rather than assuming the authored value.
-            descriptor["scenario"] = {**descriptor["scenario"], "content_sha256": str(export_digest)}
-        if export_digest and export_digest != authored_digest:
-            diagnostics.append(
-                f"APTL export scenario digest {export_digest!r} does not match the authored scenario digest "
-                f"{authored_digest!r}"
-            )
-    export_addresses = export.get("compiled_address_sets") if isinstance(export, Mapping) else None
-    if isinstance(export_addresses, Mapping):
-        # Record the export's OWN compiled address sets so the ledger honestly shows
-        # preserved vs divergent rather than assuming the authored ACES addresses; a
-        # per-class mismatch fails the descriptor (the pairing is not the same
-        # compiled scenario).
-        aces_sets = {cls: sorted(str(a) for a in (values or [])) for cls, values in address_sets.items()}
-        export_sets = {cls: sorted(str(a) for a in (export_addresses.get(cls) or [])) for cls in aces_sets}
-        descriptor["compiled_address_sets"] = export_sets
-        diagnostics.extend(
-            f"APTL export compiled_address_sets[{cls}] differs from the compiled ACES address set"
-            for cls in aces_sets
-            if export_sets[cls] != aces_sets[cls]
-        )
-    export_mode = export.get("evidence_source_mode") if isinstance(export, Mapping) else None
-    if isinstance(export_mode, str) and export_mode:
-        descriptor["evidence_source_mode"] = export_mode
-    export_limitations = export.get("limitations") if isinstance(export, Mapping) else None
-    if isinstance(export_limitations, Sequence) and not isinstance(export_limitations, str | bytes):
-        descriptor["limitations"] = [str(item) for item in export_limitations] + descriptor["limitations"]
+    diagnostics = [
+        *_apply_export_scenario(descriptor, scenario, export),
+        *_apply_export_addresses(descriptor, address_sets, export),
+    ]
+    _apply_export_scalars(descriptor, export)
     return descriptor, diagnostics
+
+
+def _read_export(path: Path) -> tuple[Mapping[str, Any] | None, str | None]:
+    """Read and JSON-parse an APTL export; return ``(mapping_or_None, error_or_None)``."""
+    try:
+        parsed = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return None, f"could not read APTL evidence export {path.name}: {exc}"
+    if not isinstance(parsed, Mapping):
+        return None, "APTL evidence export is not a JSON object; using documented-shape summary"
+    return parsed, None
 
 
 def build_aptl_backend_run(
@@ -244,16 +275,7 @@ def build_aptl_backend_run(
     """
     if aptl_evidence_path is None:
         return _aptl_summary_descriptor(scenario, address_sets), []
-    try:
-        export = json.loads(aptl_evidence_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        return (
-            _aptl_summary_descriptor(scenario, address_sets),
-            [f"could not read APTL evidence export {aptl_evidence_path.name}: {exc}"],
-        )
-    if not isinstance(export, Mapping):
-        return (
-            _aptl_summary_descriptor(scenario, address_sets),
-            ["APTL evidence export is not a JSON object; using documented-shape summary"],
-        )
+    export, read_error = _read_export(aptl_evidence_path)
+    if export is None:
+        return _aptl_summary_descriptor(scenario, address_sets), ([read_error] if read_error else [])
     return _aptl_from_export(scenario, address_sets, export)
