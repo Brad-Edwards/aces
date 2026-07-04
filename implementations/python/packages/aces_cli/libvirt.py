@@ -6,14 +6,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import typer
-from aces_operations.libvirt_paper_evidence import LibvirtPaperEvidenceConfig, run_libvirt_paper_evidence
+from aces_operations.libvirt_evidence_run import LibvirtEvidenceRunConfig, run_libvirt_evidence_run
 from aces_operations.techvault_live import TechVaultLiveConfig, validate_techvault_live
 
 app = typer.Typer(help="Libvirt backend operations.")
 techvault_app = typer.Typer(help="TechVault operational scenario checks.")
 app.add_typer(techvault_app, name="techvault")
-paper_app = typer.Typer(help="Paper-proof evaluator-evidence artifacts.")
-app.add_typer(paper_app, name="paper")
+evidence_app = typer.Typer(help="Scenario evaluator-evidence artifacts.")
+app.add_typer(evidence_app, name="evidence")
 
 _LIVE_WARNING = """\
 This will create native libvirt/QEMU resources for the selected TechVault
@@ -86,23 +86,23 @@ def validate_live(
         raise typer.Exit(code=1)
 
 
-@paper_app.command("validate-evidence")
+@evidence_app.command("validate")
 def validate_evidence(
     scenario: Path = typer.Option(
-        Path("examples/scenarios/paper-agent-loop.sdl.yaml"),
+        Path("examples/scenarios/enterprise-participant-evidence-loop.sdl.yaml"),
         "--scenario",
-        help="Paper ACES SDL scenario to produce evaluator evidence for.",
+        help="Reference ACES SDL scenario to produce evaluator evidence for.",
     ),
     project_dir: Path = typer.Option(
         Path("."),
         "--project-dir",
         "--output-dir",
-        help="Output directory for the paper-evidence run archive.",
+        help="Output directory for the scenario-evidence run archive.",
     ),
     run_id: str | None = typer.Option(
         None,
         "--run-id",
-        help="Run id for the paper-evidence archive (safe filesystem label).",
+        help="Run id for the scenario-evidence archive (safe filesystem label).",
     ),
     native_live: bool = typer.Option(
         False,
@@ -115,14 +115,14 @@ def validate_evidence(
         help="libvirt connection URI (native-live only).",
     ),
 ) -> None:
-    """Produce the libvirt paper-proof evaluator-evidence artifact for a scenario."""
+    """Produce the libvirt evidence-run evaluator-evidence artifact for a scenario."""
 
-    resolved_run_id = run_id or datetime.now(UTC).strftime("aces_libvirt_paper_%Y%m%dT%H%M%SZ")
-    report = run_libvirt_paper_evidence(
+    resolved_run_id = run_id or datetime.now(UTC).strftime("aces_libvirt_evidence_%Y%m%dT%H%M%SZ")
+    report = run_libvirt_evidence_run(
         scenario_path=scenario.resolve(),
         project_dir=project_dir.resolve(),
         run_id=resolved_run_id,
-        config=LibvirtPaperEvidenceConfig(
+        config=LibvirtEvidenceRunConfig(
             evidence_source_mode="native-live" if native_live else "deterministic",
             connection_uri=connection_uri,
         ),

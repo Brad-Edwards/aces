@@ -1,7 +1,7 @@
-"""Backend-run descriptor builders for the paper demonstration corpus (issue #600).
+"""Backend-run descriptor builders for the cross-backend evidence corpus (issue #600).
 
 A backend-run descriptor is the portable, bounded projection of one backend's
-realization of the authored paper scenario. Two descriptors -- one libvirt, one
+realization of the authored reference scenario. Two descriptors -- one libvirt, one
 APTL -- are the ``backend_runs`` of the cross-backend invariant ledger.
 
 Only stable ACES-side facts cross into a descriptor: the authored scenario
@@ -12,10 +12,10 @@ command lines, host paths; APTL container ids, Compose service names, Docker
 inspect payloads, upstream Wazuh rule bodies) never enter a descriptor -- see the
 issue #600 preflight redaction gate.
 
-The libvirt descriptor is extracted from the real ``aces.libvirt.paper-evidence-run/v1``
+The libvirt descriptor is extracted from the real ``aces.libvirt.scenario-evidence-run/v1``
 artifact (issue #615) and marked ``generated-in-repo``. The APTL descriptor is a
 bounded summary of the publicly documented APTL realization
-(``examples/scenarios/paper-agent-loop.README.md`` + Brad-Edwards/aptl#558) marked
+(``examples/scenarios/enterprise-participant-evidence-loop.README.md`` + Brad-Edwards/aptl#558) marked
 ``external-summarized``; when an operator supplies a real APTL evidence export, the
 same descriptor is built from that file's allowlisted portable fields and marked
 ``external-artifact-summarized``. ACES never imports APTL-private schemas.
@@ -101,11 +101,11 @@ def _libvirt_surface_coverage(artifact: Mapping[str, Any]) -> dict[str, str]:
 
 
 def build_libvirt_backend_run(artifact: Mapping[str, Any]) -> dict[str, Any]:
-    """Build the libvirt backend-run descriptor from its paper-evidence artifact.
+    """Build the libvirt backend-run descriptor from its scenario-evidence artifact.
 
     Copies only portable, timestamp-free fields so the descriptor (and therefore the
     corpus) is byte-stable across runs; the full timestamped evidence stays in the
-    regenerable ``aces.libvirt.paper-evidence-run/v1`` artifact.
+    regenerable ``aces.libvirt.scenario-evidence-run/v1`` artifact.
     """
     backend = _mapping(artifact.get("backend"))
     compiled = _mapping(artifact.get("compiled_artifact"))
@@ -119,7 +119,7 @@ def build_libvirt_backend_run(artifact: Mapping[str, Any]) -> dict[str, Any]:
         "evidence_locator": {
             "kind": "regenerable-artifact",
             "schema": str(artifact.get("schema", "")),
-            "command": "aces libvirt paper validate-evidence",
+            "command": "aces libvirt evidence validate",
         },
         "backend_manifest": _backend_identity(artifact),
         "capability_profile": _mapping(backend.get("capability_profile")),

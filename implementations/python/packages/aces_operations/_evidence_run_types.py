@@ -1,4 +1,4 @@
-"""Structural types and the input bundle for the libvirt paper-evidence artifact.
+"""Structural types and the input bundle for the libvirt scenario-evidence artifact.
 
 These ``Protocol`` types describe the duck-typed runtime-layer shapes the artifact
 builder and producer read — the compiled model, its node/network/boundary
@@ -8,7 +8,7 @@ more specific type than ``Any`` *without* importing the concrete ``aces_processo
 model classes, which ADR-036 walls off from ``aces_operations``. ``BackendManifest``
 is imported from the allowed pure-capabilities module.
 
-Kept in a separate module so ``_paper_evidence_artifact`` stays under the ADR-015
+Kept in a separate module so ``_evidence_run_artifact`` stays under the ADR-015
 source-size cap.
 """
 

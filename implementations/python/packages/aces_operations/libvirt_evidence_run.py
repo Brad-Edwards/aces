@@ -1,10 +1,10 @@
-"""Libvirt paper-proof evaluator-evidence artifact producer.
+"""Libvirt evidence-run evaluator-evidence artifact producer.
 
 Composes existing ACES surfaces — the libvirt participant runtime (issue #614, via
 the runtime control plane), the native libvirt substrate realization (issue #601),
 the backend manifest, and the experiment/evaluation contracts — into one stable,
-validated run artifact (``aces.libvirt.paper-evidence-run/v1``) that carries
-evaluator-facing evidence for the paper enterprise participant/evidence scenario.
+validated run artifact (``aces.libvirt.scenario-evidence-run/v1``) that carries
+evaluator-facing evidence for the enterprise participant/evidence scenario.
 The artifact is a local proof-artifact wrapper that embeds validated
 published-contract payloads and bounded summaries; it is NOT a new published
 contract.
@@ -30,8 +30,8 @@ Two honestly-disclosed evidence-source modes:
   realize is disclosed as ``unrealized_capabilities`` (and fails native-live), not
   faked; orchestration/evaluation planes are outside a provisioning-only target.
 
-Artifact assembly lives in ``_paper_evidence_artifact`` and validation in
-``_paper_evidence_validation`` (kept separate for the ADR-015 source-size cap).
+Artifact assembly lives in ``_evidence_run_artifact`` and validation in
+``_evidence_run_validation`` (kept separate for the ADR-015 source-size cap).
 """
 
 from __future__ import annotations
@@ -48,14 +48,14 @@ from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.manager import RuntimeManager
 from aces_sdl.parser import parse_sdl_file
 
-from aces_operations._paper_evidence_artifact import EVIDENCE_RUN_SCHEMA, assemble_artifact
-from aces_operations._paper_evidence_types import (
+from aces_operations._evidence_run_artifact import EVIDENCE_RUN_SCHEMA, assemble_artifact
+from aces_operations._evidence_run_types import (
     CompiledModel,
     EvidenceArtifactInputs,
     ExecutionPlan,
     ParticipantBehavior,
 )
-from aces_operations._paper_evidence_validation import validate_libvirt_paper_evidence_artifact
+from aces_operations._evidence_run_validation import validate_libvirt_evidence_run_artifact
 from aces_operations.deterministic_participant_fixtures import (
     build_participant_admission_request,
     iter_admission_pairs,
@@ -65,10 +65,10 @@ from aces_operations.run_artifacts import atomic_write_json_artifact, is_valid_r
 __all__ = [
     "EVIDENCE_RUN_SCHEMA",
     "EvidenceCheck",
-    "LibvirtPaperEvidenceConfig",
-    "LibvirtPaperEvidenceReport",
-    "run_libvirt_paper_evidence",
-    "validate_libvirt_paper_evidence_artifact",
+    "LibvirtEvidenceRunConfig",
+    "LibvirtEvidenceRunReport",
+    "run_libvirt_evidence_run",
+    "validate_libvirt_evidence_run_artifact",
 ]
 
 _PROOF_EPISODE_ID = "proof-ep-1"
@@ -78,9 +78,9 @@ EvidenceSourceMode = Literal["deterministic", "native-live"]
 
 @dataclass(frozen=True)
 class EvidenceCheck:
-    """One named check over the paper-evidence production run.
+    """One named check over the scenario-evidence production run.
 
-    Every check is gating: it contributes to ``LibvirtPaperEvidenceReport.passed``.
+    Every check is gating: it contributes to ``LibvirtEvidenceRunReport.passed``.
     There is deliberately no non-gating escape hatch — in particular, a native-live
     run that fails to realize the libvirt substrate must report ``passed=False`` so
     the mode can never claim success without actually realizing.
@@ -92,8 +92,8 @@ class EvidenceCheck:
 
 
 @dataclass(frozen=True)
-class LibvirtPaperEvidenceConfig:
-    """Runtime controls for the libvirt paper-evidence producer."""
+class LibvirtEvidenceRunConfig:
+    """Runtime controls for the libvirt scenario-evidence producer."""
 
     evidence_source_mode: EvidenceSourceMode = "deterministic"
     connection_uri: str = "qemu:///system"
@@ -103,8 +103,8 @@ class LibvirtPaperEvidenceConfig:
 
 
 @dataclass(frozen=True)
-class LibvirtPaperEvidenceReport:
-    """Rendered outcome for the libvirt paper-evidence producer."""
+class LibvirtEvidenceRunReport:
+    """Rendered outcome for the libvirt scenario-evidence producer."""
 
     scenario: str
     run_id: str
@@ -121,7 +121,7 @@ class LibvirtPaperEvidenceReport:
     def render(self) -> str:
         status = "PASS" if self.passed else "FAIL"
         lines = [
-            f"libvirt paper evidence -- scenario={self.scenario} run_id={self.run_id} "
+            f"libvirt scenario evidence -- scenario={self.scenario} run_id={self.run_id} "
             f"mode={self.evidence_source_mode}: {status}"
         ]
         for check in self.checks:
@@ -134,17 +134,17 @@ class LibvirtPaperEvidenceReport:
         return "\n".join(lines)
 
 
-def run_libvirt_paper_evidence(
+def run_libvirt_evidence_run(
     *,
     scenario_path: Path,
     project_dir: Path,
     run_id: str,
-    config: LibvirtPaperEvidenceConfig | None = None,
+    config: LibvirtEvidenceRunConfig | None = None,
     driver_factory: Callable[[], TechVaultNativeLibvirtDriver] | None = None,
     probe: NativeLibvirtProbe | None = None,
-) -> LibvirtPaperEvidenceReport:
-    """Produce the libvirt paper evaluator-evidence artifact for ``scenario_path``."""
-    settings = config or LibvirtPaperEvidenceConfig()
+) -> LibvirtEvidenceRunReport:
+    """Produce the libvirt scenario evaluator-evidence artifact for ``scenario_path``."""
+    settings = config or LibvirtEvidenceRunConfig()
     mode = settings.evidence_source_mode
     checks: list[EvidenceCheck] = []
 
@@ -153,7 +153,7 @@ def run_libvirt_paper_evidence(
         EvidenceCheck("run_id_input", run_id_ok, () if run_id_ok else ("run id must be a safe filesystem label",))
     )
     if not run_id_ok:
-        return LibvirtPaperEvidenceReport(scenario_path.name, run_id, str(project_dir), mode, tuple(checks))
+        return LibvirtEvidenceRunReport(scenario_path.name, run_id, str(project_dir), mode, tuple(checks))
 
     native_driver: TechVaultNativeLibvirtDriver | None = None
     if mode == "native-live":
@@ -165,7 +165,7 @@ def run_libvirt_paper_evidence(
         control_plane = RuntimeControlPlane(target)
     except Exception as exc:
         checks.append(EvidenceCheck("scenario_plan", False, (f"failed to plan scenario: {exc}",)))
-        return LibvirtPaperEvidenceReport(scenario_path.name, run_id, str(project_dir), mode, tuple(checks))
+        return LibvirtEvidenceRunReport(scenario_path.name, run_id, str(project_dir), mode, tuple(checks))
 
     model = execution_plan.model
     proof = _run_participant_lifecycle(model, control_plane)
@@ -192,7 +192,7 @@ def run_libvirt_paper_evidence(
         unrealized_capabilities=unrealized_capabilities,
     )
     artifact, artifact_path = _finalize_artifact(inputs, project_dir, checks)
-    return LibvirtPaperEvidenceReport(
+    return LibvirtEvidenceRunReport(
         scenario_path.name, run_id, str(project_dir), mode, tuple(checks), artifact, artifact_path
     )
 
@@ -202,7 +202,7 @@ def _finalize_artifact(
 ) -> tuple[dict[str, Any], str | None]:
     """Assemble, validate, and (fail-closed) persist the artifact, appending the gating checks."""
     artifact = assemble_artifact(inputs)
-    violations = validate_libvirt_paper_evidence_artifact(artifact)
+    violations = validate_libvirt_evidence_run_artifact(artifact)
     checks.append(EvidenceCheck("artifact_contract_validation", not violations, tuple(violations)))
     artifact_path, write_check = _persist_artifact(project_dir, inputs.run_id, artifact, violations)
     checks.append(write_check)
@@ -220,7 +220,7 @@ def _persist_artifact(
     if violations:
         return None, EvidenceCheck("artifact_write", False, ("artifact not written: contract validation failed",))
     try:
-        target_path = run_artifact_path(project_dir, run_id, "paper-evidence", "libvirt-paper-evidence-run.json")
+        target_path = run_artifact_path(project_dir, run_id, "scenario-evidence", "libvirt-scenario-evidence-run.json")
         atomic_write_json_artifact(target_path, artifact)
     except OSError as exc:
         return None, EvidenceCheck("artifact_write", False, (f"artifact write failed: {exc}",))
@@ -317,7 +317,7 @@ def _admit_one_action(
 
 
 def _default_native_driver_factory(
-    project_dir: Path, run_id: str, settings: LibvirtPaperEvidenceConfig
+    project_dir: Path, run_id: str, settings: LibvirtEvidenceRunConfig
 ) -> Callable[[], TechVaultNativeLibvirtDriver]:
     """Build the default native libvirt driver factory for operator-run native-live mode.
 
@@ -325,13 +325,13 @@ def _default_native_driver_factory(
     realize time. In CI/tests a fake driver_factory is injected instead, so this is
     never exercised without a daemon.
     """
-    state_dir = project_dir / "runs" / run_id / "paper-evidence" / "libvirt"
+    state_dir = project_dir / "runs" / run_id / "scenario-evidence" / "libvirt"
 
     def factory() -> TechVaultNativeLibvirtDriver:
         return TechVaultNativeLibvirtDriver(
             state_dir=state_dir,
             connection_uri=settings.connection_uri,
-            name_prefix="aces-paper",
+            name_prefix="aces-evidence",
             appliance_memory_mib=settings.appliance_memory_mib,
             clean_existing=settings.clean_boot,
         )

@@ -1,19 +1,19 @@
 """Deterministic participant-proof fixtures shared across the libvirt participant
-proof and the libvirt paper-evidence producer.
+proof and the libvirt scenario-evidence producer.
 
 This module builds from ``aces_contracts`` plus the shared structural ``Protocol``
-types in ``_paper_evidence_types`` only (ADR-036: ``aces_operations`` never imports
+types in ``_evidence_run_types`` only (ADR-036: ``aces_operations`` never imports
 ``aces_processor`` or ``aces_backend_libvirt`` internals — the structural types name
 the compiled-model shapes without importing the concrete processor classes). It
 builds the deterministic participant-implementation manifest, selection, typed
 action result, and admission request from compiled-model objects passed in by the
-caller (duck-typed), so both the test-layer proof and the shipped paper-evidence
+caller (duck-typed), so both the test-layer proof and the shipped scenario-evidence
 producer share one definition rather than carrying parallel copies.
 
 The identities here are structural-proof placeholders (synthetic digests): no live
 agent is installed and no live domain executes. ``WITHHELD_REFS`` are the
 evaluator-only / internal surfaces the participant must never observe; they are the
-source of the negative-boundary evidence in the paper-evidence artifact.
+source of the negative-boundary evidence in the scenario-evidence artifact.
 """
 
 from __future__ import annotations
@@ -27,12 +27,12 @@ from aces_contracts.contracts import (
 )
 from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
 
-from aces_operations._paper_evidence_types import ActionContract, ObservationBoundary, ParticipantBehavior
+from aces_operations._evidence_run_types import ActionContract, ObservationBoundary, ParticipantBehavior
 
 AGENT_IDENTITY = {"name": "libvirt-deterministic-agent", "version": "1.0.0"}
 MANIFEST_REF = "contracts/fixtures/participant-implementation-manifest/libvirt-deterministic.json"
 MANIFEST_DIGEST = "sha256:" + "1" * 64
-POLICY_ID = "libvirt-paper-agent-policy"
+POLICY_ID = "libvirt-participant-agent-policy"
 POLICY_VERSION = "1.0.0"
 POLICY_DIGEST = "sha256:" + "3" * 64
 
