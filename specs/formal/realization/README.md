@@ -23,6 +23,10 @@ backend manifests carry `realization_support`.
   those kinds may be realized — processor manifests carry no
   `realization_support` because the processor layer does not realize
   underspecified concerns
+- the proposed realization-envelope semantics for issue #667: a
+  versioned expression that denotes a set of scenario instances and
+  supports membership, subsumption, witness generation, scoped
+  closed-world posture, and negative conformance
 
 ## Out Of Scope
 
@@ -100,6 +104,10 @@ work the SEM-218 row tracks.
   `SEM-218`. It is the citable source for "is this declaration binding?",
   "when may a realizer pick a value?", and "must this unsupported exact
   requirement be rejected?".
+- `envelope-semantics.md` is the design authority for issue #667. It is not
+  executable yet; it defines the future formal seam that replaces the #663
+  `reference_scenario` bridge once the schema, relation helper, and
+  conformance probes land.
 - The non-normative companion at
   `docs/explain/reference/explicitness-realization-semantics.md` records
   the architecture guardrails for the implementation that realizes the

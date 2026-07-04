@@ -24,6 +24,10 @@ formal artifacts are warranted.
   apparatus-context, study/collection, capture specification, raw evidence,
   derived measure, backend observation capability, and archival provenance
   contracts
+- **Realization** (`specs/formal/realization/`) -- Exact/constrained/open
+  realization boundaries, backend realization support, and proposed
+  realization-envelope membership, subsumption, witness, and negative
+  conformance semantics
 
 ## FM Classification
 
