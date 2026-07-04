@@ -82,6 +82,19 @@ nodes:
             (
                 """
 name: test
+variables:
+  node_suffix:
+    type: string
+    default: blue
+nodes:
+  web-${node_suffix}:
+    type: switch
+""",
+                "nodes.web-${node_suffix}",
+            ),
+            (
+                """
+name: test
 nodes:
   vm:
     type: vm
@@ -130,6 +143,17 @@ objectives:
             SDLParseError,
             match=re.escape(f"user-defined mapping keys: '{key_path}'"),
         ):
+            parse_sdl(sdl)
+
+    def test_variable_declaration_names_must_match_contract_grammar(self):
+        sdl = """
+name: test
+variables:
+  bad.name:
+    type: string
+    default: value
+"""
+        with pytest.raises(SDLParseError, match="String should match pattern"):
             parse_sdl(sdl)
 
 

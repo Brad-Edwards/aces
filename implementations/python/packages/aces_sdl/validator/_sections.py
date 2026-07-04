@@ -5,7 +5,7 @@ Part of the SemanticValidator mixin composition; see __init__.py.
 
 from pydantic import BaseModel
 
-from .._base import extract_variable_name
+from .._base import VARIABLE_TOKEN_RE
 from ..entities import flatten_entities
 from ..explicitness import classify_scenario_explicitness
 from ..scenario import Scenario
@@ -45,10 +45,10 @@ class _SectionsMixin:
         elif isinstance(value, list):
             for index, child in enumerate(value):
                 self._check_variable_refs(child, f"{path}[{index}]", defined)
-        elif self._is_unresolved_var(value):
-            variable_name = extract_variable_name(value)
-            if variable_name and variable_name not in defined:
-                self._err(f"Undefined variable '{variable_name}' referenced at '{path}'")
+        elif isinstance(value, str):
+            for variable_name in dict.fromkeys(VARIABLE_TOKEN_RE.findall(value)):
+                if variable_name not in defined:
+                    self._err(f"Undefined variable '{variable_name}' referenced at '{path}'")
 
     def _check_model_variable_refs(self, value: BaseModel, path: str, defined: set[str]) -> None:
         for field_name in value.__class__.model_fields:

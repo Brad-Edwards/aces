@@ -2725,6 +2725,18 @@ class TestVerifyVariables:
         errors = _validate(s)
         assert any("Undefined variable 'missing_count'" in e for e in errors)
 
+    def test_embedded_undefined_variable_reference_reported(self):
+        s = _make_scenario(description="deploy host-${missing_env}")
+        errors = _validate(s)
+        assert any("Undefined variable 'missing_env' referenced at 'description'" in e for e in errors)
+
+    def test_embedded_declared_variable_reference_allowed(self):
+        s = _make_scenario(
+            description="deploy host-${env_name}",
+            variables={"env_name": {"type": "string", "default": "lab"}},
+        )
+        assert not _validate(s)
+
 
 class TestAdvisories:
     def test_vm_without_resources_emits_advisory(self):

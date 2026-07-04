@@ -43,7 +43,7 @@ Shorthand expansion also works when the shorthand value is a full variable place
 
 ## Variables
 
-Full-value `${var_name}` placeholders are preserved as literal strings during parsing. Structural validation currently accepts placeholders in ordinary string fields, common scalar/time fields, many reference values, and selected leaf enum-backed property fields. The parser does not substitute variables or evaluate expressions. It also rejects placeholders in user-defined mapping keys, because those keys define the SDL symbol table and must stay concrete.
+Full-value `${var_name}` placeholders and embedded `${var_name}` tokens are preserved as literal strings during parsing. Structural validation currently accepts placeholders in ordinary string fields, common scalar/time fields, many reference values, and selected leaf enum-backed property fields. The parser does not substitute variables or evaluate expressions. It also rejects placeholder tokens in user-defined mapping keys, because those keys define the SDL symbol table and must stay concrete.
 
 The intended boundary is:
 
