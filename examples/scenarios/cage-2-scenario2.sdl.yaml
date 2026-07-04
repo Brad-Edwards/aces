@@ -1,0 +1,380 @@
+name: cage-2-scenario2
+version: "1.0"
+description: >-
+  TTCP CAGE Challenge 2 (Scenario2) authored as a single ACES SDL document
+  (REP-003, ADR-069). It expresses the CAGE-2 three-subnet topology (user
+  hosts, enterprise servers, and the critical operational/OT subnet), its
+  hosts and services, red/blue/green/evaluator identities, the red foothold
+  and pivot path to the critical Op_Server0 OT service, and the defensive
+  objectives. This is the single authored source of truth both backends
+  realize in REP-005. It uses only existing SDL surfaces; no CAGE/CybORG-specific
+  syntax is introduced. Emulation-backend realization and the digest-bearing
+  CAGE-to-ACES source-mapping ledger are out of scope (downstream adapter work).
+  Host and subnet name mapping, source pins, and loss disclosures are recorded
+  in cage-2-scenario2.README.md.
+
+nodes:
+  # ---- Subnets (three CAGE-2 subnet roles) ----
+  user-net:
+    type: switch
+    description: CAGE-2 user host subnet (User0-User4); holds the red foothold.
+  enterprise-net:
+    type: switch
+    description: CAGE-2 enterprise server subnet (Enterprise0-2, Defender).
+  operational-net:
+    type: switch
+    description: CAGE-2 critical operational/OT subnet (Op_Server0, Op_Host0-2).
+
+  # ---- User subnet hosts ----
+  User0:
+    type: vm
+    os: windows
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - {name: smb, port: 445, protocol: tcp}
+    vulnerabilities: [exploitable-remote-service, privilege-escalation-weakness]
+  User1:
+    type: vm
+    os: windows
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - {name: smb, port: 445, protocol: tcp}
+    vulnerabilities: [exploitable-remote-service]
+  User2:
+    type: vm
+    os: windows
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - {name: smb, port: 445, protocol: tcp}
+    vulnerabilities: [exploitable-remote-service]
+  User3:
+    type: vm
+    os: linux
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - {name: ssh, port: 22, protocol: tcp}
+    vulnerabilities: [exploitable-remote-service]
+  User4:
+    type: vm
+    os: linux
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - {name: ssh, port: 22, protocol: tcp}
+    vulnerabilities: [exploitable-remote-service]
+
+  # ---- Enterprise subnet hosts ----
+  Enterprise0:
+    type: vm
+    os: linux
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - {name: ssh, port: 22, protocol: tcp}
+    vulnerabilities: [exploitable-remote-service, privilege-escalation-weakness]
+  Enterprise1:
+    type: vm
+    os: linux
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - {name: http, port: 8080, protocol: tcp}
+    vulnerabilities: [exploitable-remote-service]
+  Enterprise2:
+    type: vm
+    os: linux
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - {name: http, port: 8080, protocol: tcp}
+    vulnerabilities: [exploitable-remote-service]
+  Defender:
+    type: vm
+    os: linux
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - {name: velociraptor, port: 8000, protocol: tcp}
+
+  # ---- Operational (OT) subnet hosts ----
+  Op_Server0:
+    type: vm
+    os: linux
+    resources: {ram: 2 GiB, cpu: 2}
+    services:
+      - {name: ot-service, port: 5020, protocol: tcp}
+    vulnerabilities: [privilege-escalation-weakness]
+    asset_value:
+      confidentiality: medium
+      integrity: medium
+      availability: high
+  Op_Host0:
+    type: vm
+    os: linux
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - {name: ssh, port: 22, protocol: tcp}
+    vulnerabilities: [exploitable-remote-service]
+  Op_Host1:
+    type: vm
+    os: linux
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - {name: ssh, port: 22, protocol: tcp}
+    vulnerabilities: [exploitable-remote-service]
+  Op_Host2:
+    type: vm
+    os: linux
+    resources: {ram: 1 GiB, cpu: 1}
+    services:
+      - {name: ssh, port: 22, protocol: tcp}
+    vulnerabilities: [exploitable-remote-service]
+
+infrastructure:
+  # ---- Subnets: CIDRs and CAGE-2 reachability (User -> Operational restricted) ----
+  user-net:
+    properties: {cidr: 10.0.1.0/24, gateway: 10.0.1.1, internal: true}
+  enterprise-net:
+    properties: {cidr: 10.0.2.0/24, gateway: 10.0.2.1, internal: true}
+  operational-net:
+    properties: {cidr: 10.0.3.0/24, gateway: 10.0.3.1, internal: true}
+    acls:
+      - {name: deny-user-inbound, direction: in, from_net: user-net, action: deny}
+      - {name: allow-enterprise-inbound, direction: in, from_net: enterprise-net, action: allow}
+
+  # ---- User hosts on user-net ----
+  User0: {links: [user-net]}
+  User1: {links: [user-net]}
+  User2: {links: [user-net]}
+  User3: {links: [user-net]}
+  User4: {links: [user-net]}
+
+  # ---- Enterprise hosts; Enterprise0 bridges user-net <-> enterprise-net ----
+  Enterprise0: {links: [enterprise-net, user-net]}
+  Enterprise1: {links: [enterprise-net]}
+  Enterprise2: {links: [enterprise-net]}
+  Defender: {links: [enterprise-net]}
+
+  # ---- Operational hosts; Op_Host0 bridges enterprise-net <-> operational-net ----
+  Op_Server0: {links: [operational-net]}
+  Op_Host0: {links: [operational-net, enterprise-net]}
+  Op_Host1: {links: [operational-net]}
+  Op_Host2: {links: [operational-net]}
+
+entities:
+  red-team:
+    name: CAGE-2 Red Team
+    role: red
+    mission: >-
+      Establish access from the user subnet, pivot through the enterprise
+      subnet, reach the operational subnet, and impact the critical Op_Server0
+      OT service.
+  blue-team:
+    name: CAGE-2 Blue Team
+    role: blue
+    mission: >-
+      Monitor, analyse, remove, and restore hosts to keep the Op_Server0 OT
+      service available and evict red from the network.
+  green-users:
+    name: CAGE-2 Green Users
+    role: green
+    mission: >-
+      Generate benign user activity across the user and operational hosts.
+  evaluator:
+    name: CAGE-2 Evaluator
+    role: white
+    mission: >-
+      Project CAGE reward components and terminal conditions into ACES
+      evaluation results and derived measures.
+
+accounts:
+  red-foothold:
+    username: SYSTEM
+    node: User0
+    password_strength: none
+  green-user:
+    username: greenagent
+    node: User1
+    password_strength: medium
+  green-op:
+    username: greenagent
+    node: Op_Host0
+    password_strength: medium
+
+vulnerabilities:
+  exploitable-remote-service:
+    name: Exploitable remote service
+    description: >-
+      A remotely reachable service is exploitable, allowing red to gain a
+      session on the host (CAGE ExploitRemoteService).
+    technical: true
+    class: CWE-284
+  privilege-escalation-weakness:
+    name: Local privilege escalation weakness
+    description: >-
+      A local weakness allows red to escalate from a user session to a
+      privileged session (CAGE PrivilegeEscalate).
+    technical: true
+    class: CWE-269
+
+content:
+  ot-service-criticality:
+    type: file
+    target: Op_Server0
+    path: /etc/aces/ot-service-criticality.md
+    text: >-
+      Op_Server0 hosts the mission-critical OT service. Loss of its availability,
+      or a red privileged session on this host, drives the CAGE-2 penalty. This
+      is hidden truth used for adjudication, not participant-observable context.
+    sensitive: true
+    tags: [hidden-truth]
+
+conditions:
+  ot-service-available:
+    command: "check-ot-service --host Op_Server0 || exit 1"
+    interval: 30
+    description: The Op_Server0 OT service is reachable and responding (availability).
+  op-server-integrity-intact:
+    command: "check-no-red-privilege --host Op_Server0 || exit 1"
+    interval: 30
+    description: No red privileged session is present on Op_Server0 (integrity).
+  op-server-compromised:
+    command: "check-red-impact --host Op_Server0"
+    interval: 30
+    description: >-
+      Red holds a privileged session on Op_Server0 or has impacted its OT
+      service (red-positive compromise state).
+
+metrics:
+  ot-availability:
+    type: conditional
+    max_score: 100
+    condition: ot-service-available
+    description: Availability score for the Op_Server0 OT service.
+  op-server-integrity:
+    type: conditional
+    max_score: 100
+    condition: op-server-integrity-intact
+    description: Integrity score for the critical operational server.
+  op-server-compromise:
+    type: conditional
+    max_score: 100
+    condition: op-server-compromised
+    description: >-
+      Red-positive impact score: credited when red has compromised the
+      Op_Server0 OT service.
+
+evaluations:
+  operational-defense:
+    metrics: [ot-availability, op-server-integrity]
+    min_score: {percentage: 100}
+    description: >-
+      Blue defense of the operational subnet: keep the OT service available and
+      the critical server free of red privilege.
+
+tlos:
+  protect-operational-service:
+    name: Protect the operational OT service
+    evaluation: operational-defense
+    description: >-
+      Keep the Op_Server0 OT service available and evict red from the
+      operational subnet.
+
+goals:
+  cage2-blue-success:
+    tlos: [protect-operational-service]
+    description: >-
+      The CAGE-2 defensive success goal: the operational subnet's critical
+      service remains available and uncompromised across the episode.
+
+relationships:
+  user-to-enterprise-gateway:
+    type: connects_to
+    source: Enterprise0
+    target: user-net
+    properties: {role: gateway}
+  enterprise-to-operational-gateway:
+    type: connects_to
+    source: Op_Host0
+    target: enterprise-net
+    properties: {role: gateway}
+  blue-monitors-op-server:
+    type: manages
+    source: Defender
+    target: Op_Server0
+  red-controls-foothold:
+    type: manages
+    source: red-team
+    target: User0
+
+agents:
+  red-bline:
+    entity: red-team
+    actions: [DiscoverRemoteSystems, DiscoverNetworkServices, ExploitRemoteService, PrivilegeEscalate, Impact]
+    starting_accounts: [red-foothold]
+    initial_knowledge:
+      hosts: [User0]
+      subnets: [user-net]
+    allowed_subnets: [user-net, enterprise-net, operational-net]
+    operating_scope: [user-net, enterprise-net, operational-net, Op_Server0]
+    authority_anchors: [red-team, red-foothold]
+    reward_calculator: HybridAvailabilityConfidentiality
+  red-meander:
+    entity: red-team
+    actions: [DiscoverRemoteSystems, DiscoverNetworkServices, ExploitRemoteService, PrivilegeEscalate, Impact]
+    starting_accounts: [red-foothold]
+    initial_knowledge:
+      hosts: [User0]
+      subnets: [user-net]
+    allowed_subnets: [user-net, enterprise-net, operational-net]
+    operating_scope: [user-net, enterprise-net, operational-net, Op_Server0]
+    authority_anchors: [red-team, red-foothold]
+    reward_calculator: HybridAvailabilityConfidentiality
+  red-sleep:
+    entity: red-team
+    actions: [Sleep]
+    starting_accounts: [red-foothold]
+    initial_knowledge:
+      hosts: [User0]
+      subnets: [user-net]
+    authority_anchors: [red-team, red-foothold]
+  blue-defender:
+    entity: blue-team
+    actions: [Monitor, Analyse, Remove, Restore, DecoyApache, DecoySSHD, DecoyTomcat, DecoyVsftpd, DecoyFemitter, DecoyHarakaSMTP, Sleep]
+    initial_knowledge:
+      hosts: [User0, User1, User2, User3, User4, Enterprise0, Enterprise1, Enterprise2, Defender, Op_Server0, Op_Host0, Op_Host1, Op_Host2]
+      subnets: [user-net, enterprise-net, operational-net]
+    allowed_subnets: [user-net, enterprise-net, operational-net]
+    operating_scope: [user-net, enterprise-net, operational-net]
+    authority_anchors: [blue-team, Defender]
+  green-agent:
+    entity: green-users
+    actions: [BenignUserActivity]
+    initial_knowledge:
+      hosts: [User0, User1, User2, User3, User4, Op_Host0, Op_Host1, Op_Host2]
+      subnets: [user-net, operational-net]
+    allowed_subnets: [user-net, operational-net]
+    authority_anchors: [green-users]
+
+objectives:
+  red-impact-op-server:
+    agent: red-bline
+    actions: [ExploitRemoteService, PrivilegeEscalate, Impact]
+    targets:
+      - operational-net
+      - Op_Server0
+      - nodes.Op_Server0.services.ot-service
+    success:
+      metrics: [op-server-compromise]
+    description: >-
+      Red pivots from the user foothold through the enterprise subnet into the
+      operational subnet and impacts the Op_Server0 OT service. Success is
+      scored by the red-positive op-server-compromise metric, not by the
+      defensive integrity metric.
+  blue-protect-op-server:
+    agent: blue-defender
+    actions: [Monitor, Analyse, Restore]
+    targets:
+      - Op_Server0
+      - nodes.Op_Server0.services.ot-service
+    success:
+      metrics: [ot-availability, op-server-integrity]
+      goals: [cage2-blue-success]
+    description: >-
+      Blue keeps the Op_Server0 OT service available and evicts red from the
+      operational subnet.
