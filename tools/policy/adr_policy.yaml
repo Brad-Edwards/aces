@@ -212,6 +212,7 @@ module_boundaries:
       public_import_prefixes:
         aces_operations:
           - aces_operations.libvirt_paper_evidence
+          - aces_operations.paper_corpus
           - aces_operations.techvault_live
         aces_processor:
           - aces_processor.manifest

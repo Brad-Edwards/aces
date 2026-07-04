@@ -155,6 +155,7 @@ semantic-equivalence between the libvirt and APTL realizations.
 - ACES issue: Brad-Edwards/aces#598
 - Participant implementation binding: Brad-Edwards/aces#599
 - ACES n=2 backend proof: Brad-Edwards/aces#600
+  (corpus: `examples/corpus/paper-demonstration/`)
 - Libvirt participant runtime: Brad-Edwards/aces#614
 - Libvirt evaluator/Wazuh evidence readback: Brad-Edwards/aces#615
 - APTL realization and proof: Brad-Edwards/aptl#556,

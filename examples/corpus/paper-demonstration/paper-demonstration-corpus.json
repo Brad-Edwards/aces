@@ -1,0 +1,617 @@
+{
+  "authored_scenario": {
+    "content_sha256": "sha256:e5e6f563cc9eb44de1aa882433f2cbe460d1affca09e80d692ee407f8656107d",
+    "name": "paper-enterprise-participant-evidence-loop",
+    "relative_path": "examples/scenarios/paper-agent-loop.sdl.yaml",
+    "version": "1.0"
+  },
+  "backend_runs": [
+    {
+      "backend_id": "libvirt-reference",
+      "backend_manifest": {
+        "name": "libvirt-qemu",
+        "version": "0.3.0"
+      },
+      "capability_profile": {
+        "observation_contract_gaps": [],
+        "participant_runtime_contract_gaps": []
+      },
+      "compiled_address_sets": {
+        "action_contracts": [
+          "participant.action-contract.probe-customer-portal-login"
+        ],
+        "evaluations": [
+          "evaluation.evaluation.participant-loop-evaluation"
+        ],
+        "networks": [
+          "provision.network.dmz-net",
+          "provision.network.internal-net",
+          "provision.network.redteam-net",
+          "provision.network.security-net"
+        ],
+        "node_deployments": [
+          "provision.node.customer-db",
+          "provision.node.customer-portal",
+          "provision.node.participant-policy-gate",
+          "provision.node.red-workbench",
+          "provision.node.wazuh-indexer",
+          "provision.node.wazuh-manager"
+        ],
+        "objectives": [
+          "evaluation.objective.demonstrate-handoff"
+        ],
+        "observation_boundaries": [
+          "participant.observation-boundary.paper-agent-view"
+        ],
+        "participant_behaviors": [
+          "participant.behavior.paper-agent"
+        ]
+      },
+      "compiled_model_fingerprint": "sha256:40345ff0c875a4f7bce14808afc77e80782968ceaa3325ac9fe7fbe08e1b0021",
+      "evidence_locator": {
+        "command": "aces libvirt paper validate-evidence",
+        "kind": "regenerable-artifact",
+        "schema": "aces.libvirt.paper-evidence-run/v1"
+      },
+      "evidence_provenance": "generated-in-repo",
+      "evidence_source_mode": "deterministic",
+      "evidence_surface_coverage": {
+        "backend_manifest_capability_profile": "recorded",
+        "evaluator_wazuh_evidence": "recorded (evaluator-only; structural-evaluator-channel)",
+        "outcome_interpretation_evidence": "recorded",
+        "participant_behavior_history": "recorded",
+        "participant_episode_history": "recorded",
+        "participant_implementation_provenance": "recorded",
+        "participant_terminal_observation": "recorded (behavior-history-equivalent)",
+        "processor_artifact_identity": "recorded",
+        "realized_topology_matrix": "recorded (planned-not-realized)",
+        "runtime_snapshots": "recorded (participant lifecycle snapshot)",
+        "scenario_source_hash": "recorded"
+      },
+      "limitations": [
+        "The libvirt participant runtime uses the deterministic domain adapter; no live participant domain is executed (issue #614).",
+        "Wazuh/SOC evidence is evaluator-only and, in native-live mode, is a translated native readback of generated appliance state rather than full upstream Wazuh internals.",
+        "Deterministic mode does not realize a live libvirt substrate; topology and SOC readback are compiled/structural, explicitly disclosed as not-live."
+      ],
+      "non_claims": [
+        "No Wazuh detection-quality claim.",
+        "No model-defense robustness claim.",
+        "No byte-equivalence or application-internals equivalence claim between libvirt appliances and APTL containers.",
+        "No full semantic-equivalence claim beyond the invariant ledger in Brad-Edwards/aces#600."
+      ],
+      "realization": "aces-libvirt-reference-backend",
+      "realization_characteristics": {
+        "defensive_evidence": "structural-evaluator-channel",
+        "participant_proof": "libvirt-deterministic-participant-runtime",
+        "substrate": "native libvirt/QEMU VM and network appliances"
+      },
+      "scenario": {
+        "content_sha256": "sha256:e5e6f563cc9eb44de1aa882433f2cbe460d1affca09e80d692ee407f8656107d",
+        "name": "paper-enterprise-participant-evidence-loop",
+        "relative_path": "examples/scenarios/paper-agent-loop.sdl.yaml",
+        "version": "1.0"
+      },
+      "topology": {
+        "basis": "planned-not-realized",
+        "network_attachment_matrix": {
+          "customer-db": [
+            "internal-net"
+          ],
+          "customer-portal": [
+            "dmz-net",
+            "internal-net"
+          ],
+          "participant-policy-gate": [
+            "security-net"
+          ],
+          "red-workbench": [
+            "redteam-net",
+            "dmz-net"
+          ],
+          "wazuh-indexer": [
+            "security-net"
+          ],
+          "wazuh-manager": [
+            "security-net",
+            "internal-net"
+          ]
+        }
+      },
+      "unsupported_or_degraded_surfaces": []
+    },
+    {
+      "backend_id": "aptl-docker",
+      "backend_manifest": {
+        "name": "aptl-docker",
+        "version": "external"
+      },
+      "capability_profile": {},
+      "compiled_address_sets": {
+        "action_contracts": [
+          "participant.action-contract.probe-customer-portal-login"
+        ],
+        "evaluations": [
+          "evaluation.evaluation.participant-loop-evaluation"
+        ],
+        "networks": [
+          "provision.network.dmz-net",
+          "provision.network.internal-net",
+          "provision.network.redteam-net",
+          "provision.network.security-net"
+        ],
+        "node_deployments": [
+          "provision.node.customer-db",
+          "provision.node.customer-portal",
+          "provision.node.participant-policy-gate",
+          "provision.node.red-workbench",
+          "provision.node.wazuh-indexer",
+          "provision.node.wazuh-manager"
+        ],
+        "objectives": [
+          "evaluation.objective.demonstrate-handoff"
+        ],
+        "observation_boundaries": [
+          "participant.observation-boundary.paper-agent-view"
+        ],
+        "participant_behaviors": [
+          "participant.behavior.paper-agent"
+        ]
+      },
+      "compiled_model_fingerprint": "",
+      "evidence_locator": {
+        "kind": "external-issue",
+        "ref": "Brad-Edwards/aptl#558",
+        "url": "https://github.com/Brad-Edwards/aptl/issues/558"
+      },
+      "evidence_provenance": "external-summarized",
+      "evidence_source_mode": "docker-live",
+      "evidence_surface_coverage": {
+        "backend_manifest_capability_profile": "external-summarized (Brad-Edwards/aptl#558)",
+        "evaluator_wazuh_evidence": "external-summarized (Brad-Edwards/aptl#558)",
+        "outcome_interpretation_evidence": "external-summarized (Brad-Edwards/aptl#558)",
+        "participant_behavior_history": "external-summarized (Brad-Edwards/aptl#558)",
+        "participant_episode_history": "external-summarized (Brad-Edwards/aptl#558)",
+        "participant_implementation_provenance": "external-summarized (Brad-Edwards/aptl#558)",
+        "participant_terminal_observation": "external-summarized (Brad-Edwards/aptl#558)",
+        "processor_artifact_identity": "external-summarized (Brad-Edwards/aptl#558)",
+        "realized_topology_matrix": "external-summarized (Brad-Edwards/aptl#558)",
+        "runtime_snapshots": "external-summarized (Brad-Edwards/aptl#558)",
+        "scenario_source_hash": "external-summarized (Brad-Edwards/aptl#558)"
+      },
+      "limitations": [
+        "APTL evidence is summarized and linked, not re-executed in this repository or embedded here.",
+        "The authored scenario identity is the ACES-side authored digest both backends consume; byte-level confirmation against the APTL export (Brad-Edwards/aptl#558) is external to this repository.",
+        "No APTL-private container ids, Compose service names, Docker inspect payloads, or raw Wazuh rule bodies are recorded as portable semantics."
+      ],
+      "non_claims": [
+        "No Wazuh detection-quality claim.",
+        "No model-defense robustness claim.",
+        "No byte-equivalence or application-internals equivalence claim between APTL containers and libvirt appliances.",
+        "No full semantic-equivalence claim beyond this invariant ledger."
+      ],
+      "realization": "aptl-emulation-backend",
+      "realization_characteristics": {
+        "defensive_evidence": "upstream Wazuh live detection telemetry",
+        "participant_proof": "live participant runtime",
+        "substrate": "Docker/Compose containers"
+      },
+      "scenario": {
+        "content_sha256": "sha256:e5e6f563cc9eb44de1aa882433f2cbe460d1affca09e80d692ee407f8656107d",
+        "name": "paper-enterprise-participant-evidence-loop",
+        "relative_path": "examples/scenarios/paper-agent-loop.sdl.yaml",
+        "version": "1.0"
+      },
+      "topology": {
+        "basis": "external-summarized",
+        "network_attachment_matrix": {}
+      },
+      "unsupported_or_degraded_surfaces": [
+        "In-repo record is a bounded summary of the APTL realization; per-surface evidence lives in Brad-Edwards/aptl#558."
+      ]
+    }
+  ],
+  "compiled_address_sets": {
+    "action_contracts": [
+      "participant.action-contract.probe-customer-portal-login"
+    ],
+    "evaluations": [
+      "evaluation.evaluation.participant-loop-evaluation"
+    ],
+    "networks": [
+      "provision.network.dmz-net",
+      "provision.network.internal-net",
+      "provision.network.redteam-net",
+      "provision.network.security-net"
+    ],
+    "node_deployments": [
+      "provision.node.customer-db",
+      "provision.node.customer-portal",
+      "provision.node.participant-policy-gate",
+      "provision.node.red-workbench",
+      "provision.node.wazuh-indexer",
+      "provision.node.wazuh-manager"
+    ],
+    "objectives": [
+      "evaluation.objective.demonstrate-handoff"
+    ],
+    "observation_boundaries": [
+      "participant.observation-boundary.paper-agent-view"
+    ],
+    "participant_behaviors": [
+      "participant.behavior.paper-agent"
+    ]
+  },
+  "compiled_model_fingerprint": "sha256:40345ff0c875a4f7bce14808afc77e80782968ceaa3325ac9fe7fbe08e1b0021",
+  "corpus": {
+    "claim": "n=2 independent backend realizations (libvirt reference backend + APTL) of the same authored ACES paper scenario, compared through an inspectable invariant ledger.",
+    "name": "paper-enterprise-participant-evidence-loop-n2"
+  },
+  "invariant_ledger": {
+    "evidence_limitations": [
+      "The libvirt participant runtime uses the deterministic domain adapter; no live participant domain is executed (issue #614).",
+      "Wazuh/SOC evidence is evaluator-only and, in native-live mode, is a translated native readback of generated appliance state rather than full upstream Wazuh internals.",
+      "Deterministic mode does not realize a live libvirt substrate; topology and SOC readback are compiled/structural, explicitly disclosed as not-live.",
+      "APTL evidence is summarized and linked, not re-executed in this repository or embedded here.",
+      "The authored scenario identity is the ACES-side authored digest both backends consume; byte-level confirmation against the APTL export (Brad-Edwards/aptl#558) is external to this repository.",
+      "No APTL-private container ids, Compose service names, Docker inspect payloads, or raw Wazuh rule bodies are recorded as portable semantics."
+    ],
+    "preserved_invariants": [
+      {
+        "invariant": "authored_scenario_digest",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized",
+            "value": "sha256:e5e6f563cc9eb44de1aa882433f2cbe460d1affca09e80d692ee407f8656107d"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact",
+            "value": "sha256:e5e6f563cc9eb44de1aa882433f2cbe460d1affca09e80d692ee407f8656107d"
+          }
+        },
+        "status": "preserved",
+        "value": "sha256:e5e6f563cc9eb44de1aa882433f2cbe460d1affca09e80d692ee407f8656107d"
+      },
+      {
+        "invariant": "compiled_addresses:participant_behaviors",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact"
+          }
+        },
+        "status": "preserved",
+        "value": [
+          "participant.behavior.paper-agent"
+        ]
+      },
+      {
+        "invariant": "compiled_addresses:action_contracts",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact"
+          }
+        },
+        "status": "preserved",
+        "value": [
+          "participant.action-contract.probe-customer-portal-login"
+        ]
+      },
+      {
+        "invariant": "compiled_addresses:observation_boundaries",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact"
+          }
+        },
+        "status": "preserved",
+        "value": [
+          "participant.observation-boundary.paper-agent-view"
+        ]
+      },
+      {
+        "invariant": "compiled_addresses:objectives",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact"
+          }
+        },
+        "status": "preserved",
+        "value": [
+          "evaluation.objective.demonstrate-handoff"
+        ]
+      },
+      {
+        "invariant": "compiled_addresses:evaluations",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact"
+          }
+        },
+        "status": "preserved",
+        "value": [
+          "evaluation.evaluation.participant-loop-evaluation"
+        ]
+      },
+      {
+        "invariant": "compiled_addresses:networks",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact"
+          }
+        },
+        "status": "preserved",
+        "value": [
+          "provision.network.dmz-net",
+          "provision.network.internal-net",
+          "provision.network.redteam-net",
+          "provision.network.security-net"
+        ]
+      },
+      {
+        "invariant": "compiled_addresses:node_deployments",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact"
+          }
+        },
+        "status": "preserved",
+        "value": [
+          "provision.node.customer-db",
+          "provision.node.customer-portal",
+          "provision.node.participant-policy-gate",
+          "provision.node.red-workbench",
+          "provision.node.wazuh-indexer",
+          "provision.node.wazuh-manager"
+        ]
+      },
+      {
+        "invariant": "evidence_surface:scenario_source_hash",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized",
+            "coverage": "external-summarized (Brad-Edwards/aptl#558)"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact",
+            "coverage": "recorded"
+          }
+        },
+        "status": "preserved"
+      },
+      {
+        "invariant": "evidence_surface:processor_artifact_identity",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized",
+            "coverage": "external-summarized (Brad-Edwards/aptl#558)"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact",
+            "coverage": "recorded"
+          }
+        },
+        "status": "preserved"
+      },
+      {
+        "invariant": "evidence_surface:backend_manifest_capability_profile",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized",
+            "coverage": "external-summarized (Brad-Edwards/aptl#558)"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact",
+            "coverage": "recorded"
+          }
+        },
+        "status": "preserved"
+      },
+      {
+        "invariant": "evidence_surface:runtime_snapshots",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized",
+            "coverage": "external-summarized (Brad-Edwards/aptl#558)"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact",
+            "coverage": "recorded (participant lifecycle snapshot)"
+          }
+        },
+        "status": "preserved"
+      },
+      {
+        "invariant": "evidence_surface:realized_topology_matrix",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized",
+            "coverage": "external-summarized (Brad-Edwards/aptl#558)"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact",
+            "coverage": "recorded (planned-not-realized)"
+          }
+        },
+        "status": "preserved"
+      },
+      {
+        "invariant": "evidence_surface:participant_implementation_provenance",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized",
+            "coverage": "external-summarized (Brad-Edwards/aptl#558)"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact",
+            "coverage": "recorded"
+          }
+        },
+        "status": "preserved"
+      },
+      {
+        "invariant": "evidence_surface:participant_episode_history",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized",
+            "coverage": "external-summarized (Brad-Edwards/aptl#558)"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact",
+            "coverage": "recorded"
+          }
+        },
+        "status": "preserved"
+      },
+      {
+        "invariant": "evidence_surface:participant_behavior_history",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized",
+            "coverage": "external-summarized (Brad-Edwards/aptl#558)"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact",
+            "coverage": "recorded"
+          }
+        },
+        "status": "preserved"
+      },
+      {
+        "invariant": "evidence_surface:participant_terminal_observation",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized",
+            "coverage": "external-summarized (Brad-Edwards/aptl#558)"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact",
+            "coverage": "recorded (behavior-history-equivalent)"
+          }
+        },
+        "status": "preserved"
+      },
+      {
+        "invariant": "evidence_surface:evaluator_wazuh_evidence",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized",
+            "coverage": "external-summarized (Brad-Edwards/aptl#558)"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact",
+            "coverage": "recorded (evaluator-only; structural-evaluator-channel)"
+          }
+        },
+        "status": "preserved"
+      },
+      {
+        "invariant": "evidence_surface:outcome_interpretation_evidence",
+        "per_backend": {
+          "aptl-docker": {
+            "basis": "external-summarized",
+            "coverage": "external-summarized (Brad-Edwards/aptl#558)"
+          },
+          "libvirt-reference": {
+            "basis": "verified-in-artifact",
+            "coverage": "recorded"
+          }
+        },
+        "status": "preserved"
+      }
+    ],
+    "realization_differences": [
+      {
+        "aptl-docker": "Docker/Compose containers",
+        "dimension": "substrate",
+        "libvirt-reference": "native libvirt/QEMU VM and network appliances"
+      },
+      {
+        "aptl-docker": "live participant runtime",
+        "dimension": "participant_proof",
+        "libvirt-reference": "libvirt-deterministic-participant-runtime"
+      },
+      {
+        "aptl-docker": "upstream Wazuh live detection telemetry",
+        "dimension": "defensive_evidence",
+        "libvirt-reference": "structural-evaluator-channel"
+      },
+      {
+        "aptl-docker": "external-summarized",
+        "dimension": "evidence_provenance",
+        "libvirt-reference": "generated-in-repo"
+      },
+      {
+        "aptl-docker": "docker-live",
+        "dimension": "evidence_source_mode",
+        "libvirt-reference": "deterministic"
+      }
+    ],
+    "unsupported_or_degraded_surfaces": [
+      {
+        "backend_id": "libvirt-reference",
+        "surfaces": []
+      },
+      {
+        "backend_id": "aptl-docker",
+        "surfaces": [
+          "In-repo record is a bounded summary of the APTL realization; per-surface evidence lives in Brad-Edwards/aptl#558."
+        ]
+      }
+    ]
+  },
+  "links": {
+    "aptl_evidence": "Brad-Edwards/aptl#558",
+    "authored_scenario_issue": "Brad-Edwards/aces#598",
+    "issue": "Brad-Edwards/aces#600",
+    "libvirt_evidence": "Brad-Edwards/aces#615",
+    "libvirt_participant_runtime": "Brad-Edwards/aces#614"
+  },
+  "non_claims": [
+    "No autonomous-agent capability benchmark claim.",
+    "No claim that Wazuh detection quality is evaluated.",
+    "No model-defense robustness claim.",
+    "No full semantic equivalence across backends beyond the checked invariant ledger."
+  ],
+  "redaction_provenance": {
+    "policy": "The corpus copies only portable, bounded ACES-side facts from each backend run: authored scenario identity/digest, compiled ACES address sets, backend id/capability profile, topology basis and network attachment matrix, per-surface evidence coverage, and disclosed limitations. Backend-private semantics are never recorded.",
+    "provenance_refs": [
+      "docs/decisions/issue-600-paper-demonstration-corpus-preflight.md",
+      "docs/decisions/issue-615-libvirt-paper-evidence-preflight.md",
+      "examples/scenarios/paper-agent-loop.README.md"
+    ],
+    "redacted_field_classes": [
+      "raw-libvirt-xml",
+      "domain-uuid",
+      "qemu-command-line",
+      "host-path",
+      "connection-uri",
+      "credential",
+      "private-key",
+      "aptl-container-id",
+      "compose-service-name",
+      "docker-inspect-payload",
+      "raw-wazuh-rule-body"
+    ]
+  },
+  "schema": "aces.paper-demonstration-corpus/v1"
+}
