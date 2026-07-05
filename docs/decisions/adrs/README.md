@@ -116,6 +116,7 @@ adr-068-experiment-trials-replication-and-replay-claims
 adr-069-cage-2-replication-architecture
 adr-070-realization-envelope-semantics
 adr-071-reusable-asset-trust-and-integrity-policy
+adr-072-validation-and-admission-profiles
 ```
 
 | ADR | Title | Status | Date |
@@ -192,3 +193,4 @@ adr-071-reusable-asset-trust-and-integrity-policy
 | [069](adr-069-cage-2-replication-architecture.md) | CAGE-2 Replication Architecture | accepted | 2026-07-01 |
 | [070](adr-070-realization-envelope-semantics.md) | Realization Envelope Semantics | proposed | 2026-07-04 |
 | [071](adr-071-reusable-asset-trust-and-integrity-policy.md) | Reusable Asset Trust and Integrity Policy | accepted | 2026-07-05 |
+| [072](adr-072-validation-and-admission-profiles.md) | Validation and Admission Profiles | proposed | 2026-07-05 |
