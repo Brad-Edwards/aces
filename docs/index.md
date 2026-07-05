@@ -174,7 +174,8 @@ decisions/adrs/adr-067-participant-behavior-model
 decisions/adrs/adr-068-experiment-trials-replication-and-replay-claims
 decisions/adrs/adr-069-cage-2-replication-architecture
 decisions/adrs/adr-070-realization-envelope-semantics
-decisions/adrs/adr-071-validation-and-admission-profiles
+decisions/adrs/adr-071-reusable-asset-trust-and-integrity-policy
+decisions/adrs/adr-072-validation-and-admission-profiles
 decisions/issue-248-sem-216-boundary-semantics-preflight
 decisions/sem-213-temporal-participant-preflight
 decisions/issue-508-related-work-comparison-preflight

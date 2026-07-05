@@ -13,7 +13,7 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
-from ._base import is_variable_ref
+from ._base import contains_variable_token, is_variable_ref
 from ._errors import SDLParseError, SDLValidationError
 from .scenario import ExpandedScenario, Scenario
 from .validator import SemanticValidator
@@ -133,7 +133,7 @@ def _reject_variable_mapping_keys(
     """Reject ``${var}`` placeholders in symbol-defining mapping keys."""
     if isinstance(data, dict):
         for k, v in data.items():
-            if is_hashmap and is_variable_ref(k):
+            if is_hashmap and contains_variable_token(k):
                 key_path = f"{path}.{k}" if path else str(k)
                 raise SDLParseError(f"Variable placeholders are not allowed in user-defined mapping keys: '{key_path}'")
 

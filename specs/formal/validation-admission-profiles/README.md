@@ -29,7 +29,7 @@ Rationale:
 ## Authoritative Artifacts
 
 - Architecture decision:
-  `docs/decisions/adrs/adr-071-validation-and-admission-profiles.md`.
+  `docs/decisions/adrs/adr-072-validation-and-admission-profiles.md`.
 - Normative prose: this directory.
 - Preflight guardrails:
   `docs/decisions/issue-97-asr-511-515-validation-strength-disclosure-preflight.md`.

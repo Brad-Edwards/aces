@@ -11,10 +11,11 @@ outside the SDL.
 """
 
 from collections.abc import Mapping
+from typing import Annotated
 
-from pydantic import Field, PrivateAttr, model_validator
+from pydantic import Field, PrivateAttr, StringConstraints, model_validator
 
-from ._base import VARIABLE_TOKEN_RE, SDLModel
+from ._base import VARIABLE_NAME_PATTERN, VARIABLE_TOKEN_RE, SDLModel
 from .accounts import Account
 from .agents import Agent
 from .conditions import Condition
@@ -38,6 +39,9 @@ from .runtime_forwarding_agent import RuntimeForwardingAgent
 from .scoring import TLO, Evaluation, Goal, Metric
 from .variables import Variable
 from .vulnerabilities import Vulnerability
+
+VariableName = Annotated[str, StringConstraints(pattern=f"^{VARIABLE_NAME_PATTERN}$")]
+VariableDefinitions = dict[VariableName, Variable]
 
 
 def _collect_variable_tokens(value: object) -> list[str]:
@@ -154,7 +158,10 @@ class Scenario(SDLModel):
     evidence_requirements: dict[str, EvidenceRequirement] = Field(default_factory=dict)
     objectives: dict[str, Objective] = Field(default_factory=dict)
     workflows: dict[str, Workflow] = Field(default_factory=dict)
-    variables: dict[str, Variable] = Field(default_factory=dict)
+    variables: VariableDefinitions = Field(
+        default_factory=dict,
+        json_schema_extra={"additionalProperties": False},
+    )
 
     _advisories: list[str] = PrivateAttr(default_factory=list)
     _semantic_validated: bool = PrivateAttr(default=False)
