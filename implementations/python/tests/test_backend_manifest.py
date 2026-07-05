@@ -164,6 +164,7 @@ def test_backend_manifest_v2_declares_observation_capability_dimensions():
         "experiment-capture-spec-v1",
         "experiment-derived-measure-v1",
         "experiment-evidence-record-v1",
+        "experiment-run-v1",
     ]
     assert observation["supported_sealing_modes"] == ["digest", "immutable-store"]
     assert observation["supports_redaction"] is True
@@ -395,13 +396,29 @@ def test_participant_runtime_capability_evidence_covers_standard_vocabularies():
 def test_observation_capability_evidence_covers_standard_vocabularies():
     catalog_path = FIXTURES_ROOT / "concept-authority" / "controlled-vocabularies-v1" / "valid" / "reference.json"
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
-    scopes = {
-        scope for definition in catalog["vocabularies"].values() for scope in definition.get("governed_scopes", ())
+    terms_by_scope = {
+        scope: set(definition["terms"])
+        for definition in catalog["vocabularies"].values()
+        for scope in definition.get("governed_scopes", ())
+        if scope.startswith("capabilities.observation.")
     }
 
-    assert OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE in scopes
-    assert OBSERVATION_CAPABILITY_CHANNEL_KIND_SCOPE in scopes
-    assert OBSERVATION_CAPABILITY_SEALING_MODE_SCOPE in scopes
+    assert set(terms_by_scope) == {
+        OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE,
+        OBSERVATION_CAPABILITY_CHANNEL_KIND_SCOPE,
+        OBSERVATION_CAPABILITY_SEALING_MODE_SCOPE,
+    }
+    capability = ObservationCapabilities(
+        name="observation",
+        supported_capture_kinds=frozenset(terms_by_scope[OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE]),
+        supported_channel_kinds=frozenset(terms_by_scope[OBSERVATION_CAPABILITY_CHANNEL_KIND_SCOPE]),
+        supported_evidence_contracts=frozenset({"experiment-evidence-record-v1"}),
+        supported_media_types=frozenset({"application/json"}),
+        supported_sealing_modes=frozenset(terms_by_scope[OBSERVATION_CAPABILITY_SEALING_MODE_SCOPE]),
+    )
+    assert capability.supported_capture_kinds == terms_by_scope[OBSERVATION_CAPABILITY_CAPTURE_KIND_SCOPE]
+    assert capability.supported_channel_kinds == terms_by_scope[OBSERVATION_CAPABILITY_CHANNEL_KIND_SCOPE]
+    assert capability.supported_sealing_modes == terms_by_scope[OBSERVATION_CAPABILITY_SEALING_MODE_SCOPE]
 
 
 def test_participant_runtime_capability_claims_require_published_contract_evidence():
@@ -723,7 +740,14 @@ def test_backend_manifest_v2_rejects_hollow_capability_blocks():
 
 def test_reference_backend_v2_fixture_matches_emitted_manifest():
     payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
-    assert payload == backend_manifest_payload(create_stub_manifest())
+    emitted = backend_manifest_payload(create_stub_manifest())
+    # identity.version is the live aces-sdl distribution version (the committed
+    # __version__ literal, #684), which is bumped every release and is not pinned
+    # to the fixture's example version. Normalize it before the structural
+    # comparison; a non-empty real version is asserted elsewhere.
+    assert emitted["identity"]["version"]
+    emitted = {**emitted, "identity": {**emitted["identity"], "version": payload["identity"]["version"]}}
+    assert payload == emitted
 
 
 def test_backend_manifest_valid_fixtures_pass_validation():

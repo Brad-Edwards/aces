@@ -6,8 +6,16 @@ import json
 from pathlib import Path
 
 import pytest
-from aces_backend_protocols.capabilities import BackendManifest
+from aces_backend_protocols.capabilities import (
+    BackendCapabilitySet,
+    BackendManifest,
+    ProvisionerCapabilities,
+)
 from aces_conformance.conformance import _semantic_diagnostics
+from aces_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
+from aces_contracts.planning import ChangeAction, RuntimeDomain
+from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
+from aces_contracts.vocabulary import RealizationSupportMode
 
 from aces.backends.stubs import create_stub_components, create_stub_manifest, create_stub_target
 from aces.core.runtime.conformance import (
@@ -157,6 +165,9 @@ def test_live_probe_catches_participant_runtime_that_does_not_populate_snapshot(
             return ApplyResult(success=True, snapshot=snapshot)
 
         def terminate(self, request, snapshot):
+            return ApplyResult(success=True, snapshot=snapshot)
+
+        def admit_action(self, request, snapshot):
             return ApplyResult(success=True, snapshot=snapshot)
 
         def status(self):
@@ -1109,3 +1120,183 @@ def test_run_fixture_suite_load_failure_diagnostic_does_not_echo_input(tmp_path:
     assert report.passed is False
     for diag in report.diagnostics:
         assert sentinel not in diag.message, "profile-load diagnostic must not echo the rejected input value verbatim"
+
+
+# --- Issue #663: caller-supplied reference scenario for target conformance ---
+#
+# A fixed-topology emulation backend (e.g. APTL) declares generic provisioning
+# capability but only realizes nodes that map to its pre-built environment. The
+# probe must not fail it for refusing an arbitrary hard-coded scenario; it must
+# let the backend supply a scenario it can realize, held to full realization.
+# Temporary runner-parameter bridge, superseded by #667/#668.
+
+_FIXED_TOPOLOGY_PREBUILT_NODE = "prebuilt"
+
+
+def _fixed_topology_manifest() -> BackendManifest:
+    """Provisioning-only manifest declaring generic vm/linux support.
+
+    Both the default conformance scenario (node ``vm``) and a supplied scenario
+    (node ``prebuilt``) plan cleanly against it; the difference is purely at
+    realization, exercised by ``_FixedTopologyProvisioner``.
+    """
+
+    return BackendManifest(
+        name="fixed-topology",
+        version="1.0.0",
+        supported_contract_versions=frozenset(
+            {
+                "backend-manifest-v2",
+                "operation-receipt-v1",
+                "operation-status-v1",
+                "runtime-snapshot-v1",
+            }
+        ),
+        compatible_processors=frozenset({"aces-reference-processor"}),
+        concept_bindings=(
+            ConceptBinding(scope="capabilities.provisioner.supported_node_types", family="assets"),
+            ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
+        ),
+        realization_support=(
+            RealizationSupportDeclaration(
+                domain="runtime-realization",
+                support_mode=RealizationSupportMode.CONSTRAINED,
+                supported_constraint_kinds=frozenset({"node-type", "os-family"}),
+                supported_exact_requirement_kinds=frozenset({"declared-capability-match"}),
+                disclosure_kinds=frozenset({"backend-manifest-v2", "runtime-snapshot-v1", "operation-status-v1"}),
+            ),
+        ),
+        capabilities=BackendCapabilitySet(
+            provisioner=ProvisionerCapabilities(
+                name="fixed-topology-provisioner",
+                supported_node_types=frozenset({"vm"}),
+                supported_os_families=frozenset({"linux"}),
+            ),
+        ),
+    )
+
+
+class _FixedTopologyProvisioner:
+    """Realizes only the one pre-built node; fails fast on anything else.
+
+    Mirrors a fixed-topology emulation backend that maps ACES nodes onto a
+    pre-built environment and refuses nodes it has no realization for.
+    """
+
+    def validate(self, plan) -> list:
+        return []
+
+    def apply(self, plan, snapshot: RuntimeSnapshot) -> ApplyResult:
+        node_ops = [op for op in plan.operations if op.resource_type == "node" and op.action != ChangeAction.DELETE]
+        unmapped = [op for op in node_ops if op.payload.get("node_name") != _FIXED_TOPOLOGY_PREBUILT_NODE]
+        if not node_ops or unmapped:
+            return ApplyResult(
+                success=False,
+                snapshot=snapshot,
+                diagnostics=("fixed-topology backend has no realization for the requested node(s)",),
+            )
+        entries = dict(snapshot.entries)
+        changed: list[str] = []
+        for op in plan.operations:
+            entries[op.address] = SnapshotEntry(
+                address=op.address,
+                domain=RuntimeDomain.PROVISIONING,
+                resource_type=op.resource_type,
+                payload=op.payload,
+                ordering_dependencies=op.ordering_dependencies,
+                refresh_dependencies=op.refresh_dependencies,
+                status="applied",
+            )
+            changed.append(op.address)
+        return ApplyResult(success=True, snapshot=snapshot.with_entries(entries), changed_addresses=changed)
+
+
+class _NoopProvisioner(_FixedTopologyProvisioner):
+    """Accepts everything but realizes nothing (success-returning no-op)."""
+
+    def apply(self, plan, snapshot: RuntimeSnapshot) -> ApplyResult:
+        return ApplyResult(success=True, snapshot=snapshot, changed_addresses=[])
+
+
+def _reference_scenario(node_name: str, *, os_family: str = "linux") -> str:
+    return f"""
+name: conformance
+nodes:
+  {node_name}:
+    type: vm
+    os: {os_family}
+    resources: {{ram: 1 gib, cpu: 1}}
+    conditions: {{health: ops}}
+    roles: {{ops: operator}}
+conditions:
+  health: {{command: /bin/true, interval: 15}}
+entities:
+  blue: {{role: blue}}
+objectives:
+  validate: {{entity: blue, success: {{conditions: [health]}}}}
+workflows:
+  response:
+    start: run
+    steps:
+      run: {{type: objective, objective: validate, on-success: finish}}
+      finish: {{type: end}}
+"""
+
+
+def _fixed_topology_target(provisioner=None) -> RuntimeTarget:
+    return RuntimeTarget(
+        name="fixed-topology",
+        manifest=_fixed_topology_manifest(),
+        provisioner=provisioner or _FixedTopologyProvisioner(),
+    )
+
+
+def test_target_conformance_default_scenario_fails_fixed_topology_backend():
+    """Issue #663: the hard-coded default scenario is not universally realizable.
+
+    A fixed-topology backend that cannot realize the generic ``vm`` node fails
+    the default probe — the reported false negative the reference-scenario seam
+    exists to correct.
+    """
+
+    report = run_target_conformance(_fixed_topology_target())
+
+    assert report.profile == BackendCapabilityProfile.PROVISIONING_ONLY
+    assert report.passed is False
+    provisioning = next(case for case in report.cases if case.name == "live-provisioning")
+    assert provisioning.passed is False
+    assert any(diag.code == "conformance.provisioning-failed" for diag in provisioning.diagnostics)
+
+
+def test_target_conformance_accepts_supplied_reference_scenario():
+    """Issue #663: a backend-supplied scenario it can realize passes, and full
+    realization (issue #606 mutation guard) is still required and met."""
+
+    report = run_target_conformance(
+        _fixed_topology_target(),
+        reference_scenario=_reference_scenario(_FIXED_TOPOLOGY_PREBUILT_NODE),
+    )
+
+    assert report.passed is True
+    provisioning = next(case for case in report.cases if case.name == "live-provisioning")
+    assert provisioning.passed is True
+    snapshot_case = next(case for case in report.cases if case.name == "live-snapshot")
+    assert snapshot_case.passed is True
+
+
+def test_supplied_reference_scenario_still_enforces_mutation_guard():
+    """The reference-scenario seam does not weaken the realization bar: a
+    success-returning no-op provisioner still fails on a supplied scenario."""
+
+    report = run_target_conformance(
+        _fixed_topology_target(provisioner=_NoopProvisioner()),
+        reference_scenario=_reference_scenario(_FIXED_TOPOLOGY_PREBUILT_NODE),
+    )
+
+    assert report.passed is False
+    provisioning = next(case for case in report.cases if case.name == "live-provisioning")
+    snapshot_case = next(case for case in report.cases if case.name == "live-snapshot")
+    assert provisioning.passed is False
+    assert snapshot_case.passed is False
+    codes = {diag.code for case in report.cases for diag in case.diagnostics}
+    assert "conformance.snapshot-not-mutated" in codes

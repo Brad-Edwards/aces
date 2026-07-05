@@ -50,6 +50,9 @@ identities.
 
 Variables are **not** resolved at parse time. An authored document preserves
 `${…}` placeholders structurally; resolution happens only at instantiation.
+Authoring-time semantic validation checks every `${name}` token, whether it is a
+full-value placeholder or embedded in a larger string, and fails if `name` is
+not declared in `variables`.
 
 ## 3. Instantiation algorithm
 

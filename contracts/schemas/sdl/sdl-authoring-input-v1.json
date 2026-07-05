@@ -293,6 +293,37 @@
       "title": "AssetValueLevel",
       "type": "string"
     },
+    "BehaviorSpecificationExtensionValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/BehaviorSpecificationExtensionValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/BehaviorSpecificationExtensionValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "Condition": {
       "additionalProperties": false,
       "description": "A monitoring check deployed to a VM.\n\nEither ``command`` + ``interval`` or ``source`` must be set, not both.",
@@ -2145,6 +2176,268 @@
       "title": "Event",
       "type": "object"
     },
+    "EvidenceIntegrityExpectation": {
+      "description": "Expected integrity or chain-of-custody treatment.",
+      "enum": [
+        "none",
+        "checksum",
+        "signature",
+        "chain_of_custody",
+        "timestamped",
+        "other"
+      ],
+      "title": "EvidenceIntegrityExpectation",
+      "type": "string"
+    },
+    "EvidenceLossDisclosureExpectation": {
+      "description": "Expected disclosure when capture is incomplete or lossy.",
+      "enum": [
+        "not_expected",
+        "best_effort",
+        "required",
+        "other"
+      ],
+      "title": "EvidenceLossDisclosureExpectation",
+      "type": "string"
+    },
+    "EvidenceRedactionExpectation": {
+      "description": "Expected redaction treatment for captured output.",
+      "enum": [
+        "none",
+        "redact_sensitive",
+        "redact_secrets",
+        "aggregate_only",
+        "derived_only",
+        "other"
+      ],
+      "title": "EvidenceRedactionExpectation",
+      "type": "string"
+    },
+    "EvidenceRequirement": {
+      "additionalProperties": false,
+      "description": "One authored data, evidence, or output capture requirement.\n\nThe model records capture intent only. Executable capture contracts may map\nthis to ``experiment-capture-spec-v1`` later, but captured payloads and\nproof of capture belong to experiment evidence records.",
+      "properties": {
+        "artifact_role": {
+          "default": "",
+          "title": "Artifact Role",
+          "type": "string"
+        },
+        "boundary_kind": {
+          "default": "",
+          "title": "Boundary Kind",
+          "type": "string"
+        },
+        "boundary_ref": {
+          "default": "",
+          "title": "Boundary Ref",
+          "type": "string"
+        },
+        "capture_requirement_ref": {
+          "default": "",
+          "title": "Capture Requirement Ref",
+          "type": "string"
+        },
+        "capture_spec_ref": {
+          "default": "",
+          "title": "Capture Spec Ref",
+          "type": "string"
+        },
+        "channel": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceRequirementChannel"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Channel"
+        },
+        "channel_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Channel Refs",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "integrity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceIntegrityExpectation"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Integrity"
+        },
+        "loss_disclosure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceLossDisclosureExpectation"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Loss Disclosure"
+        },
+        "media_types": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Media Types",
+          "type": "array"
+        },
+        "notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "redaction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceRedactionExpectation"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Redaction"
+        },
+        "retention": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceRetentionExpectation"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Retention"
+        },
+        "scope": {
+          "default": "",
+          "title": "Scope",
+          "type": "string"
+        },
+        "scope_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Scope Refs",
+          "type": "array"
+        },
+        "sensitivity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeSensitivityClassification"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Sensitivity"
+        },
+        "source_class": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceRequirementSourceClass"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Class"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "trigger_ref": {
+          "default": "",
+          "title": "Trigger Ref",
+          "type": "string"
+        },
+        "window": {
+          "default": "",
+          "title": "Window",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sensitivity",
+        "redaction",
+        "integrity",
+        "retention",
+        "loss_disclosure"
+      ],
+      "title": "EvidenceRequirement",
+      "type": "object"
+    },
+    "EvidenceRequirementChannel": {
+      "description": "Capture channel or modality for an authored requirement.",
+      "enum": [
+        "packet_capture",
+        "log",
+        "trace",
+        "metric",
+        "file_artifact",
+        "screen_capture",
+        "api_response",
+        "database_record",
+        "participant_output",
+        "other"
+      ],
+      "title": "EvidenceRequirementChannel",
+      "type": "string"
+    },
+    "EvidenceRequirementSourceClass": {
+      "description": "Closed source classes for requirements without a concrete source ref.",
+      "enum": [
+        "scenario_native_observability",
+        "participant_action",
+        "participant_observation",
+        "scenario_state",
+        "processor_backend",
+        "apparatus",
+        "external",
+        "other"
+      ],
+      "title": "EvidenceRequirementSourceClass",
+      "type": "string"
+    },
+    "EvidenceRetentionExpectation": {
+      "description": "Expected retention boundary for captured output.",
+      "enum": [
+        "not_retained",
+        "run_lifetime",
+        "study_lifetime",
+        "archival",
+        "policy_defined",
+        "other"
+      ],
+      "title": "EvidenceRetentionExpectation",
+      "type": "string"
+    },
     "ExerciseRole": {
       "description": "Role in the exercise.",
       "enum": [
@@ -3805,6 +4098,141 @@
         "unsupported_guarantee"
       ],
       "title": "ParticipantBackendTimingDisclosureKind",
+      "type": "string"
+    },
+    "ParticipantBehaviorSpecification": {
+      "additionalProperties": false,
+      "description": "First-class authored aggregate over participant behavior surfaces.",
+      "properties": {
+        "action_contract_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Action Contract Refs",
+          "type": "array"
+        },
+        "ai_offensive_behavior_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ai Offensive Behavior Refs",
+          "type": "array"
+        },
+        "authority_scope_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Authority Scope Refs",
+          "type": "array"
+        },
+        "backend_feature_support_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Backend Feature Support Refs",
+          "type": "array"
+        },
+        "behavior_mode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Behavior Mode"
+        },
+        "evidence_contract_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Contract Refs",
+          "type": "array"
+        },
+        "extension_policy": {
+          "default": "governed-extension",
+          "title": "Extension Policy",
+          "type": "string"
+        },
+        "extensions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/BehaviorSpecificationExtensionValue"
+          },
+          "title": "Extensions",
+          "type": "object"
+        },
+        "lifecycle_state": {
+          "$ref": "#/$defs/ParticipantBehaviorSpecificationLifecycle",
+          "default": "active"
+        },
+        "observation_boundary_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Observation Boundary Refs",
+          "type": "array"
+        },
+        "offensive_behavior_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Offensive Behavior Refs",
+          "type": "array"
+        },
+        "outcome_interpretation_rule_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Outcome Interpretation Rule Refs",
+          "type": "array"
+        },
+        "participant_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Participant Refs",
+          "type": "array"
+        },
+        "participant_role_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Participant Role Refs",
+          "type": "array"
+        },
+        "realization_profile_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Realization Profile Ref"
+        },
+        "semantic_version": {
+          "title": "Semantic Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "semantic_version"
+      ],
+      "title": "ParticipantBehaviorSpecification",
+      "type": "object"
+    },
+    "ParticipantBehaviorSpecificationLifecycle": {
+      "description": "Governance lifecycle for participant behavior specifications.",
+      "enum": [
+        "draft",
+        "active",
+        "deprecated"
+      ],
+      "title": "ParticipantBehaviorSpecificationLifecycle",
       "type": "string"
     },
     "ParticipantEffectClass": {
@@ -16987,7 +17415,7 @@
   "$id": "https://aces.dev/schemas/sdl-authoring-input-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Top-level scenario specification.\n\nA YAML document with up to 21 named sections. Only ``name``\nis required. All sections are optional dicts keyed by\nuser-defined identifiers.",
+  "description": "Top-level scenario specification.\n\nA YAML document with up to 23 named sections. Only ``name``\nis required. All sections are optional dicts keyed by\nuser-defined identifiers.",
   "properties": {
     "accounts": {
       "additionalProperties": {
@@ -17008,6 +17436,13 @@
         "$ref": "#/$defs/Agent"
       },
       "title": "Agents",
+      "type": "object"
+    },
+    "behavior_specifications": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ParticipantBehaviorSpecification"
+      },
+      "title": "Behavior Specifications",
       "type": "object"
     },
     "conditions": {
@@ -17048,6 +17483,13 @@
         "$ref": "#/$defs/Event"
       },
       "title": "Events",
+      "type": "object"
+    },
+    "evidence_requirements": {
+      "additionalProperties": {
+        "$ref": "#/$defs/EvidenceRequirement"
+      },
+      "title": "Evidence Requirements",
       "type": "object"
     },
     "features": {
@@ -17171,8 +17613,11 @@
       "type": "object"
     },
     "variables": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Variable"
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z_][A-Za-z0-9_-]*$": {
+          "$ref": "#/$defs/Variable"
+        }
       },
       "title": "Variables",
       "type": "object"

@@ -30,6 +30,7 @@ from aces_contracts.contracts import (
     ExperimentCaptureSpecModel,
     ExperimentDerivedMeasureModel,
     ExperimentEvidenceRecordModel,
+    ExperimentRunModel,
     OperationReceiptModel,
     OperationStatusModel,
     OrchestrationPlanModel,
@@ -58,7 +59,7 @@ from aces_contracts.participant_episode import (
     iter_participant_episode_snapshot_violations,
 )
 from aces_contracts.participant_shared_state import iter_participant_shared_state_snapshot_violations
-from aces_contracts.planning import RuntimeDomain
+from aces_contracts.planning import ProvisioningPlan, RuntimeDomain
 from aces_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope, SnapshotEntry
 from aces_contracts.workflow import WorkflowExecutionState
 from aces_processor.models import (
@@ -68,17 +69,72 @@ from aces_processor.models import (
     iter_participant_behavior_history_violations,
     iter_participant_behavior_joint_action_violations,
 )
-from aces_processor.reference import run_reference_processor
+from aces_processor.reference import ScenarioInput, run_reference_processor
 from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.registry import RuntimeTarget
 from aces_runtime.result_contracts import (
     evaluation_result_contract_diagnostics,
     workflow_result_contract_diagnostics,
 )
-from aces_sdl.parser import parse_sdl
 from pydantic import ValidationError
 
 _SEMANTIC_INVALID_DIAGNOSTIC_CODE = "conformance.semantic-invalid"
+_OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE = "conformance.observability-evidence-invalid"
+_PORTABLE_AUGMENTATION_CARRIER_KINDS = frozenset(
+    {
+        "apparatus-context",
+        "capture-spec",
+        "derived-measure",
+        "evidence-record",
+        "manifest",
+        "measurement-channel",
+        "profile",
+        "run",
+        "scenario-snapshot",
+    }
+)
+_RUN_REFINEMENT_CONCERN_KINDS = frozenset({"capture-window", "measurement-channel"})
+
+# Default reference scenario the target-conformance live probe drives when the
+# caller supplies none. Backend-neutral: a single generic linux vm node.
+#
+# Issue #663 makes this a *default*, not a universal assumption. A fixed-topology
+# emulation or bounded simulation backend that cannot realize this generic
+# scenario supplies one it can realize via
+# ``run_target_conformance(reference_scenario=...)``; the live probe then holds
+# it to full realization of *that* scenario. This is a temporary runner-parameter
+# bridge — superseded by the realizability-envelope design (#667) and the
+# scenario/envelope subsumption relation (#668), which will let the probe
+# negotiate an in-envelope witness instead of carrying a default at all.
+_DEFAULT_CONFORMANCE_SCENARIO = dedent(
+    """
+    name: conformance
+    nodes:
+      vm:
+        type: vm
+        os: linux
+        resources: {ram: 1 gib, cpu: 1}
+        conditions: {health: ops}
+        roles: {ops: operator}
+    conditions:
+      health: {command: /bin/true, interval: 15}
+    entities:
+      blue: {role: blue}
+    objectives:
+      validate:
+        entity: blue
+        success: {conditions: [health]}
+    workflows:
+      response:
+        start: run
+        steps:
+          run:
+            type: objective
+            objective: validate
+            on-success: finish
+          finish: {type: end}
+    """
+)
 
 
 class BackendCapabilityProfile(str, Enum):
@@ -178,6 +234,7 @@ _MODEL_VALIDATORS = {
     "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_validate,
     "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_validate,
     "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_validate,
+    "experiment-run-v1": ExperimentRunModel.model_validate,
 }
 
 
@@ -808,6 +865,87 @@ def _runtime_snapshot_semantic_diagnostics(payload: Any) -> list[Diagnostic]:
     ]
 
 
+def observability_evidence_conformance_diagnostics(
+    payload: ExperimentRunModel | Mapping[str, Any],
+) -> tuple[Diagnostic, ...]:
+    """Return ASR-525 diagnostics for issue #128 observability/evidence semantics.
+
+    The individual contract models already enforce the closed-world shape and
+    SEM-225 baseline rules. This helper adds the conformance-level checks that
+    tie the existing carriers together for issue #128: augmentation reports
+    must name their portable affected carriers, and run-scoped capture
+    refinements must preserve the authored/base requirement plus evidence.
+    """
+
+    run = payload if isinstance(payload, ExperimentRunModel) else ExperimentRunModel.model_validate(payload)
+    diagnostics: list[Diagnostic] = []
+    diagnostics.extend(_augmentation_conformance_diagnostics(run))
+    diagnostics.extend(_run_refinement_conformance_diagnostics(run))
+    return tuple(diagnostics)
+
+
+def _augmentation_conformance_diagnostics(run: ExperimentRunModel) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    for disclosure in run.augmentation_disclosures:
+        address = f"experiment-run-v1.augmentation_disclosures.{disclosure.augmentation_id}"
+        if not disclosure.affected_refs:
+            diagnostics.append(
+                _diagnostic(
+                    _OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE,
+                    f"{address}.affected_refs",
+                    (
+                        "augmentation disclosures must name affected_refs so added capture surfaces, apparatus, "
+                        "constraints, side effects, and comparability implications are portable"
+                    ),
+                )
+            )
+        if not any(ref.ref_kind in _PORTABLE_AUGMENTATION_CARRIER_KINDS for ref in disclosure.carrier_refs):
+            diagnostics.append(
+                _diagnostic(
+                    _OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE,
+                    f"{address}.carrier_refs",
+                    "augmentation disclosures must cite at least one portable carrier_ref",
+                )
+            )
+        if disclosure.purpose in {"evidence", "evaluation", "comparability"} and not disclosure.evidence_refs:
+            diagnostics.append(
+                _diagnostic(
+                    _OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE,
+                    f"{address}.evidence_refs",
+                    f"{disclosure.purpose} augmentation disclosures must preserve supporting evidence_refs",
+                )
+            )
+    return diagnostics
+
+
+def _run_refinement_conformance_diagnostics(run: ExperimentRunModel) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    for disclosure in run.realized_form_disclosures:
+        if disclosure.concern_kind not in _RUN_REFINEMENT_CONCERN_KINDS:
+            continue
+        address = f"experiment-run-v1.realized_form_disclosures.{disclosure.concern_id}"
+        if disclosure.authored_ref is None:
+            diagnostics.append(
+                _diagnostic(
+                    _OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE,
+                    f"{address}.authored_ref",
+                    (
+                        "run-level evidence requirement refinements must preserve authored_ref instead of "
+                        "rewriting authored scenario meaning"
+                    ),
+                )
+            )
+        if not disclosure.evidence_refs:
+            diagnostics.append(
+                _diagnostic(
+                    _OBSERVABILITY_EVIDENCE_INVALID_DIAGNOSTIC_CODE,
+                    f"{address}.evidence_refs",
+                    "run-level evidence requirement refinements must preserve supporting evidence_refs",
+                )
+            )
+    return diagnostics
+
+
 def _semantic_diagnostics(contract_name: str, payload: Any) -> list[Diagnostic]:
     if contract_name == "workflow-result-envelope-v1":
         return _state_semantic_diagnostics(
@@ -840,6 +978,8 @@ def _semantic_diagnostics(contract_name: str, payload: Any) -> list[Diagnostic]:
         )
     if contract_name == "participant-behavior-history-event-stream-v1":
         return _participant_behavior_stream_diagnostics(contract_name, payload)
+    if contract_name == "experiment-run-v1":
+        return list(observability_evidence_conformance_diagnostics(payload))
     if contract_name != "runtime-snapshot-v1":
         return []
     return _runtime_snapshot_semantic_diagnostics(payload)
@@ -1021,11 +1161,22 @@ def run_target_conformance(
     profile: BackendProfileSelector | None = None,
     root: Path | None = None,
     profiles_root: Path | None = None,
+    reference_scenario: ScenarioInput | None = None,
 ) -> BackendConformanceReport:
     """Run fixture conformance for a target's declared runtime surface.
 
     ``root`` overrides the fixtures tree and ``profiles_root`` overrides the
     backend profile tree; both default to the canonical published roots.
+
+    ``reference_scenario`` selects the scenario the live provisioning/snapshot
+    probes drive (issue #663). It defaults to a generic linux-vm scenario
+    (``_DEFAULT_CONFORMANCE_SCENARIO``). A fixed-topology emulation or bounded
+    simulation backend that cannot realize the generic default supplies a
+    scenario it *can* realize here, instead of being wrongly failed for not
+    realizing an arbitrary hard-coded scenario; the probe still requires full
+    realization (issue #606 mutation guard) of whichever scenario is selected.
+    This is a temporary runner-parameter bridge superseded by the
+    realizability-envelope design (#667/#668).
     """
 
     effective_profile = profile or profile_for_manifest(target.manifest)
@@ -1105,7 +1256,7 @@ def run_target_conformance(
                 + "; ".join(claim_gaps),
             )
         )
-    live_cases = _live_target_cases(target, effective_profile)
+    live_cases = _live_target_cases(target, effective_profile, reference_scenario=reference_scenario)
     cases = tuple((*fixture_report.cases, *live_cases))
     passed = passed and all(case.passed for case in live_cases)
     return BackendConformanceReport(
@@ -1246,82 +1397,66 @@ def _drive_participant_episode_probe(
     return cases
 
 
-def _live_target_cases(
-    target: RuntimeTarget,
-    profile: BackendProfileSelector,
-) -> tuple[ConformanceCaseResult, ...]:
-    """Run live probes appropriate for known runtime surfaces only.
+def _provisioning_probe_case(
+    control_plane: RuntimeControlPlane,
+    provisioning_plan: ProvisioningPlan,
+) -> ConformanceCaseResult:
+    """Drive live provisioning and prove the operation genuinely realized state.
 
-    Live probes (orchestration, evaluation, participant-episode actions)
-    require knowing the profile's runtime contract. For an unknown profile id
-    we run only the manifest validation case (it's universally safe — just
-    validates against ``backend-manifest-v2``) and skip the rest. Capability
-    inference for known profiles still routes via :class:`BackendCapabilityProfile`.
+    Backend-neutral (issue #606): every known profile requires a provisioner,
+    so target conformance always submits the reference scenario's provisioning
+    plan through the control plane. A backend that accepts the plan but realizes
+    nothing — a failed apply, or a success that reports no changed addresses —
+    fails here rather than certifying clean on manifest validation alone.
     """
 
-    cases: list[ConformanceCaseResult] = []
-    manifest_payload = backend_manifest_payload(target.manifest)
-    manifest_diags = _validate_payload("backend-manifest-v2", manifest_payload)
-    cases.append(
-        ConformanceCaseResult(
-            name="live-manifest",
-            contract_name="backend-manifest-v2",
-            valid=True,
-            passed=not manifest_diags,
-            diagnostics=tuple(manifest_diags),
-        )
-    )
-
-    known = _to_known_profile(profile)
-    if known is None or known == BackendCapabilityProfile.PROVISIONING_ONLY:
-        return tuple(cases)
-
-    scenario = parse_sdl(
-        dedent(
-            """
-            name: conformance
-            nodes:
-              vm:
-                type: vm
-                os: linux
-                resources: {ram: 1 gib, cpu: 1}
-                conditions: {health: ops}
-                roles: {ops: operator}
-            conditions:
-              health: {command: /bin/true, interval: 15}
-            entities:
-              blue: {role: blue}
-            objectives:
-              validate:
-                entity: blue
-                success: {conditions: [health]}
-            workflows:
-              response:
-                start: run
-                steps:
-                  run:
-                    type: objective
-                    objective: validate
-                    on-success: finish
-                  finish: {type: end}
-            """
-        )
-    )
-    execution_plan = run_reference_processor(scenario, target.manifest).execution_plan
-    control_plane = RuntimeControlPlane(target)
-    control_plane.submit_provisioning(execution_plan.provisioning)
-    if target.orchestrator is not None:
-        control_plane.submit_orchestration(execution_plan.orchestration)
-    if target.evaluator is not None:
-        control_plane.submit_evaluation(execution_plan.evaluation)
-    if target.participant_runtime is not None:
-        cases.extend(
-            _drive_participant_episode_probe(
-                control_plane,
-                participant_address="participant.conformance",
+    address = "runtime.control-plane.provisioning"
+    receipt = control_plane.submit_provisioning(provisioning_plan)
+    status = control_plane.get_operation(receipt.operation_id)
+    diagnostics: list[Diagnostic] = []
+    if status is None:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.provisioning-missing-status",
+                address,
+                "Provisioning submission did not produce an OperationStatus record.",
             )
         )
-    snapshot_payload = {
+    elif status.state.value != "succeeded":
+        diagnostics.append(
+            _diagnostic(
+                "conformance.provisioning-failed",
+                address,
+                (
+                    f"Provisioning returned state {status.state.value!r} with diagnostics: "
+                    + "; ".join(diag.message for diag in status.diagnostics)
+                ),
+            )
+        )
+    elif not status.changed_addresses:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.provisioning-empty",
+                address,
+                (
+                    "Provisioning succeeded but reported no changed addresses; the backend "
+                    "did not realize the scenario, so the snapshot was not mutated."
+                ),
+            )
+        )
+    return ConformanceCaseResult(
+        name="live-provisioning",
+        contract_name="operation-status-v1",
+        valid=True,
+        passed=not diagnostics,
+        diagnostics=tuple(diagnostics),
+    )
+
+
+def _live_snapshot_payload(control_plane: RuntimeControlPlane) -> dict[str, Any]:
+    """Serialize the live control-plane snapshot to its portable envelope shape."""
+
+    return {
         "schema_version": RuntimeSnapshotEnvelope().schema_version,
         "entries": {
             address: {
@@ -1357,17 +1492,101 @@ def _live_target_cases(
         "time_management_contexts": dict(control_plane.snapshot.time_management_contexts),
         "metadata": dict(control_plane.snapshot.metadata),
     }
-    snapshot_diags = [
+
+
+def _live_snapshot_case(control_plane: RuntimeControlPlane) -> ConformanceCaseResult:
+    """Validate the post-provisioning snapshot and prove it was mutated.
+
+    Runs the ``runtime-snapshot-v1`` schema + semantic checks on the live
+    snapshot and additionally requires at least one provisioning-domain entry
+    (issue #606), so a target cannot pass with a schema-valid but empty
+    (unmutated) snapshot.
+    """
+
+    snapshot_payload = _live_snapshot_payload(control_plane)
+    diagnostics = [
         *_validate_payload("runtime-snapshot-v1", snapshot_payload),
         *_semantic_diagnostics("runtime-snapshot-v1", snapshot_payload),
     ]
+    has_provisioning_entry = any(
+        entry.domain == RuntimeDomain.PROVISIONING for entry in control_plane.snapshot.entries.values()
+    )
+    if not has_provisioning_entry:
+        diagnostics.append(
+            _diagnostic(
+                "conformance.snapshot-not-mutated",
+                "runtime.snapshot.entries",
+                (
+                    "Live snapshot carries no provisioning-domain entry after the provisioning "
+                    "probe; the backend validated contracts without realizing runtime state."
+                ),
+            )
+        )
+    return ConformanceCaseResult(
+        name="live-snapshot",
+        contract_name="runtime-snapshot-v1",
+        valid=True,
+        passed=not diagnostics,
+        diagnostics=tuple(diagnostics),
+    )
+
+
+def _live_target_cases(
+    target: RuntimeTarget,
+    profile: BackendProfileSelector,
+    *,
+    reference_scenario: ScenarioInput | None = None,
+) -> tuple[ConformanceCaseResult, ...]:
+    """Run live probes appropriate for known runtime surfaces only.
+
+    Every known profile requires a provisioner, so target conformance always
+    runs a backend-neutral provisioning probe that proves real snapshot
+    mutation (issue #606) — provisioning-only backends included, which must not
+    pass on manifest validation alone. Orchestration, evaluation, and the
+    participant-episode probe additionally run for the richer runtime surfaces
+    that declare those roles. For an unknown profile id we run only the
+    universally-safe manifest validation case and skip the live probes, since
+    their runtime contract is not known to this implementation.
+
+    The probe drives ``reference_scenario`` when supplied, else
+    ``_DEFAULT_CONFORMANCE_SCENARIO`` (issue #663). Whichever scenario is
+    selected is held to full realization (the #606 mutation guard is
+    unchanged); the parameter only stops the probe assuming *every* backend can
+    realize one hard-coded scenario.
+    """
+
+    cases: list[ConformanceCaseResult] = []
+    manifest_payload = backend_manifest_payload(target.manifest)
+    manifest_diags = _validate_payload("backend-manifest-v2", manifest_payload)
     cases.append(
         ConformanceCaseResult(
-            name="live-snapshot",
-            contract_name="runtime-snapshot-v1",
+            name="live-manifest",
+            contract_name="backend-manifest-v2",
             valid=True,
-            passed=not snapshot_diags,
-            diagnostics=tuple(snapshot_diags),
+            passed=not manifest_diags,
+            diagnostics=tuple(manifest_diags),
         )
     )
+
+    known = _to_known_profile(profile)
+    if known is None:
+        return tuple(cases)
+
+    scenario = _DEFAULT_CONFORMANCE_SCENARIO if reference_scenario is None else reference_scenario
+    execution_plan = run_reference_processor(scenario, target.manifest).execution_plan
+    control_plane = RuntimeControlPlane(target)
+    cases.append(_provisioning_probe_case(control_plane, execution_plan.provisioning))
+    if known != BackendCapabilityProfile.PROVISIONING_ONLY:
+        if target.orchestrator is not None:
+            control_plane.submit_orchestration(execution_plan.orchestration)
+        if target.evaluator is not None:
+            control_plane.submit_evaluation(execution_plan.evaluation)
+        if target.participant_runtime is not None:
+            cases.extend(
+                _drive_participant_episode_probe(
+                    control_plane,
+                    participant_address="participant.conformance",
+                )
+            )
+    cases.append(_live_snapshot_case(control_plane))
     return tuple(cases)

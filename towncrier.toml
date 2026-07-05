@@ -9,6 +9,18 @@ issue_format = "(#{issue})"
 wrap = false
 all_bullets = true
 
+# Fragment type -> release bump is computed by tools/release.py:
+#   removed  -> major (only once already >= 1.0; pre-1.0 it is a minor)
+#   added / changed / deprecated -> minor
+#   security / fixed -> patch
+# `breaking` renders a Breaking Changes section but does NOT auto-escalate the
+# bump — it is inert until you force the major explicitly (release.py --version
+# 1.0.0). It is kept so breaking changes are recorded in the changelog now.
+[[tool.towncrier.type]]
+directory = "breaking"
+name = "Breaking Changes"
+showcontent = true
+
 [[tool.towncrier.type]]
 directory = "security"
 name = "Security"

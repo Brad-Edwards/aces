@@ -1,8 +1,10 @@
 # Experiment Core Formal Specification
 
 This domain specifies the EXP-701 through EXP-705 experiment-core contract
-boundary plus the EXP-707, EXP-708, EXP-709, and EXP-715 evidence/measure
-extension and the EXP-710, EXP-720, and EXP-722 run provenance extension:
+boundary plus the EXP-706 trial/replication interpretation, the EXP-707,
+EXP-708, EXP-709, and EXP-715 evidence/measure extension, the EXP-710,
+EXP-720, and EXP-722 run provenance extension, and the EXP-712
+reproducibility/replay claim-support interpretation:
 
 - `experiment-task-v1`
 - `experiment-apparatus-context-v1`
@@ -41,7 +43,9 @@ Rationale:
   `docs/decisions/adrs/adr-055-experiment-core-contract-boundary.md` and
   `docs/decisions/adrs/adr-064-experiment-evidence-and-measure-contract-boundary.md`,
   and
-  `docs/decisions/adrs/adr-065-experiment-run-provenance-contract-boundary.md`.
+  `docs/decisions/adrs/adr-065-experiment-run-provenance-contract-boundary.md`,
+  and
+  `docs/decisions/adrs/adr-068-experiment-trials-replication-and-replay-claims.md`.
 - Machine-readable schemas: `contracts/schemas/experiment-core/`.
 - Contract source: `implementations/python/packages/aces_contracts/contracts.py`.
 - Schema generation: `tools/generate_contract_schemas.py`.
@@ -135,6 +139,12 @@ task. It binds:
 A run may reference live observation artifacts captured at a seal point. It
 must not be reconstructed from mutable live control-plane state.
 
+For EXP-706, one trial is one archival run record. Repeated runs of the same
+task are represented by multiple run records with distinct `run_id` values, a
+shared `task_ref`, and a compatible `scenario_snapshot_ref`. A repeated run
+MUST NOT be represented by mutating one run record, by a tag, or by a backend
+operation/workflow/episode identifier.
+
 Archival run records require a completed time interval, clock context, at least
 one evidence artifact, and at least one result summary. Reported result
 summaries must identify the metric, carry a value, and link to evidence. Every
@@ -162,6 +172,13 @@ Traceability belongs in the run because the run is the record that knows the
 task, scenario snapshot, apparatus, evidence, result summaries, and generated
 artifacts together. It is not a separate graph service and not an alternative
 run schema.
+
+For EXP-712, run traceability is the support surface for reproducibility and
+replay claims. It records what capture specifications, raw evidence records,
+derived measures, claim/report artifacts, disclosures, and lineage refs are
+available for review. It does not guarantee executable replay, artifact
+dereference, hidden backend-state reconstruction, or derived-result
+recomputation.
 
 ### Realized Form Disclosure
 
@@ -260,6 +277,17 @@ Studies carry accountable analysis context:
 - validity notes;
 - report and export artifact refs.
 
+For EXP-706, replications, cohorts, benchmarks, comparisons, and controlled
+variation are study allocation semantics. They are expressed through
+evaluation-run membership groupings, declared factors and factor levels,
+blocking factors, condition assignments, `target_runs_per_condition`,
+`replication_policy`, `stopping_rule`, and the analysis plan. Condition
+assignment evidence must be grounded in auditable run-level facts such as
+participant implementation provenance, processor/backend identity, apparatus
+context, selected manifests, capability declarations, measurement channels,
+task/scenario snapshot identity, non-opaque parameters, and stochastic
+controls.
+
 ## Invariants
 
 ### Separation
@@ -334,6 +362,19 @@ Studies carry accountable analysis context:
     value summary. Processor-realized disclosures MUST be attributed to a
     processor reference, and backend-realized disclosures MUST be attributed to
     a backend reference.
+21. `experiment-run-v1` is the trial record for the current model. ACES MUST
+    NOT publish a parallel trial root schema for the same task execution facts
+    unless a later ADR supersedes this boundary.
+22. Repeated executions of the same task MUST be represented by distinct run
+    records with distinct `run_id` values, a shared `task_ref`, and compatible
+    scenario snapshot identity. Operation ids, workflow ids, runtime snapshot
+    ids, participant episode ids, backend-native execution ids, tags, and
+    mutable run statuses MUST NOT stand in for repeated-run identity.
+23. Reproducibility and replay claims MUST use the run traceability chain from
+    run context to capture specs, evidence records, derived measures, and
+    claim/report refs. ACES MUST NOT publish parallel replay-run,
+    reproducibility-claim, replay-claim, or provenance-graph root schemas for
+    the same facts unless a later ADR supersedes this boundary.
 
 ### Provenance
 
@@ -417,6 +458,16 @@ Studies carry accountable analysis context:
     modes.
 20. Realized-form disclosure evidence refs MUST be present in the containing
     run's traceability evidence-record refs.
+21. Replication, cohort, benchmark, comparison, and controlled-variation claims
+    MUST be grounded in study membership and run allocation. Study membership
+    and allocation MUST NOT be replaced by tags, folders, evaluator detail,
+    runtime metadata, audit details, diagnostics, backend-private logs, or
+    free-form notes.
+22. Replay and reproducibility claim strength MUST be limited by the preserved
+    run context, evidence availability, redaction, loss disclosure, observer
+    effects, unsupported runtime surfaces, external artifact availability, and
+    apparatus limitations recorded in the relevant run, evidence, derived
+    measure, disclosure, and study artifacts.
 
 ### Closed-World Contracts
 
@@ -476,3 +527,7 @@ base. The most load-bearing criteria are:
   schedulers.
 - Backend-native packet/log/trace parsers.
 - Processor logic that computes derived measures from evidence records.
+- New trial, replay-run, reproducibility-claim, replay-claim, or provenance
+  graph root schemas for facts already carried by experiment-core contracts.
+- Runtime replay execution, replay scheduling, artifact dereference APIs,
+  retention storage, or query services.

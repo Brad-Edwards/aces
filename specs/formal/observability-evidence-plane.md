@@ -6,6 +6,9 @@ This cross-domain formal design artifact supports ADR-066 and issue #127 for:
 - `SEM-225` - Realization Augmentation And Environment-Visibility Semantics
 - `DSL-123` - Scenario-Native Observability And Telemetry Systems
 - `DSL-124` - Authored Data And Evidence Requirements
+- `RUN-316` / `API-419` / `ASR-525` / `EXP-731` / `EXP-732` -
+  Operational apparatus observability and run-level augmentation/evidence
+  conformance
 
 It is design coverage. It defines the invariant set and source-to-contract-to-
 test matrix that the spawned implementation issues must realize in SDL models,
@@ -112,6 +115,7 @@ comparability needs. The classification set is additive:
 | DSL-124 | Requirements come from declared sources, scopes, windows, or comparable boundaries. | ADR-066; SDL catalog. | Qualified source/scope/window resolver. | SDL semantic validation and experiment binding. | Requirement references runtime sensor and run window. | Requirement references an unknown hidden backend object. | #337 |
 | DSL-124 | Requirements are independent of participant objectives. | ADR-066; SDL catalog. | Cross-plane validation between objectives and evidence requirements. | SDL semantic validation and compiler. | Evidence requirement exists without an objective. | Objective success criterion is treated as capture requirement by implication. | #337 |
 | DSL-124 | Requirements are distinct from scenario-native observability systems. | ADR-066; SDL catalog. | Plane classifier and source binding helper. | SDL semantic validation. | Requirement cites an observability system as source but remains a separate obligation. | Observability system declaration is treated as proof of capture. | #337 |
+| RUN-316 / API-419 / ASR-525 / EXP-731 / EXP-732 | Backend observation capability declarations and run records must make operational augmentation support and realized evidence provenance portable. | ADR-066; this spec; experiment-core run contracts. | Backend manifest authority plus experiment-run conformance diagnostics. | Backend profile fixture conformance and run archive validation. | Run augmentation names portable carrier refs, affected refs, and traced evidence refs. | Run augmentation is traced but omits affected refs. | #128 |
 
 ## Negative Probe Set
 
@@ -208,5 +212,43 @@ participant action interaction targets.
 | Participant actions can interact with in-world observability systems | `ParticipantInteractionDeclaration.target` and `shared_state_refs` validation through the targetable index | `test_dsl_123_observability_refs_are_targetable_relationship_objective_and_action_refs` | test coverage new |
 | Bare runtime ids do not resolve by first match | Fail-closed targetable reference resolution requires the qualified runtime-family path | `test_dsl_123_observability_refs_do_not_resolve_by_bare_runtime_id` | test coverage new |
 
-DSL-124 authored evidence-requirement surfaces (#337) extend the
-carrier-to-plane registry rather than re-implementing it.
+## Implementation Coverage (#337 / DSL-124)
+
+DSL-124 is realized as the SDL `evidence_requirements` section. It records
+authored capture intent and remains separate from participant objectives,
+scenario-native observability systems, raw evidence records, and derived
+analysis. Concrete source, scope, channel, trigger, and boundary refs reuse the
+existing fail-closed targetable reference resolver; class-level requirements use
+closed source/channel/redaction/integrity/retention/loss-disclosure
+vocabularies instead of free-form observability bags.
+
+| Invariant / matrix row | Realizing artifact | Test | New in #337? |
+| --- | --- | --- | --- |
+| Authored evidence requirements are first-class SDL authoring surfaces | `Scenario.evidence_requirements`, `EvidenceRequirement` | `test_dsl_124_accepts_authored_evidence_requirement_independent_of_objectives` | yes |
+| Requirement records source/scope/window or comparable boundary plus channel and handling expectations | `EvidenceRequirement._validate_capture_intent` and required sensitivity/redaction/integrity/retention/loss fields | `test_dsl_124_rejects_capture_requirement_without_window_trigger_or_boundary` | yes |
+| Scenario-native observability can be a source without satisfying capture | `collect_scenario_native_observability_refs()` plus `EvidenceRequirement.source_refs` | `test_dsl_124_accepts_authored_evidence_requirement_independent_of_objectives` | yes |
+| Source refs fail closed and bare runtime ids do not first-match | `SemanticValidator._verify_evidence_requirements` over `_validate_named_ref(targetable=True)` | `test_dsl_124_source_refs_fail_closed` | yes |
+| Evidence requirements are independent of participant objectives | `evidence_requirements.` is excluded from targetable refs | `test_dsl_124_evidence_requirements_are_not_objective_targets` | yes |
+| SDL section plane ownership is carrier-based | `PLANE_BY_SDL_SECTION`, `classify_sdl_section_plane()` | `test_dsl_124_accepts_authored_evidence_requirement_independent_of_objectives` | yes |
+
+## Implementation Coverage (#128 / RUN-316, API-419, ASR-525, EXP-731, EXP-732)
+
+Issue #128 connects the already-realized observability/evidence carriers to the
+backend conformance runner. `experiment-run-v1` is now part of the governed
+backend observation evidence surface, so backend profiles can require it and
+manifest observation capability checks can detect a missing archival run
+carrier.
+
+The conformance runner registers `experiment-run-v1` and applies
+`observability_evidence_conformance_diagnostics()` after schema validation. The
+diagnostics keep the declaration/reporting split explicit: manifests declare
+support for the run/evidence carriers, while concrete runs disclose actual
+augmentation and realized-form behavior.
+
+| Invariant / matrix row | Realizing artifact | Test | New in #128? |
+| --- | --- | --- | --- |
+| RUN-316 operational apparatus observability has a portable run carrier | `BACKEND_SUPPORTED_CONTRACT_IDS`, `OBSERVATION_CAPABILITY_REQUIRED_CONTRACTS`, reference/stub observation manifests | `test_backend_manifest_v2_declares_observation_capability_dimensions`, `test_fixture_suite_exercises_experiment_run_observability_semantics` | yes |
+| API-419 augmentation reports name affected carriers | `_augmentation_conformance_diagnostics()` requires `affected_refs` and portable `carrier_refs` | `test_observability_evidence_conformance_requires_affected_refs`; fixture `augmentation-without-affected-refs.json` | yes |
+| ASR-525 conformance validates experiment-run semantics | `_MODEL_VALIDATORS["experiment-run-v1"]`, `_semantic_diagnostics()` | `test_fixture_suite_exercises_experiment_run_observability_semantics` | yes |
+| EXP-731 run-scoped capture refinements preserve authored requirements | `_run_refinement_conformance_diagnostics()` requires `authored_ref` for capture-window and measurement-channel disclosures | `test_observability_evidence_conformance_requires_authored_ref_for_run_refinement` | yes |
+| EXP-732 augmentation and refinements remain evidence-traced | experiment run model traced evidence refs plus conformance evidence-ref checks | `test_observability_evidence_conformance_accepts_traced_augmentation`, `test_observability_evidence_conformance_requires_authored_ref_for_run_refinement` | yes |

@@ -169,10 +169,18 @@ decisions/adrs/adr-062-concept-authority-catalog-governance-gate
 decisions/adrs/adr-063-reference-emulation-backend
 decisions/adrs/adr-064-experiment-evidence-and-measure-contract-boundary
 decisions/adrs/adr-065-experiment-run-provenance-contract-boundary
+decisions/adrs/adr-066-observability-evidence-plane-separation
+decisions/adrs/adr-067-participant-behavior-model
+decisions/adrs/adr-068-experiment-trials-replication-and-replay-claims
+decisions/adrs/adr-069-cage-2-replication-architecture
+decisions/adrs/adr-070-realization-envelope-semantics
+decisions/adrs/adr-071-reusable-asset-trust-and-integrity-policy
+decisions/adrs/adr-072-validation-and-admission-profiles
 decisions/issue-248-sem-216-boundary-semantics-preflight
 decisions/sem-213-temporal-participant-preflight
 decisions/issue-508-related-work-comparison-preflight
 decisions/issue-42-validator-package-split-preflight
+decisions/issue-567-pr-title-guard-preflight
 ```
 
 ```{toctree}
@@ -208,6 +216,9 @@ specs/formal
 lessons/README
 migration/README
 research/experiment-core/index
+research/realization-envelope/index
+research/scoring-scope/index
+research/validation-admission-profiles/index
 research/primary/index
 research/related-work-comparison/index
 ```

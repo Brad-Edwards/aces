@@ -1,0 +1,26 @@
+# Dependabot keeps the SHA-pinned GitHub Actions (and Python deps) patched, so
+# the pins in .github/workflows/*.yml do not silently rot (#684 release hardening).
+version: 2
+updates:
+  # GitHub Actions used across all workflows (release.yml pins are publishing-
+  # critical: they run in a job with id-token: write). Grouped so a batch of pin
+  # bumps arrives as one reviewable PR.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # Python package dependencies for the aces-sdl distribution.
+  - package-ecosystem: "pip"
+    directory: "/implementations/python"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      python-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

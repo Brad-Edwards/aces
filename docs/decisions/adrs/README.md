@@ -112,6 +112,12 @@ adr-064-experiment-evidence-and-measure-contract-boundary
 adr-065-experiment-run-provenance-contract-boundary
 adr-066-observability-evidence-plane-separation
 adr-067-participant-behavior-model
+adr-068-experiment-trials-replication-and-replay-claims
+adr-069-cage-2-replication-architecture
+adr-070-realization-envelope-semantics
+adr-071-reusable-asset-trust-and-integrity-policy
+adr-072-validation-and-admission-profiles
+adr-073-scoring-reward-language-scope
 ```
 
 | ADR | Title | Status | Date |
@@ -184,3 +190,9 @@ adr-067-participant-behavior-model
 | [065](adr-065-experiment-run-provenance-contract-boundary.md) | Experiment Run Provenance Contract Boundary | accepted | 2026-06-22 |
 | [066](adr-066-observability-evidence-plane-separation.md) | Observability and Evidence Plane Separation | accepted | 2026-06-23 |
 | [067](adr-067-participant-behavior-model.md) | Participant Behavior Model | proposed | 2026-06-23 |
+| [068](adr-068-experiment-trials-replication-and-replay-claims.md) | Experiment Trials, Replication, and Replay Claims | accepted | 2026-06-25 |
+| [069](adr-069-cage-2-replication-architecture.md) | CAGE-2 Replication Architecture | accepted | 2026-07-01 |
+| [070](adr-070-realization-envelope-semantics.md) | Realization Envelope Semantics | proposed | 2026-07-04 |
+| [071](adr-071-reusable-asset-trust-and-integrity-policy.md) | Reusable Asset Trust and Integrity Policy | accepted | 2026-07-05 |
+| [072](adr-072-validation-and-admission-profiles.md) | Validation and Admission Profiles | proposed | 2026-07-05 |
+| [073](adr-073-scoring-reward-language-scope.md) | Scoring and Reward Language Scope in the SDL | proposed | 2026-07-05 |

@@ -5,7 +5,7 @@ Part of the SemanticValidator mixin composition; see __init__.py.
 
 from pydantic import BaseModel
 
-from .._base import extract_variable_name
+from .._base import VARIABLE_TOKEN_RE
 from ..entities import flatten_entities
 from ..explicitness import classify_scenario_explicitness
 from ..scenario import Scenario
@@ -39,16 +39,15 @@ class _SectionsMixin:
     def _check_variable_refs(self, value: object, path: str, defined: set[str]) -> None:
         if isinstance(value, BaseModel):
             self._check_model_variable_refs(value, path, defined)
-        elif isinstance(value, dict):
-            for key, child in value.items():
-                self._check_variable_refs(child, f"{path}.{key}" if path else str(key), defined)
-        elif isinstance(value, list):
-            for index, child in enumerate(value):
-                self._check_variable_refs(child, f"{path}[{index}]", defined)
-        elif self._is_unresolved_var(value):
-            variable_name = extract_variable_name(value)
-            if variable_name and variable_name not in defined:
-                self._err(f"Undefined variable '{variable_name}' referenced at '{path}'")
+            return
+        if isinstance(value, dict):
+            self._check_mapping_variable_refs(value, path, defined)
+            return
+        if isinstance(value, list):
+            self._check_sequence_variable_refs(value, path, defined)
+            return
+        if isinstance(value, str):
+            self._check_string_variable_refs(value, path, defined)
 
     def _check_model_variable_refs(self, value: BaseModel, path: str, defined: set[str]) -> None:
         for field_name in value.__class__.model_fields:
@@ -57,6 +56,20 @@ class _SectionsMixin:
             child = getattr(value, field_name)
             child_path = f"{path}.{field_name}" if path else field_name
             self._check_variable_refs(child, child_path, defined)
+
+    def _check_mapping_variable_refs(self, value: dict[object, object], path: str, defined: set[str]) -> None:
+        for key, child in value.items():
+            child_path = f"{path}.{key}" if path else str(key)
+            self._check_variable_refs(child, child_path, defined)
+
+    def _check_sequence_variable_refs(self, value: list[object], path: str, defined: set[str]) -> None:
+        for index, child in enumerate(value):
+            self._check_variable_refs(child, f"{path}[{index}]", defined)
+
+    def _check_string_variable_refs(self, value: str, path: str, defined: set[str]) -> None:
+        for variable_name in dict.fromkeys(VARIABLE_TOKEN_RE.findall(value)):
+            if variable_name not in defined:
+                self._err(f"Undefined variable '{variable_name}' referenced at '{path}'")
 
     def _verify_explicitness(self) -> None:
         result = classify_scenario_explicitness(self._s)

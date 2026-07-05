@@ -181,6 +181,7 @@ def _capabilities() -> BackendCapabilitySet:
                     "experiment-capture-spec-v1",
                     "experiment-evidence-record-v1",
                     "experiment-derived-measure-v1",
+                    "experiment-run-v1",
                 }
             ),
             supported_media_types=frozenset({"application/json", "text/plain"}),

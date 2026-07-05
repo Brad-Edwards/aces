@@ -29,8 +29,20 @@ _CONCRETE = {"name": "concrete-scenario", "description": "a fully concrete scena
 _EMBEDDED_VAR = {"name": "concrete-scenario", "description": "deploy ${region} cluster"}
 _FULL_VAR = {"name": "concrete-scenario", "description": "${environment}"}
 _COUNT_VAR = {"name": "concrete-scenario", "infrastructure": {"net": {"count": "${replicas}"}}}
+_INVALID_VARIABLE_NAME = {"name": "variable-contract", "variables": {"bad.name": {"type": "string"}}}
+_BEHAVIOR_SPEC_EXTENSION_VAR = {
+    "name": "concrete-scenario",
+    "behavior_specifications": {
+        "blue-response": {
+            "semantic_version": "1.0.0",
+            "participant_refs": ["blue-operator"],
+            "action_contract_refs": ["triage"],
+            "extensions": {"x-acme:note": {"nested": ["ready", "${secret}"]}},
+        }
+    },
+}
 
-_VAR_PAYLOADS = [_EMBEDDED_VAR, _FULL_VAR, _COUNT_VAR]
+_VAR_PAYLOADS = [_EMBEDDED_VAR, _FULL_VAR, _COUNT_VAR, _BEHAVIOR_SPEC_EXTENSION_VAR]
 
 
 def _load(path: Path) -> dict:
@@ -45,15 +57,21 @@ _PATTERN_IN_JSON = json.dumps(VARIABLE_TOKEN_PATTERN)[1:-1]
 # --- Model boundary -------------------------------------------------------
 
 
-def test_authoring_model_accepts_unresolved_variables() -> None:
+@pytest.mark.parametrize("payload", _VAR_PAYLOADS)
+def test_authoring_model_accepts_unresolved_variables(payload: dict) -> None:
     """No regression: the authoring model still accepts ``${var}`` placeholders."""
-    for payload in _VAR_PAYLOADS:
-        Scenario.model_validate(payload)  # must not raise
+    scenario = Scenario.model_validate(payload)
+    assert scenario.name == payload["name"]
 
 
 def test_instantiated_model_accepts_concrete_scenario() -> None:
     instantiated = InstantiatedScenario.model_validate(_CONCRETE)
     assert instantiated.name == "concrete-scenario"
+
+
+def test_authoring_model_rejects_invalid_variable_name() -> None:
+    with pytest.raises(ValidationError):
+        Scenario.model_validate(_INVALID_VARIABLE_NAME)
 
 
 @pytest.mark.parametrize("payload", _VAR_PAYLOADS)
@@ -88,6 +106,11 @@ def test_bundle_instantiated_schema_accepts_concrete_scenario() -> None:
     Draft202012Validator(bundle["instantiated-scenario-v1"]).validate(_CONCRETE)
 
 
+def test_bundle_authoring_schema_rejects_invalid_variable_name() -> None:
+    bundle = schema_bundle()
+    assert not Draft202012Validator(bundle["sdl-authoring-input-v1"]).is_valid(_INVALID_VARIABLE_NAME)
+
+
 # --- Published artifacts + fixtures ---------------------------------------
 
 
@@ -103,6 +126,11 @@ def test_published_valid_fixture_passes() -> None:
     schema = _load(SDL_SCHEMA_DIR / "instantiated-scenario-v1.json")
     fixture = _load(FIXTURE_DIR / "valid" / "minimal.json")
     Draft202012Validator(schema).validate(fixture)
+
+
+def test_published_authoring_schema_rejects_invalid_variable_name() -> None:
+    schema = _load(SDL_SCHEMA_DIR / "sdl-authoring-input-v1.json")
+    assert not Draft202012Validator(schema).is_valid(_INVALID_VARIABLE_NAME)
 
 
 def test_published_invalid_fixture_fails() -> None:

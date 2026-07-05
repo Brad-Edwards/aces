@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import dataclasses
 import io
 import json
 import shutil
@@ -422,8 +423,10 @@ def test_oci_registry_requests_use_bounded_timeouts(monkeypatch: pytest.MonkeyPa
         def __exit__(self, exc_type, exc, tb) -> None:
             del exc_type, exc, tb
 
-        def read(self) -> bytes:
-            return self._payload
+        def read(self, amt: int = -1) -> bytes:
+            if amt is None or amt < 0:
+                return self._payload
+            return self._payload[:amt]
 
     def fake_urlopen(request, *, timeout=None):
         del request
@@ -805,3 +808,348 @@ def test_database_and_application_refs_survive_module_namespacing():
         "nodes.shared.db.runtime.database_services.tv-pg.databases.tv-db"
     )
     assert named["nodes.web.runtime.applications.webapp"] == ("nodes.shared.web.runtime.applications.webapp")
+
+
+# ---------------------------------------------------------------------------
+# Issue #12: bound OCI import fetches (memory/disk exhaustion).
+# ---------------------------------------------------------------------------
+
+
+class _FakeResponse:
+    """Minimal urlopen-response double for the bounded reader (issue #12)."""
+
+    def __init__(self, payload: bytes, *, content_length: str | None = None) -> None:
+        self._payload = payload
+        self.headers = {} if content_length is None else {"Content-Length": content_length}
+
+    def __enter__(self) -> _FakeResponse:
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        del exc_type, exc, tb
+
+    def read(self, amt: int = -1) -> bytes:
+        if amt is None or amt < 0:
+            return self._payload
+        return self._payload[:amt]
+
+
+def _fake_urlopen_returning(response: _FakeResponse):
+    def fake_urlopen(request, *, timeout=None):
+        del request, timeout
+        return response
+
+    return fake_urlopen
+
+
+def _gzip_tar(members: list[tuple[str, bytes]]) -> io.BytesIO:
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
+        for name, payload in members:
+            info = tarfile.TarInfo(name=name)
+            info.size = len(payload)
+            tar.addfile(info, io.BytesIO(payload))
+    buffer.seek(0)
+    return buffer
+
+
+def test_oci_resource_limits_separate_compressed_from_extracted():
+    limits = module_registry._OCI_LIMITS
+    # Compressed-download and extracted-archive caps are deliberately distinct so a
+    # small gzip cannot smuggle a large extraction past the download limit.
+    assert limits.max_bundle_bytes > limits.max_metadata_bytes
+    assert limits.max_total_bytes >= limits.max_member_bytes
+
+
+def test_oci_metadata_request_rejects_oversized_response(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        module_registry, "urlopen", _fake_urlopen_returning(_FakeResponse(b'{"tags":["' + b"a" * 64 + b'"]}'))
+    )
+    with pytest.raises(SDLParseError, match="exceeds"):
+        module_registry._json_request("https://registry.example/v2/acme/tags/list", max_bytes=16)
+
+
+def test_oci_bytes_request_rejects_oversized_response(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(module_registry, "urlopen", _fake_urlopen_returning(_FakeResponse(b"x" * 64)))
+    with pytest.raises(SDLParseError, match="exceeds"):
+        module_registry._bytes_request("https://registry.example/v2/acme/blobs/sha256:abc", max_bytes=16)
+
+
+def test_oci_bytes_request_accepts_payload_at_limit(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(module_registry, "urlopen", _fake_urlopen_returning(_FakeResponse(b"x" * 16)))
+    assert (
+        module_registry._bytes_request("https://registry.example/v2/acme/blobs/sha256:abc", max_bytes=16) == b"x" * 16
+    )
+
+
+def test_oci_response_rejects_oversized_content_length(monkeypatch: pytest.MonkeyPatch):
+    # A registry cannot force a large buffer by declaring a huge Content-Length: the
+    # advisory header is rejected before any bytes are read.
+    monkeypatch.setattr(
+        module_registry,
+        "urlopen",
+        _fake_urlopen_returning(_FakeResponse(b"x", content_length="1048576")),
+    )
+    with pytest.raises(SDLParseError, match="Content-Length"):
+        module_registry._bytes_request("https://registry.example/v2/acme/blobs/sha256:abc", max_bytes=16)
+
+
+def test_oci_response_rejects_invalid_content_length(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        module_registry,
+        "urlopen",
+        _fake_urlopen_returning(_FakeResponse(b"x", content_length="not-a-number")),
+    )
+    with pytest.raises(SDLParseError, match="Content-Length"):
+        module_registry._bytes_request("https://registry.example/v2/acme/blobs/sha256:abc", max_bytes=16)
+
+
+def test_oci_bundle_rejects_excess_member_count(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        module_registry,
+        "_OCI_LIMITS",
+        dataclasses.replace(module_registry._OCI_LIMITS, max_bundle_members=1),
+    )
+    buffer = _gzip_tar([("a.yaml", b"a\n"), ("b.yaml", b"b\n")])
+    with (
+        tarfile.open(fileobj=buffer, mode="r:gz") as tar,
+        pytest.raises(SDLParseError, match="archive members"),
+    ):
+        module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+
+def test_oci_bundle_rejects_oversized_member(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        module_registry,
+        "_OCI_LIMITS",
+        dataclasses.replace(module_registry._OCI_LIMITS, max_member_bytes=4),
+    )
+    buffer = _gzip_tar([("big.yaml", b"x" * 16)])
+    with (
+        tarfile.open(fileobj=buffer, mode="r:gz") as tar,
+        pytest.raises(SDLParseError, match="per-member"),
+    ):
+        module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+
+def test_oci_bundle_rejects_excess_total_bytes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        module_registry,
+        "_OCI_LIMITS",
+        dataclasses.replace(module_registry._OCI_LIMITS, max_member_bytes=100, max_total_bytes=8),
+    )
+    buffer = _gzip_tar([("a.yaml", b"x" * 6), ("b.yaml", b"y" * 6)])
+    with (
+        tarfile.open(fileobj=buffer, mode="r:gz") as tar,
+        pytest.raises(SDLParseError, match="total extraction"),
+    ):
+        module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+
+def test_oci_bundle_rejects_duplicate_member(tmp_path: Path):
+    buffer = _gzip_tar([("dup.yaml", b"a\n"), ("dup.yaml", b"b\n")])
+    with (
+        tarfile.open(fileobj=buffer, mode="r:gz") as tar,
+        pytest.raises(SDLParseError, match="Duplicate"),
+    ):
+        module_registry._safe_tar_members(tar, tmp_path / "cache")
+
+
+# ---------------------------------------------------------------------------
+# Issue #14: config-blob integrity + root_file signature binding.
+# ---------------------------------------------------------------------------
+
+
+def _rewrite_config_field(layout_dir: Path, field: str, value: object) -> None:
+    """Rewrite a published OCI layout so the config's ``field`` becomes ``value``.
+
+    Models a compromised registry that keeps the signer's signature intact but
+    alters an unsigned config field, then re-derives the config digest, manifest
+    digest, and index so every served blob is internally consistent. Fix 1
+    (config-digest verification) therefore passes; only a signature that binds
+    ``field`` can catch the tamper.
+    """
+    blobs = layout_dir / "blobs" / "sha256"
+    index = json.loads((layout_dir / "index.json").read_text(encoding="utf-8"))
+    manifest_digest = index["manifests"][0]["digest"]
+    manifest = json.loads((blobs / manifest_digest.removeprefix("sha256:")).read_bytes())
+    config_digest = manifest["config"]["digest"]
+    config = json.loads((blobs / config_digest.removeprefix("sha256:")).read_bytes())
+    config[field] = value
+    new_config_bytes = json.dumps(config, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    new_config_digest = f"sha256:{module_registry._sha256_digest(new_config_bytes)}"
+    (blobs / new_config_digest.removeprefix("sha256:")).write_bytes(new_config_bytes)
+    manifest["config"]["digest"] = new_config_digest
+    manifest["config"]["size"] = len(new_config_bytes)
+    new_manifest_bytes = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    new_manifest_digest = f"sha256:{module_registry._sha256_digest(new_manifest_bytes)}"
+    (blobs / new_manifest_digest.removeprefix("sha256:")).write_bytes(new_manifest_bytes)
+    index["manifests"][0]["digest"] = new_manifest_digest
+    index["manifests"][0]["size"] = len(new_manifest_bytes)
+    (layout_dir / "index.json").write_text(
+        json.dumps(index, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_oci_import_rejects_tampered_config_blob(tmp_path: Path):
+    """A registry serving config bytes that do not hash to manifest ``config.digest``
+    is rejected before the config JSON is trusted (issue #14, fix 1)."""
+    module_path = _local_module(tmp_path / "shared.yaml")
+    published = publish_module_to_oci_layout(module_path, output_dir=tmp_path / "dist")
+    layout_dir = Path(published["layout_dir"])
+
+    # Overwrite the config blob with bytes that no longer match its digest-keyed
+    # filename, so the in-process registry serves them under the advertised
+    # config.digest (the manifest is left untouched).
+    index = json.loads((layout_dir / "index.json").read_text(encoding="utf-8"))
+    manifest_digest = index["manifests"][0]["digest"]
+    blobs = layout_dir / "blobs" / "sha256"
+    manifest = json.loads((blobs / manifest_digest.removeprefix("sha256:")).read_bytes())
+    config_blob = blobs / manifest["config"]["digest"].removeprefix("sha256:")
+    tampered = json.loads(config_blob.read_bytes())
+    tampered["root_file"] = "evil.yaml"
+    config_blob.write_bytes(json.dumps(tampered, sort_keys=True, separators=(",", ":")).encode("utf-8"))
+
+    with _OCIRegistry(layout_dir, repo="acme/shared") as registry:
+        _write(
+            tmp_path / "aces-trust.yaml",
+            f"""
+            schema_version: aces-trust/v1
+            registries:
+              "127.0.0.1:{registry.port}":
+                require_signatures: false
+                allow_insecure_http: true
+            """,
+        )
+        root = _root_import(
+            tmp_path / "root-oci.yaml",
+            f"source: oci:127.0.0.1:{registry.port}/acme/shared\n            namespace: shared\n            version: 1.2.3",
+        )
+        with pytest.raises(SDLParseError, match="config digest verification failed"):
+            parse_sdl_file(root)
+
+
+def test_oci_import_rejects_root_file_tampering(tmp_path: Path):
+    """A compromised registry cannot repoint ``root_file`` inside an otherwise-signed
+    bundle: ``root_file`` is bound into the signature payload, so altering it while
+    keeping the original signature fails verification (issue #14, fix 2)."""
+    module_path = _local_module(tmp_path / "shared.yaml")
+    private_key = Ed25519PrivateKey.generate()
+    private_key_path = tmp_path / "signing-key.pem"
+    private_key_path.write_bytes(
+        private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+    )
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    published = publish_module_to_oci_layout(
+        module_path,
+        output_dir=tmp_path / "dist",
+        signer_id="test-signer",
+        private_key_path=private_key_path,
+    )
+    layout_dir = Path(published["layout_dir"])
+    # Keep the signature intact; only repoint the entrypoint.
+    _rewrite_config_field(layout_dir, "root_file", "smuggled.yaml")
+
+    with _OCIRegistry(layout_dir, repo="acme/shared") as registry:
+        _write(
+            tmp_path / "aces-trust.yaml",
+            f"""
+            schema_version: aces-trust/v1
+            registries:
+              "127.0.0.1:{registry.port}":
+                require_signatures: true
+                allow_insecure_http: true
+                trusted_signers:
+                  test-signer: "{base64.b64encode(public_key).decode("utf-8")}"
+            """,
+        )
+        root = _root_import(
+            tmp_path / "root-oci.yaml",
+            f"source: oci:127.0.0.1:{registry.port}/acme/shared\n            namespace: shared\n            version: 1.2.3",
+        )
+        with pytest.raises(SDLParseError, match="No valid trusted signer signature found"):
+            parse_sdl_file(root)
+
+
+def test_oci_import_rejects_non_string_root_file(tmp_path: Path):
+    """A config declaring a non-string ``root_file`` fails closed with SDLParseError
+    rather than flowing a bad type into the signature payload / extraction and
+    surfacing a confusing downstream TypeError (issue #14)."""
+    module_path = _local_module(tmp_path / "shared.yaml")
+    published = publish_module_to_oci_layout(module_path, output_dir=tmp_path / "dist")
+    layout_dir = Path(published["layout_dir"])
+    # Re-derive the digests so Fix 1 (config-digest verification) passes and the
+    # root_file type check is what rejects the module.
+    _rewrite_config_field(layout_dir, "root_file", ["evil.yaml"])
+
+    with _OCIRegistry(layout_dir, repo="acme/shared") as registry:
+        _write(
+            tmp_path / "aces-trust.yaml",
+            f"""
+            schema_version: aces-trust/v1
+            registries:
+              "127.0.0.1:{registry.port}":
+                require_signatures: false
+                allow_insecure_http: true
+            """,
+        )
+        root = _root_import(
+            tmp_path / "root-oci.yaml",
+            f"source: oci:127.0.0.1:{registry.port}/acme/shared\n            namespace: shared\n            version: 1.2.3",
+        )
+        with pytest.raises(SDLParseError, match="non-string root_file"):
+            parse_sdl_file(root)
+
+
+def test_oci_signature_over_legacy_payload_without_root_file_is_rejected():
+    """A signature computed over the pre-#14 payload (which omitted ``root_file``)
+    fails closed under ``require_signatures`` — no compatibility fallback."""
+    descriptor = module_registry.ModuleDescriptor(id="acme/shared", version="1.2.3", exports={"nodes": ["vm"]})
+    content_digest = "sha256:" + "0" * 64
+    legacy_payload = json.dumps(
+        {
+            "module_id": descriptor.id,
+            "module_version": descriptor.version,
+            "exports": descriptor.exports,
+            "content_digest": content_digest,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    signature = base64.b64encode(private_key.sign(legacy_payload)).decode("utf-8")
+    policy = module_registry.RegistryTrustPolicy(
+        require_signatures=True,
+        trusted_signers={"test-signer": base64.b64encode(public_key).decode("utf-8")},
+    )
+    with pytest.raises(SDLParseError, match="No valid trusted signer signature found"):
+        module_registry._verify_signatures(
+            signatures=[{"signer_id": "test-signer", "signature": signature}],
+            trust_policy=policy,
+            module_descriptor=descriptor,
+            content_digest=content_digest,
+            root_file="module.yaml",
+        )
+
+
+def test_oci_signature_binds_root_file():
+    """The canonical signing payload includes ``root_file`` so a differing
+    ``root_file`` produces a different signable payload (issue #14, fix 2)."""
+    descriptor = module_registry.ModuleDescriptor(id="acme/shared", version="1.2.3", exports={"nodes": ["vm"]})
+    content_digest = "sha256:" + "0" * 64
+    payload_a = module_registry._signable_payload(descriptor, content_digest=content_digest, root_file="module.yaml")
+    payload_b = module_registry._signable_payload(descriptor, content_digest=content_digest, root_file="other.yaml")
+    assert payload_a != payload_b
+    assert b"root_file" in payload_a

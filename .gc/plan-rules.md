@@ -34,6 +34,16 @@ These encode the hard rules previously in `AGENTS.md` prose.
   aligned with changed code and tests.
 - Plans with a user-visible change MUST add a fragment under
   `changelog.d/<issue>.<type>.md` (or `changelog.d/+<slug>.<type>.md`
-  for issue-free entries), where `<type>` is one of `security`, `added`,
-  `changed`, `deprecated`, `removed`, `fixed`; do not edit `CHANGELOG.md`
-  directly outside release-collation commits.
+  for issue-free entries), where `<type>` is one of `breaking`, `security`,
+  `added`, `changed`, `deprecated`, `removed`, `fixed`. The fragment `<type>`
+  drives the release version bump (`tools/release.py`): `removed` → major (once
+  ≥ 1.0; pre-1.0 it is a minor), `added`/`changed`/`deprecated` → minor,
+  `security`/`fixed` → patch; `breaking` is recorded in the changelog but does
+  NOT auto-bump (force a major with `release.py --version 1.0.0`). Do not edit
+  `CHANGELOG.md` directly outside release-collation commits.
+- Plans MUST NOT hand-edit the version. It is a single committed literal,
+  `__version__` in `implementations/python/src/aces/__init__.py`, bumped only by
+  `tools/release.py` from the pending changelog fragments at release time (#684).
+  The PR title must still pass the `title-guard` conventional-shape / no-branding
+  gate (`tools/check_pr_title.py`), but the PR title does NOT drive the version —
+  only the changelog fragment types do.

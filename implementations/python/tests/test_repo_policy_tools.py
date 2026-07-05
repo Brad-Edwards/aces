@@ -14,6 +14,7 @@ if str(REPO_ROOT) not in sys.path:
 
 import pytest
 import tools.check_generated_schemas as check_generated_schemas
+import tools.osv_scanner_tool as osv_scanner_tool
 import yaml
 from tools.check_adr_immutability import (
     amendment_refs,
@@ -105,6 +106,8 @@ def setup_policy_repo(tmp_path: Path) -> Path:
         "aces_runtime",
         "aces_backend_protocols",
         "aces_backend_stubs",
+        "aces_backend_libvirt",
+        "aces_operations",
         "aces_reference_backend",
         "aces_conformance",
         "aces_cli",
@@ -217,6 +220,25 @@ def test_compatibility_layer_rejects_non_wrapper_logic(tmp_path: Path) -> None:
     )
 
     assert [failure.rule_id for failure in failures] == ["compatibility-wrapper-only"]
+
+
+def test_compatibility_layer_allows_version_literal(tmp_path: Path) -> None:
+    # The committed __version__ literal is the [tool.hatch.version] `path` source
+    # (#684); a version constant is not implementation logic.
+    repo_root = setup_policy_repo(tmp_path)
+    write_text(
+        repo_root / "implementations" / "python" / "src" / "aces" / "__init__.py",
+        '"""ns."""\n\n__version__ = "0.17.0"\n\n__all__ = ["__version__"]\n',
+    )
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        ["implementations/python/src/aces/__init__.py"],
+        check_set="file-local",
+        structural_runner=structural_runner_stub,
+    )
+
+    assert "compatibility-wrapper-only" not in [failure.rule_id for failure in failures]
 
 
 def test_adr_readme_must_match_adr_documents(tmp_path: Path) -> None:
@@ -1780,6 +1802,83 @@ def test_gitleaks_binary_path_uses_repo_local_cache(tmp_path: Path) -> None:
     assert gitleaks_binary_path(tmp_path, version="8.30.1") == (
         tmp_path / ".cache" / "aces-sdl" / "tooling" / "gitleaks" / "8.30.1" / "gitleaks"
     )
+
+
+@pytest.mark.parametrize(
+    ("system", "machine", "expected"),
+    [
+        ("Linux", "x86_64", "osv-scanner_linux_amd64"),
+        ("Linux", "aarch64", "osv-scanner_linux_arm64"),
+        ("Darwin", "arm64", "osv-scanner_darwin_arm64"),
+    ],
+)
+def test_osv_scanner_release_asset_names_match_platform_conventions(
+    monkeypatch: pytest.MonkeyPatch, system: str, machine: str, expected: str
+) -> None:
+    monkeypatch.setattr("platform.system", lambda: system)
+    monkeypatch.setattr("platform.machine", lambda: machine)
+
+    # OSV-Scanner ships plain per-platform binaries, not archives.
+    assert osv_scanner_tool._release_asset_name("2.4.0") == expected
+    assert osv_scanner_tool._checksums_asset_name("2.4.0") == "osv-scanner_SHA256SUMS"
+
+
+@pytest.mark.parametrize("system", ["Windows", "Plan9"])
+def test_osv_scanner_release_asset_name_rejects_unsupported_platform(
+    monkeypatch: pytest.MonkeyPatch, system: str
+) -> None:
+    monkeypatch.setattr("platform.system", lambda: system)
+    monkeypatch.setattr("platform.machine", lambda: "x86_64")
+
+    with pytest.raises(RuntimeError, match="unsupported osv-scanner platform"):
+        osv_scanner_tool._release_asset_name("2.4.0")
+
+
+def test_osv_scanner_binary_path_uses_repo_local_cache(tmp_path: Path) -> None:
+    assert osv_scanner_tool.osv_scanner_binary_path(tmp_path, version="2.4.0") == (
+        tmp_path / ".cache" / "aces-sdl" / "tooling" / "osv-scanner" / "2.4.0" / "osv-scanner"
+    )
+
+
+def test_osv_scanner_expected_checksum_parses_sha256sums() -> None:
+    sha256sums = (
+        "aaaa1111  osv-scanner_linux_amd64\n"
+        "bbbb2222  osv-scanner_darwin_arm64\n"
+        "cccc3333  osv-scanner_windows_amd64.exe\n"
+    )
+
+    assert osv_scanner_tool._expected_checksum(sha256sums, "osv-scanner_darwin_arm64") == "bbbb2222"
+    assert osv_scanner_tool._expected_checksum(sha256sums, "osv-scanner_missing") is None
+
+
+def test_osv_scanner_advisory_exit_codes_are_clean_and_vulns_only() -> None:
+    # 0 (no vulns) and 1 (vulns found) are advisory-success; scanner/setup
+    # error codes (127 general error, 128 no packages found) are not.
+    assert 0 in osv_scanner_tool.OSV_ADVISORY_EXIT_CODES
+    assert 1 in osv_scanner_tool.OSV_ADVISORY_EXIT_CODES
+    assert 127 not in osv_scanner_tool.OSV_ADVISORY_EXIT_CODES
+    assert 128 not in osv_scanner_tool.OSV_ADVISORY_EXIT_CODES
+
+
+def _fake_osv_binary(tmp_path: Path, *, exit_code: int, payload: str = '{"results": []}') -> Path:
+    binary = tmp_path / "osv-scanner"
+    binary.write_text(
+        f"#!/usr/bin/env python3\nimport sys\nsys.stdout.write({payload!r})\nraise SystemExit({exit_code})\n"
+    )
+    binary.chmod(0o755)
+    return binary
+
+
+def test_run_osv_scanner_captures_stdout_and_returns_exit_code(tmp_path: Path) -> None:
+    binary = _fake_osv_binary(tmp_path, exit_code=1, payload='{"results": [1]}')
+    lockfile = tmp_path / "uv.lock"
+    lockfile.write_text("")
+    report = tmp_path / "out" / "osv-scanner-report.json"
+
+    exit_code = osv_scanner_tool.run_osv_scanner(lockfile, report, binary=binary)
+
+    assert exit_code == 1
+    assert report.read_text() == '{"results": [1]}'
 
 
 def test_extra_published_schema_paths_detects_stale_generated_files(tmp_path: Path) -> None:

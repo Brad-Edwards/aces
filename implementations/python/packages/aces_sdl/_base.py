@@ -17,6 +17,8 @@ class SDLModel(BaseModel):
 
 
 _VARIABLE_NAME_PATTERN = r"[A-Za-z_][A-Za-z0-9_-]*"
+VARIABLE_NAME_PATTERN = _VARIABLE_NAME_PATTERN
+VARIABLE_NAME_RE = re.compile(r"^" + VARIABLE_NAME_PATTERN + r"$")
 # Single source of truth for the ``${name}`` substitution token, shared by the
 # instantiation engine, SEM-218 explicitness analysis, the InstantiatedScenario
 # model validator, and the published instantiated-scenario JSON Schema
@@ -32,6 +34,11 @@ _VARIABLE_REF_RE = re.compile(r"^" + VARIABLE_TOKEN_PATTERN + r"$")
 def is_variable_ref(v: Any) -> bool:
     """Return whether ``v`` is a full ``${var_name}`` placeholder."""
     return isinstance(v, str) and _VARIABLE_REF_RE.fullmatch(v) is not None
+
+
+def is_variable_name(v: object) -> bool:
+    """Return whether ``v`` is a syntactically valid SDL variable name."""
+    return isinstance(v, str) and VARIABLE_NAME_RE.fullmatch(v) is not None
 
 
 def contains_variable_token(v: object) -> bool:

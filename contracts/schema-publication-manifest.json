@@ -9,23 +9,43 @@
       "content_hash": "e7b858c93b7ec763c361439b1d9c7cc3979a1d150ca64a7f41ebc12c050f5cff"
     },
     {
+      "contract_id": "atlas-tactics-source-v1",
+      "schema_path": "contracts/schemas/concept-authority/atlas-tactics-source-v1.json",
+      "stability": "draft",
+      "content_hash": "17e144abf9c8de10fa7342ab8662306ad0d4170a2df1c67829ac641a686bd562",
+      "last_change": {
+        "summary": "Initial publication of the pinned MITRE ATLAS tactics v2026.06 source schema for the ACT-609 adopted AI offensive behavior vocabulary.",
+        "content_hash": "17e144abf9c8de10fa7342ab8662306ad0d4170a2df1c67829ac641a686bd562"
+      }
+    },
+    {
+      "contract_id": "attack-enterprise-tactics-source-v1",
+      "schema_path": "contracts/schemas/concept-authority/attack-enterprise-tactics-source-v1.json",
+      "stability": "draft",
+      "content_hash": "32dc4af64f786b3c7a520181f9266cbc3fcfd54d69683faa861c38a495783c7f",
+      "last_change": {
+        "summary": "Initial publication of the pinned MITRE ATT&CK Enterprise tactics v19.1 source schema for the ACT-609 adopted offensive behavior vocabulary.",
+        "content_hash": "32dc4af64f786b3c7a520181f9266cbc3fcfd54d69683faa861c38a495783c7f"
+      }
+    },
+    {
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "645831fb013c9450a1354a609b0645f6d045c85b3d92edcdd3cdbce19a0e3064",
+      "content_hash": "4485bf2485e1f98be2c540552d42828a170dc6ff5beeb6b091a4e87a55b922ab",
       "last_change": {
-        "summary": "Added the EXP-715 observation capability declaration and experiment evidence contract identifiers to backend manifest v2.",
-        "content_hash": "645831fb013c9450a1354a609b0645f6d045c85b3d92edcdd3cdbce19a0e3064"
+        "summary": "Added experiment-run-v1 to the governed backend manifest contract vocabulary for run-level observability and augmentation evidence disclosure.",
+        "content_hash": "4485bf2485e1f98be2c540552d42828a170dc6ff5beeb6b091a4e87a55b922ab"
       }
     },
     {
       "contract_id": "backend-profile-v1",
       "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
       "stability": "draft",
-      "content_hash": "85ddac10a896b39cc9c5ef3f73141e84566236d12d0127511007610ccd700694",
+      "content_hash": "3f4152b2d7f1e4a01b30e2782a4d6001654e2785f4b9fe54121ed7e84a37c604",
       "last_change": {
-        "summary": "Added the EXP-707/EXP-708/EXP-709 experiment evidence contracts to the backend profile contract vocabulary.",
-        "content_hash": "85ddac10a896b39cc9c5ef3f73141e84566236d12d0127511007610ccd700694"
+        "summary": "Added experiment-run-v1 to the backend profile contract vocabulary so profile fixture conformance can exercise run-level observability semantics.",
+        "content_hash": "3f4152b2d7f1e4a01b30e2782a4d6001654e2785f4b9fe54121ed7e84a37c604"
       }
     },
     {
@@ -38,7 +58,11 @@
       "contract_id": "controlled-vocabularies-v1",
       "schema_path": "contracts/schemas/concept-authority/controlled-vocabularies-v1.json",
       "stability": "draft",
-      "content_hash": "3c3b4e517c42bd3822a2b9bbc69dc359773ee79da24f67abd4cafe8b205be2b8"
+      "content_hash": "c7565b28b4f3a5511b4b744b17210ddf9d79961d374bfbe1ace5a732cf637758",
+      "last_change": {
+        "summary": "Added external source metadata to controlled vocabularies and pinned ACT-609 offensive behavior base terms to MITRE ATT&CK Enterprise tactics v19.1.",
+        "content_hash": "c7565b28b4f3a5511b4b744b17210ddf9d79961d374bfbe1ace5a732cf637758"
+      }
     },
     {
       "contract_id": "evaluation-history-event-stream-v1",
@@ -132,10 +156,10 @@
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "fae2bab70f056a20a211b752f40e2886e1d3be9afa14c2d9d0722efc6be6e7ba",
+      "content_hash": "21b5882778f3db00ee6ac4c7825e12b52ddbc9e7c14230bcf0fd4dc70b0303da",
       "last_change": {
-        "summary": "Differentiate instantiated-scenario from authoring-input: the instantiated contract now rejects unresolved variable placeholders in string values (issue #500).",
-        "content_hash": "fae2bab70f056a20a211b752f40e2886e1d3be9afa14c2d9d0722efc6be6e7ba"
+        "summary": "Constrained instantiated SDL variable map keys to the declared variable-name grammar.",
+        "content_hash": "21b5882778f3db00ee6ac4c7825e12b52ddbc9e7c14230bcf0fd4dc70b0303da"
       }
     },
     {
@@ -299,6 +323,16 @@
       "content_hash": "28ae8b46e4bcb4436a01adf3a70472b2f8ffc1fc8c13ff7ea8766492652f8267"
     },
     {
+      "contract_id": "reusable-asset-trust-policy-v1",
+      "schema_path": "contracts/schemas/asset-trust/reusable-asset-trust-policy-v1.json",
+      "stability": "draft",
+      "content_hash": "68f18e107bddb0b037a316bd334258da7329fc60460ee38ef415c89ce58ad7e0",
+      "last_change": {
+        "summary": "Initial publication of the GOV-913 reusable-asset trust/authenticity/integrity policy contract: per-family evidence-class requirements (integrity/authenticity/provenance/governance) referencing existing ACES mechanisms.",
+        "content_hash": "68f18e107bddb0b037a316bd334258da7329fc60460ee38ef415c89ce58ad7e0"
+      }
+    },
+    {
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
@@ -318,10 +352,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "805355fa8df9c0ca360f89c1379fb55052dcc176c83d80a0b8963096ffa38134",
+      "content_hash": "1cf332317657cc3dee87f98b42c02f8fb98400396de0119e0a6d2c9e93700668",
       "last_change": {
-        "summary": "Extended the SDL authoring-input scenario schema for the DSL-132/DSL-141 runtime datastore-node surface: per-node engine provenance, listener topology, datastore cardinality, and structured index/template mapping manifests.",
-        "content_hash": "805355fa8df9c0ca360f89c1379fb55052dcc176c83d80a0b8963096ffa38134"
+        "summary": "Constrained authored SDL variable map keys to the declared variable-name grammar.",
+        "content_hash": "1cf332317657cc3dee87f98b42c02f8fb98400396de0119e0a6d2c9e93700668"
       }
     },
     {

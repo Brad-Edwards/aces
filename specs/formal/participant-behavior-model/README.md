@@ -7,6 +7,7 @@ This document is the issue #77 formal design artifact for:
 - `ACT-606` - First-Class Participant Behavior Specifications
 - `ACT-607` - Participant Authority And Scope Boundaries
 - `ACT-608` - Participant Behavior Modes
+- `ACT-609` - Offensive Behavior Vocabularies
 
 It is governed by ADR-067. It composes the participant semantics from ADR-022
 with SDL participant framing, participant runtime records, backend-facing
@@ -28,17 +29,19 @@ Existing coverage:
 - ADR-060 and `specs/formal/runtime-contracts/participant-backend-contracts.md`
   define backend-facing carrier, retrieval, support, and outcome surfaces.
 - `controlled-vocabularies-v1` already defines
-  `participant-decision-surface-modes`.
+  `participant-decision-surface-modes` and
+  `participant-offensive-behavior-activities`.
+- Issue #206 adds SDL `behavior-specifications` authoring, semantic
+  validation, generated schema coverage, and compiled
+  `participant.behavior-specification.*` runtime records for ACT-606.
 
-Remaining issue #77 gap:
+Remaining child-issue boundaries:
 
-- no single behavior-model composition binding these surfaces to ACT-602,
-  ACT-603, ACT-606, ACT-607, and ACT-608;
-- no first-class behavior specification aggregate;
-- no clause matrix tying authority/scope and mode selection to the behavior
-  model; and
-- no child-issue boundary that prevents each UID from publishing local behavior
-  semantics.
+- child issues must not publish local behavior semantics outside this model;
+- authority/scope and mode work beyond ACT-606 must continue to bind through
+  the governed refs and vocabularies defined here; and
+- executable behavior-model gates for ACT-602, ACT-607, and ACT-608 remain
+  owned by their child issues.
 
 ## Model Summary
 
@@ -240,6 +243,7 @@ BehaviorSpecification =
   outcome_interpretation_rule_ref*
   authority_scope_ref*
   behavior_mode?
+  offensive_behavior_ref*
   realization_profile_ref?
   backend_feature_support_ref*
   evidence_contract_ref*
@@ -254,14 +258,21 @@ Rules:
   contracts, observation boundaries, outcome rules, manifests, backend
   capabilities, or runtime evidence.
 - `behavior_mode` binds to the controlled vocabulary described in ACT-608.
+- `offensive_behavior_ref` values bind to the ACT-609 offensive behavior
+  vocabulary for attack-oriented participant tasks, goals, or activities.
 - `realization_profile_ref` records how the behavior can be realized without
   exposing private implementation configuration.
 - `evidence_contract_ref` names the contracts needed to prove the behavior
   claim in a run or conformance report.
 - Extension fields follow the governed `x-<owner>:<term>` discipline.
 
-Implementation issue #206 owns the executable authoring and validation surface
-for this aggregate.
+Implementation issue #206 adds the executable SDL authoring and validation
+surface for this aggregate. The Python reference implementation parses
+`behavior-specifications`, validates participant, role, action, observation,
+outcome, authority, extension, and governed-mode refs, includes the surface in
+generated SDL schemas, and compiles stable
+`participant.behavior-specification.<name>` runtime records without creating a
+parallel participant stack.
 
 ## ACT-607 - Authority And Scope Boundaries
 
@@ -295,6 +306,81 @@ Rules:
 Implementation issue #207 owns executable authority/scope extensions beyond
 the ACT-601 fields already shipped.
 
+### ACT-607 Implementation Preflight Guardrails
+
+Executable ACT-607 work must extend the existing participant-authoring and
+behavior surfaces. The canonical incumbents are:
+
+- SDL authored semantics: `agents.*.starting_accounts`,
+  `initial_knowledge`, `starting_conditions`, `authority_anchors`,
+  `operating_scope`, and behavior-specification `authority_scope_refs`.
+- Action and observation semantics: typed participant action preconditions,
+  governed failure classes such as `authority_denied`, observation boundaries,
+  view rules, and view transitions.
+- Parser and model gates: `parse_sdl`, `SDLModel(extra="forbid")`,
+  variable-key rejection, `Scenario`, and `InstantiatedScenario`.
+- Semantic validation: `SemanticValidator`, `_validate_named_ref`,
+  `_validate_operating_scope_ref`, `_verify_agent`,
+  `_verify_behavior_specification_authority_refs`, and
+  `analyze_participant_behavior`.
+- Runtime compilation: stable participant behavior, action-contract,
+  observation-boundary, outcome-rule, and behavior-specification addresses from
+  `aces_processor.compiler`.
+- Published contract authority: closed `ContractModel` payloads,
+  `schema_bundle()`, generated schemas, the schema-publication manifest, and
+  valid/invalid fixtures.
+- Runtime evidence and conformance: participant action precondition/result
+  records, behavior history, observation envelopes, shared-state records,
+  runtime snapshots, diagnostics, and existing participant-runtime validators.
+- Control-plane and persistence boundaries: `ControlPlaneSecurityConfig`,
+  read/mutating identity dependencies, request-size guards, idempotency
+  fingerprints, audit records, redacted 500 envelopes, and
+  `ControlPlaneStore`.
+
+Security and boundary gates remain in force:
+
+- SDL authoring must fail closed on unknown fields, variable-created keys,
+  unresolved refs, ambiguous authority anchors, and invalid operating-scope
+  targets. Instantiated scenarios must not carry unresolved `${name}` tokens.
+- Participant authority is not control-plane authorization. Bearer tokens,
+  proxy headers, control-plane identities, OS users, process boundaries, and
+  backend sandbox settings may enforce or observe a boundary, but they do not
+  define the authored authority/scope boundary.
+- Secrets and private material stay out of portable authority evidence:
+  credentials, tokens, hidden prompts, answer keys, backend-private
+  configuration, raw command output, raw logs, argv/env values, and
+  adjudication assets require refs, digests, markings, redaction policy, and
+  evidence boundaries.
+- Error surfaces must use existing collected `SDLValidationError`,
+  `Diagnostic`, `HTTPException`, audit, and redacted internal-error patterns.
+  New checks must not create a participant-specific exception hierarchy or
+  leak raw secret/config values through diagnostics or fixtures.
+- Published exchange shapes must remain closed contracts. A schema-facing
+  change updates model source, generated schema bundle, publication-manifest
+  ledger, and fixtures together.
+
+The extensibility seam is a parameterized authority/scope reference resolver:
+reuse the named-reference index for authority anchors, the spatial/resource
+operating-scope index for scope, and add explicit allowed-target/facet
+parameters when a future boundary type needs a narrower target set. If runtime
+claims need normalized addresses, add that normalization at the compiler
+addressing boundary rather than copying raw, possibly ambiguous authoring refs
+into a second resolver.
+
+Anti-patterns for ACT-607 implementations:
+
+- introducing a new top-level `participants` or `authority` stack for the same
+  authored participant concept;
+- treating credential possession, account login, backend capability,
+  participant implementation identity, or control-plane auth as authored
+  authority;
+- duplicating controlled vocabularies, schema publication, validation passes,
+  persistence, audit, or exception machinery;
+- placing trust anchors or access/control anchors in free-form `metadata`,
+  diagnostics, raw logs, or backend-local DTOs; or
+- proving conformance only through schema acceptance without semantic negative
+  tests, runtime evidence, and redaction/leakage checks.
+
 ## ACT-608 - Participant Behavior Modes
 
 Behavior mode declares how decisions are selected or controlled at the
@@ -327,6 +413,98 @@ Rules:
 Implementation issue #208 owns executable declaration, selection, validation,
 and conformance for behavior modes.
 
+## ACT-609 - Offensive Behavior Vocabularies
+
+Offensive behavior refs declare attack-oriented participant tasks, goals, or
+activities as governed vocabulary values on a behavior specification.
+
+The base terms in `participant-offensive-behavior-activities` are a direct
+adoption of MITRE ATT&CK Enterprise tactics v19.1. The pinned source artifact is
+`contracts/concept-authority/attack-enterprise-tactics-source-v1.json`; it
+records the upstream STIX bundle URL, ATT&CK version, retrieval date, SHA-256
+digest, MITRE terms URL, and citation URLs. The source artifact was extracted
+from the ATT&CK Enterprise matrix order, not hand-curated by ACES.
+
+The base terms in `participant-ai-offensive-behavior-activities` are a separate
+direct adoption of MITRE ATLAS tactics release v2026.06 (`collection.version`
+`2026.06`, `format-version` `6.0.0`). The pinned source artifact is
+`contracts/concept-authority/atlas-tactics-source-v1.json`; it records the
+upstream YAML release asset URL, ATLAS content and format versions, retrieval
+date, SHA-256 digest, MITRE ATLAS project and license citations, matrix id, and
+term lineage fields. The source artifact was extracted from the ATLAS
+`ATLAS-matrix` sequence order, not hand-curated by ACES.
+
+Rules:
+
+- `offensive_behavior_refs` values resolve through
+  `participant-offensive-behavior-activities`.
+- `ai_offensive_behavior_refs` values resolve through
+  `participant-ai-offensive-behavior-activities`.
+- Base vocabulary values preserve ATT&CK tactic shortnames, IDs, names, URLs,
+  descriptions, and matrix order from the pinned v19.1 source artifact.
+- ATLAS base vocabulary values preserve ATLAS tactic shortnames, IDs, names,
+  URLs, descriptions, UUIDs, creation/modification dates, ATT&CK cross-reference
+  metadata where present, and matrix order from the pinned v2026.06 source
+  artifact.
+- Governed extensions must use the shared `x-<owner>:<term>` syntax.
+- Offensive behavior refs classify authored behavior intent; they do not
+  replace action contracts, observation boundaries, outcome rules, authority
+  refs, SDL `goals`, experiment tasks, workflow steps, participant roles,
+  behavior modes, backend feature support, or runtime history.
+- ATT&CK and ATLAS are distinct adopted authorities. Do not merge ATLAS terms
+  into the ATT&CK vocabulary, use one vocabulary to govern both fields, or treat
+  overlapping labels as interchangeable without an explicit mapping surface.
+- External technique, tool, CVE, or command identifiers require explicit
+  mapping or loss metadata on the owning surface; they are not accepted as raw
+  portable ACES semantics by this field.
+- Future ATT&CK or ATLAS release updates must update the matching pinned source
+  artifact, catalog terms, fixture, docs, schema metadata as needed, and
+  checker validation evidence in one reviewable change.
+
+Pinned ATT&CK v19.1 tactics:
+
+| ATT&CK ID | Shortname | Name |
+| --- | --- | --- |
+| TA0043 | `reconnaissance` | Reconnaissance |
+| TA0042 | `resource-development` | Resource Development |
+| TA0001 | `initial-access` | Initial Access |
+| TA0002 | `execution` | Execution |
+| TA0003 | `persistence` | Persistence |
+| TA0004 | `privilege-escalation` | Privilege Escalation |
+| TA0005 | `stealth` | Stealth |
+| TA0112 | `defense-impairment` | Defense Impairment |
+| TA0006 | `credential-access` | Credential Access |
+| TA0007 | `discovery` | Discovery |
+| TA0008 | `lateral-movement` | Lateral Movement |
+| TA0009 | `collection` | Collection |
+| TA0011 | `command-and-control` | Command and Control |
+| TA0010 | `exfiltration` | Exfiltration |
+| TA0040 | `impact` | Impact |
+
+Pinned ATLAS v2026.06 tactics:
+
+| ATLAS ID | Shortname | Name |
+| --- | --- | --- |
+| AML.TA0002 | `reconnaissance` | Reconnaissance |
+| AML.TA0003 | `resource-development` | Resource Development |
+| AML.TA0004 | `initial-access` | Initial Access |
+| AML.TA0000 | `ai-model-access` | AI Model Access |
+| AML.TA0005 | `execution` | Execution |
+| AML.TA0006 | `persistence` | Persistence |
+| AML.TA0012 | `privilege-escalation` | Privilege Escalation |
+| AML.TA0007 | `defense-evasion` | Defense Evasion |
+| AML.TA0013 | `credential-access` | Credential Access |
+| AML.TA0008 | `discovery` | Discovery |
+| AML.TA0015 | `lateral-movement` | Lateral Movement |
+| AML.TA0009 | `collection` | Collection |
+| AML.TA0001 | `ai-attack-staging` | AI Attack Staging |
+| AML.TA0014 | `command-and-control` | Command and Control |
+| AML.TA0010 | `exfiltration` | Exfiltration |
+| AML.TA0011 | `impact` | Impact |
+
+Implementation issue #209 owns executable declaration, validation, generated
+schema coverage, and compiler carry-through for offensive behavior refs.
+
 ## Cross-Clause Invariants
 
 | ID | Invariant | Primary clauses |
@@ -339,6 +517,7 @@ and conformance for behavior modes.
 | PBM-06 | Backend support claims require governed feature terms, support levels, disclosure refs, and evidence contracts. | ACT-602, ACT-608 |
 | PBM-07 | Hidden prompts, credentials, answer keys, raw command output, backend-private objects, and adjudication assets stay out of portable behavior artifacts. | ACT-606, ACT-607 |
 | PBM-08 | Unknown, opaque, unsupported, not applicable, bounded, lossy, and exact are distinct claims. | ACT-602, ACT-603, ACT-608 |
+| PBM-09 | Offensive behavior refs are governed vocabulary classifications, not raw action names, roles, goals, tasks, commands, or external technique labels. | ACT-609 |
 
 ## Child-Issue Mapping
 
@@ -346,9 +525,10 @@ and conformance for behavior modes.
 | --- | --- | --- |
 | #204 | ACT-602 | Machine-checkable behavior model gates, fixtures, and conformance evidence. |
 | #205 | ACT-603 | Abstract interaction implementation coverage over actions, observations, state, preconditions, effects, failure classes, and joint interactions. |
-| #206 | ACT-606 | First-class behavior specification authoring, validation, versioning, and traceability. |
+| #206 | ACT-606 | First-class behavior specification authoring, validation, versioning, traceability, and compiled runtime records. |
 | #207 | ACT-607 | Authority/scope boundary authoring, validation, evidence, and failure mapping. |
 | #208 | ACT-608 | Behavior-mode declaration, selection, controlled-vocabulary validation, and conformance. |
+| #209 | ACT-609 | Offensive behavior vocabulary declaration, validation, and compiler carry-through. |
 
 ## Verification Expectations
 
@@ -366,5 +546,5 @@ Any executable issue that claims this model must provide:
   to the artifact.
 
 Issue #77 satisfies the design requirement by publishing ADR-067 and this
-formal spec. It does not claim runtime emission, SDL syntax, schema, fixture,
-or conformance implementation for #204 through #208.
+formal spec. Child issues provide executable SDL syntax, schema, fixture,
+runtime emission, and conformance implementation for #204 through #208.

@@ -10,7 +10,7 @@ import os
 import tarfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -185,13 +185,23 @@ def _signable_payload(
     module_descriptor: ModuleDescriptor,
     *,
     content_digest: str,
+    root_file: str,
 ) -> bytes:
+    """Canonical bytes an Ed25519 signature binds for an OCI module (issue #14).
+
+    The payload binds ``root_file`` alongside the module identity, exports, and
+    bundle ``content_digest`` so a compromised registry cannot repoint the module
+    entrypoint to a different file inside an otherwise-signed bundle. This is the
+    single canonical signer-payload builder: publishing and resolving must produce
+    the identical shape or verification fails closed.
+    """
     return json.dumps(
         {
             "module_id": module_descriptor.id,
             "module_version": module_descriptor.version,
             "exports": module_descriptor.exports,
             "content_digest": content_digest,
+            "root_file": root_file,
         },
         sort_keys=True,
         separators=(",", ":"),
@@ -204,8 +214,9 @@ def _verify_signatures(
     trust_policy: RegistryTrustPolicy,
     module_descriptor: ModuleDescriptor,
     content_digest: str,
+    root_file: str,
 ) -> str:
-    payload = _signable_payload(module_descriptor, content_digest=content_digest)
+    payload = _signable_payload(module_descriptor, content_digest=content_digest, root_file=root_file)
     for signature_entry in signatures:
         signer_id = str(signature_entry.get("signer_id", ""))
         signature_b64 = str(signature_entry.get("signature", ""))
@@ -244,20 +255,97 @@ def _registry_base_url(registry: str, *, allow_insecure_http: bool) -> str:
 _HTTP_TIMEOUT_SECONDS = 30
 
 
-def _json_request(url: str, *, headers: dict[str, str] | None = None) -> Any:
+@dataclass(frozen=True)
+class _OCIResourceLimits:
+    """Bounds for remote OCI fetches and bundle extraction (issue #12).
+
+    The OCI import path pulls attacker-influenceable bytes from allowlisted
+    registries; without caps a compromised registry, mirror, or oversized module
+    can exhaust process memory (buffering an unbounded response) or disk/CPU
+    (extracting an unbounded bundle). Compressed-download limits are kept separate
+    from extracted-archive limits because a small gzip can expand into a large tar
+    payload. This is the single extensibility seam: operator-tunable overrides
+    should later extend ``RegistryTrustPolicy`` and merge with these defaults,
+    rather than threading limit arguments through parser/compiler/runtime/CLI.
+    """
+
+    timeout_seconds: int = _HTTP_TIMEOUT_SECONDS
+    max_metadata_bytes: int = 8 * 1024 * 1024
+    max_bundle_bytes: int = 128 * 1024 * 1024
+    max_bundle_members: int = 8192
+    max_member_bytes: int = 64 * 1024 * 1024
+    max_total_bytes: int = 256 * 1024 * 1024
+
+
+_OCI_LIMITS = _OCIResourceLimits()
+
+
+class _CappableResponse(Protocol):
+    """Minimal HTTP-response surface the bounded reader depends on.
+
+    Structural view of ``http.client.HTTPResponse`` (the ``urlopen`` return) so the
+    reader is typed without a bare ``Any``: it only needs a size-capped ``read`` and,
+    optionally, response headers for the advisory Content-Length pre-check.
+    """
+
+    def read(self, amt: int = ..., /) -> bytes: ...
+
+
+def _declared_content_length(response: _CappableResponse) -> int | None:
+    """Return a validated Content-Length, or ``None`` when the header is absent.
+
+    Content-Length is advisory and attacker-controlled, so it is only ever used to
+    reject early - never to size a buffer or to substitute for counting the bytes
+    actually read.
+    """
+    headers = getattr(response, "headers", None)
+    raw = headers.get("Content-Length") if headers is not None else None
+    if raw is None:
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise SDLParseError(f"OCI response declares an invalid Content-Length: {raw!r}") from exc
+    if value < 0:
+        raise SDLParseError(f"OCI response declares a negative Content-Length: {value}")
+    return value
+
+
+def _read_capped(response: _CappableResponse, *, url: str, max_bytes: int) -> bytes:
+    """Read at most ``max_bytes`` from ``response``, failing closed if exceeded.
+
+    Rejecting an oversized advisory ``Content-Length`` avoids even starting the
+    read; the authoritative check reads ``max_bytes + 1`` so the in-memory buffer
+    stays bounded and a registry cannot force the resolver to buffer an unbounded
+    blob. Messages name the limit and the safe URL only - never the body.
+    """
+    declared = _declared_content_length(response)
+    if declared is not None and declared > max_bytes:
+        raise SDLParseError(
+            f"OCI response from {url} declares Content-Length {declared} bytes, exceeding the {max_bytes}-byte limit"
+        )
+    data = response.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise SDLParseError(f"OCI response from {url} exceeds the {max_bytes}-byte limit")
+    return data
+
+
+def _json_request(url: str, *, headers: dict[str, str] | None = None, max_bytes: int | None = None) -> dict[str, Any]:
     request = Request(url, headers=headers or {})
+    limit = _OCI_LIMITS.max_metadata_bytes if max_bytes is None else max_bytes
     try:
         with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:
-            return json.loads(response.read().decode("utf-8"))
+            return json.loads(_read_capped(response, url=url, max_bytes=limit).decode("utf-8"))
     except (HTTPError, URLError, json.JSONDecodeError) as exc:
         raise SDLParseError(f"Failed to fetch OCI metadata from {url}: {exc}") from exc
 
 
-def _bytes_request(url: str, *, headers: dict[str, str] | None = None) -> bytes:
+def _bytes_request(url: str, *, headers: dict[str, str] | None = None, max_bytes: int | None = None) -> bytes:
     request = Request(url, headers=headers or {})
+    limit = _OCI_LIMITS.max_metadata_bytes if max_bytes is None else max_bytes
     try:
         with urlopen(request, timeout=_HTTP_TIMEOUT_SECONDS) as response:
-            return response.read()
+            return _read_capped(response, url=url, max_bytes=limit)
     except (HTTPError, URLError) as exc:
         raise SDLParseError(f"Failed to fetch OCI blob from {url}: {exc}") from exc
 
@@ -293,6 +381,39 @@ def _oci_cache_dir(base_dir: Path) -> Path:
     return base_dir / ".aces" / "module-cache"
 
 
+def _validate_tar_member_shape(
+    member: tarfile.TarInfo,
+    *,
+    dest: Path,
+    resolved_dest: Path,
+    seen_paths: set[str],
+    limits: _OCIResourceLimits,
+) -> None:
+    """Fail closed on an unsafe or oversized single tar member (issues #12/#13).
+
+    Rejects path traversal, symlinks, hard links, special files, and duplicate
+    normalized paths, and enforces the per-member extracted-size cap. Records the
+    member's normalized path in ``seen_paths`` so a later duplicate is caught.
+    """
+    member_path = (dest / member.name).resolve()
+    if not member_path.is_relative_to(resolved_dest):
+        raise SDLParseError(f"Path traversal detected in OCI bundle tar member: {member.name!r}")
+    if member.issym() or member.islnk():
+        raise SDLParseError(f"Links are not allowed in OCI bundle tar: {member.name!r}")
+    if not (member.isfile() or member.isdir()):
+        raise SDLParseError(f"Unsupported tar member type in OCI bundle: {member.name!r}")
+    normalized = member_path.as_posix()
+    if normalized in seen_paths:
+        raise SDLParseError(f"Duplicate tar member path in OCI bundle: {member.name!r}")
+    seen_paths.add(normalized)
+    # Account by the logical member size so a sparse or padded member cannot
+    # understate the bytes it will extract.
+    if member.isfile() and member.size > limits.max_member_bytes:
+        raise SDLParseError(
+            f"OCI bundle member {member.name!r} exceeds the {limits.max_member_bytes}-byte per-member limit"
+        )
+
+
 def _safe_tar_members(
     tar: tarfile.TarFile,
     dest: Path,
@@ -307,17 +428,35 @@ def _safe_tar_members(
     Python 3.11.4 while the project supports ``>=3.11``. Validation therefore
     matches the ``data`` filter's guarantees: reject path traversal, symlinks,
     hard links, and special files, and strip setuid/setgid/sticky bits.
+
+    It is also the resource-exhaustion boundary (issue #12): the archive member
+    count, per-member extracted size, and total extracted bytes are bounded by
+    ``_OCI_LIMITS`` and duplicate normalized paths are rejected, so a malicious or
+    oversized bundle cannot exhaust disk or CPU during extraction.
     """
+    limits = _OCI_LIMITS
     safe: list[tarfile.TarInfo] = []
     resolved_dest = dest.resolve()
-    for member in tar.getmembers():
-        member_path = (dest / member.name).resolve()
-        if not member_path.is_relative_to(resolved_dest):
-            raise SDLParseError(f"Path traversal detected in OCI bundle tar member: {member.name!r}")
-        if member.issym() or member.islnk():
-            raise SDLParseError(f"Links are not allowed in OCI bundle tar: {member.name!r}")
-        if not (member.isfile() or member.isdir()):
-            raise SDLParseError(f"Unsupported tar member type in OCI bundle: {member.name!r}")
+    seen_paths: set[str] = set()
+    total_bytes = 0
+    # Iterate lazily rather than materialising ``tar.getmembers()`` so a bundle that
+    # declares an unbounded member list, or expands into an unbounded extraction, is
+    # rejected as soon as a cap is crossed - before the remainder of the archive is
+    # decompressed (issue #12).
+    for member_count, member in enumerate(tar, start=1):
+        if member_count > limits.max_bundle_members:
+            raise SDLParseError(f"OCI bundle exceeds the maximum of {limits.max_bundle_members} archive members")
+        _validate_tar_member_shape(
+            member,
+            dest=dest,
+            resolved_dest=resolved_dest,
+            seen_paths=seen_paths,
+            limits=limits,
+        )
+        if member.isfile():
+            total_bytes += member.size
+            if total_bytes > limits.max_total_bytes:
+                raise SDLParseError(f"OCI bundle exceeds the {limits.max_total_bytes}-byte total extraction limit")
         # Drop setuid/setgid/sticky bits.
         member.mode &= 0o777
         safe.append(member)
@@ -523,13 +662,21 @@ def resolve_import(
         raise SDLParseError(f"OCI module '{source}' is missing config or bundle layer")
     config_digest = str(config.get("digest", ""))
     layer_digest = str(layer.get("digest", ""))
-    config_payload = json.loads(
-        _bytes_request(f"{base_url}/v2/{quote(repository, safe='/')}/blobs/{quote(config_digest, safe=':@/')}").decode(
-            "utf-8"
-        )
+    # Verify the config blob bytes hash to the manifest's config.digest BEFORE
+    # decoding the JSON (issue #14). Fetching by digest is not integrity: a
+    # compromised registry can serve arbitrary bytes for the config endpoint, and
+    # those bytes carry the unsigned-by-default root_file that selects the module
+    # entrypoint. Hash the exact bytes received - never a reserialized object -
+    # and reuse the bundle's digest spelling.
+    config_bytes = _bytes_request(
+        f"{base_url}/v2/{quote(repository, safe='/')}/blobs/{quote(config_digest, safe=':@/')}"
     )
+    if f"sha256:{_sha256_digest(config_bytes)}" != config_digest:
+        raise SDLParseError(f"OCI module '{source}' config digest verification failed")
+    config_payload = json.loads(config_bytes.decode("utf-8"))
     bundle_bytes = _bytes_request(
-        f"{base_url}/v2/{quote(repository, safe='/')}/blobs/{quote(layer_digest, safe=':@/')}"
+        f"{base_url}/v2/{quote(repository, safe='/')}/blobs/{quote(layer_digest, safe=':@/')}",
+        max_bytes=_OCI_LIMITS.max_bundle_bytes,
     )
     if f"sha256:{_sha256_digest(bundle_bytes)}" != layer_digest:
         raise SDLParseError(f"OCI module '{source}' bundle digest verification failed")
@@ -548,6 +695,14 @@ def resolve_import(
         )
     content_digest = layer_digest
     _validate_digest_pin(content_digest, import_decl.digest, source=source)
+    # Resolve the config-declared root_file as a single string before it reaches
+    # the signature payload or extraction (issue #14). Signing and extracting the
+    # SAME value closes the gap where a signature verified over a default root_file
+    # while a different attacker-declared root_file was extracted.
+    raw_root_file = config_payload.get("root_file", "module.yaml")
+    if not isinstance(raw_root_file, str):
+        raise SDLParseError(f"OCI module '{source}' declares a non-string root_file")
+    root_file = raw_root_file
     signer_id = ""
     if registry_policy.require_signatures:
         signer_id = _verify_signatures(
@@ -555,8 +710,8 @@ def resolve_import(
             trust_policy=registry_policy,
             module_descriptor=descriptor,
             content_digest=content_digest,
+            root_file=root_file,
         )
-    root_file = str(config_payload.get("root_file", "module.yaml"))
     resolved_root = _extract_bundle_to_cache(
         bundle_bytes=bundle_bytes,
         manifest_digest=manifest_digest.replace("sha256:", ""),
@@ -674,7 +829,9 @@ def publish_module_to_oci_layout(
         )
         if not isinstance(private_key, Ed25519PrivateKey):
             raise SDLParseError("Publishing key must be an Ed25519 private key")
-        signature = private_key.sign(_signable_payload(descriptor, content_digest=content_digest))
+        signature = private_key.sign(
+            _signable_payload(descriptor, content_digest=content_digest, root_file=root_path.name)
+        )
         signatures.append(
             {
                 "signer_id": signer_id,

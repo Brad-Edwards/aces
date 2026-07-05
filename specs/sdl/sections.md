@@ -63,6 +63,7 @@ and defaults to an empty map when omitted.
 | `action_contracts` | optional | identifier | other `action_contracts` (interactions) |
 | `observation_boundaries` | optional | identifier | own information refs (observable/hidden/evidence) |
 | `outcome_interpretation_rules` | optional | identifier | `action_contracts`, `objectives`, `workflows`, `evaluations` |
+| `evidence_requirements` | optional | identifier | targetable elements for source, scope, channel, trigger, and boundary refs; distinct from `objectives` and scenario-native observability systems ([observability-and-evidence.md](observability-and-evidence.md)) |
 | `objectives` | optional | identifier | `agents`/`entities` (actor), `action_contracts` (action), targetable elements (target), `conditions`/`metrics`/`evaluations`/`tlos`/`goals` (success), `stories`/`scripts`/`events`/`workflows` (window), other `objectives` (depends_on, acyclic) |
 | `workflows` | optional | identifier | own steps (`start`, successors), other `workflows` (compensation), assessment sections (predicates) |
 | `variables` | optional | identifier matching `[A-Za-z_][A-Za-z0-9_-]*` | referenced by `${…}` placeholders ([variables-and-instantiation.md](variables-and-instantiation.md)) |

@@ -130,6 +130,56 @@ module_boundaries:
       public_import_prefixes:
         aces_runtime:
           - aces_runtime.registry
+    - id: aces_backend_libvirt
+      root: implementations/python/packages/aces_backend_libvirt
+      allowed_top_level_imports:
+        - aces_backend_protocols
+        - aces_contracts
+        - aces_runtime
+      forbidden_import_prefixes:
+        - aces_backend_stubs
+        - aces_cli
+        - aces_conformance
+        - aces_mcp
+        - aces_processor
+        - aces_reference_backend
+        - aces_sdl
+      public_import_prefixes:
+        aces_runtime:
+          - aces_runtime.registry
+    - id: aces_operations
+      root: implementations/python/packages/aces_operations
+      allowed_top_level_imports:
+        - aces_backend_libvirt
+        # Pure, side-effect-free manifest/capability renderers only (see
+        # public_import_prefixes below). aces_operations embeds the canonical
+        # BackendManifestV2 payload + capability-gap report in the libvirt
+        # scenario-evidence artifact instead of a hand-rolled summary, so the
+        # evidence carries the same backend contract the rest of the stack uses.
+        - aces_backend_protocols
+        - aces_contracts
+        - aces_runtime
+        - aces_sdl
+      forbidden_import_prefixes:
+        - aces_backend_stubs
+        - aces_cli
+        - aces_conformance
+        - aces_mcp
+        - aces_processor
+        - aces_reference_backend
+      public_import_prefixes:
+        aces_backend_libvirt:
+          - aces_backend_libvirt.target
+          - aces_backend_libvirt.techvault_native
+        aces_backend_protocols:
+          - aces_backend_protocols.manifest
+          - aces_backend_protocols.capabilities
+        aces_runtime:
+          - aces_runtime.control_plane
+          - aces_runtime.manager
+          - aces_runtime.registry
+        aces_sdl:
+          - aces_sdl.parser
     - id: aces_conformance
       root: implementations/python/packages/aces_conformance
       allowed_top_level_imports:
@@ -154,11 +204,16 @@ module_boundaries:
       allowed_top_level_imports:
         - aces_contracts
         - aces_conformance
+        - aces_operations
         - aces_processor
         - aces_sdl
       forbidden_import_prefixes:
         - aces_runtime
       public_import_prefixes:
+        aces_operations:
+          - aces_operations.libvirt_evidence_run
+          - aces_operations.cross_backend_corpus
+          - aces_operations.techvault_live
         aces_processor:
           - aces_processor.manifest
           - aces_processor.models
