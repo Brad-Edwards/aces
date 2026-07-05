@@ -24,6 +24,7 @@ unpublished, first-class contract shape the relation operates over.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from enum import Enum
 from typing import Annotated, Literal
 
@@ -319,18 +320,21 @@ class RealizationEnvelopeModel(ContractModel):
                 raise ValueError(f"witness policy selection for domain '{domain_name}' is not a domain member")
 
 
+# Per-domain-kind predicates, dispatched by type to keep the public entry points
+# flat (SonarCloud caps returns/complexity per function; type-dispatch chains
+# otherwise trip S1142 / cognitive-complexity).
+_SINGLETON_DOMAIN_CHECKS: dict[type, Callable[..., bool]] = {
+    ExactDomain: lambda descriptor: True,
+    EnumDomain: lambda descriptor: len(descriptor.values) == 1,
+    BooleanDomain: lambda descriptor: descriptor.value is not None,
+    NumericIntervalDomain: lambda descriptor: descriptor.lower == descriptor.upper,
+    GovernedReferenceDomain: lambda descriptor: len(descriptor.allowed_refs) == 1,
+}
+
+
 def _is_singleton_domain(descriptor: DomainDescriptor) -> bool:
-    if isinstance(descriptor, ExactDomain):
-        return True
-    if isinstance(descriptor, EnumDomain):
-        return len(descriptor.values) == 1
-    if isinstance(descriptor, BooleanDomain):
-        return descriptor.value is not None
-    if isinstance(descriptor, NumericIntervalDomain):
-        return descriptor.lower == descriptor.upper
-    if isinstance(descriptor, GovernedReferenceDomain):
-        return len(descriptor.allowed_refs) == 1
-    return False
+    check = _SINGLETON_DOMAIN_CHECKS.get(type(descriptor))
+    return bool(check(descriptor)) if check is not None else False
 
 
 def scalar_matches_numeric_type(value: object, numeric_type: NumericType) -> bool:
@@ -345,30 +349,54 @@ def scalar_matches_numeric_type(value: object, numeric_type: NumericType) -> boo
     return isinstance(value, (int, float))
 
 
+def _scalar_eq(value: object, member: DomainScalar) -> bool:
+    """Type-strict scalar equality so ``True`` never equals ``1``."""
+    return type(value) is type(member) and value == member
+
+
+def _exact_member(value: object, descriptor: ExactDomain) -> bool:
+    return _scalar_eq(value, descriptor.value)
+
+
+def _enum_member(value: object, descriptor: EnumDomain) -> bool:
+    return any(_scalar_eq(value, member) for member in descriptor.values)
+
+
+def _boolean_member(value: object, descriptor: BooleanDomain) -> bool:
+    return isinstance(value, bool) and (descriptor.value is None or value == descriptor.value)
+
+
+def _interval_member(value: object, descriptor: NumericIntervalDomain) -> bool:
+    if not scalar_matches_numeric_type(value, descriptor.numeric_type):
+        return False
+    # narrowed to a number by scalar_matches_numeric_type above
+    numeric = float(value)
+    lower_ok = numeric >= descriptor.lower if descriptor.lower_closed else numeric > descriptor.lower
+    upper_ok = numeric <= descriptor.upper if descriptor.upper_closed else numeric < descriptor.upper
+    return lower_ok and upper_ok
+
+
+def _governed_member(value: object, descriptor: GovernedReferenceDomain) -> bool:
+    return isinstance(value, str) and value in descriptor.allowed_refs
+
+
+_SCALAR_MEMBER_CHECKS: dict[type, Callable[..., bool]] = {
+    ExactDomain: _exact_member,
+    EnumDomain: _enum_member,
+    BooleanDomain: _boolean_member,
+    NumericIntervalDomain: _interval_member,
+    GovernedReferenceDomain: _governed_member,
+}
+
+
 def scalar_in_domain(value: object, descriptor: DomainDescriptor) -> bool:
     """Structural membership for the scalar domain kinds.
 
-    This is the single scalar-membership engine, hosted in the contract layer so
-    both the contract's own ``witness_policy`` validation and the higher-level
-    relation in ``aces_sdl.realization_envelope`` (which cannot be imported here
-    without a dependency cycle) share one definition. Record domains are product
-    structures, not scalars, and are handled by the relation engine.
+    The single scalar-membership engine, hosted in the contract layer so both the
+    contract's own ``witness_policy`` validation and the relation in
+    ``aces_sdl.realization_envelope`` (which cannot import this module without a
+    dependency cycle) share one definition. Record domains are product structures,
+    not scalars, and are handled by the relation engine.
     """
-    if isinstance(descriptor, ExactDomain):
-        return type(value) is type(descriptor.value) and value == descriptor.value
-    if isinstance(descriptor, EnumDomain):
-        return any(type(value) is type(member) and value == member for member in descriptor.values)
-    if isinstance(descriptor, BooleanDomain):
-        if not isinstance(value, bool):
-            return False
-        return descriptor.value is None or value == descriptor.value
-    if isinstance(descriptor, NumericIntervalDomain):
-        if not scalar_matches_numeric_type(value, descriptor.numeric_type):
-            return False
-        numeric = float(value)
-        lower_ok = numeric >= descriptor.lower if descriptor.lower_closed else numeric > descriptor.lower
-        upper_ok = numeric <= descriptor.upper if descriptor.upper_closed else numeric < descriptor.upper
-        return lower_ok and upper_ok
-    if isinstance(descriptor, GovernedReferenceDomain):
-        return isinstance(value, str) and value in descriptor.allowed_refs
-    return False
+    check = _SCALAR_MEMBER_CHECKS.get(type(descriptor))
+    return check(value, descriptor) if check is not None else False

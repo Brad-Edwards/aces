@@ -3,9 +3,9 @@
 One deterministic semantic relation over :class:`RealizationEnvelopeModel` and
 validated SDL instances (ADR-070 §2, ``specs/formal/realization/envelope-semantics.md``
 R1-R8). Membership, subsumption, witness generation, and negative-probe generation
-share a single domain-comparison and closure engine
-(:mod:`aces_sdl._realization_envelope_engine`) — there are no separate author-side,
-backend-side, or conformance-side interpretations.
+share a single flattening/closure engine (:mod:`aces_sdl._realization_envelope_engine`)
+and domain-kind dispatch (:mod:`aces_sdl._realization_envelope_domains`) — there are
+no separate author-side, backend-side, or conformance-side interpretations.
 
 Guarantees:
 
@@ -32,22 +32,20 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any
 
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.realization_envelope import Posture, RealizationEnvelopeModel, WitnessPolicy, scalar_in_domain
 from pydantic import ValidationError
 
 from ._errors import SDLInstantiationError, SDLValidationError
+from ._realization_envelope_domains import _MISSING, domain_subset, out_of_domain_value
 from ._realization_envelope_engine import (
-    _MISSING,
+    LeafConstraint,
     assign_path,
-    domain_subset,
     effective_constraints,
     fresh_extra_key,
     navigate,
     normalize_scalar,
-    out_of_domain_value,
     overridability_violations,
     present_children,
     remove_path,
@@ -104,7 +102,7 @@ class NegativeProbe:
     path: str
     domain_kind: str
     variation: str
-    payload: dict[str, Any]
+    payload: dict[str, object]
 
 
 def _diag(code: str, address: str, message: str, severity: Severity = Severity.ERROR) -> Diagnostic:
@@ -121,9 +119,7 @@ def _envelope_r2_diagnostics(envelope: RealizationEnvelopeModel) -> tuple[Diagno
 
     return tuple(
         _diag(
-            "invalid.non-overrideable-widen",
-            path,
-            "a more-specific binding widens a non-overrideable inherited value",
+            "invalid.non-overrideable-widen", path, "a more-specific binding widens a non-overrideable inherited value"
         )
         for path in overridability_violations(envelope)
     )
@@ -134,44 +130,35 @@ def _envelope_r2_diagnostics(envelope: RealizationEnvelopeModel) -> tuple[Diagno
 # --------------------------------------------------------------------------- #
 
 
-def member(instance: InstantiatedScenario, envelope: RealizationEnvelopeModel) -> RelationResult:
-    """Decide whether ``instance`` is a member of ``envelope`` (R1)."""
+def _member_sdl_invalid(instance: InstantiatedScenario, envelope: RealizationEnvelopeModel) -> RelationResult | None:
+    """Return a deny result when the instance is not semantically valid SDL (R1)."""
 
-    invalid = _envelope_r2_diagnostics(envelope)
-    if invalid:
-        return RelationResult(False, invalid)
+    if getattr(instance, "semantic_validated", False):
+        return None
+    try:
+        SemanticValidator(instance).validate()
+    except SDLValidationError:
+        return RelationResult(
+            False,
+            (_diag(f"{RelationKind.MEMBERSHIP}.invalid-sdl", envelope.id, "instance failed SDL semantic validation"),),
+        )
+    return None
 
+
+def _member_constraint_diagnostics(
+    instance: InstantiatedScenario, constraints: dict[str, LeafConstraint]
+) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
-
-    if not getattr(instance, "semantic_validated", False):
-        try:
-            SemanticValidator(instance).validate()
-        except SDLValidationError:
-            return RelationResult(
-                False,
-                (
-                    _diag(
-                        f"{RelationKind.MEMBERSHIP}.invalid-sdl", envelope.id, "instance failed SDL semantic validation"
-                    ),
-                ),
-            )
-
-    constraints, closed = effective_constraints(envelope)
-    satisfied = True
-
     for path, constraint in constraints.items():
         found, value = navigate(instance, tokenize_path(path))
         if not found or value is None:
             # A constrained/exact dimension left unspecified (missing field, or an
             # optional field defaulting to ``None``) is not a member. Domains never
             # admit ``None`` (they range over scalars), so this is always absence.
-            satisfied = False
             diagnostics.append(
                 _diag(f"{RelationKind.MEMBERSHIP}.path-absent", path, "constrained path is unspecified in the instance")
             )
-            continue
-        if not scalar_in_domain(normalize_scalar(value), constraint.domain):
-            satisfied = False
+        elif not scalar_in_domain(normalize_scalar(value), constraint.domain):
             diagnostics.append(
                 _diag(
                     f"{RelationKind.MEMBERSHIP}.domain-mismatch",
@@ -179,33 +166,118 @@ def member(instance: InstantiatedScenario, envelope: RealizationEnvelopeModel) -
                     f"value is not in the {constraint.domain.kind} domain",
                 )
             )
+    return diagnostics
 
-    for scope_path in sorted(closed):
-        admitted = closed[scope_path]
-        if scope_path:
-            found, scope_value = navigate(instance, tokenize_path(scope_path))
-            if not found:
-                continue
-        else:
-            scope_value = instance
-        for child in sorted(present_children(scope_value)):
-            if child not in admitted:
-                satisfied = False
-                address = f"{scope_path}.{child}" if scope_path else child
-                diagnostics.append(
-                    _diag(
-                        f"{RelationKind.MEMBERSHIP}.closed-world-extra",
-                        address,
-                        "closed-world scope admits no unspecified realizable dimension",
-                    )
+
+_UNRESOLVED = object()
+
+
+def _resolve_scope_value(instance: InstantiatedScenario, scope_path: str) -> object:
+    """Value at ``scope_path`` (the whole instance for the root), or ``_UNRESOLVED``."""
+
+    if not scope_path:
+        return instance
+    found, value = navigate(instance, tokenize_path(scope_path))
+    return value if found else _UNRESOLVED
+
+
+def _closed_extra_diagnostics(scope_path: str, scope_value: object, admitted: set[str]) -> list[Diagnostic]:
+    """Diagnostics for realizable child dimensions not admitted under a closed scope."""
+
+    diagnostics: list[Diagnostic] = []
+    for child in sorted(present_children(scope_value)):
+        if child not in admitted:
+            address = f"{scope_path}.{child}" if scope_path else child
+            diagnostics.append(
+                _diag(
+                    f"{RelationKind.MEMBERSHIP}.closed-world-extra",
+                    address,
+                    "closed-world scope admits no unspecified realizable dimension",
                 )
+            )
+    return diagnostics
 
-    return RelationResult(satisfied, tuple(diagnostics))
+
+def _member_closed_diagnostics(instance: InstantiatedScenario, closed: dict[str, set[str]]) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    for scope_path in sorted(closed):
+        scope_value = _resolve_scope_value(instance, scope_path)
+        if scope_value is not _UNRESOLVED:
+            diagnostics.extend(_closed_extra_diagnostics(scope_path, scope_value, closed[scope_path]))
+    return diagnostics
+
+
+def member(instance: InstantiatedScenario, envelope: RealizationEnvelopeModel) -> RelationResult:
+    """Decide whether ``instance`` is a member of ``envelope`` (R1)."""
+
+    invalid = _envelope_r2_diagnostics(envelope)
+    if invalid:
+        return RelationResult(False, invalid)
+
+    sdl_invalid = _member_sdl_invalid(instance, envelope)
+    if sdl_invalid is not None:
+        return sdl_invalid
+
+    constraints, closed = effective_constraints(envelope)
+    diagnostics = _member_constraint_diagnostics(instance, constraints) + _member_closed_diagnostics(instance, closed)
+    return RelationResult(not diagnostics, tuple(diagnostics))
 
 
 # --------------------------------------------------------------------------- #
 # Subsumption (R4)                                                            #
 # --------------------------------------------------------------------------- #
+
+
+def _subsumption_domain_diagnostics(
+    offered: dict[str, LeafConstraint], requested: dict[str, LeafConstraint]
+) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    for path in sorted(set(offered) | set(requested)):
+        offered_constraint = offered.get(path)
+        if offered_constraint is None:
+            # offered is open/universal here: it admits any requested value
+            continue
+        requested_constraint = requested.get(path)
+        if requested_constraint is None:
+            diagnostics.append(
+                _diag(
+                    f"{RelationKind.SUBSUMPTION}.requested-unconstrained",
+                    path,
+                    "requested leaves a path open that offered constrains",
+                )
+            )
+        elif not domain_subset(requested_constraint.domain, offered_constraint.domain):
+            diagnostics.append(
+                _diag(
+                    f"{RelationKind.SUBSUMPTION}.domain-not-subset",
+                    path,
+                    "requested domain is not a subset of the offered domain",
+                )
+            )
+    return diagnostics
+
+
+def _subsumption_closure_diagnostics(offered: dict[str, set[str]], requested: dict[str, set[str]]) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    for scope_path in sorted(offered):
+        label = scope_path or "<scenario>"
+        if scope_path not in requested:
+            diagnostics.append(
+                _diag(
+                    f"{RelationKind.SUBSUMPTION}.closure-mismatch",
+                    label,
+                    "offered is closed-world where requested is open-world",
+                )
+            )
+        elif not requested[scope_path].issubset(offered[scope_path]):
+            diagnostics.append(
+                _diag(
+                    f"{RelationKind.SUBSUMPTION}.closed-extra",
+                    label,
+                    "requested admits a closed dimension offered does not",
+                )
+            )
+    return diagnostics
 
 
 def subsumes(offered: RealizationEnvelopeModel, requested: RealizationEnvelopeModel) -> RelationResult:
@@ -217,58 +289,10 @@ def subsumes(offered: RealizationEnvelopeModel, requested: RealizationEnvelopeMo
 
     offered_constraints, offered_closed = effective_constraints(offered)
     requested_constraints, requested_closed = effective_constraints(requested)
-    diagnostics: list[Diagnostic] = []
-    holds = True
-
-    for path in sorted(set(offered_constraints) | set(requested_constraints)):
-        offered_constraint = offered_constraints.get(path)
-        requested_constraint = requested_constraints.get(path)
-        if offered_constraint is None:
-            # Offered is open/universal at this path: it admits any requested value.
-            continue
-        if requested_constraint is None:
-            holds = False
-            diagnostics.append(
-                _diag(
-                    f"{RelationKind.SUBSUMPTION}.requested-unconstrained",
-                    path,
-                    "requested leaves a path open that offered constrains",
-                )
-            )
-            continue
-        if not domain_subset(requested_constraint.domain, offered_constraint.domain):
-            holds = False
-            diagnostics.append(
-                _diag(
-                    f"{RelationKind.SUBSUMPTION}.domain-not-subset",
-                    path,
-                    "requested domain is not a subset of the offered domain",
-                )
-            )
-
-    for scope_path in sorted(offered_closed):
-        offered_admitted = offered_closed[scope_path]
-        if scope_path not in requested_closed:
-            holds = False
-            diagnostics.append(
-                _diag(
-                    f"{RelationKind.SUBSUMPTION}.closure-mismatch",
-                    scope_path or "<scenario>",
-                    "offered is closed-world where requested is open-world",
-                )
-            )
-            continue
-        if not requested_closed[scope_path] <= offered_admitted:
-            holds = False
-            diagnostics.append(
-                _diag(
-                    f"{RelationKind.SUBSUMPTION}.closed-extra",
-                    scope_path or "<scenario>",
-                    "requested admits a closed dimension offered does not",
-                )
-            )
-
-    return RelationResult(holds, tuple(diagnostics))
+    diagnostics = _subsumption_domain_diagnostics(
+        offered_constraints, requested_constraints
+    ) + _subsumption_closure_diagnostics(offered_closed, requested_closed)
+    return RelationResult(not diagnostics, tuple(diagnostics))
 
 
 # --------------------------------------------------------------------------- #
@@ -276,30 +300,23 @@ def subsumes(offered: RealizationEnvelopeModel, requested: RealizationEnvelopeMo
 # --------------------------------------------------------------------------- #
 
 
-def witness(envelope: RealizationEnvelopeModel, policy: WitnessPolicy | None = None) -> WitnessResult:
-    """Deterministically derive one in-envelope scenario instance (R5)."""
-
-    invalid = _envelope_r2_diagnostics(envelope)
-    if invalid:
-        return WitnessResult(None, invalid)
-
+def _build_witness_payload(
+    envelope: RealizationEnvelopeModel, policy: WitnessPolicy | None
+) -> tuple[dict[str, object], list[Diagnostic]]:
     effective_policy = policy if policy is not None else envelope.witness_policy
     constraints, _closed = effective_constraints(envelope)
-    payload: dict[str, Any] = {}
+    payload: dict[str, object] = {}
     diagnostics: list[Diagnostic] = []
-
     for path in sorted(constraints):
         value, error = witness_value(constraints[path], effective_policy)
+        if error is None:
+            error = assign_path(payload, tokenize_path(path), value)
         if error is not None:
             diagnostics.append(_diag(f"{RelationKind.WITNESS}.no-witness", path, error))
-            continue
-        assign_error = assign_path(payload, tokenize_path(path), value)
-        if assign_error is not None:
-            diagnostics.append(_diag(f"{RelationKind.WITNESS}.no-witness", path, assign_error))
+    return payload, diagnostics
 
-    if diagnostics:
-        return WitnessResult(None, tuple(diagnostics))
 
+def _validate_witness_payload(payload: dict[str, object], envelope: RealizationEnvelopeModel) -> WitnessResult:
     try:
         raw = Scenario.model_validate(payload)
         raw._set_semantic_validated(False)
@@ -316,13 +333,50 @@ def witness(envelope: RealizationEnvelopeModel, policy: WitnessPolicy | None = N
                 ),
             ),
         )
-
     return WitnessResult(instantiated, ())
+
+
+def witness(envelope: RealizationEnvelopeModel, policy: WitnessPolicy | None = None) -> WitnessResult:
+    """Deterministically derive one in-envelope scenario instance (R5)."""
+
+    invalid = _envelope_r2_diagnostics(envelope)
+    if invalid:
+        return WitnessResult(None, invalid)
+    payload, diagnostics = _build_witness_payload(envelope, policy)
+    if diagnostics:
+        return WitnessResult(None, tuple(diagnostics))
+    return _validate_witness_payload(payload, envelope)
 
 
 # --------------------------------------------------------------------------- #
 # Negative probes (R6)                                                        #
 # --------------------------------------------------------------------------- #
+
+
+def _value_probes_for(base_payload: dict[str, object], path: str, constraint: LeafConstraint) -> list[NegativeProbe]:
+    probes: list[NegativeProbe] = []
+    variation_value = out_of_domain_value(constraint.domain)
+    if variation_value is not _MISSING:
+        payload = deepcopy(base_payload)
+        if assign_path(payload, tokenize_path(path), variation_value) is None:
+            probes.append(NegativeProbe(path, constraint.domain.kind, "value-outside-domain", payload))
+    if constraint.posture is Posture.EXACT:
+        omitted = deepcopy(base_payload)
+        if remove_path(omitted, tokenize_path(path)):
+            probes.append(NegativeProbe(path, constraint.domain.kind, "omitted-required-exact", omitted))
+    return probes
+
+
+def _closed_scope_probes(base_payload: dict[str, object], closed: dict[str, set[str]]) -> list[NegativeProbe]:
+    probes: list[NegativeProbe] = []
+    for scope_path in sorted(closed):
+        extra_key = fresh_extra_key(closed[scope_path])
+        payload = deepcopy(base_payload)
+        tokens = tokenize_path(scope_path) + [extra_key] if scope_path else [extra_key]
+        if assign_path(payload, tokens, "out-of-envelope") is None:
+            address = f"{scope_path}.{extra_key}" if scope_path else extra_key
+            probes.append(NegativeProbe(address, "closed-scope", "extra-dimension", payload))
+    return probes
 
 
 def generate_negative_probes(
@@ -345,43 +399,7 @@ def generate_negative_probes(
     base_payload = base.scenario.model_dump(mode="json", by_alias=True)
     constraints, closed = effective_constraints(envelope)
     probes: list[NegativeProbe] = []
-
     for path in sorted(constraints):
-        constraint = constraints[path]
-        variation_value = out_of_domain_value(constraint.domain)
-        if variation_value is _MISSING:
-            continue
-        payload = deepcopy(base_payload)
-        if assign_path(payload, tokenize_path(path), variation_value) is not None:
-            continue
-        probes.append(
-            NegativeProbe(
-                path=path, domain_kind=constraint.domain.kind, variation="value-outside-domain", payload=payload
-            )
-        )
-
-        if constraint.posture is Posture.EXACT:
-            omitted = deepcopy(base_payload)
-            if remove_path(omitted, tokenize_path(path)):
-                probes.append(
-                    NegativeProbe(
-                        path=path,
-                        domain_kind=constraint.domain.kind,
-                        variation="omitted-required-exact",
-                        payload=omitted,
-                    )
-                )
-
-    for scope_path in sorted(closed):
-        admitted = closed[scope_path]
-        extra_key = fresh_extra_key(admitted)
-        payload = deepcopy(base_payload)
-        tokens = tokenize_path(scope_path) + [extra_key] if scope_path else [extra_key]
-        if assign_path(payload, tokens, "out-of-envelope") is not None:
-            continue
-        address = f"{scope_path}.{extra_key}" if scope_path else extra_key
-        probes.append(
-            NegativeProbe(path=address, domain_kind="closed-scope", variation="extra-dimension", payload=payload)
-        )
-
+        probes.extend(_value_probes_for(base_payload, path, constraints[path]))
+    probes.extend(_closed_scope_probes(base_payload, closed))
     return tuple(probes), ()

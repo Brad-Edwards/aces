@@ -36,7 +36,7 @@ from aces_sdl import (
     instantiate_scenario,
     parse_sdl,
 )
-from aces_sdl._realization_envelope_engine import _MISSING, default_witness_value, out_of_domain_value
+from aces_sdl._realization_envelope_domains import _MISSING, default_witness_value, out_of_domain_value
 from aces_sdl.realization_envelope import generate_negative_probes, member, subsumes, witness
 from aces_sdl.scenario import InstantiatedScenario, Scenario
 from hypothesis import given, settings
@@ -340,7 +340,8 @@ def _probe_is_out_of_envelope(payload: dict, env: RealizationEnvelopeModel) -> b
     try:
         instance = instantiate_scenario(Scenario.model_validate(payload))
     except (ValidationError, SDLValidationError, SDLInstantiationError):
-        return True  # invalid SDL is never a member; any other exception is a real bug and must propagate
+        # invalid SDL is never a member; any other exception is a real bug and must propagate
+        return True
     return not member(instance, env).holds
 
 
