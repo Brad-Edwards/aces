@@ -1,0 +1,3 @@
+{"id": "bad-exact", "scope": "scenario",
+ "domains": {"os": {"kind": "enum", "values": ["linux", "windows"]}},
+ "bindings": [{"path": "nodes.web.os", "scope": "field", "posture": "exact", "domain": "os"}]}

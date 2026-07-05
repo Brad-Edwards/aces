@@ -1,0 +1,3 @@
+{"id": "bad-interval", "scope": "node",
+ "domains": {"cpu": {"kind": "numeric-interval", "numeric_type": "integer", "lower": 8, "upper": 1}},
+ "bindings": []}

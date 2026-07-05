@@ -1,0 +1,15 @@
+{
+  "id": "web-family-v1",
+  "scope": "scenario",
+  "domains": {
+    "scenario_name": {"kind": "exact", "value": "web-family"},
+    "node_type": {"kind": "exact", "value": "vm"},
+    "os": {"kind": "enum", "values": ["linux", "windows"]}
+  },
+  "bindings": [
+    {"path": "name", "scope": "scenario", "posture": "exact", "domain": "scenario_name"},
+    {"path": "nodes.web.type", "scope": "node", "posture": "exact", "domain": "node_type"},
+    {"path": "nodes.web.os", "scope": "field", "posture": "constrained", "domain": "os"}
+  ],
+  "witness_policy": {"seed": "linux-first", "selections": {"os": "linux"}}
+}
