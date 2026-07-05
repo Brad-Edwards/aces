@@ -17613,8 +17613,11 @@
       "type": "object"
     },
     "variables": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Variable"
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z_][A-Za-z0-9_-]*$": {
+          "$ref": "#/$defs/Variable"
+        }
       },
       "title": "Variables",
       "type": "object"

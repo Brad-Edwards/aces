@@ -156,10 +156,10 @@
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "3377c548df57ad3af2b485561c7685b3883b9b93e0673be283005ad29c367e7c",
+      "content_hash": "21b5882778f3db00ee6ac4c7825e12b52ddbc9e7c14230bcf0fd4dc70b0303da",
       "last_change": {
-        "summary": "Added ai_offensive_behavior_refs to participant behavior specifications for the separately governed MITRE ATLAS tactic vocabulary.",
-        "content_hash": "3377c548df57ad3af2b485561c7685b3883b9b93e0673be283005ad29c367e7c"
+        "summary": "Constrained instantiated SDL variable map keys to the declared variable-name grammar.",
+        "content_hash": "21b5882778f3db00ee6ac4c7825e12b52ddbc9e7c14230bcf0fd4dc70b0303da"
       }
     },
     {
@@ -352,10 +352,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "c97cb7d5d9196aaef1628c2a12d9a397dd1e3edca7179399b57487371970ecd8",
+      "content_hash": "1cf332317657cc3dee87f98b42c02f8fb98400396de0119e0a6d2c9e93700668",
       "last_change": {
-        "summary": "Added ai_offensive_behavior_refs to authored participant behavior specifications for the separately governed MITRE ATLAS tactic vocabulary.",
-        "content_hash": "c97cb7d5d9196aaef1628c2a12d9a397dd1e3edca7179399b57487371970ecd8"
+        "summary": "Constrained authored SDL variable map keys to the declared variable-name grammar.",
+        "content_hash": "1cf332317657cc3dee87f98b42c02f8fb98400396de0119e0a6d2c9e93700668"
       }
     },
     {
