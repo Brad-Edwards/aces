@@ -7,7 +7,7 @@ implementation plan.
 
 `SEM-206` covers the assessment pipeline semantics for SDL conditions, metrics,
 evaluations, TLOs, goals, and their relationship to declarative objectives. The
-pipeline is:
+current incumbent pipeline is:
 
 ```text
 condition bindings -> metrics -> evaluations -> TLOs -> goals -> objectives
@@ -18,6 +18,16 @@ processor layer owns compiled evaluation resources, dependency semantics,
 capability checks, and runtime result contracts. The backend/evaluator boundary
 owns only portable evaluator result envelopes and history streams, not
 backend-native scoring state.
+
+Issue #671 reopens whether OCR-style scoring and CybORG-style reward labels
+belong in authored SDL at all. Until an ADR resolves that question, treat the
+existing pipeline as the compatibility surface to preserve, not as permission to
+expand scoring language. A reward, score, return, leaderboard value, or training
+signal is SDL meaning only when it changes the experiment within its horizon or
+is consumed by a participant in-run. Researcher-only scoring, model-training
+reward, leaderboard ranking, and downstream statistical analysis belong in
+experiment/evidence/derived-measure contracts or adapter-private evidence, not
+in a new SDL assessment shortcut.
 
 ## Incumbents To Reuse
 
@@ -37,6 +47,13 @@ backend-native scoring state.
   `validate_evaluation_result()`, and
   `RuntimeManager`'s evaluation result contract diagnostics are the shared
   enforcement path for evaluator payloads.
+- Participant outcome boundary: `ParticipantOutcomeReport` carriers and
+  SEM-215 interpretation rules remain relationship/provenance records. They do
+  not carry score, reward, or objective-success fields.
+- Experiment/evidence boundary: ADR-055 experiment tasks/runs/studies and
+  ADR-064 capture/evidence/derived-measure contracts own researcher-facing
+  metrics, analysis plans, evidence records, and derived measures outside live
+  SDL scenario meaning.
 - Contracts: `aces_contracts.contracts.ContractModel`, `schema_bundle()`, and
   generated `contracts/schemas/control-plane/evaluation-*-v1.json` remain the
   external shape authority.
@@ -53,6 +70,12 @@ backend-native scoring state.
 - Keep scoring resources distinct from objectives. Metrics, evaluations, TLOs,
   and goals define assessment structure; objectives bind actors, targets,
   success criteria, dependencies, and optional windows.
+- Keep participant reward/return signals distinct from SDL scoring resources.
+  `agents.reward_calculator` is an inherited source label, not a semantic
+  authority for objective success or evaluator aggregation. If a future ADR
+  retains it, the implementation must bind it through governed participant
+  runtime or experiment/evaluator contracts instead of interpreting the string
+  locally.
 - Keep ordering dependencies and refresh dependencies separate. Assessment
   aggregation uses ordering edges from prerequisite assessment resources;
   objective windows and condition-driven changes create refresh edges where
@@ -63,15 +86,18 @@ backend-native scoring state.
   resolves the reference.
 - Preserve the existing evaluator payload contract: `metric` reports score
   fields, while `condition-binding`, `evaluation`, `tlo`, `goal`, and
-  `objective` report `passed`. Any additional portable aggregation rule must compile into
-  the contract or a governed contract version, not into backend-private
-  convention.
+  `objective` report `passed`. Any additional portable aggregation rule must
+  compile into the contract or a governed contract version, not into
+  backend-private convention.
 - Treat `detail`, `details`, and `evidence_refs` as observation metadata, not
   as hidden scoring authority. They must not contain secrets, tokens, raw
   credentials, backend-private object dumps, or full tracebacks.
 - Extend controlled vocabulary, semantic profile, or contract authority only
   when portable comparison requires it. A local evaluator implementation detail
   does not belong in those surfaces.
+- Migrate or deprecate existing scenario scoring sections only under an
+  ADR-backed compatibility rule. Do not rewrite `metrics` / `evaluations` /
+  `tlos` / `goals` fixture by fixture to settle the design question locally.
 
 ## Required Gates
 
@@ -121,6 +147,8 @@ compare them. They should not be hard-coded as evaluator-specific strings.
 - Recomputing aggregation semantics independently in validator, compiler,
   planner, manager, and backend stubs.
 - Letting backend-native evaluator payloads become the observation contract.
+- Treating `agents.reward_calculator`, reward arrays, cumulative return, or
+  leaderboard score as a shortcut for SDL objective success.
 - Treating objectives as just another aggregation node, or treating goals/TLOs
   as actor-bound objectives.
 - Editing generated schemas under `contracts/schemas/` directly.
