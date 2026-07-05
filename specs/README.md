@@ -41,3 +41,6 @@ hook).
   agree with; governed by ADR-001 and ADR-009)
 - `formal/` — optional formal-methods artifacts for semantic and
   stateful subsystems (governed by ADR-007 and ADR-018)
+- `supply-chain/` — normative prose for the Packaging & Supply Chain
+  wave, including the reusable-asset trust/authenticity/integrity policy
+  (GOV-913, governed by ADR-071)
