@@ -6767,6 +6767,41 @@ class ReusableAssetAuthenticityPolicyModel(ContractModel):
     threshold: PositiveInteger
 
 
+def _reusable_asset_duplicate_evidence_classes(
+    requirements: list[ReusableAssetEvidenceRequirementModel],
+) -> list[str]:
+    classes = [requirement.evidence_class for requirement in requirements]
+    return sorted({value for value in classes if classes.count(value) > 1})
+
+
+def _reusable_asset_has_required_integrity(
+    requirements: list[ReusableAssetEvidenceRequirementModel],
+) -> bool:
+    return any(
+        requirement.evidence_class in _INTEGRITY_EVIDENCE_CLASSES and requirement.enforcement == "required"
+        for requirement in requirements
+    )
+
+
+def _reusable_asset_signature_enforced(
+    requirements: list[ReusableAssetEvidenceRequirementModel],
+) -> bool:
+    return any(
+        requirement.evidence_class == "authenticity_signature"
+        and requirement.enforcement in {"required", "recommended"}
+        for requirement in requirements
+    )
+
+
+def _reusable_asset_has_required_governance_source(
+    requirements: list[ReusableAssetEvidenceRequirementModel],
+) -> bool:
+    return any(
+        requirement.evidence_class == "governance_source" and requirement.enforcement == "required"
+        for requirement in requirements
+    )
+
+
 class ReusableAssetFamilyTrustPolicyModel(ContractModel):
     """Per-family trust/authenticity/integrity policy for a reusable asset."""
 
@@ -6777,26 +6812,17 @@ class ReusableAssetFamilyTrustPolicyModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_family_policy(self) -> ReusableAssetFamilyTrustPolicyModel:
-        classes = [requirement.evidence_class for requirement in self.evidence_requirements]
-        duplicates = sorted({value for value in classes if classes.count(value) > 1})
+        duplicates = _reusable_asset_duplicate_evidence_classes(self.evidence_requirements)
         if duplicates:
             raise ValueError(f"asset family {self.asset_family!r} declares duplicate evidence classes: {duplicates}")
 
-        has_required_integrity = any(
-            requirement.evidence_class in _INTEGRITY_EVIDENCE_CLASSES and requirement.enforcement == "required"
-            for requirement in self.evidence_requirements
-        )
-        if not has_required_integrity:
+        if not _reusable_asset_has_required_integrity(self.evidence_requirements):
             raise ValueError(
                 f"asset family {self.asset_family!r} must declare a required integrity evidence "
                 "class (integrity_digest or artifact_checksum); integrity is the GOV-913 baseline"
             )
 
-        signature_enforced = any(
-            requirement.evidence_class == "authenticity_signature"
-            and requirement.enforcement in {"required", "recommended"}
-            for requirement in self.evidence_requirements
-        )
+        signature_enforced = _reusable_asset_signature_enforced(self.evidence_requirements)
         if signature_enforced and self.authenticity_policy is None:
             raise ValueError(
                 f"asset family {self.asset_family!r} enforces authenticity_signature but declares no "
@@ -6809,17 +6835,14 @@ class ReusableAssetFamilyTrustPolicyModel(ContractModel):
                 "required/recommended authenticity_signature requirement"
             )
 
-        if self.asset_family == "behavior_vocabulary":
-            has_governance_source = any(
-                requirement.evidence_class == "governance_source" and requirement.enforcement == "required"
-                for requirement in self.evidence_requirements
+        if self.asset_family == "behavior_vocabulary" and not _reusable_asset_has_required_governance_source(
+            self.evidence_requirements
+        ):
+            raise ValueError(
+                "asset family 'behavior_vocabulary' must declare a required governance_source "
+                "evidence class; authoritative origin is a first-class evidence class for "
+                "reusable governed vocabularies"
             )
-            if not has_governance_source:
-                raise ValueError(
-                    "asset family 'behavior_vocabulary' must declare a required governance_source "
-                    "evidence class; authoritative origin is a first-class evidence class for "
-                    "reusable governed vocabularies"
-                )
         return self
 
     @classmethod
