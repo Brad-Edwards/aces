@@ -217,6 +217,7 @@ lessons/README
 migration/README
 research/experiment-core/index
 research/realization-envelope/index
+research/scoring-scope/index
 research/validation-admission-profiles/index
 research/primary/index
 research/related-work-comparison/index
