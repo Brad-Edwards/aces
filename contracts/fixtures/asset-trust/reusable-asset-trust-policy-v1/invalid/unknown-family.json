@@ -1,0 +1,108 @@
+{
+  "schema_version": "reusable-asset-trust-policy/v1",
+  "policy_id": "aces-reusable-asset-trust-policy",
+  "families": [
+    {
+      "asset_family": "reusable_scenario",
+      "identity_basis": "identity-basis-for-reusable_scenario",
+      "evidence_requirements": [
+        {
+          "evidence_class": "integrity_digest",
+          "enforcement": "required",
+          "mechanism_ref": "existing-mechanism",
+          "description": "baseline required integrity"
+        }
+      ]
+    },
+    {
+      "asset_family": "sdl_module",
+      "identity_basis": "identity-basis-for-sdl_module",
+      "evidence_requirements": [
+        {
+          "evidence_class": "integrity_digest",
+          "enforcement": "required",
+          "mechanism_ref": "existing-mechanism",
+          "description": "baseline required integrity"
+        }
+      ]
+    },
+    {
+      "asset_family": "experiment_task",
+      "identity_basis": "identity-basis-for-experiment_task",
+      "evidence_requirements": [
+        {
+          "evidence_class": "integrity_digest",
+          "enforcement": "required",
+          "mechanism_ref": "existing-mechanism",
+          "description": "baseline required integrity"
+        }
+      ]
+    },
+    {
+      "asset_family": "experiment_study",
+      "identity_basis": "identity-basis-for-experiment_study",
+      "evidence_requirements": [
+        {
+          "evidence_class": "integrity_digest",
+          "enforcement": "required",
+          "mechanism_ref": "existing-mechanism",
+          "description": "baseline required integrity"
+        }
+      ]
+    },
+    {
+      "asset_family": "behavior_vocabulary",
+      "identity_basis": "identity-basis-for-behavior_vocabulary",
+      "evidence_requirements": [
+        {
+          "evidence_class": "integrity_digest",
+          "enforcement": "required",
+          "mechanism_ref": "existing-mechanism",
+          "description": "baseline required integrity"
+        },
+        {
+          "evidence_class": "governance_source",
+          "enforcement": "required",
+          "mechanism_ref": "controlled-vocabularies source",
+          "description": "authoritative origin"
+        }
+      ]
+    },
+    {
+      "asset_family": "participant_manifest",
+      "identity_basis": "identity-basis-for-participant_manifest",
+      "evidence_requirements": [
+        {
+          "evidence_class": "integrity_digest",
+          "enforcement": "required",
+          "mechanism_ref": "existing-mechanism",
+          "description": "baseline required integrity"
+        }
+      ]
+    },
+    {
+      "asset_family": "evidence_artifact",
+      "identity_basis": "identity-basis-for-evidence_artifact",
+      "evidence_requirements": [
+        {
+          "evidence_class": "integrity_digest",
+          "enforcement": "required",
+          "mechanism_ref": "existing-mechanism",
+          "description": "baseline required integrity"
+        }
+      ]
+    },
+    {
+      "asset_family": "reusable_widget",
+      "identity_basis": "identity-basis-for-reusable_widget",
+      "evidence_requirements": [
+        {
+          "evidence_class": "integrity_digest",
+          "enforcement": "required",
+          "mechanism_ref": "existing-mechanism",
+          "description": "baseline required integrity"
+        }
+      ]
+    }
+  ]
+}

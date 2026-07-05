@@ -115,6 +115,7 @@ adr-067-participant-behavior-model
 adr-068-experiment-trials-replication-and-replay-claims
 adr-069-cage-2-replication-architecture
 adr-070-realization-envelope-semantics
+adr-071-reusable-asset-trust-and-integrity-policy
 ```
 
 | ADR | Title | Status | Date |
@@ -190,3 +191,4 @@ adr-070-realization-envelope-semantics
 | [068](adr-068-experiment-trials-replication-and-replay-claims.md) | Experiment Trials, Replication, and Replay Claims | accepted | 2026-06-25 |
 | [069](adr-069-cage-2-replication-architecture.md) | CAGE-2 Replication Architecture | accepted | 2026-07-01 |
 | [070](adr-070-realization-envelope-semantics.md) | Realization Envelope Semantics | proposed | 2026-07-04 |
+| [071](adr-071-reusable-asset-trust-and-integrity-policy.md) | Reusable Asset Trust and Integrity Policy | accepted | 2026-07-05 |
