@@ -1,6 +1,6 @@
-# Paper Enterprise Participant Evidence Loop
+# Enterprise Participant Evidence Loop
 
-`paper-agent-loop.sdl.yaml` is the ACES paper reference scenario for the
+`enterprise-participant-evidence-loop.sdl.yaml` is the ACES reference scenario for the
 authored SDL -> processor -> runtime -> backend handoff. It is a generic
 enterprise slice: a red participant workbench, a DMZ customer portal, an
 internal database, a Wazuh evidence surface, and optional participant policy
@@ -30,11 +30,11 @@ backends that support those checks.
 
 ## Participant
 
-The scenario declares one participant, `paper-agent`, bound to the
-`paper-participant` red-role entity. Its authored behavior is intentionally
+The scenario declares one participant, `participant-agent`, bound to the
+`enterprise-participant` red-role entity. Its authored behavior is intentionally
 narrow: probe `nodes.customer-portal.services.http` and report a bounded
 terminal observation. The concrete coding-agent runner is outside the SDL and
-is referenced only through `participant-implementation-manifest:paper-agent` in
+is referenced only through `participant-implementation-manifest:participant-agent` in
 the behavior specification.
 
 ## Declared Action
@@ -50,7 +50,7 @@ policy internals.
 
 ## Observation Boundary
 
-`paper-agent-view` separates the public task brief, the DMZ service before and
+`participant-view` separates the public task brief, the DMZ service before and
 after discovery, hidden internal resources, evaluator-only evidence, and hidden
 adjudication material. The portal service becomes discovered only after the
 terminal participant observation. `nodes.customer-db.services.postgres`, Wazuh
@@ -75,24 +75,24 @@ The expected evidence is deliberately bounded:
   API reachability from the participant host where supported by a live backend.
 
 The objective and outcome interpretation rule use those records to support the
-paper demonstration without treating local action success as broad benchmark
+reference demonstration without treating local action success as broad benchmark
 success, Wazuh effectiveness, or model-defense robustness.
 
 ## Runtime Binding
 
 The runtime/backend binding is intentionally downstream. APTL and the libvirt
-reference backend should bind `paper-agent` to a participant implementation
+reference backend should bind `participant-agent` to a participant implementation
 manifest and provenance record, realize the declared portal probe, retain
 participant/Wazuh/policy evidence, and record negative boundary evidence where
 the backend supports live checks. That binding must not require new SDL syntax,
 a new backend manifest shape, or APTL-private keys inside the scenario body.
 
-## Libvirt Paper Evidence Artifact (#615)
+## Libvirt Scenario Evidence Artifact (#615)
 
-`aces_operations.libvirt_paper_evidence.run_libvirt_paper_evidence` (CLI: `aces
-libvirt paper validate-evidence`) produces a stable, validated evaluator-evidence
-run artifact for this scenario — `aces.libvirt.paper-evidence-run/v1`, written to
-`runs/<run-id>/paper-evidence/libvirt-paper-evidence-run.json`. It composes the
+`aces_operations.libvirt_evidence_run.run_libvirt_evidence_run` (CLI: `aces
+libvirt evidence validate`) produces a stable, validated evaluator-evidence
+run artifact for this scenario — `aces.libvirt.scenario-evidence-run/v1`, written to
+`runs/<run-id>/scenario-evidence/libvirt-scenario-evidence-run.json`. It composes the
 existing ACES surfaces (libvirt deterministic participant runtime #614, native
 substrate realization #601, backend manifest/capability contracts, and the
 experiment/evaluation contracts) into one artifact carrying scenario+compiled
@@ -116,7 +116,7 @@ URIs, credentials, or private keys).
   substrate and records the native topology and native SOC readback. Native
   realization is **gating** — the run only reports `PASS` when the libvirt driver
   actually realizes substrate, so the mode can never claim success without
-  realizing. The libvirt backend declares no content-type support, so the *paper*
+  realizing. The libvirt backend declares no content-type support, so the *reference*
   scenario's content, orchestration, and evaluation planes are not
   backend-realized: native-live against this scenario therefore reports the
   realization gate as **failed** and surfaces the unrealized planes under
@@ -128,7 +128,7 @@ URIs, credentials, or private keys).
 ### How libvirt evidence differs from APTL Docker/Wazuh evidence
 
 APTL realizes the scenario as Docker/Compose containers with a full upstream
-Wazuh stack, so its paper proof artifact (Brad-Edwards/aptl#558) carries live
+Wazuh stack, so its scenario evidence artifact (Brad-Edwards/aptl#558) carries live
 container-native Wazuh detection telemetry and Docker-network reachability
 evidence. The libvirt proof realizes a different substrate — native libvirt/QEMU
 appliances — and its participant runtime is deterministic (#614), so:
@@ -142,7 +142,7 @@ appliances — and its participant runtime is deterministic (#614), so:
 - the **participant action proof** is structural (deterministic domain adapter),
   disclosed as such.
 
-The paper claim that this difference supports is narrow and explicit: ACES can
+The claim that this difference supports is narrow and explicit: ACES can
 drive the *same authored scenario, action contract, and observation/evaluator
 boundary* across two independent backends, producing comparable evaluator
 evidence shapes for the Brad-Edwards/aces#600 cross-backend **invariant ledger**.
@@ -155,7 +155,7 @@ semantic-equivalence between the libvirt and APTL realizations.
 - ACES issue: Brad-Edwards/aces#598
 - Participant implementation binding: Brad-Edwards/aces#599
 - ACES n=2 backend proof: Brad-Edwards/aces#600
-  (corpus: `examples/corpus/paper-demonstration/`)
+  (corpus: `examples/corpus/reference-demonstration/`)
 - Libvirt participant runtime: Brad-Edwards/aces#614
 - Libvirt evaluator/Wazuh evidence readback: Brad-Edwards/aces#615
 - APTL realization and proof: Brad-Edwards/aptl#556,

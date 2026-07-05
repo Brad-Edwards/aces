@@ -3,7 +3,7 @@
 The deterministic participant-implementation manifest, selection, action-result,
 and admission helpers now live in
 ``aces_operations.deterministic_participant_fixtures`` (contracts-only, importable
-by both the tests and the shipped paper-evidence producer). This module re-exports
+by both the tests and the shipped scenario-evidence producer). This module re-exports
 them for the existing acceptance tests and adds the test-only ``NullLibvirtDriver``
 (which depends on ``aces_backend_libvirt`` and so cannot live in the operations
 package under the ADR-036 module boundary).

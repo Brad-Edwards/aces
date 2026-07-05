@@ -8,7 +8,7 @@ name: test-scenario
 description: Minimal SDL scenario
 """
 EXAMPLE_SCENARIOS = sorted(EXAMPLES_DIR.glob("*.sdl.yaml"))
-PAPER_REFERENCE_SCENARIO = EXAMPLES_DIR / "paper-agent-loop.sdl.yaml"
+REFERENCE_SCENARIO = EXAMPLES_DIR / "enterprise-participant-evidence-loop.sdl.yaml"
 COMPLEX_EXAMPLES = [
     EXAMPLES_DIR / "hospital-ransomware-surgery-day.sdl.yaml",
     EXAMPLES_DIR / "satcom-release-poisoning.sdl.yaml",
@@ -173,12 +173,12 @@ def test_complex_examples_cover_new_sdl_surfaces():
     )
 
 
-def test_paper_reference_scenario_compiles_participant_loop():
-    """Issue #598: the paper reference scenario proves the participant handoff surface."""
+def test_reference_scenario_compiles_participant_loop():
+    """Issue #598: the reference scenario proves the participant handoff surface."""
     from aces_processor.compiler import compile_runtime_model
     from aces_sdl.scenarios import load_scenario
 
-    scenario = load_scenario(PAPER_REFERENCE_SCENARIO)
+    scenario = load_scenario(REFERENCE_SCENARIO)
     model = compile_runtime_model(scenario)
 
     assert {
@@ -202,9 +202,9 @@ def test_paper_reference_scenario_compiles_participant_loop():
         "policy-decision-log",
         "boundary-check-evidence",
     } <= set(scenario.content)
-    assert scenario.agents["paper-agent"].actions == ["probe-customer-portal-login"]
-    assert scenario.agents["paper-agent"].allowed_subnets == ["dmz-net"]
-    assert set(scenario.agents["paper-agent"].operating_scope) == {
+    assert scenario.agents["participant-agent"].actions == ["probe-customer-portal-login"]
+    assert scenario.agents["participant-agent"].allowed_subnets == ["dmz-net"]
+    assert set(scenario.agents["participant-agent"].operating_scope) == {
         "nodes.customer-portal.services.http",
         "content.task-brief",
     }
@@ -218,7 +218,7 @@ def test_paper_reference_scenario_compiles_participant_loop():
         "wazuh-internals-not-disclosed",
     }
 
-    boundary = scenario.observation_boundaries["paper-agent-view"]
+    boundary = scenario.observation_boundaries["participant-view"]
     assert "nodes.customer-db.services.postgres" in boundary.hidden_refs
     assert "nodes.wazuh-manager" in boundary.hidden_refs
     assert "nodes.wazuh-indexer" in boundary.hidden_refs
@@ -233,9 +233,9 @@ def test_paper_reference_scenario_compiles_participant_loop():
     assert model.participant_behaviors
     assert model.action_contracts
     assert model.observation_boundaries
-    assert "participant.behavior.paper-agent" in model.participant_behaviors
+    assert "participant.behavior.participant-agent" in model.participant_behaviors
     assert "participant.action-contract.probe-customer-portal-login" in model.action_contracts
-    assert "participant.observation-boundary.paper-agent-view" in model.observation_boundaries
+    assert "participant.observation-boundary.participant-view" in model.observation_boundaries
 
 
 class TestScenarioExceptions:

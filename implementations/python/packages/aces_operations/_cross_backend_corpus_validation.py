@@ -1,6 +1,6 @@
-"""Validation for the paper demonstration corpus artifact (issue #600).
+"""Validation for the cross-backend evidence corpus artifact (issue #600).
 
-Enforces the corpus contract without forking the libvirt paper validator: it reuses
+Enforces the corpus contract without forking the libvirt scenario-evidence validator: it reuses
 the shared ``redaction_violations`` gate and asserts the n=2 backend-pairing
 invariants that make the corpus a demonstration corpus rather than a single run --
 exactly two distinct backend runs keyed to one authored scenario digest, and a
@@ -13,9 +13,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from aces_operations._paper_evidence_validation import redaction_violations
+from aces_operations._evidence_run_validation import redaction_violations
 
-CORPUS_SCHEMA = "aces.paper-demonstration-corpus/v1"
+CORPUS_SCHEMA = "aces.cross-backend-evidence-corpus/v1"
 
 _REQUIRED_SECTIONS: tuple[str, ...] = (
     "authored_scenario",
@@ -86,7 +86,7 @@ def _validate_ledger(payload: Mapping[str, Any]) -> list[str]:
     ]
 
 
-def validate_paper_demonstration_corpus_artifact(payload: Mapping[str, Any]) -> list[str]:
+def validate_cross_backend_corpus_artifact(payload: Mapping[str, Any]) -> list[str]:
     """Validate a corpus artifact: schema, required sections, n=2 pairing, ledger, redaction.
 
     Returns a list of human-readable violation strings; an empty list means valid.
