@@ -1,6 +1,6 @@
-"""Artifact assembly for the libvirt paper-evidence producer.
+"""Artifact assembly for the libvirt scenario-evidence producer.
 
-Builds the ``aces.libvirt.paper-evidence-run/v1`` payload from the compiled runtime
+Builds the ``aces.libvirt.scenario-evidence-run/v1`` payload from the compiled runtime
 model, the backend manifest, the participant-proof result, and (optionally) the
 native substrate snapshot. Section builders only read duck-typed runtime-layer
 objects and copy allowlisted, bounded fields, so no raw libvirt/backend internals
@@ -8,7 +8,7 @@ reach the artifact. The backend section embeds the canonical ``BackendManifestV2
 payload rendered by the pure ``aces_backend_protocols`` manifest/capability helpers
 (ADR-036 allows ``aces_operations`` those two side-effect-free renderers) so the
 evidence carries the same backend contract the rest of the stack uses, not a
-hand-rolled summary. Split from ``libvirt_paper_evidence`` to keep each module under
+hand-rolled summary. Split from ``libvirt_evidence_run`` to keep each module under
 the ADR-015 source-size cap.
 """
 
@@ -32,7 +32,7 @@ from aces_contracts.contracts import (
     ExperimentRealizedFormDisclosureModel,
 )
 
-from aces_operations._paper_evidence_types import (
+from aces_operations._evidence_run_types import (
     BackendManifest,
     CompiledModel,
     EvidenceArtifactInputs,
@@ -41,15 +41,15 @@ from aces_operations._paper_evidence_types import (
     TerminalSnapshot,
 )
 
-EVIDENCE_RUN_SCHEMA = "aces.libvirt.paper-evidence-run/v1"
+EVIDENCE_RUN_SCHEMA = "aces.libvirt.scenario-evidence-run/v1"
 _LIBVIRT_BACKEND_NAME = "libvirt-qemu"
 
 # Internal/evaluator-only surfaces the participant must never observe. Derived from
-# the paper scenario observation boundary's hidden_refs; the negative-boundary
+# the reference scenario observation boundary's hidden_refs; the negative-boundary
 # evidence confirms none of these reach the participant's visible/disclosed refs.
 _INTERNAL_SURFACE_KEYWORDS = ("customer-db", "wazuh", "evaluator", "policy-gate", "postgres")
 
-# The four paper non-claims (issue #615). Carried verbatim in the artifact.
+# The four scenario non-claims (issue #615). Carried verbatim in the artifact.
 _NON_CLAIMS = (
     "No Wazuh detection-quality claim.",
     "No model-defense robustness claim.",
@@ -59,7 +59,7 @@ _NON_CLAIMS = (
 
 
 def assemble_artifact(inputs: EvidenceArtifactInputs) -> dict[str, Any]:
-    """Assemble the full paper-evidence artifact payload."""
+    """Assemble the full scenario-evidence artifact payload."""
     scenario_path = inputs.scenario_path
     run_id = inputs.run_id
     recorded_at = inputs.recorded_at
@@ -418,7 +418,7 @@ def _evaluator_outcome_section(lifecycle_clean: bool, recorded_at: str) -> dict[
     result = EvaluationResultStateModel.model_validate(
         {
             "resource_type": "participant-loop-evaluation",
-            "run_id": "paper-evidence",
+            "run_id": "scenario-evidence",
             "status": status,
             "observed_at": recorded_at,
             "updated_at": recorded_at,
@@ -433,7 +433,7 @@ def _evaluator_outcome_section(lifecycle_clean: bool, recorded_at: str) -> dict[
             "timestamp": recorded_at,
             "status": status,
             "passed": lifecycle_clean,
-            "detail": "Paper-evidence evaluator outcome derived from the structural participant proof.",
+            "detail": "Scenario-evidence evaluator outcome derived from the structural participant proof.",
             "evidence_refs": ["participant_action_proof"],
         }
     )
@@ -442,7 +442,7 @@ def _evaluator_outcome_section(lifecycle_clean: bool, recorded_at: str) -> dict[
         "history": [history.model_dump(mode="json")],
         "limitations": [
             "Evaluator outcome reflects the structural participant-loop proof; the libvirt backend ships no generic "
-            "evaluator component, so this is a paper-proof evaluator record, not a generic backend evaluator result.",
+            "evaluator component, so this is a evidence-run evaluator record, not a generic backend evaluator result.",
         ],
     }
 
@@ -462,7 +462,7 @@ def _realized_form_disclosures(manifest: BackendManifest, substrate_realized: bo
                     f"{backend_name} backend ({backend_version}); substrate "
                     f"{'realized natively' if substrate_realized else 'planned, not realized'}."
                 ),
-                "disclosure": "The libvirt-qemu backend realized this paper-evidence run.",
+                "disclosure": "The libvirt-qemu backend realized this scenario-evidence run.",
             }
         ),
         ExperimentRealizedFormDisclosureModel.model_validate(

@@ -3,7 +3,7 @@
 Tests are ordered so earlier checks (manifest, conformance, component
 construction) gate the deeper behavioral checks (episode lifecycle, action
 admission, observation-boundary projection, failure-path rejection, and the
-end-to-end paper-scenario proof), covering every issue acceptance criterion.
+end-to-end reference-scenario proof), covering every issue acceptance criterion.
 """
 
 from __future__ import annotations
@@ -39,7 +39,9 @@ from aces.core.runtime.models import (
 from aces.core.runtime.registry import RuntimeTarget
 from aces.core.sdl import parse_sdl
 
-_PAPER_SCENARIO_PATH = Path(__file__).parents[3] / "examples" / "scenarios" / "paper-agent-loop.sdl.yaml"
+_REFERENCE_SCENARIO_PATH = (
+    Path(__file__).parents[3] / "examples" / "scenarios" / "enterprise-participant-evidence-loop.sdl.yaml"
+)
 
 _DISCLOSURE_REF = "docs/decisions/issue-614-libvirt-participant-runtime.md"
 
@@ -143,7 +145,7 @@ def test_ac3_components_construction_still_raises_for_orchestrator():
 def test_ac4_episode_lifecycle_initialize_reset_terminate_restart():
     target = _libvirt_target_with_participant_runtime()
     control_plane = RuntimeControlPlane(target)
-    participant_address = "participant.behavior.paper-agent"
+    participant_address = "participant.behavior.participant-agent"
 
     def _episode_state() -> dict:
         snap = control_plane.get_snapshot().snapshot
@@ -212,9 +214,9 @@ def test_ac4_episode_lifecycle_initialize_reset_terminate_restart():
 
 
 def test_ac5_admit_action_records_behavior_history_without_internal_refs():
-    sdl = parse_sdl(_PAPER_SCENARIO_PATH.read_text())
+    sdl = parse_sdl(_REFERENCE_SCENARIO_PATH.read_text())
     runtime_model = compile_runtime_model(sdl)
-    behavior = runtime_model.participant_behaviors["participant.behavior.paper-agent"]
+    behavior = runtime_model.participant_behaviors["participant.behavior.participant-agent"]
     action_address = behavior.action_contract_addresses[0]
     boundary_address = behavior.observation_boundary_addresses[0]
     contract = runtime_model.action_contracts[action_address]
@@ -316,9 +318,9 @@ def test_ac5_admit_action_records_behavior_history_without_internal_refs():
 
 
 def test_ac_missing_episode_binding_fails_with_redacted_diagnostic():
-    sdl = parse_sdl(_PAPER_SCENARIO_PATH.read_text())
+    sdl = parse_sdl(_REFERENCE_SCENARIO_PATH.read_text())
     runtime_model = compile_runtime_model(sdl)
-    behavior = runtime_model.participant_behaviors["participant.behavior.paper-agent"]
+    behavior = runtime_model.participant_behaviors["participant.behavior.participant-agent"]
     action_address = behavior.action_contract_addresses[0]
     boundary_address = behavior.observation_boundary_addresses[0]
     contract = runtime_model.action_contracts[action_address]
@@ -383,12 +385,12 @@ def test_ac6_no_participant_runtime_capability_contract_gaps():
 
 
 # ---------------------------------------------------------------------------
-# AC-7: run_libvirt_participant_proof validates the paper scenario end-to-end
+# AC-7: run_libvirt_participant_proof validates the reference scenario end-to-end
 # ---------------------------------------------------------------------------
 
 
-def test_ac7_proof_driver_validates_paper_scenario():
-    result = run_libvirt_participant_proof(_PAPER_SCENARIO_PATH)
+def test_ac7_proof_driver_validates_reference_scenario():
+    result = run_libvirt_participant_proof(_REFERENCE_SCENARIO_PATH)
 
     assert isinstance(result, LibvirtParticipantProofResult)
     assert result.errors == (), f"proof errors: {result.errors}"

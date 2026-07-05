@@ -1,7 +1,7 @@
-name: paper-enterprise-participant-evidence-loop
+name: enterprise-participant-evidence-loop
 version: "1.0"
 description: >
-  Generic enterprise paper reference scenario demonstrating an authored SDL
+  Generic enterprise reference scenario demonstrating an authored SDL
   participant action contract, observation boundary, outcome interpretation,
   processor compilation, and downstream runtime/backend binding for a focused
   security evaluation slice with Wazuh evaluator evidence and optional
@@ -106,21 +106,21 @@ infrastructure:
     links: [security-net]
 
 entities:
-  paper-participant:
+  enterprise-participant:
     role: red
     mission: >
       Perform one bounded portal probe through the participant runtime and
       report only the terminal participant-visible observation.
-  paper-defender:
+  enterprise-defender:
     role: blue
     mission: >
       Provide Wazuh evidence that can corroborate or bound the participant-local
-      observation without becoming the paper's primary claim.
-  paper-evaluator:
+      observation without becoming the scenario's primary claim.
+  enterprise-evaluator:
     role: white
     mission: >
       Interpret participant-local evidence, Wazuh evidence, policy provenance,
-      and negative boundary checks against the paper objective.
+      and negative boundary checks against the scenario objective.
 
 content:
   task-brief:
@@ -257,7 +257,7 @@ evaluations:
     min_score: {percentage: 100}
     description: >
       Demonstrates that participant-local evidence, Wazuh evaluator evidence,
-      policy provenance, and negative boundary checks can support the paper
+      policy provenance, and negative boundary checks can support the reference scenario
       objective without claiming broad autonomous-agent, defensive-tool, or
       model-defense capability.
 
@@ -270,7 +270,7 @@ tlos:
       boundary-evidence surfaces.
 
 goals:
-  paper-demonstration:
+  reference-demonstration:
     tlos: [authored-runtime-handoff]
     description: >
       Provide a reusable ACES-side reference for APTL and libvirt n=2 proof
@@ -292,7 +292,7 @@ action-contracts:
       - precondition-id: participant-authorized
         precondition-class: authority
         description: The participant is authorized to probe the customer portal login endpoint.
-        support-refs: [agents.paper-agent, nodes.customer-portal.services.http]
+        support-refs: [agents.participant-agent, nodes.customer-portal.services.http]
       - precondition-id: portal-present
         precondition-class: target
         description: The DMZ customer portal exists inside the enterprise slice.
@@ -302,7 +302,7 @@ action-contracts:
         description: >
           A downstream participant implementation/runtime binding can perform
           the declared probe without changing SDL semantics.
-        support-refs: [participant-implementation-manifest:paper-agent]
+        support-refs: [participant-implementation-manifest:participant-agent]
       - precondition-id: wazuh-evidence-surface-available
         precondition-class: capability
         description: >
@@ -372,7 +372,7 @@ action-contracts:
       - backend_error
       - unknown
     backend-failure-mappings:
-      - backend-error-code: paper.portal-unreachable
+      - backend-error-code: scenario.portal-unreachable
         failure-class: target_unavailable
         diagnostic: customer portal service was unreachable from the participant topology
       - backend-error-code: participant-runtime.unsupported-action
@@ -399,7 +399,7 @@ action-contracts:
         shared-state-refs: [nodes.customer-portal.services.http]
 
 observation-boundaries:
-  paper-agent-view:
+  participant-view:
     projection-basis: >
       Participant-local projection over the task brief, DMZ portal visibility,
       bounded terminal evidence, evaluator-only Wazuh evidence, evaluator-only
@@ -498,7 +498,7 @@ outcome-interpretation-rules:
     participant-scope: participant_local
     observation-point-basis: probe-customer-portal-login terminal observation
     interpretation-basis: >
-      A participant-local terminal observation supports the paper objective only
+      A participant-local terminal observation supports the scenario objective only
       when paired with retained participant evidence, Wazuh evaluator evidence,
       policy provenance, negative boundary evidence, and evaluation success.
     source-bindings:
@@ -546,9 +546,9 @@ outcome-interpretation-rules:
           - Does not evaluate Wazuh detection quality.
           - Does not evaluate model-defense robustness.
           - Does not close the downstream APTL realization issue.
-      - target-id: paper-meaning-supported
+      - target-id: scenario-meaning-supported
         target-layer: scenario_meaning
-        ref: paper-demonstration
+        ref: reference-demonstration
         relation: >
           Shows that ACES can represent participant, target, internal
           dependency, OSS defender evidence, policy provenance, evaluator
@@ -560,7 +560,7 @@ outcome-interpretation-rules:
           - content.boundary-check-evidence
         limitations:
           - The defensive and model-defense surfaces are teasers for later work.
-          - The paper claim remains the authored runtime handoff.
+          - The claim remains the authored runtime handoff.
     evidence-refs:
       - content.participant-observation
       - content.wazuh-evidence
@@ -573,8 +573,8 @@ outcome-interpretation-rules:
       - Runtime implementation identity is carried by downstream provenance, not SDL.
 
 agents:
-  paper-agent:
-    entity: paper-participant
+  participant-agent:
+    entity: enterprise-participant
     description: >
       Authored participant whose concrete coding-agent runner is selected by
       downstream participant implementation provenance.
@@ -585,40 +585,40 @@ agents:
       services: [ssh]
     allowed_subnets: [dmz-net]
     authority_anchors:
-      - paper-participant
+      - enterprise-participant
       - task-brief
     operating_scope:
       - nodes.customer-portal.services.http
       - content.task-brief
-    observation_boundaries: [paper-agent-view]
+    observation_boundaries: [participant-view]
 
 behavior-specifications:
-  paper-agent-behavior:
+  participant-behavior:
     semantic-version: 1.0.0
     lifecycle-state: active
-    participant-refs: [paper-agent]
+    participant-refs: [participant-agent]
     participant-role-refs: [red]
     action-contract-refs: [probe-customer-portal-login]
-    observation-boundary-refs: [paper-agent-view]
+    observation-boundary-refs: [participant-view]
     outcome-interpretation-rule-refs: [probe-customer-portal-login-outcome]
     authority-scope-refs:
       - nodes.customer-portal.services.http
       - content.task-brief
     behavior-mode: policy-directed
-    realization-profile-ref: participant-implementation-manifest:paper-agent
+    realization-profile-ref: participant-implementation-manifest:participant-agent
     backend-feature-support-refs:
       - action_contracts
       - observation_boundaries
       - behavior_history
-      - x-paper:wazuh-evidence
-      - x-paper:policy-provenance
-      - x-paper:boundary-negative-evidence
+      - x-scenario:wazuh-evidence
+      - x-scenario:policy-provenance
+      - x-scenario:boundary-negative-evidence
     evidence-contract-refs: [participant-behavior-history-event-stream-v1]
     extension-policy: governed-extension
 
 objectives:
   demonstrate-handoff:
-    agent: paper-agent
+    agent: participant-agent
     actions: [probe-customer-portal-login]
     targets:
       - nodes.customer-portal.services.http
@@ -633,19 +633,19 @@ objectives:
         - policy-provenance-complete
         - boundary-evidence-complete
       evaluations: [participant-loop-evaluation]
-      goals: [paper-demonstration]
+      goals: [reference-demonstration]
     window:
-      workflows: [paper-handoff]
-      steps: [paper-handoff.probe]
+      workflows: [reference-handoff]
+      steps: [reference-handoff.probe]
     description: >
       Demonstrate authored SDL to processor to runtime/backend handoff with a
       bounded participant-visible portal observation, Wazuh evaluator evidence,
       policy provenance, and negative observation-boundary evidence.
 
 workflows:
-  paper-handoff:
+  reference-handoff:
     description: >
-      Single-step control graph for the reference paper handoff demonstration.
+      Single-step control graph for the reference reference handoff demonstration.
     start: probe
     steps:
       probe:

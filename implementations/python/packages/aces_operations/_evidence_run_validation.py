@@ -1,9 +1,9 @@
-"""Validation for the libvirt paper-evidence artifact.
+"""Validation for the libvirt scenario-evidence artifact.
 
 Re-validates the embedded published-contract payloads, enforces the redaction gate
 (no raw libvirt XML, domain UUIDs, QEMU command lines, host paths, connection URIs,
 credentials, or private keys), and checks the participant/evaluator boundary
-invariant. Split from ``libvirt_paper_evidence`` to keep each module under the
+invariant. Split from ``libvirt_evidence_run`` to keep each module under the
 ADR-015 source-size cap.
 """
 
@@ -22,7 +22,7 @@ from aces_contracts.contracts import (
 )
 from pydantic import BaseModel
 
-from aces_operations._paper_evidence_artifact import EVIDENCE_RUN_SCHEMA
+from aces_operations._evidence_run_artifact import EVIDENCE_RUN_SCHEMA
 
 # Redaction gate: substrings/patterns that must never appear in the artifact.
 _FORBIDDEN_REDACTION_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
@@ -61,8 +61,8 @@ _REQUIRED_SECTIONS = (
 )
 
 
-def validate_libvirt_paper_evidence_artifact(payload: Mapping[str, Any]) -> list[str]:
-    """Validate a paper-evidence artifact: schema, required surfaces, embedded contracts, redaction, boundary.
+def validate_libvirt_evidence_run_artifact(payload: Mapping[str, Any]) -> list[str]:
+    """Validate a scenario-evidence artifact: schema, required surfaces, embedded contracts, redaction, boundary.
 
     Returns a list of human-readable violation strings; an empty list means the
     artifact is valid.
@@ -138,7 +138,7 @@ def _validate_embedded_contracts(payload: Mapping[str, Any]) -> list[str]:
 def redaction_violations(payload: Mapping[str, Any]) -> list[str]:
     """Return redaction-gate violations for any JSON-serializable artifact payload.
 
-    Shared by the libvirt paper-evidence validator and the issue #600 corpus
+    Shared by the libvirt scenario-evidence validator and the issue #600 corpus
     validator so both enforce one redaction gate rather than a forked copy (no raw
     libvirt XML, domain UUIDs, QEMU command lines, host paths, connection URIs,
     credentials, or private keys).
