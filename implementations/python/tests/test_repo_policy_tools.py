@@ -222,6 +222,25 @@ def test_compatibility_layer_rejects_non_wrapper_logic(tmp_path: Path) -> None:
     assert [failure.rule_id for failure in failures] == ["compatibility-wrapper-only"]
 
 
+def test_compatibility_layer_allows_version_literal(tmp_path: Path) -> None:
+    # The committed __version__ literal is the [tool.hatch.version] `path` source
+    # (#684); a version constant is not implementation logic.
+    repo_root = setup_policy_repo(tmp_path)
+    write_text(
+        repo_root / "implementations" / "python" / "src" / "aces" / "__init__.py",
+        '"""ns."""\n\n__version__ = "0.17.0"\n\n__all__ = ["__version__"]\n',
+    )
+
+    failures = evaluate_repo_policy(
+        repo_root,
+        ["implementations/python/src/aces/__init__.py"],
+        check_set="file-local",
+        structural_runner=structural_runner_stub,
+    )
+
+    assert "compatibility-wrapper-only" not in [failure.rule_id for failure in failures]
+
+
 def test_adr_readme_must_match_adr_documents(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
     write_text(

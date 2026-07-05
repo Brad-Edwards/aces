@@ -34,20 +34,16 @@ These encode the hard rules previously in `AGENTS.md` prose.
   aligned with changed code and tests.
 - Plans with a user-visible change MUST add a fragment under
   `changelog.d/<issue>.<type>.md` (or `changelog.d/+<slug>.<type>.md`
-  for issue-free entries), where `<type>` is one of `security`, `added`,
-  `changed`, `deprecated`, `removed`, `fixed`; do not edit `CHANGELOG.md`
-  directly outside release-collation commits.
-- Plans MUST use a Conventional Commit type in the PR title and squashed
-  commit. Consumer-visible types RELEASE: `feat`/`added`/`changed`/
-  `deprecated`/`removed` bump the minor, `fix`/`fixed`/`perf`/`security` bump
-  the patch, and a `!` / `BREAKING CHANGE:` footer bumps the major (pre-1.0 →
-  minor; a breaking removal is `removed!:`). Repo-internal types NEVER release:
-  `docs`/`chore`/`ci`/`test`/`refactor`/`build`/`style`/`revert`. The release
-  and SemVer bump are DERIVED from these by python-semantic-release; plans MUST
-  NOT hand-edit any version string — the version is the git tag via `hatch-vcs`
-  (aces-scenario-packs ADR 0006; tracked for aces in #684). The authoritative
-  type→bump mapping is `[tool.semantic_release.commit_parser_options]` in
-  `implementations/python/pyproject.toml`, kept in sync with `CONVENTIONAL_TYPES`
-  in `tools/check_pr_title.py`. Pick the type by the one-line rule: release when
-  a consumer of the package would observe the change; hold when it is
-  repo-internal.
+  for issue-free entries), where `<type>` is one of `breaking`, `security`,
+  `added`, `changed`, `deprecated`, `removed`, `fixed`. The fragment `<type>`
+  drives the release version bump (`tools/release.py`): `removed` → major (once
+  ≥ 1.0; pre-1.0 it is a minor), `added`/`changed`/`deprecated` → minor,
+  `security`/`fixed` → patch; `breaking` is recorded in the changelog but does
+  NOT auto-bump (force a major with `release.py --version 1.0.0`). Do not edit
+  `CHANGELOG.md` directly outside release-collation commits.
+- Plans MUST NOT hand-edit the version. It is a single committed literal,
+  `__version__` in `implementations/python/src/aces/__init__.py`, bumped only by
+  `tools/release.py` from the pending changelog fragments at release time (#684).
+  The PR title must still pass the `title-guard` conventional-shape / no-branding
+  gate (`tools/check_pr_title.py`), but the PR title does NOT drive the version —
+  only the changelog fragment types do.
