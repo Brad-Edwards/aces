@@ -740,7 +740,14 @@ def test_backend_manifest_v2_rejects_hollow_capability_blocks():
 
 def test_reference_backend_v2_fixture_matches_emitted_manifest():
     payload = json.loads((V2_VALID_DIR / "stub.json").read_text(encoding="utf-8"))
-    assert payload == backend_manifest_payload(create_stub_manifest())
+    emitted = backend_manifest_payload(create_stub_manifest())
+    # identity.version is the live aces-sdl distribution version, derived from the
+    # git tag via hatch-vcs (#684). It is intentionally not pinned to the
+    # fixture's example version, so normalize it before the structural comparison
+    # (a non-empty real version is asserted separately).
+    assert emitted["identity"]["version"]
+    emitted = {**emitted, "identity": {**emitted["identity"], "version": payload["identity"]["version"]}}
+    assert payload == emitted
 
 
 def test_backend_manifest_valid_fixtures_pass_validation():
