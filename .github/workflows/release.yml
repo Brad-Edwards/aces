@@ -1,37 +1,29 @@
 name: Release
 
-# Conventional-commit-driven release (ADR 0006 blueprint from aces-scenario-packs;
-# tracked for aces in #684). Builds on #537 (the corpus-bundled wheel).
+# Committed-literal release (#684), built on the corpus-bundled wheel (#537).
 #
-# On every push to `main`, python-semantic-release (PSR) inspects the Conventional
-# Commit messages since the last tag, computes the next SemVer, and creates the
-# tag + GitHub Release (notes generated from the commits). It is TAG-ONLY
-# (`commit = false` in pyproject) — it never pushes a commit back to the
-# branch-protected `main`. The version itself is DERIVED from that tag by
-# hatch-vcs at build time; there is no version string to edit.
+# The version is the single committed literal `__version__` in
+# src/aces/__init__.py. `tools/release.py` bumps it from the pending towncrier
+# changelog fragments and collates CHANGELOG.md on a `release/vX.Y.Z` branch; that
+# opens a PR to `main`. Merging it (a normal human-reviewed PR merge) is the only
+# thing that puts a new version on `main` — this workflow never commits to `main`,
+# it only reads the literal and creates a tag, so no bot/PAT/deploy-key/bypass is
+# needed.
 #
-# When PSR reports a release, the job then builds the corpus-bundled wheel + sdist
-# with `uv build`, RE-VERIFIES the corpus payload is present (the #537 guarantee),
-# attaches a CycloneDX SBOM + the distributions to the GitHub Release, and
-# publishes to PyPI via OIDC trusted publishing (no stored token).
-#
-# Trust model: the trigger is a push to the protected, already-reviewed `main`
-# branch, so the repository-controlled build hook (hatch_build.py) only ever runs
-# on reviewed code. `workflow_dispatch` bootstraps the first release and is the
-# manual override; the job is guarded to `main` so a dispatch from another ref
-# cannot publish.
-#
-# See docs/explain/releasing.md for the full runbook and the one-time PyPI
-# trusted-publisher setup.
+# On push to `main` the `decide` job publishes iff:
+#   * the changelog fragments have been collated (none pending) — a real release
+#     always collates first, so a plain `dev`->`main` promotion with pending
+#     fragments never publishes a half-baked version; and
+#   * no tag exists yet for the current `__version__`.
+# The `release` job then builds the corpus-bundled wheel/sdist, verifies the
+# corpus payload and that the built version matches, attaches a CycloneDX SBOM,
+# publishes to PyPI via OIDC trusted publishing, and cuts a GitHub Release whose
+# notes are the CHANGELOG.md section. First release + PyPI setup:
+# docs/explain/releasing.md.
 on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      force:
-        description: "Force a bump when no releasable commits exist (patch|minor|major)"
-        required: false
-        default: ""
 
 permissions:
   contents: read
@@ -40,54 +32,83 @@ concurrency:
   group: release
   cancel-in-progress: false
 
+env:
+  VERSION_FILE: implementations/python/src/aces/__init__.py
+
 jobs:
-  release:
-    # Publish only from the protected default branch. `push` is already
-    # main-only; this also blocks a workflow_dispatch from an unreviewed ref.
+  decide:
     if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.decide.outputs.release }}
+      version: ${{ steps.decide.outputs.version }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+      - name: Decide whether to release
+        id: decide
+        run: |
+          set -euo pipefail
+          version="$(grep -oP '^__version__\s*=\s*"\K[^"]+' "${VERSION_FILE}")"
+          if [ -z "${version}" ]; then
+            echo "::error::no __version__ literal in ${VERSION_FILE}"; exit 1
+          fi
+          # Guard: uncollated fragments mean this is not a prepared release
+          # (release.py collates before opening the release PR). Never publish a
+          # version whose changelog has not been collated.
+          if find changelog.d -type f -name '*.md' ! -name '_*' ! -name 'README.md' | grep -q .; then
+            echo "::notice::changelog fragments are still pending; run tools/release.py to prepare a release. Skipping."
+            echo "release=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if git rev-parse -q --verify "refs/tags/v${version}" >/dev/null; then
+            echo "::notice::v${version} already tagged; nothing to release"
+            echo "release=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "::notice::releasing v${version}"
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: decide
+    if: needs.decide.outputs.release == 'true'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      contents: write   # PSR creates the release tag + the GitHub Release
+      contents: write   # create the release tag + the GitHub Release
       id-token: write   # OIDC trusted publishing to PyPI (no stored token)
+    env:
+      VERSION: ${{ needs.decide.outputs.version }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
 
-      - name: Python Semantic Release (compute version + tag + GitHub Release)
-        id: release
-        uses: python-semantic-release/python-semantic-release@37a30a7987cfebb6d49240bf1c4e9cd9817d0673 # v10.6.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          directory: implementations/python
-          build: false
-          force: ${{ github.event.inputs.force }}
-
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
-        if: steps.release.outputs.released == 'true'
         with:
           python-version: "3.12"
 
       - name: Install uv
-        if: steps.release.outputs.released == 'true'
         uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8
 
-      - name: Build the corpus-bundled wheel + sdist from the release tag
-        if: steps.release.outputs.released == 'true'
+      - name: Build the corpus-bundled wheel + sdist
         run: uv build --out-dir dist implementations/python
 
-      - name: Verify the contract corpus is bundled in the wheel (#537)
-        if: steps.release.outputs.released == 'true'
+      - name: Verify built version matches and the corpus is bundled
         run: |
           python - <<'PY'
           import glob
+          import os
           import sys
           import zipfile
 
+          expected = os.environ["VERSION"]
           wheels = glob.glob("dist/aces_sdl-*.whl")
           if len(wheels) != 1:
               sys.exit(f"expected exactly one wheel, found {wheels}")
+          built = wheels[0].split("/")[-1].split("-")[1]
+          if built != expected:
+              sys.exit(f"built version {built!r} != __version__ {expected!r}")
           names = zipfile.ZipFile(wheels[0]).namelist()
           required = [
               "aces_contracts/_corpus/profiles/backend/provisioning-only.json",
@@ -98,29 +119,59 @@ jobs:
           missing = [r for r in required if not any(n == r or n.startswith(r) for n in names)]
           if missing:
               sys.exit(f"wheel is missing corpus payload: {missing}")
-          print(f"corpus payload present: {sum(n.startswith('aces_contracts/_corpus/') for n in names)} files")
+          print(f"v{expected}: corpus payload present ({sum(n.startswith('aces_contracts/_corpus/') for n in names)} files)")
           PY
 
       - name: Generate CycloneDX SBOM
-        if: steps.release.outputs.released == 'true'
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
           python -m pip install dist/*.whl cyclonedx-bom
           mkdir -p sbom
-          cyclonedx-py environment \
-            --output-format JSON \
-            --output-file sbom/aces-sdl.cdx.json
+          cyclonedx-py environment --output-format JSON --output-file sbom/aces-sdl.cdx.json
 
-      - name: Attach the SBOM + distributions to the GitHub Release
-        if: steps.release.outputs.released == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.release.outputs.tag }}
-        run: gh release upload "${TAG}" dist/* sbom/aces-sdl.cdx.json --clobber
+      - name: Extract the changelog section for the release notes
+        run: |
+          python - <<'PY' > notes.md
+          import os
+          import pathlib
+          import re
+
+          ver = os.environ["VERSION"]
+          lines = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8").splitlines()
+          out, capturing = [], False
+          header = re.compile(r"^##\s*\[" + re.escape(ver) + r"\]")
+          any_header = re.compile(r"^##\s*\[")
+          for line in lines:
+              if header.match(line):
+                  capturing = True
+                  continue
+              if capturing and any_header.match(line):
+                  break
+              if capturing:
+                  out.append(line)
+          body = "\n".join(out).strip()
+          print(body if body else f"Release v{ver}")
+          PY
+
+      - name: Create + push the release tag (tag-only; main is never committed to)
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -c tag.gpgSign=false tag -a "v${VERSION}" -m "v${VERSION}"
+          git push origin "v${VERSION}"
 
       - name: Publish to PyPI (OIDC trusted publishing)
-        if: steps.release.outputs.released == 'true'
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
         with:
           packages-dir: dist
+
+      - name: Create the GitHub Release (notes from the changelog)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${VERSION}" dist/* sbom/aces-sdl.cdx.json \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "v${VERSION}" \
+            --notes-file notes.md

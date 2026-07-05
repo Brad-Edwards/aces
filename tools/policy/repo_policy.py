@@ -584,8 +584,16 @@ def _is_wrapper_module(tree: ast.Module) -> bool:
             target_names = {target.id for target in node.targets if isinstance(target, ast.Name)}
             if target_names == {"__all__"} and isinstance(node.value, (ast.List, ast.Tuple)):
                 continue
-            if target_names == {"__version__"} and isinstance(node.value, ast.Call):
-                if isinstance(node.value.func, ast.Name) and node.value.func.id in allowed_calls:
+            if target_names == {"__version__"}:
+                # The committed version literal (the [tool.hatch.version] `path`
+                # source, #684) or a package_version()/_reexport() re-export.
+                if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                    continue
+                if (
+                    isinstance(node.value, ast.Call)
+                    and isinstance(node.value.func, ast.Name)
+                    and node.value.func.id in allowed_calls
+                ):
                     continue
             return False
         if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
