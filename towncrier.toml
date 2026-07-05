@@ -9,6 +9,18 @@ issue_format = "(#{issue})"
 wrap = false
 all_bullets = true
 
+# Fragment type -> SemVer bump (see tools/compute_release.py, the single source
+# of truth for the release version):
+#   breaking, removed -> MAJOR   (breaking API change / removal)
+#   added, changed, deprecated -> MINOR
+#   security, fixed -> PATCH
+# `breaking` is the explicit major signal; use it for any backward-incompatible
+# change that is not itself a `removed`.
+[[tool.towncrier.type]]
+directory = "breaking"
+name = "Breaking Changes"
+showcontent = true
+
 [[tool.towncrier.type]]
 directory = "security"
 name = "Security"

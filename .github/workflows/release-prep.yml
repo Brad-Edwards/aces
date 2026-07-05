@@ -1,0 +1,88 @@
+name: Prepare Release
+
+# Cut a release (#684). Run this from `dev` when you want to ship the pending
+# changes. It:
+#   1. computes the next version from the pending changelog fragments
+#      (tools/compute_release.py — breaking/removed=major, added/changed/
+#      deprecated=minor, security/fixed=patch; highest wins), then
+#   2. collates the fragments into CHANGELOG.md at that version with towncrier
+#      (consuming/deleting the fragments), and
+#   3. opens a PR into `dev` with that change.
+#
+# Merging that PR, then promoting `dev` -> `main`, is what triggers release.yml
+# to tag + build + publish. The collation commit lands on `dev` (via this PR) so
+# the protected `main` branch is only ever tagged, never committed to.
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: "Override the base version (optional; else latest tag / CHANGELOG)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-prep
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # push the release/<version> branch
+      pull-requests: write   # open the collation PR into dev
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8
+
+      - name: Compute the next version from pending fragments
+        id: v
+        env:
+          BASE: ${{ github.event.inputs.base }}
+        run: |
+          set -euo pipefail
+          BASEARG=()
+          [ -n "${BASE}" ] && BASEARG=(--base "${BASE}")
+          VER="$(python tools/compute_release.py --format version "${BASEARG[@]}")"
+          if [ "${VER}" = "none" ]; then
+            echo "::notice::no pending releasable fragments — nothing to prepare"
+            echo "release=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "::notice::next version is v${VER}"
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "version=${VER}" >> "$GITHUB_OUTPUT"
+
+      - name: Collate changelog fragments with towncrier
+        if: steps.v.outputs.release == 'true'
+        run: uvx towncrier build --version "${{ steps.v.outputs.version }}" --yes
+
+      - name: Open the collation PR into dev
+        if: steps.v.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VER: ${{ steps.v.outputs.version }}
+        run: |
+          set -euo pipefail
+          BR="release/v${VER}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "${BR}"
+          git add -A
+          git commit -m "chore: collate changelog for v${VER}"
+          git push -u origin "${BR}"
+          gh pr create \
+            --repo "${GITHUB_REPOSITORY}" \
+            --base dev \
+            --head "${BR}" \
+            --title "chore: collate changelog for v${VER}" \
+            --body "Automated release preparation for **v${VER}**. Collates the pending \`changelog.d/\` fragments into \`CHANGELOG.md\`. Merge into \`dev\`, then promote \`dev\` -> \`main\` to publish (release.yml tags + builds + publishes v${VER})."

@@ -1,37 +1,31 @@
 name: Release
 
-# Conventional-commit-driven release (ADR 0006 blueprint from aces-scenario-packs;
-# tracked for aces in #684). Builds on #537 (the corpus-bundled wheel).
+# Changelog-driven release (#684), built on the corpus-bundled wheel (#537).
 #
-# On every push to `main`, python-semantic-release (PSR) inspects the Conventional
-# Commit messages since the last tag, computes the next SemVer, and creates the
-# tag + GitHub Release (notes generated from the commits). It is TAG-ONLY
-# (`commit = false` in pyproject) — it never pushes a commit back to the
-# branch-protected `main`. The version itself is DERIVED from that tag by
-# hatch-vcs at build time; there is no version string to edit.
+# The version is DERIVED from the towncrier changelog fragments — the single
+# source of truth (see tools/compute_release.py and towncrier.toml). The flow:
 #
-# When PSR reports a release, the job then builds the corpus-bundled wheel + sdist
-# with `uv build`, RE-VERIFIES the corpus payload is present (the #537 guarantee),
-# attaches a CycloneDX SBOM + the distributions to the GitHub Release, and
-# publishes to PyPI via OIDC trusted publishing (no stored token).
+#   1. "Prepare release" (release-prep.yml) collates the pending fragments into
+#      CHANGELOG.md at the computed version and opens a PR into `dev`.
+#   2. That PR merges to `dev`; then `dev` -> `main` is promoted as usual.
+#   3. This workflow runs on push to `main`: it reads the version from the top of
+#      CHANGELOG.md, and if there is no tag for it yet, cuts the release —
+#      creating the tag (TAG-ONLY; `main` is never committed to), building the
+#      corpus-bundled wheel/sdist (hatch-vcs stamps the version from the tag),
+#      re-verifying the corpus payload (#537), attaching a CycloneDX SBOM, and
+#      publishing to PyPI via OIDC trusted publishing.
 #
-# Trust model: the trigger is a push to the protected, already-reviewed `main`
-# branch, so the repository-controlled build hook (hatch_build.py) only ever runs
-# on reviewed code. `workflow_dispatch` bootstraps the first release and is the
-# manual override; the job is guarded to `main` so a dispatch from another ref
-# cannot publish.
+# The release notes are the CHANGELOG.md section for that version, so the
+# published changelog and the GitHub Release always match.
 #
-# See docs/explain/releasing.md for the full runbook and the one-time PyPI
-# trusted-publisher setup.
+# Trust model: the trigger is a push to the protected, reviewed `main` branch, so
+# the repository-controlled build hook (hatch_build.py) only runs on reviewed
+# code. The job is guarded to `main` so a workflow_dispatch from another ref
+# cannot publish. First-release bootstrap + PyPI setup: docs/explain/releasing.md.
 on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      force:
-        description: "Force a bump when no releasable commits exist (patch|minor|major)"
-        required: false
-        default: ""
 
 permissions:
   contents: read
@@ -42,52 +36,68 @@ concurrency:
 
 jobs:
   release:
-    # Publish only from the protected default branch. `push` is already
-    # main-only; this also blocks a workflow_dispatch from an unreviewed ref.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      contents: write   # PSR creates the release tag + the GitHub Release
+      contents: write   # create the release tag + the GitHub Release
       id-token: write   # OIDC trusted publishing to PyPI (no stored token)
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
 
-      - name: Python Semantic Release (compute version + tag + GitHub Release)
-        id: release
-        uses: python-semantic-release/python-semantic-release@37a30a7987cfebb6d49240bf1c4e9cd9817d0673 # v10.6.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          directory: implementations/python
-          build: false
-          force: ${{ github.event.inputs.force }}
-
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
-        if: steps.release.outputs.released == 'true'
         with:
           python-version: "3.12"
 
+      - name: Determine release version from the collated changelog
+        id: ver
+        run: |
+          set -euo pipefail
+          VER="$(python tools/compute_release.py --format changelog-version)"
+          if [ -z "${VER}" ]; then
+            echo "::notice::no version header in CHANGELOG.md; nothing to release"
+            echo "release=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if git rev-parse -q --verify "refs/tags/v${VER}" >/dev/null; then
+            echo "::notice::v${VER} already tagged; nothing to release"
+            echo "release=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "::notice::releasing v${VER}"
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "version=${VER}" >> "$GITHUB_OUTPUT"
+
       - name: Install uv
-        if: steps.release.outputs.released == 'true'
+        if: steps.ver.outputs.release == 'true'
         uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8
 
-      - name: Build the corpus-bundled wheel + sdist from the release tag
-        if: steps.release.outputs.released == 'true'
+      - name: Create the release tag (tag-only — main is never committed to)
+        if: steps.ver.outputs.release == 'true'
+        run: git -c tag.gpgSign=false tag "v${{ steps.ver.outputs.version }}"
+
+      - name: Build the corpus-bundled wheel + sdist
+        if: steps.ver.outputs.release == 'true'
         run: uv build --out-dir dist implementations/python
 
-      - name: Verify the contract corpus is bundled in the wheel (#537)
-        if: steps.release.outputs.released == 'true'
+      - name: Verify built version matches the tag and the corpus is bundled
+        if: steps.ver.outputs.release == 'true'
+        env:
+          EXPECTED: ${{ steps.ver.outputs.version }}
         run: |
           python - <<'PY'
           import glob
+          import os
           import sys
           import zipfile
 
+          expected = os.environ["EXPECTED"]
           wheels = glob.glob("dist/aces_sdl-*.whl")
           if len(wheels) != 1:
               sys.exit(f"expected exactly one wheel, found {wheels}")
+          built = wheels[0].split("/")[-1].split("-")[1]
+          if built != expected:
+              sys.exit(f"built version {built!r} != changelog/tag version {expected!r}")
           names = zipfile.ZipFile(wheels[0]).namelist()
           required = [
               "aces_contracts/_corpus/profiles/backend/provisioning-only.json",
@@ -98,11 +108,11 @@ jobs:
           missing = [r for r in required if not any(n == r or n.startswith(r) for n in names)]
           if missing:
               sys.exit(f"wheel is missing corpus payload: {missing}")
-          print(f"corpus payload present: {sum(n.startswith('aces_contracts/_corpus/') for n in names)} files")
+          print(f"v{expected}: corpus payload present ({sum(n.startswith('aces_contracts/_corpus/') for n in names)} files)")
           PY
 
       - name: Generate CycloneDX SBOM
-        if: steps.release.outputs.released == 'true'
+        if: steps.ver.outputs.release == 'true'
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
@@ -112,15 +122,48 @@ jobs:
             --output-format JSON \
             --output-file sbom/aces-sdl.cdx.json
 
-      - name: Attach the SBOM + distributions to the GitHub Release
-        if: steps.release.outputs.released == 'true'
+      - name: Extract the changelog section for the release notes
+        if: steps.ver.outputs.release == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.release.outputs.tag }}
-        run: gh release upload "${TAG}" dist/* sbom/aces-sdl.cdx.json --clobber
+          VER: ${{ steps.ver.outputs.version }}
+        run: |
+          python - <<'PY' > notes.md
+          import os
+          import pathlib
+          import re
+
+          ver = os.environ["VER"]
+          lines = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8").splitlines()
+          out, capturing = [], False
+          header = re.compile(r"^##\s*\[" + re.escape(ver) + r"\]")
+          any_header = re.compile(r"^##\s*\[")
+          for line in lines:
+              if header.match(line):
+                  capturing = True
+                  continue
+              if capturing and any_header.match(line):
+                  break
+              if capturing:
+                  out.append(line)
+          body = "\n".join(out).strip()
+          print(body if body else f"Release v{ver}")
+          PY
+
+      - name: Create the GitHub Release (tag + notes from the changelog)
+        if: steps.ver.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VER: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          git push origin "v${VER}"
+          gh release create "v${VER}" dist/* sbom/aces-sdl.cdx.json \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "v${VER}" \
+            --notes-file notes.md
 
       - name: Publish to PyPI (OIDC trusted publishing)
-        if: steps.release.outputs.released == 'true'
+        if: steps.ver.outputs.release == 'true'
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
         with:
           packages-dir: dist

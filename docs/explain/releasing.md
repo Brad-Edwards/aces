@@ -1,123 +1,103 @@
 # Releasing aces-sdl
 
-`aces-sdl` is published to **PyPI** and releases are cut **automatically** when
-`dev` is promoted to `main`. The model is the conventional-commit-driven pipeline
-from aces-scenario-packs ADR 0006 (tracked for aces in issue #684), built on the
-corpus-bundled wheel from #537.
+`aces-sdl` is published to **PyPI**, and the release version is **derived from the
+towncrier changelog fragments** — the single source of truth. The fragment types
+you already write (`changelog.d/<issue>.<type>.md`) drive the changelog *and* the
+SemVer bump *and* the git tag, so they can never disagree. There is no version
+string to hand-edit (#684).
 
-`aces-sdl` ships the published contract corpus (backend/semantic profiles, the
-fixture conformance corpus, the concept-authority catalogs, and the schemas) as
-package data, so `aces conformance backend` and SDL semantic validation work from
-an installed wheel — no source checkout required. Every release binds the Python
-code and the corpus together in one versioned artifact.
+`aces-sdl` also ships the published contract corpus as package data, so
+`aces conformance backend` and SDL semantic validation work from an installed
+wheel — no source checkout required. Every release binds the code and the corpus
+in one versioned artifact (#537).
 
-## The model (how a release happens)
+## Version rubric (fragment type → bump)
 
-1. Feature PRs **squash-merge into `dev`** with a Conventional Commit PR title
-   (the required `pr-title-lint` check enforces the type). The squashed commit
-   subject becomes the conventional commit.
-2. Promoting **`dev` → `main`** (merge or rebase — never squash, or the
-   per-change history PSR reads is lost) triggers `.github/workflows/release.yml`.
-3. `python-semantic-release` (PSR) inspects the Conventional Commits since the
-   last tag, computes the next SemVer, and creates the **git tag + GitHub
-   Release** with notes generated from the commits. It is **tag-only**
-   (`commit = false`) — it never pushes a commit back to protected `main`.
-4. If PSR reports a release, the job builds the corpus-bundled wheel + sdist with
-   `uv build`, **re-verifies the corpus payload** is present (the #537
-   guarantee), attaches a CycloneDX SBOM + the distributions to the GitHub
-   Release, and **publishes to PyPI via OIDC trusted publishing** (no stored
-   token).
+`tools/compute_release.py` scans the pending fragments and takes the **highest**
+bump present:
 
-If the batch of commits since the last tag is chores/docs only, PSR releases
-**nothing** — no tag, no PyPI upload.
+| Fragment type | Bump |
+|---|---|
+| `breaking`, `removed` | **major** |
+| `added`, `changed`, `deprecated` | **minor** |
+| `security`, `fixed` | **patch** |
+| *(no fragments)* | no release |
 
-### Versioning is tag-derived
+Major is real: a `breaking` (or `removed`) fragment on `0.x` bumps to `1.0.0`.
+`breaking` is the explicit major signal; use it for any backward-incompatible
+change that is not itself a `removed`. The base version is the latest `v*` git
+tag, falling back to the latest `CHANGELOG.md` header.
 
-There is no version string to edit. `[tool.hatch.version] source = "vcs"`
-(hatch-vcs) derives the built artifact's version from the git tag PSR creates;
-`aces.__version__` reads it back from installed distribution metadata. Do not
-hand-edit a version anywhere.
+## Cutting a release
 
-### The type → bump rubric
+1. **Prepare** — run the **Prepare Release** workflow (`release-prep.yml`,
+   `workflow_dispatch`) from `dev`. It computes the next version, collates the
+   pending fragments into `CHANGELOG.md` with towncrier (deleting them), and
+   opens a PR into `dev`.
+2. **Merge** that collation PR into `dev`.
+3. **Promote** `dev` → `main` (merge or rebase — never squash).
+4. `release.yml` runs on the push to `main`: it reads the just-collated version
+   from the top of `CHANGELOG.md` and, if there's no tag for it yet, **creates
+   the tag** (tag-only — `main` is never committed to), builds the
+   corpus-bundled wheel + sdist (hatch-vcs stamps the version from the tag),
+   re-verifies the corpus payload, attaches a CycloneDX SBOM, publishes to PyPI
+   via OIDC, and creates a GitHub Release whose notes are the `CHANGELOG.md`
+   section for that version.
 
-The commit *type* is the decision (authoritative mapping:
-`[tool.semantic_release.commit_parser_options]` in
-`implementations/python/pyproject.toml`, kept in sync with `CONVENTIONAL_TYPES`
-in `tools/check_pr_title.py`):
+If the pending fragments are empty, `compute_release.py` reports no release and
+nothing ships.
 
-| Type | Releases? | Bump |
-|---|---|---|
-| `feat`, `added`, `changed`, `deprecated`, `removed` | yes | minor |
-| `fix`, `fixed`, `perf`, `security` | yes | patch |
-| any of the above with `!` / `BREAKING CHANGE:` footer | yes | major (pre-1.0 → minor) |
-| `docs`, `chore`, `ci`, `test`, `refactor`, `build`, `style`, `revert` | no | — |
-
-One-line rule: **release when a consumer of the package would observe the
-change; hold when it is repo-internal.** A breaking removal is `removed!:`.
-
-Note: this is deliberately a superset of PSR's default `feat`/`fix` vocabulary,
-because aces uses towncrier-style change types as first-class PR-title types.
-The changelog *fragment* files under `changelog.d/<issue>.<type>.md` are a
-separate mechanism that feeds the in-repo `CHANGELOG.md` via towncrier; PSR
-generates the GitHub Release notes from the commits.
-
-## How the corpus is bundled
-
-The corpus is the normative authority at the repository-root `contracts/` tree
-(ADR-009). It is **not** moved or duplicated in source control. At build time a
-hatchling build hook (`implementations/python/hatch_build.py`) force-includes it
-into the wheel at `aces_contracts/_corpus`, and the sdist vendors it at
-top-level `_corpus/` so a wheel built from the sdist finds it too. At runtime,
-`aces_contracts.corpus` resolves the corpus via `importlib.resources`, falling
-back to the in-repo `contracts/` tree only for source/editable checkouts.
-
-Build artifacts locally with:
+Everything is derivable locally:
 
 ```sh
-uv build --out-dir dist implementations/python
+python tools/compute_release.py --format json      # next version + bump + counts
+uvx towncrier build --version <X.Y.Z> --draft      # preview the changelog section
+uv build --out-dir dist implementations/python     # build (clean tag → clean version)
 ```
 
-Locally (no git tag at `HEAD`) hatch-vcs stamps a dev version; on the release
-runner the tag PSR just created yields the exact release version.
+## Why the split (protected `main`)
+
+`main` is branch-protected with no bypass, so the release can't commit to it. The
+changelog collation (which *is* a commit — it rewrites `CHANGELOG.md` and deletes
+fragments) therefore lands on `dev` via the prep PR; `main` is only ever
+**tagged**. That's why cutting a release is prepare-on-`dev` then
+promote-to-`main`, not a single push.
 
 ## First-release bootstrap (one-time)
 
-`main` has no release tag yet, so the first promotion has no prior version to
-bump from. Bootstrap by running the **Release** workflow via
-`workflow_dispatch` with `force: minor` (from the Actions tab, on `main`). With
-no prior tag and `allow_zero_version = true` that cuts **`v0.1.0`** — the first
-PyPI release. PSR auto-manages every release after that.
+The changelog reflects `0.17.0` (hand-authored history), but nothing was ever
+tagged or published. Seed the baseline so automation starts cleanly:
 
-> To start the PyPI line at `v0.3.0` instead (matching the last hand-maintained
-> `version` string), first create and push a baseline tag `git tag v0.2.0 <main-sha>
-> && git push origin v0.2.0` (never built/published), then run the workflow with
-> `force: minor` → `v0.3.0`. Decide before the first run; the default `force:
-> minor` from zero gives `v0.1.0`.
+```sh
+git tag v0.17.0 <current-main-sha>
+git push origin v0.17.0
+```
+
+This marks `0.17.0` as already-released (never published to PyPI — it's a
+baseline), so the first *published* release is the next computed version
+(`0.18.0` from the current backlog). Without this tag the first push to `main`
+would try to publish `0.17.0`.
 
 ## PyPI trusted publishing (one-time, maintainer)
 
-PyPI OIDC publishing needs a one-time **pending trusted publisher** registered on
-PyPI before the first upload (no token is stored):
+Register a **pending** trusted publisher on PyPI before the first upload (no
+token stored):
 
-- PyPI → *Your projects* → *Publishing* → *Add a pending publisher*
+- PyPI → *Your projects* → *Publishing* → *Add a pending publisher* → GitHub
 - PyPI Project Name: `aces-sdl`
-- Owner: `Brad-Edwards`, Repository: `aces`
-- Workflow name: `release.yml`
-- Environment name: `pypi`
+- Owner: `Brad-Edwards`  ·  Repository: `aces`
+- Workflow name: `release.yml`  ·  Environment name: `pypi`
 
-The workflow's `release` job sets `environment: pypi`, so the GitHub `pypi`
-environment must exist (Settings → Environments). A mismatch in the workflow
-filename or environment name 403s only the PyPI publish step.
+The `release` job sets `environment: pypi` (a GitHub environment restricted to
+`main`). A filename/environment mismatch 403s only the PyPI publish step.
 
 ## Pinning from a downstream backend
-
-Once published, pin the PyPI release:
 
 ```
 aces-sdl==<X.Y.Z>
 ```
 
-or, for a pre-release/unpublished commit, the git subdirectory install:
+or, for an unpublished commit, the git subdirectory install:
 
 ```
 aces-sdl @ git+https://github.com/Brad-Edwards/aces.git@v<X.Y.Z>#subdirectory=implementations/python
