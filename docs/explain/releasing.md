@@ -63,20 +63,20 @@ fragments) therefore lands on `dev` via the prep PR; `main` is only ever
 **tagged**. That's why cutting a release is prepare-on-`dev` then
 promote-to-`main`, not a single push.
 
-## First-release bootstrap (one-time)
+## First release (0.18.0)
 
-The changelog reflects `0.17.0` (hand-authored history), but nothing was ever
-tagged or published. Seed the baseline so automation starts cleanly:
+No baseline tag is needed. `release.yml` only publishes a **fully-collated**
+changelog — it skips while any typed fragments are still pending — so `0.17.0`
+(the hand-authored, never-published header) can never accidentally ship. Cut the
+first release the normal way:
 
-```sh
-git tag v0.17.0 <current-main-sha>
-git push origin v0.17.0
-```
+1. Merge this change to `dev`.
+2. Run **Prepare Release** from `dev`, then merge the collation PR. The pending
+   fragments collate into `## [0.18.0]` and are deleted.
+3. Promote `dev` → `main`. The push runs `release.yml`, which now sees a collated
+   changelog with no pending fragments, tags `v0.18.0`, builds, and publishes.
 
-This marks `0.17.0` as already-released (never published to PyPI — it's a
-baseline), so the first *published* release is the next computed version
-(`0.18.0` from the current backlog). Without this tag the first push to `main`
-would try to publish `0.17.0`.
+`v0.18.0` then becomes the base for the next computed version.
 
 ## PyPI trusted publishing (one-time, maintainer)
 

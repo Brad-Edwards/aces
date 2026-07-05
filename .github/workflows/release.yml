@@ -55,6 +55,16 @@ jobs:
         id: ver
         run: |
           set -euo pipefail
+          # Guard: never publish a stale changelog. If typed fragments are still
+          # pending, collation (Prepare Release) has not been run for this
+          # promotion — the CHANGELOG top is behind the real work, so releasing it
+          # would ship the wrong version (e.g. an un-bumped 0.17.0). Skip until the
+          # changelog is collated.
+          PENDING="$(python tools/compute_release.py --format version)"
+          if [ "${PENDING}" != "none" ]; then
+            echo "::notice::uncollated changelog fragments are pending (next=${PENDING}); run Prepare Release before promoting. Skipping."
+            echo "release=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
           VER="$(python tools/compute_release.py --format changelog-version)"
           if [ -z "${VER}" ]; then
             echo "::notice::no version header in CHANGELOG.md; nothing to release"
