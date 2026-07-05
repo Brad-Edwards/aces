@@ -1,56 +1,84 @@
 name: Release
 
-# Cut a release by pushing a version tag, e.g. `git tag v0.3.0 && git push origin v0.3.0`.
-# Builds the corpus-bundled wheel + sdist and publishes a GitHub Release with the
-# artifacts attached, so downstream backends can pin a real version instead of a
-# `dev` commit SHA. See docs/explain/releasing.md for the full runbook.
+# Conventional-commit-driven release (ADR 0006 blueprint from aces-scenario-packs;
+# tracked for aces in #684). Builds on #537 (the corpus-bundled wheel).
 #
-# Release integrity (issue #537 codex review):
-#   * The only trigger is a `v*` tag push — there is no `workflow_dispatch`, so a
-#     manual run can never publish a Release named after a branch from untagged
-#     code.
-#   * The build job checks the tag commit is reachable from the protected default
-#     branch (`main`) BEFORE it runs any repository-controlled build code
-#     (`uv build` runs the hatch build hook), and checks out with
-#     `persist-credentials: false` so no write-scoped token sits in the git config
-#     while that build code executes.
-#   * Publishing happens in a separate job that only consumes the already-built
-#     artifacts. The `contents: write` token is scoped to that job alone and is
-#     used only by `gh release create`, so tag-controlled build hooks never run in
-#     a context that holds the write token.
+# On every push to `main`, python-semantic-release (PSR) inspects the Conventional
+# Commit messages since the last tag, computes the next SemVer, and creates the
+# tag + GitHub Release (notes generated from the commits). It is TAG-ONLY
+# (`commit = false` in pyproject) — it never pushes a commit back to the
+# branch-protected `main`. The version itself is DERIVED from that tag by
+# hatch-vcs at build time; there is no version string to edit.
+#
+# When PSR reports a release, the job then builds the corpus-bundled wheel + sdist
+# with `uv build`, RE-VERIFIES the corpus payload is present (the #537 guarantee),
+# attaches a CycloneDX SBOM + the distributions to the GitHub Release, and
+# publishes to PyPI via OIDC trusted publishing (no stored token).
+#
+# Trust model: the trigger is a push to the protected, already-reviewed `main`
+# branch, so the repository-controlled build hook (hatch_build.py) only ever runs
+# on reviewed code. `workflow_dispatch` bootstraps the first release and is the
+# manual override; the job is guarded to `main` so a dispatch from another ref
+# cannot publish.
+#
+# See docs/explain/releasing.md for the full runbook and the one-time PyPI
+# trusted-publisher setup.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Force a bump when no releasable commits exist (patch|minor|major)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  build:
+  release:
+    # Publish only from the protected default branch. `push` is already
+    # main-only; this also blocks a workflow_dispatch from an unreviewed ref.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: write   # PSR creates the release tag + the GitHub Release
+      id-token: write   # OIDC trusted publishing to PyPI (no stored token)
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
-          persist-credentials: false
-      - name: Verify the tag is reachable from the protected default branch
-        run: |
-          set -euo pipefail
-          git fetch --no-tags origin main:refs/remotes/origin/main
-          tag_sha="$(git rev-parse HEAD)"
-          if ! git merge-base --is-ancestor "${tag_sha}" origin/main; then
-            echo "::error::tag ${GITHUB_REF_NAME} (${tag_sha}) is not reachable from origin/main; refusing to build or publish a release from unreviewed code"
-            exit 1
-          fi
-          echo "tag ${GITHUB_REF_NAME} (${tag_sha}) is an ancestor of origin/main"
+
+      - name: Python Semantic Release (compute version + tag + GitHub Release)
+        id: release
+        uses: python-semantic-release/python-semantic-release@37a30a7987cfebb6d49240bf1c4e9cd9817d0673 # v10.6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          directory: implementations/python
+          build: false
+          force: ${{ github.event.inputs.force }}
+
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        if: steps.release.outputs.released == 'true'
         with:
           python-version: "3.12"
+
       - name: Install uv
+        if: steps.release.outputs.released == 'true'
         uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8
-      - name: Build wheel + sdist
+
+      - name: Build the corpus-bundled wheel + sdist from the release tag
+        if: steps.release.outputs.released == 'true'
         run: uv build --out-dir dist implementations/python
-      - name: Verify the contract corpus is bundled in the wheel
+
+      - name: Verify the contract corpus is bundled in the wheel (#537)
+        if: steps.release.outputs.released == 'true'
         run: |
           python - <<'PY'
           import glob
@@ -72,29 +100,27 @@ jobs:
               sys.exit(f"wheel is missing corpus payload: {missing}")
           print(f"corpus payload present: {sum(n.startswith('aces_contracts/_corpus/') for n in names)} files")
           PY
-      - name: Upload built artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: release-dist
-          path: dist/*
-          if-no-files-found: error
 
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download built artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: release-dist
-          path: dist
-      - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Generate CycloneDX SBOM
+        if: steps.release.outputs.released == 'true'
         run: |
-          gh release create "${GITHUB_REF_NAME}" dist/* \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "${GITHUB_REF_NAME}" \
-            --generate-notes
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl cyclonedx-bom
+          mkdir -p sbom
+          cyclonedx-py environment \
+            --output-format JSON \
+            --output-file sbom/aces-sdl.cdx.json
+
+      - name: Attach the SBOM + distributions to the GitHub Release
+        if: steps.release.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: gh release upload "${TAG}" dist/* sbom/aces-sdl.cdx.json --clobber
+
+      - name: Publish to PyPI (OIDC trusted publishing)
+        if: steps.release.outputs.released == 'true'
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
+        with:
+          packages-dir: dist
