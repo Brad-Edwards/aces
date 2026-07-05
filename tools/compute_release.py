@@ -138,8 +138,7 @@ def pending_types(changelog_dir: Path) -> list[str]:
         types.append(ftype)
     if unknown:
         raise ReleaseComputationError(
-            "changelog fragments with unknown type (expected one of "
-            f"{sorted(TYPE_BUMP)}): {unknown}"
+            f"changelog fragments with unknown type (expected one of {sorted(TYPE_BUMP)}): {unknown}"
         )
     return types
 
@@ -187,11 +186,7 @@ def latest_changelog_version(changelog_file: Path) -> Version | None:
 
 
 def resolve_base(repo_root: Path, changelog_file: Path) -> Version:
-    return (
-        latest_git_tag(repo_root)
-        or latest_changelog_version(changelog_file)
-        or Version(0, 0, 0)
-    )
+    return latest_git_tag(repo_root) or latest_changelog_version(changelog_file) or Version(0, 0, 0)
 
 
 def compute(
