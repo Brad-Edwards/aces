@@ -37,3 +37,13 @@ These encode the hard rules previously in `AGENTS.md` prose.
   for issue-free entries), where `<type>` is one of `security`, `added`,
   `changed`, `deprecated`, `removed`, `fixed`; do not edit `CHANGELOG.md`
   directly outside release-collation commits.
+- Plans MUST use a Conventional Commit type in the PR title and squashed
+  commit — `feat:` (minor), `fix:` (patch), or `feat!:`/`fix!:`/a
+  `BREAKING CHANGE:` footer (major; pre-1.0 → minor) for consumer-visible
+  changes, and `docs:`/`chore:`/`test:`/`ci:`/`refactor:`/`build:`/`style:`
+  for repo-internal changes that must NOT release. The release and SemVer
+  bump are DERIVED from these by python-semantic-release; plans MUST NOT
+  hand-edit any version string — the version is the git tag via `hatch-vcs`
+  (aces-scenario-packs ADR 0006; tracked for aces in #684). Pick the type by
+  the one-line rule: release when a consumer of the package would observe the
+  change; hold when it is repo-internal.
