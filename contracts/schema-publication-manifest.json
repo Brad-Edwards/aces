@@ -323,6 +323,16 @@
       "content_hash": "28ae8b46e4bcb4436a01adf3a70472b2f8ffc1fc8c13ff7ea8766492652f8267"
     },
     {
+      "contract_id": "reusable-asset-trust-policy-v1",
+      "schema_path": "contracts/schemas/asset-trust/reusable-asset-trust-policy-v1.json",
+      "stability": "draft",
+      "content_hash": "68f18e107bddb0b037a316bd334258da7329fc60460ee38ef415c89ce58ad7e0",
+      "last_change": {
+        "summary": "Initial publication of the GOV-913 reusable-asset trust/authenticity/integrity policy contract: per-family evidence-class requirements (integrity/authenticity/provenance/governance) referencing existing ACES mechanisms.",
+        "content_hash": "68f18e107bddb0b037a316bd334258da7329fc60460ee38ef415c89ce58ad7e0"
+      }
+    },
+    {
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
