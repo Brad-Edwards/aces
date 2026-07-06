@@ -32,18 +32,14 @@ These encode the hard rules previously in `AGENTS.md` prose.
   concept-authority surfaces.
 - Plans MUST keep IMPLEMENTS and TESTS traceability in Ground Control
   aligned with changed code and tests.
-- Plans with a user-visible change MUST add a fragment under
-  `changelog.d/<issue>.<type>.md` (or `changelog.d/+<slug>.<type>.md`
-  for issue-free entries), where `<type>` is one of `breaking`, `security`,
-  `added`, `changed`, `deprecated`, `removed`, `fixed`. The fragment `<type>`
-  drives the release version bump (`tools/release.py`): `removed` → major (once
-  ≥ 1.0; pre-1.0 it is a minor), `added`/`changed`/`deprecated` → minor,
-  `security`/`fixed` → patch; `breaking` is recorded in the changelog but does
-  NOT auto-bump (force a major with `release.py --version 1.0.0`). Do not edit
-  `CHANGELOG.md` directly outside release-collation commits.
-- Plans MUST NOT hand-edit the version. It is a single committed literal,
-  `__version__` in `implementations/python/src/aces/__init__.py`, bumped only by
-  `tools/release.py` from the pending changelog fragments at release time (#684).
-  The PR title must still pass the `title-guard` conventional-shape / no-branding
-  gate (`tools/check_pr_title.py`), but the PR title does NOT drive the version —
-  only the changelog fragment types do.
+- Plans MUST NOT edit `CHANGELOG.md` or add changelog fragments: release-please
+  owns `CHANGELOG.md` and generates it from the Conventional Commit history on
+  `main` (#684). There is no `changelog.d/`.
+- Plans MUST NOT hand-edit the version (`[project] version` in
+  `implementations/python/pyproject.toml`); release-please bumps it on release.
+  Feature PRs squash-merge, so the PR title becomes the commit release-please
+  reads: `feat:` → minor, `fix:`/`perf:` → patch, `feat!:` / a `BREAKING CHANGE:`
+  footer → major (pre-1.0 demoted to minor); `docs`/`chore`/`refactor`/`test`/
+  `ci`/`build` do not release. Use `feat:`/`fix:` for consumer-visible changes so
+  release-please actually cuts a release. The PR title MUST still pass the
+  `title-guard` gate (`tools/check_pr_title.py`).

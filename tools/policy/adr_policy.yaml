@@ -9,9 +9,6 @@ source_roots:
   - implementations/python/packages
   - implementations/python/src
 
-changelog_path: CHANGELOG.md
-changelog_fragment_dir: changelog.d
-
 # ADR-009 section 7: published schemas under contracts/schemas/ are
 # hand-governed normative authority. A schema change must record a
 # contract-facing change-ledger entry in the publication manifest (the deeper
