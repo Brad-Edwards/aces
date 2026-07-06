@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [0.19.1](https://github.com/Brad-Edwards/aces/compare/v0.19.0...v0.19.1) (2026-07-06)
+
+
+### Bug Fixes
+
+* publish the project README as the PyPI description ([#701](https://github.com/Brad-Edwards/aces/issues/701)) ([6a56f93](https://github.com/Brad-Edwards/aces/commit/6a56f93d35e50a2362c13a81700f332f8a2709ca))
+
 ## [0.19.0](https://github.com/Brad-Edwards/aces/compare/v0.18.0...v0.19.0) (2026-07-06)
 
 
