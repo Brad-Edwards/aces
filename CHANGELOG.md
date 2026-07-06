@@ -8,6 +8,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [0.19.0](https://github.com/Brad-Edwards/aces/compare/v0.18.0...v0.19.0) (2026-07-06)
+
+
+### Features
+
+* add ADR amendment policy and acceptance-content pin gate (GOV-941) ([8c58ab5](https://github.com/Brad-Edwards/aces/commit/8c58ab5d34129da32573845ff5a31d7569d20b00))
+* add authored evidence requirements ([b41584b](https://github.com/Brad-Edwards/aces/commit/b41584be704c3dea9062e10cdfe99275c8462cdf))
+* add behavior specifications to SDL ([039b019](https://github.com/Brad-Edwards/aces/commit/039b0197b896803fa4c4d70a49eaf650080148af))
+* add dns runtime inventory ([2f61056](https://github.com/Brad-Edwards/aces/commit/2f6105631e69444467d2aaa9dfd5aef0e4a47cb8))
+* add explicitness classifier semantics ([26a22da](https://github.com/Brad-Edwards/aces/commit/26a22da9c7ce9eaff571296ac1578f36c07adf11))
+* add libvirt participant runtime for the paper scenario ([554a139](https://github.com/Brad-Edwards/aces/commit/554a139fb62b4873ffea8141051520ef800df2cc))
+* add libvirt provisioning backend ([7da3293](https://github.com/Brad-Edwards/aces/commit/7da329364620a31f543fec77c8b2fdf62130d8dd))
+* add operational apparatus summary ([b26876c](https://github.com/Brad-Edwards/aces/commit/b26876c401667ec5ba96b4de5d72521a55989fa8))
+* add participant concurrency runtime contracts ([9827df8](https://github.com/Brad-Edwards/aces/commit/9827df8aad84c94c8d8f53825672e8a651adb421))
+* add repository-owned reference processor (RUN-313) ([106122b](https://github.com/Brad-Edwards/aces/commit/106122b7589f673ca57fa1d9bd35f51c65c23161))
+* add scenario-level forwarding agents ([a7467df](https://github.com/Brad-Edwards/aces/commit/a7467df3b2366c8d4d6f5f044ab7623c27830081))
+* add scenario-native observability coverage ([3e9f5db](https://github.com/Brad-Edwards/aces/commit/3e9f5dbbf65c70ad4ac88da8e6f852629c3fb4e4))
+* bind participant implementations to runtime actions ([d28d314](https://github.com/Brad-Edwards/aces/commit/d28d3140d78b9ce1115ed3e946f5eb81e0c0c3c4))
+* **corpus:** add paper demonstration corpus with cross-backend invariant ledger ([ce1bc07](https://github.com/Brad-Edwards/aces/commit/ce1bc07ab8bb80e7afaf6c304ac69f4a2e5dd8ec))
+* define SEM-216 boundary semantics for state, evidence, evaluation, analysis, and views ([2c72e7f](https://github.com/Brad-Edwards/aces/commit/2c72e7f600f7a20f205b45754747934c4f6de438))
+* **DSL-132,DSL-133:** add datastore_services and platform_applications spines ([aaef653](https://github.com/Brad-Edwards/aces/commit/aaef6530d56ae02e929ec98c275139b82a0ebf04))
+* **DSL-134,DSL-135:** add app_authorization and scheduled_jobs runtime families ([4d02197](https://github.com/Brad-Edwards/aces/commit/4d02197de616cc58fc50af44400b85551db79c7a))
+* **DSL-136,DSL-137:** add forwarding_agents and orchestration_authorities families ([b9f9f12](https://github.com/Brad-Edwards/aces/commit/b9f9f123318e8afe461195d0b11392871deb7dc1))
+* **DSL-138:** add typed runtime relationship subtypes + route upstream_target ([4e0f631](https://github.com/Brad-Edwards/aces/commit/4e0f631af89676c0212dcaa2d711c54bb27e04e7))
+* emit SEM-218 realization requirements and gate the planner on backend support ([38f925f](https://github.com/Brad-Edwards/aces/commit/38f925f2dde5cab96320139de7199e956d475321))
+* implement SEM-224 observability plane separation semantics ([eba8724](https://github.com/Brad-Edwards/aces/commit/eba87241b4c02bbc4b5a5c86f9b71010bccafa04))
+* **libvirt:** typed capability diagnostics for out-of-envelope plan terms ([7b298e9](https://github.com/Brad-Edwards/aces/commit/7b298e90e7a79a50bae34b42a2d2d0c318a29756))
+* **libvirt:** typed capability diagnostics for out-of-envelope plan terms ([1db2597](https://github.com/Brad-Edwards/aces/commit/1db2597c09494664aa656ab0a4be307b1ae9ca76))
+* realize plan resources on libvirt (domains, networks, placements) ([72b87e0](https://github.com/Brad-Edwards/aces/commit/72b87e07f2ac04fbd144110f0c3d13b9793fd7e9))
+* register API-406 backend carrier contracts ([59cfd43](https://github.com/Brad-Edwards/aces/commit/59cfd43a4275f4e41234f901a85895f522966c69))
+* **runtime:** add shared operational state snapshots ([29ca38c](https://github.com/Brad-Edwards/aces/commit/29ca38c70081b25b430717ea9984752c6987f848))
+* **runtime:** add shared operational state snapshots ([5ca2c2b](https://github.com/Brad-Edwards/aces/commit/5ca2c2b969812a0c38bc283a7f4d506591c99047))
+* ship contract corpus as package data and add a versioned release line ([8c0ddd8](https://github.com/Brad-Edwards/aces/commit/8c0ddd89809ac6332ff318fa7fd73c93ed46d209))
+
+
+### Bug Fixes
+
+* backfill schema-publication ledger entries to unblock dev-&gt;main ([27c2fb0](https://github.com/Brad-Edwards/aces/commit/27c2fb0c0b13d237f2d058b2afef62883bb4dedf))
+* clear SonarCloud new-code findings in the libvirt backend ([180715a](https://github.com/Brad-Edwards/aces/commit/180715a855c4e6c12c7fb5819d997db5a5050671))
+* consolidate runtime validation helpers ([bfab7e1](https://github.com/Brad-Edwards/aces/commit/bfab7e1e0709eda2b00318fc36564257a8de034a))
+* consolidate runtime validation helpers ([6958fed](https://github.com/Brad-Edwards/aces/commit/6958fed460067cd5a3b9c5dd6a4a2ca6cfd75aae))
+* **DSL-132:** tighten SCN-010 SDL validation closure ([d727d84](https://github.com/Brad-Edwards/aces/commit/d727d84a2b6f0365211cba6310044446e889cd98))
+* honor reconciliation and make libvirt backend teardown idempotent ([a2ccc81](https://github.com/Brad-Edwards/aces/commit/a2ccc8158b797f2181fc73bda5d85f7dc5429902))
+* preserve inventory target secrets ([26e5abb](https://github.com/Brad-Edwards/aces/commit/26e5abb2c80bdd10df1f4e2a4b7978380c633102))
+* **runtime:** clear shared-state sonar findings ([4d464c4](https://github.com/Brad-Edwards/aces/commit/4d464c466066e7eb8b579cb7577faee312c8e0dc))
+* **runtime:** simplify shared-state validators ([c19f282](https://github.com/Brad-Edwards/aces/commit/c19f282ff737a4c9b1292269e819c102a949cc45))
+* **sdl:** make local import lockfile resolved_source checkout-independent ([15b7121](https://github.com/Brad-Edwards/aces/commit/15b7121c7e6257b564e1c36ce0a9b723441c3899))
+* unify runtime service family registry ([ffe28e5](https://github.com/Brad-Edwards/aces/commit/ffe28e596840cc37d152f63880a889a7477a5911))
+
+
+### Documentation
+
+* accept participant ADR dependency chain ([cee0543](https://github.com/Brad-Edwards/aces/commit/cee05438a6c49295d5cfb7df81c7138817603f2c))
+* add CAGE-2 replication architecture ([7ad0276](https://github.com/Brad-Edwards/aces/commit/7ad0276003d88fc3673f3f4768d857580c124f16))
+* add participant runtime design ([bb087e9](https://github.com/Brad-Edwards/aces/commit/bb087e99dfb5d773e7a6f30f7d4db6c372ae5b85))
+* add proposed ADR-073 on scoring/reward language scope ([c8bbbad](https://github.com/Brad-Edwards/aces/commit/c8bbbad68c2d4bd8938918d9a70f98c7d62fe292))
+* add related-work comparison positioning ACES against precedent systems ([0fe9f1f](https://github.com/Brad-Edwards/aces/commit/0fe9f1fc39dce1ec8ec1c9478d96f7eb7ea49561))
+* add SDL module composition ADR ([22bbbdb](https://github.com/Brad-Edwards/aces/commit/22bbbdb5f76d4a5b09385ce428b7e420e209f899))
+* add validation admission profile design ([4df4e8e](https://github.com/Brad-Edwards/aces/commit/4df4e8e5c066bbbc1d2612b066fe1a8aff0393b1))
+* author the SDL prose specification under specs/sdl/ (CT-6) ([792c207](https://github.com/Brad-Edwards/aces/commit/792c207950211f25166139e7035a3509570b6f49))
+* define experiment replication and replay claims ([bed09cf](https://github.com/Brad-Edwards/aces/commit/bed09cf75b17bf52b19c8cdbcfaab3bd6db7bfb1))
+* document ACT-603 interaction guardrails ([0be0e79](https://github.com/Brad-Edwards/aces/commit/0be0e79c957a490e945cbe9fca09186d1a39140d))
+* document observability evidence plane separation ([9fd2b73](https://github.com/Brad-Edwards/aces/commit/9fd2b73f9a578b8270ac3921ca21cd87720fd7a9))
+* document realization envelope semantics ([bfe4515](https://github.com/Brad-Edwards/aces/commit/bfe4515b27ce6cf3bc09283be0c4a8e70f36a597))
+* **DSL-139:** backfill limitations.md family coverage + confirmation-folds doctrine ([eb49821](https://github.com/Brad-Edwards/aces/commit/eb49821b2546f56c9f8cd512ccd969624d1b55d5))
+* **experiment-core:** define replication and replay claims ([09d56df](https://github.com/Brad-Edwards/aces/commit/09d56dff861087cc74f87c46b49e3b25565faeeb))
+* reconcile asset inventory methodology closeout ([4a1fddb](https://github.com/Brad-Edwards/aces/commit/4a1fddbbbcaa0f3718f26363c3d011eaf8b97bba))
+* reconcile asset inventory methodology closeout ([ba18151](https://github.com/Brad-Edwards/aces/commit/ba18151b2a665bcc85eb4417915297ec7c6464f7))
+* record api-419 preflight guardrails ([b61eb02](https://github.com/Brad-Edwards/aces/commit/b61eb024a37be7114d3c5cce645ae9ce3c7ef1fb))
+* register gap remediation overlay ([ee74846](https://github.com/Brad-Edwards/aces/commit/ee74846a4210e3299f981b6c6bc54429b3ebf2b5))
+* **scn010:** add expressivity gap analysis and wire toctree ([0cdc927](https://github.com/Brad-Edwards/aces/commit/0cdc92791c40cd14c4bc3cdb97259f7fbf013ca6))
+* **security:** record 2026-07-01 commit authorship anomaly ([5eb8078](https://github.com/Brad-Edwards/aces/commit/5eb8078047a17890e819d8d5867c59acc79c8320))
+* **security:** record 2026-07-01 commit authorship anomaly ([b648c99](https://github.com/Brad-Edwards/aces/commit/b648c99e8716b634fa2b48ec3f0902734d0bd585))
+* tighten citation hygiene across SDL lineage and precedent docs ([0059d03](https://github.com/Brad-Edwards/aces/commit/0059d03af5c6280655eb41c07b8a094388b9f4e2))
+
 ## [0.18.0] - 2026-07-06
 
 ### Security
