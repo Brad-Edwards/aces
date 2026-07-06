@@ -136,7 +136,7 @@ accounts:
 
 ## Documentation
 
-- [SDL Sections Reference](sections.md) — Complete reference for all 21 sections
+- [SDL Sections Reference](sections.md) — Complete reference for all 17 sections
 - [Parser Behavior](parser.md) — Key normalization, shorthand expansion, SDL-only parsing
 - [Language-Service Tools](language-service.md) — Agent-facing completions, references, formatting, diagnostics, and structured edits
 - [Agent Guidance Profile](agent-guidance.md) — Machine-readable scope boundaries, invariants, review priorities, and safe-operating expectations

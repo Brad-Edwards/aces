@@ -2,7 +2,7 @@
 
 ## Status
 
-proposed
+accepted
 
 ## Date
 
@@ -261,3 +261,9 @@ ratification. The ADR is proposed; implementation is spawned on acceptance.
 - If only `reward_calculator` is removed and the follow-through lapses, the
   duplicated grading pipeline persists. The decision commits to the full removal
   via staged migration, and SEM-206 tracks completion.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-06 | #682 | Accepted (proposed → accepted) and realized under SEM-206: the SDL scoring/reward surfaces (`metrics`/`evaluations`/`tlos`/`goals` and `agents.reward_calculator`) were removed, `objectives.success` narrowed to `conditions`, ADR-002's objective-success clause amended, and the published SDL schemas updated with change-ledger entries. The staged deprecation window in §5 was collapsed into one change: all in-repo consumers were migrated together, with the downstream `Brad-Edwards/aptl#606` tracked to follow. |

@@ -85,8 +85,6 @@ def _raw_scenario():
                 roles: {{ops: operator}}
             conditions:
               health: {{command: /bin/true, interval: 15}}
-            metrics:
-              uptime: {{type: conditional, max-score: 100, condition: health}}
             entities:
               blue: {{role: blue}}
             objectives:

@@ -167,8 +167,9 @@ Current status:
 - Participant behavior has a reusable action-contract and observation-boundary
   template validated through current SDL semantics.
 - Tasks, runs, and studies have reusable templates and patterns that map those
-  concepts onto current objectives, workflows, timing, scoring, and evidence
-  references.
+  concepts onto current objectives, workflows, timing, conditions, and evidence
+  references. Graded scoring/reward is an experiment/evaluator-plane concern
+  (ADR-073), not an SDL section.
 - Evidence and provenance concerns are documented at architecture and
   limitation surfaces, but not fully materialized as published runtime
   contracts.

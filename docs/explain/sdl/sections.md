@@ -18,19 +18,21 @@ Canonical `imports.source` classes are:
 
 ## Section Overview
 
-### From Open Cyber Range SDL (14 sections)
+### From Open Cyber Range SDL (10 sections)
+
+The OCR scoring pipeline sections (`metrics`, `evaluations`, `tlos`, `goals`)
+were removed from the SDL by
+[ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md); graded
+scoring, reward, and evaluation outputs now live in the experiment/evaluator
+plane (ADR-055/064/069). `conditions` (observable state) remain.
 
 | Section | Type | Purpose |
 |---------|------|---------|
 | `nodes` | `dict[str, Node]` | VMs and network switches — the compute/network topology |
 | `infrastructure` | `dict[str, InfraNode]` | Deployment topology: counts, links, dependencies, IP/CIDR, ACLs |
 | `features` | `dict[str, Feature]` | Software (Service/Configuration/Artifact) deployed to VMs |
-| `conditions` | `dict[str, Condition]` | Health checks (command+interval or library source) |
+| `conditions` | `dict[str, Condition]` | Health checks (command+interval or library source) — observable state |
 | `vulnerabilities` | `dict[str, Vulnerability]` | CWE-classified vulnerabilities assigned to nodes/features |
-| `metrics` | `dict[str, Metric]` | Scoring: Manual (human-graded) or Conditional (automated) |
-| `evaluations` | `dict[str, Evaluation]` | Metric groups with pass/fail thresholds |
-| `tlos` | `dict[str, TLO]` | Training Learning Objectives linked to evaluations |
-| `goals` | `dict[str, Goal]` | High-level goals composed of TLOs |
 | `entities` | `dict[str, Entity]` | Teams, organizations, people (recursive, with exercise roles) |
 | `injects` | `dict[str, Inject]` | Actions between entities during exercises |
 | `events` | `dict[str, Event]` | Triggered actions combining conditions + injects |
@@ -46,7 +48,7 @@ Canonical `imports.source` classes are:
 | `relationships` | `dict[str, Relationship]` | Typed edges between elements (auth, trust, federation) | STIX Relationship SRO |
 | `agents` | `dict[str, Agent]` | Autonomous participants (actions, knowledge, scope) | CybORG Agents |
 | `behavior-specifications` | `dict[str, ParticipantBehaviorSpecification]` | Versioned aggregates over participant action, observation, outcome, authority, and mode surfaces | ACES ACT-606 |
-| `objectives` | `dict[str, Objective]` | Scenario-local objectives binding actors, targets, windows, and success; not EXP task records | OCR scoring + CACAO action/target/agent |
+| `objectives` | `dict[str, Objective]` | Scenario-local objectives binding actors, targets, windows, and success (against observable `conditions`); not EXP task records | CACAO action/target/agent |
 | `workflows` | `dict[str, Workflow]` | Branching and parallel control graphs over declared objectives | CACAO workflow graph patterns; semantics tightened using Step Functions / Argo / SCXML style control-flow rules |
 | `variables` | `dict[str, Variable]` | Parameterization (types, defaults, substitution) | CACAO playbook_variables |
 
@@ -1384,38 +1386,28 @@ vulnerabilities:
 
 ---
 
-## Scoring Pipeline: Metrics, Evaluations, TLOs, Goals
+## Scoring: removed from the SDL
 
-```
-Conditions → Metrics → Evaluations → TLOs → Goals
-```
+The OCR-inherited SDL scoring pipeline
+(`conditions → metrics → evaluations → TLOs → goals`) and the CybORG
+`agents.reward_calculator` label were removed from the authoring language by
+[ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md). The
+`metrics`, `evaluations`, `tlos` (Training Learning Objectives), and `goals`
+sections are no longer SDL surfaces.
 
-```yaml
-metrics:
-  service-uptime:
-    type: CONDITIONAL
-    max-score: 100
-    condition: web-alive
-  report-quality:
-    type: MANUAL
-    max-score: 50
-    artifact: true
-
-evaluations:
-  overall:
-    metrics: [service-uptime, report-quality]
-    min-score: 75                       # shorthand = percentage
-    # or: min-score: {absolute: 100}
-
-tlos:
-  web-defense:
-    name: Web Application Defense
-    evaluation: overall
-
-goals:
-  pass-exercise:
-    tlos: [web-defense]
-```
+`conditions` remain first-class **observable state**: an objective's `success`
+is expressed against `conditions` (see [Objectives](#objectives)), and workflow
+predicates reference `conditions`. When a scenario genuinely needs a graded
+score, cumulative reward, pass/fail evaluation, or a leaderboard value, that
+concern lives in the experiment/evaluator plane — experiment-core contracts
+(`experiment-task-v1` metric definitions, `experiment-study-v1` analysis plans;
+[ADR-055](../../decisions/adrs/adr-055-experiment-core-contract-boundary.md)),
+the evidence/measure contracts (`experiment-evidence-record-v1`,
+`experiment-derived-measure-v1`;
+[ADR-064](../../decisions/adrs/adr-064-experiment-evidence-and-measure-contract-boundary.md)),
+and the backend Evaluator
+([ADR-069](../../decisions/adrs/adr-069-cage-2-replication-architecture.md)) —
+never as authored SDL.
 
 ---
 
@@ -1430,7 +1422,6 @@ entities:
     name: Blue Team
     role: Blue
     mission: Defend infrastructure
-    tlos: [web-defense]
     facts:
       department: SOC
       primary-shift: nights
@@ -1636,8 +1627,13 @@ agents:
     operating_scope:                    # broader targetable scope beyond subnets
       - corp-net
       - user-net
-    reward_calculator: HybridImpactPwn
 ```
+
+The CybORG-inherited `agents.reward_calculator` label was removed from the SDL by
+[ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md): it was
+an unbound free-text label that named a reward class running outside participant
+perception. Reward now lives in the experiment/evaluator plane (ADR-055/064/069),
+not as an authored SDL agent field.
 
 `entity` is required and must resolve to the `entities` section; the
 participant's authored identity and role both come from this binding (per
@@ -1737,7 +1733,7 @@ direct adoption of MITRE ATLAS tactics release v2026.06, pinned by
 `contracts/concept-authority/atlas-tactics-source-v1.json` and checked by
 `tools/check_atlas_tactic_vocabulary.py`. These refs classify authored
 attack-oriented participant tasks, goals, or activities without replacing
-action contracts, SDL `goals`, experiment tasks, workflow steps, or runtime
+action contracts, experiment tasks, workflow steps, or runtime
 history. Extensions are only allowed when `extension_policy` permits them, and
 extension keys must use `x-<owner>:<term>`.
 
@@ -1750,7 +1746,7 @@ outcome-rule runtime addresses.
 
 ## Objectives
 
-Declarative experiment semantics that bind actors, targets, timing, and success criteria in the same SDL. Inspired by OCR's in-spec assessment model and CACAO's separation of agent, target, and workflow context.
+Declarative experiment semantics that bind actors, targets, timing, and success criteria in the same SDL. Inspired by CACAO's separation of agent, target, and workflow context; objective success is expressed against observable `conditions` ([ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md)).
 
 ```yaml
 objectives:
@@ -1764,8 +1760,7 @@ objectives:
       - infrastructure.dmz-switch.acls.allow-dmz-https
     success:
       mode: all_of                     # all_of, any_of
-      goals: [pass-exercise]
-      metrics: [service-uptime]
+      conditions: [beacon-online]      # observable state only
     window:
       stories: [exercise]
       scripts: [main-timeline]
@@ -1776,11 +1771,11 @@ objectives:
   blue-reporting:
     entity: blue-team
     success:
-      metrics: [report-quality]
+      conditions: [web-alive]          # observable state only
     depends_on: [red-initial-access]
 ```
 
-Every objective must declare exactly one actor: either `agent` or `entity`. `success` is required and must reference at least one declared `condition`, `metric`, `evaluation`, `tlo`, or `goal`. `targets` are optional, but when present they must resolve to named scenario elements. Bare target refs work when unambiguous; otherwise use a qualified ref such as `nodes.web-server`, `features.app-to-db`, or `content.mailbox.items.invoice.eml`. `window` is optional; when supplied, referenced stories/scripts/events/workflows must exist and remain internally consistent. Workflow steps use qualified refs of the form `<workflow>.<step>`.
+Every objective must declare exactly one actor: either `agent` or `entity`. `success` is required and must reference at least one declared `condition` (observable state; the OCR scoring surfaces `metrics`/`evaluations`/`tlos`/`goals` were removed by [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md)). `targets` are optional, but when present they must resolve to named scenario elements. Bare target refs work when unambiguous; otherwise use a qualified ref such as `nodes.web-server`, `features.app-to-db`, or `content.mailbox.items.invoice.eml`. `window` is optional; when supplied, referenced stories/scripts/events/workflows must exist and remain internally consistent. Workflow steps use qualified refs of the form `<workflow>.<step>`.
 
 `depends_on` is an ordering relation, not just commentary. It defines a partial order over objectives: downstream objectives are not considered ready until their predecessors have been satisfied. Objective dependency cycles are rejected.
 
@@ -1866,7 +1861,7 @@ terminates with a configured trigger.
 
 Workflow predicates may observe:
 
-- scoring/evaluation data via `conditions`, `metrics`, `evaluations`, `tlos`, `goals`, and `objectives`
+- observable state via `conditions` and objective status via `objectives` (the OCR scoring surfaces `metrics`/`evaluations`/`tlos`/`goals` were removed by [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md))
 - prior step state via `steps`, where each entry names a prior executable step plus one or more expected outcomes (`succeeded`, `failed`, `exhausted`) and an optional `min-attempts`
 
 Example predicate over prior step state:
@@ -1953,16 +1948,23 @@ Think of variables as parameterizing **properties of declared objects**, not the
 
 ---
 
-## Scoring, Objectives, and Runtime Checks
+## Objectives, Conditions, and Runtime Checks
 
-The SDL carries both:
+The SDL carries:
 
-- the OCR-style scoring pipeline (`conditions → metrics → evaluations → TLOs → goals`)
-- declarative objectives that bind actors, targets, windows, and success criteria
+- `conditions` — observable state (health checks and library-sourced checks)
+- declarative objectives that bind actors, targets, windows, and success criteria expressed against observable `conditions`
 - workflow graphs that branch or parallelize declared objectives without embedding runtime probe logic
+
+The SDL carries **no** graded scoring pipeline: the OCR-inherited
+`metrics`/`evaluations`/`tlos`/`goals` sections and the `agents.reward_calculator`
+label were removed by
+[ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md). Graded
+scoring, reward, leaderboard values, and evaluation outputs live in the
+experiment/evaluator plane (ADR-055/064/069).
 
 Experiment-core task, run, apparatus-context, and study records are separate
 contracts. They may reference SDL scenarios or scenario snapshots, but they are
 not SDL sections.
 
-Backend-specific auto-validation mechanics still live outside the SDL. The runtime may use Wazuh queries, command probes, file checks, or other adapters to determine whether an SDL-declared objective or scoring condition has been satisfied, but those probe details are not the language itself.
+Backend-specific auto-validation mechanics still live outside the SDL. The runtime may use Wazuh queries, command probes, file checks, or other adapters to determine whether an SDL-declared objective or observable condition has been satisfied, but those probe details are not the language itself.

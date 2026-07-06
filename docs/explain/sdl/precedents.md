@@ -26,7 +26,7 @@ is not a borrowing table and carries no such column.
 
 ## Core Structure (from Open Cyber Range SDL)
 
-The 14 base sections start from the [OCR SDL](https://github.com/Open-Cyber-Range/SDL-parser) v0.21.2 surface and are adapted into Python/Pydantic. This repository aims for coverage parity across the adopted OCR concepts while remaining its own SDL; when behavior diverges or OCR's own sources disagree, this document states repository behavior explicitly instead of making clone-level compatibility claims. The OCR SDL was developed by the Norwegian Cyber Range (CR14/NTNU).
+The base sections start from the [OCR SDL](https://github.com/Open-Cyber-Range/SDL-parser) v0.21.2 surface and are adapted into Python/Pydantic (per ADR-073 the OCR scoring pipeline — metrics/evaluations/TLOs/goals — was not adopted; it lives in the experiment/evaluator plane instead). This repository aims for coverage parity across the adopted OCR concepts while remaining its own SDL; when behavior diverges or OCR's own sources disagree, this document states repository behavior explicitly instead of making clone-level compatibility claims. The OCR SDL was developed by the Norwegian Cyber Range (CR14/NTNU).
 
 
 | SDL Element | OCR Source | Borrowed | Changes |
@@ -39,7 +39,7 @@ The 14 base sections start from the [OCR SDL](https://github.com/Open-Cyber-Rang
 | Feature | `Feature` | Syntax | Direct port |
 | Condition | `Condition` | Both | Added `timeout`, `retries`, `start_period` |
 | Vulnerability | `Vulnerability` | Syntax | Direct port |
-| Metric/Evaluation/TLO/Goal | OCR scoring pipeline | Both | Direct port |
+| Metric/Evaluation/TLO/Goal | OCR scoring pipeline | Not adopted | Removed from the SDL per ADR-073; graded scoring/reward lives in the experiment/evaluator plane (ADR-055/064/069) |
 | Entity | `Entity` + OCR entity surface | Both | Direct port, including OCR fact maps |
 | Inject/Event/Script/Story | OCR orchestration | Both | Direct port |
 | Source | `Source` (name + version) | Syntax | Made provider-neutral |

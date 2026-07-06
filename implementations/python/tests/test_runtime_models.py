@@ -524,12 +524,10 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
-metrics:
-  uptime: {type: conditional, max-score: 100, condition: health}
 objectives:
   initial:
     entity: blue
-    success: {conditions: [health], metrics: [uptime]}
+    success: {conditions: [health]}
     window:
       stories: [main]
       scripts: [timeline]
@@ -561,7 +559,6 @@ workflows:
         objective = model.objectives["evaluation.objective.initial"]
         workflow = model.workflows["orchestration.workflow.flow"]
 
-        assert "evaluation.metric.uptime" in objective.success_addresses
         assert "evaluation.condition.vm.health" in objective.success_addresses
         assert objective.window_story_addresses == ("orchestration.story.main",)
         assert objective.window_script_addresses == ("orchestration.script.timeline",)
@@ -578,7 +575,7 @@ workflows:
         ]
         assert objective.window_references[-1].workflow_name == "flow"
         assert objective.window_references[-1].step_name == "branch"
-        assert "evaluation.metric.uptime" in objective.ordering_dependencies
+        assert "evaluation.condition.vm.health" in objective.ordering_dependencies
         assert "orchestration.workflow.flow" in objective.refresh_dependencies
         assert workflow.referenced_objective_addresses == ("evaluation.objective.initial",)
         assert workflow.start_step == "start"
@@ -599,8 +596,6 @@ workflows:
         assert "evaluation.condition.vm.health" in workflow.step_predicate_addresses["branch"]
         assert workflow.ordering_dependencies == ()
         assert "evaluation.objective.initial" in workflow.refresh_dependencies
-        assert model.metrics["evaluation.metric.uptime"].result_contract.supports_score is True
-        assert model.metrics["evaluation.metric.uptime"].result_contract.fixed_max_score == 100
         assert model.objectives["evaluation.objective.initial"].result_contract.supports_passed is True
         assert not model.diagnostics
 
@@ -688,20 +683,11 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
-metrics:
-  uptime: {type: conditional, max-score: 100, condition: health}
-evaluations:
-  overall: {metrics: [uptime, missing-metric], min-score: 50}
-tlos:
-  defend: {evaluation: missing-evaluation}
-goals:
-  pass: {tlos: [missing-tlo]}
 objectives:
   initial:
     entity: blue
     success:
-      metrics: [missing-metric]
-      goals: [missing-goal]
+      conditions: [missing-condition]
     window:
       workflows: [missing-workflow]
       steps: [missing-workflow.branch, badstep]
@@ -717,7 +703,7 @@ workflows:
     steps:
       branch:
         type: decision
-        when: {metrics: [missing-metric], objectives: [missing-objective]}
+        when: {conditions: [missing-condition], objectives: [missing-objective]}
         then: finish
         else: finish
       finish: {type: end}
@@ -729,21 +715,14 @@ workflows:
         codes = {diag.code for diag in model.diagnostics}
         assert "orchestration.event-ref-unbound" in codes
         assert "orchestration.script-ref-unbound" in codes
-        assert "evaluation.metric-ref-unbound" in codes
-        assert "evaluation.evaluation-ref-unbound" in codes
-        assert "evaluation.tlo-ref-unbound" in codes
-        assert "evaluation.goal-ref-unbound" in codes
+        assert "evaluation.condition-ref-unbound" in codes
         assert "evaluation.workflow-ref-unbound" in codes
         assert "evaluation.workflow-step-ref-workflow-unbound" in codes
         assert "evaluation.workflow-step-ref-invalid-format" in codes
-        assert "orchestration.metric-ref-unbound" in codes
         assert "orchestration.objective-ref-unbound" in codes
 
         assert model.scripts["orchestration.script.timeline"].event_addresses == ()
         assert model.stories["orchestration.story.main"].script_addresses == ()
-        assert model.evaluations["evaluation.evaluation.overall"].metric_addresses == ("evaluation.metric.uptime",)
-        assert model.tlos["evaluation.tlo.defend"].evaluation_address == ""
-        assert model.goals["evaluation.goal.pass"].tlo_addresses == ()
         assert model.objectives["evaluation.objective.initial"].success_addresses == ()
         assert model.objectives["evaluation.objective.initial"].window_workflow_addresses == ()
         assert model.objectives["evaluation.objective.initial"].window_step_refs == ()
@@ -764,15 +743,13 @@ conditions:
   health: {command: /bin/true, interval: 15}
 entities:
   blue: {role: blue}
-metrics:
-  uptime: {type: conditional, max-score: 100, condition: health}
 objectives:
   attempt:
     entity: blue
     success: {conditions: [health]}
   recover:
     entity: blue
-    success: {metrics: [uptime]}
+    success: {conditions: [health]}
 workflows:
   retry:
     start: attempt-loop

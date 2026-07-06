@@ -106,7 +106,6 @@ def _rewrite_entity(payload: dict[str, Any], symbols: dict[str, dict[str, str] |
     payload["vulnerabilities"] = [
         _maybe_rename(name, symbols["vulnerabilities"]) for name in payload.get("vulnerabilities", [])
     ]
-    payload["tlos"] = [_maybe_rename(name, symbols["tlos"]) for name in payload.get("tlos", [])]
     payload["events"] = [_maybe_rename(name, symbols["events"]) for name in payload.get("events", [])]
     for child in payload.get("entities", {}).values():
         if isinstance(child, dict):
@@ -135,10 +134,6 @@ def _rewrite_workflow(payload: dict[str, Any], symbols: dict[str, dict[str, str]
         when = step.get("when")
         if isinstance(when, dict):
             when["conditions"] = [_maybe_rename(name, symbols["conditions"]) for name in when.get("conditions", [])]
-            when["metrics"] = [_maybe_rename(name, symbols["metrics"]) for name in when.get("metrics", [])]
-            when["evaluations"] = [_maybe_rename(name, symbols["evaluations"]) for name in when.get("evaluations", [])]
-            when["tlos"] = [_maybe_rename(name, symbols["tlos"]) for name in when.get("tlos", [])]
-            when["goals"] = [_maybe_rename(name, symbols["goals"]) for name in when.get("goals", [])]
             when["objectives"] = [_maybe_rename(name, symbols["objectives"]) for name in when.get("objectives", [])]
 
 
@@ -181,18 +176,6 @@ def _namespace_payload(
     for feature in namespaced.get("features", {}).values():
         if isinstance(feature, dict):
             _rewrite_feature(feature, symbols)
-    for metric in namespaced.get("metrics", {}).values():
-        if isinstance(metric, dict) and metric.get("condition"):
-            metric["condition"] = _maybe_rename(str(metric["condition"]), symbols["conditions"])
-    for evaluation in namespaced.get("evaluations", {}).values():
-        if isinstance(evaluation, dict):
-            evaluation["metrics"] = [_maybe_rename(name, symbols["metrics"]) for name in evaluation.get("metrics", [])]
-    for tlo in namespaced.get("tlos", {}).values():
-        if isinstance(tlo, dict) and tlo.get("evaluation"):
-            tlo["evaluation"] = _maybe_rename(str(tlo["evaluation"]), symbols["evaluations"])
-    for goal in namespaced.get("goals", {}).values():
-        if isinstance(goal, dict):
-            goal["tlos"] = [_maybe_rename(name, symbols["tlos"]) for name in goal.get("tlos", [])]
     for entity in namespaced.get("entities", {}).values():
         if isinstance(entity, dict):
             _rewrite_entity(entity, symbols)
@@ -201,7 +184,6 @@ def _namespace_payload(
             if inject.get("from_entity"):
                 inject["from_entity"] = _maybe_rename(str(inject["from_entity"]), symbols["entities"])
             inject["to_entities"] = [_maybe_rename(name, symbols["entities"]) for name in inject.get("to_entities", [])]
-            inject["tlos"] = [_maybe_rename(name, symbols["tlos"]) for name in inject.get("tlos", [])]
     for event in namespaced.get("events", {}).values():
         if isinstance(event, dict):
             event["conditions"] = [_maybe_rename(name, symbols["conditions"]) for name in event.get("conditions", [])]
@@ -294,14 +276,9 @@ def _namespace_payload(
         ]
         success = objective.get("success")
         if isinstance(success, dict):
-            for field_name, symbol_key in (
-                ("conditions", "conditions"),
-                ("metrics", "metrics"),
-                ("evaluations", "evaluations"),
-                ("tlos", "tlos"),
-                ("goals", "goals"),
-            ):
-                success[field_name] = [_maybe_rename(name, symbols[symbol_key]) for name in success.get(field_name, [])]
+            success["conditions"] = [
+                _maybe_rename(name, symbols["conditions"]) for name in success.get("conditions", [])
+            ]
         window = objective.get("window")
         if isinstance(window, dict):
             for field_name, symbol_key in (

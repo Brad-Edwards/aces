@@ -19,7 +19,6 @@ from aces_sdl.participant_outcome_semantics import (
     OutcomeInterpretationTargetLayer,
 )
 from aces_sdl.scenario import InstantiatedScenario, Scenario
-from aces_sdl.semantics.assessment import partition_assessment_dependencies
 from aces_sdl.semantics.objective_semantics import (
     OBJECTIVE_WINDOW_DEPENDENCY_ROLES,
     partition_objective_dependencies,
@@ -36,13 +35,10 @@ from .models import (
     Diagnostic,
     EvaluationExecutionContract,
     EvaluationResultContract,
-    EvaluationRuntime,
     EventRuntime,
     FeatureBinding,
-    GoalRuntime,
     InjectBinding,
     InjectRuntime,
-    MetricRuntime,
     NetworkRuntime,
     NodeRuntime,
     ObjectiveRuntime,
@@ -56,7 +52,6 @@ from .models import (
     RuntimeTemplate,
     ScriptRuntime,
     StoryRuntime,
-    TLORuntime,
     WorkflowExecutionContract,
     WorkflowPredicateRuntime,
     WorkflowResultContract,
@@ -286,20 +281,11 @@ def _workflow_address(name: str) -> str:
     return _address("orchestration", "workflow", name)
 
 
-def _metric_address(name: str) -> str:
-    return _address("evaluation", "metric", name)
-
-
 def _evaluation_address(name: str) -> str:
+    # Address form for the experiment/evaluator-plane EVALUATION_RESULT
+    # interpretation layer (SEM-215). Per ADR-073 the SDL no longer authors an
+    # ``evaluations`` section; this address no longer resolves an SDL resource.
     return _address("evaluation", "evaluation", name)
-
-
-def _tlo_address(name: str) -> str:
-    return _address("evaluation", "tlo", name)
-
-
-def _goal_address(name: str) -> str:
-    return _address("evaluation", "goal", name)
 
 
 def _objective_address(name: str) -> str:
@@ -544,27 +530,9 @@ def _initial_knowledge_addresses(
 
 def _evaluation_contracts(
     resource_type: str,
-    spec: dict[str, Any] | None = None,
 ) -> tuple[EvaluationResultContract, EvaluationExecutionContract]:
-    payload = spec or {}
-    if resource_type == "metric":
-        max_score_raw = payload.get("max-score", payload.get("max_score"))
-        fixed_max_score = (
-            max_score_raw if isinstance(max_score_raw, int) and not isinstance(max_score_raw, bool) else None
-        )
-        return (
-            EvaluationResultContract(
-                resource_type=resource_type,
-                supports_score=True,
-                fixed_max_score=fixed_max_score,
-            ),
-            EvaluationExecutionContract(resource_type=resource_type),
-        )
     if resource_type in {
         "condition-binding",
-        "evaluation",
-        "tlo",
-        "goal",
         "objective",
     }:
         return (
@@ -1763,157 +1731,13 @@ def _compile_stories(
     return stories
 
 
-def _compile_metrics(
-    scenario: InstantiatedScenario,
-    condition_bindings: dict[str, ConditionBinding],
-    diagnostics: list[Diagnostic],
-) -> dict[str, MetricRuntime]:
-    metrics: dict[str, MetricRuntime] = {}
-    for name, metric in scenario.metrics.items():
-        metric_spec = _dump(metric)
-        metric_address = _metric_address(name)
-        condition_addresses = _metric_condition_addresses(metric_spec, metric_address, condition_bindings, diagnostics)
-        result_contract, execution_contract = _evaluation_contracts("metric", metric_spec)
-        ordering_dependencies, refresh_dependencies = partition_assessment_dependencies(condition_addresses)
-        metrics[metric_address] = MetricRuntime(
-            address=metric_address,
-            name=name,
-            condition_name=metric_spec.get("condition") or "",
-            condition_addresses=condition_addresses,
-            ordering_dependencies=ordering_dependencies,
-            refresh_dependencies=refresh_dependencies,
-            spec=metric_spec,
-            result_contract=result_contract,
-            execution_contract=execution_contract,
-        )
-    return metrics
-
-
-def _metric_condition_addresses(
-    metric_spec: dict[str, Any],
-    metric_address: str,
-    condition_bindings: dict[str, ConditionBinding],
-    diagnostics: list[Diagnostic],
-) -> tuple[str, ...]:
-    condition_name = metric_spec.get("condition") or ""
-    if not condition_name:
-        return ()
-    condition_addresses, metric_diagnostics = _resolve_binding_ref(
-        condition_bindings,
-        ref_name=condition_name,
-        owner_address=metric_address,
-        domain="evaluation",
-        code_prefix="evaluation.condition-ref",
-        binding_attr="condition_name",
-        binding_label="condition",
-    )
-    diagnostics.extend(metric_diagnostics)
-    return condition_addresses
-
-
-def _compile_evaluations(
-    scenario: InstantiatedScenario,
-    diagnostics: list[Diagnostic],
-) -> dict[str, EvaluationRuntime]:
-    evaluations: dict[str, EvaluationRuntime] = {}
-    for name, evaluation in scenario.evaluations.items():
-        evaluation_address = _evaluation_address(name)
-        metric_addresses, evaluation_diagnostics = _resolve_named_refs(
-            ref_names=list(evaluation.metrics),
-            available_names=set(scenario.metrics),
-            address_builder=_metric_address,
-            owner_address=evaluation_address,
-            domain="evaluation",
-            code_prefix="evaluation.metric-ref",
-            resource_label="metric",
-        )
-        diagnostics.extend(evaluation_diagnostics)
-        result_contract, execution_contract = _evaluation_contracts("evaluation")
-        ordering_dependencies, refresh_dependencies = partition_assessment_dependencies(metric_addresses)
-        evaluations[evaluation_address] = EvaluationRuntime(
-            address=evaluation_address,
-            name=name,
-            metric_addresses=metric_addresses,
-            ordering_dependencies=ordering_dependencies,
-            refresh_dependencies=refresh_dependencies,
-            spec=_dump(evaluation),
-            result_contract=result_contract,
-            execution_contract=execution_contract,
-        )
-    return evaluations
-
-
-def _compile_tlos(
-    scenario: InstantiatedScenario,
-    diagnostics: list[Diagnostic],
-) -> dict[str, TLORuntime]:
-    tlos: dict[str, TLORuntime] = {}
-    for name, tlo in scenario.tlos.items():
-        tlo_address = _tlo_address(name)
-        evaluation_addresses, tlo_diagnostics = _resolve_named_refs(
-            ref_names=[tlo.evaluation],
-            available_names=set(scenario.evaluations),
-            address_builder=_evaluation_address,
-            owner_address=tlo_address,
-            domain="evaluation",
-            code_prefix="evaluation.evaluation-ref",
-            resource_label="evaluation",
-        )
-        diagnostics.extend(tlo_diagnostics)
-        result_contract, execution_contract = _evaluation_contracts("tlo")
-        ordering_dependencies, refresh_dependencies = partition_assessment_dependencies(evaluation_addresses)
-        tlos[tlo_address] = TLORuntime(
-            address=tlo_address,
-            name=name,
-            evaluation_address=evaluation_addresses[0] if evaluation_addresses else "",
-            ordering_dependencies=ordering_dependencies,
-            refresh_dependencies=refresh_dependencies,
-            spec=_dump(tlo),
-            result_contract=result_contract,
-            execution_contract=execution_contract,
-        )
-    return tlos
-
-
-def _compile_goals(
-    scenario: InstantiatedScenario,
-    diagnostics: list[Diagnostic],
-) -> dict[str, GoalRuntime]:
-    goals: dict[str, GoalRuntime] = {}
-    for name, goal in scenario.goals.items():
-        goal_address = _goal_address(name)
-        tlo_addresses, goal_diagnostics = _resolve_named_refs(
-            ref_names=list(goal.tlos),
-            available_names=set(scenario.tlos),
-            address_builder=_tlo_address,
-            owner_address=goal_address,
-            domain="evaluation",
-            code_prefix="evaluation.tlo-ref",
-            resource_label="TLO",
-        )
-        diagnostics.extend(goal_diagnostics)
-        result_contract, execution_contract = _evaluation_contracts("goal")
-        ordering_dependencies, refresh_dependencies = partition_assessment_dependencies(tlo_addresses)
-        goals[goal_address] = GoalRuntime(
-            address=goal_address,
-            name=name,
-            tlo_addresses=tlo_addresses,
-            ordering_dependencies=ordering_dependencies,
-            refresh_dependencies=refresh_dependencies,
-            spec=_dump(goal),
-            result_contract=result_contract,
-            execution_contract=execution_contract,
-        )
-    return goals
-
-
 def _objective_success_addresses(
-    scenario: InstantiatedScenario,
     condition_bindings: dict[str, ConditionBinding],
     objective: Any,
     objective_address: str,
     diagnostics: list[Diagnostic],
 ) -> list[str]:
+    # Per ADR-073 objective success references observable ``conditions`` only.
     condition_addresses, condition_diagnostics = _resolve_binding_refs(
         condition_bindings,
         ref_names=list(objective.success.conditions),
@@ -1923,52 +1747,8 @@ def _objective_success_addresses(
         binding_attr="condition_name",
         binding_label="condition",
     )
-    metric_addresses, metric_diagnostics = _resolve_named_refs(
-        ref_names=list(objective.success.metrics),
-        available_names=set(scenario.metrics),
-        address_builder=_metric_address,
-        owner_address=objective_address,
-        domain="evaluation",
-        code_prefix="evaluation.metric-ref",
-        resource_label="metric",
-    )
-    evaluation_addresses, evaluation_diagnostics = _resolve_named_refs(
-        ref_names=list(objective.success.evaluations),
-        available_names=set(scenario.evaluations),
-        address_builder=_evaluation_address,
-        owner_address=objective_address,
-        domain="evaluation",
-        code_prefix="evaluation.evaluation-ref",
-        resource_label="evaluation",
-    )
-    tlo_addresses, tlo_diagnostics = _resolve_named_refs(
-        ref_names=list(objective.success.tlos),
-        available_names=set(scenario.tlos),
-        address_builder=_tlo_address,
-        owner_address=objective_address,
-        domain="evaluation",
-        code_prefix="evaluation.tlo-ref",
-        resource_label="TLO",
-    )
-    goal_addresses, goal_diagnostics = _resolve_named_refs(
-        ref_names=list(objective.success.goals),
-        available_names=set(scenario.goals),
-        address_builder=_goal_address,
-        owner_address=objective_address,
-        domain="evaluation",
-        code_prefix="evaluation.goal-ref",
-        resource_label="goal",
-    )
-    diagnostics.extend(
-        [
-            *condition_diagnostics,
-            *metric_diagnostics,
-            *evaluation_diagnostics,
-            *tlo_diagnostics,
-            *goal_diagnostics,
-        ]
-    )
-    return [*condition_addresses, *metric_addresses, *evaluation_addresses, *tlo_addresses, *goal_addresses]
+    diagnostics.extend(condition_diagnostics)
+    return list(condition_addresses)
 
 
 def _objective_dependency_addresses(
@@ -2060,7 +1840,6 @@ def _compile_objectives(
     for name, objective in scenario.objectives.items():
         objective_address = _objective_address(name)
         success_addresses = _objective_success_addresses(
-            scenario,
             condition_bindings,
             objective,
             objective_address,
@@ -2120,42 +1899,6 @@ def _compile_workflow_predicate(
         binding_attr="condition_name",
         binding_label="condition",
     )
-    metric_addresses, metric_diagnostics = _resolve_named_refs(
-        ref_names=list(predicate_source.metrics),
-        available_names=set(scenario.metrics),
-        address_builder=_metric_address,
-        owner_address=predicate_address,
-        domain="orchestration",
-        code_prefix="orchestration.metric-ref",
-        resource_label="metric",
-    )
-    evaluation_addresses, evaluation_diagnostics = _resolve_named_refs(
-        ref_names=list(predicate_source.evaluations),
-        available_names=set(scenario.evaluations),
-        address_builder=_evaluation_address,
-        owner_address=predicate_address,
-        domain="orchestration",
-        code_prefix="orchestration.evaluation-ref",
-        resource_label="evaluation",
-    )
-    tlo_addresses, tlo_diagnostics = _resolve_named_refs(
-        ref_names=list(predicate_source.tlos),
-        available_names=set(scenario.tlos),
-        address_builder=_tlo_address,
-        owner_address=predicate_address,
-        domain="orchestration",
-        code_prefix="orchestration.tlo-ref",
-        resource_label="TLO",
-    )
-    goal_addresses, goal_diagnostics = _resolve_named_refs(
-        ref_names=list(predicate_source.goals),
-        available_names=set(scenario.goals),
-        address_builder=_goal_address,
-        owner_address=predicate_address,
-        domain="orchestration",
-        code_prefix="orchestration.goal-ref",
-        resource_label="goal",
-    )
     objective_addresses, objective_diagnostics = _resolve_named_refs(
         ref_names=list(predicate_source.objectives),
         available_names=set(scenario.objectives),
@@ -2168,10 +1911,6 @@ def _compile_workflow_predicate(
     diagnostics.extend(
         [
             *workflow_diagnostics,
-            *metric_diagnostics,
-            *evaluation_diagnostics,
-            *tlo_diagnostics,
-            *goal_diagnostics,
             *objective_diagnostics,
         ]
     )
@@ -2187,20 +1926,12 @@ def _compile_workflow_predicate(
     predicate_addresses = _dedupe(
         [
             *condition_addresses,
-            *metric_addresses,
-            *evaluation_addresses,
-            *tlo_addresses,
-            *goal_addresses,
             *objective_addresses,
         ]
     )
     return _WorkflowPredicateCompilation(
         predicate=WorkflowPredicateRuntime(
             condition_addresses=condition_addresses,
-            metric_addresses=tuple(metric_addresses),
-            evaluation_addresses=tuple(evaluation_addresses),
-            tlo_addresses=tuple(tlo_addresses),
-            goal_addresses=tuple(goal_addresses),
             objective_addresses=tuple(objective_addresses),
             step_state_predicates=step_state_predicates,
         ),
@@ -2697,10 +2428,6 @@ def compile_runtime_model(scenario: Scenario | InstantiatedScenario) -> RuntimeM
     events = _compile_events(scenario, condition_bindings, injects, inject_bindings, diagnostics)
     scripts = _compile_scripts(scenario, diagnostics)
     stories = _compile_stories(scenario, diagnostics)
-    metrics = _compile_metrics(scenario, condition_bindings, diagnostics)
-    evaluations = _compile_evaluations(scenario, diagnostics)
-    tlos = _compile_tlos(scenario, diagnostics)
-    goals = _compile_goals(scenario, diagnostics)
     objectives = _compile_objectives(scenario, condition_bindings, diagnostics)
     workflows = _compile_workflows(scenario, condition_bindings, diagnostics)
 
@@ -2732,10 +2459,6 @@ def compile_runtime_model(scenario: Scenario | InstantiatedScenario) -> RuntimeM
         scripts=scripts,
         stories=stories,
         workflows=workflows,
-        metrics=metrics,
-        evaluations=evaluations,
-        tlos=tlos,
-        goals=goals,
         objectives=objectives,
         diagnostics=diagnostics,
         realization_requirements=_compile_realization_requirements(scenario),

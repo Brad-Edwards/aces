@@ -71,7 +71,7 @@ Completion contexts include:
 
 - top-level SDL keys
 - known fields for SDL sections
-- reference targets such as features, conditions, metrics, TLOs, entities,
+- reference targets such as features, conditions, entities,
   accounts, objectives, and workflow steps
 - generic target fields that can refer to more than one section
 

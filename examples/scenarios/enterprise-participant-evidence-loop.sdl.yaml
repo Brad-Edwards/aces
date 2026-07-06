@@ -219,64 +219,6 @@ conditions:
       reachability checks from the participant host were retained as negative
       evaluator evidence where supported.
 
-metrics:
-  participant-evidence-complete:
-    type: conditional
-    max_score: 100
-    condition: participant-observation-recorded
-    description: >
-      Scores the handoff only when the participant action produced the expected
-      bounded observation evidence.
-  wazuh-evidence-complete:
-    type: conditional
-    max_score: 100
-    condition: wazuh-evidence-recorded
-    description: >
-      Scores the handoff only when Wazuh evaluator evidence is retained.
-  policy-provenance-complete:
-    type: conditional
-    max_score: 100
-    condition: policy-decision-recorded
-    description: >
-      Scores the handoff only when optional policy provenance is retained.
-  boundary-evidence-complete:
-    type: conditional
-    max_score: 100
-    condition: boundary-checks-recorded
-    description: >
-      Scores the handoff only when negative participant-boundary evidence is
-      retained by a backend that supports live checks.
-
-evaluations:
-  participant-loop-evaluation:
-    metrics:
-      - participant-evidence-complete
-      - wazuh-evidence-complete
-      - policy-provenance-complete
-      - boundary-evidence-complete
-    min_score: {percentage: 100}
-    description: >
-      Demonstrates that participant-local evidence, Wazuh evaluator evidence,
-      policy provenance, and negative boundary checks can support the reference scenario
-      objective without claiming broad autonomous-agent, defensive-tool, or
-      model-defense capability.
-
-tlos:
-  authored-runtime-handoff:
-    evaluation: participant-loop-evaluation
-    description: >
-      The authored SDL participant behavior compiles into runtime-addressable
-      participant, action, observation, Wazuh-evidence, policy-provenance, and
-      boundary-evidence surfaces.
-
-goals:
-  reference-demonstration:
-    tlos: [authored-runtime-handoff]
-    description: >
-      Provide a reusable ACES-side reference for APTL and libvirt n=2 proof
-      issues while signaling richer defensive and model-defense evidence
-      possibilities for later work.
-
 action-contracts:
   probe-customer-portal-login:
     semantic-version: 1.0.0
@@ -617,6 +559,9 @@ behavior-specifications:
     extension-policy: governed-extension
 
 objectives:
+  # Graded scoring/interpretation of this evidence loop now lives in the
+  # experiment/evaluator plane (experiment-* contracts) per ADR-073. The SDL
+  # objective asserts only observable success via conditions.
   demonstrate-handoff:
     agent: participant-agent
     actions: [probe-customer-portal-login]
@@ -627,13 +572,11 @@ objectives:
       - content.policy-decision-log
       - content.boundary-check-evidence
     success:
-      metrics:
-        - participant-evidence-complete
-        - wazuh-evidence-complete
-        - policy-provenance-complete
-        - boundary-evidence-complete
-      evaluations: [participant-loop-evaluation]
-      goals: [reference-demonstration]
+      conditions:
+        - participant-observation-recorded
+        - wazuh-evidence-recorded
+        - policy-decision-recorded
+        - boundary-checks-recorded
     window:
       workflows: [reference-handoff]
       steps: [reference-handoff.probe]

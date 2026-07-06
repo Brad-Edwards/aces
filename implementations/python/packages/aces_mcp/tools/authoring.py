@@ -122,10 +122,6 @@ def register(mcp: FastMCP) -> None:
             "features",
             "conditions",
             "vulnerabilities",
-            "metrics",
-            "evaluations",
-            "tlos",
-            "goals",
             "entities",
             "injects",
             "events",
@@ -181,7 +177,7 @@ def register(mcp: FastMCP) -> None:
         description=(
             "Generate a starter SDL scenario skeleton.  Choose a complexity "
             "level: 'minimal' (topology + features only), 'standard' "
-            "(adds scoring, entities, accounts), or 'full' (all 21 sections "
+            "(adds objectives, entities, accounts), or 'full' (all sections "
             "with placeholder structure).  Optionally provide a scenario name "
             "and description.  The output is valid SDL YAML you can edit."
         ),
@@ -278,10 +274,6 @@ _SECTION_FIELDS = [
     "features",
     "conditions",
     "vulnerabilities",
-    "metrics",
-    "evaluations",
-    "tlos",
-    "goals",
     "entities",
     "injects",
     "events",
@@ -397,34 +389,23 @@ vulnerabilities:
     technical: true
     class: CWE-89
 
-metrics:
-  web-uptime:
-    type: CONDITIONAL
-    max-score: 100
-    condition: web-healthy
-
-evaluations:
-  availability:
-    metrics: [web-uptime]
-    min-score: 75
-
-tlos:
-  defend-web:
-    name: Defend the web application
-    evaluation: availability
-
-goals:
-  exercise-goal:
-    tlos: [defend-web]
-
 entities:
   blue-team:
     name: Blue Team
     role: Blue
-    tlos: [defend-web]
   red-team:
     name: Red Team
     role: Red
+
+# Objective success references observable state (conditions) per ADR-073.
+# Graded scoring/reward, if a study needs it, lives in the experiment/evaluator
+# plane (ADR-055/064/069), not in the SDL.
+objectives:
+  keep-web-available:
+    description: Keep the web application available
+    entity: blue-team
+    success:
+      conditions: [web-healthy]
 
 accounts:
   web-admin-account:
@@ -520,36 +501,11 @@ vulnerabilities:
     technical: true
     class: CWE-89
 
-# --- Scoring Pipeline ---
-metrics:
-  web-uptime:
-    type: CONDITIONAL
-    max-score: 100
-    condition: web-healthy
-  report-quality:
-    type: MANUAL
-    max-score: 50
-
-evaluations:
-  overall:
-    metrics: [web-uptime, report-quality]
-    min-score: 75
-
-tlos:
-  defend-web:
-    name: Defend the web application
-    evaluation: overall
-
-goals:
-  exercise-goal:
-    tlos: [defend-web]
-
 # --- Teams ---
 entities:
   blue-team:
     name: Blue Team
     role: Blue
-    tlos: [defend-web]
     entities:
       web-ops: {name: Web Operations}
   red-team:
@@ -630,7 +586,7 @@ objectives:
   blue-defend:
     entity: blue-team
     success:
-      goals: [exercise-goal]
+      conditions: [web-healthy]
     depends_on: [red-access]
 
 # --- Workflows ---

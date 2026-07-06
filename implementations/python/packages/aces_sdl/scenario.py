@@ -1,10 +1,12 @@
 """Top-level Scenario model — the root of the SDL.
 
-The Scenario combines 23 specification sections covering
+The Scenario combines specification sections covering
 who (entities, accounts, agents), what (nodes, features,
 vulnerabilities, content), when (scripts, stories, events),
-and declarative experiment semantics (objectives, scoring
-pipeline, conditions, relationships, workflows, variables).
+and declarative experiment semantics (objectives, conditions,
+relationships, workflows, variables). Per ADR-073 the SDL no
+longer carries the OCR scoring pipeline; graded scoring/reward
+live in the experiment/evaluator plane (ADR-055/064/069).
 
 Delivery-level concerns (Docker, Terraform, cloud APIs) are
 outside the SDL.
@@ -36,7 +38,6 @@ from .participant_behavior_specification import ParticipantBehaviorSpecification
 from .participant_outcome_semantics import OutcomeInterpretationRule
 from .relationships import Relationship
 from .runtime_forwarding_agent import RuntimeForwardingAgent
-from .scoring import TLO, Evaluation, Goal, Metric
 from .variables import Variable
 from .vulnerabilities import Vulnerability
 
@@ -135,10 +136,6 @@ class Scenario(SDLModel):
     features: dict[str, Feature] = Field(default_factory=dict)
     conditions: dict[str, Condition] = Field(default_factory=dict)
     vulnerabilities: dict[str, Vulnerability] = Field(default_factory=dict)
-    metrics: dict[str, Metric] = Field(default_factory=dict)
-    evaluations: dict[str, Evaluation] = Field(default_factory=dict)
-    tlos: dict[str, TLO] = Field(default_factory=dict)
-    goals: dict[str, Goal] = Field(default_factory=dict)
     entities: dict[str, Entity] = Field(default_factory=dict)
     injects: dict[str, Inject] = Field(default_factory=dict)
     events: dict[str, Event] = Field(default_factory=dict)

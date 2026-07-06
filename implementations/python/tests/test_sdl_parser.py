@@ -132,7 +132,7 @@ objectives:
   ${objective_name}:
     agent: red-agent
     success:
-      goals: [pass-exercise]
+      conditions: [initial-access]
 """,
                 "objectives.${objective_name}",
             ),
@@ -168,31 +168,21 @@ agents:
   red-agent:
     entity: red-team
     actions: [Scan, Exploit]
-goals:
-  pass-exercise:
-    tlos: [web-defense]
-tlos:
-  web-defense:
-    evaluation: overall
-evaluations:
-  overall:
-    metrics: [service-uptime]
-    min-score: 75
-metrics:
-  service-uptime:
-    type: manual
-    max-score: 100
+conditions:
+  initial-access:
+    command: /bin/check
+    interval: 30
 objectives:
   initial-access:
     agent: red-agent
     actions: [Scan]
     targets: [red-agent]
     success:
-      goals: [pass-exercise]
+      conditions: [initial-access]
 """
         s = parse_sdl(sdl, skip_semantic_validation=True)
         assert s.objectives["initial-access"].agent == "red-agent"
-        assert s.objectives["initial-access"].success.goals == ["pass-exercise"]
+        assert s.objectives["initial-access"].success.conditions == ["initial-access"]
         assert s.advisories == []
 
     def test_workflows_section_parses(self):
@@ -201,25 +191,15 @@ name: test
 entities:
   blue-team:
     role: Blue
-metrics:
-  release-check:
-    type: manual
-    max-score: 100
-evaluations:
-  eval-1:
-    metrics: [release-check]
-    min-score: 75
-tlos:
-  tlo-1:
-    evaluation: eval-1
-goals:
-  pass-exercise:
-    tlos: [tlo-1]
+conditions:
+  release-ready:
+    command: /bin/check
+    interval: 30
 objectives:
   validate-release:
     entity: blue-team
     success:
-      goals: [pass-exercise]
+      conditions: [release-ready]
 workflows:
   release-response:
     start: validate
@@ -849,52 +829,6 @@ nodes:
         s = parse_sdl(sdl)
         assert s.nodes["vm"].roles["admin"].username == "admin-user"
 
-    def test_min_score_shorthand(self):
-        sdl = """
-name: test
-conditions:
-  c1:
-    command: /check
-    interval: 10
-metrics:
-  m1:
-    type: conditional
-    max-score: 10
-    condition: c1
-evaluations:
-  e1:
-    metrics:
-      - m1
-    min-score: 75
-"""
-        s = parse_sdl(sdl, skip_semantic_validation=True)
-        assert s.evaluations["e1"].min_score.percentage == 75
-
-    def test_min_score_placeholder_shorthand(self):
-        sdl = """
-name: test
-variables:
-  pass_pct:
-    type: integer
-    default: 75
-conditions:
-  c1:
-    command: /check
-    interval: 10
-metrics:
-  m1:
-    type: conditional
-    max-score: 10
-    condition: c1
-evaluations:
-  e1:
-    metrics:
-      - m1
-    min-score: ${pass_pct}
-"""
-        s = parse_sdl(sdl)
-        assert s.evaluations["e1"].min_score.percentage == "${pass_pct}"
-
     def test_entity_facts_keys_preserved(self):
         sdl = """
 name: test
@@ -1007,26 +941,16 @@ accounts:
     username: admin
     node: vm
     password_strength: ${account_strength}
-goals:
-  pass-exercise:
-    tlos: [tlo-1]
-tlos:
-  tlo-1:
-    evaluation: eval-1
-evaluations:
-  eval-1:
-    metrics: [release-check]
-    min-score: 75
-metrics:
-  release-check:
-    type: manual
-    max-score: 100
+conditions:
+  release-ready:
+    command: /bin/check
+    interval: 30
 objectives:
   review:
     entity: blue-team
     success:
       mode: ${success_mode}
-      goals: [pass-exercise]
+      conditions: [release-ready]
 """
         s = parse_sdl(sdl)
         assert s.nodes["vm"].os == "${host_os}"
@@ -1080,7 +1004,6 @@ nodes:
             "nodes.vm.type",
             "features.svc.type",
             "content.seed.type",
-            "metrics.m1.type",
             "relationships.r1.type",
             "variables.v1.type",
         ],
@@ -1109,13 +1032,6 @@ content:
   seed:
     type: ${content_type}
     target: vm
-""",
-            "metrics.m1.type": """
-name: test
-metrics:
-  m1:
-    type: ${metric_type}
-    max-score: 100
 """,
             "relationships.r1.type": """
 name: test
@@ -1199,10 +1115,12 @@ class TestSkipSemanticValidation:
     def test_structural_only(self):
         """skip_semantic_validation=True skips cross-reference checks."""
         s = parse_sdl(
-            "name: test\ngoals:\n  g1:\n    tlos:\n      - missing-tlo",
+            "name: test\nentities:\n  blue:\n    role: blue\n"
+            "objectives:\n  obj:\n    entity: blue\n    success:\n"
+            "      conditions:\n        - missing-condition",
             skip_semantic_validation=True,
         )
-        assert "g1" in s.goals
+        assert "obj" in s.objectives
 
 
 class TestModuleImports:
@@ -2280,3 +2198,80 @@ nodes:
         assert raw.nodes["db-host"].runtime.database_services[0].version == "${pg_version}"
         instantiated = instantiate_scenario(raw, parameters={"pg_version": "16.13"})
         assert instantiated.nodes["db-host"].runtime.database_services[0].version == "16.13"
+
+
+class TestADR073ScoringRemoval:
+    """Negative-conformance coverage for the OCR scoring removal (ADR-073, SEM-206)."""
+
+    @pytest.mark.parametrize(
+        "section",
+        ["metrics", "evaluations", "tlos", "goals"],
+    )
+    def test_removed_top_level_scoring_sections_rejected(self, section):
+        sdl = f"name: test\n{section}:\n  x1: {{}}\n"
+        with pytest.raises(SDLParseError, match="were removed from the language by ADR-073"):
+            parse_sdl(sdl)
+
+    def test_migration_message_points_to_success_conditions(self):
+        with pytest.raises(SDLParseError, match="objectives.\\*.success.conditions"):
+            parse_sdl("name: test\ngoals:\n  g1:\n    tlos: [t1]\n")
+
+    def test_agent_reward_calculator_rejected(self):
+        sdl = """
+name: test
+entities:
+  red-team:
+    role: red
+agents:
+  red-agent:
+    entity: red-team
+    reward_calculator: some-calc
+"""
+        with pytest.raises(SDLParseError):
+            parse_sdl(sdl)
+
+    def test_entity_tlos_rejected(self):
+        sdl = """
+name: test
+entities:
+  blue-team:
+    role: blue
+    tlos: [t1]
+"""
+        with pytest.raises(SDLParseError):
+            parse_sdl(sdl)
+
+    @pytest.mark.parametrize("field", ["metrics", "evaluations", "tlos", "goals"])
+    def test_objective_success_removed_fields_rejected(self, field):
+        sdl = f"""
+name: test
+entities:
+  blue-team:
+    role: blue
+objectives:
+  obj:
+    entity: blue-team
+    success:
+      {field}: [x1]
+"""
+        with pytest.raises(SDLParseError):
+            parse_sdl(sdl)
+
+    def test_objective_success_accepts_conditions_only(self):
+        sdl = """
+name: test
+entities:
+  blue-team:
+    role: blue
+conditions:
+  release-ready:
+    command: /bin/check
+    interval: 30
+objectives:
+  obj:
+    entity: blue-team
+    success:
+      conditions: [release-ready]
+"""
+        s = parse_sdl(sdl)
+        assert s.objectives["obj"].success.conditions == ["release-ready"]

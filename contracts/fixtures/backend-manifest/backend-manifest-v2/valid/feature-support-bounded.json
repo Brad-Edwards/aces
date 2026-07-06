@@ -159,11 +159,7 @@
       "name": "stub-evaluator",
       "supported_sections": [
         "conditions",
-        "evaluations",
-        "goals",
-        "metrics",
-        "objectives",
-        "tlos"
+        "objectives"
       ],
       "supports_scoring": true,
       "supports_objectives": true,

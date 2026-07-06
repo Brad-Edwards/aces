@@ -111,10 +111,6 @@ class _ValidatorCore:
         ("conditions", True),
         ("vulnerabilities", True),
         ("infrastructure", False),
-        ("metrics", True),
-        ("evaluations", True),
-        ("tlos", True),
-        ("goals", True),
         ("content", True),
         ("accounts", True),
         ("agents", True),
@@ -202,7 +198,7 @@ class _ValidatorCore:
         - services come from declared services on VM nodes.
         - content references stay open across content sections and items.
 
-        Non-spatial, non-resource elements (conditions, metrics, accounts,
+        Non-spatial, non-resource elements (conditions, accounts,
         relationships, objectives, …) are not scope boundaries even though
         they appear in the generic targetable index.
         """
@@ -321,7 +317,6 @@ class _ValidatorCore:
         self._verify_features()
         self._verify_conditions()
         self._verify_vulnerabilities()
-        self._verify_assessment_pipeline()
         self._verify_entities()
         self._verify_injects()
         self._verify_events()

@@ -14,10 +14,6 @@ _SECTION_FIELDS = [
     "features",
     "conditions",
     "vulnerabilities",
-    "metrics",
-    "evaluations",
-    "tlos",
-    "goals",
     "entities",
     "injects",
     "events",
@@ -220,10 +216,6 @@ def runtime_model_summary(model: Any) -> dict[str, Any]:
             },
             "evaluation": {
                 "condition_bindings": len(model.condition_bindings),
-                "metrics": len(model.metrics),
-                "evaluations": len(model.evaluations),
-                "tlos": len(model.tlos),
-                "goals": len(model.goals),
                 "objectives": len(model.objectives),
             },
             "participant": {
@@ -286,12 +278,13 @@ def design_notes(scenario: Any, model: Any, execution_plan: Any) -> list[dict[st
                 "No objectives are authored; range intent and success criteria may be hard to assess.",
             )
         )
-    if scenario.objectives and not (scenario.metrics or scenario.evaluations or scenario.tlos or scenario.goals):
+    if scenario.objectives and not any(objective.success.conditions for objective in scenario.objectives.values()):
         notes.append(
             note(
                 "assessment",
                 "warning",
-                "Objectives exist without a scoring pipeline; objective success may be under-specified.",
+                "Objectives exist without any observable-state (conditions) success criteria; "
+                "objective success may be under-specified.",
             )
         )
     if scenario.agents and not scenario.action_contracts:
@@ -385,22 +378,14 @@ def claim_assessment(scenario: Any, model: Any, execution_plan: Any) -> dict[str
         ),
     ]
 
-    if scenario.metrics or scenario.evaluations or scenario.tlos or scenario.goals:
-        supported.append(
-            claim(
-                "assessment-pipeline",
-                "The scenario contains authored assessment material for scoring or outcome review.",
-                "Metrics/evaluations/TLOs/goals are present.",
-            )
+    unsupported.append(
+        claim(
+            "assessment-result",
+            "The scenario supports scoring or assessment-result claims.",
+            "Per ADR-073 the SDL no longer authors scoring/reward surfaces; graded scoring and "
+            "evaluation results live in the experiment/evaluator plane (ADR-055/064/069).",
         )
-    else:
-        unsupported.append(
-            claim(
-                "assessment-result",
-                "The scenario supports scoring or assessment-result claims.",
-                "No metrics, evaluations, TLOs, or goals are authored.",
-            )
-        )
+    )
 
     if model.action_contracts and model.observation_boundaries and model.participant_behaviors:
         supported.append(

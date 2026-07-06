@@ -44,18 +44,6 @@ _OBJECTIVE_ISSUE_RENDERERS = {
     "objective.success-condition-undeclared": (
         lambda i: f"Objective '{i.objective_name}' references undefined condition '{i.ref}' in success criteria"
     ),
-    "objective.success-metric-undeclared": (
-        lambda i: f"Objective '{i.objective_name}' references undefined metric '{i.ref}' in success criteria"
-    ),
-    "objective.success-evaluation-undeclared": (
-        lambda i: f"Objective '{i.objective_name}' references undefined evaluation '{i.ref}' in success criteria"
-    ),
-    "objective.success-tlo-undeclared": (
-        lambda i: f"Objective '{i.objective_name}' references undefined TLO '{i.ref}' in success criteria"
-    ),
-    "objective.success-goal-undeclared": (
-        lambda i: f"Objective '{i.objective_name}' references undefined goal '{i.ref}' in success criteria"
-    ),
     "objective.window.story-unbound": (
         lambda i: f"Objective '{i.objective_name}' references undefined story '{i.ref}' in window"
     ),
@@ -208,17 +196,11 @@ _PARTICIPANT_OUTCOME_ISSUE_RENDERERS = {
     "participant.outcome.source-workflow-unbound": (
         lambda i: f"Outcome interpretation rule '{i.rule_name}' source '{i.ref}' references undefined workflow"
     ),
-    "participant.outcome.source-evaluation-unbound": (
-        lambda i: f"Outcome interpretation rule '{i.rule_name}' source '{i.ref}' references undefined evaluation"
-    ),
     "participant.outcome.target-objective-unbound": (
         lambda i: f"Outcome interpretation rule '{i.rule_name}' target '{i.ref}' references undefined objective"
     ),
     "participant.outcome.target-workflow-unbound": (
         lambda i: f"Outcome interpretation rule '{i.rule_name}' target '{i.ref}' references undefined workflow"
-    ),
-    "participant.outcome.target-evaluation-unbound": (
-        lambda i: f"Outcome interpretation rule '{i.rule_name}' target '{i.ref}' references undefined evaluation"
     ),
 }
 
@@ -402,7 +384,6 @@ class _ContentObjectivesMixin:
             action_contracts=self._s.action_contracts,
             objectives=self._s.objectives,
             workflows=self._s.workflows,
-            evaluations=self._s.evaluations,
             is_unresolved=self._is_unresolved_var,
         )
         for issue in analysis.issues:
@@ -421,10 +402,6 @@ class _ContentObjectivesMixin:
             entity_names=self._all_entity_names(),
             assessment_resources=AssessmentResourceCatalog(
                 conditions=self._s.conditions,
-                metrics=self._s.metrics,
-                evaluations=self._s.evaluations,
-                tlos=self._s.tlos,
-                goals=self._s.goals,
             ),
             window_resources=WindowResourceCatalog(
                 stories=self._s.stories,

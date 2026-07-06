@@ -1,163 +1,69 @@
-# Assessment Semantics Preflight
+# Assessment Semantics
 
-This note records architecture guardrails for `SEM-206`. It is not an
-implementation plan.
+Implementer-facing reference for `SEM-206` (Assessment Semantics), governed by
+ADR-016. The formal artifacts are
+{download}`specs/formal/assessment/README.md <../../../specs/formal/assessment/README.md>`
+and
+{download}`specs/formal/assessment/pipeline-consistency.md <../../../specs/formal/assessment/pipeline-consistency.md>`;
+this note is the working summary.
 
-## Scope Boundary
+## The SDL carries no scoring/assessment pipeline
 
-`SEM-206` covers the assessment pipeline semantics for SDL conditions, metrics,
-evaluations, TLOs, goals, and their relationship to declarative objectives. The
-current incumbent pipeline is:
+[ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md) removed
+the OCR-inherited scoring/assessment pipeline from the SDL authoring language.
+The graded chain `conditions -> metrics -> evaluations -> tlos -> goals` and the
+CybORG `agents.reward_calculator` label are no longer SDL surfaces:
 
-```text
-condition bindings -> metrics -> evaluations -> TLOs -> goals -> objectives
-```
+- `metrics`, `evaluations`, `tlos` (Training Learning Objectives), and `goals`
+  are removed. They expressed graded values, thresholds, and training-exercise
+  objective/goal trees — read by a grader, not by a participant in-horizon.
+- `agents.reward_calculator` is removed. It was an unbound free-text CybORG label
+  with no cross-reference validator.
 
-The SDL authoring layer owns section shape and static reference rules. The
-processor layer owns compiled evaluation resources, dependency semantics,
-capability checks, and runtime result contracts. The backend/evaluator boundary
-owns only portable evaluator result envelopes and history streams, not
-backend-native scoring state.
+There is no score aggregation, no per-condition metric-exclusivity rule, and no
+scoring-chain ordering/refresh derivation in authored SDL.
 
-Issue #671 reopens whether OCR-style scoring and CybORG-style reward labels
-belong in authored SDL at all. Until an ADR resolves that question, treat the
-existing pipeline as the compatibility surface to preserve, not as permission to
-expand scoring language. A reward, score, return, leaderboard value, or training
-signal is SDL meaning only when it changes the experiment within its horizon or
-is consumed by a participant in-run. Researcher-only scoring, model-training
-reward, leaderboard ranking, and downstream statistical analysis belong in
-experiment/evidence/derived-measure contracts or adapter-private evidence, not
-in a new SDL assessment shortcut.
+## What the SDL keeps
 
-## Incumbents To Reuse
+- **`conditions`** are observable state and remain a first-class SDL surface. A
+  declared condition compiles onto a runtime `evaluation.condition.*` address
+  (`evaluation.condition.<node>.<condition>` once bound); an unbound or ambiguous
+  binding is reported at compilation as `evaluation.condition-ref-unbound` /
+  `evaluation.condition-ref-ambiguous`.
+- **`objectives`** are participant intent and remain first-class. An objective's
+  `success` references **only** `conditions` — observable state, in-horizon and
+  reproducible — never a graded score. Workflow predicates likewise reference
+  `conditions`. The objective-success semantics are detailed in
+  [objective-semantics.md](objective-semantics.md).
 
-- SDL shape: `aces_sdl.conditions`, `aces_sdl.scoring`, and
-  `aces_sdl.objectives`.
-- Static validation: `SemanticValidator._verify_conditions()`,
-  `_verify_metrics()`, `_verify_evaluations()`, `_verify_tlos()`,
-  `_verify_goals()`, and `_verify_objectives()`.
-- Instantiation: `instantiate_scenario()` must rerun semantic validation after
-  parameter substitution.
-- Compilation: `compile_runtime_model()` must remain the source of canonical
-  `evaluation.*` addresses and compiled `EvaluationResultContract` /
-  `EvaluationExecutionContract` payloads.
-- Planning: `aces_processor.semantics.planner` owns ordering and refresh
-  dependency interpretation for compiled evaluation resources.
-- Runtime boundary: `EvaluationExecutionState`, `EvaluationHistoryEvent`,
-  `validate_evaluation_result()`, and
-  `RuntimeManager`'s evaluation result contract diagnostics are the shared
-  enforcement path for evaluator payloads.
-- Participant outcome boundary: `ParticipantOutcomeReport` carriers and
-  SEM-215 interpretation rules remain relationship/provenance records. They do
-  not carry score, reward, or objective-success fields.
-- Experiment/evidence boundary: ADR-055 experiment tasks/runs/studies and
-  ADR-064 capture/evidence/derived-measure contracts own researcher-facing
-  metrics, analysis plans, evidence records, and derived measures outside live
-  SDL scenario meaning.
-- Contracts: `aces_contracts.contracts.ContractModel`, `schema_bundle()`, and
-  generated `contracts/schemas/control-plane/evaluation-*-v1.json` remain the
-  external shape authority.
-- Capability authority: evaluator support must flow through
-  `EvaluatorCapabilities`, `EvaluatorCapabilitiesModel`, controlled vocabulary
-  terms for `capabilities.evaluator.supported_sections`, and the existing
-  `supports_scoring` / `supports_objectives` split.
+## Where graded scoring now lives
 
-## Guardrails
+Graded scoring, cumulative reward, pass/fail evaluation, leaderboard values, and
+evaluation outputs are an experiment/evaluator-plane concern, never authored SDL:
 
-- Keep condition templates distinct from condition bindings. Authoring names a
-  reusable condition; runtime scoring works against node-bound
-  `evaluation.condition.<node>.<condition>` addresses.
-- Keep scoring resources distinct from objectives. Metrics, evaluations, TLOs,
-  and goals define assessment structure; objectives bind actors, targets,
-  success criteria, dependencies, and optional windows.
-- Keep participant reward/return signals distinct from SDL scoring resources.
-  `agents.reward_calculator` is an inherited source label, not a semantic
-  authority for objective success or evaluator aggregation. If a future ADR
-  retains it, the implementation must bind it through governed participant
-  runtime or experiment/evaluator contracts instead of interpreting the string
-  locally.
-- Keep ordering dependencies and refresh dependencies separate. Assessment
-  aggregation uses ordering edges from prerequisite assessment resources;
-  objective windows and condition-driven changes create refresh edges where
-  appropriate.
-- Use the existing fail-closed reference behavior for missing, ambiguous, or
-  out-of-scope references. Do not add local string parsing in compiler,
-  planner, runtime manager, or backend adapters when a model/helper already
-  resolves the reference.
-- Preserve the existing evaluator payload contract: `metric` reports score
-  fields, while `condition-binding`, `evaluation`, `tlo`, `goal`, and
-  `objective` report `passed`. Any additional portable aggregation rule must
-  compile into the contract or a governed contract version, not into
-  backend-private convention.
-- Treat `detail`, `details`, and `evidence_refs` as observation metadata, not
-  as hidden scoring authority. They must not contain secrets, tokens, raw
-  credentials, backend-private object dumps, or full tracebacks.
-- Extend controlled vocabulary, semantic profile, or contract authority only
-  when portable comparison requires it. A local evaluator implementation detail
-  does not belong in those surfaces.
-- Migrate or deprecate existing scenario scoring sections only under an
-  ADR-backed compatibility rule. Do not rewrite `metrics` / `evaluations` /
-  `tlos` / `goals` fixture by fixture to settle the design question locally.
+- **experiment-core contracts**
+  ([ADR-055](../../decisions/adrs/adr-055-experiment-core-contract-boundary.md)):
+  `experiment-task-v1` metric definitions and `experiment-study-v1` analysis
+  plans;
+- **evidence/measure contracts**
+  ([ADR-064](../../decisions/adrs/adr-064-experiment-evidence-and-measure-contract-boundary.md)):
+  `experiment-evidence-record-v1` (raw evidence) and
+  `experiment-derived-measure-v1` (a derived measure or evaluation output);
+- **the backend Evaluator**
+  ([ADR-069](../../decisions/adrs/adr-069-cage-2-replication-architecture.md)
+  §3), which projects reward, objective, terminal-condition, and scoring facts
+  into ACES evaluation results, evidence records, and derived measures.
 
-## Required Gates
+The runtime evaluator-result and execution contracts (`EvaluationResultContract`,
+`EvaluationExecutionContract`, `validate_evaluation_result()`) remain the
+portable, fail-closed observation boundary for evaluated success; score fields
+stay confined to score-supporting evaluator resources and experiment-derived
+measures, not SDL objectives or participant outcomes.
 
-- Parser/model gate: assessment fields stay closed Pydantic models derived from
-  `SDLModel`; `${var}` placeholders may parameterize values but may not create
-  mapping keys or semantic identities.
-- Validation gate: `SemanticValidator` remains the static semantic choke point
-  and raises `SDLValidationError` with collected authoring errors.
-- Instantiation gate: concrete scenarios pass `instantiate_scenario()` and
-  concrete semantic revalidation before compilation.
-- Compiler/planner gate: compiled evaluation resources use canonical
-  `evaluation.*` addresses and shared planner dependency helpers.
-- Manifest/profile gate: evaluator sections and scoring/objective capability
-  declarations resolve through the existing apparatus-manifest and controlled
-  vocabulary helpers.
-- Runtime contract gate: evaluator payloads pass `EvaluationExecutionState`,
-  `EvaluationHistoryEvent`, `EvaluationResultContract`,
-  `EvaluationExecutionContract`, and `validate_evaluation_result()` before
-  entering snapshots.
-- HTTP/control-plane gate: any API exposure uses the existing control-plane
-  request-size, authentication, authorization, idempotency, audit, response
-  model, and redacted-error behavior.
-- Persistence/OS exposure gate: snapshots, operation records, audit details,
-  diagnostics, history `details`, and evidence references stay plain-data and
-  non-secret; bearer tokens and credentials must not appear in command-line
-  arguments, logs, diagnostics, fixtures, or persisted envelopes.
+## Participant outcome interpretation
 
-## Extension Boundary
-
-The extension seam is a pure assessment semantic helper under
-`aces_sdl.semantics` when the same aggregation or reference rule must be used
-by validation, compilation, planning, runtime contract checks, and tests. The
-helper should operate on structured inputs and return normalized references,
-derived dependency roles, and machine-readable issues; callers may translate
-those issues into their local error or diagnostic envelope.
-
-Portable assessment variations belong in versioned contract/profile or
-controlled-vocabulary authority only when external implementations need to
-compare them. They should not be hard-coded as evaluator-specific strings.
-
-## Anti-Patterns
-
-- Duplicating scoring schemas outside `aces_sdl.scoring` or external contract
-  schemas.
-- Creating a second assessment registry beside the scenario model, semantic
-  profile, and concept-authority stack.
-- Recomputing aggregation semantics independently in validator, compiler,
-  planner, manager, and backend stubs.
-- Letting backend-native evaluator payloads become the observation contract.
-- Treating `agents.reward_calculator`, reward arrays, cumulative return, or
-  leaderboard score as a shortcut for SDL objective success.
-- Treating objectives as just another aggregation node, or treating goals/TLOs
-  as actor-bound objectives.
-- Editing generated schemas under `contracts/schemas/` directly.
-- Introducing SEM-206-specific exception, logging, persistence, audit, or
-  error-envelope stacks.
-
-## Non-Goals
-
-This note does not implement new assessment rules, change the current scoring
-pipeline, publish a new contract version, add evaluator capabilities, define
-evidence/provenance semantics, or transition `SEM-206`. Those belong to the
-implementation run that follows.
+The SEM-215 participant outcome-interpretation layer keeps its
+`reward_signal` / `evaluation_result` interpretation layers as a governed
+interpretation relation. They no longer bind to any SDL `evaluations` section —
+a governed `reward_signal` interpretation is not an authored reward calculator
+and adds no score/reward field to participant outcome reports.

@@ -169,7 +169,6 @@ def _compiled_artifact_section(model: CompiledModel) -> dict[str, Any]:
         "action_contracts": sorted(model.action_contracts),
         "observation_boundaries": sorted(model.observation_boundaries),
         "objectives": sorted(model.objectives),
-        "evaluations": sorted(model.evaluations),
         "networks": sorted(model.networks),
         "node_deployments": sorted(model.node_deployments),
     }
@@ -535,7 +534,6 @@ def _invariant_ledger_refs(model: CompiledModel, scenario_section: Mapping[str, 
         "participant_behaviors": sorted(model.participant_behaviors),
         "action_contracts": sorted(model.action_contracts),
         "observation_boundaries": sorted(model.observation_boundaries),
-        "evaluations": sorted(model.evaluations),
         "evidence_refs": [
             "participant_action_proof",
             "terminal_observation",

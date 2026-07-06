@@ -141,7 +141,6 @@ class Inject(SDLModel):
     source: Source | None = None
     from_entity: str = ""
     to_entities: list[str] = Field(default_factory=list)
-    tlos: list[str] = Field(default_factory=list)
     description: str = ""
     environment: list[str] = Field(default_factory=list)
 
@@ -271,13 +270,14 @@ class WorkflowStepStateRef(SDLModel):
 
 
 class WorkflowPredicate(SDLModel):
-    """Branch predicate over runtime evaluation data and prior step state."""
+    """Branch predicate over observable state, objectives, and prior step state.
+
+    Per ADR-073 the OCR scoring references (``metrics`` / ``evaluations`` /
+    ``tlos`` / ``goals``) were removed; a predicate branches on observable
+    ``conditions``, declared ``objectives``, and prior workflow ``steps``.
+    """
 
     conditions: list[str] = Field(default_factory=list)
-    metrics: list[str] = Field(default_factory=list)
-    evaluations: list[str] = Field(default_factory=list)
-    tlos: list[str] = Field(default_factory=list)
-    goals: list[str] = Field(default_factory=list)
     objectives: list[str] = Field(default_factory=list)
     steps: list[WorkflowStepStateRef] = Field(default_factory=list)
 
@@ -286,19 +286,12 @@ class WorkflowPredicate(SDLModel):
         if any(
             (
                 self.conditions,
-                self.metrics,
-                self.evaluations,
-                self.tlos,
-                self.goals,
                 self.objectives,
                 self.steps,
             )
         ):
             return self
-        raise ValueError(
-            "Workflow predicate must reference at least one condition, "
-            "metric, evaluation, TLO, goal, objective, or step state"
-        )
+        raise ValueError("Workflow predicate must reference at least one condition, objective, or step state")
 
 
 class WorkflowSwitchCase(SDLModel):

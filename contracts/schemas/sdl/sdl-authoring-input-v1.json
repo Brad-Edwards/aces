@@ -156,7 +156,7 @@
     },
     "Agent": {
       "additionalProperties": false,
-      "description": "An autonomous participant in the scenario.\n\nAgents reference existing scenario elements:\n\n- ``entity`` links to the entities section (team/role) and supplies\n  identity and role per ADR-020\n- ``starting_accounts`` links to the accounts section\n- ``allowed_subnets`` links to infrastructure entries\n- ``initial_knowledge`` references nodes and infrastructure\n- ``starting_conditions`` links to the conditions section, giving the\n  authoring surface a declarative hook for participant-relevant\n  precondition checks (ACT-601)\n- ``authority_anchors`` links to declared SDL elements (entities,\n  relationships, content, etc.) that anchor what the participant is\n  allowed or expected to do in scenario meaning (ACT-601, ADR-020)\n- ``operating_scope`` links to targetable named scenario elements\n  (subnets, hosts, services, content) defining where the participant\n  may act or observe (ACT-601, ADR-020)\n- ``observation_boundaries`` links to declared participant observation\n  boundaries that define participant-specific projections of world and\n  evidence state (SEM-208)",
+      "description": "An autonomous participant in the scenario.\n\nAgents reference existing scenario elements:\n\n- ``entity`` links to the entities section (team/role) and supplies\n  identity and role per ADR-020\n- ``starting_accounts`` links to the accounts section\n- ``allowed_subnets`` links to infrastructure entries\n- ``initial_knowledge`` references nodes and infrastructure\n- ``starting_conditions`` links to the conditions section, giving the\n  authoring surface a declarative hook for participant-relevant\n  precondition checks (ACT-601)\n- ``authority_anchors`` links to declared SDL elements (entities,\n  relationships, content, etc.) that anchor what the participant is\n  allowed or expected to do in scenario meaning (ACT-601, ADR-020)\n- ``operating_scope`` links to targetable named scenario elements\n  (subnets, hosts, services, content) defining where the participant\n  may act or observe (ACT-601, ADR-020)\n- ``observation_boundaries`` links to declared participant observation\n  boundaries that define participant-specific projections of world and\n  evidence state (SEM-208)\n\nPer ADR-073 the CybORG-inherited ``reward_calculator`` label was removed;\nit was an unbound, unvalidated string and graded reward lives in the\nexperiment/evaluator plane (ADR-055/064/069).",
       "properties": {
         "actions": {
           "items": {
@@ -213,11 +213,6 @@
           },
           "title": "Operating Scope",
           "type": "array"
-        },
-        "reward_calculator": {
-          "default": "",
-          "title": "Reward Calculator",
-          "type": "string"
         },
         "starting_accounts": {
           "items": {
@@ -2082,13 +2077,6 @@
           "default": null,
           "title": "Role"
         },
-        "tlos": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Tlos",
-          "type": "array"
-        },
         "vulnerabilities": {
           "items": {
             "type": "string"
@@ -2098,39 +2086,6 @@
         }
       },
       "title": "Entity",
-      "type": "object"
-    },
-    "Evaluation": {
-      "additionalProperties": false,
-      "description": "A group of metrics with a pass/fail threshold.",
-      "properties": {
-        "description": {
-          "default": "",
-          "title": "Description",
-          "type": "string"
-        },
-        "metrics": {
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1,
-          "title": "Metrics",
-          "type": "array"
-        },
-        "min_score": {
-          "$ref": "#/$defs/MinScore"
-        },
-        "name": {
-          "default": "",
-          "title": "Name",
-          "type": "string"
-        }
-      },
-      "required": [
-        "metrics",
-        "min_score"
-      ],
-      "title": "Evaluation",
       "type": "object"
     },
     "Event": {
@@ -2549,35 +2504,6 @@
       ],
       "title": "FeatureType",
       "type": "string"
-    },
-    "Goal": {
-      "additionalProperties": false,
-      "description": "High-level goal composed of TLOs.",
-      "properties": {
-        "description": {
-          "default": "",
-          "title": "Description",
-          "type": "string"
-        },
-        "name": {
-          "default": "",
-          "title": "Name",
-          "type": "string"
-        },
-        "tlos": {
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1,
-          "title": "Tlos",
-          "type": "array"
-        }
-      },
-      "required": [
-        "tlos"
-      ],
-      "title": "Goal",
-      "type": "object"
     },
     "ImageAttestation": {
       "additionalProperties": false,
@@ -3101,13 +3027,6 @@
           ],
           "default": null
         },
-        "tlos": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Tlos",
-          "type": "array"
-        },
         "to_entities": {
           "items": {
             "type": "string"
@@ -3117,116 +3036,6 @@
         }
       },
       "title": "Inject",
-      "type": "object"
-    },
-    "Metric": {
-      "additionalProperties": false,
-      "description": "A scoring metric \u2014 either manual or conditional.\n\nManual metrics may require artifact submission. Conditional\nmetrics reference a condition that produces the score.",
-      "properties": {
-        "artifact": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Artifact"
-        },
-        "condition": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Condition"
-        },
-        "description": {
-          "default": "",
-          "title": "Description",
-          "type": "string"
-        },
-        "max_score": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "title": "Max Score"
-        },
-        "name": {
-          "default": "",
-          "title": "Name",
-          "type": "string"
-        },
-        "type": {
-          "$ref": "#/$defs/MetricType"
-        }
-      },
-      "required": [
-        "type",
-        "max_score"
-      ],
-      "title": "Metric",
-      "type": "object"
-    },
-    "MetricType": {
-      "description": "How a metric is scored.",
-      "enum": [
-        "manual",
-        "conditional"
-      ],
-      "title": "MetricType",
-      "type": "string"
-    },
-    "MinScore": {
-      "additionalProperties": false,
-      "description": "Pass/fail threshold \u2014 either absolute points or percentage.\n\nShorthand: ``min-score: 50`` (interpreted as percentage).\nLonghand: ``min-score: {absolute: 50}`` or ``{percentage: 75}``.",
-      "properties": {
-        "absolute": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Absolute"
-        },
-        "percentage": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Percentage"
-        }
-      },
-      "title": "MinScore",
       "type": "object"
     },
     "ModuleDescriptor": {
@@ -3485,34 +3294,13 @@
     },
     "ObjectiveSuccess": {
       "additionalProperties": false,
-      "description": "Declarative success criteria for an objective.",
+      "description": "Declarative success criteria for an objective.\n\nPer ADR-073, objective success references observable state (``conditions``)\nonly. The OCR-inherited scoring pipeline (``metrics`` / ``evaluations`` /\n``tlos`` / ``goals``) was removed from the SDL; graded scoring and reward\nlive in the experiment/evaluator plane (ADR-055/064/069).",
       "properties": {
         "conditions": {
           "items": {
             "type": "string"
           },
           "title": "Conditions",
-          "type": "array"
-        },
-        "evaluations": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Evaluations",
-          "type": "array"
-        },
-        "goals": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Goals",
-          "type": "array"
-        },
-        "metrics": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Metrics",
           "type": "array"
         },
         "mode": {
@@ -3526,13 +3314,6 @@
           ],
           "default": "all_of",
           "title": "Mode"
-        },
-        "tlos": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Tlos",
-          "type": "array"
         }
       },
       "title": "ObjectiveSuccess",
@@ -16885,31 +16666,6 @@
       "title": "SuccessMode",
       "type": "string"
     },
-    "TLO": {
-      "additionalProperties": false,
-      "description": "Training Learning Objective \u2014 linked to an evaluation.",
-      "properties": {
-        "description": {
-          "default": "",
-          "title": "Description",
-          "type": "string"
-        },
-        "evaluation": {
-          "title": "Evaluation",
-          "type": "string"
-        },
-        "name": {
-          "default": "",
-          "title": "Name",
-          "type": "string"
-        }
-      },
-      "required": [
-        "evaluation"
-      ],
-      "title": "TLO",
-      "type": "object"
-    },
     "Variable": {
       "additionalProperties": false,
       "description": "A named variable for scenario parameterization.\n\nVariables define configurable parameters with types, defaults,\nand optional value constraints. They're referenced in other\nsections via ``${variable_name}`` syntax.",
@@ -17132,34 +16888,13 @@
     },
     "WorkflowPredicate": {
       "additionalProperties": false,
-      "description": "Branch predicate over runtime evaluation data and prior step state.",
+      "description": "Branch predicate over observable state, objectives, and prior step state.\n\nPer ADR-073 the OCR scoring references (``metrics`` / ``evaluations`` /\n``tlos`` / ``goals``) were removed; a predicate branches on observable\n``conditions``, declared ``objectives``, and prior workflow ``steps``.",
       "properties": {
         "conditions": {
           "items": {
             "type": "string"
           },
           "title": "Conditions",
-          "type": "array"
-        },
-        "evaluations": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Evaluations",
-          "type": "array"
-        },
-        "goals": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Goals",
-          "type": "array"
-        },
-        "metrics": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Metrics",
           "type": "array"
         },
         "objectives": {
@@ -17174,13 +16909,6 @@
             "$ref": "#/$defs/WorkflowStepStateRef"
           },
           "title": "Steps",
-          "type": "array"
-        },
-        "tlos": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Tlos",
           "type": "array"
         }
       },
@@ -17471,13 +17199,6 @@
       "title": "Entities",
       "type": "object"
     },
-    "evaluations": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Evaluation"
-      },
-      "title": "Evaluations",
-      "type": "object"
-    },
     "events": {
       "additionalProperties": {
         "$ref": "#/$defs/Event"
@@ -17506,13 +17227,6 @@
       "title": "Forwarding Agents",
       "type": "array"
     },
-    "goals": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Goal"
-      },
-      "title": "Goals",
-      "type": "object"
-    },
     "imports": {
       "items": {
         "$ref": "#/$defs/ImportDecl"
@@ -17532,13 +17246,6 @@
         "$ref": "#/$defs/Inject"
       },
       "title": "Injects",
-      "type": "object"
-    },
-    "metrics": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Metric"
-      },
-      "title": "Metrics",
       "type": "object"
     },
     "module": {
@@ -17603,13 +17310,6 @@
         "$ref": "#/$defs/Story"
       },
       "title": "Stories",
-      "type": "object"
-    },
-    "tlos": {
-      "additionalProperties": {
-        "$ref": "#/$defs/TLO"
-      },
-      "title": "Tlos",
       "type": "object"
     },
     "variables": {
