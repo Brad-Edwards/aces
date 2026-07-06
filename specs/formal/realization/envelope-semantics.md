@@ -31,11 +31,22 @@ Out of scope:
 
 ## Realization Status
 
-This spec is design authority. It is not yet executable. The relation helper,
-schema carrier, fixtures, property tests, target-conformance integration, and
-manifest evolution are downstream implementation work.
+This spec is design authority. The relation helper, the envelope expression
+contract model, fixtures, and property tests are implemented by issue #668:
 
-Until that work lands:
+- `aces_contracts.realization_envelope` carries the closed, versioned envelope
+  expression (`realization-envelope/v1`) — the admitted-fragment domain kinds,
+  scoped bindings, posture, closure, and witness policy of this note;
+- `aces_sdl.realization_envelope` implements `member`, `subsumes`, `witness`, and
+  `generate_negative_probes` as one deterministic engine over that contract.
+
+The **schema carrier** (a published `contracts/schemas/` artifact with a
+publication-ledger entry), **backend-manifest carriage** (R7), and
+**target-conformance integration** (replacing the #663 `reference_scenario`
+bridge) remain downstream siblings. The envelope contract is intentionally
+unpublished until manifest carriage lands, so its shape can still evolve.
+
+Until that downstream work lands:
 
 - SEM-218 remains the active exact/constrained/open realization authority;
 - `backend-manifest-v2.realization_support` remains the coarse capability and

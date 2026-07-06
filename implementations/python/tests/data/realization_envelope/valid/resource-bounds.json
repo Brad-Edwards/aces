@@ -1,0 +1,16 @@
+{
+  "id": "resource-bounds-v1",
+  "scope": "node",
+  "domains": {
+    "cpu": {"kind": "numeric-interval", "numeric_type": "integer", "lower": 1, "upper": 8},
+    "ratio": {"kind": "numeric-interval", "numeric_type": "number", "lower": 0.0, "upper": 1.0, "upper_closed": false},
+    "enabled": {"kind": "boolean", "value": true},
+    "image": {"kind": "governed-reference", "authority": "image-registry", "allowed_refs": ["base/linux", "base/windows"]}
+  },
+  "bindings": [
+    {"path": "nodes.host.resources.cpu", "scope": "field", "posture": "constrained", "domain": "cpu"},
+    {"path": "nodes.host.resources.ratio", "scope": "field", "posture": "constrained", "domain": "ratio"},
+    {"path": "nodes.host.enabled", "scope": "field", "posture": "exact", "domain": "enabled"},
+    {"path": "nodes.host.image", "scope": "field", "posture": "constrained", "domain": "image"}
+  ]
+}

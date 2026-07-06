@@ -1,0 +1,2 @@
+{"id": "bad-ref", "scope": "scenario", "domains": {},
+ "bindings": [{"path": "name", "scope": "scenario", "posture": "constrained", "domain": "missing"}]}
