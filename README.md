@@ -70,9 +70,9 @@ nodes:
     roles: {mail-admin: postfix}
 ```
 
-Complete examples live in [`examples/scenarios/`](examples/scenarios/).
+Complete examples live in [`examples/scenarios/`](https://github.com/Brad-Edwards/aces/tree/main/examples/scenarios).
 Reusable non-normative templates and patterns are indexed by
-[`examples/library/catalog.yaml`](examples/library/catalog.yaml).
+[`examples/library/catalog.yaml`](https://github.com/Brad-Edwards/aces/blob/main/examples/library/catalog.yaml).
 
 ## Getting Started
 
@@ -147,24 +147,24 @@ uv run aces-mcp
 
 For a dimension-by-dimension comparison against these systems — what ACES
 expresses that they do not, and where they still lead ACES — see
-[Related-Work Comparison](docs/explain/sdl/related-work-comparison.md).
+[Related-Work Comparison](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/sdl/related-work-comparison.md).
 
 ## Documentation
 
-The documentation source is under [`docs/`](docs/). Important entry points:
+The documentation source is under [`docs/`](https://github.com/Brad-Edwards/aces/tree/main/docs). Important entry points:
 
-- [`docs/index.md`](docs/index.md) - documentation index
-- [`docs/explain/getting-started.md`](docs/explain/getting-started.md) - use-case and rigor-level entrypoint
-- [`examples/README.md`](examples/README.md) - current worked example inventory
-- [`examples/library/catalog.yaml`](examples/library/catalog.yaml) - template and pattern library catalog
-- [`docs/explain/reference/canonical-reference-map.md`](docs/explain/reference/canonical-reference-map.md) - current reference map
-- [`docs/explain/reference/documentation-style-guide.md`](docs/explain/reference/documentation-style-guide.md) - documentation style and citation rules
-- [`docs/explain/reference/glossary.md`](docs/explain/reference/glossary.md) - current terminology
-- [`docs/explain/sdl/index.md`](docs/explain/sdl/index.md) - SDL guide
-- [`docs/explain/sdl/runtime-architecture.md`](docs/explain/sdl/runtime-architecture.md) - runtime architecture
-- [`docs/explain/reference/backend-conformance.md`](docs/explain/reference/backend-conformance.md) - backend conformance model
-- [`docs/decisions/adrs/README.md`](docs/decisions/adrs/README.md) - architecture decisions
-- [`contracts/README.md`](contracts/README.md) - contract publication surface
+- [`docs/index.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/index.md) - documentation index
+- [`docs/explain/getting-started.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/getting-started.md) - use-case and rigor-level entrypoint
+- [`examples/README.md`](https://github.com/Brad-Edwards/aces/blob/main/examples/README.md) - current worked example inventory
+- [`examples/library/catalog.yaml`](https://github.com/Brad-Edwards/aces/blob/main/examples/library/catalog.yaml) - template and pattern library catalog
+- [`docs/explain/reference/canonical-reference-map.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/reference/canonical-reference-map.md) - current reference map
+- [`docs/explain/reference/documentation-style-guide.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/reference/documentation-style-guide.md) - documentation style and citation rules
+- [`docs/explain/reference/glossary.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/reference/glossary.md) - current terminology
+- [`docs/explain/sdl/index.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/sdl/index.md) - SDL guide
+- [`docs/explain/sdl/runtime-architecture.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/sdl/runtime-architecture.md) - runtime architecture
+- [`docs/explain/reference/backend-conformance.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/reference/backend-conformance.md) - backend conformance model
+- [`docs/decisions/adrs/README.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/decisions/adrs/README.md) - architecture decisions
+- [`contracts/README.md`](https://github.com/Brad-Edwards/aces/blob/main/contracts/README.md) - contract publication surface
 
 ## Verification
 
@@ -183,7 +183,7 @@ including repository policy, generated artifact checks, tests, and docs.
 
 Contributions are welcome where they improve the language, reference
 implementation, contracts, tests, examples, or documentation. Start with
-[CONTRIBUTING.md](CONTRIBUTING.md).
+[CONTRIBUTING.md](https://github.com/Brad-Edwards/aces/blob/main/CONTRIBUTING.md).
 
 Language and contract changes should be discussed before implementation because
 small SDL changes can affect validation, generated schemas, backend
@@ -192,9 +192,9 @@ conformance, and existing scenario examples.
 ## Versioning
 
 The Python package currently declares its version in
-[`implementations/python/pyproject.toml`](implementations/python/pyproject.toml).
+[`implementations/python/pyproject.toml`](https://github.com/Brad-Edwards/aces/blob/main/implementations/python/pyproject.toml).
 Release notes are collated from towncrier fragments in
-[`changelog.d/`](changelog.d/). Do not hand-edit `CHANGELOG.md`.
+[`changelog.d/`](https://github.com/Brad-Edwards/aces/tree/main/changelog.d). Do not hand-edit `CHANGELOG.md`.
 
 Published JSON Schemas use versioned contract identifiers such as
 `sdl-authoring-input-v1`, but the suffix is not the same as a stability promise.
@@ -202,7 +202,7 @@ The authoritative schema publication manifest records each schema's `draft` or
 `stable` stability class and canonical content hash. Current checked-in schemas
 are draft until a maintainer explicitly promotes them; stable breaking changes
 must mint a new schema version as described in
-[ADR-061](docs/decisions/adrs/adr-061-published-schema-evolution-policy.md).
+[ADR-061](https://github.com/Brad-Edwards/aces/blob/main/docs/decisions/adrs/adr-061-published-schema-evolution-policy.md).
 
 ## Maintainers
 
@@ -224,4 +224,4 @@ If you use ACES SDL in academic work, cite the repository:
 
 ## License
 
-Released under the MIT License. See [LICENSE](LICENSE).
+Released under the MIT License. See [LICENSE](https://github.com/Brad-Edwards/aces/blob/main/LICENSE).
