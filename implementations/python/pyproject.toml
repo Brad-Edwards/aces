@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aces-sdl"
-dynamic = ["version"]
+version = "0.18.0"
 description = "Backend-agnostic cyber range scenario description language and runtime."
 requires-python = ">=3.11"
 dependencies = [
@@ -28,7 +28,6 @@ dev = [
     "coverage>=7.0.0",
     "httpx>=0.27.0",
     "hypothesis>=6.0.0",
-    "towncrier>=23.11.0",
 ]
 docs = [
     "sphinx>=7.3.0",
@@ -42,12 +41,9 @@ docs = [
 aces = "aces.cli.main:app"
 aces-mcp = "aces_mcp.server:main"
 
-# Version is a single committed literal, `__version__` in src/aces/__init__.py
-# (#684). Hatchling reads it via the `path` source; `tools/release.py` bumps that
-# literal from the pending towncrier changelog fragments at release time. There
-# is no VCS- or PSR-derived version and nothing to hand-edit outside a release.
-[tool.hatch.version]
-path = "src/aces/__init__.py"
+# Version is the static `[project] version` above (#684) — the single source of
+# truth, rewritten by release-please on each release. Hatchling reads it directly;
+# `aces.__version__` derives from the installed distribution metadata.
 
 [tool.hatch.build.targets.wheel]
 packages = [
