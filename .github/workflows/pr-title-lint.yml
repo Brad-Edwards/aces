@@ -7,11 +7,16 @@ name: PR Title Lint
 #
 # The PR title is untrusted event data, so it is read from $GITHUB_EVENT_PATH
 # by the checker (never shell-interpolated), the token is read-only, and this
-# uses `pull_request` (never `pull_request_target`). There is no exemption for
-# PRs targeting `dev`.
+# uses `pull_request` (never `pull_request_target`).
+#
+# Scoped to PRs targeting `dev` (feature PRs). On a squash-merged feature PR the
+# conventional title becomes the commit release-please reads, so it is enforced
+# there. `dev`->`main` promotion PRs are not squashed and their title never
+# becomes a release commit, so linting them is noise (#684).
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
+    branches: [dev]
 
 permissions:
   contents: read
