@@ -1,79 +1,68 @@
 # Releasing aces-sdl
 
-`aces-sdl` is published to **PyPI**. The version is a **single committed literal**
-— `__version__` in `implementations/python/src/aces/__init__.py` — bumped by
-`tools/release.py` from the pending towncrier changelog fragments. The changelog
-fragments, the `__version__` literal, and the git tag all carry the same value
-(#684).
+`aces-sdl` is published to **PyPI**, and releases are automated with
+[release-please](https://github.com/googleapis/release-please) (#684). You never
+hand-edit the version or `CHANGELOG.md`: release-please derives both from the
+Conventional Commit history on `main`.
 
 `aces-sdl` also ships the published contract corpus as package data, so
 `aces conformance backend` and SDL semantic validation work from an installed
 wheel. Every release binds the code and the corpus in one versioned artifact
 (#537).
 
-## Version rubric (fragment type → bump)
+## How a release happens
 
-`tools/release.py` scans the pending fragments and takes the **highest** bump:
+1. Feature PRs **squash-merge** (into `dev`, then promoted to `main`) with a
+   Conventional Commit **PR title** — the squashed commit is what release-please
+   reads. The required `title-guard` check enforces the shape.
+2. On every push to `main`, `.github/workflows/release-please.yml` maintains a
+   **release PR** titled `chore(main): release X.Y.Z` that bumps the version and
+   regenerates `CHANGELOG.md` from the commits since the last release.
+3. **Merge that release PR.** release-please tags `vX.Y.Z` and creates the GitHub
+   Release; the `publish` job then builds the corpus-bundled wheel + sdist,
+   verifies the corpus payload (#537), publishes to PyPI via OIDC, and attaches
+   the distributions to the Release.
 
-| Fragment type | Bump |
-|---|---|
-| `removed` | **major** once already ≥ 1.0; **minor** while pre-1.0 |
-| `added`, `changed`, `deprecated` | **minor** |
-| `security`, `fixed` | **patch** |
-| `breaking` | recorded in the changelog, **no auto-bump** — force with `--version` |
-| *(no fragments)* | nothing to release |
+Nothing is hand-run, and feature PRs never touch `CHANGELOG.md` (release-please
+owns it) — no fragment collisions.
 
-`breaking` renders a "Breaking Changes" section so incompatible changes are
-recorded now, but it never escalates the version on its own. To cut the first
-major, force it: `python tools/release.py --version 1.0.0`.
+## Version rubric (PR-title type → bump)
 
-## Cutting a release
+| Type | Releases? | Bump |
+|---|---|---|
+| `feat` | yes | minor |
+| `fix`, `perf` | yes | patch |
+| `feat!` / `fix!` / `BREAKING CHANGE:` footer | yes | major (pre-1.0 demoted to minor) |
+| `docs`, `chore`, `refactor`, `test`, `ci`, `build` | no | — |
 
-1. From an up-to-date checkout (with the pending fragments present), run:
+Use `feat:`/`fix:` for consumer-visible changes so release-please cuts a release.
 
-   ```sh
-   python tools/release.py            # or: --version X.Y.Z to force
-   ```
+## Configuration
 
-   This bumps `__version__`, runs `towncrier build` (collating the fragments into
-   `CHANGELOG.md` and deleting them), and prints the next commands.
-2. Commit on a release branch and open a PR to `main`:
+- `release-please-config.json` — package at repo root (so `CHANGELOG.md` stays at
+  the root), `release-type: python`, `package-name: aces-sdl`. The actual version
+  literal lives in the subdir pyproject and is bumped via `extra-files`
+  (`implementations/python/pyproject.toml` → `$.project.version`).
+- `.release-please-manifest.json` — the version source of truth: `{".": "X.Y.Z"}`.
+- `implementations/python/pyproject.toml` — static `[project] version`
+  (release-please rewrites it). `aces.__version__` derives from the installed
+  distribution metadata.
 
-   ```sh
-   git switch -c release/vX.Y.Z
-   git commit -am "chore: release vX.Y.Z"
-   gh pr create --base main --title "chore: release vX.Y.Z" --fill
-   ```
-3. Merge the PR into `main`. That push runs `.github/workflows/release.yml`: the
-   `decide` job confirms the fragments are collated (none pending) and that
-   `v<version>` is untagged, then the `release` job builds the corpus-bundled
-   wheel + sdist, verifies the corpus + version, tags `v<version>` (tag-only —
-   `main` is never committed to by the workflow), publishes to PyPI via OIDC, and
-   cuts a GitHub Release whose notes are the `CHANGELOG.md` section.
+## Caveat: the release PR and required checks
 
-No commit is pushed to `main` by any bot — only a tag — so no PAT, deploy key, or
-ruleset bypass is needed. The version-bump/changelog commit reaches `main` the
-normal way: a human-reviewed PR merge.
+The release PR is opened by `GITHUB_TOKEN`, so **required status checks do not
+auto-run on it** (GitHub's recursion guard). Two options:
 
-### Keeping `dev` in sync
+- **Admin-merge** the release PR (bypass the required checks for that PR), or
+- Give release-please a **PAT** (repo `contents`+`pull_requests`) as the `token`
+  input so its PRs trigger checks normally.
 
-Feature PRs merge to `dev` (each adds a `changelog.d/` fragment). The release PR
-targets `main`, so after it merges, **back-merge `main` → `dev`** to bring the
-bumped `__version__` and the collated `CHANGELOG.md` back to `dev` (otherwise the
-next `release.py` run computes from a stale literal).
+## First release
 
-## First release (0.18.0)
-
-The literal starts at `0.17.0` (the last hand-authored changelog version, never
-published). The `decide` job **skips publishing while fragments are pending**, so
-merging the release-infra change to `main` cannot accidentally publish `0.17.0`.
-To ship the first release:
-
-1. Run `python tools/release.py` — the pending backlog (`added`/`changed`/
-   `fixed`/`security`) computes a minor bump → **`0.18.0`**, collated into
-   `## [0.18.0]`.
-2. PR the `release/v0.18.0` branch to `main` and merge → `v0.18.0` is tagged,
-   built, and published.
+`main` starts at `0.18.0` (the manifest/pyproject baseline; the historical
+changelog through `0.18.0` is preserved in `CHANGELOG.md`). The first `feat:`/
+`fix:` merged to `main` after adoption produces a release PR bumping from
+`0.18.0`; merging it publishes the first PyPI artifact.
 
 ## PyPI trusted publishing (one-time, maintainer)
 
@@ -83,25 +72,14 @@ token stored):
 - PyPI → *Your projects* → *Publishing* → *Add a pending publisher* → GitHub
 - PyPI Project Name: `aces-sdl`
 - Owner: `Brad-Edwards`  ·  Repository: `aces`
-- Workflow name: `release.yml`  ·  Environment name: `pypi`
+- **Workflow name: `release-please.yml`**  ·  Environment name: `pypi`
 
-The `release` job sets `environment: pypi` (a GitHub environment restricted to
-`main`). A filename/environment mismatch 403s only the PyPI publish step.
-
-## Contributor rule
-
-Per PR, add a `changelog.d/<slug>.<type>.md` fragment; **never edit
-`CHANGELOG.md` directly** (only `tools/release.py` / release-collation commits
-do). The fragment `<type>` is what determines the next version.
+> If you previously registered the publisher against `release.yml`, update it to
+> `release-please.yml` (or add a second pending publisher) — the workflow filename
+> must match or only the PyPI publish step 403s.
 
 ## Pinning from a downstream backend
 
 ```
 aces-sdl==<X.Y.Z>
-```
-
-or, for an unpublished commit, the git subdirectory install:
-
-```
-aces-sdl @ git+https://github.com/Brad-Edwards/aces.git@v<X.Y.Z>#subdirectory=implementations/python
 ```

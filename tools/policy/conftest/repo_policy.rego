@@ -39,36 +39,8 @@ deny contains result if {
 }
 
 
-deny contains result if {
-  input.check_set == "full"
-  some path in input.changed
-  path_matches_any(path, input.policy.source_roots)
-  endswith(path, ".py")
-  not changelog_signal_touched
-  result := {
-    "msg": "source changes require a changelog fragment under changelog.d/",
-    "rule_id": "changelog-required",
-    "path": input.policy.changelog_fragment_dir,
-  }
-}
-
-
 manifest_touched if {
   input.policy.generated_contracts.manifest_path in input.changed
-}
-
-
-changelog_signal_touched if {
-  input.policy.changelog_path in input.changed
-}
-
-
-changelog_signal_touched if {
-  some path in input.changed
-  path_matches_prefix(path, input.policy.changelog_fragment_dir)
-  endswith(path, ".md")
-  not endswith(path, "/README.md")
-  not startswith(path, sprintf("%s/_", [trim(input.policy.changelog_fragment_dir, "/")]))
 }
 
 
