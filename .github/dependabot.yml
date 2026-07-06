@@ -1,5 +1,10 @@
 # Dependabot keeps the SHA-pinned GitHub Actions (and Python deps) patched, so
 # the pins in .github/workflows/*.yml do not silently rot (#684 release hardening).
+#
+# All updates target `dev` (not the default `main`): bumps should flow through the
+# integration branch and the normal dev->main promotion, not land on `main` where
+# a release is being cut. NOTE: dependabot reads this file from the DEFAULT branch
+# (`main`), so `target-branch` only takes effect once this change is on `main`.
 version: 2
 updates:
   # GitHub Actions used across all workflows (release.yml pins are publishing-
@@ -7,6 +12,7 @@ updates:
   # bumps arrives as one reviewable PR.
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
@@ -17,6 +23,7 @@ updates:
   # Python package dependencies for the aces-sdl distribution.
   - package-ecosystem: "pip"
     directory: "/implementations/python"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
