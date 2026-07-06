@@ -219,10 +219,15 @@ contract between definition and backend.
 Objectives and workflow graphs (branching, parallel, joins) as authored
 constructs.
 
-- **ACES — yes.** Declarative objectives (actor-target-window-success) and a
-  workflow graph (decisions, switch/case, parallel, joins, retries, cancel and
-  timeout, compensation)
+- **ACES — yes.** Declarative objectives (actor-target-window-success, where
+  success references observable `conditions`) and a workflow graph (decisions,
+  switch/case, parallel, joins, retries, cancel and timeout, compensation).
+  Unlike OCR, ACES carries **no** in-SDL scoring chain: the OCR-inherited
+  `metrics`/`evaluations`/`tlos`/`goals` sections were removed by
+  [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md), and
+  graded scoring/reward lives in the experiment/evaluator plane (ADR-055/064/069)
   ([objective-semantics.md](../reference/objective-semantics.md),
+  [assessment-semantics.md](../reference/assessment-semantics.md),
   `specs/formal/objectives/`, `specs/formal/workflows/`).
 - **OCR SDL — yes.** A Goals → TLOs → Evaluations → Metrics → Conditions scoring
   chain and Stories → Scripts → Events → Injects timelines with parallel

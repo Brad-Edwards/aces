@@ -665,10 +665,6 @@ class WorkflowPredicateRuntime:
     """Resolved workflow predicate semantics."""
 
     condition_addresses: tuple[str, ...] = ()
-    metric_addresses: tuple[str, ...] = ()
-    evaluation_addresses: tuple[str, ...] = ()
-    tlo_addresses: tuple[str, ...] = ()
-    goal_addresses: tuple[str, ...] = ()
     objective_addresses: tuple[str, ...] = ()
     step_state_predicates: tuple[WorkflowStepStatePredicateRuntime, ...] = ()
 
@@ -678,10 +674,6 @@ class WorkflowPredicateRuntime:
         ordered: list[str] = []
         for address in (
             *self.condition_addresses,
-            *self.metric_addresses,
-            *self.evaluation_addresses,
-            *self.tlo_addresses,
-            *self.goal_addresses,
             *self.objective_addresses,
         ):
             if address in seen:
@@ -4167,59 +4159,6 @@ def iter_participant_behavior_joint_action_violations(
 
 
 @dataclass(frozen=True)
-class MetricRuntime(ResolvedResource):
-    """Resolved metric node."""
-
-    condition_name: str = ""
-    condition_addresses: tuple[str, ...] = ()
-    result_contract: "EvaluationResultContract" = field(
-        default_factory=lambda: EvaluationResultContract(resource_type="metric")
-    )
-    execution_contract: "EvaluationExecutionContract" = field(
-        default_factory=lambda: EvaluationExecutionContract(resource_type="metric")
-    )
-
-
-@dataclass(frozen=True)
-class EvaluationRuntime(ResolvedResource):
-    """Resolved evaluation node."""
-
-    metric_addresses: tuple[str, ...] = ()
-    result_contract: "EvaluationResultContract" = field(
-        default_factory=lambda: EvaluationResultContract(resource_type="evaluation")
-    )
-    execution_contract: "EvaluationExecutionContract" = field(
-        default_factory=lambda: EvaluationExecutionContract(resource_type="evaluation")
-    )
-
-
-@dataclass(frozen=True)
-class TLORuntime(ResolvedResource):
-    """Resolved TLO node."""
-
-    evaluation_address: str = ""
-    result_contract: "EvaluationResultContract" = field(
-        default_factory=lambda: EvaluationResultContract(resource_type="tlo")
-    )
-    execution_contract: "EvaluationExecutionContract" = field(
-        default_factory=lambda: EvaluationExecutionContract(resource_type="tlo")
-    )
-
-
-@dataclass(frozen=True)
-class GoalRuntime(ResolvedResource):
-    """Resolved goal node."""
-
-    tlo_addresses: tuple[str, ...] = ()
-    result_contract: "EvaluationResultContract" = field(
-        default_factory=lambda: EvaluationResultContract(resource_type="goal")
-    )
-    execution_contract: "EvaluationExecutionContract" = field(
-        default_factory=lambda: EvaluationExecutionContract(resource_type="goal")
-    )
-
-
-@dataclass(frozen=True)
 class ObjectiveRuntime(ResolvedResource):
     """Resolved objective node."""
 
@@ -4285,10 +4224,6 @@ class RuntimeModel:
     scripts: dict[str, ScriptRuntime] = field(default_factory=dict)
     stories: dict[str, StoryRuntime] = field(default_factory=dict)
     workflows: dict[str, WorkflowRuntime] = field(default_factory=dict)
-    metrics: dict[str, MetricRuntime] = field(default_factory=dict)
-    evaluations: dict[str, EvaluationRuntime] = field(default_factory=dict)
-    tlos: dict[str, TLORuntime] = field(default_factory=dict)
-    goals: dict[str, GoalRuntime] = field(default_factory=dict)
     objectives: dict[str, ObjectiveRuntime] = field(default_factory=dict)
     diagnostics: list[Diagnostic] = field(default_factory=list)
     # SEM-218 typed compiler emission: each authored realization concern with

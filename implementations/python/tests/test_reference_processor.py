@@ -50,8 +50,6 @@ _SCENARIO = dedent(
         roles: {ops: operator}
     conditions:
       health: {command: /bin/true, interval: 15}
-    metrics:
-      uptime: {type: conditional, max-score: 100, condition: health}
     entities:
       blue: {role: blue}
     objectives:
@@ -83,8 +81,6 @@ _PARAM_SCENARIO = dedent(
         roles: {ops: operator}
     conditions:
       health: {command: /bin/true, interval: 15}
-    metrics:
-      uptime: {type: conditional, max-score: 100, condition: health}
     entities:
       blue: {role: blue}
     objectives:

@@ -12,8 +12,9 @@ target-resolution, success-interpretation, and dependency-ordering semantics
 - target resolution through the targetable named-reference index (bare or
   section-qualified), fail-closed on missing/ambiguous references
 - success interpretation: `mode` (`all_of` / `any_of`) over referenced
-  conditions, metrics, evaluations, TLOs, and goals; the assessment pipeline
-  stays the authority for upstream ordering/refresh among those resources
+  `conditions` (observable state only; the OCR scoring surfaces `metrics`,
+  `evaluations`, `tlos`, and `goals` were removed by
+  [ADR-073](../../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md))
 - windows: normalized story/script/event/workflow/workflow-step reference
   resolution; consistency between `window.stories`, `window.scripts`,
   `window.events`, `window.workflows`, and `window.steps`; reachability

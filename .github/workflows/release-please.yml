@@ -1,0 +1,133 @@
+name: Release Please
+
+# release-please (#684) owns versioning + CHANGELOG.md. On each push to `main`
+# it maintains a release PR ("chore(main): release X.Y.Z") that bumps the version
+# (in implementations/python/pyproject.toml via extra-files) and updates the
+# repo-root CHANGELOG.md from the Conventional Commits since the last release.
+# Merging that PR tags `vX.Y.Z` and cuts the GitHub Release; the publish job then
+# builds the corpus-bundled wheel/sdist (#537) and publishes to PyPI over OIDC
+# trusted publishing.
+#
+# Feature PRs never touch CHANGELOG.md (release-please owns it) — no fragment
+# collisions. The version literal is `[project] version` in the subdir pyproject;
+# `aces.__version__` derives from the installed distribution metadata.
+#
+# Caveat: the release PR is opened by GITHUB_TOKEN, so required CI checks do not
+# auto-run on it — admin-merge it, or give release-please a PAT so checks run.
+# First release + PyPI setup: docs/explain/releasing.md.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # create/maintain the release PR, tag, and Release
+      pull-requests: write   # maintain the release PR
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+        id: rp
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: write   # upload the built distributions to the Release
+      id-token: write   # OIDC trusted publishing to PyPI (no stored token)
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8
+
+      - name: Build the corpus-bundled wheel + sdist
+        run: uv build --out-dir dist implementations/python
+
+      - name: Verify the contract corpus is bundled in the wheel (#537)
+        run: |
+          python - <<'PY'
+          import glob
+          import sys
+          import zipfile
+
+          wheels = glob.glob("dist/aces_sdl-*.whl")
+          if len(wheels) != 1:
+              sys.exit(f"expected exactly one wheel, found {wheels}")
+          names = zipfile.ZipFile(wheels[0]).namelist()
+          required = [
+              "aces_contracts/_corpus/profiles/backend/provisioning-only.json",
+              "aces_contracts/_corpus/fixtures/",
+              "aces_contracts/_corpus/concept-authority/controlled-vocabularies-v1.json",
+              "aces_contracts/_corpus/schemas/",
+          ]
+          missing = [r for r in required if not any(n == r or n.startswith(r) for n in names)]
+          if missing:
+              sys.exit(f"wheel is missing corpus payload: {missing}")
+          print(f"corpus payload present: {sum(n.startswith('aces_contracts/_corpus/') for n in names)} files")
+          PY
+
+      - name: Publish to PyPI (OIDC trusted publishing)
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
+        with:
+          packages-dir: dist
+
+      - name: Attach the distributions to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: gh release upload "${TAG}" dist/* --clobber
+
+  # After a release is cut, the version bump + CHANGELOG land on `main`, so `dev`
+  # falls one release commit behind. Open a back-merge PR so `dev` is resynced.
+  # `main` is ahead of `dev` only by the release commit (a fast-forward). This
+  # job cannot auto-merge it: `dev` requires status checks that a bot-opened PR
+  # does not trigger, and repo auto-merge is off — merge it yourself (admin
+  # override; enforce_admins is false).
+  sync-dev:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+      - name: Open the back-merge PR (main -> dev)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          existing="$(gh pr list --repo "${GITHUB_REPOSITORY}" --base dev --head main --state open --json number --jq '.[].number')"
+          if [ -n "${existing}" ]; then
+            echo "back-merge PR main->dev already open (#${existing}); nothing to do"
+            exit 0
+          fi
+          gh pr create --repo "${GITHUB_REPOSITORY}" --base dev --head main \
+            --title "chore: back-merge ${TAG} into dev" \
+            --body "Automated back-merge of the ${TAG} release commit (version bump + CHANGELOG) from \`main\` into \`dev\`, so \`dev\` stays in sync. \`main\` is ahead of \`dev\` only by the release commit (fast-forward). \`dev\`'s required checks do not run on this bot-opened PR — merge it directly (admin)."

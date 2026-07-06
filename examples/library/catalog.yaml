@@ -71,14 +71,14 @@ surfaces:
       - id: run-window-with-evidence
         path: examples/library/patterns/run-window-with-evidence.yaml
   study:
-    summary: Study-oriented authoring with metrics, evaluations, TLOs, goals, and workflow protocol.
+    summary: Study-oriented authoring with observable conditions, objectives, and workflow protocol. Graded scoring is an experiment/evaluator-plane concern per ADR-073.
     worked_examples:
-      - id: satcom-study-scoring
+      - id: satcom-study-scenario
         path: examples/scenarios/satcom-release-poisoning.sdl.yaml
         source_refs: [examples/README.md]
     templates:
-      - id: scored-study-protocol
-        path: examples/library/templates/study/scored-study-protocol.yaml
+      - id: observational-study-protocol
+        path: examples/library/templates/study/observational-study-protocol.yaml
     patterns:
-      - id: study-scoring-chain
-        path: examples/library/patterns/study-scoring-chain.yaml
+      - id: observable-study-conditions
+        path: examples/library/patterns/observable-study-conditions.yaml

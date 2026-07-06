@@ -1,0 +1,44 @@
+template: aces-library-template
+version: 1
+id: observational-study-protocol
+surface: study
+requirement_refs: [AUT-806]
+source_refs:
+  - docs/explain/sdl/sections.md
+  - docs/decisions/adrs/adr-073-scoring-reward-language-scope.md
+summary: Study template connecting a task outcome to an observable condition, objective, and workflow protocol. Graded scoring lives in the experiment/evaluator plane per ADR-073.
+body:
+  name: library-study-template
+  description: Study-oriented SDL wrapper whose objective asserts observable success via a condition. Graded scoring and reward are experiment/evaluator-plane concerns per ADR-073, not SDL surfaces.
+  nodes:
+    study-target:
+      type: VM
+      resources: {ram: 1 GiB, cpu: 1}
+      services:
+        - {port: 443, name: https}
+  conditions:
+    study-task-success:
+      command: test -f /var/lib/aces/study-task-success
+      interval: 30
+  entities:
+    participant-team:
+      role: blue
+  agents:
+    study-participant:
+      entity: participant-team
+  objectives:
+    complete-study-task:
+      agent: study-participant
+      targets: [nodes.study-target.services.https]
+      success:
+        conditions: [study-task-success]
+  workflows:
+    study-protocol:
+      start: complete-task
+      steps:
+        complete-task:
+          type: objective
+          objective: complete-study-task
+          on-success: done
+        done:
+          type: end

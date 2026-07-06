@@ -9,26 +9,7 @@ from .._base import VARIABLE_TOKEN_RE
 from ..entities import flatten_entities
 from ..explicitness import classify_scenario_explicitness
 from ..scenario import Scenario
-from ..semantics.assessment import AssessmentIssue, analyze_assessment_pipeline
 from ._support import _topological_sort
-
-# Renders an assessment-pipeline issue (machine-readable code from
-# ``aces_sdl.semantics.assessment``) into the authoring-error string. Keyed by
-# issue code so a new code is a new line here rather than a new conditional.
-_ASSESSMENT_ISSUE_RENDERERS = {
-    "metric.condition-undeclared": (lambda i: f"Metric '{i.resource_name}' references undefined condition '{i.ref}'"),
-    "metric.condition-multiply-scored": (lambda i: f"Condition '{i.resource_name}' is referenced by multiple metrics"),
-    "evaluation.metric-undeclared": (lambda i: f"Evaluation '{i.resource_name}' references undefined metric '{i.ref}'"),
-    "evaluation.min-score-exceeds-metric-total": (
-        lambda i: (
-            f"Evaluation '{i.resource_name}' absolute min-score "
-            f"({i.observed}) exceeds sum of "
-            f"metric max-scores ({i.limit})"
-        )
-    ),
-    "tlo.evaluation-undeclared": (lambda i: f"TLO '{i.resource_name}' references undefined evaluation '{i.ref}'"),
-    "goal.tlo-undeclared": (lambda i: f"Goal '{i.resource_name}' references undefined TLO '{i.ref}'"),
-}
 
 
 class _SectionsMixin:
@@ -120,37 +101,11 @@ class _SectionsMixin:
         # CWE format validation is handled by the Pydantic field_validator.
         pass
 
-    def _verify_assessment_pipeline(self) -> None:
-        # The condition -> metric -> evaluation -> TLO -> goal scoring chain.
-        # Reference, aggregation, and dependency-role semantics live in
-        # ``aces_sdl.semantics.assessment`` (SEM-206); this pass renders the
-        # machine-readable issues it reports as authoring errors.
-        analysis = analyze_assessment_pipeline(
-            conditions_by_name=self._s.conditions,
-            metrics_by_name=self._s.metrics,
-            evaluations_by_name=self._s.evaluations,
-            tlos_by_name=self._s.tlos,
-            goals_by_name=self._s.goals,
-            is_unresolved=self._is_unresolved_var,
-        )
-        for issue in analysis.issues:
-            self._err(self._format_assessment_issue(issue))
-
-    @staticmethod
-    def _format_assessment_issue(issue: AssessmentIssue) -> str:
-        renderer = _ASSESSMENT_ISSUE_RENDERERS.get(issue.code)
-        if renderer is None:
-            raise AssertionError(f"unhandled assessment-pipeline issue code: {issue.code}")
-        return renderer(issue)
-
     def _verify_entities(self) -> None:
         for name, entity in flatten_entities(self._s.entities).items():
             self._verify_entity_refs(name, entity)
 
     def _verify_entity_refs(self, name: str, entity: object) -> None:
-        self._verify_membership_refs(
-            entity.tlos, self._s.tlos, lambda ref: f"Entity '{name}' references undefined TLO '{ref}'"
-        )
         self._verify_membership_refs(
             entity.vulnerabilities,
             self._s.vulnerabilities,
@@ -174,9 +129,6 @@ class _SectionsMixin:
             self._err(f"Inject '{name}' from_entity '{inject.from_entity}' is not a defined entity")
         self._verify_membership_refs(
             inject.to_entities, flat_names, lambda ref: f"Inject '{name}' to_entity '{ref}' is not a defined entity"
-        )
-        self._verify_membership_refs(
-            inject.tlos, self._s.tlos, lambda ref: f"Inject '{name}' references undefined TLO '{ref}'"
         )
 
     def _verify_events(self) -> None:

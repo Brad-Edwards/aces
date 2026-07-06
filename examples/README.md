@@ -9,9 +9,9 @@ backend guarantees.
 
 | File | Best use | Current coverage | Limits |
 |------|----------|------------------|--------|
-| [`scenarios/hospital-ransomware-surgery-day.sdl.yaml`](scenarios/hospital-ransomware-surgery-day.sdl.yaml) | Large enterprise and clinical operations scenario | Disk-backed example test; complex example checks for objectives, agents, relationships, content, stories, metrics, direct refs | Does not deploy a hospital range or prove clinical exercise adequacy |
-| [`scenarios/satcom-release-poisoning.sdl.yaml`](scenarios/satcom-release-poisoning.sdl.yaml) | Supply-chain, release, tenant, and rollback scenario | Disk-backed example test; complex example checks for objectives, agents, relationships, content, stories, metrics, workflows, enum-backed variables | Does not implement a CI/CD backend or production release system |
-| [`scenarios/port-authority-surge-response.sdl.yaml`](scenarios/port-authority-surge-response.sdl.yaml) | IT/OT, customs, yard operations, and recovery scenario | Disk-backed example test; complex example checks for objectives, agents, relationships, content, stories, metrics, workflows, direct refs | Does not implement OT control, safety validation, or port operations |
+| [`scenarios/hospital-ransomware-surgery-day.sdl.yaml`](scenarios/hospital-ransomware-surgery-day.sdl.yaml) | Large enterprise and clinical operations scenario | Disk-backed example test; complex example checks for objectives, agents, relationships, content, stories, conditions, direct refs | Does not deploy a hospital range or prove clinical exercise adequacy |
+| [`scenarios/satcom-release-poisoning.sdl.yaml`](scenarios/satcom-release-poisoning.sdl.yaml) | Supply-chain, release, tenant, and rollback scenario | Disk-backed example test; complex example checks for objectives, agents, relationships, content, stories, conditions, workflows, enum-backed variables | Does not implement a CI/CD backend or production release system |
+| [`scenarios/port-authority-surge-response.sdl.yaml`](scenarios/port-authority-surge-response.sdl.yaml) | IT/OT, customs, yard operations, and recovery scenario | Disk-backed example test; complex example checks for objectives, agents, relationships, content, stories, conditions, workflows, direct refs | Does not implement OT control, safety validation, or port operations |
 | [`scenarios/techvault.sdl.yaml`](scenarios/techvault.sdl.yaml) | Runtime inventory and image provenance parity example | Disk-backed example test | Does not provide a deployable TechVault application or image build pipeline |
 | [`scenarios/enterprise-participant-evidence-loop.sdl.yaml`](scenarios/enterprise-participant-evidence-loop.sdl.yaml) | Reference scenario for a generic enterprise participant/evidence loop | Disk-backed example test; focused processor compile check for participant behaviors, action contracts, observation boundaries, Wazuh evidence, policy provenance, and boundary evidence surfaces | Does not prove a concrete coding-agent runner, APTL/libvirt realization, TechVault coverage, or broad benchmark capability |
 
@@ -31,7 +31,7 @@ machine-readable catalog for the current non-normative authoring library.
 | Participant behavior | [`library/templates/participant_behavior/action-contract-observation-boundary.yaml`](library/templates/participant_behavior/action-contract-observation-boundary.yaml) | [`library/patterns/participant-behavior-contract-binding.yaml`](library/patterns/participant-behavior-contract-binding.yaml) |
 | Task | [`library/templates/task/single-objective-task.yaml`](library/templates/task/single-objective-task.yaml) | [`library/patterns/task-as-objective-contract.yaml`](library/patterns/task-as-objective-contract.yaml) |
 | Run | [`library/templates/run/timed-run-control.yaml`](library/templates/run/timed-run-control.yaml) | [`library/patterns/run-window-with-evidence.yaml`](library/patterns/run-window-with-evidence.yaml) |
-| Study | [`library/templates/study/scored-study-protocol.yaml`](library/templates/study/scored-study-protocol.yaml) | [`library/patterns/study-scoring-chain.yaml`](library/patterns/study-scoring-chain.yaml) |
+| Study | [`library/templates/study/observational-study-protocol.yaml`](library/templates/study/observational-study-protocol.yaml) | [`library/patterns/observable-study-conditions.yaml`](library/patterns/observable-study-conditions.yaml) |
 
 Each template has metadata plus a complete current-SDL `body`. The
 `tools/check_example_library.py` policy gate validates catalog shape, stable
@@ -100,5 +100,7 @@ conformance tests.
 
 Task, run, and study templates use current SDL wrappers rather than first-class
 `tasks`, `runs`, or `studies` sections. They show how to express those concepts
-with objectives, workflows, timing, scoring, and evidence-like references that
-the current implementation can validate.
+with objectives, workflows, timing, observable conditions, and evidence-like
+references that the current implementation can validate. Graded scoring and
+reward are experiment/evaluator-plane concerns (experiment-* contracts) per
+ADR-073, not SDL surfaces.

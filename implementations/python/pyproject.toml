@@ -1,11 +1,12 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
 name = "aces-sdl"
-dynamic = ["version"]
+version = "0.19.0"
 description = "Backend-agnostic cyber range scenario description language and runtime."
+dynamic = ["readme"]
 requires-python = ">=3.11"
 dependencies = [
     "typer>=0.12.0",
@@ -41,55 +42,15 @@ docs = [
 aces = "aces.cli.main:app"
 aces-mcp = "aces_mcp.server:main"
 
-# Tag-driven versioning (ADR 0006 pattern; tracked in #684). The version is
-# DERIVED from the git tag via hatch-vcs — there is no version string to edit or
-# commit. python-semantic-release creates the tag; hatch-vcs turns it into the
-# built artifact's version. Runtime `aces.__version__` reads it back from the
-# installed distribution metadata (see src/aces/__init__.py).
-[tool.hatch.version]
-source = "vcs"
-# This project's pyproject lives in `implementations/python`, but the git repo
-# (and the release tags) are two levels up at the repo root. Let setuptools_scm
-# (under hatch-vcs) walk up to find the repo-root `.git`. When building from an
-# unpacked sdist (no `.git`), setuptools_scm reads the baked-in version from
-# PKG-INFO instead, so both build paths resolve the version.
-raw-options = { search_parent_directories = true }
+# Version is the static `[project] version` above (#684) — the single source of
+# truth, rewritten by release-please on each release. Hatchling reads it directly;
+# `aces.__version__` derives from the installed distribution metadata.
 
-[tool.hatch.build.hooks.vcs]
-version-file = "src/aces/_version.py"
-
-# Conventional-commit-driven releases (ADR 0006 pattern; tracked in #684).
-# python-semantic-release computes the next SemVer from the Conventional Commit
-# messages since the last tag and creates the tag ONLY — `commit = false` means
-# it never pushes a commit back to the branch-protected `main`. The release
-# workflow builds + publishes from that tag. `directory: implementations/python`
-# in the workflow points PSR at this config.
-[tool.semantic_release]
-tag_format = "v{version}"
-commit = false
-allow_zero_version = true
-major_on_zero = false
-
-[tool.semantic_release.branches.main]
-match = "main"
-
-# aces uses towncrier-style change types (added/changed/fixed/security/
-# deprecated/removed) as first-class commit/PR-title types ALONGSIDE conventional
-# feat/fix. `allowed_tags` does not recompute from minor/patch, so the full
-# vocabulary is listed explicitly here and MUST stay in sync with
-# `CONVENTIONAL_TYPES` in tools/check_pr_title.py (the required PR-title gate).
-# Consumer-visible types bump the version; docs/chore/ci/test/refactor/build/
-# style/revert never release. Breaking changes use `!` / a `BREAKING CHANGE:`
-# footer (major; pre-1.0 → minor via major_on_zero=false) — e.g. a breaking
-# removal is `removed!:`.
-[tool.semantic_release.commit_parser_options]
-minor_tags = ["feat", "added", "changed", "deprecated", "removed"]
-patch_tags = ["fix", "fixed", "perf", "security"]
-allowed_tags = [
-    "feat", "added", "changed", "deprecated", "removed",
-    "fix", "fixed", "perf", "security",
-    "docs", "chore", "ci", "test", "refactor", "build", "style", "revert",
-]
+# The PyPI long description (`readme`) is injected from the repo-root README.md by
+# a custom metadata hook (hatch_build.py), so there is a single README source and
+# no duplicate copy under implementations/python. `[project] dynamic = ["readme"]`.
+[tool.hatch.metadata.hooks.custom]
+path = "hatch_build.py"
 
 [tool.hatch.build.targets.wheel]
 packages = [
@@ -124,6 +85,7 @@ path = "hatch_build.py"
 
 [tool.hatch.build.targets.sdist.force-include]
 "../../contracts" = "_corpus"
+"../../README.md" = "README.md"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

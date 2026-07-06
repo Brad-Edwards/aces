@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from aces_sdl.language_service import (
     apply_structured_edit,
     language_completions,
@@ -56,10 +57,8 @@ nodes:
   web: {type: VM, os: linux, resources: {ram: 2 GiB, cpu: 1}}
 conditions:
   alive: {command: "true", interval: 5}
-metrics:
-  uptime: {type: CONDITIONAL, condition: alive}
 relationships:
-  app-to-web: {type: hosted_on, source: web, target: uptime}
+  app-to-web: {type: hosted_on, source: web, target: alive}
 workflows:
   flow:
     start: start-here
@@ -77,7 +76,7 @@ workflows:
 
     any_refs = language_completions(sdl, cursor_path="/relationships/app-to-web/source")
     assert any(item["detail"] == "nodes.web" for item in any_refs["items"])
-    assert any(item["detail"] == "metrics.uptime" for item in any_refs["items"])
+    assert any(item["detail"] == "conditions.alive" for item in any_refs["items"])
 
     workflow_refs = language_completions(sdl, cursor_path="/workflows/flow/start")
     assert workflow_refs["context"] == "reference:workflow_steps"
@@ -244,19 +243,28 @@ def test_structured_edit_handles_root_and_list_mutations() -> None:
     assert "custom:" in created["content"]
 
 
-def test_structured_edit_reports_invalid_edit_requests() -> None:
-    cases = [
-        ("delete", "", None, "root pointer supports only the set operation"),
-        ("replace", "/description", "x", "operation must be one of"),
-        ("set", "description", "x", "pointer must be empty or start with '/'"),
-        ("append", "/name", "x", "is not a list"),
-        ("delete", "/missing", None, "missing path segment"),
-        ("delete", "/infrastructure/web/links/nope", None, "is not an integer"),
-        ("delete", "/infrastructure/web/links/10", None, "out of range"),
-        ("set", "/infrastructure/web/links/0/name", "x", "does not address a mapping or list"),
-    ]
-
-    for operation, pointer, value, expected in cases:
-        payload = apply_structured_edit(SAMPLE_SDL, operation=operation, pointer=pointer, value=value)
-        assert payload["status"] == "invalid"
-        assert expected in payload["diagnostics"][0]["message"]
+@pytest.mark.parametrize(
+    ("operation", "pointer", "value", "expected"),
+    [
+        pytest.param("delete", "", None, "root pointer supports only the set operation", id="root-delete-unsupported"),
+        pytest.param("replace", "/description", "x", "operation must be one of", id="unknown-operation"),
+        pytest.param(
+            "set", "description", "x", "pointer must be empty or start with '/'", id="pointer-missing-leading-slash"
+        ),
+        pytest.param("append", "/name", "x", "is not a list", id="append-non-list"),
+        pytest.param("delete", "/missing", None, "missing path segment", id="delete-missing-segment"),
+        pytest.param("delete", "/infrastructure/web/links/nope", None, "is not an integer", id="index-not-integer"),
+        pytest.param("delete", "/infrastructure/web/links/10", None, "out of range", id="index-out-of-range"),
+        pytest.param(
+            "set",
+            "/infrastructure/web/links/0/name",
+            "x",
+            "does not address a mapping or list",
+            id="non-container-parent",
+        ),
+    ],
+)
+def test_structured_edit_reports_invalid_edit_requests(operation, pointer, value, expected) -> None:
+    payload = apply_structured_edit(SAMPLE_SDL, operation=operation, pointer=pointer, value=value)
+    assert payload["status"] == "invalid"
+    assert expected in payload["diagnostics"][0]["message"]

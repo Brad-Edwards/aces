@@ -89,7 +89,7 @@ It separates reusable definitions from bound runtime instances:
 - `injects` -> first-class orchestration inject resources
 - `node.injects` -> optional node-scoped inject bindings layered on top of top-level inject resources
 - `nodes` + `infrastructure` -> deployable network/node resources
-- orchestration and scoring/objective sections -> resolved runtime programs and graph nodes
+- orchestration and objective sections -> resolved runtime programs and graph nodes
 
 The output is a `RuntimeModel` with canonical addresses for every runtime-owned
 object.
@@ -142,7 +142,7 @@ objects against the current `RuntimeSnapshot`.
 
 - `ProvisioningPlan` for deployable resources and bindings
 - `OrchestrationPlan` for events, scripts, stories, workflows, and inject state
-- `EvaluationPlan` for condition bindings, scoring graph nodes, and objectives
+- `EvaluationPlan` for condition bindings and objectives
 
 Each plan is provenance-bound to:
 
@@ -257,7 +257,7 @@ Validation is semantic, not section-only. Current checks include:
 - fine-grained workflow feature usage (`decision`, `retry`, `parallel` barriers, failure transitions)
 - workflow predicate condition refs
 - workflow predicate prior-step state refs and state-predicate subfeatures (`outcome-matching`, `attempt-counts`)
-- scoring/objective usage
+- objective usage
 
 `OrchestratorCapabilities` expose both coarse workflow support and fine-grained workflow semantics:
 

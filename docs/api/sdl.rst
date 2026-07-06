@@ -137,12 +137,6 @@ Objectives
 .. automodule:: aces_sdl.objectives
    :members:
 
-Scoring
-~~~~~~~
-
-.. automodule:: aces_sdl.scoring
-   :members:
-
 Variables
 ~~~~~~~~~
 

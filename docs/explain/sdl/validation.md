@@ -22,16 +22,19 @@ becoming a validator-only interpretation of the SDL.
 | `verify_features` | Vulnerability references exist. Dependency references exist. **Dependency cycle detection** via topological sort. |
 | `verify_conditions` | (Structural: command+interval XOR source — enforced by Pydantic) |
 | `verify_vulnerabilities` | (Structural: CWE format — enforced by Pydantic) |
-| `verify_metrics` | Conditional metrics reference existing conditions. Each condition used by at most one metric. |
-| `verify_evaluations` | Referenced metrics exist. Absolute min-score doesn't exceed sum of metric max-scores. |
-| `verify_tlos` | Referenced evaluations exist. |
-| `verify_goals` | Referenced TLOs exist. |
-| `verify_entities` | TLO, vulnerability, and event references on entities (including nested) exist. |
-| `verify_injects` | from-entity and to-entities reference existing (possibly nested) entities. TLO references exist. |
+| `verify_entities` | Vulnerability and event references on entities (including nested) exist. |
+| `verify_injects` | from-entity and to-entities reference existing (possibly nested) entities. |
 | `verify_events` | Condition and inject references exist. |
 | `verify_scripts` | Event references exist. Event times within script start/end bounds. |
 | `verify_stories` | Script references exist. |
 | `verify_roles` | Entity references in node roles resolve to flattened entity names. |
+
+The former scoring-pipeline passes (`verify_metrics`, `verify_evaluations`,
+`verify_tlos`, `verify_goals`, and the internal `_verify_assessment_pipeline`
+check) were removed with the `metrics`/`evaluations`/`tlos`/`goals` sections by
+[ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md). There is
+no longer a "references undefined metric/evaluation/TLO/goal" validation error;
+`conditions` remain the observable-state surface objective success references.
 
 ### Extension passes
 
@@ -58,9 +61,9 @@ becoming a validator-only interpretation of the SDL.
 | `verify_relationship_mail_access` | A relationship with `mail_access` must target a runtime mail service. Concrete `listener_ref`, `mailbox_ref`, and `domain_ref` values resolve within that target service, while protocol, auth-mechanism, and TLS-mode fields are structurally normalized by the `RelationshipMailAccess` model. |
 | `verify_agents` | Entity references resolve. Starting accounts and initial-knowledge accounts exist in accounts section. Allowed subnets and initial-knowledge subnets must resolve to switch-backed infrastructure entries. Initial-knowledge hosts must resolve to VM nodes. Initial-knowledge services exist in `nodes.*.services[].name`. |
 | `verify_participant_behavior` | Agent action refs resolve to declared action contracts, observation-boundary refs resolve to declared boundaries, interaction refs resolve to declared actions or targetable state, and boundary view rules/transitions resolve to declared observable, hidden, or evidence refs. |
-| `verify_objectives` | Objective actors resolve (`agent` or `entity`). Objective actions must be declared by the referenced agent. Targets resolve to named scenario elements, including qualified service/ACL refs and section-qualified top-level refs. Ambiguous bare refs are rejected with qualified alternatives. Success criteria resolve to declared conditions/metrics/evaluations/TLOs/goals. Optional windows resolve through one shared normalized analysis over stories/scripts/events/workflows/workflow-steps, must remain internally consistent, and fail closed on dangling or out-of-window refs. Objective dependencies must resolve and stay acyclic. |
-| `verify_workflows` | Workflow `start` and every referenced step must exist. `objective`/`retry` steps must reference declared objectives. Predicate refs must resolve to declared conditions/metrics/evaluations/TLOs/goals/objectives, and step-state refs must resolve to prior executable steps whose state is guaranteed to be known before the predicate runs. Workflow graphs must be acyclic and fully reachable from `start`. Parallel joins must be explicit barriers, every explicit branch path must converge on the declared join, branch-local state remains scoped until the join, and post-join predicates may inspect only branch steps guaranteed on every path within their branch before the join. |
-| `verify_participant_outcomes` | Outcome interpretation source and target refs resolve for action contracts, objectives, workflows, and evaluations. Reward-signal targets require governed assessment refs structurally, while runtime conformance grounds emitted interpretation records in action results, event evidence, and participant episode history. |
+| `verify_objectives` | Objective actors resolve (`agent` or `entity`). Objective actions must be declared by the referenced agent. Targets resolve to named scenario elements, including qualified service/ACL refs and section-qualified top-level refs. Ambiguous bare refs are rejected with qualified alternatives. Success criteria resolve to declared `conditions` (observable state only, per [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md)). Optional windows resolve through one shared normalized analysis over stories/scripts/events/workflows/workflow-steps, must remain internally consistent, and fail closed on dangling or out-of-window refs. Objective dependencies must resolve and stay acyclic. |
+| `verify_workflows` | Workflow `start` and every referenced step must exist. `objective`/`retry` steps must reference declared objectives. Predicate refs must resolve to declared `conditions`/`objectives` (the scoring surfaces were removed per [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md)), and step-state refs must resolve to prior executable steps whose state is guaranteed to be known before the predicate runs. Workflow graphs must be acyclic and fully reachable from `start`. Parallel joins must be explicit barriers, every explicit branch path must converge on the declared join, branch-local state remains scoped until the join, and post-join predicates may inspect only branch steps guaranteed on every path within their branch before the join. |
+| `verify_participant_outcomes` | Outcome interpretation source and target refs resolve for action contracts, objectives, and workflows. The SEM-215 `reward_signal` / `evaluation_result` interpretation layers remain a governed interpretation relation but no longer bind to any SDL `evaluations` section ([ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md)); runtime conformance grounds emitted interpretation records in action results, event evidence, and participant episode history. |
 | `verify_variables` | Checks that full-value `${var}` placeholders and embedded `${var}` tokens reference declared variables. Structural validation of variable declaration names, typed defaults, and `allowed_values` still happens in the model/schema layer. |
 
 Pydantic structural validation also enforces model-local node rules before
@@ -574,7 +577,7 @@ from the SDL runtime-family registry. Registered runtime refs include:
   connector, and setting refs
 
 This means a relationship can reference any node, feature, condition,
-vulnerability, infrastructure entry, metric, evaluation, TLO, goal, entity
+vulnerability, infrastructure entry, entity
 (including nested), inject, event, script, story, content entry, content item,
 account, agent, objective, workflow, relationship, variable, named service
 binding, registered runtime-family object, registered runtime-family child

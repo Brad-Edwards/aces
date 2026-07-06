@@ -252,8 +252,12 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
-metrics:
-  uptime: {type: conditional, max-score: 100, condition: health}
+entities:
+  blue: {role: blue}
+objectives:
+  initial:
+    entity: blue
+    success: {conditions: [health]}
 """)
         )
         old_plan = plan(old_model, create_stub_manifest())
@@ -271,15 +275,22 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/false, interval: 15}
-metrics:
-  uptime: {type: conditional, max-score: 100, condition: health}
+entities:
+  blue: {role: blue}
+objectives:
+  initial:
+    entity: blue
+    success: {conditions: [health]}
 """,
             snapshot,
         )
 
         eval_actions = {op.address: op.action.value for op in new_plan.evaluation.operations}
         assert eval_actions["evaluation.condition.vm.health"] == "update"
-        assert eval_actions["evaluation.metric.uptime"] == "update"
+        # Objective success references the condition, so a condition change must
+        # propagate to the objective evaluation resource (metric->evaluation->tlo->goal
+        # chain removed by ADR-073).
+        assert eval_actions["evaluation.objective.initial"] == "update"
 
     def test_ambiguous_condition_refs_fail_closed(self):
         execution_plan = plan(
@@ -347,8 +358,12 @@ conditions:
   health: {command: /bin/true, interval: 15}
 injects:
   mail: {source: inbox}
-metrics:
-  uptime: {type: conditional, max-score: 100, condition: health}
+entities:
+  blue: {role: blue}
+objectives:
+  check:
+    entity: blue
+    success: {conditions: [health]}
 events:
   kickoff: {conditions: [health], injects: [mail]}
 """)
@@ -365,23 +380,17 @@ events:
         assert "orchestration.inject-ref-unbound" in codes
         assert not execution_plan.is_valid
 
-    def test_workflow_condition_refs_require_orchestrator_support(self):
-        limited = _limited_backend_manifest(
-            name="limited",
-            provisioner=create_stub_manifest().provisioner,
-            orchestrator=OrchestratorCapabilities(
-                name="limited-orchestrator",
-                supported_sections=frozenset({"workflows"}),
-                supports_workflows=True,
-                supports_condition_refs=False,
-                supported_workflow_features=frozenset({WorkflowFeature.DECISION}),
-            ),
-            evaluator=create_stub_manifest().evaluator,
-        )
-
-        execution_plan = plan(
-            compile_runtime_model(
-                _scenario("""
+    @pytest.mark.parametrize(
+        ("orchestrator_kwargs", "scenario_yaml", "expected_code"),
+        [
+            pytest.param(
+                {
+                    "supported_sections": frozenset({"workflows"}),
+                    "supports_workflows": True,
+                    "supports_condition_refs": False,
+                    "supported_workflow_features": frozenset({WorkflowFeature.DECISION}),
+                },
+                """
 name: workflows
 nodes:
   vm:
@@ -402,31 +411,17 @@ workflows:
         then: finish
         else: finish
       finish: {type: end}
-""")
+""",
+                "orchestrator.condition-refs-unsupported",
+                id="condition-refs-unsupported",
             ),
-            limited,
-        )
-
-        codes = {diag.code for diag in execution_plan.diagnostics}
-        assert "orchestrator.condition-refs-unsupported" in codes
-        assert not execution_plan.is_valid
-
-    def test_workflow_feature_requires_orchestrator_support(self):
-        limited = _limited_backend_manifest(
-            name="limited",
-            provisioner=create_stub_manifest().provisioner,
-            orchestrator=OrchestratorCapabilities(
-                name="limited-orchestrator",
-                supported_sections=frozenset({"workflows"}),
-                supports_workflows=True,
-                supported_workflow_features=frozenset({WorkflowFeature.DECISION}),
-            ),
-            evaluator=create_stub_manifest().evaluator,
-        )
-
-        execution_plan = plan(
-            compile_runtime_model(
-                _scenario("""
+            pytest.param(
+                {
+                    "supported_sections": frozenset({"workflows"}),
+                    "supports_workflows": True,
+                    "supported_workflow_features": frozenset({WorkflowFeature.DECISION}),
+                },
+                """
 name: workflows
 nodes:
   vm:
@@ -453,32 +448,18 @@ workflows:
         on-success: finish
         max-attempts: 3
       finish: {type: end}
-"""),
+""",
+                "orchestrator.workflow-feature-unsupported",
+                id="workflow-feature-unsupported",
             ),
-            limited,
-        )
-
-        codes = {diag.code for diag in execution_plan.diagnostics}
-        assert "orchestrator.workflow-feature-unsupported" in codes
-        assert not execution_plan.is_valid
-
-    def test_step_state_predicates_require_orchestrator_support(self):
-        limited = _limited_backend_manifest(
-            name="limited",
-            provisioner=create_stub_manifest().provisioner,
-            orchestrator=OrchestratorCapabilities(
-                name="limited-orchestrator",
-                supported_sections=frozenset({"workflows"}),
-                supports_workflows=True,
-                supported_workflow_features=frozenset({WorkflowFeature.DECISION}),
-                supported_workflow_state_predicates=frozenset(),
-            ),
-            evaluator=create_stub_manifest().evaluator,
-        )
-
-        execution_plan = plan(
-            compile_runtime_model(
-                _scenario("""
+            pytest.param(
+                {
+                    "supported_sections": frozenset({"workflows"}),
+                    "supports_workflows": True,
+                    "supported_workflow_features": frozenset({WorkflowFeature.DECISION}),
+                    "supported_workflow_state_predicates": frozenset(),
+                },
+                """
 name: workflows
 entities:
   blue: {role: blue}
@@ -505,32 +486,18 @@ workflows:
         then: finish
         else: finish
       finish: {type: end}
-""")
+""",
+                "orchestrator.step-state-predicate-feature-unsupported",
+                id="step-state-predicates-unsupported",
             ),
-            limited,
-        )
-
-        codes = {diag.code for diag in execution_plan.diagnostics}
-        assert "orchestrator.step-state-predicate-feature-unsupported" in codes
-        assert not execution_plan.is_valid
-
-    def test_attempt_count_predicates_require_specific_support(self):
-        limited = _limited_backend_manifest(
-            name="limited",
-            provisioner=create_stub_manifest().provisioner,
-            orchestrator=OrchestratorCapabilities(
-                name="limited-orchestrator",
-                supported_sections=frozenset({"workflows"}),
-                supports_workflows=True,
-                supported_workflow_features=frozenset({WorkflowFeature.DECISION}),
-                supported_workflow_state_predicates=frozenset({WorkflowStatePredicateFeature.OUTCOME_MATCHING}),
-            ),
-            evaluator=create_stub_manifest().evaluator,
-        )
-
-        execution_plan = plan(
-            compile_runtime_model(
-                _scenario("""
+            pytest.param(
+                {
+                    "supported_sections": frozenset({"workflows"}),
+                    "supports_workflows": True,
+                    "supported_workflow_features": frozenset({WorkflowFeature.DECISION}),
+                    "supported_workflow_state_predicates": frozenset({WorkflowStatePredicateFeature.OUTCOME_MATCHING}),
+                },
+                """
 name: workflows
 entities:
   blue: {role: blue}
@@ -559,31 +526,17 @@ workflows:
         then: finish
         else: finish
       finish: {type: end}
-""")
+""",
+                "orchestrator.step-state-predicate-feature-unsupported",
+                id="attempt-count-predicates-unsupported",
             ),
-            limited,
-        )
-
-        codes = {diag.code for diag in execution_plan.diagnostics}
-        assert "orchestrator.step-state-predicate-feature-unsupported" in codes
-        assert not execution_plan.is_valid
-
-    def test_parallel_barrier_requires_specific_support(self):
-        limited = _limited_backend_manifest(
-            name="limited",
-            provisioner=create_stub_manifest().provisioner,
-            orchestrator=OrchestratorCapabilities(
-                name="limited-orchestrator",
-                supported_sections=frozenset({"workflows"}),
-                supports_workflows=True,
-                supported_workflow_features=frozenset({WorkflowFeature.DECISION}),
-            ),
-            evaluator=create_stub_manifest().evaluator,
-        )
-
-        execution_plan = plan(
-            compile_runtime_model(
-                _scenario("""
+            pytest.param(
+                {
+                    "supported_sections": frozenset({"workflows"}),
+                    "supports_workflows": True,
+                    "supported_workflow_features": frozenset({WorkflowFeature.DECISION}),
+                },
+                """
 name: workflows
 entities:
   blue: {role: blue}
@@ -616,13 +569,27 @@ workflows:
         type: join
         next: finish
       finish: {type: end}
-""")
+""",
+                "orchestrator.workflow-feature-unsupported",
+                id="parallel-barrier-unsupported",
             ),
+        ],
+    )
+    def test_workflow_capability_requires_orchestrator_support(self, orchestrator_kwargs, scenario_yaml, expected_code):
+        limited = _limited_backend_manifest(
+            name="limited",
+            provisioner=create_stub_manifest().provisioner,
+            orchestrator=OrchestratorCapabilities(name="limited-orchestrator", **orchestrator_kwargs),
+            evaluator=create_stub_manifest().evaluator,
+        )
+
+        execution_plan = plan(
+            compile_runtime_model(_scenario(scenario_yaml)),
             limited,
         )
 
         codes = {diag.code for diag in execution_plan.diagnostics}
-        assert "orchestrator.workflow-feature-unsupported" in codes
+        assert expected_code in codes
         assert not execution_plan.is_valid
 
     def test_workflow_condition_bindings_force_workflow_refresh(self):
@@ -741,12 +708,10 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
-metrics:
-  uptime: {type: conditional, max-score: 100, condition: health}
 objectives:
   initial:
     entity: blue
-    success: {metrics: [uptime]}
+    success: {conditions: [health]}
     window:
       workflows: [flow]
       steps: [flow.branch]
@@ -772,7 +737,6 @@ workflows:
         assert "orchestration.workflow.flow" in objective.refresh_dependencies
         assert execution_plan.evaluation.startup_order == [
             "evaluation.condition.vm.health",
-            "evaluation.metric.uptime",
             "evaluation.objective.initial",
         ]
 
@@ -788,12 +752,10 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
-metrics:
-  uptime: {type: conditional, max-score: 100, condition: health}
 objectives:
   initial:
     entity: blue
-    success: {metrics: [uptime]}
+    success: {conditions: [health]}
     window:
       scripts: [timeline]
       events: [kickoff]
@@ -921,7 +883,7 @@ accounts:
             ),
             evaluator=EvaluatorCapabilities(
                 name="limited-evaluator",
-                supported_sections=frozenset({"conditions", "metrics"}),
+                supported_sections=frozenset({"conditions"}),
                 supports_scoring=True,
                 supports_objectives=False,
             ),
@@ -949,8 +911,6 @@ accounts:
   admin: {username: administrator, node: dc, spn: LDAP/dc.example.local}
 conditions:
   health: {command: /bin/true, interval: 15}
-metrics:
-  uptime: {type: conditional, max-score: 100, condition: health}
 objectives:
   defend:
     entity: blue
@@ -1396,18 +1356,10 @@ conditions:
   health: {command: /bin/true, interval: 15}
 injects:
   mail: {source: inbox}
-metrics:
-  uptime: {type: conditional, max-score: 100, condition: health}
-evaluations:
-  overall: {metrics: [uptime], min-score: 50}
-tlos:
-  defend: {evaluation: overall}
-goals:
-  pass: {tlos: [defend]}
 objectives:
   initial:
     entity: blue
-    success: {metrics: [uptime], goals: [pass]}
+    success: {conditions: [health]}
 entities:
   blue: {role: blue}
 events:
@@ -1447,15 +1399,11 @@ workflows:
         assert orchestration_order.index("orchestration.script.timeline") < orchestration_order.index(
             "orchestration.story.main"
         )
+        # Post ADR-073 the evaluation domain orders condition -> objective
+        # (the metric -> evaluation -> tlo -> goal chain was removed).
         assert evaluation_order.index("evaluation.condition.web.health") < evaluation_order.index(
-            "evaluation.metric.uptime"
+            "evaluation.objective.initial"
         )
-        assert evaluation_order.index("evaluation.metric.uptime") < evaluation_order.index(
-            "evaluation.evaluation.overall"
-        )
-        assert evaluation_order.index("evaluation.evaluation.overall") < evaluation_order.index("evaluation.tlo.defend")
-        assert evaluation_order.index("evaluation.tlo.defend") < evaluation_order.index("evaluation.goal.pass")
-        assert evaluation_order.index("evaluation.goal.pass") < evaluation_order.index("evaluation.objective.initial")
 
     def test_satcom_release_poisoning_compiles_to_valid_execution_plan(self):
         scenario_path = EXAMPLES_DIR / "satcom-release-poisoning.sdl.yaml"

@@ -258,15 +258,20 @@ def test_module_exports_are_enforced_for_importers(tmp_path: Path):
         imports:
           - source: local:shared.yaml
             namespace: shared
-        metrics:
-          uptime:
-            type: conditional
-            condition: shared.health
-            max-score: 100
+        entities:
+          blue: {role: blue}
+        objectives:
+          check:
+            entity: blue
+            success:
+              conditions: [shared.health]
         """,
     )
 
-    with pytest.raises(SDLValidationError, match=r"Metric 'uptime' references undefined condition 'shared\.health'"):
+    with pytest.raises(
+        SDLValidationError,
+        match=r"Objective 'check' references undefined condition 'shared\.health' in success criteria",
+    ):
         parse_sdl_file(root)
 
 
@@ -657,6 +662,7 @@ def test_oci_bundle_cache_hit_enforces_root_file_containment(tmp_path: Path):
         )
 
 
+@pytest.mark.integration
 def test_signed_oci_import_resolution_and_publish_cli(tmp_path: Path):
     module_path = _local_module(tmp_path / "shared.yaml")
     runner = CliRunner()
@@ -733,6 +739,7 @@ def test_signed_oci_import_resolution_and_publish_cli(tmp_path: Path):
         )
 
 
+@pytest.mark.integration
 def test_untrusted_and_unsigned_oci_imports_fail_closed(tmp_path: Path):
     module_path = _local_module(tmp_path / "shared.yaml")
     unsigned = publish_module_to_oci_layout(module_path, output_dir=tmp_path / "dist")
@@ -992,6 +999,7 @@ def _rewrite_config_field(layout_dir: Path, field: str, value: object) -> None:
     )
 
 
+@pytest.mark.integration
 def test_oci_import_rejects_tampered_config_blob(tmp_path: Path):
     """A registry serving config bytes that do not hash to manifest ``config.digest``
     is rejected before the config JSON is trusted (issue #14, fix 1)."""
@@ -1030,6 +1038,7 @@ def test_oci_import_rejects_tampered_config_blob(tmp_path: Path):
             parse_sdl_file(root)
 
 
+@pytest.mark.integration
 def test_oci_import_rejects_root_file_tampering(tmp_path: Path):
     """A compromised registry cannot repoint ``root_file`` inside an otherwise-signed
     bundle: ``root_file`` is bound into the signature payload, so altering it while
@@ -1079,6 +1088,7 @@ def test_oci_import_rejects_root_file_tampering(tmp_path: Path):
             parse_sdl_file(root)
 
 
+@pytest.mark.integration
 def test_oci_import_rejects_non_string_root_file(tmp_path: Path):
     """A config declaring a non-string ``root_file`` fails closed with SDLParseError
     rather than flowing a bad type into the signature payload / extraction and

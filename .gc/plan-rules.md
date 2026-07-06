@@ -32,22 +32,14 @@ These encode the hard rules previously in `AGENTS.md` prose.
   concept-authority surfaces.
 - Plans MUST keep IMPLEMENTS and TESTS traceability in Ground Control
   aligned with changed code and tests.
-- Plans with a user-visible change MUST add a fragment under
-  `changelog.d/<issue>.<type>.md` (or `changelog.d/+<slug>.<type>.md`
-  for issue-free entries), where `<type>` is one of `security`, `added`,
-  `changed`, `deprecated`, `removed`, `fixed`; do not edit `CHANGELOG.md`
-  directly outside release-collation commits.
-- Plans MUST use a Conventional Commit type in the PR title and squashed
-  commit. Consumer-visible types RELEASE: `feat`/`added`/`changed`/
-  `deprecated`/`removed` bump the minor, `fix`/`fixed`/`perf`/`security` bump
-  the patch, and a `!` / `BREAKING CHANGE:` footer bumps the major (pre-1.0 →
-  minor; a breaking removal is `removed!:`). Repo-internal types NEVER release:
-  `docs`/`chore`/`ci`/`test`/`refactor`/`build`/`style`/`revert`. The release
-  and SemVer bump are DERIVED from these by python-semantic-release; plans MUST
-  NOT hand-edit any version string — the version is the git tag via `hatch-vcs`
-  (aces-scenario-packs ADR 0006; tracked for aces in #684). The authoritative
-  type→bump mapping is `[tool.semantic_release.commit_parser_options]` in
-  `implementations/python/pyproject.toml`, kept in sync with `CONVENTIONAL_TYPES`
-  in `tools/check_pr_title.py`. Pick the type by the one-line rule: release when
-  a consumer of the package would observe the change; hold when it is
-  repo-internal.
+- Plans MUST NOT edit `CHANGELOG.md` or add changelog fragments: release-please
+  owns `CHANGELOG.md` and generates it from the Conventional Commit history on
+  `main` (#684). There is no `changelog.d/`.
+- Plans MUST NOT hand-edit the version (`[project] version` in
+  `implementations/python/pyproject.toml`); release-please bumps it on release.
+  Feature PRs squash-merge, so the PR title becomes the commit release-please
+  reads: `feat:` → minor, `fix:`/`perf:` → patch, `feat!:` / a `BREAKING CHANGE:`
+  footer → major (pre-1.0 demoted to minor); `docs`/`chore`/`refactor`/`test`/
+  `ci`/`build` do not release. Use `feat:`/`fix:` for consumer-visible changes so
+  release-please actually cuts a release. The PR title MUST still pass the
+  `title-guard` gate (`tools/check_pr_title.py`).

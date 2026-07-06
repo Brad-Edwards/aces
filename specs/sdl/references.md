@@ -46,7 +46,7 @@ the `wazuh.manager` node, not a `wazuh` node with a `manager` member.
 1. A reference **MUST** resolve to **exactly one** declared element of a kind the
    referencing field accepts.
 2. A field defines its **candidate set** — the section or sections a value may
-   name. Some fields accept a single section (e.g. `metric.condition_ref` →
+   name. Some fields accept a single section (e.g. an objective's `success` →
    `conditions`); others accept a set of targetable sections (e.g. an
    objective's `target`, a relationship's `source`/`target`). The candidate set
    is part of each field's definition and is reflected in the edge catalog (§5).
@@ -98,24 +98,18 @@ validation pass rather than one-at-a-time ([diagnostics.md](diagnostics.md)).
 Each row is a reference edge: a source section's field names a target. Unless
 noted, an unresolved (dangling) or ambiguous reference is a fatal error.
 
-### Assessment pipeline
-
-| Source | Field | Target |
-|--------|-------|--------|
-| `metrics` | condition ref | `conditions` |
-| `evaluations` | metric refs | `metrics` |
-| `tlos` | evaluation refs | `evaluations` |
-| `goals` | tlo refs | `tlos` |
-
-A condition referenced by a metric MUST be scored by exactly one metric;
-an evaluation's minimum score MUST NOT exceed the sum of its metrics' maxima.
+The SDL carries no graded scoring pipeline: the OCR-inherited `metrics`,
+`evaluations`, `tlos`, and `goals` sections were removed with
+[ADR-073](../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md), so
+no reference edge targets them. Graded scoring, reward, and evaluation outputs
+live in the experiment/evaluator plane (ADR-055/064/069). `conditions` remain the
+observable-state target for objective success and workflow predicates.
 
 ### Narrative chain
 
 | Source | Field | Target |
 |--------|-------|--------|
 | `injects` | from/to entity | `entities` |
-| `injects` | tlo refs | `tlos` |
 | `events` | condition refs | `conditions` |
 | `events` | inject refs | `injects` |
 | `scripts` | event refs | `events` |
@@ -127,7 +121,7 @@ an evaluation's minimum score MUST NOT exceed the sum of its metrics' maxima.
 |--------|-------|--------|
 | `features` | vulnerability refs | `vulnerabilities` |
 | `features` | dependencies | `features` (acyclic) |
-| `entities` | tlos / vulnerabilities | `tlos` / `vulnerabilities` |
+| `entities` | vulnerabilities | `vulnerabilities` |
 | `nodes` | feature/condition/inject/vulnerability refs | `features` / `conditions` / `injects` / `vulnerabilities` |
 | `infrastructure` | node / link / dependency | `nodes` / switch-backed `infrastructure` |
 | `content` | target | `nodes` (VM) |
@@ -149,11 +143,11 @@ an evaluation's minimum score MUST NOT exceed the sum of its metrics' maxima.
 | `objectives` | actor | `agents` or flattened `entities` |
 | `objectives` | action | the bound agent's `action_contracts` |
 | `objectives` | target | targetable elements (excl. `variables`/`objectives`/`workflows`) |
-| `objectives` | success criteria | `conditions`/`metrics`/`evaluations`/`tlos`/`goals` |
+| `objectives` | success criteria | `conditions` (observable state only, [ADR-073](../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md)) |
 | `objectives` | window | `stories`/`scripts`/`events`/`workflows` (with closure rules) |
 | `objectives` | depends_on | `objectives` (acyclic) |
-| `outcome_interpretation_rules` | source | `action_contracts`/`objectives`/`workflows`/`evaluations` |
-| `outcome_interpretation_rules` | target | `objectives`/`workflows`/`evaluations` |
+| `outcome_interpretation_rules` | source | `action_contracts`/`objectives`/`workflows` |
+| `outcome_interpretation_rules` | target | `objectives`/`workflows` |
 
 ### Observability and evidence authoring
 
@@ -177,7 +171,7 @@ element is the source or channel.
 | `workflows` | start | own steps |
 | `workflows` | step successors (`on_success`/`on_failure`) | own steps |
 | `workflows` | compensation | other `workflows` |
-| `workflows` | predicate assessment refs | `conditions`/`metrics`/`evaluations`/`tlos`/`goals` |
+| `workflows` | predicate condition refs | `conditions` (observable state) |
 | `workflows` | predicate step refs | own steps (executable) |
 
 Parallel/join control flow MUST be closed: every branch reaches its join and no
