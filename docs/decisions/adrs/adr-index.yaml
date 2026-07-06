@@ -288,3 +288,7 @@ adrs:
   - id: ADR-073
     path: docs/decisions/adrs/adr-073-scoring-reward-language-scope.md
     pin: 5c0f6a0fe961bd9fc3f0b268ee99e1bdf6e6b576fbbe470dd3969a543dc07356
+    amendments:
+      - date: 2026-07-06
+        ref: "#682"
+        summary: "Accepted (proposed → accepted) and realized under SEM-206: removed the SDL scoring/reward surfaces, narrowed objectives.success to conditions, amended ADR-002, and updated the published SDL schemas."
