@@ -416,30 +416,8 @@ conditions:
   dns-scored: {command: "dig @localhost example.com +short || exit 1", interval: 60}
   mysql-scored: {command: "mysqladmin ping || exit 1", interval: 60}
 
-metrics:
-  http-uptime: {type: CONDITIONAL, max-score: 1000, condition: http-scored}
-  https-uptime: {type: CONDITIONAL, max-score: 1000, condition: https-scored}
-  smtp-uptime: {type: CONDITIONAL, max-score: 800, condition: smtp-scored}
-  ssh-uptime: {type: CONDITIONAL, max-score: 700, condition: ssh-scored}
-  dns-uptime: {type: CONDITIONAL, max-score: 800, condition: dns-scored}
-  mysql-uptime: {type: CONDITIONAL, max-score: 700, condition: mysql-scored}
-
-evaluations:
-  service-uptime:
-    metrics: [http-uptime, https-uptime, smtp-uptime, ssh-uptime, dns-uptime, mysql-uptime]
-    min-score: {absolute: 2500}
-
-tlos:
-  maintain-services:
-    name: "Service Availability"
-    evaluation: service-uptime
-
-goals:
-  defend-infrastructure:
-    tlos: [maintain-services]
-
 entities:
-  blue-team: {name: Blue Team, role: Blue, mission: "Maintain services, patch vulnerabilities", tlos: [maintain-services]}
+  blue-team: {name: Blue Team, role: Blue, mission: "Maintain services, patch vulnerabilities"}
   red-team: {name: Red Team, role: Red, mission: "Compromise systems, steal PII"}
   white-team: {name: Scoring Engine, role: White, mission: "Score service availability"}
 """
@@ -810,36 +788,9 @@ conditions:
   scada-hmi-responsive:
     command: /usr/bin/check-hmi-availability
     interval: 60
-
-metrics:
-  maintain-scada-availability:
-    type: CONDITIONAL
-    max-score: 100
-    condition: scada-hmi-responsive
-  execute-disruption:
-    type: MANUAL
-    max-score: 100
-    artifact: true
-
-evaluations:
-  blue-resilience:
-    metrics: [maintain-scada-availability]
-    min-score: 75
-  red-impact:
-    metrics: [execute-disruption]
-    min-score: {absolute: 100}
-
-tlos:
-  sustain-critical-operations:
-    evaluation: blue-resilience
-  achieve-scada-disruption:
-    evaluation: red-impact
-
-goals:
-  berylia-goal:
-    tlos: [sustain-critical-operations]
-  crimsonia-goal:
-    tlos: [achieve-scada-disruption]
+  scada-hmi-disrupted:
+    command: /usr/bin/check-hmi-disruption
+    interval: 60
 
 events:
   disruption-wave: {}
@@ -863,7 +814,7 @@ objectives:
     entity: crimsonia-red
     targets: [hmi-controls-power, hmi-controls-water, hmi-server]
     success:
-      goals: [crimsonia-goal]
+      conditions: [scada-hmi-disrupted]
     window:
       stories: [main-exercise]
       scripts: [locked-shields-day-1]
@@ -873,7 +824,7 @@ objectives:
     entity: berylia-blue.ot-team
     targets: [hmi-server, plc-power, plc-water]
     success:
-      goals: [berylia-goal]
+      conditions: [scada-hmi-responsive]
     window:
       stories: [main-exercise]
       scripts: [locked-shields-day-1]
@@ -919,7 +870,13 @@ def test_scenario_topology_integrity(label, yaml_str):
 
 @pytest.mark.parametrize("label,yaml_str", SCENARIOS, ids=[s[0] for s in SCENARIOS])
 def test_scenario_stats(label, yaml_str):
-    """Report scenario complexity metrics."""
+    """Every real-world scenario must present a non-trivial topology.
+
+    Each computed metric is exercised by an assertion so a regression that
+    silently drops a scenario's hosts, networks, feature bindings, or overall
+    richness is caught, rather than leaving dead metric variables (mirrors the
+    content-presence checks in test_sdl_stress.py::test_scenario_parses_and_validates).
+    """
     scenario = parse_sdl(textwrap.dedent(yaml_str))
     nodes = len([n for n in scenario.nodes.values() if n.type.value == "vm"])
     nets = len([n for n in scenario.nodes.values() if n.type.value == "switch"])
@@ -927,8 +884,18 @@ def test_scenario_stats(label, yaml_str):
     features = len(scenario.features)
     accts = len(scenario.accounts)
     rels = len(scenario.relationships)
-    # Just verify these are non-trivial scenarios
-    assert nodes >= 1
+
+    # Every study scenario is a multi-host, networked topology with service
+    # feature bindings, so these lower bounds hold for the whole parametrized set.
+    assert nodes >= 1, f"{label}: no VM nodes"
+    assert nets >= 1, f"{label}: no networks"
+    assert features >= 1, f"{label}: no feature bindings"
+
+    # Vulnerabilities, accounts, and relationships are legitimately absent from
+    # some fixtures (e.g. the CCDC defense scenario models none), so they are
+    # folded into an overall richness floor instead of each asserted >= 1.
+    total_elements = nodes + nets + vulns + features + accts + rels
+    assert total_elements >= 10, f"{label}: scenario too sparse ({total_elements} elements)"
 
 
 def test_objectives_are_exercised_in_realworld_suite():

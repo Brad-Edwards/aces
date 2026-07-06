@@ -8,7 +8,7 @@ Objective semantics are declarative SDL meaning. They answer:
 
 - which declared actor owns the objective
 - which declared scenario elements the objective names as targets
-- which assessment resources define success
+- which observable `conditions` define success
 - which window bounds when the objective matters
 - which other objectives must precede it
 
@@ -26,7 +26,8 @@ The implementation must build on these existing authorities:
   rejection, and `SDLParseError`
 - static validation: `SemanticValidator` and `SDLValidationError`
 - objective-window analysis: `aces_sdl.semantics.objectives`
-- assessment pipeline semantics: `aces_sdl.semantics.assessment`
+- condition resolution: the targetable named-reference index over declared
+  `conditions`
 - runtime compilation: `compile_runtime_model()` and
   `aces_processor.models.ObjectiveRuntime`
 - dependency graph semantics: `aces_processor.semantics.planner`
@@ -58,14 +59,16 @@ Target resolution:
 
 Success interpretation:
 
-- success references only declared conditions, metrics, evaluations, TLOs, and
-  goals
-- the assessment pipeline remains the authority for upstream ordering and
-  refresh dependencies among those resources
-- objective success mode describes interpretation of referenced success
-  resources; it must not encode evaluator implementation mechanics
+- success references only declared `conditions` (observable state). The OCR
+  scoring surfaces `metrics`, `evaluations`, `tlos`, and `goals` were removed by
+  [ADR-073](../../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md);
+  objective success is no longer expressible against a graded score
+- objective success mode describes interpretation of the referenced conditions;
+  it must not encode evaluator implementation mechanics
 - runtime result and execution contracts remain the portable observation
   boundary for evaluated success
+- graded scoring, reward, and evaluation outputs are an experiment/evaluator-plane
+  concern (ADR-055/064/069), never authored SDL success criteria
 
 Windows:
 
@@ -93,10 +96,9 @@ Dependency roles (which references propagate through the planner):
   compiles actor or target into runtime addresses lifts the role constant in
   lockstep
 - the derived per-objective `ordering_names` / `refresh_names` tuples are
-  kind-qualified (`condition.<n>`, `metric.<n>`, `evaluation.<n>`, `tlo.<n>`,
-  `goal.<n>`, `objective.<n>`, `story.<n>`, `script.<n>`, `event.<n>`,
-  `workflow.<n>`) so a metric and a condition with the same SDL name remain
-  distinguishable
+  kind-qualified (`condition.<n>`, `objective.<n>`, `story.<n>`, `script.<n>`,
+  `event.<n>`, `workflow.<n>`) so a condition and an objective with the same SDL
+  name remain distinguishable
 
 ## Cross-Cutting Gates
 
@@ -151,7 +153,7 @@ Avoid:
 - a second objective schema beside `aces_sdl.objectives`
 - a second reference resolver beside `SemanticValidator`'s named-reference
   index or the compiler's canonical address helpers
-- a second assessment pipeline or objective-dependency graph implementation
+- a second objective-dependency graph implementation
 - mixing objective actor binding with participant episode lifecycle or
   apparatus realization
 - treating objective targets as backend execution targets

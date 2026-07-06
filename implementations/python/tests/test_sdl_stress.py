@@ -107,39 +107,10 @@ vulnerabilities:
     technical: true
     class: CWE-89
 
-metrics:
-  manual-grade:
-    type: MANUAL
-    artifact: true
-    max-score: 10
-  auto-grade:
-    type: CONDITIONAL
-    max-score: 10
-    condition: service-check
-
-evaluations:
-  eval-1:
-    metrics:
-      - manual-grade
-      - auto-grade
-    min-score: 50
-
-tlos:
-  tlo-defense:
-    name: Web Defense
-    evaluation: eval-1
-
-goals:
-  goal-1:
-    tlos:
-      - tlo-defense
-
 entities:
   blue-team:
     name: Blue Team
     role: Blue
-    tlos:
-      - tlo-defense
     entities:
       bob:
         name: Blue Bob
@@ -153,8 +124,6 @@ injects:
     from-entity: red-team
     to-entities:
       - blue-team
-    tlos:
-      - tlo-defense
 
 events:
   attack-event:
@@ -454,26 +423,6 @@ conditions:
     command: "test -f /home/kali/operations/exfil/loot.tar.gz"
     interval: 30
 
-metrics:
-  exfil-success:
-    type: CONDITIONAL
-    max-score: 100
-    condition: exfil-check
-
-evaluations:
-  data-theft:
-    metrics: [exfil-success]
-    min-score: {absolute: 100}
-
-tlos:
-  exfiltration:
-    name: Data Exfiltration
-    evaluation: data-theft
-
-goals:
-  ransack-goal:
-    tlos: [exfiltration]
-
 entities:
   attacker: {name: Ransack Operator, role: Red}
 """
@@ -508,26 +457,6 @@ vulnerabilities:
     description: "Local admin can dump LSASS process memory"
     technical: true
     class: CWE-522
-
-metrics:
-  cred-dump-grade:
-    type: MANUAL
-    artifact: true
-    max-score: 100
-
-evaluations:
-  cred-assessment:
-    metrics: [cred-dump-grade]
-    min-score: {absolute: 50}
-
-tlos:
-  cred-access:
-    name: Credential Access Techniques
-    evaluation: cred-assessment
-
-goals:
-  atomic-goal:
-    tlos: [cred-access]
 
 entities:
   pentester: {name: Penetration Tester, role: Red}
@@ -723,35 +652,6 @@ conditions:
   flag-check-3:
     command: "/opt/ctf/check_flag.sh level3"
     interval: 10
-
-metrics:
-  level-1:
-    type: CONDITIONAL
-    max-score: 100
-    condition: flag-check-1
-  level-2:
-    type: CONDITIONAL
-    max-score: 200
-    condition: flag-check-2
-  level-3:
-    type: CONDITIONAL
-    max-score: 300
-    condition: flag-check-3
-
-evaluations:
-  ctf-eval:
-    metrics: [level-1, level-2, level-3]
-    min-score:
-      absolute: 300
-
-tlos:
-  ctf-skills:
-    name: CTF Problem Solving
-    evaluation: ctf-eval
-
-goals:
-  complete-ctf:
-    tlos: [ctf-skills]
 """
 
 
@@ -1286,36 +1186,9 @@ conditions:
   enterprise0-compromised:
     command: /usr/bin/check-enterprise0-compromise
     interval: 60
-
-metrics:
-  red-access-achieved:
-    type: CONDITIONAL
-    max-score: 50
-    condition: enterprise0-compromised
-  blue-detection-report:
-    type: MANUAL
-    max-score: 50
-    artifact: true
-
-evaluations:
-  red-campaign:
-    metrics: [red-access-achieved]
-    min-score: {absolute: 50}
-  blue-response:
-    metrics: [blue-detection-report]
-    min-score: 50
-
-tlos:
-  establish-enterprise-foothold:
-    evaluation: red-campaign
-  detect-enterprise-compromise:
-    evaluation: blue-response
-
-goals:
-  red-campaign-goal:
-    tlos: [establish-enterprise-foothold]
-  blue-response-goal:
-    tlos: [detect-enterprise-compromise]
+  enterprise0-detected:
+    command: /usr/bin/check-enterprise0-detection
+    interval: 60
 
 accounts:
   phished-user:
@@ -1350,7 +1223,6 @@ agents:
       hosts: [user0]
       subnets: [user-net]
     allowed_subnets: [user-net, enterprise-net]
-    reward_calculator: HybridImpactPwn
 
   blue-agent:
     entity: blue-team.analyst
@@ -1360,7 +1232,6 @@ agents:
       hosts: [defender, enterprise0, enterprise1, user0, user1]
       subnets: [user-net, enterprise-net, op-net]
     allowed_subnets: [user-net, enterprise-net, op-net]
-    reward_calculator: HybridAvailabilityConfidentiality
 
   green-agent:
     entity: green-team
@@ -1399,7 +1270,7 @@ objectives:
     actions: [DiscoverRemoteSystems, ExploitRemoteService, EternalBlue]
     targets: [enterprise0]
     success:
-      goals: [red-campaign-goal]
+      conditions: [enterprise0-compromised]
     window:
       stories: [exercise]
       scripts: [day-1]
@@ -1410,7 +1281,7 @@ objectives:
     actions: [Monitor, Analyse]
     targets: [enterprise0, velociraptor]
     success:
-      goals: [blue-response-goal]
+      conditions: [enterprise0-detected]
     window:
       stories: [exercise]
       scripts: [day-1]
@@ -1566,25 +1437,6 @@ conditions:
     command: /usr/bin/check-adfs-federation
     interval: 60
 
-metrics:
-  maintain-federation:
-    type: CONDITIONAL
-    max-score: 100
-    condition: federation-service-up
-
-evaluations:
-  federation-health:
-    metrics: [maintain-federation]
-    min-score: 75
-
-tlos:
-  sustain-federated-auth:
-    evaluation: federation-health
-
-goals:
-  blue-identity-goal:
-    tlos: [sustain-federated-auth]
-
 events:
   federation-cutover: {}
 
@@ -1605,7 +1457,7 @@ objectives:
     entity: blue-team
     targets: [adfs-service, child-trusts-parent]
     success:
-      goals: [blue-identity-goal]
+      conditions: [federation-service-up]
     window:
       stories: [federation-exercise]
       scripts: [identity-day]
@@ -1643,9 +1495,9 @@ def test_scenario_parses_and_validates(label, yaml_str):
     has_stories = bool(scenario.stories)
     has_entities = bool(scenario.entities)
     has_vulns = bool(scenario.vulnerabilities)
-    has_metrics = bool(scenario.metrics)
+    has_objectives = bool(scenario.objectives)
     has_content = bool(scenario.content)
-    assert any([has_nodes, has_features, has_stories, has_entities, has_vulns, has_metrics, has_content]), (
+    assert any([has_nodes, has_features, has_stories, has_entities, has_vulns, has_objectives, has_content]), (
         f"{label} parsed but has no content"
     )
 

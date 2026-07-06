@@ -26,14 +26,16 @@ class SuccessMode(str, Enum):
 
 
 class ObjectiveSuccess(SDLModel):
-    """Declarative success criteria for an objective."""
+    """Declarative success criteria for an objective.
+
+    Per ADR-073, objective success references observable state (``conditions``)
+    only. The OCR-inherited scoring pipeline (``metrics`` / ``evaluations`` /
+    ``tlos`` / ``goals``) was removed from the SDL; graded scoring and reward
+    live in the experiment/evaluator plane (ADR-055/064/069).
+    """
 
     mode: SuccessMode | str = SuccessMode.ALL_OF
     conditions: list[str] = Field(default_factory=list)
-    metrics: list[str] = Field(default_factory=list)
-    evaluations: list[str] = Field(default_factory=list)
-    tlos: list[str] = Field(default_factory=list)
-    goals: list[str] = Field(default_factory=list)
 
     @field_validator("mode", mode="before")
     @classmethod
@@ -42,17 +44,9 @@ class ObjectiveSuccess(SDLModel):
 
     @model_validator(mode="after")
     def validate_non_empty(self) -> "ObjectiveSuccess":
-        if any(
-            (
-                self.conditions,
-                self.metrics,
-                self.evaluations,
-                self.tlos,
-                self.goals,
-            )
-        ):
+        if self.conditions:
             return self
-        raise ValueError("Objective success must reference at least one condition, metric, evaluation, TLO, or goal")
+        raise ValueError("Objective success must reference at least one condition")
 
 
 class ObjectiveWindow(SDLModel):

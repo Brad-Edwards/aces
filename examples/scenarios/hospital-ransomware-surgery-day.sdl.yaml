@@ -494,60 +494,11 @@ vulnerabilities:
     technical: true
     class: CWE-732
 
-metrics:
-  blue-ehr-availability:
-    type: CONDITIONAL
-    max-score: 100
-    condition: ehr-api-healthy
-  blue-pacs-availability:
-    type: CONDITIONAL
-    max-score: 100
-    condition: pacs-archive-healthy
-  blue-backup-integrity:
-    type: CONDITIONAL
-    max-score: 100
-    condition: backup-catalog-intact
-  blue-ir-report:
-    type: MANUAL
-    max-score: 50
-    artifact: true
-  red-phi-staging:
-    type: CONDITIONAL
-    max-score: 100
-    condition: phi-staging-observed
-  red-clinical-disruption:
-    type: CONDITIONAL
-    max-score: 100
-    condition: clinical-disruption-observed
-
-evaluations:
-  blue-clinical-resilience:
-    metrics: [blue-ehr-availability, blue-pacs-availability, blue-backup-integrity, blue-ir-report]
-    min-score: 75
-  red-ransom-impact:
-    metrics: [red-phi-staging, red-clinical-disruption]
-    min-score: {percentage: 75}
-
-tlos:
-  sustain-clinical-operations:
-    name: Sustain clinical operations
-    evaluation: blue-clinical-resilience
-  achieve-ransomware-impact:
-    name: Achieve ransomware impact
-    evaluation: red-ransom-impact
-
-goals:
-  hospital-blue-goal:
-    tlos: [sustain-clinical-operations]
-  ransom-crew-goal:
-    tlos: [achieve-ransomware-impact]
-
 entities:
   hospital-blue:
     name: Hospital Blue Team
     role: Blue
     mission: Keep patient care and core services available throughout the incident
-    tlos: [sustain-clinical-operations]
     entities:
       soc:
         name: SOC
@@ -750,7 +701,6 @@ agents:
       services: [smtp-inbound, vpn-portal, vendor-rdp]
       accounts: [vendor-tech]
     allowed_subnets: [internet-edge, vendor-segment, corp-it]
-    reward_calculator: InitialAccessImpact
   red-operator:
     entity: ransom-crew
     actions: [Pivot, Exfiltrate, Encrypt, Disable]
@@ -761,7 +711,6 @@ agents:
       services: [ehr-https, ehr-postgres, dicom-store]
       accounts: [svc-sql, backup-operator]
     allowed_subnets: [clinical-it, backup-net, identity-net]
-    reward_calculator: HybridImpactPwn
   blue-soc-agent:
     entity: hospital-blue.soc
     actions: [Inspect, Triage, Isolate, Escalate]
@@ -772,7 +721,6 @@ agents:
       services: [soc-ui, mail-admin-ui, vpn-portal]
       accounts: [helpdesk-user, vendor-tech]
     allowed_subnets: [security-net, corp-it, vendor-segment]
-    reward_calculator: HybridAvailabilityConfidentiality
   blue-ir-agent:
     entity: hospital-blue.recovery
     actions: [Contain, Restore, ReissueCreds, Validate]
@@ -783,9 +731,11 @@ agents:
       services: [backup-api, backup-nfs, pacs-web-ui]
       accounts: [svc-sql, backup-operator]
     allowed_subnets: [backup-net, clinical-it, identity-net]
-    reward_calculator: RecoveryResilience
 
 objectives:
+  # This scenario intended graded red/blue comparison. Graded scoring now lives
+  # in the experiment/evaluator plane (experiment-* contracts) per ADR-073;
+  # SDL objectives assert only observable success via conditions.
   red-establish-foothold:
     agent: red-initial
     actions: [Phish, AbuseVPN]
@@ -807,7 +757,6 @@ objectives:
     targets: [phi-records, ehr-to-database, ehr-db]
     success:
       conditions: [phi-staging-observed]
-      metrics: [red-phi-staging]
     depends_on: [red-establish-foothold]
     window:
       stories: [surgery-day]
@@ -816,7 +765,7 @@ objectives:
     entity: ransom-crew
     targets: [pacs01, radiology-images, pacs-sync-to-backup]
     success:
-      goals: [ransom-crew-goal]
+      conditions: [radiology-workflow-delayed, clinical-disruption-observed]
     depends_on: [red-stage-phi]
     window:
       stories: [surgery-day]
@@ -841,8 +790,7 @@ objectives:
     actions: [Contain, Restore, Validate]
     targets: [backup-vault, ehr-db, pacs01, backup-manages-ehr]
     success:
-      goals: [hospital-blue-goal]
-      metrics: [blue-backup-integrity]
+      conditions: [ehr-api-healthy, pacs-archive-healthy, backup-catalog-intact]
     depends_on: [blue-detect-and-triage, red-disrupt-radiology]
     window:
       stories: [surgery-day]

@@ -30,7 +30,6 @@ _ADDRESS_CLASSES: tuple[str, ...] = (
     "action_contracts",
     "observation_boundaries",
     "objectives",
-    "evaluations",
     "networks",
     "node_deployments",
 )

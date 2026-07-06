@@ -16,7 +16,9 @@ A declarative *objective* binds, in one place:
   index (bare or section-qualified; objectives, workflows, and variables are not
   targetable);
 - a **success** interpretation — `mode` (`all_of` / `any_of`) over referenced
-  conditions, metrics, evaluations, TLOs, and goals;
+  observable `conditions` only (the OCR scoring surfaces `metrics`,
+  `evaluations`, `tlos`, and `goals` were removed by
+  [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md));
 - an optional **window** that constrains when the objective matters (the
   story/script/event/workflow/workflow-step reachability and consistency rules
   live with the window helper — see
@@ -79,11 +81,10 @@ those constants, so a change to a success condition (or to a depended-on
 objective) propagates as a refresh through `objective -> depends_on -> objective`.
 
 In the analyzer's name-level IR the derived `ordering_names` / `refresh_names`
-are kind-qualified (`condition.<n>`, `metric.<n>`, `evaluation.<n>`, `tlo.<n>`,
-`goal.<n>`, `objective.<n>`, `story.<n>`, `script.<n>`, `event.<n>`,
-`workflow.<n>`) so a metric and a condition with the same SDL name remain
-distinguishable, mirroring the canonical `evaluation.*` addresses the compiler
-builds independently.
+are kind-qualified (`condition.<n>`, `objective.<n>`, `story.<n>`, `script.<n>`,
+`event.<n>`, `workflow.<n>`) so a condition and an objective with the same SDL
+name remain distinguishable, mirroring the canonical `evaluation.*` addresses the
+compiler builds independently.
 
 ## Cross-stage agreement
 
@@ -106,8 +107,8 @@ itself is unit-tested in `implementations/python/tests/test_semantics_objectives
 - a second objective schema beside `aces_sdl.objectives`, or a second reference
   resolver beside `SemanticValidator`'s named-reference index / the compiler's
   canonical address helpers;
-- duplicating the window, assessment, dependency, or reference-resolution rules
-  in compiler, planner, or tests;
+- duplicating the window, dependency, or reference-resolution rules in compiler,
+  planner, or tests;
 - mixing objective actor binding with participant episode lifecycle or apparatus
   realization, or treating objective targets as backend execution targets;
 - encoding evaluator query language, probe commands, credentials, or polling

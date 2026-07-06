@@ -13,5 +13,3 @@ files:
   - implementations/python/packages/aces_conformance/conformance.py
   - implementations/python/packages/aces_sdl/module_registry.py
   - implementations/python/packages/aces_mcp/tools/authoring.py
-  - implementations/python/packages/aces_mcp/tools/inspection.py
-  - implementations/python/packages/aces_sdl/orchestration.py

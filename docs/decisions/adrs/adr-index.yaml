@@ -16,6 +16,10 @@ adrs:
   - id: ADR-002
     path: docs/decisions/adrs/adr-002-declarative-sdl-objectives.md
     pin: 7550c868306aa4f6ff7a1522796b71ae8797aa0015d7faec37c8f7011e60c536
+    amendments:
+      - date: 2026-07-05
+        ref: "#682"
+        summary: "Per ADR-073, narrowed the objective-success clause to reference observable state (conditions) only; the OCR scoring pipeline (metrics/evaluations/tlos/goals) was removed from the SDL and graded scoring/reward moved to the experiment/evaluator plane (ADR-055/064/069)."
   - id: ADR-003
     path: docs/decisions/adrs/adr-003-workflows-targetable-subobjects-and-enum-variables.md
     pin: 0039bea0de4e4d5d08ccf300a7fb7516a0ea01977f38f1e2e111409a13e108df
@@ -281,3 +285,6 @@ adrs:
   - id: ADR-071
     path: docs/decisions/adrs/adr-071-reusable-asset-trust-and-integrity-policy.md
     pin: d0f0d15945a91e97870d794986d7c7453cea7fade5c74c673d271ceaf05a6b7e
+  - id: ADR-073
+    path: docs/decisions/adrs/adr-073-scoring-reward-language-scope.md
+    pin: 5c0f6a0fe961bd9fc3f0b268ee99e1bdf6e6b576fbbe470dd3969a543dc07356

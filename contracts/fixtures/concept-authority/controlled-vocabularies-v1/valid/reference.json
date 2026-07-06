@@ -724,22 +724,6 @@
           "title": "Conditions",
           "description": "Condition section support."
         },
-        "metrics": {
-          "title": "Metrics",
-          "description": "Metric section support."
-        },
-        "evaluations": {
-          "title": "Evaluations",
-          "description": "Evaluation section support."
-        },
-        "tlos": {
-          "title": "TLOs",
-          "description": "TLO section support."
-        },
-        "goals": {
-          "title": "Goals",
-          "description": "Goal section support."
-        },
         "objectives": {
           "title": "Objectives",
           "description": "Objective section support."

@@ -13,7 +13,7 @@ from ._language_diagnostics import invalid as _invalid
 from ._language_metadata import REFERENCE_COMPLETION_TARGETS
 
 _CODE_PARSE = "sdl.parse"
-_SUCCESS_REFERENCE_TARGETS = frozenset({"conditions", "metrics", "evaluations", "tlos", "goals"})
+_SUCCESS_REFERENCE_TARGETS = frozenset({"conditions"})
 
 
 def find_references(

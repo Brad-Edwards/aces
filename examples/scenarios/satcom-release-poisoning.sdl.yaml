@@ -359,60 +359,11 @@ vulnerabilities:
     technical: true
     class: CWE-345
 
-metrics:
-  blue-release-signing:
-    type: CONDITIONAL
-    max-score: 100
-    condition: release-signature-valid
-  blue-telemetry-availability:
-    type: CONDITIONAL
-    max-score: 100
-    condition: telemetry-flowing
-  blue-tenant-isolation:
-    type: CONDITIONAL
-    max-score: 100
-    condition: tenant-isolation-healthy
-  blue-rollback-report:
-    type: MANUAL
-    max-score: 50
-    artifact: true
-  red-release-poisoning:
-    type: CONDITIONAL
-    max-score: 100
-    condition: rogue-release-promoted
-  red-edge-compromise:
-    type: CONDITIONAL
-    max-score: 100
-    condition: edge-east-poisoned
-
-evaluations:
-  blue-release-resilience:
-    metrics: [blue-release-signing, blue-telemetry-availability, blue-tenant-isolation, blue-rollback-report]
-    min-score: 75
-  red-propagation:
-    metrics: [red-release-poisoning, red-edge-compromise]
-    min-score: {percentage: 75}
-
-tlos:
-  preserve-release-integrity:
-    name: Preserve release integrity
-    evaluation: blue-release-resilience
-  achieve-poisoned-propagation:
-    name: Achieve poisoned propagation
-    evaluation: red-propagation
-
-goals:
-  platform-blue-goal:
-    tlos: [preserve-release-integrity]
-  supply-chain-red-goal:
-    tlos: [achieve-poisoned-propagation]
-
 entities:
   platform-blue:
     name: Platform Blue Team
     role: Blue
     mission: Deliver a trusted release while maintaining customer service continuity
-    tlos: [preserve-release-integrity]
     entities:
       release-engineering:
         name: Release Engineering
@@ -607,7 +558,6 @@ agents:
       services: [forge-https, ci-api, bastion-ssh]
       accounts: [support-vendor]
     allowed_subnets: [corp-eng, build-net, federation-net, control-net]
-    reward_calculator: SupplyChainImpact
   blue-release-agent:
     entity: platform-blue.release-engineering
     actions: [Review, Promote, Revoke, Rollback]
@@ -618,7 +568,6 @@ agents:
       services: [forge-https, registry-api, signing-api]
       accounts: [ci-bot, registry-bot]
     allowed_subnets: [corp-eng, build-net, control-net]
-    reward_calculator: TrustedRelease
   blue-sre-agent:
     entity: platform-blue.sre
     actions: [Inspect, Isolate, Restore, Validate]
@@ -629,9 +578,11 @@ agents:
       services: [control-api, edge-east-api, edge-west-api, telemetry-kafka]
       accounts: [satops]
     allowed_subnets: [control-net, edge-net, telemetry-net, security-net]
-    reward_calculator: TelemetryAvailability
 
 objectives:
+  # This scenario intended graded red/blue comparison. Graded scoring now lives
+  # in the experiment/evaluator plane (experiment-* contracts) per ADR-073;
+  # SDL objectives assert only observable success via conditions.
   red-compromise-build:
     agent: red-build-agent
     actions: [Exploit, StealToken]
@@ -646,7 +597,7 @@ objectives:
     actions: [PushArtifact]
     targets: [release-manifest, artifact-registry, ci-publishes-registry]
     success:
-      metrics: [red-release-poisoning]
+      conditions: [rogue-release-promoted]
     depends_on: [red-compromise-build]
     window:
       stories: [release-day]
@@ -656,7 +607,7 @@ objectives:
     entity: red-supply-chain
     targets: [edge-gateway-east, control-manages-east]
     success:
-      goals: [supply-chain-red-goal]
+      conditions: [edge-east-poisoned]
     depends_on: [red-poison-release]
     window:
       stories: [release-day]
@@ -668,7 +619,6 @@ objectives:
     targets: [artifact-registry, signing-hsm, registry-relies-signing]
     success:
       conditions: [release-signature-valid]
-      metrics: [blue-release-signing]
     window:
       stories: [release-day]
       scripts: [release-prep, canary-rollout]
@@ -696,8 +646,7 @@ objectives:
     actions: [Inspect, Isolate, Restore, Validate]
     targets: [control-api, edge-gateway-east, telemetry-broker, telemetry-replicates-analytics]
     success:
-      goals: [platform-blue-goal]
-      metrics: [blue-telemetry-availability, blue-tenant-isolation]
+      conditions: [telemetry-flowing, tenant-isolation-healthy]
     depends_on: [blue-validate-release, red-reach-edge]
     window:
       stories: [release-day]

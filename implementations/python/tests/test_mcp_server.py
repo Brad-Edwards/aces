@@ -89,23 +89,10 @@ conditions:
 vulnerabilities:
   sqli: {name: SQL Injection, description: "SQLi in login", technical: true, class: CWE-89}
 
-metrics:
-  uptime: {type: CONDITIONAL, max-score: 100, condition: alive}
-
-evaluations:
-  basic: {metrics: [uptime], min-score: 50}
-
-tlos:
-  web-defense: {name: Defend web, evaluation: basic}
-
-goals:
-  pass: {tlos: [web-defense]}
-
 entities:
   blue-team:
     name: Blue
     role: Blue
-    tlos: [web-defense]
     entities:
       alice: {name: Alice}
   red-team:
@@ -186,8 +173,8 @@ class TestReferenceTools:
         text = _call(server, "sdl_overview")
         assert "SDL" in text
         # Both pieces of evidence must be present; an OR disjunction over
-        # "21" / "sections" would let either drift go undetected.
-        assert "21" in text
+        # "17" / "sections" would let either drift go undetected.
+        assert "17" in text
         assert "sections" in text.lower()
         assert "nodes" in text
 
@@ -197,31 +184,24 @@ class TestReferenceTools:
         assert "Switch" in text
         assert "VM" in text
 
-    def test_sdl_section_reference_scoring(self, server):
-        text = _call(server, "sdl_section_reference", {"section": "scoring"})
-        assert "Metrics" in text or "metrics" in text
-        assert "Evaluations" in text or "evaluations" in text
-
     def test_sdl_section_reference_invalid(self, server):
         text = _call(server, "sdl_section_reference", {"section": "nonexistent"})
         assert "Unknown section" in text
 
-    def test_sdl_get_example_minimal(self, server):
-        text = _call(server, "sdl_get_example", {"name": "minimal"})
-        assert "name:" in text
-        assert "nodes:" in text
-        # Pin the example identity so a regression returning a different
-        # SDL (still with `name:` / `nodes:`) is not silently accepted.
-        assert "simple-pentest-lab" in text
-
-    def test_sdl_get_example_hospital(self, server):
-        text = _call(server, "sdl_get_example", {"name": "hospital"})
-        assert "hospital-ransomware" in text
-        assert "objectives:" in text
-
-    def test_sdl_get_example_invalid(self, server):
-        text = _call(server, "sdl_get_example", {"name": "nonexistent"})
-        assert "Unknown example" in text
+    @pytest.mark.parametrize(
+        ("name", "expected"),
+        [
+            # Pin the example identity so a regression returning a different
+            # SDL (still with `name:` / `nodes:`) is not silently accepted.
+            pytest.param("minimal", ["name:", "nodes:", "simple-pentest-lab"], id="minimal"),
+            pytest.param("hospital", ["hospital-ransomware", "objectives:"], id="hospital"),
+            pytest.param("nonexistent", ["Unknown example"], id="invalid"),
+        ],
+    )
+    def test_sdl_get_example(self, server, name, expected):
+        text = _call(server, "sdl_get_example", {"name": name})
+        for substring in expected:
+            assert substring in text
 
     def test_sdl_parser_reference(self, server):
         text = _call(server, "sdl_parser_reference")
@@ -300,26 +280,19 @@ class TestAuthoringTools:
         )
         assert "Unknown section" in text
 
-    def test_scaffold_minimal(self, server):
-        text = _call(server, "sdl_scaffold", {"complexity": "minimal"})
-        assert "name:" in text
-        assert "nodes:" in text
-        # Should be valid SDL
-        validation = _call(server, "sdl_validate", {"sdl_content": text})
-        assert validation.startswith("VALID")
-
-    def test_scaffold_standard(self, server):
-        text = _call(server, "sdl_scaffold", {"complexity": "standard"})
-        assert "entities:" in text
-        assert "accounts:" in text
-        validation = _call(server, "sdl_validate", {"sdl_content": text})
-        assert validation.startswith("VALID")
-
-    def test_scaffold_full(self, server):
-        text = _call(server, "sdl_scaffold", {"complexity": "full"})
-        assert "workflows:" in text
-        assert "objectives:" in text
-        assert "variables:" in text
+    @pytest.mark.parametrize(
+        ("complexity", "expected"),
+        [
+            pytest.param("minimal", ["name:", "nodes:"], id="minimal"),
+            pytest.param("standard", ["entities:", "accounts:"], id="standard"),
+            pytest.param("full", ["workflows:", "objectives:", "variables:"], id="full"),
+        ],
+    )
+    def test_scaffold(self, server, complexity, expected):
+        text = _call(server, "sdl_scaffold", {"complexity": complexity})
+        for substring in expected:
+            assert substring in text
+        # Scaffolded output should be valid SDL.
         validation = _call(server, "sdl_validate", {"sdl_content": text})
         assert validation.startswith("VALID")
 
@@ -754,40 +727,22 @@ class TestExampleScenarios:
 class TestServerConstruction:
     def test_server_has_all_tools(self):
         server = create_server()
+        # Ground truth: the tools actually registered on the FastMCP server.
+        # Using the real registration surface (rather than a hand-copied
+        # literal) means a drift between what the server exposes and what
+        # aces_tool_surface advertises cannot pass silently.
+        registered = asyncio.get_event_loop().run_until_complete(server.list_tools())
+        registered_names = {tool.name for tool in registered}
+        assert registered_names, "server registered no tools"
+
+        # The advertised surface from aces_tool_surface must equal the real
+        # registered set. aces_tool_surface documents itself outside the
+        # family listing, so seed it explicitly.
         payload = _json_call(server, "aces_tool_surface")
-        tool_names = {"aces_tool_surface"}
+        advertised = {"aces_tool_surface"}
         for family in payload["tool_families"].values():
-            tool_names.update(family)
-        expected = {
-            "aces_tool_surface",
-            "aces_agent_guidance",
-            "aces_reference_manifests",
-            "sdl_overview",
-            "sdl_section_reference",
-            "sdl_get_example",
-            "sdl_parser_reference",
-            "sdl_validation_reference",
-            "sdl_parse",
-            "sdl_validate",
-            "sdl_validate_section",
-            "sdl_scaffold",
-            "sdl_instantiate",
-            "sdl_completions",
-            "sdl_references",
-            "sdl_format",
-            "sdl_diagnostics",
-            "sdl_apply_edit",
-            "sdl_summarize",
-            "sdl_list_elements",
-            "sdl_get_element",
-            "sdl_check_references",
-            "sdl_diagram",
-            "sdl_compile",
-            "sdl_plan",
-            "sdl_design_assessment",
-            "sdl_claims_assessment",
-        }
-        assert tool_names == expected
+            advertised.update(family)
+        assert advertised == registered_names
 
     def test_server_has_instructions(self):
         server = create_server()

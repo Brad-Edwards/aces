@@ -311,56 +311,11 @@ vulnerabilities:
     technical: true
     class: CWE-306
 
-metrics:
-  blue-customs-integrity:
-    type: CONDITIONAL
-    max-score: 100
-    condition: manifest-integrity-ok
-  blue-yard-safety:
-    type: CONDITIONAL
-    max-score: 100
-    condition: crane-safe-mode
-  blue-telemetry-retention:
-    type: CONDITIONAL
-    max-score: 100
-    condition: yard-telemetry-flowing
-  blue-ops-brief:
-    type: MANUAL
-    max-score: 50
-    artifact: true
-  red-manifest-impact:
-    type: CONDITIONAL
-    max-score: 100
-    condition: tampered-manifest-observed
-
-evaluations:
-  blue-surge-resilience:
-    metrics: [blue-customs-integrity, blue-yard-safety, blue-telemetry-retention, blue-ops-brief]
-    min-score: 75
-  red-yard-impact:
-    metrics: [red-manifest-impact]
-    min-score: {absolute: 80}
-
-tlos:
-  sustain-safe-throughput:
-    name: Sustain safe throughput
-    evaluation: blue-surge-resilience
-  achieve-yard-disruption:
-    name: Achieve yard disruption
-    evaluation: red-yard-impact
-
-goals:
-  port-blue-goal:
-    tlos: [sustain-safe-throughput]
-  red-cartel-goal:
-    tlos: [achieve-yard-disruption]
-
 entities:
   port-blue:
     name: Port Authority Blue Team
     role: Blue
     mission: Maintain customs integrity and safe yard operations during the surge
-    tlos: [sustain-safe-throughput]
     entities:
       it:
         name: Port IT
@@ -550,7 +505,6 @@ agents:
       services: [shipping-portal-https, vendor-jump-ssh, yard-hmi-web]
       accounts: [vendor-tech]
     allowed_subnets: [public-edge, vendor-net, yard-ot, terminal-it]
-    reward_calculator: OTImpact
   blue-yard-agent:
     entity: port-blue.yard-ops
     actions: [Inspect, Isolate, Restore, Validate]
@@ -561,7 +515,6 @@ agents:
       services: [yard-hmi-rdp, crane-opcua, historian-ui]
       accounts: [historian-svc]
     allowed_subnets: [yard-ot, safety-net, backup-net]
-    reward_calculator: SafetyFirst
   blue-soc-agent:
     entity: port-blue.incident-command
     actions: [Monitor, Triage, Coordinate, Recover]
@@ -572,16 +525,17 @@ agents:
       services: [port-soc-ui, shipping-portal-https, tos-https]
       accounts: [harbor-master, customs-officer]
     allowed_subnets: [security-net, terminal-it, customs-link, backup-net]
-    reward_calculator: CoordinatedResponse
 
 objectives:
+  # This scenario intended graded red/blue comparison. Graded scoring now lives
+  # in the experiment/evaluator plane (experiment-* contracts) per ADR-073;
+  # SDL objectives assert only observable success via conditions.
   red-corrupt-manifests:
     agent: red-yard-agent
     actions: [Phish, Tamper]
     targets: [cargo-manifests, manifest-db, portal-to-manifest]
     success:
       conditions: [tampered-manifest-observed]
-      metrics: [red-manifest-impact]
     window:
       stories: [surge-day]
       scripts: [arrival-phase, customs-surge-phase]
@@ -589,7 +543,7 @@ objectives:
     entity: red-cartel
     targets: [yard-hmi, crane-plc, hmi-manages-crane]
     success:
-      goals: [red-cartel-goal]
+      conditions: [tampered-manifest-observed]
     depends_on: [red-corrupt-manifests]
     window:
       stories: [surge-day]
@@ -600,8 +554,7 @@ objectives:
     actions: [Monitor, Triage, Coordinate]
     targets: [customs-gateway, manifest-db, customs-federates-port]
     success:
-      metrics: [blue-customs-integrity]
-      conditions: [customs-link-healthy]
+      conditions: [customs-link-healthy, manifest-integrity-ok]
     window:
       stories: [surge-day]
       scripts: [arrival-phase, customs-surge-phase]
@@ -618,7 +571,7 @@ objectives:
       - nodes.crane-plc.services.crane-opcua
       - infrastructure.yard-ot.acls.allow-yard-control
     success:
-      goals: [port-blue-goal]
+      conditions: [crane-safe-mode, yard-telemetry-flowing]
     depends_on: [blue-maintain-customs-integrity, red-degrade-yard-ops]
     window:
       stories: [surge-day]
@@ -636,7 +589,6 @@ objectives:
       - infrastructure.yard-ot.acls.allow-yard-control
     success:
       conditions: [yard-telemetry-flowing, historian-replication-ok]
-      metrics: [blue-telemetry-retention]
     depends_on: [red-degrade-yard-ops]
     window:
       stories: [surge-day]

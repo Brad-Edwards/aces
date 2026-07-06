@@ -13,7 +13,9 @@ The corresponding specifications live in `examples/scenarios/*.sdl.yaml`.
   application, data, vendor access, and recovery paths.
 - Include both attack and defense experiments, not just topology.
 - Use the current declarative experiment surface:
-  scoring, entities, orchestration, agents, objectives, and variables.
+  conditions, entities, orchestration, agents, objectives, and variables.
+  (Graded scoring is not an SDL surface — it lives in the experiment/evaluator
+  plane per [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md).)
 - Prefer scenarios grounded enough to expose parser, validation, runtime, and
   contract limits rather than abstract toy graphs.
 - Surface authoring friction explicitly when the SDL makes a concept
@@ -84,14 +86,15 @@ red team attempts data theft and radiology disruption?
   restore from immutable backups, produce an incident report
 - Windows tied to an exercise story with pre-surgery, live-clinic, and
   recovery phases
-- Success based on a mix of conditional uptime metrics and manual
-  reporting / recovery evaluation
+- Objective success expressed against observable `conditions` (e.g. service
+  uptime and recovery state); any graded scoring of the exercise is an
+  experiment/evaluator-plane concern, not authored SDL
 - Strong distinction between in-world telemetry and any extra experiment-side
   evidence capture outside the current SDL syntax
 
 ### SDL Stress Surface
 
-- All 21 sections
+- All 17 sections
 - Hybrid IT + clinical + vendor trust boundaries
 - Multiple agents with distinct initial knowledge and subnet scope
 - Objectives that target systems, relationships, and content

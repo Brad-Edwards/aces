@@ -64,8 +64,6 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
-metrics:
-  uptime: {type: conditional, max-score: 100, condition: health}
 events:
   kickoff: {conditions: [health]}
 scripts:
@@ -711,11 +709,17 @@ class MissingEvaluatorFieldsEvaluator(RecordingEvaluator):
 class InvalidEvaluatorReadyPayloadEvaluator(RecordingEvaluator):
     def start(self, plan, snapshot: RuntimeSnapshot) -> ApplyResult:
         result = super().start(plan, snapshot)
-        metric_address = next(
-            op.address for op in plan.operations if op.action != ChangeAction.DELETE and op.resource_type == "metric"
+        # Post ADR-073 the observable evaluation resources are conditions
+        # (supports_passed); a ready result must report passed or score, so
+        # nulling passed with no score violates the result contract.
+        passed_address = next(
+            op.address
+            for op in plan.operations
+            if op.action != ChangeAction.DELETE and op.payload.get("result_contract", {}).get("supports_passed")
         )
-        self._results[metric_address]["score"] = None
-        self._results[metric_address]["max_score"] = None
+        self._results[passed_address]["passed"] = None
+        self._results[passed_address].pop("score", None)
+        self._results[passed_address].pop("max_score", None)
         return ApplyResult(
             success=True,
             snapshot=result.snapshot.with_entries(
@@ -1037,117 +1041,129 @@ class TestRuntimeManager:
         ]
         assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
 
-    def test_apply_fails_on_invalid_workflow_result_schema_version(self):
+    @pytest.mark.parametrize(
+        ("fake_cls", "slot", "scenario_factory", "expected_code"),
+        [
+            pytest.param(
+                InvalidWorkflowSchemaVersionOrchestrator,
+                "orchestrator",
+                _workflow_scenario,
+                "runtime.backend-contract-invalid",
+                id="workflow-schema-version",
+            ),
+            pytest.param(
+                MissingWorkflowFieldsOrchestrator,
+                "orchestrator",
+                _workflow_scenario,
+                "runtime.backend-contract-invalid",
+                id="workflow-missing-fields",
+            ),
+            pytest.param(
+                InvalidWorkflowLifecycleOrchestrator,
+                "orchestrator",
+                _workflow_scenario,
+                "runtime.backend-contract-invalid",
+                id="workflow-lifecycle",
+            ),
+            pytest.param(
+                InvalidWorkflowOutcomeOrchestrator,
+                "orchestrator",
+                _workflow_scenario,
+                "runtime.backend-contract-invalid",
+                id="workflow-outcome",
+            ),
+            pytest.param(
+                InvalidWorkflowAttemptCountOrchestrator,
+                "orchestrator",
+                _workflow_scenario,
+                "runtime.backend-contract-invalid",
+                id="workflow-attempt-count",
+            ),
+            pytest.param(
+                InvalidWorkflowPendingOutcomeOrchestrator,
+                "orchestrator",
+                _workflow_scenario,
+                "runtime.backend-contract-invalid",
+                id="workflow-pending-outcome",
+            ),
+            pytest.param(
+                MissingObservableWorkflowStepOrchestrator,
+                "orchestrator",
+                _workflow_scenario,
+                "runtime.backend-contract-invalid",
+                id="workflow-missing-observable-step",
+            ),
+            pytest.param(
+                InvalidWorkflowCallHistoryOrchestrator,
+                "orchestrator",
+                _workflow_call_scenario,
+                "runtime.backend-contract-invalid",
+                id="workflow-call-history",
+            ),
+            pytest.param(
+                InvalidWorkflowCompensationOrchestrator,
+                "orchestrator",
+                _workflow_scenario,
+                "runtime.backend-contract-invalid",
+                id="workflow-compensation-state",
+            ),
+            pytest.param(
+                InvalidEvaluatorSchemaVersionEvaluator,
+                "evaluator",
+                _full_scenario,
+                "runtime.backend-contract-invalid",
+                id="evaluation-schema-version",
+            ),
+            pytest.param(
+                MissingEvaluatorFieldsEvaluator,
+                "evaluator",
+                _full_scenario,
+                "runtime.backend-contract-invalid",
+                id="evaluation-missing-fields",
+            ),
+            pytest.param(
+                InvalidEvaluatorReadyPayloadEvaluator,
+                "evaluator",
+                _full_scenario,
+                "runtime.backend-contract-invalid",
+                id="evaluation-ready-payload",
+            ),
+            pytest.param(
+                MissingEvaluatorHistoryEvaluator,
+                "evaluator",
+                _full_scenario,
+                "runtime.backend-contract-invalid",
+                id="evaluation-missing-history",
+            ),
+        ],
+    )
+    def test_apply_fails_on_invalid_backend_result_contract(
+        self,
+        fake_cls,
+        slot,
+        scenario_factory,
+        expected_code,
+    ):
         calls: list[str] = []
+        if slot == "orchestrator":
+            orchestrator = fake_cls(calls)
+            evaluator = RecordingEvaluator(calls, "evaluator")
+        else:
+            orchestrator = RecordingOrchestrator(calls)
+            evaluator = fake_cls(calls, "evaluator")
         target = RuntimeTarget(
             name="recording",
             manifest=create_stub_manifest(with_participant_runtime=False),
             provisioner=RecordingProvisioner(calls),
-            orchestrator=InvalidWorkflowSchemaVersionOrchestrator(calls),
-            evaluator=RecordingEvaluator(calls, "evaluator"),
+            orchestrator=orchestrator,
+            evaluator=evaluator,
         )
         manager = RuntimeManager(target)
 
-        result = manager.apply(manager.plan(_workflow_scenario()))
+        result = manager.apply(manager.plan(scenario_factory()))
 
         assert not result.success
-        assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
-
-    def test_apply_fails_on_missing_workflow_result_fields(self):
-        calls: list[str] = []
-        target = RuntimeTarget(
-            name="recording",
-            manifest=create_stub_manifest(with_participant_runtime=False),
-            provisioner=RecordingProvisioner(calls),
-            orchestrator=MissingWorkflowFieldsOrchestrator(calls),
-            evaluator=RecordingEvaluator(calls, "evaluator"),
-        )
-        manager = RuntimeManager(target)
-
-        result = manager.apply(manager.plan(_workflow_scenario()))
-
-        assert not result.success
-        assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
-
-    def test_apply_fails_on_invalid_workflow_result_lifecycle(self):
-        calls: list[str] = []
-        target = RuntimeTarget(
-            name="recording",
-            manifest=create_stub_manifest(with_participant_runtime=False),
-            provisioner=RecordingProvisioner(calls),
-            orchestrator=InvalidWorkflowLifecycleOrchestrator(calls),
-            evaluator=RecordingEvaluator(calls, "evaluator"),
-        )
-        manager = RuntimeManager(target)
-
-        result = manager.apply(manager.plan(_workflow_scenario()))
-
-        assert not result.success
-        assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
-
-    def test_apply_fails_on_invalid_workflow_result_outcome(self):
-        calls: list[str] = []
-        target = RuntimeTarget(
-            name="recording",
-            manifest=create_stub_manifest(with_participant_runtime=False),
-            provisioner=RecordingProvisioner(calls),
-            orchestrator=InvalidWorkflowOutcomeOrchestrator(calls),
-            evaluator=RecordingEvaluator(calls, "evaluator"),
-        )
-        manager = RuntimeManager(target)
-
-        result = manager.apply(manager.plan(_workflow_scenario()))
-
-        assert not result.success
-        assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
-
-    def test_apply_fails_on_fixed_attempt_mismatch(self):
-        calls: list[str] = []
-        target = RuntimeTarget(
-            name="recording",
-            manifest=create_stub_manifest(with_participant_runtime=False),
-            provisioner=RecordingProvisioner(calls),
-            orchestrator=InvalidWorkflowAttemptCountOrchestrator(calls),
-            evaluator=RecordingEvaluator(calls, "evaluator"),
-        )
-        manager = RuntimeManager(target)
-
-        result = manager.apply(manager.plan(_workflow_scenario()))
-
-        assert not result.success
-        assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
-
-    def test_apply_fails_on_pending_step_with_outcome(self):
-        calls: list[str] = []
-        target = RuntimeTarget(
-            name="recording",
-            manifest=create_stub_manifest(with_participant_runtime=False),
-            provisioner=RecordingProvisioner(calls),
-            orchestrator=InvalidWorkflowPendingOutcomeOrchestrator(calls),
-            evaluator=RecordingEvaluator(calls, "evaluator"),
-        )
-        manager = RuntimeManager(target)
-
-        result = manager.apply(manager.plan(_workflow_scenario()))
-
-        assert not result.success
-        assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
-
-    def test_apply_fails_on_missing_observable_workflow_step(self):
-        calls: list[str] = []
-        target = RuntimeTarget(
-            name="recording",
-            manifest=create_stub_manifest(with_participant_runtime=False),
-            provisioner=RecordingProvisioner(calls),
-            orchestrator=MissingObservableWorkflowStepOrchestrator(calls),
-            evaluator=RecordingEvaluator(calls, "evaluator"),
-        )
-        manager = RuntimeManager(target)
-
-        result = manager.apply(manager.plan(_workflow_scenario()))
-
-        assert not result.success
-        assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
+        assert expected_code in {diag.code for diag in result.diagnostics}
 
     def test_apply_validates_against_result_contract_not_control_steps(self):
         calls: list[str] = []
@@ -1164,102 +1180,6 @@ class TestRuntimeManager:
 
         assert result.success
         assert manager.snapshot.for_domain(RuntimeDomain.ORCHESTRATION)
-
-    def test_apply_fails_on_invalid_workflow_call_history(self):
-        calls: list[str] = []
-        target = RuntimeTarget(
-            name="recording",
-            manifest=create_stub_manifest(with_participant_runtime=False),
-            provisioner=RecordingProvisioner(calls),
-            orchestrator=InvalidWorkflowCallHistoryOrchestrator(calls),
-            evaluator=RecordingEvaluator(calls, "evaluator"),
-        )
-        manager = RuntimeManager(target)
-
-        result = manager.apply(manager.plan(_workflow_call_scenario()))
-
-        assert not result.success
-        assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
-
-    def test_apply_fails_on_invalid_workflow_compensation_state(self):
-        calls: list[str] = []
-        target = RuntimeTarget(
-            name="recording",
-            manifest=create_stub_manifest(with_participant_runtime=False),
-            provisioner=RecordingProvisioner(calls),
-            orchestrator=InvalidWorkflowCompensationOrchestrator(calls),
-            evaluator=RecordingEvaluator(calls, "evaluator"),
-        )
-        manager = RuntimeManager(target)
-
-        result = manager.apply(manager.plan(_workflow_scenario()))
-
-        assert not result.success
-        assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
-
-    def test_apply_fails_on_invalid_evaluation_result_schema_version(self):
-        calls: list[str] = []
-        target = RuntimeTarget(
-            name="recording",
-            manifest=create_stub_manifest(with_participant_runtime=False),
-            provisioner=RecordingProvisioner(calls),
-            orchestrator=RecordingOrchestrator(calls),
-            evaluator=InvalidEvaluatorSchemaVersionEvaluator(calls, "evaluator"),
-        )
-        manager = RuntimeManager(target)
-
-        result = manager.apply(manager.plan(_full_scenario()))
-
-        assert not result.success
-        assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
-
-    def test_apply_fails_on_missing_evaluation_result_fields(self):
-        calls: list[str] = []
-        target = RuntimeTarget(
-            name="recording",
-            manifest=create_stub_manifest(with_participant_runtime=False),
-            provisioner=RecordingProvisioner(calls),
-            orchestrator=RecordingOrchestrator(calls),
-            evaluator=MissingEvaluatorFieldsEvaluator(calls, "evaluator"),
-        )
-        manager = RuntimeManager(target)
-
-        result = manager.apply(manager.plan(_full_scenario()))
-
-        assert not result.success
-        assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
-
-    def test_apply_fails_on_invalid_ready_evaluation_payload(self):
-        calls: list[str] = []
-        target = RuntimeTarget(
-            name="recording",
-            manifest=create_stub_manifest(with_participant_runtime=False),
-            provisioner=RecordingProvisioner(calls),
-            orchestrator=RecordingOrchestrator(calls),
-            evaluator=InvalidEvaluatorReadyPayloadEvaluator(calls, "evaluator"),
-        )
-        manager = RuntimeManager(target)
-
-        result = manager.apply(manager.plan(_full_scenario()))
-
-        assert not result.success
-        assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
-
-    def test_apply_fails_on_missing_evaluation_history(self):
-        calls: list[str] = []
-        target = RuntimeTarget(
-            name="recording",
-            manifest=create_stub_manifest(with_participant_runtime=False),
-            provisioner=RecordingProvisioner(calls),
-            orchestrator=RecordingOrchestrator(calls),
-            evaluator=MissingEvaluatorHistoryEvaluator(calls, "evaluator"),
-        )
-        manager = RuntimeManager(target)
-
-        result = manager.apply(manager.plan(_full_scenario()))
-
-        assert not result.success
-        assert "runtime.backend-contract-invalid" in {diag.code for diag in result.diagnostics}
 
     def test_status_exposes_plain_data_workflow_results(self):
         target = RuntimeTarget(
@@ -1302,12 +1222,12 @@ class TestRuntimeManager:
         evaluation_history = status["evaluation_history"]
         assert isinstance(evaluation_results, dict)
         assert isinstance(evaluation_history, dict)
-        metric_payload = evaluation_results["evaluation.metric.uptime"]
-        assert metric_payload["state_schema_version"] == EVALUATION_STATE_SCHEMA_VERSION
-        assert metric_payload["resource_type"] == "metric"
-        assert metric_payload["status"] == "ready"
-        assert metric_payload["score"] == 100
-        assert evaluation_history["evaluation.metric.uptime"][-1]["event_type"] == "evaluation_ready"
+        condition_payload = evaluation_results["evaluation.condition.vm.health"]
+        assert condition_payload["state_schema_version"] == EVALUATION_STATE_SCHEMA_VERSION
+        assert condition_payload["resource_type"] == "condition-binding"
+        assert condition_payload["status"] == "ready"
+        assert condition_payload["passed"] is True
+        assert evaluation_history["evaluation.condition.vm.health"][-1]["event_type"] == "evaluation_ready"
         json.dumps(evaluation_results)
         json.dumps(evaluation_history)
 
@@ -1324,14 +1244,21 @@ class TestRuntimeManager:
         json.dumps(manager.snapshot.orchestration_results)
 
     def test_runtime_manager_requires_explicit_manifest(self):
+        # RuntimeTarget.__post_init__ rejects manifest=None at construction, so
+        # build a valid target and null the manifest afterwards to exercise the
+        # RuntimeManager.__init__ guard directly (mirrors the evaluator-missing
+        # test's object.__setattr__ bypass below).
+        target = RuntimeTarget(
+            name="invalid",
+            manifest=create_stub_manifest(with_participant_runtime=False),
+            provisioner=RecordingProvisioner([]),
+            orchestrator=RecordingOrchestrator([]),
+            evaluator=RecordingEvaluator([], "evaluator"),
+        )
+        object.__setattr__(target, "manifest", None)
+
         with pytest.raises(ValueError, match="explicit manifest"):
-            RuntimeManager(
-                RuntimeTarget(  # type: ignore[arg-type]
-                    name="invalid",
-                    manifest=None,
-                    provisioner=RecordingProvisioner([]),
-                )
-            )
+            RuntimeManager(target)
 
     def test_apply_fails_closed_before_provisioning_when_required_service_is_missing(self):
         calls: list[str] = []

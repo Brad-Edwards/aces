@@ -114,10 +114,6 @@ _SECTION_FIELDS = [
     "features",
     "conditions",
     "vulnerabilities",
-    "metrics",
-    "evaluations",
-    "tlos",
-    "goals",
     "entities",
     "injects",
     "events",
@@ -444,25 +440,6 @@ def _build_reference_map(scenario) -> dict[tuple[str, str], list[str]]:
         if feat.dependencies:
             refs[("features", name)] = list(feat.dependencies)
 
-    # Metrics -> conditions
-    for name, metric in scenario.metrics.items():
-        if metric.condition:
-            refs[("metrics", name)] = [metric.condition]
-
-    # Evaluations -> metrics
-    for name, ev in scenario.evaluations.items():
-        if ev.metrics:
-            refs[("evaluations", name)] = list(ev.metrics)
-
-    # TLOs -> evaluations
-    for name, tlo in scenario.tlos.items():
-        refs[("tlos", name)] = [tlo.evaluation]
-
-    # Goals -> TLOs
-    for name, goal in scenario.goals.items():
-        if goal.tlos:
-            refs[("goals", name)] = list(goal.tlos)
-
     # Events -> conditions, injects
     for name, event in scenario.events.items():
         targets = []
@@ -526,10 +503,6 @@ def _build_reference_map(scenario) -> dict[tuple[str, str], list[str]]:
             targets.extend(obj.depends_on)
         if obj.success:
             targets.extend(obj.success.conditions)
-            targets.extend(obj.success.metrics)
-            targets.extend(obj.success.evaluations)
-            targets.extend(obj.success.tlos)
-            targets.extend(obj.success.goals)
         if targets:
             refs[("objectives", name)] = targets
 

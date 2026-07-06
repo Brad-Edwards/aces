@@ -25,10 +25,6 @@ class _WorkflowAnalysisMixin:
     ) -> None:
         predicate_sections = (
             ("condition", predicate.conditions, self._s.conditions),
-            ("metric", predicate.metrics, self._s.metrics),
-            ("evaluation", predicate.evaluations, self._s.evaluations),
-            ("TLO", predicate.tlos, self._s.tlos),
-            ("goal", predicate.goals, self._s.goals),
             ("objective", predicate.objectives, self._s.objectives),
         )
         for label, refs, section in predicate_sections:
