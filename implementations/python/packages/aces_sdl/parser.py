@@ -28,10 +28,6 @@ _HASHMAP_SECTIONS = frozenset(
         "features",
         "conditions",
         "vulnerabilities",
-        "metrics",
-        "evaluations",
-        "tlos",
-        "goals",
         "entities",
         "injects",
         "events",
@@ -186,11 +182,26 @@ def _expand_roles(roles: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def _expand_min_score(value: Any) -> Any:
-    """Expand min-score shorthand: 50 → {percentage: 50}."""
-    if isinstance(value, int) or is_variable_ref(value):
-        return {"percentage": value}
-    return value
+# OCR scoring sections removed from the SDL by ADR-073. Detected up front so
+# authors get a migration pointer instead of a raw "extra fields" error.
+_REMOVED_SCORING_SECTIONS = ("metrics", "evaluations", "tlos", "goals")
+
+
+def _reject_removed_scoring_sections(data: dict[str, Any], *, path: Path | None) -> None:
+    """Raise a migration-pointing error when a removed scoring section is used."""
+    present = [section for section in _REMOVED_SCORING_SECTIONS if section in data]
+    if not present:
+        return
+    raise SDLParseError(
+        "SDL scoring sections "
+        f"{', '.join(present)} were removed from the language by ADR-073. "
+        "Express objective success against observable state via "
+        "'objectives.*.success.conditions', and route graded scoring, reward, "
+        "and evaluation outputs to the experiment/evaluator plane "
+        "(ADR-055/064/069). The CybORG 'agents.*.reward_calculator' label was "
+        "removed for the same reason.",
+        path=path,
+    )
 
 
 def _expand_shorthands(data: dict[str, Any]) -> dict[str, Any]:
@@ -255,12 +266,6 @@ def _expand_shorthands(data: dict[str, Any]) -> dict[str, Any]:
                     if field in node_data and isinstance(node_data[field], list):
                         node_data[field] = {name: "" for name in node_data[field]}
 
-    # Expand min_score in evaluations
-    if "evaluations" in data and isinstance(data["evaluations"], dict):
-        for eval_data in data["evaluations"].values():
-            if isinstance(eval_data, dict) and "min_score" in eval_data:
-                eval_data["min_score"] = _expand_min_score(eval_data["min_score"])
-
     return data
 
 
@@ -290,6 +295,7 @@ def parse_sdl(
         SDLValidationError: If semantic validation finds errors.
     """
     data = _load_normalized_data(content, path=path)
+    _reject_removed_scoring_sections(data, path=path)
     module_variable_specs: dict[str, dict[str, object]] = {}
     module_node_variable_refs: dict[str, dict[str, str | None]] = {}
     if data.get("imports"):

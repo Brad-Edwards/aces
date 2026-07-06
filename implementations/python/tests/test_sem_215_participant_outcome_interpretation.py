@@ -60,22 +60,13 @@ def _scenario_yaml() -> str:
           exfil-detected:
             command: "test -f /tmp/alert"
             interval: 10
-        metrics:
-          exfil-score:
-            type: conditional
-            condition: exfil-detected
-            max-score: 10
-        evaluations:
-          exfil-eval:
-            metrics: [exfil-score]
-            min-score: {absolute: 10}
         objectives:
           exfil-objective:
             agent: red-agent
             actions: [scan]
             targets: [nodes.web.services.http]
             success:
-              evaluations: [exfil-eval]
+              conditions: [exfil-detected]
         workflows:
           response-flow:
             start: verify

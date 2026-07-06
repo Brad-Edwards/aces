@@ -397,78 +397,6 @@ class TestVerifyFeatures:
         assert not errors
 
 
-class TestVerifyMetrics:
-    def test_conditional_metric_references_undefined_condition(self):
-        s = _make_scenario(
-            conditions={"c1": {"command": "/bin/check", "interval": 30}},
-            metrics={
-                "m1": {"type": "conditional", "max_score": 10, "condition": "missing"},
-            },
-        )
-        errors = _validate(s)
-        assert any("undefined condition" in e for e in errors)
-
-    def test_duplicate_condition_reference(self):
-        s = _make_scenario(
-            conditions={"c1": {"command": "/bin/check", "interval": 30}},
-            metrics={
-                "m1": {"type": "conditional", "max_score": 10, "condition": "c1"},
-                "m2": {"type": "conditional", "max_score": 10, "condition": "c1"},
-            },
-        )
-        errors = _validate(s)
-        assert any("multiple metrics" in e for e in errors)
-
-
-class TestVerifyEvaluations:
-    def test_references_undefined_metric(self):
-        s = _make_scenario(
-            evaluations={
-                "e1": {"metrics": ["missing"], "min_score": {"percentage": 50}},
-            },
-        )
-        errors = _validate(s)
-        assert any("undefined metric" in e for e in errors)
-
-    def test_absolute_min_score_exceeds_max(self):
-        s = _make_scenario(
-            conditions={"c1": {"command": "/check", "interval": 10}},
-            metrics={"m1": {"type": "conditional", "max_score": 10, "condition": "c1"}},
-            evaluations={
-                "e1": {"metrics": ["m1"], "min_score": {"absolute": 100}},
-            },
-        )
-        errors = _validate(s)
-        assert any("exceeds" in e for e in errors)
-
-
-class TestVerifyTLOs:
-    def test_references_undefined_evaluation(self):
-        s = _make_scenario(
-            tlos={"t1": {"evaluation": "missing"}},
-        )
-        errors = _validate(s)
-        assert any("undefined evaluation" in e for e in errors)
-
-
-class TestVerifyGoals:
-    def test_references_undefined_tlo(self):
-        s = _make_scenario(
-            goals={"g1": {"tlos": ["missing"]}},
-        )
-        errors = _validate(s)
-        assert any("undefined TLO" in e for e in errors)
-
-
-class TestVerifyEntities:
-    def test_entity_references_undefined_tlo(self):
-        s = _make_scenario(
-            entities={"team": {"tlos": ["missing"]}},
-        )
-        errors = _validate(s)
-        assert any("undefined TLO" in e for e in errors)
-
-
 class TestVerifyInjects:
     def test_inject_references_undefined_entity(self):
         s = _make_scenario(
@@ -527,8 +455,8 @@ class TestErrorCollection:
             features={
                 "f1": {"type": "service", "vulnerabilities": ["missing-1"]},
                 "f2": {"type": "service", "vulnerabilities": ["missing-2"]},
+                "f3": {"type": "service", "vulnerabilities": ["missing-3"]},
             },
-            goals={"g1": {"tlos": ["missing-tlo"]}},
         )
         errors = _validate(s)
         assert len(errors) >= 3
@@ -1354,20 +1282,9 @@ class TestVerifyObjectives:
                     "actions": ["Scan", "Exploit"],
                 },
             },
-            "metrics": {
-                "report-quality": {
-                    "type": "manual",
-                    "max_score": 100,
-                },
+            "conditions": {
+                "exercise-passed": {"command": "/bin/check", "interval": 30},
             },
-            "evaluations": {
-                "overall": {
-                    "metrics": ["report-quality"],
-                    "min_score": {"percentage": 50},
-                },
-            },
-            "tlos": {"web-defense": {"evaluation": "overall"}},
-            "goals": {"pass-exercise": {"tlos": ["web-defense"]}},
             "events": {"attack-wave": {}},
             "scripts": {
                 "main-timeline": {
@@ -1386,7 +1303,7 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "ghost-agent",
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                 },
             },
         )
@@ -1399,7 +1316,7 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "entity": "ghost-team",
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                 },
             },
         )
@@ -1413,7 +1330,7 @@ class TestVerifyObjectives:
                 "obj-1": {
                     "agent": "red-agent",
                     "actions": ["Persist"],
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                 },
             },
         )
@@ -1427,7 +1344,7 @@ class TestVerifyObjectives:
                 "obj-1": {
                     "agent": "red-agent",
                     "targets": ["ghost-target"],
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                 },
             },
         )
@@ -1443,7 +1360,7 @@ class TestVerifyObjectives:
                 "obj-1": {
                     "agent": "red-agent",
                     "targets": ["web"],
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                 },
             },
         )
@@ -1459,7 +1376,7 @@ class TestVerifyObjectives:
                 "obj-1": {
                     "agent": "red-agent",
                     "targets": ["nodes.web", "infrastructure.net"],
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                 },
             },
         )
@@ -1488,7 +1405,7 @@ class TestVerifyObjectives:
                         "nodes.web.services.web-https",
                         "infrastructure.net.acls.allow-admin",
                     ],
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                 },
             },
             relationships={
@@ -1508,12 +1425,12 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "red-agent",
-                    "success": {"metrics": ["ghost-metric"]},
+                    "success": {"conditions": ["ghost-condition"]},
                 },
             },
         )
         errors = _validate(s)
-        assert any("undefined metric" in e for e in errors)
+        assert any("undefined condition" in e for e in errors)
 
     def test_window_event_must_belong_to_script(self):
         kwargs = self._base_kwargs()
@@ -1523,7 +1440,7 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "red-agent",
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                     "window": {
                         "scripts": ["main-timeline"],
                         "events": ["cleanup-wave"],
@@ -1540,12 +1457,12 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "red-agent",
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                     "depends_on": ["obj-2"],
                 },
                 "obj-2": {
                     "entity": "blue",
-                    "success": {"metrics": ["report-quality"]},
+                    "success": {"conditions": ["exercise-passed"]},
                     "depends_on": ["obj-1"],
                 },
             },
@@ -1559,7 +1476,7 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "red-agent",
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                     "depends_on": ["ghost-objective"],
                 },
             },
@@ -1573,7 +1490,7 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "red-agent",
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                     "window": {"steps": ["response.validate"]},
                 },
             },
@@ -1587,7 +1504,7 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "red-agent",
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                     "window": {
                         "workflows": ["response"],
                         "steps": ["other.validate"],
@@ -1630,7 +1547,7 @@ class TestVerifyObjectives:
                     "agent": "red-agent",
                     "actions": ["Scan"],
                     "targets": ["web"],
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                     "window": {
                         "stories": ["exercise"],
                         "scripts": ["main-timeline"],
@@ -1639,7 +1556,7 @@ class TestVerifyObjectives:
                 },
                 "report": {
                     "entity": "blue",
-                    "success": {"metrics": ["report-quality"]},
+                    "success": {"conditions": ["exercise-passed"]},
                     "depends_on": ["recon"],
                 },
             },
@@ -1652,28 +1569,17 @@ class TestVerifyWorkflows:
     def _base_kwargs(self) -> dict:
         return {
             "entities": {"blue": {"role": "blue"}},
-            "metrics": {
-                "report-quality": {
-                    "type": "manual",
-                    "max_score": 100,
-                },
+            "conditions": {
+                "exercise-passed": {"command": "/bin/check", "interval": 30},
             },
-            "evaluations": {
-                "overall": {
-                    "metrics": ["report-quality"],
-                    "min_score": {"percentage": 50},
-                },
-            },
-            "tlos": {"ops-ready": {"evaluation": "overall"}},
-            "goals": {"pass-exercise": {"tlos": ["ops-ready"]}},
             "objectives": {
                 "validate-release": {
                     "entity": "blue",
-                    "success": {"goals": ["pass-exercise"]},
+                    "success": {"conditions": ["exercise-passed"]},
                 },
                 "rollback-edge": {
                     "entity": "blue",
-                    "success": {"metrics": ["report-quality"]},
+                    "success": {"conditions": ["exercise-passed"]},
                 },
             },
         }
@@ -1881,7 +1787,7 @@ class TestVerifyWorkflows:
                             "type": "switch",
                             "cases": [
                                 {
-                                    "when": {"goals": ["pass-exercise"]},
+                                    "when": {"objectives": ["validate-release"]},
                                     "next": "delegate",
                                 }
                             ],
@@ -2645,22 +2551,7 @@ class TestVerifyVariables:
                     "interval": "${check_interval}",
                 }
             },
-            metrics={
-                "m1": {
-                    "type": "conditional",
-                    "max_score": "${max_score}",
-                    "condition": "check",
-                }
-            },
-            evaluations={
-                "e1": {
-                    "metrics": ["m1"],
-                    "min_score": {"percentage": "${pass_percentage}"},
-                }
-            },
-            tlos={"t1": {"evaluation": "e1"}},
-            goals={"g1": {"tlos": ["t1"]}},
-            entities={"blue": {"role": "blue", "tlos": ["t1"]}},
+            entities={"blue": {"role": "blue"}},
             events={"evt": {}},
             scripts={
                 "timeline": {
@@ -2710,7 +2601,7 @@ class TestVerifyVariables:
                 "obj": {
                     "agent": "a1",
                     "targets": ["${objective_target}"],
-                    "success": {"goals": ["g1"]},
+                    "success": {"conditions": ["check"]},
                 }
             },
         )
@@ -2749,8 +2640,8 @@ class TestAdvisories:
 
 
 class TestValidFullScenario:
-    def test_complete_ocr_scenario_validates(self):
-        """A complete OCR-style scenario passes validation."""
+    def test_complete_scenario_validates(self):
+        """A complete scenario passes validation (post ADR-073, no scoring sections)."""
         s = Scenario(
             name="full-test",
             nodes={
@@ -2769,12 +2660,8 @@ class TestValidFullScenario:
             },
             features={"svc": {"type": "service", "source": {"name": "apache"}}},
             conditions={"check": {"command": "/bin/check", "interval": 30}},
-            metrics={"m1": {"type": "conditional", "max_score": 10, "condition": "check"}},
-            evaluations={"e1": {"metrics": ["m1"], "min_score": {"percentage": 50}}},
-            tlos={"t1": {"evaluation": "e1"}},
-            goals={"g1": {"tlos": ["t1"]}},
             entities={
-                "blue": {"role": "blue", "tlos": ["t1"]},
+                "blue": {"role": "blue"},
             },
         )
         errors = _validate(s)

@@ -123,7 +123,6 @@ from aces.core.sdl.orchestration import (
     WorkflowStepType,
     parse_duration,
 )
-from aces.core.sdl.scoring import TLO, Evaluation, Goal, Metric, MetricType, MinScore
 from aces.core.sdl.vulnerabilities import Vulnerability
 
 # ---------------------------------------------------------------------------
@@ -2086,78 +2085,6 @@ class TestVulnerability:
 
 
 # ---------------------------------------------------------------------------
-# Scoring
-# ---------------------------------------------------------------------------
-
-
-class TestMetric:
-    def test_manual(self):
-        m = Metric(type="manual", max_score=10, artifact=True)
-        assert m.type == MetricType.MANUAL
-
-    def test_conditional(self):
-        m = Metric(type="conditional", max_score=10, condition="cond-1")
-        assert m.condition == "cond-1"
-
-    def test_manual_rejects_condition(self):
-        with pytest.raises(ValidationError, match="Manual.*condition"):
-            Metric(type="manual", max_score=10, condition="cond-1")
-
-    def test_conditional_requires_condition(self):
-        with pytest.raises(ValidationError, match="requires.*condition"):
-            Metric(type="conditional", max_score=10)
-
-    def test_variable_placeholders(self):
-        m = Metric(type="manual", max_score="${max_score}", artifact="${needs_upload}")
-        assert m.max_score == "${max_score}"
-        assert m.artifact == "${needs_upload}"
-
-
-class TestMinScore:
-    def test_percentage(self):
-        ms = MinScore(percentage=75)
-        assert ms.percentage == 75
-
-    def test_absolute(self):
-        ms = MinScore(absolute=50)
-        assert ms.absolute == 50
-
-    def test_rejects_both(self):
-        with pytest.raises(ValidationError, match="both"):
-            MinScore(absolute=50, percentage=75)
-
-    def test_rejects_neither(self):
-        with pytest.raises(ValidationError, match="either"):
-            MinScore()
-
-    def test_placeholder_percentage(self):
-        ms = MinScore(percentage="${pass_percentage}")
-        assert ms.percentage == "${pass_percentage}"
-
-
-class TestEvaluation:
-    def test_valid(self):
-        e = Evaluation(metrics=["m-1"], min_score=MinScore(percentage=50))
-        assert len(e.metrics) == 1
-
-    def test_empty_metrics_rejected(self):
-        with pytest.raises(ValidationError, match="at least 1 item"):
-            Evaluation(metrics=[], min_score=MinScore(percentage=50))
-
-
-class TestTLO:
-    def test_valid(self):
-        t = TLO(evaluation="eval-1")
-        assert t.evaluation == "eval-1"
-
-
-class TestGoal:
-    def test_valid(self):
-        g = Goal(tlos=["tlo-1"])
-        assert len(g.tlos) == 1
-
-
-# ---------------------------------------------------------------------------
 # Entities
 # ---------------------------------------------------------------------------
 
@@ -2313,14 +2240,14 @@ class TestObjectiveSuccess:
         with pytest.raises(ValidationError, match="at least one condition"):
             ObjectiveSuccess()
 
-    def test_accepts_goal_reference(self):
-        success = ObjectiveSuccess(goals=["pass-exercise"])
-        assert success.goals == ["pass-exercise"]
+    def test_accepts_condition_reference(self):
+        success = ObjectiveSuccess(conditions=["exercise-passed"])
+        assert success.conditions == ["exercise-passed"]
 
     def test_mode_placeholder(self):
         success = ObjectiveSuccess(
             mode="${objective_mode}",
-            goals=["pass-exercise"],
+            conditions=["exercise-passed"],
         )
         assert success.mode == "${objective_mode}"
 
@@ -2329,14 +2256,14 @@ class TestObjective:
     def test_requires_exactly_one_actor_binding(self):
         with pytest.raises(ValidationError, match="exactly one"):
             Objective(
-                success={"goals": ["g1"]},
+                success={"conditions": ["c1"]},
             )
 
         with pytest.raises(ValidationError, match="exactly one"):
             Objective(
                 agent="red-agent",
                 entity="red-team",
-                success={"goals": ["g1"]},
+                success={"conditions": ["c1"]},
             )
 
     def test_valid_agent_objective(self):
@@ -2344,7 +2271,7 @@ class TestObjective:
             agent="red-agent",
             actions=["Scan"],
             targets=["web-server"],
-            success={"goals": ["initial-access"]},
+            success={"conditions": ["initial-access"]},
             window={
                 "scripts": ["main-timeline"],
                 "events": ["attack-wave"],
@@ -2354,14 +2281,14 @@ class TestObjective:
             depends_on=["recon"],
         )
         assert objective.agent == "red-agent"
-        assert objective.success.goals == ["initial-access"]
+        assert objective.success.conditions == ["initial-access"]
         assert isinstance(objective.window, ObjectiveWindow)
         assert objective.window.steps == ["response-flow.validate"]
 
     def test_valid_entity_objective(self):
         objective = Objective(
             entity="blue-team",
-            success={"metrics": ["report-quality"]},
+            success={"conditions": ["report-quality"]},
         )
         assert objective.entity == "blue-team"
 
@@ -2624,7 +2551,7 @@ class TestWorkflow:
             ValidationError,
             match="requires 'when', 'then', and 'else'",
         ):
-            WorkflowStep(type="decision", when={"goals": ["g1"]})
+            WorkflowStep(type="decision", when={"conditions": ["c1"]})
 
     def test_parallel_step_requires_unique_branches(self):
         with pytest.raises(ValidationError, match="branches must be unique"):
@@ -2668,7 +2595,7 @@ class TestWorkflow:
             type="switch",
             cases=[
                 {
-                    "when": {"goals": ["g1"]},
+                    "when": {"conditions": ["c1"]},
                     "next": "done",
                 }
             ],
@@ -2771,7 +2698,7 @@ class TestWorkflow:
         ):
             WorkflowStep(
                 type="decision",
-                when={"goals": ["g1"]},
+                when={"conditions": ["c1"]},
                 **{"then": "a", "else": "b", "on-failure": "recover"},
             )
 
@@ -2796,7 +2723,7 @@ class TestWorkflow:
 
     def test_legacy_workflow_step_type_rejected(self):
         with pytest.raises(ValidationError, match="no longer supported"):
-            WorkflowStep(type="if", when={"goals": ["g1"]}, **{"then": "a", "else": "b"})
+            WorkflowStep(type="if", when={"conditions": ["c1"]}, **{"then": "a", "else": "b"})
 
     def test_predicate_empty_rejected(self):
         with pytest.raises(ValidationError, match="must reference at least one"):

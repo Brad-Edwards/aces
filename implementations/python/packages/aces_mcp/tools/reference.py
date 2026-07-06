@@ -72,11 +72,6 @@ _SECTION_NAMES: dict[str, str] = {
     "features": "Features",
     "conditions": "Conditions",
     "vulnerabilities": "Vulnerabilities",
-    "metrics": "Scoring Pipeline: Metrics, Evaluations, TLOs, Goals",
-    "evaluations": "Scoring Pipeline: Metrics, Evaluations, TLOs, Goals",
-    "tlos": "Scoring Pipeline: Metrics, Evaluations, TLOs, Goals",
-    "goals": "Scoring Pipeline: Metrics, Evaluations, TLOs, Goals",
-    "scoring": "Scoring Pipeline: Metrics, Evaluations, TLOs, Goals",
     "entities": "Entities",
     "injects": "Orchestration: Injects, Events, Scripts, Stories",
     "events": "Orchestration: Injects, Events, Scripts, Stories",
@@ -118,7 +113,7 @@ def register(mcp: FastMCP) -> None:
         name="sdl_overview",
         description=(
             "Get a comprehensive overview of the ACES Scenario Description "
-            "Language (SDL). Returns what the SDL is, its 21 sections, how "
+            "Language (SDL). Returns what the SDL is, its 17 sections, how "
             "parsing/validation works, the variable system, and a complete "
             "minimal example. Start here if you have never seen the SDL before."
         ),
@@ -132,11 +127,11 @@ def register(mcp: FastMCP) -> None:
             "Get detailed documentation for a specific SDL section including "
             "its schema, fields, YAML examples, shorthands, and validation "
             "rules.  Valid section names: nodes, infrastructure, features, "
-            "conditions, vulnerabilities, scoring (metrics+evaluations+tlos+"
-            "goals), entities, orchestration (injects+events+scripts+stories), "
-            "content, accounts, relationships, agents, objectives, workflows, "
-            "variables.  You can also pass the individual section name like "
-            "'metrics' or 'events'."
+            "conditions, vulnerabilities, entities, orchestration "
+            "(injects+events+scripts+stories), content, accounts, "
+            "relationships, agents, objectives, workflows, variables.  You can "
+            "also pass the individual section name like 'conditions' or "
+            "'events'."
         ),
     )
     def sdl_section_reference(section: str) -> str:
@@ -166,7 +161,7 @@ def register(mcp: FastMCP) -> None:
         description=(
             "Get a complete, real-world annotated SDL scenario example. "
             "Available examples: 'hospital' (hospital ransomware exercise, "
-            "~750 lines, uses all 21 sections), 'satcom' (satellite supply-chain "
+            "~750 lines, uses all 17 sections), 'satcom' (satellite supply-chain "
             "exercise, ~750 lines), 'port' (port authority OT exercise, ~680 lines), "
             "'minimal' (a small annotated pentest-lab example to learn the basics). "
             "Use 'hospital' for a comprehensive reference of all SDL features."
@@ -292,36 +287,23 @@ conditions:
     command: "curl -sf http://localhost:8080/ || exit 1"
     interval: 15
 
-# --- Scoring pipeline: conditions -> metrics -> evaluations -> TLOs -> goals ---
-metrics:
-  uptime:
-    type: CONDITIONAL
-    max-score: 100
-    condition: web-alive
-
-evaluations:
-  basic-eval:
-    metrics: [uptime]
-    min-score: 75                          # shorthand for {percentage: 75}
-
-tlos:
-  web-defense:
-    name: Defend the web application
-    evaluation: basic-eval
-
-goals:
-  pass:
-    tlos: [web-defense]
-
 # --- Teams / people ---
 entities:
   blue-team:
     name: Blue Team
     role: Blue                             # Blue, Red, White, Green
-    tlos: [web-defense]
   red-team:
     name: Red Team
     role: Red
+
+# Objective success references observable state (conditions) per ADR-073.
+# Graded scoring/reward lives in the experiment/evaluator plane, not the SDL.
+objectives:
+  keep-web-alive:
+    description: Keep the web application available
+    entity: blue-team
+    success:
+      conditions: [web-alive]
 
 # --- Parameterization (${var} syntax, resolved at instantiation, not parse time) ---
 variables:
@@ -344,9 +326,9 @@ specifications through runtime contracts.
 It descends from the Open Cyber Range (OCR) SDL and extends it with 7 \
 additional sections for richer experiment semantics.
 
-## The 21 Sections
+## The 17 Sections
 
-A scenario is a YAML document with a required `name` and up to 21 optional \
+A scenario is a YAML document with a required `name` and up to 17 optional \
 sections, organized into four concerns:
 
 ### Topology & Software (5 sections)
@@ -358,15 +340,10 @@ sections, organized into four concerns:
 | `conditions` | Health checks (command+interval or library source) |
 | `vulnerabilities` | CWE-classified weaknesses |
 
-### Scoring Pipeline (4 sections)
-| Section | Purpose |
-|---------|---------|
-| `metrics` | Scoring criteria: CONDITIONAL (automated) or MANUAL |
-| `evaluations` | Metric groups with pass/fail thresholds |
-| `tlos` | Training Learning Objectives linked to evaluations |
-| `goals` | High-level goals composed of TLOs |
-
-Flow: `conditions -> metrics -> evaluations -> TLOs -> goals`
+Per ADR-073 the OCR scoring pipeline (`metrics` / `evaluations` / `tlos` / \
+`goals`) and `agents.reward_calculator` were removed from the SDL. Objective \
+success references observable state (`conditions`); graded scoring, reward, and \
+evaluation outputs live in the experiment/evaluator plane (ADR-055/064/069).
 
 ### Exercise Orchestration (4 sections)
 | Section | Purpose |

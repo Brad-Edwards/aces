@@ -1,15 +1,15 @@
 template: aces-library-template
 version: 1
-id: scored-study-protocol
+id: observational-study-protocol
 surface: study
 requirement_refs: [AUT-806]
 source_refs:
   - docs/explain/sdl/sections.md
-  - docs/explain/reference/assessment-semantics.md
-summary: Study template connecting task outcome, metric, evaluation, TLO, goal, and workflow protocol.
+  - docs/decisions/adrs/adr-073-scoring-reward-language-scope.md
+summary: Study template connecting a task outcome to an observable condition, objective, and workflow protocol. Graded scoring lives in the experiment/evaluator plane per ADR-073.
 body:
   name: library-study-template
-  description: Study-oriented SDL wrapper with objectives mapped into metric, evaluation, TLO, and goal evidence.
+  description: Study-oriented SDL wrapper whose objective asserts observable success via a condition. Graded scoring and reward are experiment/evaluator-plane concerns per ADR-073, not SDL surfaces.
   nodes:
     study-target:
       type: VM
@@ -20,21 +20,6 @@ body:
     study-task-success:
       command: test -f /var/lib/aces/study-task-success
       interval: 30
-  metrics:
-    task-success-score:
-      type: conditional
-      condition: study-task-success
-      max-score: 100
-  evaluations:
-    study-evaluation:
-      metrics: [task-success-score]
-      min-score: {percentage: 80}
-  tlos:
-    study-learning-objective:
-      evaluation: study-evaluation
-  goals:
-    study-goal:
-      tlos: [study-learning-objective]
   entities:
     participant-team:
       role: blue
@@ -46,10 +31,7 @@ body:
       agent: study-participant
       targets: [nodes.study-target.services.https]
       success:
-        metrics: [task-success-score]
-        evaluations: [study-evaluation]
-        tlos: [study-learning-objective]
-        goals: [study-goal]
+        conditions: [study-task-success]
   workflows:
     study-protocol:
       start: complete-task

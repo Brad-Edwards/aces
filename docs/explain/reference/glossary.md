@@ -90,8 +90,7 @@ published schemas, source code, and ADRs.
   inject state.
 
 **Evaluation plan**
-: The execution-plan portion for condition bindings, scoring graph nodes, and
-  objectives.
+: The execution-plan portion for condition bindings and objectives.
 
 **Runtime snapshot**
 : The typed state model used by the planner and manager to represent current

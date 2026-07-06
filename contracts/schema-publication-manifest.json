@@ -156,10 +156,10 @@
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "21b5882778f3db00ee6ac4c7825e12b52ddbc9e7c14230bcf0fd4dc70b0303da",
+      "content_hash": "e0a28239e30855be948b4c3718ae34811de231b3f8d8e146d149d862af0b7cc5",
       "last_change": {
-        "summary": "Constrained instantiated SDL variable map keys to the declared variable-name grammar.",
-        "content_hash": "21b5882778f3db00ee6ac4c7825e12b52ddbc9e7c14230bcf0fd4dc70b0303da"
+        "summary": "Removed the OCR scoring pipeline (metrics/evaluations/tlos/goals), agents.reward_calculator, entities.tlos, injects.tlos, and workflow-predicate/objective-success scoring references; narrowed objectives.success to conditions (observable state) per ADR-073.",
+        "content_hash": "e0a28239e30855be948b4c3718ae34811de231b3f8d8e146d149d862af0b7cc5"
       }
     },
     {
@@ -352,10 +352,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "1cf332317657cc3dee87f98b42c02f8fb98400396de0119e0a6d2c9e93700668",
+      "content_hash": "820fbd6619a100e382d722890edcdde01da977158fd86f958f4928a9d32ad51a",
       "last_change": {
-        "summary": "Constrained authored SDL variable map keys to the declared variable-name grammar.",
-        "content_hash": "1cf332317657cc3dee87f98b42c02f8fb98400396de0119e0a6d2c9e93700668"
+        "summary": "Removed the OCR scoring pipeline (metrics/evaluations/tlos/goals), agents.reward_calculator, entities.tlos, injects.tlos, and workflow-predicate/objective-success scoring references; narrowed objectives.success to conditions (observable state) per ADR-073.",
+        "content_hash": "820fbd6619a100e382d722890edcdde01da977158fd86f958f4928a9d32ad51a"
       }
     },
     {

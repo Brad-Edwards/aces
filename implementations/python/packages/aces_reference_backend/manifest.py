@@ -153,7 +153,7 @@ def _capabilities() -> BackendCapabilitySet:
         ),
         evaluator=EvaluatorCapabilities(
             name="reference-emulation-evaluator",
-            supported_sections=frozenset({"conditions", "metrics", "evaluations", "tlos", "goals", "objectives"}),
+            supported_sections=frozenset({"conditions", "objectives"}),
             supports_scoring=True,
             supports_objectives=True,
         ),

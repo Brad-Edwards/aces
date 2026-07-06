@@ -16,9 +16,12 @@ against precedent systems, including where those systems lead ACES, see
 - [Open Cyber Range SDL](https://documentation.opencyberrange.ee/docs/sdl/reference/)
   is the closest direct SDL precedent. ACES starts from its author-facing
   section surface, including logical nodes, infrastructure, features,
-  conditions, scoring concepts, entities, injects, events, scripts, and
-  stories. ACES keeps the logical scenario surface separate from backend
-  realization instead of treating the SDL as a deployment format.
+  conditions, entities, injects, events, scripts, and stories. ACES keeps the
+  logical scenario surface separate from backend realization instead of
+  treating the SDL as a deployment format, and per
+  [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md) it
+  dropped OCR's scoring concepts (metrics/evaluations/TLOs/goals) — graded
+  scoring/reward lives in the experiment/evaluator plane.
 - [Open Cybersecurity Schema Framework](https://ocsf.io/) influences the event
   and schema side of the architecture. Its schema, profile, extension, and
   attribute-dictionary model is the main precedent for portable telemetry and

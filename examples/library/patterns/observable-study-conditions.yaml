@@ -1,0 +1,25 @@
+pattern: aces-library-pattern
+version: 1
+id: observable-study-conditions
+surface: study
+requirement_refs: [AUT-806]
+source_refs:
+  - examples/scenarios/satcom-release-poisoning.sdl.yaml
+  - docs/decisions/adrs/adr-073-scoring-reward-language-scope.md
+summary: Represent study-style examples through observable conditions and objective success, keeping graded scoring in the experiment/evaluator plane.
+intent: >
+  Make study-like examples reusable by connecting participant activity to
+  observable conditions, objectives, and workflow protocol. Graded scoring,
+  reward, and interpretation live in the experiment/evaluator plane
+  (experiment-* contracts) per ADR-073, not in the SDL.
+use_when:
+  - A study needs a repeatable, observable definition of participant success.
+  - Reviewers need to see how a measured condition gates an objective and workflow.
+authoring_steps:
+  - Define the observable condition with a real command and interval.
+  - Reference the condition from the objective's success.conditions list.
+  - Drive the objective from a workflow protocol step.
+  - Carry any graded scoring or reward in the experiment/evaluator plane, not the SDL.
+validation:
+  - command: parse_sdl_file
+    expected: condition, objective, and workflow references resolve with no removed scoring surfaces.

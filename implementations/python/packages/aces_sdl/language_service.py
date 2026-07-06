@@ -199,10 +199,6 @@ def _completion_target_section(pointer: list[str]) -> str | None:
     if len(pointer) >= 4 and pointer[-2] == "success":
         success_targets = {
             "conditions": "conditions",
-            "metrics": "metrics",
-            "evaluations": "evaluations",
-            "tlos": "tlos",
-            "goals": "goals",
         }
         return success_targets.get(field)
     return None

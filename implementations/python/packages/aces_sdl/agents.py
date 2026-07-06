@@ -58,6 +58,10 @@ class Agent(SDLModel):
     - ``observation_boundaries`` links to declared participant observation
       boundaries that define participant-specific projections of world and
       evidence state (SEM-208)
+
+    Per ADR-073 the CybORG-inherited ``reward_calculator`` label was removed;
+    it was an unbound, unvalidated string and graded reward lives in the
+    experiment/evaluator plane (ADR-055/064/069).
     """
 
     entity: str = ""
@@ -66,7 +70,6 @@ class Agent(SDLModel):
     starting_accounts: list[str] = Field(default_factory=list)
     initial_knowledge: InitialKnowledge | None = None
     allowed_subnets: list[str] = Field(default_factory=list)
-    reward_calculator: str = ""
     starting_conditions: list[str] = Field(default_factory=list)
     authority_anchors: list[str] = Field(default_factory=list)
     operating_scope: list[str] = Field(default_factory=list)

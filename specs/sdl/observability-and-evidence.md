@@ -70,8 +70,7 @@ Authored evidence requirements:
 - MAY reference a scenario-native observability system as a source;
 - MAY map to `experiment-capture-spec-v1` concepts when executable capture
   contracts are generated;
-- MUST remain independent of participant objectives, metrics, evaluations,
-  TLOs, and goals;
+- MUST remain independent of participant `objectives`;
 - MUST NOT be objective targets or implied by objective success criteria;
 - MUST remain distinct from `experiment-evidence-record-v1` raw evidence; and
 - MUST remain distinct from `experiment-derived-measure-v1` interpreted

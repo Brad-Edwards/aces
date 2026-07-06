@@ -135,34 +135,6 @@ def _collect_resources(model: RuntimeModel) -> dict[str, PlannedResource]:
             "condition-binding",
             resource,
         )
-    for address, resource in model.metrics.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.EVALUATION,
-            "metric",
-            resource,
-        )
-    for address, resource in model.evaluations.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.EVALUATION,
-            "evaluation",
-            resource,
-        )
-    for address, resource in model.tlos.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.EVALUATION,
-            "tlo",
-            resource,
-        )
-    for address, resource in model.goals.items():
-        resources[address] = _planned_resource(
-            address,
-            RuntimeDomain.EVALUATION,
-            "goal",
-            resource,
-        )
     for address, resource in model.objectives.items():
         resources[address] = _planned_resource(
             address,
@@ -714,10 +686,6 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
 
     evaluation_sections = {
         "conditions": bool(model.condition_bindings),
-        "metrics": bool(model.metrics),
-        "evaluations": bool(model.evaluations),
-        "tlos": bool(model.tlos),
-        "goals": bool(model.goals),
         "objectives": bool(model.objectives),
     }
     if any(evaluation_sections.values()):
@@ -742,18 +710,6 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
                             message=f"Evaluator does not support '{section}'.",
                         )
                     )
-            scoring_in_use = bool(
-                model.condition_bindings or model.metrics or model.evaluations or model.tlos or model.goals
-            )
-            if scoring_in_use and not manifest.supports_scoring:
-                diagnostics.append(
-                    Diagnostic(
-                        code="evaluator.scoring-unsupported",
-                        domain="evaluation",
-                        address="evaluation.scoring",
-                        message="Evaluator does not support scoring resources.",
-                    )
-                )
             if model.objectives and not manifest.supports_objectives:
                 diagnostics.append(
                     Diagnostic(

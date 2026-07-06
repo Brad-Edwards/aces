@@ -2,7 +2,7 @@
 
 :func:`analyze_objective_semantics` is the single name-level source of truth
 for the SDL declarative-objective construct — actor binding, target resolution,
-success interpretation (over conditions/metrics/evaluations/TLOs/goals), the
+success interpretation (over ``conditions`` observable state, per ADR-073), the
 optional window (delegated to :func:`aces_sdl.semantics.objectives.analyze_objective_window`),
 and the acyclic ``depends_on`` ordering relation. It returns normalized
 references with their dependency-role tags, the per-objective ordering/refresh
@@ -140,13 +140,13 @@ class ObjectiveSemanticAnalysis:
 
 @dataclass(frozen=True)
 class AssessmentResourceCatalog:
-    """The five assessment-pipeline section maps an objective's success may name."""
+    """The observable-state section an objective's success may name (post ADR-073).
+
+    Objective success references ``conditions`` only; the OCR scoring sections
+    (metrics/evaluations/tlos/goals) were removed by ADR-073.
+    """
 
     conditions: Mapping[str, object]
-    metrics: Mapping[str, object]
-    evaluations: Mapping[str, object]
-    tlos: Mapping[str, object]
-    goals: Mapping[str, object]
 
 
 @dataclass(frozen=True)
@@ -222,10 +222,6 @@ def _has_cycle(graph: Mapping[str, list[str]]) -> bool:
 
 _SUCCESS_REFERENCE_SECTIONS: tuple[tuple[str, AssessmentResourceKind, str], ...] = (
     ("conditions", AssessmentResourceKind.CONDITION, "objective.success-condition-undeclared"),
-    ("metrics", AssessmentResourceKind.METRIC, "objective.success-metric-undeclared"),
-    ("evaluations", AssessmentResourceKind.EVALUATION, "objective.success-evaluation-undeclared"),
-    ("tlos", AssessmentResourceKind.TLO, "objective.success-tlo-undeclared"),
-    ("goals", AssessmentResourceKind.GOAL, "objective.success-goal-undeclared"),
 )
 
 
@@ -353,24 +349,18 @@ def _analyze_success(
     assessment_resources: AssessmentResourceCatalog,
     unresolved: Callable[[object], bool],
 ) -> tuple[list[ObjectiveReference], list[ObjectiveIssue], list[str]]:
-    """Resolve ``success.{conditions,metrics,evaluations,tlos,goals}``.
+    """Resolve ``success.conditions`` (observable state, per ADR-073).
 
-    Each success namespace contributes its own keyspace; resolved names are
-    kind-qualified before they enter the derived ordering/refresh tuples so a
-    metric and a condition with the same SDL name remain distinguishable.
+    Resolved names are kind-qualified before they enter the derived
+    ordering/refresh tuples, preserving the kind-qualifier seam even though
+    ``conditions`` is the only success reference kind today.
     """
 
     refs: list[ObjectiveReference] = []
     issues: list[ObjectiveIssue] = []
     resolved: list[str] = []
     success = getattr(objective, "success", None)
-    sections = (
-        (assessment_resources.conditions, _SUCCESS_REFERENCE_SECTIONS[0]),
-        (assessment_resources.metrics, _SUCCESS_REFERENCE_SECTIONS[1]),
-        (assessment_resources.evaluations, _SUCCESS_REFERENCE_SECTIONS[2]),
-        (assessment_resources.tlos, _SUCCESS_REFERENCE_SECTIONS[3]),
-        (assessment_resources.goals, _SUCCESS_REFERENCE_SECTIONS[4]),
-    )
+    sections = ((assessment_resources.conditions, _SUCCESS_REFERENCE_SECTIONS[0]),)
     for section, (attr, kind, code) in sections:
         for ref_name in getattr(success, attr, []) or []:
             if unresolved(ref_name):

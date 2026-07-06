@@ -88,3 +88,9 @@ This ADR refines ADR-001's SDL boundary by making declarative objectives part of
 - Future agent-support work could accidentally collapse participant-exposure or
   participant-implementation concerns into objectives unless those boundaries
   remain explicit.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-05 | #682 | Per [ADR-073](adr-073-scoring-reward-language-scope.md), narrowed the objective-success clause: `objectives.success` references observable state (`conditions`) only. The OCR scoring pipeline (`metrics` / `evaluations` / `tlos` / `goals`) this ADR preserved was removed from the SDL; graded scoring and reward now live in the experiment/evaluator plane (ADR-055/064/069). |

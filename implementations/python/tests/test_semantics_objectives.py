@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -191,29 +192,75 @@ class TestObjectiveWindowSemantics:
             "step-unbound",
         }
 
-    def test_window_invariant_story_refs_must_resolve(self) -> None:
-        analysis = _window_analysis(story_refs=["missing-story"])
+    @pytest.mark.parametrize(
+        ("kwargs", "expected_code"),
+        [
+            pytest.param({"story_refs": ["missing-story"]}, "story-unbound", id="story-unbound"),
+            pytest.param({"script_refs": ["missing-script"]}, "script-unbound", id="script-unbound"),
+            pytest.param({"event_refs": ["missing-event"]}, "event-unbound", id="event-unbound"),
+            pytest.param(
+                {
+                    "workflow_refs": ["flow"],
+                    "step_refs": ["bad-step-ref"],
+                    "workflows_by_name": {"flow": _workflow("start")},
+                },
+                "step-invalid-format",
+                id="step-invalid-format",
+            ),
+            pytest.param({"workflow_refs": ["missing-flow"]}, "workflow-unbound", id="workflow-unbound"),
+            pytest.param(
+                {
+                    "workflow_refs": ["flow"],
+                    "step_refs": ["missing-flow.start"],
+                    "workflows_by_name": {"flow": _workflow("start")},
+                },
+                "step-workflow-unbound",
+                id="step-workflow-unbound",
+            ),
+            pytest.param(
+                {
+                    "workflow_refs": ["flow"],
+                    "step_refs": ["flow.missing"],
+                    "workflows_by_name": {"flow": _workflow("start")},
+                },
+                "step-unbound",
+                id="step-unbound",
+            ),
+            pytest.param(
+                {
+                    "workflow_refs": ["flow"],
+                    "step_refs": ["other.done"],
+                    "workflows_by_name": {"flow": _workflow("start"), "other": _workflow("done")},
+                },
+                "step-workflow-outside-window",
+                id="step-workflow-outside-window",
+            ),
+            pytest.param(
+                {
+                    "story_refs": ["intro"],
+                    "script_refs": ["side"],
+                    "stories_by_name": {"intro": SimpleNamespace(scripts=["main"])},
+                    "scripts_by_name": {"main": SimpleNamespace(events={}), "side": SimpleNamespace(events={})},
+                },
+                "script-outside-window-stories",
+                id="script-outside-window-stories",
+            ),
+            pytest.param(
+                {
+                    "script_refs": ["timeline"],
+                    "event_refs": ["cleanup"],
+                    "scripts_by_name": {"timeline": SimpleNamespace(events={"kickoff": 10})},
+                    "events_by_name": {"cleanup": SimpleNamespace()},
+                },
+                "event-outside-window-scripts",
+                id="event-outside-window-scripts",
+            ),
+        ],
+    )
+    def test_window_invariant_reference_must_resolve(self, kwargs, expected_code) -> None:
+        analysis = _window_analysis(**kwargs)
 
-        assert _window_issue_codes(analysis) == {"story-unbound"}
-
-    def test_window_invariant_script_refs_must_resolve(self) -> None:
-        analysis = _window_analysis(script_refs=["missing-script"])
-
-        assert _window_issue_codes(analysis) == {"script-unbound"}
-
-    def test_window_invariant_event_refs_must_resolve(self) -> None:
-        analysis = _window_analysis(event_refs=["missing-event"])
-
-        assert _window_issue_codes(analysis) == {"event-unbound"}
-
-    def test_window_invariant_steps_must_use_workflow_step_syntax(self) -> None:
-        analysis = _window_analysis(
-            workflow_refs=["flow"],
-            step_refs=["bad-step-ref"],
-            workflows_by_name={"flow": _workflow("start")},
-        )
-
-        assert _window_issue_codes(analysis) == {"step-invalid-format"}
+        assert _window_issue_codes(analysis) == {expected_code}
 
     def test_window_invariant_steps_require_workflow_window(self) -> None:
         analysis = _window_analysis(
@@ -222,58 +269,6 @@ class TestObjectiveWindowSemantics:
         )
 
         assert "step-requires-workflow-window" in _window_issue_codes(analysis)
-
-    def test_window_invariant_workflow_refs_must_resolve(self) -> None:
-        analysis = _window_analysis(workflow_refs=["missing-flow"])
-
-        assert _window_issue_codes(analysis) == {"workflow-unbound"}
-
-    def test_window_invariant_step_workflow_must_resolve(self) -> None:
-        analysis = _window_analysis(
-            workflow_refs=["flow"],
-            step_refs=["missing-flow.start"],
-            workflows_by_name={"flow": _workflow("start")},
-        )
-
-        assert _window_issue_codes(analysis) == {"step-workflow-unbound"}
-
-    def test_window_invariant_step_name_must_resolve_within_workflow(self) -> None:
-        analysis = _window_analysis(
-            workflow_refs=["flow"],
-            step_refs=["flow.missing"],
-            workflows_by_name={"flow": _workflow("start")},
-        )
-
-        assert _window_issue_codes(analysis) == {"step-unbound"}
-
-    def test_window_invariant_step_workflow_must_be_inside_workflow_window(self) -> None:
-        analysis = _window_analysis(
-            workflow_refs=["flow"],
-            step_refs=["other.done"],
-            workflows_by_name={"flow": _workflow("start"), "other": _workflow("done")},
-        )
-
-        assert _window_issue_codes(analysis) == {"step-workflow-outside-window"}
-
-    def test_window_invariant_explicit_scripts_must_be_inside_story_window(self) -> None:
-        analysis = _window_analysis(
-            story_refs=["intro"],
-            script_refs=["side"],
-            stories_by_name={"intro": SimpleNamespace(scripts=["main"])},
-            scripts_by_name={"main": SimpleNamespace(events={}), "side": SimpleNamespace(events={})},
-        )
-
-        assert _window_issue_codes(analysis) == {"script-outside-window-stories"}
-
-    def test_window_invariant_events_must_be_inside_reachable_script_window(self) -> None:
-        analysis = _window_analysis(
-            script_refs=["timeline"],
-            event_refs=["cleanup"],
-            scripts_by_name={"timeline": SimpleNamespace(events={"kickoff": 10})},
-            events_by_name={"cleanup": SimpleNamespace()},
-        )
-
-        assert _window_issue_codes(analysis) == {"event-outside-window-scripts"}
 
     def test_composition_ready_invariant_imported_window_analysis_uses_expanded_canonical_identities(
         self, tmp_path: Path
@@ -373,13 +368,9 @@ class TestObjectiveWindowSemantics:
         assert analysis.workflow_step_refs == tuple(dict.fromkeys(step_refs))
 
 
-def _success(*, conditions=None, metrics=None, evaluations=None, tlos=None, goals=None, mode="all_of"):
+def _success(*, conditions=None, mode="all_of"):
     return SimpleNamespace(
         conditions=list(conditions or []),
-        metrics=list(metrics or []),
-        evaluations=list(evaluations or []),
-        tlos=list(tlos or []),
-        goals=list(goals or []),
         mode=mode,
     )
 
@@ -424,10 +415,6 @@ def _analyze(objectives, **overrides):
 
     section_defaults = {
         "conditions_by_name": {},
-        "metrics_by_name": {},
-        "evaluations_by_name": {},
-        "tlos_by_name": {},
-        "goals_by_name": {},
         "stories_by_name": {},
         "scripts_by_name": {},
         "events_by_name": {},
@@ -440,10 +427,6 @@ def _analyze(objectives, **overrides):
         "entity_names": set(),
         "assessment_resources": AssessmentResourceCatalog(
             conditions=sections["conditions_by_name"],
-            metrics=sections["metrics_by_name"],
-            evaluations=sections["evaluations_by_name"],
-            tlos=sections["tlos_by_name"],
-            goals=sections["goals_by_name"],
         ),
         "window_resources": WindowResourceCatalog(
             stories=sections["stories_by_name"],
@@ -461,20 +444,19 @@ class TestObjectiveSemantics:
     def test_well_formed_objectives_normalize_references_and_dependencies(self) -> None:
         analysis = _analyze(
             {
-                "base": _objective(entity="blue", success=_success(metrics=["m1"])),
+                "base": _objective(entity="blue", success=_success(conditions=["c1"])),
                 "follow": _objective(
                     agent="red",
                     actions=["Scan"],
                     targets=["nodes.web"],
-                    success=_success(goals=["g1"]),
+                    success=_success(conditions=["c2"]),
                     window=_window(workflows=["flow"], steps=["flow.branch"]),
                     depends_on=["base"],
                 ),
             },
             agents_by_name={"red": _agent("Scan", "Exploit")},
             entity_names={"blue"},
-            metrics_by_name={"m1": object()},
-            goals_by_name={"g1": object()},
+            conditions_by_name={"c1": object(), "c2": object()},
             workflows_by_name={"flow": _workflow("start", "branch")},
             targetable_name_index={"nodes.web": {"nodes.web"}},
         )
@@ -487,15 +469,15 @@ class TestObjectiveSemantics:
             "nodes.web"
         }
         assert {ref.canonical_name for ref in analysis.references_of_kind(ObjectiveReferenceKind.SUCCESS)} == {
-            "metric.m1",
-            "goal.g1",
+            "condition.c1",
+            "condition.c2",
         }
         success_kinds = {
             ref.canonical_name: ref.success_resource_kind
             for ref in analysis.references_of_kind(ObjectiveReferenceKind.SUCCESS)
         }
-        assert success_kinds["metric.m1"] == AssessmentResourceKind.METRIC
-        assert success_kinds["goal.g1"] == AssessmentResourceKind.GOAL
+        assert success_kinds["condition.c1"] == AssessmentResourceKind.CONDITION
+        assert success_kinds["condition.c2"] == AssessmentResourceKind.CONDITION
         assert {ref.canonical_name for ref in analysis.references_of_kind(ObjectiveReferenceKind.WINDOW)} == {
             "flow",
             "flow.branch",
@@ -515,10 +497,10 @@ class TestObjectiveSemantics:
             for ref in analysis.references_of_kind(kind):
                 assert ref.dependency_roles == ()
 
-        assert analysis.dependencies_for("base").ordering_names == ("metric.m1",)
-        assert analysis.dependencies_for("base").refresh_names == ("metric.m1",)
-        assert analysis.dependencies_for("follow").ordering_names == ("goal.g1", "objective.base")
-        assert analysis.dependencies_for("follow").refresh_names == ("goal.g1", "objective.base", "workflow.flow")
+        assert analysis.dependencies_for("base").ordering_names == ("condition.c1",)
+        assert analysis.dependencies_for("base").refresh_names == ("condition.c1",)
+        assert analysis.dependencies_for("follow").ordering_names == ("condition.c2", "objective.base")
+        assert analysis.dependencies_for("follow").refresh_names == ("condition.c2", "objective.base", "workflow.flow")
         assert "follow" in analysis.window_analyses
 
     def test_undeclared_actor_references_are_reported(self) -> None:
@@ -564,30 +546,18 @@ class TestObjectiveSemantics:
         assert issue.ref == "web"
         assert issue.candidates == ("features.web", "nodes.web")
 
-    def test_undeclared_success_references_are_reported_per_kind(self) -> None:
+    def test_undeclared_success_condition_is_reported(self) -> None:
         analysis = _analyze(
             {
                 "a": _objective(
                     entity="blue",
-                    success=_success(
-                        conditions=["c?"],
-                        metrics=["m?"],
-                        evaluations=["e?"],
-                        tlos=["t?"],
-                        goals=["g?"],
-                    ),
+                    success=_success(conditions=["c?"]),
                 )
             },
             entity_names={"blue"},
         )
         codes = {issue.code for issue in analysis.issues}
-        assert {
-            "objective.success-condition-undeclared",
-            "objective.success-metric-undeclared",
-            "objective.success-evaluation-undeclared",
-            "objective.success-tlo-undeclared",
-            "objective.success-goal-undeclared",
-        } <= codes
+        assert "objective.success-condition-undeclared" in codes
 
     def test_window_issues_are_resurfaced_under_objective_codes(self) -> None:
         analysis = _analyze(
@@ -633,7 +603,7 @@ class TestObjectiveSemantics:
                     agent="${actor}",
                     actions=["${act}"],
                     targets=["${tgt}"],
-                    success=_success(metrics=["${m}"]),
+                    success=_success(conditions=["${m}"]),
                     window=_window(stories=["${story}"]),
                     depends_on=["${dep}"],
                 )

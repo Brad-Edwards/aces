@@ -47,12 +47,8 @@ and defaults to an empty map when omitted.
 | `features` | optional | identifier | `vulnerabilities`; other `features` (dependencies, acyclic) |
 | `conditions` | optional | identifier | — |
 | `vulnerabilities` | optional | identifier | — |
-| `metrics` | optional | identifier | `conditions` |
-| `evaluations` | optional | identifier | `metrics` |
-| `tlos` | optional | identifier | `evaluations` |
-| `goals` | optional | identifier | `tlos` |
-| `entities` | optional | identifier | `tlos`, `vulnerabilities` |
-| `injects` | optional | identifier | `entities`, `tlos` |
+| `entities` | optional | identifier | `vulnerabilities` |
+| `injects` | optional | identifier | `entities` |
 | `events` | optional | identifier | `conditions`, `injects` |
 | `scripts` | optional | identifier | `events` |
 | `stories` | optional | identifier | `scripts` |
@@ -62,10 +58,10 @@ and defaults to an empty map when omitted.
 | `agents` | optional | identifier | `entities`, `accounts`, `infrastructure`, `nodes`, `conditions`, `action_contracts`, `observation_boundaries`, targetable elements |
 | `action_contracts` | optional | identifier | other `action_contracts` (interactions) |
 | `observation_boundaries` | optional | identifier | own information refs (observable/hidden/evidence) |
-| `outcome_interpretation_rules` | optional | identifier | `action_contracts`, `objectives`, `workflows`, `evaluations` |
+| `outcome_interpretation_rules` | optional | identifier | `action_contracts`, `objectives`, `workflows` |
 | `evidence_requirements` | optional | identifier | targetable elements for source, scope, channel, trigger, and boundary refs; distinct from `objectives` and scenario-native observability systems ([observability-and-evidence.md](observability-and-evidence.md)) |
-| `objectives` | optional | identifier | `agents`/`entities` (actor), `action_contracts` (action), targetable elements (target), `conditions`/`metrics`/`evaluations`/`tlos`/`goals` (success), `stories`/`scripts`/`events`/`workflows` (window), other `objectives` (depends_on, acyclic) |
-| `workflows` | optional | identifier | own steps (`start`, successors), other `workflows` (compensation), assessment sections (predicates) |
+| `objectives` | optional | identifier | `agents`/`entities` (actor), `action_contracts` (action), targetable elements (target), `conditions` (success — observable state only, [ADR-073](../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md)), `stories`/`scripts`/`events`/`workflows` (window), other `objectives` (depends_on, acyclic) |
+| `workflows` | optional | identifier | own steps (`start`, successors), other `workflows` (compensation), `conditions` (predicates) |
 | `variables` | optional | identifier matching `[A-Za-z_][A-Za-z0-9_-]*` | referenced by `${…}` placeholders ([variables-and-instantiation.md](variables-and-instantiation.md)) |
 
 ## Authoring section — list-valued
@@ -80,18 +76,27 @@ lives under `nodes.<id>.runtime` ([runtime-inventory.md](runtime-inventory.md));
 both carry `forwarding_agent_id` identity and the same family invariants, but
 they occupy different positions in the document.
 
-## Assessment and narrative chains
+## Narrative chain
 
-Two reference chains run through the catalog and are called out because their
+One reference chain runs through the catalog and is called out because its
 ordering is normative (resolution and failure semantics in
 [`references.md`](references.md)):
 
-- **Assessment pipeline:** `conditions` ← `metrics` ← `evaluations` ← `tlos` ←
-  `goals`. Each link names the prior section; the chain feeds objectives and
-  workflow predicates.
 - **Narrative chain:** `injects` → `events` → `scripts` → `stories`, with
-  `injects` naming `entities`/`tlos` and `events` naming `conditions`. Objective
+  `injects` naming `entities` and `events` naming `conditions`. Objective
   windows bind `stories`/`scripts`/`events`/`workflows`.
+
+`conditions` are observable state: an objective's success is expressed against
+`conditions`, and workflow predicates reference `conditions`. The SDL carries no
+graded scoring pipeline — the OCR-inherited `metrics`, `evaluations`, `tlos`
+(Training Learning Objectives), and `goals` sections were removed with
+[ADR-073](../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md).
+Graded scoring, reward, leaderboard values, and evaluation outputs live in the
+experiment/evaluator plane
+([ADR-055](../../docs/decisions/adrs/adr-055-experiment-core-contract-boundary.md),
+[ADR-064](../../docs/decisions/adrs/adr-064-experiment-evidence-and-measure-contract-boundary.md),
+[ADR-069](../../docs/decisions/adrs/adr-069-cage-2-replication-architecture.md)),
+never as authored SDL.
 
 ## Extending the section set
 

@@ -40,7 +40,6 @@ def _source_ref_issue(
     action_contracts: Mapping[str, object],
     objectives: Mapping[str, object],
     workflows: Mapping[str, object],
-    evaluations: Mapping[str, object],
     is_unresolved: Callable[[object], bool],
 ) -> ParticipantOutcomeIssue | None:
     layer = getattr(binding, "source_layer", None)
@@ -72,14 +71,10 @@ def _source_ref_issue(
             ref=str(ref),
             layer=layer.value,
         )
-    if layer == OutcomeInterpretationSourceLayer.EVALUATION_RESULT and ref not in evaluations:
-        return ParticipantOutcomeIssue(
-            code="participant.outcome.source-evaluation-unbound",
-            rule_name=rule_name,
-            binding_id=binding_id,
-            ref=str(ref),
-            layer=layer.value,
-        )
+    # Per ADR-073 the SDL `evaluations` section was removed; the
+    # EVALUATION_RESULT interpretation layer remains a governed
+    # experiment/evaluator-plane concept whose ref is not bound to an SDL
+    # section, so no SDL cross-reference check applies to it here.
     return None
 
 
@@ -89,7 +84,6 @@ def _target_ref_issue(
     binding: object,
     objectives: Mapping[str, object],
     workflows: Mapping[str, object],
-    evaluations: Mapping[str, object],
     is_unresolved: Callable[[object], bool],
 ) -> ParticipantOutcomeIssue | None:
     layer = getattr(binding, "target_layer", None)
@@ -113,14 +107,8 @@ def _target_ref_issue(
             ref=str(ref),
             layer=layer.value,
         )
-    if layer == OutcomeInterpretationTargetLayer.EVALUATION_RESULT and ref not in evaluations:
-        return ParticipantOutcomeIssue(
-            code="participant.outcome.target-evaluation-unbound",
-            rule_name=rule_name,
-            binding_id=binding_id,
-            ref=str(ref),
-            layer=layer.value,
-        )
+    # EVALUATION_RESULT targets are an experiment/evaluator-plane concept after
+    # ADR-073 and carry no SDL-section cross-reference here.
     return None
 
 
@@ -130,7 +118,6 @@ def analyze_participant_outcome_interpretations(
     action_contracts: Mapping[str, object],
     objectives: Mapping[str, object],
     workflows: Mapping[str, object],
-    evaluations: Mapping[str, object],
     is_unresolved: Callable[[object], bool],
 ) -> ParticipantOutcomeAnalysis:
     """Validate source/target refs declared by SEM-215 interpretation rules."""
@@ -144,7 +131,6 @@ def analyze_participant_outcome_interpretations(
                 action_contracts=action_contracts,
                 objectives=objectives,
                 workflows=workflows,
-                evaluations=evaluations,
                 is_unresolved=is_unresolved,
             )
             if issue is not None:
@@ -155,7 +141,6 @@ def analyze_participant_outcome_interpretations(
                 binding=binding,
                 objectives=objectives,
                 workflows=workflows,
-                evaluations=evaluations,
                 is_unresolved=is_unresolved,
             )
             if issue is not None:
