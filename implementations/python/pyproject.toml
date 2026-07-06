@@ -6,6 +6,7 @@ build-backend = "hatchling.build"
 name = "aces-sdl"
 version = "0.18.0"
 description = "Backend-agnostic cyber range scenario description language and runtime."
+dynamic = ["readme"]
 requires-python = ">=3.11"
 dependencies = [
     "typer>=0.12.0",
@@ -45,6 +46,12 @@ aces-mcp = "aces_mcp.server:main"
 # truth, rewritten by release-please on each release. Hatchling reads it directly;
 # `aces.__version__` derives from the installed distribution metadata.
 
+# The PyPI long description (`readme`) is injected from the repo-root README.md by
+# a custom metadata hook (hatch_build.py), so there is a single README source and
+# no duplicate copy under implementations/python. `[project] dynamic = ["readme"]`.
+[tool.hatch.metadata.hooks.custom]
+path = "hatch_build.py"
+
 [tool.hatch.build.targets.wheel]
 packages = [
     "src/aces",
@@ -78,6 +85,7 @@ path = "hatch_build.py"
 
 [tool.hatch.build.targets.sdist.force-include]
 "../../contracts" = "_corpus"
+"../../README.md" = "README.md"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
