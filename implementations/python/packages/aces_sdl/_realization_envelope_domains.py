@@ -99,7 +99,12 @@ def domain_subset(sub: DomainDescriptor, sup: DomainDescriptor) -> bool:
 
 
 def _enum_sort_key(value: DomainScalar) -> tuple[int, str]:
-    kind = 0 if isinstance(value, bool) else 1 if isinstance(value, (int, float)) else 2
+    if isinstance(value, bool):
+        kind = 0
+    elif isinstance(value, (int, float)):
+        kind = 1
+    else:
+        kind = 2
     return (kind, str(value))
 
 
