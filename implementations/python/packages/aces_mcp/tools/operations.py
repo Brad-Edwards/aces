@@ -71,6 +71,11 @@ def register(mcp: FastMCP) -> None:
                         "sdl_validate_section",
                         "sdl_instantiate",
                     ],
+                    "experiment_authoring": [
+                        "experiment_scaffold",
+                        "experiment_validate",
+                        "experiment_get_example",
+                    ],
                     "language_service": [
                         "sdl_completions",
                         "sdl_references",

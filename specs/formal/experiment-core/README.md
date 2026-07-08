@@ -13,12 +13,19 @@ reproducibility/replay claim-support interpretation:
 - `experiment-capture-spec-v1`
 - `experiment-evidence-record-v1`
 - `experiment-derived-measure-v1`
+- `experiment-authoring-input-v1` (pre-run authoring input; ADR-074)
 - optional `backend-manifest-v2` `capabilities.observation`
 - canonical run traceability and realized-form disclosures inside
   `experiment-run-v1`
 
 The contracts describe cyber range experiment artifacts. They do not implement
 execution, storage, scheduling, APIs, or analysis engines.
+
+`experiment-authoring-input-v1` (ADR-074) is the one input contract in this
+domain: the pre-run experiment *specification* that binds a task to a run plan
+before execution. It is the authoring counterpart to the archival run, study,
+and apparatus-context outputs, analogous to how `sdl-authoring-input-v1` is the
+authored counterpart to `instantiated-scenario-v1`.
 
 ## FM Classification
 
@@ -45,7 +52,9 @@ Rationale:
   and
   `docs/decisions/adrs/adr-065-experiment-run-provenance-contract-boundary.md`,
   and
-  `docs/decisions/adrs/adr-068-experiment-trials-replication-and-replay-claims.md`.
+  `docs/decisions/adrs/adr-068-experiment-trials-replication-and-replay-claims.md`,
+  and
+  `docs/decisions/adrs/adr-074-experiment-authoring-input-contract-boundary.md`.
 - Machine-readable schemas: `contracts/schemas/experiment-core/`.
 - Contract source: `implementations/python/packages/aces_contracts/contracts.py`.
 - Schema generation: `tools/generate_contract_schemas.py`.
@@ -288,6 +297,32 @@ context, selected manifests, capability declarations, measurement channels,
 task/scenario snapshot identity, non-opaque parameters, and stochastic
 controls.
 
+### Experiment Authoring Input
+
+An experiment authoring input is the pre-run *specification* of an experiment,
+distinct from the archival run/study/apparatus-context records it will later
+produce. It binds:
+
+- a `task_ref` to a separately authored `experiment-task-v1`, and optionally an
+  `intended_scenario_ref` to a scenario snapshot;
+- declared apparatus intent (the input-shaped apparatus constraints), distinct
+  from the run-scoped observed apparatus context;
+- a run plan: stochastic controls (seeds), an episode control (turn order,
+  logical step count, termination), either a condition `allocation` plan or a
+  scalar `target_run_count`, red-variant selections keyed by variant id, and an
+  optional clock intent;
+- study factors keyed by factor id;
+- capture-specification references, validity notes, and supporting artifacts.
+
+An authoring input is not a run, study, or apparatus-context record. It carries
+no execution provenance, results, or observed evidence. It reuses the archival
+family's input-shaped value models (apparatus constraints, run allocation,
+stochastic controls, factors, clock context) by reference or embedding and does
+not re-declare task, scenario, or capture-specification meaning. The reused run-
+allocation model annotates its semantic invariant against `experiment-study-v1`
+even when embedded here; that annotation is descriptive only — the ACES model
+validator runs regardless of the embedding contract.
+
 ## Invariants
 
 ### Separation
@@ -375,6 +410,20 @@ controls.
     claim/report refs. ACES MUST NOT publish parallel replay-run,
     reproducibility-claim, replay-claim, or provenance-graph root schemas for
     the same facts unless a later ADR supersedes this boundary.
+24. An experiment authoring input MUST reference its task with a `task`
+    reference and MUST NOT embed or re-declare task, scenario, or
+    capture-specification meaning; scenario intent uses `scenario` or
+    `scenario-snapshot` references and capture intent uses `capture-spec`
+    references.
+25. An experiment authoring input run plan MUST declare exactly one run-count
+    source: either a condition `allocation` plan or a scalar `target_run_count`.
+    Red-variant selection map keys MUST match their embedded `variant_id`, and
+    declared allocation blocking factors MUST resolve to declared spec factors.
+26. An experiment authoring input is an input artifact. It MUST NOT be treated
+    as, or substituted for, an `experiment-run-v1`, `experiment-study-v1`, or
+    `experiment-apparatus-context-v1` record. Its declared apparatus intent uses
+    the input-shaped apparatus constraints, not the run-scoped observed
+    apparatus context.
 
 ### Provenance
 
@@ -531,3 +580,5 @@ base. The most load-bearing criteria are:
   graph root schemas for facts already carried by experiment-core contracts.
 - Runtime replay execution, replay scheduling, artifact dereference APIs,
   retention storage, or query services.
+- Orchestration or execution of authored experiment specifications, or
+  producing archival run/study records from an `experiment-authoring-input-v1`.

@@ -93,6 +93,16 @@
       }
     },
     {
+      "contract_id": "experiment-authoring-input-v1",
+      "schema_path": "contracts/schemas/experiment-core/experiment-authoring-input-v1.json",
+      "stability": "draft",
+      "content_hash": "0373103adfa21acc45fb9db525f73603f79173660b372ea6b91de119771ea616",
+      "last_change": {
+        "summary": "Published the experiment authoring-input contract: a pre-run experiment design surface that references the archival experiment-core outputs (ADR-074, issue #675).",
+        "content_hash": "0373103adfa21acc45fb9db525f73603f79173660b372ea6b91de119771ea616"
+      }
+    },
+    {
       "contract_id": "experiment-capture-spec-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-capture-spec-v1.json",
       "stability": "draft",

@@ -286,3 +286,9 @@ adapter-driven replication.
 - Cross-repo work may drift if downstream issues do not link back to ACES
   requirements and design records. The workflow requires linked issues, PRs,
   and evidence readback.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-08 | #675 | ADR-074 adds `experiment-authoring-input-v1`, a pre-run experiment authoring surface, giving REP-003 a home to declare the execution-control facts (turn order, step count, termination, red-agent variants, seeds, stochastic controls) this ADR requires for execution-control equivalence. It complements — does not replace — the SDL scenario authoring path this ADR routes CAGE-2 through, and adds no CAGE-specific schema. |

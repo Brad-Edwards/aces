@@ -66,6 +66,7 @@ from .versions import (
     CONTROLLED_VOCABULARIES_SCHEMA_VERSION,
     EVALUATION_STATE_SCHEMA_VERSION,
     EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION,
+    EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION,
     EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION,
     EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION,
     EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION,
@@ -5476,6 +5477,148 @@ class ExperimentStudyModel(ContractModel):
         return json_schema
 
 
+class ExperimentEpisodeControlModel(ContractModel):
+    """Declarative episode execution controls for a planned experiment.
+
+    Captures the pre-run execution-control facts — turn order, logical step
+    count, and episode termination — that ADR-069 requires for CAGE-2
+    execution-control equivalence but that the archival experiment-core
+    contracts only record after a run has executed.
+    """
+
+    turn_order: Literal["sequential", "simultaneous", "round-robin", "scenario-defined", "other"]
+    termination_rule: NonEmptyString
+    max_steps: PositiveInteger | None = None
+    termination_condition_refs: list[NonEmptyString] = Field(
+        default_factory=list, json_schema_extra={"uniqueItems": True}
+    )
+    description: NonEmptyString | None = None
+
+
+class ExperimentRedVariantSelectionModel(ContractModel):
+    """Selection of one red-agent variant bound into a planned experiment."""
+
+    variant_id: NonEmptyString
+    agent_ref: NonEmptyString
+    parameters: list[ExperimentParameterModel] = Field(default_factory=list)
+    description: NonEmptyString | None = None
+
+
+class ExperimentRunPlanModel(ContractModel):
+    """Pre-run replication, stochastic, episode, and red-variant plan.
+
+    Reuses the archival-family value models for stochastic controls, run
+    allocation, and clock intent, and adds the authoring-only episode and
+    red-variant selections. Exactly one of ``allocation`` (condition-based)
+    or ``target_run_count`` (simple, no-condition) declares the run count.
+    """
+
+    stochastic_controls: list[ExperimentStochasticControlModel] = Field(min_length=1)
+    episode_control: ExperimentEpisodeControlModel
+    allocation: ExperimentRunAllocationPlanModel | None = None
+    target_run_count: PositiveInteger | None = None
+    red_variant_selections: dict[NonEmptyString, ExperimentRedVariantSelectionModel] = Field(default_factory=dict)
+    clock_intent: ExperimentClockContextModel | None = None
+
+    @model_validator(mode="after")
+    def _validate_run_plan(self) -> ExperimentRunPlanModel:
+        if (self.allocation is None) == (self.target_run_count is None):
+            raise ValueError("run_plan must declare exactly one of allocation or target_run_count")
+        for key, selection in self.red_variant_selections.items():
+            if selection.variant_id != key:
+                raise ValueError(
+                    f"run_plan red_variant_selections key '{key}' must match embedded variant_id "
+                    f"'{selection.variant_id}'"
+                )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("oneOf", []).extend(
+            [
+                {
+                    "required": ["allocation"],
+                    "properties": {"allocation": {"not": {"type": "null"}}, "target_run_count": {"type": "null"}},
+                },
+                {
+                    "required": ["target_run_count"],
+                    "properties": {"target_run_count": {"not": {"type": "null"}}, "allocation": {"type": "null"}},
+                },
+            ]
+        )
+        _add_aces_invariant(
+            json_schema,
+            "run-plan-exactly-one-run-count-source",
+            "A run plan must declare exactly one of allocation or target_run_count, and every red-variant "
+            "selection map key must equal its embedded variant_id.",
+            validator="aces_contracts.contracts.ExperimentRunPlanModel._validate_run_plan",
+            inputs=[{"contract_id": "experiment-authoring-input-v1", "instance_path": "#/run_plan"}],
+        )
+        return json_schema
+
+
+class ExperimentSpecModel(ContractModel):
+    """Pre-run experiment authoring input: a design that binds a task to a run plan.
+
+    This is the authoring/input counterpart to the archival experiment-core
+    outputs (run/study/apparatus-context). It references the separately
+    authored task (and optionally a scenario snapshot) and declares the
+    pre-run experimental design — apparatus intent, run plan, factors,
+    intended capture, and validity notes — before any run executes. It is
+    never a run, study, or apparatus-context record (ADR-055 / ADR-074).
+    """
+
+    schema_version: Literal[EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION]
+    spec_id: NonEmptyString
+    spec_version: NonEmptyString
+    title: NonEmptyString
+    description: NonEmptyString
+    task_ref: ExperimentTaskReferenceModel
+    run_plan: ExperimentRunPlanModel
+    intended_scenario_ref: ExperimentScenarioReferenceModel | None = None
+    apparatus_intent: ExperimentApparatusConstraintModel | None = None
+    factors: dict[NonEmptyString, ExperimentStudyFactorModel] = Field(default_factory=dict)
+    capture_spec_refs: list[ExperimentCaptureSpecReferenceModel] = Field(default_factory=list)
+    validity_notes: list[ExperimentValidityNoteModel] = Field(default_factory=list)
+    artifact_refs: list[ExperimentArtifactRefModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_experiment_spec(self) -> ExperimentSpecModel:
+        allocation = self.run_plan.allocation
+        if allocation is not None:
+            factor_names = set(self.factors)
+            for blocking_factor in allocation.blocking_factors:
+                if blocking_factor not in factor_names:
+                    raise ValueError(
+                        f"run_plan allocation blocking factor '{blocking_factor}' must be a declared factor"
+                    )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        _add_aces_invariant(
+            json_schema,
+            "experiment-spec-blocking-factors-declared",
+            "When a run plan declares an allocation with blocking factors, every blocking factor must be a "
+            "declared experiment-spec factor.",
+            validator="aces_contracts.contracts.ExperimentSpecModel._validate_experiment_spec",
+            inputs=[{"contract_id": "experiment-authoring-input-v1", "instance_path": "#"}],
+        )
+        return json_schema
+
+
 def validate_experiment_task_archival_datetimes(task: ExperimentTaskModel | Mapping[str, Any]) -> None:
     """Validate task-level archival timestamp semantics not carried by generic JSON Schema."""
 
@@ -7023,6 +7166,7 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
+        "experiment-authoring-input-v1": ExperimentSpecModel.model_json_schema(),
         "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_json_schema(),
         "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_json_schema(),
         "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_json_schema(),
@@ -7129,6 +7273,7 @@ __all__ = [
     "ExperimentDerivedMeasureMethodModel",
     "ExperimentDerivedMeasureModel",
     "ExperimentDerivedMeasureReferenceModel",
+    "ExperimentEpisodeControlModel",
     "ExperimentEvidenceRecordModel",
     "ExperimentEvidenceRecordReferenceModel",
     "ExperimentEvidenceReferenceModel",
@@ -7142,13 +7287,16 @@ __all__ = [
     "ExperimentParameterModel",
     "ExperimentProcessorReferenceModel",
     "ExperimentRealizedFormDisclosureModel",
+    "ExperimentRedVariantSelectionModel",
     "ExperimentReferenceModel",
     "ExperimentResultSummaryModel",
     "ExperimentRunAllocationPlanModel",
     "ExperimentRunModel",
+    "ExperimentRunPlanModel",
     "ExperimentRunTraceabilityModel",
     "ExperimentScenarioReferenceModel",
     "ExperimentScenarioSnapshotReferenceModel",
+    "ExperimentSpecModel",
     "ExperimentSplitAndLeakageControlsModel",
     "ExperimentStatisticalMethodModel",
     "ExperimentStochasticControlModel",
@@ -7160,6 +7308,7 @@ __all__ = [
     "ExperimentUncertaintyMethodModel",
     "ExperimentValidityNoteModel",
     "EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION",
+    "EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION",
     "EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION",
     "EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION",
     "EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION",
