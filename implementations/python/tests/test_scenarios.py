@@ -114,6 +114,11 @@ class TestFindScenarios:
         assert find_scenarios(tmp_path / "missing") == []
 
 
+def test_example_scenario_corpus_is_nonempty():
+    """A stale corpus root must fail loudly, not collect zero parametrized cases."""
+    assert EXAMPLE_SCENARIOS, f"No example SDL scenarios found under {EXAMPLES_DIR} (glob '*.sdl.yaml')"
+
+
 @pytest.mark.parametrize("path", EXAMPLE_SCENARIOS, ids=lambda path: path.name)
 def test_example_scenarios_load(path):
     """Every example SDL should load successfully from disk."""
