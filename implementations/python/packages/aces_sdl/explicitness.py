@@ -316,22 +316,47 @@ def _resolve_path_token(
     *,
     allow_unset_model_field: bool,
 ) -> tuple[bool, object]:
+    resolved: tuple[bool, object] = (False, None)
     if isinstance(token, int):
-        if _is_sequence(current) and 0 <= token < len(current):
-            return True, current[token]
-        return False, None
-    if isinstance(current, BaseModel):
-        if token not in type(current).model_fields:
-            return False, None
+        resolved = _resolve_sequence_path_token(current, token)
+    elif isinstance(current, BaseModel):
+        resolved = _resolve_model_path_token(
+            current,
+            token,
+            allow_unset_model_field=allow_unset_model_field,
+        )
+    elif isinstance(current, Mapping):
+        resolved = _resolve_mapping_path_token(current, token)
+    return resolved
+
+
+def _resolve_sequence_path_token(current: object, token: int) -> tuple[bool, object]:
+    resolved: tuple[bool, object] = (False, None)
+    if _is_sequence(current) and 0 <= token < len(current):
+        resolved = (True, current[token])
+    return resolved
+
+
+def _resolve_model_path_token(
+    current: BaseModel,
+    token: str,
+    *,
+    allow_unset_model_field: bool,
+) -> tuple[bool, object]:
+    resolved: tuple[bool, object] = (False, None)
+    if token in type(current).model_fields:
         value = getattr(current, token)
-        if value is None and token not in current.model_fields_set and not allow_unset_model_field:
-            return False, None
-        return True, value
-    if isinstance(current, Mapping):
-        if token in current:
-            return True, current[token]
-        return False, None
-    return False, None
+        missing_unset_optional = value is None and token not in current.model_fields_set
+        if not missing_unset_optional or allow_unset_model_field:
+            resolved = (True, value)
+    return resolved
+
+
+def _resolve_mapping_path_token(current: Mapping[object, object], token: str) -> tuple[bool, object]:
+    resolved: tuple[bool, object] = (False, None)
+    if token in current:
+        resolved = (True, current[token])
+    return resolved
 
 
 def _is_sequence(value: object) -> bool:
