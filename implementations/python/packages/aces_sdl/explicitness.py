@@ -332,7 +332,7 @@ def _resolve_path_token(
 
 def _resolve_sequence_path_token(current: object, token: int) -> tuple[bool, object]:
     resolved: tuple[bool, object] = (False, None)
-    if _is_sequence(current) and 0 <= token < len(current):
+    if isinstance(current, Sequence) and not isinstance(current, (str, bytes, bytearray)) and 0 <= token < len(current):
         resolved = (True, current[token])
     return resolved
 
@@ -357,10 +357,6 @@ def _resolve_mapping_path_token(current: Mapping[object, object], token: str) ->
     if token in current:
         resolved = (True, current[token])
     return resolved
-
-
-def _is_sequence(value: object) -> bool:
-    return isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray))
 
 
 class _AuthoredPathCollector:
