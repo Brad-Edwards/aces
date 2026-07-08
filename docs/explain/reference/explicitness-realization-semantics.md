@@ -123,6 +123,20 @@ additional exact requirement kinds for other artifact families; that should
 require adding governed terms and shared semantic checks, not rewriting planner
 or conformance call sites.
 
+## Authoring Specificity
+
+`classify_authoring_specificity()` is the DSL-115 helper for reviewing
+specificity across existing owned surfaces. It reuses the SEM-218 classifier
+for exact and constrained authored values, and it records open or
+underspecified concerns only when the owning caller supplies the explicit path
+in `admitted_open_paths`.
+
+Do not treat a missing field as open by default. The helper's admitted-open
+paths are authoring metadata for surfaces whose SDL, contract, or semantic rule
+already allows an underspecified form; they are not backend-realization
+permission and do not replace manifest `realization_support`, realization
+envelopes, or experiment-core contracts.
+
 ## Part 2 Implementation Boundary
 
 The typed compiler emission and planner gate must preserve the classifier output
