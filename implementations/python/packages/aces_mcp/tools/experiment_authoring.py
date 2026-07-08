@@ -35,6 +35,61 @@ _ALLOWED_EXAMPLES = {
 }
 
 
+def _run_experiment_validate(spec_content: str) -> str:
+    """Validate experiment-spec YAML and render a human-readable result."""
+    if len(spec_content.encode("utf-8", errors="replace")) > _MAX_INPUT_BYTES:
+        return f"INPUT TOO LARGE — limit is {_MAX_INPUT_BYTES} bytes."
+
+    from aces_contracts.experiment_spec import (
+        ExperimentSpecValidationError,
+        parse_experiment_spec,
+    )
+
+    try:
+        spec = parse_experiment_spec(spec_content)
+    except ExperimentSpecValidationError as exc:
+        return f"VALIDATION ERROR — the experiment spec is invalid.\n\nDetails:\n{exc.details}"
+
+    run_plan = spec.run_plan
+    allocation = run_plan.allocation
+    run_count = (
+        f"  compared conditions: {len(allocation.compared_conditions)}"
+        if allocation is not None
+        else f"  target run count: {run_plan.target_run_count}"
+    )
+    parts = [
+        f"VALID — experiment spec '{spec.spec_id}' (v{spec.spec_version}) parsed successfully.",
+        f"  task_ref: {spec.task_ref.ref_id}",
+        f"  run-count source: {'allocation' if allocation is not None else 'target_run_count'}",
+        f"  stochastic controls: {len(run_plan.stochastic_controls)}",
+        f"  red-variant selections: {len(run_plan.red_variant_selections)}",
+        f"  factors: {len(spec.factors)}",
+        f"  capture-spec refs: {len(spec.capture_spec_refs)}",
+        run_count,
+    ]
+    return "\n".join(parts)
+
+
+def _run_experiment_scaffold(complexity: str, spec_id: str, task_ref_id: str) -> str:
+    """Render a starter experiment-spec skeleton for the requested complexity."""
+    key = complexity.lower().strip()
+    if key not in ("minimal", "sweep"):
+        return "Invalid complexity. Choose: 'minimal' or 'sweep'."
+    template = _SCAFFOLD_MINIMAL if key == "minimal" else _SCAFFOLD_SWEEP
+    return template.replace("{spec_id}", spec_id).replace("{task_ref_id}", task_ref_id)
+
+
+def _run_experiment_get_example(name: str) -> str:
+    """Return an allowlisted worked experiment-spec example."""
+    filename = _ALLOWED_EXAMPLES.get(name.lower().strip())
+    if filename is None:
+        return f"Unknown example '{name}'. Available: {', '.join(sorted(_ALLOWED_EXAMPLES))}"
+    path = _EXAMPLES_DIR / filename
+    if not path.exists():
+        return f"Example file not found: {filename}"
+    return path.read_text(encoding="utf-8")
+
+
 def register(mcp: FastMCP) -> None:
     """Register experiment authoring tools on the MCP server."""
 
@@ -53,35 +108,7 @@ def register(mcp: FastMCP) -> None:
         ),
     )
     def experiment_validate(spec_content: str) -> str:
-        if len(spec_content.encode("utf-8", errors="replace")) > _MAX_INPUT_BYTES:
-            return f"INPUT TOO LARGE — limit is {_MAX_INPUT_BYTES} bytes."
-
-        from aces_contracts.experiment_spec import (
-            ExperimentSpecValidationError,
-            parse_experiment_spec,
-        )
-
-        try:
-            spec = parse_experiment_spec(spec_content)
-        except ExperimentSpecValidationError as exc:
-            return f"VALIDATION ERROR — the experiment spec is invalid.\n\nDetails:\n{exc.details}"
-
-        run_plan = spec.run_plan
-        run_count_source = "allocation" if run_plan.allocation is not None else "target_run_count"
-        parts = [
-            f"VALID — experiment spec '{spec.spec_id}' (v{spec.spec_version}) parsed successfully.",
-            f"  task_ref: {spec.task_ref.ref_id}",
-            f"  run-count source: {run_count_source}",
-            f"  stochastic controls: {len(run_plan.stochastic_controls)}",
-            f"  red-variant selections: {len(run_plan.red_variant_selections)}",
-            f"  factors: {len(spec.factors)}",
-            f"  capture-spec refs: {len(spec.capture_spec_refs)}",
-        ]
-        if run_plan.allocation is not None:
-            parts.append(f"  compared conditions: {len(run_plan.allocation.compared_conditions)}")
-        else:
-            parts.append(f"  target run count: {run_plan.target_run_count}")
-        return "\n".join(parts)
+        return _run_experiment_validate(spec_content)
 
     @mcp.tool(
         name="experiment_scaffold",
@@ -98,11 +125,7 @@ def register(mcp: FastMCP) -> None:
         spec_id: str = "my-experiment-spec",
         task_ref_id: str = "task-example-v1",
     ) -> str:
-        key = complexity.lower().strip()
-        if key not in ("minimal", "sweep"):
-            return "Invalid complexity. Choose: 'minimal' or 'sweep'."
-        template = _SCAFFOLD_MINIMAL if key == "minimal" else _SCAFFOLD_SWEEP
-        return template.replace("{spec_id}", spec_id).replace("{task_ref_id}", task_ref_id)
+        return _run_experiment_scaffold(complexity, spec_id, task_ref_id)
 
     @mcp.tool(
         name="experiment_get_example",
@@ -114,14 +137,7 @@ def register(mcp: FastMCP) -> None:
         ),
     )
     def experiment_get_example(name: str) -> str:
-        key = name.lower().strip()
-        filename = _ALLOWED_EXAMPLES.get(key)
-        if filename is None:
-            return f"Unknown example '{name}'. Available: {', '.join(sorted(_ALLOWED_EXAMPLES))}"
-        path = _EXAMPLES_DIR / filename
-        if not path.exists():
-            return f"Example file not found: {filename}"
-        return path.read_text(encoding="utf-8")
+        return _run_experiment_get_example(name)
 
 
 # ---------------------------------------------------------------------------
