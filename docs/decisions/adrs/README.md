@@ -118,6 +118,7 @@ adr-070-realization-envelope-semantics
 adr-071-reusable-asset-trust-and-integrity-policy
 adr-072-validation-and-admission-profiles
 adr-073-scoring-reward-language-scope
+adr-074-experiment-authoring-input-contract-boundary
 ```
 
 | ADR | Title | Status | Date |
@@ -196,3 +197,4 @@ adr-073-scoring-reward-language-scope
 | [071](adr-071-reusable-asset-trust-and-integrity-policy.md) | Reusable Asset Trust and Integrity Policy | accepted | 2026-07-05 |
 | [072](adr-072-validation-and-admission-profiles.md) | Validation and Admission Profiles | proposed | 2026-07-05 |
 | [073](adr-073-scoring-reward-language-scope.md) | Scoring and Reward Language Scope in the SDL | accepted | 2026-07-05 |
+| [074](adr-074-experiment-authoring-input-contract-boundary.md) | Experiment Authoring-Input Contract Boundary | accepted | 2026-07-08 |

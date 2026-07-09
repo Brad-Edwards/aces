@@ -11,6 +11,7 @@ from __future__ import annotations
 from mcp.server.fastmcp import FastMCP
 
 from aces_mcp.tools.authoring import register as register_authoring_tools
+from aces_mcp.tools.experiment_authoring import register as register_experiment_authoring_tools
 from aces_mcp.tools.inspection import register as register_inspection_tools
 from aces_mcp.tools.language_service import register as register_language_service_tools
 from aces_mcp.tools.operations import register as register_operation_tools
@@ -34,7 +35,13 @@ Use `sdl_get_example` to see real-world annotated scenarios. Use \
 `sdl_format`, `sdl_diagnostics`, and `sdl_apply_edit` for language-service \
 workflows. Use `sdl_validate`, `sdl_design_assessment`, `sdl_plan`, and \
 `sdl_claims_assessment` to check SDL YAML and avoid overstating what a \
-scenario or dry run can prove.\
+scenario or dry run can prove.
+
+To author an *experiment* (the pre-run specification that binds a task to a \
+run plan — seeds, episode controls, red-variant selection, and replication — \
+distinct from the archival run/study records), use `experiment_scaffold` to \
+start, `experiment_get_example` to see a worked design, and `experiment_validate` \
+to check it.\
 """
 
 
@@ -46,6 +53,7 @@ def create_server() -> FastMCP:
     )
     register_reference_tools(mcp)
     register_authoring_tools(mcp)
+    register_experiment_authoring_tools(mcp)
     register_language_service_tools(mcp)
     register_inspection_tools(mcp)
     register_operation_tools(mcp)

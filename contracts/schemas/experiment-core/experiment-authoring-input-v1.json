@@ -1,0 +1,1864 @@
+{
+  "$defs": {
+    "ExperimentApparatusConstraintModel": {
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "allowed_processor_refs": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "allowed_processor_refs"
+          ]
+        },
+        {
+          "properties": {
+            "allowed_backend_refs": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "allowed_backend_refs"
+          ]
+        },
+        {
+          "properties": {
+            "required_manifest_refs": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "required_manifest_refs"
+          ]
+        },
+        {
+          "properties": {
+            "required_capabilities": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "required_capabilities"
+          ]
+        },
+        {
+          "properties": {
+            "notes": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "notes"
+          ]
+        }
+      ],
+      "description": "Apparatus compatibility and capability constraints for a task.",
+      "properties": {
+        "allowed_backend_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentBackendReferenceModel"
+          },
+          "title": "Allowed Backend Refs",
+          "type": "array"
+        },
+        "allowed_processor_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentProcessorReferenceModel"
+          },
+          "title": "Allowed Processor Refs",
+          "type": "array"
+        },
+        "notes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "required_capabilities": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Required Capabilities",
+          "type": "array"
+        },
+        "required_manifest_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentManifestReferenceModel"
+          },
+          "title": "Required Manifest Refs",
+          "type": "array"
+        }
+      },
+      "title": "ExperimentApparatusConstraintModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "Every allowed processor/backend identity reference must have a matching required manifest ref_id with matching manifest id, subject identity, and manifest schema version.",
+          "id": "apparatus-constraint-identity-manifest-resolves",
+          "inputs": [
+            {
+              "contract_id": "experiment-task-v1",
+              "instance_path": "#/apparatus_constraints"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.ExperimentApparatusConstraintModel._validate_allowed_identity_manifest_refs"
+        }
+      ]
+    },
+    "ExperimentArtifactRefModel": {
+      "additionalProperties": false,
+      "description": "Reference to an artifact that supports a task, run, apparatus, or study.",
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "checksum": {
+          "$ref": "#/$defs/ExperimentChecksumModel"
+        },
+        "created_at": {
+          "format": "date-time",
+          "minLength": 1,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}[Tt](?:[01]\\d|2[0-3]):[0-5]\\d:(?:[0-5]\\d|60)(?:\\.\\d+)?(?:[Zz]|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "title": "Created At",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "media_type": {
+          "minLength": 1,
+          "title": "Media Type",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "protocol",
+            "metric-definition",
+            "scenario-snapshot",
+            "manifest",
+            "apparatus-evidence",
+            "observation",
+            "result",
+            "analysis",
+            "report",
+            "export",
+            "starter-file",
+            "evaluator",
+            "subtask",
+            "gold-step",
+            "milestone",
+            "human-assistance",
+            "scaffold",
+            "baseline",
+            "cost-resource-trace",
+            "other"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "satisfies_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentEvidenceSatisfactionReferenceModel"
+          },
+          "title": "Satisfies Refs",
+          "type": "array"
+        },
+        "sensitivity": {
+          "enum": [
+            "public",
+            "internal",
+            "restricted",
+            "redacted"
+          ],
+          "title": "Sensitivity",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "source": {
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "uri": {
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "role",
+        "media_type",
+        "uri",
+        "checksum",
+        "size_bytes",
+        "created_at",
+        "source",
+        "sensitivity"
+      ],
+      "title": "ExperimentArtifactRefModel",
+      "type": "object"
+    },
+    "ExperimentBackendReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to a backend identity.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "backend",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentBackendReferenceModel",
+      "type": "object"
+    },
+    "ExperimentCaptureSpecReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to a declarative capture specification.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "capture-spec",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentCaptureSpecReferenceModel",
+      "type": "object"
+    },
+    "ExperimentChecksumModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha256"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{64}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha384"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{96}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "sha512"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{128}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "algorithm": {
+                "const": "blake3"
+              }
+            },
+            "required": [
+              "algorithm"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[A-Fa-f0-9]{64}$"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Checksum metadata for an experiment-core artifact reference.",
+      "properties": {
+        "algorithm": {
+          "enum": [
+            "sha256",
+            "sha384",
+            "sha512",
+            "blake3"
+          ],
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "pattern": "^[A-Fa-f0-9]+$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "title": "ExperimentChecksumModel",
+      "type": "object"
+    },
+    "ExperimentClockContextModel": {
+      "additionalProperties": false,
+      "description": "Clock authority and time-domain metadata for run interpretation.",
+      "properties": {
+        "authority": {
+          "minLength": 1,
+          "title": "Authority",
+          "type": "string"
+        },
+        "clock_id": {
+          "minLength": 1,
+          "title": "Clock Id",
+          "type": "string"
+        },
+        "synchronization": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Synchronization"
+        },
+        "time_domain": {
+          "enum": [
+            "wall-clock",
+            "monotonic",
+            "simulated",
+            "logical",
+            "other"
+          ],
+          "title": "Time Domain",
+          "type": "string"
+        }
+      },
+      "required": [
+        "clock_id",
+        "authority",
+        "time_domain"
+      ],
+      "title": "ExperimentClockContextModel",
+      "type": "object"
+    },
+    "ExperimentConditionAssignmentModel": {
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "required_refs": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "required_refs"
+          ]
+        },
+        {
+          "properties": {
+            "required_parameters": {
+              "minItems": 1
+            }
+          },
+          "required": [
+            "required_parameters"
+          ]
+        }
+      ],
+      "description": "Concrete treatment-condition assignment criteria for study evaluation runs.",
+      "properties": {
+        "condition_id": {
+          "minLength": 1,
+          "title": "Condition Id",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "factor_levels": {
+          "additionalProperties": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Factor Levels",
+          "type": "object"
+        },
+        "required_parameters": {
+          "items": {
+            "$ref": "#/$defs/ExperimentConditionAssignmentParameterModel"
+          },
+          "title": "Required Parameters",
+          "type": "array"
+        },
+        "required_refs": {
+          "items": {
+            "$ref": "#/$defs/ExperimentConditionAssignmentReferenceModel"
+          },
+          "title": "Required Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "condition_id",
+        "factor_levels"
+      ],
+      "title": "ExperimentConditionAssignmentModel",
+      "type": "object"
+    },
+    "ExperimentConditionAssignmentParameterModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "redaction": {
+                "enum": [
+                  "redacted",
+                  "withheld"
+                ]
+              }
+            },
+            "required": [
+              "redaction"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Auditable parameter value that can ground a study condition assignment.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "redaction": {
+          "const": "none",
+          "default": "none",
+          "title": "Redaction",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "value_kind": {
+          "enum": [
+            "configuration",
+            "protocol",
+            "apparatus",
+            "analysis"
+          ],
+          "title": "Value Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "value_kind"
+      ],
+      "title": "ExperimentConditionAssignmentParameterModel",
+      "type": "object"
+    },
+    "ExperimentConditionAssignmentReferenceModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "properties": {
+            "ref_digest": {
+              "type": "null"
+            },
+            "ref_path": {
+              "type": "null"
+            }
+          }
+        }
+      ],
+      "description": "Auditable run-level reference that can ground a study condition assignment.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "processor",
+            "backend",
+            "participant-implementation",
+            "scenario-snapshot",
+            "task",
+            "apparatus-context",
+            "manifest",
+            "profile",
+            "capability",
+            "measurement-channel"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentConditionAssignmentReferenceModel",
+      "type": "object"
+    },
+    "ExperimentEpisodeControlModel": {
+      "additionalProperties": false,
+      "description": "Declarative episode execution controls for a planned experiment.\n\nCaptures the pre-run execution-control facts \u2014 turn order, logical step\ncount, and episode termination \u2014 that ADR-069 requires for CAGE-2\nexecution-control equivalence but that the archival experiment-core\ncontracts only record after a run has executed.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "max_steps": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Steps"
+        },
+        "termination_condition_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Termination Condition Refs",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "termination_rule": {
+          "minLength": 1,
+          "title": "Termination Rule",
+          "type": "string"
+        },
+        "turn_order": {
+          "enum": [
+            "sequential",
+            "simultaneous",
+            "round-robin",
+            "scenario-defined",
+            "other"
+          ],
+          "title": "Turn Order",
+          "type": "string"
+        }
+      },
+      "required": [
+        "turn_order",
+        "termination_rule"
+      ],
+      "title": "ExperimentEpisodeControlModel",
+      "type": "object"
+    },
+    "ExperimentEvidenceSatisfactionReferenceModel": {
+      "additionalProperties": false,
+      "description": "Evidence concept reference that an artifact claims to satisfy.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "evidence",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentEvidenceSatisfactionReferenceModel",
+      "type": "object"
+    },
+    "ExperimentManifestReferenceModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "properties": {
+            "ref_path": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ref_digest": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ref_digest"
+            ]
+          },
+          "then": {
+            "properties": {
+              "subject_ref": {
+                "properties": {
+                  "ref_kind": {
+                    "enum": [
+                      "processor",
+                      "backend"
+                    ]
+                  }
+                },
+                "required": [
+                  "ref_kind"
+                ]
+              }
+            },
+            "required": [
+              "subject_ref"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ref_digest": {
+                "type": "string"
+              },
+              "subject_ref": {
+                "properties": {
+                  "ref_kind": {
+                    "const": "processor"
+                  }
+                },
+                "required": [
+                  "ref_kind"
+                ]
+              }
+            },
+            "required": [
+              "ref_digest",
+              "subject_ref"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ref_version": {
+                "const": "processor-manifest/v2"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ref_digest": {
+                "type": "string"
+              },
+              "subject_ref": {
+                "properties": {
+                  "ref_kind": {
+                    "const": "backend"
+                  }
+                },
+                "required": [
+                  "ref_kind"
+                ]
+              }
+            },
+            "required": [
+              "ref_digest",
+              "subject_ref"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ref_version": {
+                "const": "backend-manifest/v2"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subject_ref": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "subject_ref"
+            ]
+          },
+          "then": {
+            "properties": {
+              "subject_ref": {
+                "properties": {
+                  "ref_digest": {
+                    "type": "null"
+                  },
+                  "ref_path": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "description": "Reference constrained to an apparatus or capability manifest.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "manifest",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        },
+        "subject_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentReferenceModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentManifestReferenceModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "Manifest digest qualifiers are limited to processor/backend manifest refs that can be checked against concrete manifest payload digests; manifest path qualifiers are not accepted in v1.",
+          "id": "manifest-reference-digest-scope-valid",
+          "inputs": [
+            {
+              "contract_id": "experiment-task-v1",
+              "instance_path": "#/$defs/ExperimentManifestReferenceModel"
+            },
+            {
+              "contract_id": "experiment-apparatus-context-v1",
+              "instance_path": "#/$defs/ExperimentManifestReferenceModel"
+            },
+            {
+              "contract_id": "experiment-run-v1",
+              "instance_path": "#/$defs/ExperimentManifestReferenceModel"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.ExperimentManifestReferenceModel._validate_manifest_reference_scope"
+        }
+      ]
+    },
+    "ExperimentParameterModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "redaction": {
+                "enum": [
+                  "redacted",
+                  "withheld"
+                ]
+              }
+            },
+            "required": [
+              "redaction"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Redaction-aware parameter captured for a task, run, or apparatus context.",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "redaction": {
+          "default": "none",
+          "enum": [
+            "none",
+            "redacted",
+            "withheld"
+          ],
+          "title": "Redaction",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "value_kind": {
+          "enum": [
+            "configuration",
+            "protocol",
+            "apparatus",
+            "analysis",
+            "other"
+          ],
+          "title": "Value Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "value_kind"
+      ],
+      "title": "ExperimentParameterModel",
+      "type": "object"
+    },
+    "ExperimentProcessorReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to a processor identity.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "processor",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentProcessorReferenceModel",
+      "type": "object"
+    },
+    "ExperimentRedVariantSelectionModel": {
+      "additionalProperties": false,
+      "description": "Selection of one red-agent variant bound into a planned experiment.",
+      "properties": {
+        "agent_ref": {
+          "minLength": 1,
+          "title": "Agent Ref",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/$defs/ExperimentParameterModel"
+          },
+          "title": "Parameters",
+          "type": "array"
+        },
+        "variant_id": {
+          "minLength": 1,
+          "title": "Variant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "variant_id",
+        "agent_ref"
+      ],
+      "title": "ExperimentRedVariantSelectionModel",
+      "type": "object"
+    },
+    "ExperimentReferenceModel": {
+      "additionalProperties": false,
+      "description": "Typed reference to an experiment-core or adjacent ACES artifact.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "processor",
+            "backend",
+            "participant-implementation",
+            "scenario",
+            "scenario-snapshot",
+            "task",
+            "protocol",
+            "apparatus-context",
+            "run",
+            "metric-definition",
+            "result",
+            "study",
+            "manifest",
+            "profile",
+            "capability",
+            "capture-spec",
+            "evidence",
+            "evidence-record",
+            "derived-measure",
+            "measurement-channel",
+            "analysis-artifact",
+            "other"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentReferenceModel",
+      "type": "object"
+    },
+    "ExperimentRunAllocationPlanModel": {
+      "additionalProperties": false,
+      "description": "Structured run allocation, replication, and assignment plan.",
+      "properties": {
+        "allocation_method": {
+          "minLength": 1,
+          "title": "Allocation Method",
+          "type": "string"
+        },
+        "allocation_unit": {
+          "minLength": 1,
+          "title": "Allocation Unit",
+          "type": "string"
+        },
+        "blocking_factors": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Blocking Factors",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "compared_conditions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Compared Conditions",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "condition_assignments": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ExperimentConditionAssignmentModel"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Condition Assignments",
+          "type": "object"
+        },
+        "randomization_unit": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Randomization Unit"
+        },
+        "replication_policy": {
+          "minLength": 1,
+          "title": "Replication Policy",
+          "type": "string"
+        },
+        "stopping_rule": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stopping Rule"
+        },
+        "target_runs_per_condition": {
+          "minimum": 1,
+          "title": "Target Runs Per Condition",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "allocation_unit",
+        "allocation_method",
+        "compared_conditions",
+        "condition_assignments",
+        "target_runs_per_condition",
+        "replication_policy"
+      ],
+      "title": "ExperimentRunAllocationPlanModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "Run-allocation compared_conditions, condition_assignments keys, embedded condition ids, blocking factor ids, factor-level combinations, and run-level criteria signatures must be internally coherent.",
+          "id": "run-allocation-condition-assignments-valid",
+          "inputs": [
+            {
+              "contract_id": "experiment-study-v1",
+              "instance_path": "#/run_allocation"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.ExperimentRunAllocationPlanModel._validate_condition_assignments"
+        }
+      ]
+    },
+    "ExperimentRunPlanModel": {
+      "additionalProperties": false,
+      "description": "Pre-run replication, stochastic, episode, and red-variant plan.\n\nReuses the archival-family value models for stochastic controls, run\nallocation, and clock intent, and adds the authoring-only episode and\nred-variant selections. Exactly one of ``allocation`` (condition-based)\nor ``target_run_count`` (simple, no-condition) declares the run count.",
+      "oneOf": [
+        {
+          "properties": {
+            "allocation": {
+              "not": {
+                "type": "null"
+              }
+            },
+            "target_run_count": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "allocation"
+          ]
+        },
+        {
+          "properties": {
+            "allocation": {
+              "type": "null"
+            },
+            "target_run_count": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "target_run_count"
+          ]
+        }
+      ],
+      "properties": {
+        "allocation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentRunAllocationPlanModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "clock_intent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentClockContextModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "episode_control": {
+          "$ref": "#/$defs/ExperimentEpisodeControlModel"
+        },
+        "red_variant_selections": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ExperimentRedVariantSelectionModel"
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Red Variant Selections",
+          "type": "object"
+        },
+        "stochastic_controls": {
+          "items": {
+            "$ref": "#/$defs/ExperimentStochasticControlModel"
+          },
+          "minItems": 1,
+          "title": "Stochastic Controls",
+          "type": "array"
+        },
+        "target_run_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Run Count"
+        }
+      },
+      "required": [
+        "stochastic_controls",
+        "episode_control"
+      ],
+      "title": "ExperimentRunPlanModel",
+      "type": "object",
+      "x-aces-invariants": [
+        {
+          "description": "A run plan must declare exactly one of allocation or target_run_count, and every red-variant selection map key must equal its embedded variant_id.",
+          "id": "run-plan-exactly-one-run-count-source",
+          "inputs": [
+            {
+              "contract_id": "experiment-authoring-input-v1",
+              "instance_path": "#/run_plan"
+            }
+          ],
+          "level": "error",
+          "validator": "aces_contracts.contracts.ExperimentRunPlanModel._validate_run_plan"
+        }
+      ]
+    },
+    "ExperimentScenarioReferenceModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "ref_kind": {
+                "const": "scenario"
+              }
+            },
+            "required": [
+              "ref_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ref_digest": {
+                "type": "null"
+              },
+              "ref_path": {
+                "type": "null"
+              },
+              "ref_version": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Reference constrained to authored scenario material.",
+      "properties": {
+        "ref_digest": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "^(?:sha256:[A-Fa-f0-9]{64}|sha384:[A-Fa-f0-9]{96}|sha512:[A-Fa-f0-9]{128}|blake3:[A-Fa-f0-9]{64})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Digest"
+        },
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "enum": [
+            "scenario",
+            "scenario-snapshot"
+          ],
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_path": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Path"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentScenarioReferenceModel",
+      "type": "object"
+    },
+    "ExperimentStochasticControlModel": {
+      "additionalProperties": false,
+      "description": "Seed, randomization, sampling, or scheduler control for reproducibility.",
+      "properties": {
+        "control_id": {
+          "minLength": 1,
+          "title": "Control Id",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "role": {
+          "enum": [
+            "seed",
+            "randomization",
+            "sampling",
+            "scheduler",
+            "agent-policy",
+            "other"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "required": [
+        "control_id",
+        "role"
+      ],
+      "title": "ExperimentStochasticControlModel",
+      "type": "object"
+    },
+    "ExperimentStudyFactorModel": {
+      "additionalProperties": false,
+      "description": "Treatment, control, blocking, or apparatus factor for study analysis.",
+      "properties": {
+        "factor_kind": {
+          "enum": [
+            "treatment",
+            "control",
+            "blocking",
+            "stratification",
+            "apparatus",
+            "other"
+          ],
+          "title": "Factor Kind",
+          "type": "string"
+        },
+        "levels": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Levels",
+          "type": "array"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "factor_kind"
+      ],
+      "title": "ExperimentStudyFactorModel",
+      "type": "object"
+    },
+    "ExperimentTaskReferenceModel": {
+      "additionalProperties": false,
+      "description": "Reference constrained to an experiment task.",
+      "properties": {
+        "ref_id": {
+          "minLength": 1,
+          "title": "Ref Id",
+          "type": "string"
+        },
+        "ref_kind": {
+          "const": "task",
+          "title": "Ref Kind",
+          "type": "string"
+        },
+        "ref_version": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref Version"
+        }
+      },
+      "required": [
+        "ref_kind",
+        "ref_id"
+      ],
+      "title": "ExperimentTaskReferenceModel",
+      "type": "object"
+    },
+    "ExperimentValidityNoteModel": {
+      "additionalProperties": false,
+      "description": "Validity threat, limitation, or mitigation note for experiment interpretation.",
+      "properties": {
+        "category": {
+          "enum": [
+            "construct",
+            "internal",
+            "external",
+            "conclusion",
+            "statistical",
+            "apparatus",
+            "reproducibility",
+            "security",
+            "other"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "mitigation": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mitigation"
+        },
+        "note": {
+          "minLength": 1,
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "note"
+      ],
+      "title": "ExperimentValidityNoteModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/experiment-authoring-input-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Pre-run experiment authoring input: a design that binds a task to a run plan.\n\nThis is the authoring/input counterpart to the archival experiment-core\noutputs (run/study/apparatus-context). It references the separately\nauthored task (and optionally a scenario snapshot) and declares the\npre-run experimental design \u2014 apparatus intent, run plan, factors,\nintended capture, and validity notes \u2014 before any run executes. It is\nnever a run, study, or apparatus-context record (ADR-055 / ADR-074).",
+  "properties": {
+    "apparatus_intent": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExperimentApparatusConstraintModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "artifact_refs": {
+      "items": {
+        "$ref": "#/$defs/ExperimentArtifactRefModel"
+      },
+      "title": "Artifact Refs",
+      "type": "array"
+    },
+    "capture_spec_refs": {
+      "items": {
+        "$ref": "#/$defs/ExperimentCaptureSpecReferenceModel"
+      },
+      "title": "Capture Spec Refs",
+      "type": "array"
+    },
+    "description": {
+      "minLength": 1,
+      "title": "Description",
+      "type": "string"
+    },
+    "factors": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ExperimentStudyFactorModel"
+      },
+      "propertyNames": {
+        "minLength": 1
+      },
+      "title": "Factors",
+      "type": "object"
+    },
+    "intended_scenario_ref": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ExperimentScenarioReferenceModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "run_plan": {
+      "$ref": "#/$defs/ExperimentRunPlanModel"
+    },
+    "schema_version": {
+      "const": "experiment-authoring-input/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "spec_id": {
+      "minLength": 1,
+      "title": "Spec Id",
+      "type": "string"
+    },
+    "spec_version": {
+      "minLength": 1,
+      "title": "Spec Version",
+      "type": "string"
+    },
+    "task_ref": {
+      "$ref": "#/$defs/ExperimentTaskReferenceModel"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "validity_notes": {
+      "items": {
+        "$ref": "#/$defs/ExperimentValidityNoteModel"
+      },
+      "title": "Validity Notes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "spec_id",
+    "spec_version",
+    "title",
+    "description",
+    "task_ref",
+    "run_plan"
+  ],
+  "title": "ExperimentSpecModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "When a run plan declares an allocation with blocking factors, every blocking factor must be a declared experiment-spec factor.",
+      "id": "experiment-spec-blocking-factors-declared",
+      "inputs": [
+        {
+          "contract_id": "experiment-authoring-input-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.contracts.ExperimentSpecModel._validate_experiment_spec"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "experiment-authoring-input-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

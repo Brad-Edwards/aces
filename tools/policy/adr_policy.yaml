@@ -219,6 +219,7 @@ module_boundaries:
       allowed_top_level_imports:
         - aces_backend_protocols
         - aces_backend_stubs
+        - aces_contracts
         - aces_processor
         - aces_sdl
       forbidden_import_prefixes:

@@ -242,6 +242,9 @@ adrs:
       - date: 2026-06-12
         ref: "#482"
         summary: "Recorded that the ADR's decision date is 2026-05-26 and it landed with experiment-core PR #422 on 2026-06-05."
+      - date: 2026-07-08
+        ref: "#675"
+        summary: "ADR-074 realizes the explicit draft/authoring surface anticipated in the Risks section as experiment-authoring-input-v1; the archival contracts are unchanged."
   - id: ADR-056
     path: docs/decisions/adrs/adr-056-runtime-observed-values-and-credential-posture.md
     pin: 3aa602de53f7607cf531b4a9da3f58192eb87ad21ddd92846fd2ae2a7526a4c3
@@ -282,6 +285,10 @@ adrs:
   - id: ADR-069
     path: docs/decisions/adrs/adr-069-cage-2-replication-architecture.md
     pin: 305334e5558fb88d1f84317209f0e64d182714ba8e99cdeb5f6781bf3ee384f5
+    amendments:
+      - date: 2026-07-08
+        ref: "#675"
+        summary: "ADR-074 adds experiment-authoring-input-v1, giving REP-003 a pre-run home for execution-control facts; it complements the SDL scenario authoring path and adds no CAGE-specific schema."
   - id: ADR-071
     path: docs/decisions/adrs/adr-071-reusable-asset-trust-and-integrity-policy.md
     pin: d0f0d15945a91e97870d794986d7c7453cea7fade5c74c673d271ceaf05a6b7e
@@ -292,3 +299,6 @@ adrs:
       - date: 2026-07-06
         ref: "#682"
         summary: "Accepted (proposed → accepted) and realized under SEM-206: removed the SDL scoring/reward surfaces, narrowed objectives.success to conditions, amended ADR-002, and updated the published SDL schemas."
+  - id: ADR-074
+    path: docs/decisions/adrs/adr-074-experiment-authoring-input-contract-boundary.md
+    pin: 74dd29e3e5f3a2b7bdf836bd40908c0840c51f46a1a89efbb191e6ce7f620ce5
