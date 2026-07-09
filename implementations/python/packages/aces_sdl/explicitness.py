@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+import re
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 
@@ -16,12 +17,15 @@ __all__ = [
     "ExplicitnessProvenance",
     "ExplicitnessRecord",
     "ExplicitnessResult",
+    "classify_authoring_specificity",
+    "classify_model_explicitness",
     "classify_scenario_explicitness",
     "derive_instantiated_explicitness",
 ]
 
 _OPEN_ENUM_SENTINELS = frozenset({"unknown", "other"})
 _EXPLICITNESS_ORDER: dict[ExplicitnessClass, int] = {}
+_PATH_TOKEN_RE = re.compile(r"[^.\[\]]+|\[\d+\]")
 
 
 class ExplicitnessClass(str, Enum):
@@ -71,10 +75,58 @@ class ExplicitnessResult:
 def classify_scenario_explicitness(scenario: BaseModel) -> ExplicitnessResult:
     """Classify authored SDL declarations on ``scenario``."""
 
-    variables = getattr(scenario, "variables", {})
+    return classify_model_explicitness(scenario)
+
+
+def classify_model_explicitness(
+    model: BaseModel,
+    *,
+    variables: dict[str, Variable] | None = None,
+) -> ExplicitnessResult:
+    """Classify authored declarations on any closed ACES Pydantic model."""
+
+    variables = variables if variables is not None else getattr(model, "variables", {})
     classifier = _ExplicitnessClassifier(variables)
-    classifier.visit(scenario, "")
+    classifier.visit(model, "")
     return ExplicitnessResult(records=dict(classifier.records), errors=tuple(classifier.errors))
+
+
+def classify_authoring_specificity(
+    model: BaseModel,
+    *,
+    admitted_open_paths: Iterable[str] = (),
+    variables: dict[str, Variable] | None = None,
+) -> ExplicitnessResult:
+    """Classify DSL-115 specificity with opt-in open/underspecified paths.
+
+    Missing fields are not open by default. A caller must supply the exact
+    owning-surface path for any concern whose owning rule explicitly admits an
+    open or underspecified form. This records authoring review metadata only;
+    it is not backend-realization permission.
+    """
+
+    result = classify_model_explicitness(model, variables=variables)
+    records = dict(result.records)
+    errors = list(result.errors)
+    for path in admitted_open_paths:
+        normalized_path = path.strip() if isinstance(path, str) else ""
+        if not normalized_path:
+            errors.append("Cannot classify open specificity for an empty path")
+            continue
+        if not _path_addresses_model_surface(model, normalized_path):
+            errors.append(
+                f"Cannot classify open specificity for '{normalized_path}': path does not resolve to a model surface"
+            )
+            continue
+        records.setdefault(
+            normalized_path,
+            ExplicitnessRecord(
+                path=normalized_path,
+                classification=ExplicitnessClass.OPEN,
+                reason="explicitly admitted open/underspecified concern; not backend-realization permission",
+            ),
+        )
+    return ExplicitnessResult(records=records, errors=tuple(errors))
 
 
 def derive_instantiated_explicitness(
@@ -235,6 +287,76 @@ def _authored_paths(value: object) -> set[str]:
     collector = _AuthoredPathCollector()
     collector.visit(value, "")
     return collector.paths
+
+
+def _path_addresses_model_surface(root: object, path: str) -> bool:
+    tokens = _path_tokens(path)
+    if not tokens:
+        return False
+
+    current = root
+    for index, token in enumerate(tokens):
+        is_final = index == len(tokens) - 1
+        found, current = _resolve_path_token(current, token, allow_unset_model_field=is_final)
+        if not found:
+            return False
+    return True
+
+
+def _path_tokens(path: str) -> tuple[str | int, ...]:
+    tokens: list[str | int] = []
+    for raw in _PATH_TOKEN_RE.findall(path):
+        tokens.append(int(raw[1:-1]) if raw.startswith("[") else raw)
+    return tuple(tokens)
+
+
+def _resolve_path_token(
+    current: object,
+    token: str | int,
+    *,
+    allow_unset_model_field: bool,
+) -> tuple[bool, object]:
+    resolved: tuple[bool, object] = (False, None)
+    if isinstance(token, int):
+        resolved = _resolve_sequence_path_token(current, token)
+    elif isinstance(current, BaseModel):
+        resolved = _resolve_model_path_token(
+            current,
+            token,
+            allow_unset_model_field=allow_unset_model_field,
+        )
+    elif isinstance(current, Mapping):
+        resolved = _resolve_mapping_path_token(current, token)
+    return resolved
+
+
+def _resolve_sequence_path_token(current: object, token: int) -> tuple[bool, object]:
+    resolved: tuple[bool, object] = (False, None)
+    if isinstance(current, Sequence) and not isinstance(current, (str, bytes, bytearray)) and 0 <= token < len(current):
+        resolved = (True, current[token])
+    return resolved
+
+
+def _resolve_model_path_token(
+    current: BaseModel,
+    token: str,
+    *,
+    allow_unset_model_field: bool,
+) -> tuple[bool, object]:
+    resolved: tuple[bool, object] = (False, None)
+    if token in type(current).model_fields:
+        value = getattr(current, token)
+        missing_unset_optional = value is None and token not in current.model_fields_set
+        if not missing_unset_optional or allow_unset_model_field:
+            resolved = (True, value)
+    return resolved
+
+
+def _resolve_mapping_path_token(current: Mapping[object, object], token: str) -> tuple[bool, object]:
+    resolved: tuple[bool, object] = (False, None)
+    if token in current:
+        resolved = (True, current[token])
+    return resolved
 
 
 class _AuthoredPathCollector:
