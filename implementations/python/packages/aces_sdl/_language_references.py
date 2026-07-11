@@ -5,14 +5,13 @@ from __future__ import annotations
 from collections.abc import Collection
 from typing import Any
 
-import yaml
-from yaml.error import MarkedYAMLError, YAMLError
 from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
-from ._language_diagnostics import invalid as _invalid
+from ._errors import SDLParseError
+from ._language_diagnostics import parse_error as _parse_error
 from ._language_metadata import REFERENCE_COMPLETION_TARGETS
+from ._yaml_loader import compose_sdl_yaml
 
-_CODE_PARSE = "sdl.parse"
 _SUCCESS_REFERENCE_TARGETS = frozenset({"conditions"})
 
 
@@ -23,42 +22,33 @@ def find_references(
     section_fields: Collection[str],
 ) -> dict[str, Any]:
     """Return definition and occurrence locations for an SDL symbol."""
-    root, error = _compose_yaml(sdl_content)
-    if error is not None:
-        return error
+    if not sdl_content.strip():
+        result = {"status": "ok", "symbol": symbol, "definitions": [], "occurrences": []}
+    else:
+        root, error = _compose_yaml(sdl_content)
+        result = error if error is not None else _reference_result(root, symbol, section_fields)
+    return result
+
+
+def _reference_result(root: Node | None, symbol: str, section_fields: Collection[str]) -> dict[str, Any]:
     if root is None:
         return {"status": "ok", "symbol": symbol, "definitions": [], "occurrences": []}
-
     definitions = _collect_definitions(root, section_fields)
-    matching_definitions = [definition for definition in definitions if _definition_matches_symbol(definition, symbol)]
     occurrences: list[dict[str, Any]] = []
-    _collect_occurrences(
-        root,
-        symbol,
-        [],
-        occurrences,
-        qualified_section=_qualified_symbol_section(symbol),
-    )
+    _collect_occurrences(root, symbol, [], occurrences, qualified_section=_qualified_symbol_section(symbol))
     return {
         "status": "ok",
         "symbol": symbol,
-        "definitions": matching_definitions,
+        "definitions": [item for item in definitions if _definition_matches_symbol(item, symbol)],
         "occurrences": occurrences,
     }
 
 
 def _compose_yaml(sdl_content: str) -> tuple[Node | None, dict[str, Any] | None]:
     try:
-        return yaml.compose(sdl_content), None
-    except MarkedYAMLError as exc:
-        return None, _invalid(
-            "parse",
-            _CODE_PARSE,
-            str(exc.problem or exc),
-            location=_location_from_mark(exc.problem_mark),
-        )
-    except YAMLError as exc:
-        return None, _invalid("parse", _CODE_PARSE, str(exc))
+        return compose_sdl_yaml(sdl_content), None
+    except SDLParseError as exc:
+        return None, _parse_error(exc)
 
 
 def _collect_definitions(root: Node, section_fields: Collection[str]) -> list[dict[str, Any]]:

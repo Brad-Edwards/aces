@@ -1,12 +1,17 @@
 # SDL Parser Behavior
 
-The parser (`aces.core.sdl.parser`) transforms raw YAML into a validated `Scenario` object through three stages: key normalization, shorthand expansion, and model construction.
+The parser (`aces.core.sdl.parser`) transforms raw YAML into a validated
+`Scenario` object through source-marked safe composition, mapping-key
+validation, key normalization, shorthand expansion, and model construction.
 
 This layer is intentionally about syntax, normalization, and structural model
 construction. It is usually an `FM0` surface under the repository's
 [coding standards](../reference/coding-standards.md): parser work normally
 needs ordinary tests, not state-machine modeling or solver-backed formal
 artifacts, unless it also introduces new semantic invariants above raw syntax.
+The mapping-key injectivity gate is such an invariant and is treated as `FM1`:
+table-driven and property tests pin ambiguity rejection and literal-map
+preservation.
 
 ## Key Normalization
 
@@ -24,6 +29,17 @@ nodes:
   My-Switch:
     Type: Switch
 ```
+
+Field aliases do not imply precedence. Writing both `Name` and `name`, or both
+`password-strength` and `password_strength`, in one structural mapping is a
+fatal `sdl.mapping_key_conflict`. Exact duplicates are also fatal in
+user-defined and native maps, but distinct literal keys such as `Web-App` and
+`web_app` remain distinct identifiers.
+
+The check runs over the composed YAML node graph before a Python dictionary is
+constructed, so it retains both authored spellings and source ranges. YAML
+anchors remain supported. A `<<` merge is accepted only when all inherited and
+local effective keys are disjoint; cyclic aliases are rejected.
 
 ## Shorthand Expansion
 
@@ -81,11 +97,13 @@ be migrated to SDL before parsing.
 
 ## Validation Pipeline
 
-1. **YAML parsing** — `yaml.safe_load()`
-2. **Key normalization** — lowercase field keys, preserve user names
-3. **Shorthand expansion** — source, infrastructure, roles, min-score, feature lists
-4. **Pydantic construction** — structural validation (types, ranges, required fields)
-5. **Semantic validation** — cross-reference checks plus variable-reference checks (22 passes, see [validation.md](validation.md))
+1. **Safe YAML composition** — build a source-marked standard-tag node graph
+2. **Mapping-key preflight** — reject exact, normalized, and merge conflicts
+3. **Safe construction** — construct native values only after ambiguity checks
+4. **Key normalization** — lowercase field keys, preserve user names
+5. **Shorthand expansion** — source, infrastructure, roles, min-score, feature lists
+6. **Pydantic construction** — structural validation (types, ranges, required fields)
+7. **Semantic validation** — cross-reference checks plus variable-reference checks (see [validation.md](validation.md))
 
 On success, the returned `Scenario` may still carry non-fatal advisories in `scenario.advisories` (for example, VM nodes without explicit `resources`).
 
@@ -93,6 +111,7 @@ On success, the returned `Scenario` may still carry non-fatal advisories in `sce
 
 ```python
 from aces.core.sdl import parse_sdl, parse_sdl_file
+from aces_sdl import load_sdl_fragment
 
 # Parse from string
 scenario = parse_sdl(yaml_string)
@@ -102,6 +121,13 @@ scenario = parse_sdl_file(Path("scenario.yaml"))
 
 # Structural validation only (skip cross-reference checks)
 scenario = parse_sdl(yaml_string, skip_semantic_validation=True)
+
+# Advanced authoring tools can preflight a fragment at its final address.
+nodes = load_sdl_fragment(
+    nodes_yaml,
+    mapping_keys="literal",
+    base_pointer="/nodes",
+)
 ```
 
 Use `parse_sdl_file(...)` for SDL that uses top-level `imports:`. Import
@@ -127,5 +153,7 @@ shorthand. They are resolved by the composition layer, not expanded into
 
 ## Error Types
 
-- `SDLParseError` — YAML syntax errors, structural validation failures
+- `SDLParseError` — YAML syntax errors and structural validation failures;
+  mapping-key failures carry structured `.diagnostics` with stable code, JSON
+  Pointer, authored spellings, and source ranges
 - `SDLValidationError` — semantic validation failures (has `.errors` list with all issues)

@@ -12,9 +12,10 @@ An SDL document is checked at three stages, in order. Each is **fail-closed**:
 a problem at a stage stops the document from advancing past that stage.
 
 1. **Parse / structural.** YAML loading and structural shape: the root is a
-   mapping, keys are strings, values have the right shapes, and **no unknown key
-   is present** ([document-model.md §4](document-model.md)). A structural problem
-   is a parse error.
+   mapping, keys are strings, mapping entries remain unique before and after
+   field-key normalisation, values have the right shapes, and **no unknown key is
+   present** ([document-model.md §4](document-model.md)). A structural problem is
+   a parse error.
 2. **Semantic validation.** Cross-section reference resolution
    ([references.md](references.md)), uniqueness, acyclicity, control-flow
    closure, and the runtime-family invariants
@@ -32,8 +33,10 @@ a problem at a stage stops the document from advancing past that stage.
 The semantic-validation and instantiation stages **collect all errors in a pass**
 and report them together, rather than failing at the first problem. An author
 fixing a document sees the full set of errors a stage found, not one error at a
-time. (Parsing may stop at the first structural fault that prevents
-interpretation.)
+time. Parsing may stop at the first structural fault that prevents composition
+of a YAML node graph. Once that graph is available, the mapping-key preflight
+collects all exact duplicates, merge conflicts, and field-key normalisation
+collisions before construction; none is hidden by a last-write-wins mapping.
 
 ## 3. Errors are fatal
 
@@ -127,3 +130,37 @@ A future change that moves a condition between the error and advisory channels,
 or that adds a new diagnostic category, **MUST** apply this criterion and be
 reflected here, in the published schemas, and in the reference implementation
 together, so the boundary stays single-sourced.
+
+## 6. Mapping-key diagnostics
+
+Exact duplicate keys, conflicting effective keys introduced by `<<`, and
+distinct structural field spellings that normalise to one field use the stable
+diagnostic code `sdl.mapping_key_conflict`. They are fatal at the `parse` stage
+and **MUST** be raised before Pydantic or any other SDL model constructor sees
+the mapping.
+
+An explicitly non-string or complex mapping key uses
+`sdl.mapping_key_type`. A cyclic YAML alias graph uses `sdl.alias_cycle`. These
+conditions are likewise fatal at the `parse` stage and carry the canonical
+target path and primary source range; they do not have a second authored-key
+range when no competing declaration exists.
+
+Each diagnostic **MUST** carry:
+
+1. the canonical target path as an RFC 6901 JSON Pointer, with schema field
+   segments canonicalised and user-defined/native-map segments preserved and
+   escaped;
+2. both authored key spellings (the spellings are identical for an exact
+   duplicate); and
+3. the one-based line and column range of both key tokens. The later/conflicting
+   key is the primary range and the earlier key is a related range. When the
+   conflict is contributed through a YAML merge, the ranges identify the
+   original key declarations and the canonical path identifies the effective
+   target mapping.
+
+The reference implementation continues to use `SDLParseError` for this failure;
+it **MUST NOT** introduce a parallel exception hierarchy. Public structured
+adapters (including language-service and MCP responses) preserve the code,
+stage, canonical path, and both ranges. Plain-text CLI/library rendering may
+format the same fields as prose but must not replace them with raw YAML values or
+silently downgrade the error to a generic model-validation failure.

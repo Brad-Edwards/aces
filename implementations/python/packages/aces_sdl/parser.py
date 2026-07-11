@@ -6,77 +6,40 @@ Provides ``parse_sdl()`` as the primary entry point. Handles:
 - Shorthand expansion (``source: "pkg"`` → ``{name: "pkg", version: "*"}``)
 """
 
-import textwrap
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
-import yaml
 from pydantic import ValidationError
 
 from ._base import contains_variable_token, is_variable_ref
 from ._errors import SDLParseError, SDLValidationError
+from ._mapping_scopes import (
+    HASHMAP_SECTIONS,
+    NESTED_HASHMAP_FIELDS,
+    MappingScope,
+    is_literal_map_field,
+    normalize_field_key,
+)
+from ._yaml_loader import load_sdl_yaml
 from .scenario import ExpandedScenario, Scenario
 from .validator import SemanticValidator
 
 # Top-level sections that are HashMaps of user-defined identifiers.
 # Keys inside these are scenario-author names (e.g., "web-server")
 # and must NOT be transformed.
-_HASHMAP_SECTIONS = frozenset(
-    {
-        "nodes",
-        "infrastructure",
-        "features",
-        "conditions",
-        "vulnerabilities",
-        "entities",
-        "injects",
-        "events",
-        "scripts",
-        "stories",
-        "content",
-        "accounts",
-        "relationships",
-        "agents",
-        "action_contracts",
-        "observation_boundaries",
-        "outcome_interpretation_rules",
-        "behavior_specifications",
-        "evidence_requirements",
-        "objectives",
-        "workflows",
-        "variables",
-    }
-)
+_HASHMAP_SECTIONS = HASHMAP_SECTIONS
 
 # Fields within struct models that are also HashMaps of user-defined keys.
-_NESTED_HASHMAP_FIELDS = frozenset(
-    {
-        "features",  # VM.features (dict[str, str])
-        "conditions",  # VM.conditions (dict[str, str])
-        "injects",  # VM.injects (dict[str, str])
-        "roles",  # Node.roles (dict[str, Role])
-        "log_options",  # RuntimeContainerConfiguration.log_options preserves native engine option keys
-        "labels",  # ImageConfig.labels preserves case-sensitive native image label keys
-        "driver_options",  # RuntimeNetworkBackendDetail.driver_options preserves native network driver keys
-        "ipam_options",  # RuntimeNetworkBackendDetail.ipam_options preserves native IPAM driver keys
-        "facts",  # Entity.facts (dict[str, str])
-        "entities",  # Entity.entities (dict[str, Entity])
-        "events",  # Script.events (dict[str, int])
-        "steps",  # Workflow.steps (dict[str, WorkflowStep])
-        # ParticipantBehaviorSpecification.extensions preserves governed x-owner:term keys.
-        "extensions",
-    }
-)
+_NESTED_HASHMAP_FIELDS = NESTED_HASHMAP_FIELDS
 
 
 def _child_is_hashmap_field(key: str, value: Any) -> bool:
     """Return whether the children of ``key`` are user-defined hashmap keys."""
-    if key in _HASHMAP_SECTIONS:
-        return isinstance(value, dict)
-    if key in _NESTED_HASHMAP_FIELDS:
-        return True
-    # Complex properties use list items like ``[{switch-name: "10.0.0.10"}]``.
-    return key == "properties" and isinstance(value, list)
+    return is_literal_map_field(
+        key,
+        value_is_mapping=isinstance(value, dict),
+        value_is_sequence=isinstance(value, list),
+    )
 
 
 def _normalize_field_key(k: Any) -> Any:
@@ -84,10 +47,8 @@ def _normalize_field_key(k: Any) -> Any:
     # PyYAML's YAML 1.1 rules can coerce bare keys like ``on``/``off`` to bools.
     # SDL field keys are schema-defined strings, so normalize those legacy bool
     # coercions back into the field names we actually support.
-    if isinstance(k, bool):
-        return "on" if k else "off"
     if isinstance(k, str):
-        return k.lower().replace("-", "_")
+        return normalize_field_key(k)
     return k
 
 
@@ -118,6 +79,20 @@ def _normalize_keys(data: Any, is_hashmap: bool = False) -> Any:
         # user-defined keys, list items within it do too.
         return [_normalize_keys(item, is_hashmap=is_hashmap) for item in data]
     return data
+
+
+def load_sdl_fragment(
+    content: str,
+    *,
+    mapping_keys: Literal["structural", "literal"] = "structural",
+    base_pointer: str = "",
+) -> object:
+    """Safely load an SDL YAML fragment with the canonical key preflight."""
+    return load_sdl_yaml(
+        content,
+        scope=MappingScope(mapping_keys),
+        base_pointer=base_pointer,
+    )
 
 
 def _reject_variable_mapping_keys(
@@ -400,14 +375,7 @@ def _load_normalized_data(
     *,
     path: Path | None = None,
 ) -> dict[str, Any]:
-    content = textwrap.dedent(content).strip()
-    if not content:
-        raise SDLParseError("SDL content is empty", path=path)
-
-    try:
-        raw = yaml.safe_load(content)
-    except yaml.YAMLError as e:
-        raise SDLParseError(f"Invalid YAML: {e}", path=path) from e
+    raw = load_sdl_yaml(content, path=path)
 
     if not isinstance(raw, dict):
         raise SDLParseError("SDL must be a YAML mapping (not a scalar or list)", path=path)

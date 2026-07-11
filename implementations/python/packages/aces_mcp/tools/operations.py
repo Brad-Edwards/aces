@@ -162,7 +162,7 @@ def register(mcp: FastMCP) -> None:
                 skip_semantic_validation=not semantic_validation,
             )
         except SDLParseError as exc:
-            return json_response(stage_error("parse", exc.details))
+            return json_response(stage_error("parse", exc))
         except SDLValidationError as exc:
             return json_response(
                 {
