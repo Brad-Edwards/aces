@@ -45,6 +45,11 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
             )
             for declaration in manifest.realization_support
         ],
+        realization_envelope=(
+            manifest.realization_envelope.identity.model_dump(mode="json")
+            if manifest.realization_envelope is not None
+            else None
+        ),
         concept_bindings=[
             ConceptBindingEntryModel(scope=binding.scope, family=binding.family)
             for binding in manifest.concept_bindings
@@ -136,4 +141,7 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
 def backend_manifest_payload(manifest: BackendManifest) -> dict[str, Any]:
     """Render a backend manifest as JSON-ready data."""
 
-    return backend_manifest_v2_model(manifest).model_dump(mode="json")
+    payload = backend_manifest_v2_model(manifest).model_dump(mode="json")
+    if payload.get("realization_envelope") is None:
+        payload.pop("realization_envelope", None)
+    return payload

@@ -1,4 +1,4 @@
-"""Issue #606: libvirt backend conformance (fixture + live target).
+"""Issue #606: libvirt backend conformance (fixture + target adapter).
 
 Acceptance bar:
 
@@ -6,13 +6,12 @@ Acceptance bar:
    ``unsupported-capability-claim`` / ``unsupported-contract-declaration``
    diagnostics (covered by ``test_backend_conformance_cli.py`` /
    ``run_fixture_suite`` -- asserted green here for the libvirt-relevant profile).
-2. ``run_target_conformance`` against the libvirt target passes a real
+2. ``run_target_conformance`` against the libvirt target passes a target
    *provisioning probe* and asserts *snapshot mutation* -- not manifest /
-   contract-surface only. The probe drives ``RuntimeControlPlane`` and proves
-   the snapshot gained provisioning entries.
+   contract-surface only. This is adapter evidence, not daemon or guest proof.
 3. A conformance report is captured and committed (drift-guarded here).
 
-The live probe runs daemon-free through an injected ``RecordingLibvirtDriver``
+The target probe runs daemon-free through an injected ``RecordingLibvirtDriver``
 that confirms realization, so the real ``LibvirtProvisioner`` path is exercised
 without a libvirt/QEMU daemon.
 """
@@ -106,7 +105,7 @@ def test_provisioning_only_fixture_suite_has_no_unsupported_diagnostics():
 
 
 # ---------------------------------------------------------------------------
-# AC2: live provisioning probe + real snapshot mutation
+# AC2: target provisioning probe + snapshot mutation
 # ---------------------------------------------------------------------------
 
 
@@ -121,9 +120,9 @@ def test_provisioning_only_conformance_runs_live_provisioning_probe():
     case_names = {case.name for case in report.cases}
     # Not manifest/contract-surface only: the probe must actually provision and
     # validate a mutated snapshot.
-    assert {"live-manifest", "live-provisioning", "live-snapshot"} <= case_names
+    assert {"target-manifest", "target-provisioning", "target-snapshot"} <= case_names
     for case in report.cases:
-        if case.name in {"live-manifest", "live-provisioning", "live-snapshot"}:
+        if case.name in {"target-manifest", "target-provisioning", "target-snapshot"}:
             assert case.passed, [diag.message for diag in case.diagnostics]
 
 
@@ -150,17 +149,17 @@ def test_libvirt_provisioning_mutates_snapshot():
 
 
 def test_provisioning_only_conformance_requires_confirmed_realization():
-    """A driver that does not confirm realization must fail the live probe.
+    """A driver that does not confirm realization must fail the target probe.
 
     Guards the backend-neutral anti-pattern: provisioning-only conformance must
-    not pass on ``live-manifest`` alone, and must not accept an empty snapshot.
+    not pass on ``target-manifest`` alone, and must not accept an empty snapshot.
     """
 
     report = run_target_conformance(create_libvirt_target(driver=NullLibvirtDriver()))
 
     assert report.passed is False
-    live_provisioning = next((case for case in report.cases if case.name == "live-provisioning"), None)
-    assert live_provisioning is not None, "provisioning-only conformance must run a live-provisioning probe"
+    live_provisioning = next((case for case in report.cases if case.name == "target-provisioning"), None)
+    assert live_provisioning is not None, "provisioning-only conformance must run a target-provisioning probe"
     assert live_provisioning.passed is False
 
 

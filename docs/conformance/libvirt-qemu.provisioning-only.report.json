@@ -234,21 +234,21 @@
       ]
     },
     {
-      "name": "live-manifest",
+      "name": "target-manifest",
       "contract_name": "backend-manifest-v2",
       "valid": true,
       "passed": true,
       "diagnostic_codes": []
     },
     {
-      "name": "live-provisioning",
+      "name": "target-provisioning",
       "contract_name": "operation-status-v1",
       "valid": true,
       "passed": true,
       "diagnostic_codes": []
     },
     {
-      "name": "live-snapshot",
+      "name": "target-snapshot",
       "contract_name": "runtime-snapshot-v1",
       "valid": true,
       "passed": true,

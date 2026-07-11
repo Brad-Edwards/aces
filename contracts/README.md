@@ -7,6 +7,8 @@ The goal of this bucket is organizational clarity:
 - `schemas/` contains published contract schemas
 - `fixtures/` contains valid and invalid payload corpora for those contracts
 - `profiles/` contains capability profile declarations
+- `realization-envelopes/` contains configuration-bound backend realization
+  declarations whose identity is carried through manifests, plans, and snapshots
 
 `schema-publication-manifest.json` is the authoritative publication inventory
 for the current machine-readable schema set. The contracts verification gate

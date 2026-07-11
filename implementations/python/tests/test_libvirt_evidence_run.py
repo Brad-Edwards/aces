@@ -283,7 +283,7 @@ def test_validator_flags_participant_boundary_exposure(tmp_path):
 # --- native-live mode ----------------------------------------------------------
 
 
-def test_native_live_reference_scenario_realizes_content_plane(tmp_path):
+def test_native_live_reference_scenario_discloses_unrealized_content_plane(tmp_path):
     report = run_libvirt_evidence_run(
         scenario_path=_REFERENCE_SCENARIO,
         project_dir=tmp_path,
@@ -292,21 +292,17 @@ def test_native_live_reference_scenario_realizes_content_plane(tmp_path):
         driver_factory=_native_driver_factory(tmp_path),
         probe=_Probe(),
     )
-    # Issue #603: the libvirt backend now realizes the reference scenario's content and
-    # account placements through cloud-init, so native-live realizes the provisioning
-    # substrate. The disclosure remains honest: only the orchestration/evaluation
-    # planes (outside a provisioning-only target) are still surfaced as unrealized —
-    # no content/account provisioning capability is disclosed as unrealized anymore.
-    assert report.passed, report.render()
+    # ASR-519: the TechVault appliance driver does not consume the generic cloud-init
+    # content/account surfaces. A native domain must not hide that gap.
+    assert report.passed is False
     artifact = report.artifact
     assert artifact is not None
     assert validate_libvirt_evidence_run_artifact(artifact) == []
     provenance = artifact["backend"]["realization_provenance"]
-    assert provenance["substrate_realized"] is True
+    assert provenance["substrate_realized"] is False
     unrealized = artifact["realized_topology"]["unrealized_capabilities"]
     assert unrealized, "orchestration/evaluation planes must still be disclosed, not faked"
-    assert all(cap.split(".", 1)[0] in {"orchestrator", "evaluator", "evaluation"} for cap in unrealized), unrealized
-    assert not any("content" in cap.lower() or "account" in cap.lower() for cap in unrealized)
+    assert any("content" in cap.lower() or "account" in cap.lower() for cap in unrealized)
 
 
 def test_native_live_realizes_substrate_for_provisionable_scenario(tmp_path):

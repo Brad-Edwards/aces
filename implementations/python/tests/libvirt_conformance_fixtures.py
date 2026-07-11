@@ -41,6 +41,8 @@ class RecordedOp:
 class RecordingLibvirtDriver:
     """Hermetic libvirt driver that confirms realization and records ops."""
 
+    driver_mode = "generic"
+
     recorded_ops: list[RecordedOp] = field(default_factory=list)
     _realized: set[str] = field(default_factory=set)
 
