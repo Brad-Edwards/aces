@@ -19,6 +19,7 @@ from ._language_diagnostics import parse_error as _parse_error
 from ._language_edit import apply_edit
 from ._language_metadata import REFERENCE_COMPLETION_TARGETS, SECTION_FIELD_COMPLETIONS
 from ._language_references import find_references
+from .formatting import format_sdl_source
 from .parser import _load_normalized_data, parse_sdl
 from .scenario import Scenario
 
@@ -89,23 +90,19 @@ def language_references(sdl_content: str, symbol: str) -> dict[str, Any]:
 
 
 def language_format(sdl_content: str) -> dict[str, Any]:
-    """Return normalized, consistently formatted SDL YAML."""
+    """Migrate recognized legacy spellings and return canonical SDL YAML."""
     size_error = _size_error(sdl_content)
     if size_error is not None:
         return size_error
 
     try:
-        data = _load_normalized_data(sdl_content)
+        result = format_sdl_source(sdl_content)
     except SDLParseError as exc:
         return _parse_error(exc)
 
-    formatted = yaml.safe_dump(
-        data,
-        allow_unicode=False,
-        default_flow_style=False,
-        sort_keys=False,
-    )
-    diagnostics = language_diagnostics(formatted)["diagnostics"]
+    formatted = result.content
+    diagnostics = [item.as_dict() for item in result.diagnostics]
+    diagnostics.extend(language_diagnostics(formatted)["diagnostics"])
     status = "formatted" if not diagnostics else "formatted_with_diagnostics"
     return {"status": status, "content": formatted, "diagnostics": diagnostics}
 

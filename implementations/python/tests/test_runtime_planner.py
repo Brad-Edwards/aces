@@ -445,8 +445,8 @@ workflows:
       attempt:
         type: retry
         objective: defend
-        on-success: finish
-        max-attempts: 3
+        on_success: finish
+        max_attempts: 3
       finish: {type: end}
 """,
                 "orchestrator.workflow-feature-unsupported",
@@ -476,7 +476,7 @@ workflows:
       validate:
         type: objective
         objective: defend
-        on-success: branch
+        on_success: branch
       branch:
         type: decision
         when:
@@ -514,15 +514,15 @@ workflows:
       validate:
         type: retry
         objective: defend
-        on-success: branch
-        max-attempts: 3
+        on_success: branch
+        max_attempts: 3
       branch:
         type: decision
         when:
           steps:
             - step: validate
               outcomes: [succeeded]
-              min-attempts: 2
+              min_attempts: 2
         then: finish
         else: finish
       finish: {type: end}
@@ -560,11 +560,11 @@ workflows:
       left-branch:
         type: objective
         objective: left
-        on-success: joined
+        on_success: joined
       right-branch:
         type: objective
         objective: right
-        on-success: joined
+        on_success: joined
       joined:
         type: join
         next: finish
@@ -766,7 +766,7 @@ entities:
 events:
   kickoff: {conditions: [health], description: kickoff}
 scripts:
-  timeline: {start-time: 0, end-time: 60, speed: 1, events: {kickoff: 10}}
+  timeline: {start_time: 0, end_time: 60, speed: 1, events: {kickoff: 10}}
 workflows:
   flow:
     description: primary
@@ -783,7 +783,7 @@ workflows:
         snapshot = _snapshot_from_plan(old_plan)
 
         changed_variants = [
-            base.replace("end-time: 60", "end-time: 120"),
+            base.replace("end_time: 60", "end_time: 120"),
             base.replace("description: kickoff", "description: changed"),
             base.replace("description: primary", "description: updated"),
             base.replace("then: finish", "then: finish\n        description: changed"),
@@ -905,7 +905,7 @@ infrastructure:
     count: 1
     properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}
     acls:
-      - {direction: in, from-net: corp, action: allow}
+      - {direction: in, from_net: corp, action: allow}
   dc: {count: 1, links: [corp]}
 accounts:
   admin: {username: administrator, node: dc, spn: LDAP/dc.example.local}
@@ -920,14 +920,14 @@ entities:
 events:
   kickoff: {conditions: [health]}
 scripts:
-  timeline: {start-time: 0, end-time: 60, speed: 1, events: {kickoff: 10}}
+  timeline: {start_time: 0, end_time: 60, speed: 1, events: {kickoff: 10}}
 stories:
   main: {scripts: [timeline]}
 workflows:
   flow:
     start: start
     steps:
-      start: {type: objective, objective: defend, on-success: end}
+      start: {type: objective, objective: defend, on_success: end}
       end: {type: end}
 """)
         )
@@ -1365,14 +1365,14 @@ entities:
 events:
   kickoff: {conditions: [health], injects: [mail]}
 scripts:
-  timeline: {start-time: 0, end-time: 60, speed: 1, events: {kickoff: 10}}
+  timeline: {start_time: 0, end_time: 60, speed: 1, events: {kickoff: 10}}
 stories:
   main: {scripts: [timeline]}
 workflows:
   flow:
     start: start
     steps:
-      start: {type: objective, objective: initial, on-success: end}
+      start: {type: objective, objective: initial, on_success: end}
       end: {type: end}
 """)
             ),

@@ -8,7 +8,7 @@ be the home of the authoritative machine-readable artifacts, independent of any
 single implementation language or package layout.
 
 Current published schemas cover:
-- SDL authoring input
+- SDL normalized authoring objects (not raw YAML presentation)
 - instantiated scenarios
 - backend manifests (`v1` legacy plus shared-apparatus `v2`)
 - processor manifests (`v1` legacy plus shared-apparatus `v2`)
@@ -27,6 +27,14 @@ Current published schemas cover:
   context-view meaning and comparability semantics
 - experiment-core task, run, apparatus-context, study/collection, capture
   specification, raw evidence, and derived measure contracts
+
+`sdl/sdl-authoring-input-v1.json` begins after `sdl-yaml/v1` source decoding,
+canonical-field recognition, shorthand expansion, enum normalization, and typed
+construction. Its title and `x-aces-document-phase` annotation state that
+boundary. Raw YAML properties such as duplicate keys, tags, directives,
+anchors, aliases, Core scalar resolution, and resource limits are specified in
+`specs/sdl/document-model.md` and tested by
+`contracts/fixtures/sdl/sdl-yaml-v1/`; JSON Schema cannot express them.
 
 Current filenames still use `runtime` for some live-execution artifacts. That
 naming is preserved for compatibility while the repository migrates toward the

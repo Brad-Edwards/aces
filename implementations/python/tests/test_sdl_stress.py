@@ -121,8 +121,8 @@ entities:
 injects:
   attack-inject:
     source: attack-pkg
-    from-entity: red-team
-    to-entities:
+    from_entity: red-team
+    to_entities:
       - blue-team
 
 events:
@@ -134,8 +134,8 @@ events:
 
 scripts:
   main-script:
-    start-time: 5 min
-    end-time: 2 hour
+    start_time: 5 min
+    end_time: 2 hour
     speed: 1.0
     events:
       attack-event: 30 min
@@ -1253,8 +1253,8 @@ events:
 
 scripts:
   day-1:
-    start-time: 0
-    end-time: 2 hour
+    start_time: 0
+    end_time: 2 hour
     speed: 1
     events:
       phishing-wave: 5 min
@@ -1442,8 +1442,8 @@ events:
 
 scripts:
   identity-day:
-    start-time: 0
-    end-time: 4 hour
+    start_time: 0
+    end_time: 4 hour
     speed: 1
     events:
       federation-cutover: 30 min

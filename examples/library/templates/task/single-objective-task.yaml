@@ -39,6 +39,6 @@ body:
         perform-task:
           type: objective
           objective: complete-service-check-task
-          on-success: done
+          on_success: done
         done:
           type: end

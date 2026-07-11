@@ -81,8 +81,8 @@ stories:
     scripts: [{prefix}timeline]
 scripts:
   {prefix}timeline:
-    start-time: 0
-    end-time: 60
+    start_time: 0
+    end_time: 60
     speed: 1
     events:
       {prefix}kickoff: 0
@@ -106,7 +106,7 @@ workflows:
       start:
         type: objective
         objective: {prefix}observe
-        on-success: finish
+        on_success: finish
       finish:
         type: end
 """,

@@ -157,9 +157,14 @@ Nodes:
 """
     )
 
-    assert payload["status"] == "formatted"
+    assert payload["status"] == "formatted_with_diagnostics"
     assert payload["content"].startswith("name: formatting-test\nnodes:\n")
-    assert "type: Switch" in payload["content"]
+    assert "type: switch" in payload["content"]
+    assert [item["code"] for item in payload["diagnostics"]] == [
+        "sdl.noncanonical_field",
+        "sdl.noncanonical_field",
+        "sdl.noncanonical_field",
+    ]
 
 
 def test_language_format_reports_parse_error() -> None:

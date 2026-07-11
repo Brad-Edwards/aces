@@ -798,8 +798,8 @@ events:
 
 scripts:
   locked-shields-day-1:
-    start-time: 0
-    end-time: 8 hour
+    start_time: 0
+    end_time: 8 hour
     speed: 1
     events:
       disruption-wave: 2 hour

@@ -16933,9 +16933,9 @@
           "title": "Cases",
           "type": "array"
         },
-        "compensate-with": {
+        "compensate_with": {
           "default": "",
-          "title": "Compensate-With",
+          "title": "Compensate With",
           "type": "string"
         },
         "default": {
@@ -16958,7 +16958,7 @@
           "title": "Join",
           "type": "string"
         },
-        "max-attempts": {
+        "max_attempts": {
           "anyOf": [
             {
               "type": "integer"
@@ -16971,7 +16971,7 @@
             }
           ],
           "default": null,
-          "title": "Max-Attempts"
+          "title": "Max Attempts"
         },
         "next": {
           "default": "",
@@ -16983,19 +16983,19 @@
           "title": "Objective",
           "type": "string"
         },
-        "on-exhausted": {
+        "on_exhausted": {
           "default": "",
-          "title": "On-Exhausted",
+          "title": "On Exhausted",
           "type": "string"
         },
-        "on-failure": {
+        "on_failure": {
           "default": "",
-          "title": "On-Failure",
+          "title": "On Failure",
           "type": "string"
         },
-        "on-success": {
+        "on_success": {
           "default": "",
-          "title": "On-Success",
+          "title": "On Success",
           "type": "string"
         },
         "then": {
@@ -17043,7 +17043,7 @@
       "additionalProperties": false,
       "description": "Predicate reference to previously observed workflow step state.",
       "properties": {
-        "min-attempts": {
+        "min_attempts": {
           "anyOf": [
             {
               "type": "integer"
@@ -17056,7 +17056,7 @@
             }
           ],
           "default": null,
-          "title": "Min-Attempts"
+          "title": "Min Attempts"
         },
         "outcomes": {
           "items": {
@@ -17143,7 +17143,7 @@
   "$id": "https://aces.dev/schemas/sdl-authoring-input-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Top-level scenario specification.\n\nA YAML document with up to 23 named sections. Only ``name``\nis required. All sections are optional dicts keyed by\nuser-defined identifiers.",
+  "description": "Normalized SDL authoring object.\n\nThis model applies after ``sdl-yaml/v1`` source-profile checks, structural\nkey canonicalization, shorthand expansion, enum normalization, and typed\nconstruction, but before module expansion and instantiation. Its JSON\nSchema does not validate YAML presentation details.",
   "properties": {
     "accounts": {
       "additionalProperties": {
@@ -17345,6 +17345,9 @@
   "required": [
     "name"
   ],
-  "title": "Scenario",
-  "type": "object"
+  "title": "SDL Normalized Authoring Object v1",
+  "type": "object",
+  "x-aces-document-phase": "normalized-authoring-object",
+  "x-aces-source-profile": "sdl-yaml/v1",
+  "x-aces-validates-raw-source": false
 }

@@ -29,17 +29,20 @@ def register(mcp: FastMCP) -> None:
             "Pass the full YAML scenario text as `sdl_content`.  Optionally "
             "set `structural_only=true` to skip semantic cross-reference "
             "checks (useful for work-in-progress fragments that aren't "
-            "complete yet)."
+            "complete yet). Set `accept_migration_syntax=true` only when "
+            "migrating legacy field spellings; canonical validation is strict."
         ),
     )
     def sdl_validate(
         sdl_content: str,
         structural_only: bool = False,
+        accept_migration_syntax: bool = False,
     ) -> str:
         if len(sdl_content.encode("utf-8", errors="replace")) > _MAX_INPUT_BYTES:
             return f"INPUT TOO LARGE — limit is {_MAX_INPUT_BYTES} bytes."
 
         from aces_sdl import (
+            SDLMigrationPolicy,
             SDLParseError,
             SDLValidationError,
             parse_sdl,
@@ -49,6 +52,7 @@ def register(mcp: FastMCP) -> None:
             scenario = parse_sdl(
                 sdl_content,
                 skip_semantic_validation=structural_only,
+                migration_policy=(SDLMigrationPolicy.ACCEPT if accept_migration_syntax else SDLMigrationPolicy.REJECT),
             )
         except SDLParseError as exc:
             return (
@@ -77,6 +81,12 @@ def register(mcp: FastMCP) -> None:
             parts.append(f"\nAdvisories ({len(scenario.advisories)}):")
             for adv in scenario.advisories:
                 parts.append(f"  - {adv}")
+
+        if scenario.source_diagnostics:
+            parts.append(f"\nSource migration advisories ({len(scenario.source_diagnostics)}):")
+            for diagnostic in scenario.source_diagnostics:
+                start = diagnostic.primary_range.start
+                parts.append(f"  - [{diagnostic.code}] line {start.line}, column {start.column}: {diagnostic.message}")
 
         if structural_only:
             parts.append(
@@ -531,8 +541,8 @@ events:
 
 scripts:
   main-timeline:
-    start-time: 0
-    end-time: 4 hour
+    start_time: 0
+    end_time: 4 hour
     speed: ${exercise_speed}
     events:
       attack-start: 30 min
@@ -603,11 +613,11 @@ workflows:
       run-attack:
         type: objective
         objective: red-access
-        on-success: run-defense
+        on_success: run-defense
       run-defense:
         type: objective
         objective: blue-defend
-        on-success: done
+        on_success: done
       done:
         type: end
 """

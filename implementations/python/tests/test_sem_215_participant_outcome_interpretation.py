@@ -74,112 +74,112 @@ def _scenario_yaml() -> str:
               verify:
                 type: objective
                 objective: exfil-objective
-                on-success: done
-                on-failure: done
+                on_success: done
+                on_failure: done
               done:
                 type: end
-        action-contracts:
+        action_contracts:
           scan:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            behavioral-granularity: atomic
-            procedure-basis: nmap service discovery
-            realization-profile: backend-declared
-            fidelity-claim: records participant discovery intent and terminal observation
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            behavioral_granularity: atomic
+            procedure_basis: nmap service discovery
+            realization_profile: backend-declared
+            fidelity_claim: records participant discovery intent and terminal observation
             preconditions:
-              - precondition-id: authority-in-scope
-                precondition-class: authority
+              - precondition_id: authority-in-scope
+                precondition_class: authority
                 description: red participant is authorized to scan the web service
-                support-refs: [agents.red-agent]
+                support_refs: [agents.red-agent]
             effects:
-              - effect-id: scan-evidence
-                effect-class: evidence_effect
+              - effect_id: scan-evidence
+                effect_class: evidence_effect
                 description: scan emits evidence even when the action fails
-                evidence-refs: [evidence.scan-output, evidence.alert]
-              - effect-id: detection-alert
-                effect-class: detection_effect
+                evidence_refs: [evidence.scan-output, evidence.alert]
+              - effect_id: detection-alert
+                effect_class: detection_effect
                 description: scan may trigger a backend detection alert
-                target-refs: [alerts.ids.scan]
-                evidence-refs: [evidence.alert]
-            failure-classes: [precondition_unsatisfied, timeout, backend_error, unknown]
-        observation-boundaries:
+                target_refs: [alerts.ids.scan]
+                evidence_refs: [evidence.alert]
+            failure_classes: [precondition_unsatisfied, timeout, backend_error, unknown]
+        observation_boundaries:
           red-view:
-            projection-basis: participant-local projection over observed services
-            observable-refs: [nodes.web.services.http]
-            hidden-refs: [content.private-answer-key]
-            evidence-refs: [evidence.scan-output, evidence.alert]
-            redaction-policy: hidden refs never project without explicit disclosure
-            latency-profile: terminal observation emitted after state transition commit
-            view-rules:
-              - information-ref: nodes.web.services.http
-                boundary-class: observable_resource
+            projection_basis: participant-local projection over observed services
+            observable_refs: [nodes.web.services.http]
+            hidden_refs: [content.private-answer-key]
+            evidence_refs: [evidence.scan-output, evidence.alert]
+            redaction_policy: hidden refs never project without explicit disclosure
+            latency_profile: terminal observation emitted after state transition commit
+            view_rules:
+              - information_ref: nodes.web.services.http
+                boundary_class: observable_resource
                 disposition: observable
-                visibility-basis: service is visible to the red participant
-              - information-ref: content.private-answer-key
-                boundary-class: private_answer_key
+                visibility_basis: service is visible to the red participant
+              - information_ref: content.private-answer-key
+                boundary_class: private_answer_key
                 disposition: hidden
-                visibility-basis: adjudication-only hidden truth
-              - information-ref: evidence.alert
-                boundary-class: archival_evidence
+                visibility_basis: adjudication-only hidden truth
+              - information_ref: evidence.alert
+                boundary_class: archival_evidence
                 disposition: evidence_only
-                visibility-basis: archival alert evidence reference
-                evidence-refs: [evidence.alert]
+                visibility_basis: archival alert evidence reference
+                evidence_refs: [evidence.alert]
         agents:
           red-agent:
             entity: red-team
             actions: [scan]
-            observation-boundaries: [red-view]
-        outcome-interpretation-rules:
+            observation_boundaries: [red-view]
+        outcome_interpretation_rules:
           scan-evidence-objective:
-            semantic-version: 1.0.0
-            participant-scope: participant_local
-            observation-point-basis: terminal participant observation event
-            interpretation-basis: explicit SEM-215 mapping from local scan evidence to objective/evaluation meaning
-            evidence-refs: [evidence.alert]
+            semantic_version: 1.0.0
+            participant_scope: participant_local
+            observation_point_basis: terminal participant observation event
+            interpretation_basis: explicit SEM-215 mapping from local scan evidence to objective/evaluation meaning
+            evidence_refs: [evidence.alert]
             limitations:
               - local scan result is not objective success by itself
               - reward remains a derived assessment signal
-            source-bindings:
-              - source-id: local-action
-                source-layer: participant_action_outcome
+            source_bindings:
+              - source_id: local-action
+                source_layer: participant_action_outcome
                 ref: scan
-                interpretation-role: local action status input
-                evidence-refs: [evidence.scan-output]
-              - source-id: alert-evidence
-                source-layer: evidence_claim
+                interpretation_role: local action status input
+                evidence_refs: [evidence.scan-output]
+              - source_id: alert-evidence
+                source_layer: evidence_claim
                 ref: evidence.alert
-                interpretation-role: alert evidence input
-                evidence-refs: [evidence.alert]
-              - source-id: scaffold
-                source-layer: scaffold_variant
+                interpretation_role: alert evidence input
+                evidence_refs: [evidence.alert]
+              - source_id: scaffold
+                source_layer: scaffold_variant
                 ref: scaffold.standard
-                interpretation-role: benchmark context input
-                provenance-refs: [provenance.scaffold.standard]
-            target-bindings:
-              - target-id: objective-meaning
-                target-layer: objective_result
+                interpretation_role: benchmark context input
+                provenance_refs: [provenance.scaffold.standard]
+            target_bindings:
+              - target_id: objective-meaning
+                target_layer: objective_result
                 ref: exfil-objective
                 relation: evidence supports objective interpretation
-                evidence-refs: [evidence.alert]
+                evidence_refs: [evidence.alert]
                 limitations: [objective success still requires evaluator confirmation]
-              - target-id: evaluation-meaning
-                target-layer: evaluation_result
+              - target_id: evaluation-meaning
+                target_layer: evaluation_result
                 ref: exfil-eval
                 relation: evidence is an input to evaluation meaning
-                evidence-refs: [evidence.alert]
+                evidence_refs: [evidence.alert]
                 limitations: [evaluation result is not inferred from action status]
-              - target-id: workflow-meaning
-                target-layer: workflow_result
+              - target_id: workflow-meaning
+                target_layer: workflow_result
                 ref: response-flow
                 relation: evidence may inform workflow result interpretation
-                evidence-refs: [evidence.alert]
+                evidence_refs: [evidence.alert]
                 limitations: [workflow completion is evaluated separately]
-              - target-id: reward-meaning
-                target-layer: reward_signal
+              - target_id: reward-meaning
+                target_layer: reward_signal
                 ref: reward.scan-learning
                 relation: reward relevant only under governed assessment rule
-                governance-ref: assessment.reward.scan-learning
-                evidence-refs: [evidence.alert]
+                governance_ref: assessment.reward.scan-learning
+                evidence_refs: [evidence.alert]
                 limitations: [reward is derived, not the participant outcome]
         """
     )
@@ -334,16 +334,16 @@ def _history_payloads(
 
 def _episode_status_scenario_yaml() -> str:
     return _scenario_yaml().replace(
-        "      - source-id: scaffold\n"
-        "        source-layer: scaffold_variant\n"
+        "      - source_id: scaffold\n"
+        "        source_layer: scaffold_variant\n"
         "        ref: scaffold.standard\n"
-        "        interpretation-role: benchmark context input\n"
-        "        provenance-refs: [provenance.scaffold.standard]",
-        "      - source-id: episode-terminal\n"
-        "        source-layer: participant_episode_status\n"
+        "        interpretation_role: benchmark context input\n"
+        "        provenance_refs: [provenance.scaffold.standard]",
+        "      - source_id: episode-terminal\n"
+        "        source_layer: participant_episode_status\n"
         "        ref: episode.terminal\n"
-        "        interpretation-role: participant episode terminal status input\n"
-        "        provenance-refs: [runtime.participant-episode-history.episode-1]",
+        "        interpretation_role: participant episode terminal status input\n"
+        "        provenance_refs: [runtime.participant-episode-history.episode-1]",
         1,
     )
 
@@ -646,7 +646,7 @@ def test_outcome_evidence_refs_must_be_grounded_in_event_payload() -> None:
 
 def test_reward_interpretation_requires_governed_assessment_rule() -> None:
     missing_governance = _scenario_yaml().replace(
-        "        governance-ref: assessment.reward.scan-learning\n",
+        "        governance_ref: assessment.reward.scan-learning\n",
         "",
         1,
     )
@@ -657,8 +657,8 @@ def test_reward_interpretation_requires_governed_assessment_rule() -> None:
 
 def test_outcome_interpretation_scope_is_participant_local_only() -> None:
     global_scope = _scenario_yaml().replace(
-        "    participant-scope: participant_local\n",
-        "    participant-scope: cohort_global\n",
+        "    participant_scope: participant_local\n",
+        "    participant_scope: cohort_global\n",
         1,
     )
 
@@ -700,7 +700,7 @@ def test_reward_interpretation_records_must_match_declared_governance_ref() -> N
 
 def test_benchmark_outcome_inputs_require_explicit_provenance() -> None:
     missing_provenance = _scenario_yaml().replace(
-        "        provenance-refs: [provenance.scaffold.standard]\n",
+        "        provenance_refs: [provenance.scaffold.standard]\n",
         "",
         1,
     )
@@ -711,15 +711,15 @@ def test_benchmark_outcome_inputs_require_explicit_provenance() -> None:
 
 def test_episode_status_outcome_inputs_require_explicit_provenance() -> None:
     missing_provenance = _scenario_yaml().replace(
-        "      - source-id: scaffold\n"
-        "        source-layer: scaffold_variant\n"
+        "      - source_id: scaffold\n"
+        "        source_layer: scaffold_variant\n"
         "        ref: scaffold.standard\n"
-        "        interpretation-role: benchmark context input\n"
-        "        provenance-refs: [provenance.scaffold.standard]",
-        "      - source-id: episode-terminal\n"
-        "        source-layer: participant_episode_status\n"
+        "        interpretation_role: benchmark context input\n"
+        "        provenance_refs: [provenance.scaffold.standard]",
+        "      - source_id: episode-terminal\n"
+        "        source_layer: participant_episode_status\n"
         "        ref: episode.terminal\n"
-        "        interpretation-role: participant episode terminal status input",
+        "        interpretation_role: participant episode terminal status input",
         1,
     )
 
@@ -842,8 +842,8 @@ def test_declared_outcome_source_provenance_must_be_preserved_at_runtime() -> No
 
 def test_outcome_source_provenance_cannot_expose_hidden_boundary_refs() -> None:
     hidden_provenance_yaml = _scenario_yaml().replace(
-        "        provenance-refs: [provenance.scaffold.standard]\n",
-        "        provenance-refs: [content.private-answer-key]\n",
+        "        provenance_refs: [provenance.scaffold.standard]\n",
+        "        provenance_refs: [content.private-answer-key]\n",
         1,
     )
     model = compile_runtime_model(parse_sdl(hidden_provenance_yaml))

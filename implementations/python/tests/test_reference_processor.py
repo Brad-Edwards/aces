@@ -60,7 +60,7 @@ _SCENARIO = dedent(
       response:
         start: run
         steps:
-          run: {type: objective, objective: validate, on-success: finish}
+          run: {type: objective, objective: validate, on_success: finish}
           finish: {type: end}
     """
 )
@@ -91,7 +91,7 @@ _PARAM_SCENARIO = dedent(
       response:
         start: run
         steps:
-          run: {type: objective, objective: validate, on-success: finish}
+          run: {type: objective, objective: validate, on_success: finish}
           finish: {type: end}
     """
 )

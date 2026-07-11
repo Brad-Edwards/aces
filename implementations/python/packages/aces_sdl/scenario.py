@@ -15,9 +15,10 @@ outside the SDL.
 from collections.abc import Mapping
 from typing import Annotated
 
-from pydantic import Field, PrivateAttr, StringConstraints, model_validator
+from pydantic import ConfigDict, Field, PrivateAttr, StringConstraints, model_validator
 
 from ._base import VARIABLE_NAME_PATTERN, VARIABLE_TOKEN_RE, SDLModel
+from ._errors import SDLParseDiagnostic
 from .accounts import Account
 from .agents import Agent
 from .conditions import Condition
@@ -116,12 +117,22 @@ class ImportDecl(SDLModel):
 
 
 class Scenario(SDLModel):
-    """Top-level scenario specification.
+    """Normalized SDL authoring object.
 
-    A YAML document with up to 23 named sections. Only ``name``
-    is required. All sections are optional dicts keyed by
-    user-defined identifiers.
+    This model applies after ``sdl-yaml/v1`` source-profile checks, structural
+    key canonicalization, shorthand expansion, enum normalization, and typed
+    construction, but before module expansion and instantiation. Its JSON
+    Schema does not validate YAML presentation details.
     """
+
+    model_config = ConfigDict(
+        title="SDL Normalized Authoring Object v1",
+        json_schema_extra={
+            "x-aces-document-phase": "normalized-authoring-object",
+            "x-aces-source-profile": "sdl-yaml/v1",
+            "x-aces-validates-raw-source": False,
+        },
+    )
 
     # --- Identity ---
     name: str
@@ -161,6 +172,7 @@ class Scenario(SDLModel):
     )
 
     _advisories: list[str] = PrivateAttr(default_factory=list)
+    _source_diagnostics: tuple[SDLParseDiagnostic, ...] = PrivateAttr(default=())
     _semantic_validated: bool = PrivateAttr(default=False)
     # Capability-variable provenance carried across the SDL module-import
     # composition boundary. The composition pass strips imported variables
@@ -181,6 +193,14 @@ class Scenario(SDLModel):
 
     def _set_advisories(self, advisories: list[str]) -> None:
         self._advisories = list(advisories)
+
+    @property
+    def source_diagnostics(self) -> tuple[SDLParseDiagnostic, ...]:
+        """Non-fatal source migration diagnostics retained after parsing."""
+        return self._source_diagnostics
+
+    def _set_source_diagnostics(self, diagnostics: list[SDLParseDiagnostic]) -> None:
+        self._source_diagnostics = tuple(diagnostics)
 
     @property
     def semantic_validated(self) -> bool:
@@ -229,6 +249,14 @@ class InstantiatedScenario(Scenario):
     literal ``${name}`` sequence (single-pass substitution does not re-scan
     it), the schema and this validator treat it as non-concrete and reject it.
     """
+
+    model_config = ConfigDict(
+        title="SDL Instantiated Scenario v1",
+        json_schema_extra={
+            "x-aces-document-phase": "instantiated-scenario",
+            "x-aces-source-profile": "sdl-yaml/v1",
+        },
+    )
 
     _instantiation_parameters: dict[str, object] = PrivateAttr(default_factory=dict)
     _instantiation_profile: str | None = PrivateAttr(default=None)

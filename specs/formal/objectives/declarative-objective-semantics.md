@@ -22,8 +22,8 @@ The implementation must build on these existing authorities:
 
 - SDL structure: `aces_sdl.objectives.Objective`,
   `ObjectiveSuccess`, and `ObjectiveWindow`
-- parser/model gates: `SDLModel`, parser key normalization, variable-key
-  rejection, and `SDLParseError`
+- parser/model gates: `sdl-yaml/v1`, `SDLModel`, canonical-field enforcement,
+  explicit migration, variable-key rejection, and `SDLParseError`
 - static validation: `SemanticValidator` and `SDLValidationError`
 - objective-window analysis: `aces_sdl.semantics.objectives`
 - condition resolution: the targetable named-reference index over declared

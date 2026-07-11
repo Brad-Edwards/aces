@@ -61,77 +61,77 @@ nodes:
       mounts:
         - target: /shuffle-database
           source: aptl_shuffle_data
-          source-sensitivity: plain
-          source-kind: volume
-          filesystem-type: ext4
-          read-only: false
+          source_sensitivity: plain
+          source_kind: volume
+          filesystem_type: ext4
+          read_only: false
           options: [rw, nosuid]
-          options-sensitivity: plain
+          options_sensitivity: plain
           propagation: rprivate
           stability: volume-backed
-          backend-generated: true
-      filesystem-inventory:
+          backend_generated: true
+      filesystem_inventory:
         - path: /app/app.py
-          entry-type: file
-          owner-user: root
-          owner-group: root
+          entry_type: file
+          owner_user: root
+          owner_group: root
           uid: "0"
           gid: "0"
           mode: "0644"
           size: "4096"
-          content-digest: 4f8c2d
-          digest-algorithm: sha256
-          source-path: src/webapp/app.py
+          content_digest: 4f8c2d
+          digest_algorithm: sha256
+          source_path: src/webapp/app.py
           provenance: python-package
           stability: stable
           sensitivity: plain
         - path: /var/log/gunicorn/access.log
-          entry-type: file
+          entry_type: file
           mode: "0600"
           stability: log
           sensitivity: operator-secret
-      local-control-interfaces:
-        - control-interface-id: docker-sock
+      local_control_interfaces:
+        - control_interface_id: docker-sock
           path: /run/docker.sock
           kind: unix-socket
           protocol: docker
-          bind-source-sensitivity: operator-secret
+          bind_source_sensitivity: operator-secret
           access: read-write
       processes:
         - name: shufflebackend
           command: ./shufflebackend
           user: root
-          working-directory: /app
+          working_directory: /app
         - name: supervisord
           pid: 1
           command: supervisord -n
           role: supervisor
         - name: gunicorn
-          parent-pid: 1
+          parent_pid: 1
           command: [gunicorn, app:app]
           role: worker
       environment:
         - name: TECHVAULT_ADMIN_PASSWORD
-          value-classification: redacted
+          value_classification: redacted
           provenance: operator
         - name: SCENARIO_FIXTURE_TOKEN
           value: fixture-token
-          value-classification: secret-fixture
+          value_classification: secret-fixture
           provenance: compose
-      linux-capabilities:
+      linux_capabilities:
         required: [CAP_NET_ADMIN]
         effective: CAP_NET_ADMIN
-      operational-policy:
+      operational_policy:
         restart: unless-stopped
-        resource-limits:
+        resource_limits:
           memory: 512 MiB
           cpu: 0.5
           pids: 128
       container:
         entrypoint: [/entrypoint.sh]
         command: [gunicorn, app:app]
-        log-driver: json-file
-        log-options:
+        log_driver: json-file
+        log_options:
           max-size: 10m
           max-file: "3"
         namespaces:
@@ -141,69 +141,69 @@ nodes:
           userns: host
           uts: private
         privileged: false
-        read-only-rootfs: false
-        publish-all-ports: false
+        read_only_rootfs: false
+        publish_all_ports: false
         autoremove: false
-        shm-size: 64 MiB
-        masked-paths: [/proc/acpi, /proc/kcore]
-        read-only-paths: /proc/sys
-        cgroup-parent: /docker
-        runtime-name: runc
+        shm_size: 64 MiB
+        masked_paths: [/proc/acpi, /proc/kcore]
+        read_only_paths: /proc/sys
+        cgroup_parent: /docker
+        runtime_name: runc
         devices:
-          - host-path: /dev/null
-            container-path: /dev/null
+          - host_path: /dev/null
+            container_path: /dev/null
             permissions: rwm
-        device-cgroup-rules: c 1:3 rwm
-        seccomp-profile: unconfined
-        security-opt: [seccomp:unconfined, no-new-privileges]
-        extra-hosts:
+        device_cgroup_rules: c 1:3 rwm
+        seccomp_profile: unconfined
+        security_opt: [seccomp:unconfined, no-new-privileges]
+        extra_hosts:
           - hostname: wazuh-manager
             address: 172.20.0.10
         dns: [8.8.8.8]
-        dns-options: ndots:0
-        dns-search: [techvault.local]
-        group-add: [adm, "101"]
+        dns_options: ndots:0
+        dns_search: [techvault.local]
+        group_add: [adm, "101"]
       health:
         status: healthy
-        failing-streak: "0"
+        failing_streak: "0"
         log:
           - start: "2026-05-20T12:00:00Z"
             end: "2026-05-20T12:00:01Z"
-            exit-code: "0"
+            exit_code: "0"
             output: ok
       packages:
         - manager: apk
           name: musl
           version: 1.2.4-r2
-      software-components:
-        - component-id: shuffle-backend-app
+      software_components:
+        - component_id: shuffle-backend-app
           name: shuffle-backend
           version: 1.2.3
-          component-type: application
+          component_type: application
           provenance: scanner
           ecosystem: go
           purl: "pkg:golang/github.com/frikky/shuffle@1.2.3"
-          package-manager: apk
-          package-name: shuffle-backend
-          package-version: 1.2.3-r0
-          manifest-path: /app/go.mod
-          installed-paths: [/app/shufflebackend, /app/go.mod]
+          package_manager: apk
+          package_name: shuffle-backend
+          package_version: 1.2.3-r0
+          manifest_path: /app/go.mod
+          installed_paths: [/app/shufflebackend, /app/go.mod]
           hashes:
             - algorithm: sha256
               value: abc123
-      dependency-manifests:
+      dependency_manifests:
         - ecosystem: go
           path: /app/go.mod
           format: go-module
-      package-vulnerabilities:
+      package_vulnerabilities:
         - id: CVE-2026-12345
-          package-name: musl
-          installed-version: 1.2.4-r2
-          fixed-version: 1.2.5-r0
+          package_name: musl
+          installed_version: 1.2.4-r2
+          fixed_version: 1.2.5-r0
           severity: high
           scanner: trivy
-          image-digest: sha256:abc123
-          scan-time: "2026-05-20T12:00:00Z"
+          image_digest: sha256:abc123
+          scan_time: "2026-05-20T12:00:00Z"
 """)
         )
 
@@ -295,22 +295,22 @@ nodes:
       - {port: 389, name: ldap}
       - {port: 88, name: kerberos}
     runtime:
-      identity-authorities:
-        - identity-authority-id: techvault-domain
+      identity_authorities:
+        - identity_authority_id: techvault-domain
           kind: domain
           namespace: techvault.local
-          domain-name: TECHVAULT
+          domain_name: TECHVAULT
           realm: TECHVAULT.LOCAL
           services:
-            - {service-id: ldap-endpoint, service: ldap, protocol: ldap, port: 389}
+            - {service_id: ldap-endpoint, service: ldap, protocol: ldap, port: 389}
           subjects:
-            - {subject-id: alice, kind: user, name: alice}
-            - {subject-id: domain-admins, kind: group, name: Domain Admins}
+            - {subject_id: alice, kind: user, name: alice}
+            - {subject_id: domain-admins, kind: group, name: Domain Admins}
           relationships:
-            - relationship-id: alice-admin
-              relationship-type: member-of
-              source-ref: alice
-              target-ref: domain-admins
+            - relationship_id: alice-admin
+              relationship_type: member-of
+              source_ref: alice
+              target_ref: domain-admins
 """)
         )
 
@@ -335,66 +335,66 @@ nodes:
     services:
       - {port: 445, name: smb}
     runtime:
-      local-identity:
+      local_identity:
         users:
           - {username: svc-fileshare, uid: 1100, primary_gid: 1100, primary_group: svc-fileshare}
-      file-services:
-        - file-service-id: fileshare-smb
+      file_services:
+        - file_service_id: fileshare-smb
           service: smb
           protocol: smb
           backend: samba-4.x
           shares:
-            - share-id: public
+            - share_id: public
               name: public
               kind: disk
-              backing-path: /srv/samba/public
-              read-only: true
+              backing_path: /srv/samba/public
+              read_only: true
               browseable: true
-              guest-ok: true
-            - share-id: deploy-keys
+              guest_ok: true
+            - share_id: deploy-keys
               name: deploy_keys
               kind: disk
-              backing-path: /srv/samba/deploy_keys
-              read-only: false
+              backing_path: /srv/samba/deploy_keys
+              read_only: false
               browseable: false
-              guest-ok: false
-              valid-users: [svc-fileshare]
-              write-users: [svc-fileshare]
+              guest_ok: false
+              valid_users: [svc-fileshare]
+              write_users: [svc-fileshare]
           principals:
-            - principal-id: nobody
+            - principal_id: nobody
               kind: guest
               name: nobody
-              external-id: S-1-5-21-0-501
+              external_id: S-1-5-21-0-501
               status: enabled
-              credential-classification: no_credential
+              credential_classification: no_credential
               origin: built_in
-            - principal-id: svc-fileshare
+            - principal_id: svc-fileshare
               kind: service_account
               name: svc-fileshare
               status: enabled
-              credential-classification: redacted
+              credential_classification: redacted
               origin: provisioned
-              local-user-ref: svc-fileshare
-          access-rules:
-            - rule-id: public-read
-              subject-ref: nobody
-              resource-ref: public
+              local_user_ref: svc-fileshare
+          access_rules:
+            - rule_id: public-read
+              subject_ref: nobody
+              resource_ref: public
               action: read
               effect: allow
               basis: share_config
-          access-observations:
-            - observation-id: anon-mount-allowed
-              subject-ref: anonymous
-              resource-ref: public
+          access_observations:
+            - observation_id: anon-mount-allowed
+              subject_ref: anonymous
+              resource_ref: public
               action: browse
               outcome: allowed
               basis: observed_probe
-      filesystem-inventory:
+      filesystem_inventory:
         - path: /srv/samba/public
-          entry-type: directory
+          entry_type: directory
           presence: present
         - path: /srv/samba/deploy_keys/id_ed25519
-          entry-type: file
+          entry_type: file
           presence: expected_absent
           description: Expected deploy-key attempted by setup, absent at capture.
 """)
@@ -539,14 +539,14 @@ entities:
 events:
   kickoff: {conditions: [health]}
 scripts:
-  timeline: {start-time: 0, end-time: 60, speed: 1, events: {kickoff: 10}}
+  timeline: {start_time: 0, end_time: 60, speed: 1, events: {kickoff: 10}}
 stories:
   main: {scripts: [timeline]}
 workflows:
   flow:
     start: start
     steps:
-      start: {type: objective, objective: initial, on-success: branch}
+      start: {type: objective, objective: initial, on_success: branch}
       branch:
         type: decision
         when: {conditions: [health]}
@@ -694,7 +694,7 @@ objectives:
 entities:
   blue: {role: blue}
 scripts:
-  timeline: {start-time: 0, end-time: 60, speed: 1, events: {missing-event: 10}}
+  timeline: {start_time: 0, end_time: 60, speed: 1, events: {missing-event: 10}}
 stories:
   main: {scripts: [missing-script]}
 workflows:
@@ -757,9 +757,9 @@ workflows:
       attempt-loop:
         type: retry
         objective: attempt
-        on-success: branch
-        max-attempts: 3
-        on-exhausted: handle-error
+        on_success: branch
+        max_attempts: 3
+        on_exhausted: handle-error
       branch:
         type: decision
         when:
@@ -772,7 +772,7 @@ workflows:
       handle-error:
         type: objective
         objective: recover
-        on-success: done
+        on_success: done
       done: {type: end}
 """)
         )
@@ -832,15 +832,15 @@ workflows:
         type: parallel
         branches: [left-branch, right-branch]
         join: joined
-        on-failure: recover-step
+        on_failure: recover-step
       left-branch:
         type: objective
         objective: left
-        on-success: joined
+        on_success: joined
       right-branch:
         type: objective
         objective: right
-        on-success: joined
+        on_success: joined
       joined:
         type: join
         next: branch
@@ -850,13 +850,13 @@ workflows:
           steps:
             - step: left-branch
               outcomes: [succeeded]
-              min-attempts: 2
+              min_attempts: 2
         then: finish
         else: recover-step
       recover-step:
         type: objective
         objective: recover
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
         )
@@ -925,7 +925,7 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish:
         type: end
 """,
@@ -972,7 +972,7 @@ imports:
                       run:
                         type: objective
                         objective: shared.validate
-                        on-success: finish
+                        on_success: finish
                       finish:
                         type: end
                 """
@@ -1019,7 +1019,7 @@ imports:
                           run:
                             type: objective
                             objective: validate
-                            on-success: finish
+                            on_success: finish
                           finish: {type: end}
                       parent:
                         start: route
@@ -1034,7 +1034,7 @@ imports:
                           delegate:
                             type: call
                             workflow: child
-                            on-success: finish
+                            on_success: finish
                           finish: {type: end}
                     """
                 )
@@ -1092,9 +1092,9 @@ imports:
                           run:
                             type: objective
                             objective: validate
-                            compensate-with: rollback
-                            on-success: finish
-                            on-failure: finish
+                            compensate_with: rollback
+                            on_success: finish
+                            on_failure: finish
                           finish: {type: end}
                     """
                 )

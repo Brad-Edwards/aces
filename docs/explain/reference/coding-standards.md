@@ -80,8 +80,9 @@ Required artifacts:
 
 Do not add TLA+ or Alloy for FM0 work.
 
-**Repo example:** parser key normalization in `aces.core.sdl.parser`, where
-`start-time` becomes `start_time` but user-defined names remain concrete.
+**Repo example:** explicit SDL source migration, where a formatter diagnoses and
+rewrites legacy `start-time` as canonical `start_time` while user-defined names
+remain concrete. Strict `sdl-yaml/v1` parsing accepts only the canonical field.
 
 ### FM1 Static Semantic
 

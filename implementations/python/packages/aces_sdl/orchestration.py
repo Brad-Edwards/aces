@@ -253,7 +253,7 @@ class WorkflowStepStateRef(SDLModel):
 
     step: str
     outcomes: list[WorkflowStepOutcome] = Field(min_length=1)
-    min_attempts: int | str | None = Field(default=None, alias="min-attempts")
+    min_attempts: int | str | None = None
 
     @field_validator("min_attempts", mode="before")
     @classmethod
@@ -345,7 +345,6 @@ class WorkflowCompensationPolicy(SDLModel):
     on: list[WorkflowCompensationTrigger] = Field(default_factory=list)
     failure_policy: WorkflowCompensationFailurePolicy = Field(
         default=WorkflowCompensationFailurePolicy.FAIL_WORKFLOW,
-        alias="failure_policy",
     )
     order: str = "reverse_completion"
 
@@ -373,9 +372,9 @@ class WorkflowStep(SDLModel):
     type: WorkflowStepType = Field(alias="type")
     objective: str = ""
     next: str = ""
-    on_success: str = Field(default="", alias="on-success")
-    on_failure: str = Field(default="", alias="on-failure")
-    on_exhausted: str = Field(default="", alias="on-exhausted")
+    on_success: str = ""
+    on_failure: str = ""
+    on_exhausted: str = ""
     when: WorkflowPredicate | None = None
     then_step: str = Field(default="", alias="then")
     else_step: str = Field(default="", alias="else")
@@ -384,8 +383,8 @@ class WorkflowStep(SDLModel):
     branches: list[str] = Field(default_factory=list)
     join: str = ""
     workflow: str = ""
-    compensate_with: str = Field(default="", alias="compensate-with")
-    max_attempts: int | str | None = Field(default=None, alias="max-attempts")
+    compensate_with: str = ""
+    max_attempts: int | str | None = None
     description: str = ""
 
     @field_validator("type", mode="before")
@@ -411,7 +410,7 @@ class WorkflowStep(SDLModel):
     def validate_type_specific_fields(self) -> "WorkflowStep":
         if self.type == WorkflowStepType.OBJECTIVE:
             if not self.objective or not self.on_success:
-                raise ValueError("Objective workflow step requires 'objective' and 'on-success'")
+                raise ValueError("Objective workflow step requires 'objective' and 'on_success'")
             if (
                 self.next
                 or self.on_exhausted

@@ -50,6 +50,7 @@ class SDLParseDiagnostic:
     related_message: str | None = None
     stage: str = "parse"
     severity: str = "error"
+    source: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -60,6 +61,8 @@ class SDLParseDiagnostic:
             "path": self.pointer,
             "range": self.primary_range.as_dict(),
         }
+        if self.source is not None:
+            payload["source"] = self.source
         if self.authored_keys is not None:
             payload["authored_keys"] = list(self.authored_keys)
         if self.related_range is not None:

@@ -83,8 +83,9 @@ algorithm and value. Runtime healthcheck entries marked as redacted must omit
 raw output. Runtime mount sources/options and local-control bind sources
 classified as `redacted` or `operator_secret` must omit the corresponding raw
 value; the Python models and generated JSON Schemas both reject non-empty raw
-values for redacted/operator-secret labels accepted by the parser's
-normalization rules, including case-insensitive hyphen/underscore spellings.
+values for redacted/operator-secret labels accepted by the value-normalization
+rules, including case-insensitive hyphen/underscore enum spellings. Structural
+field keys themselves use exact `snake_case` under `sdl-yaml/v1`.
 Runtime observed-value surfaces share the ADR-056/ADR-057 raw-value helper:
 redacted and operator-secret classifications omit raw values. ADR-057 supersedes
 the earlier name-driven omission rule: credential-shaped names do not by

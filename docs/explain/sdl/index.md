@@ -137,7 +137,7 @@ accounts:
 ## Documentation
 
 - [SDL Sections Reference](sections.md) — Complete reference for all 17 sections
-- [Parser Behavior](parser.md) — Key normalization, shorthand expansion, SDL-only parsing
+- [Parser Behavior](parser.md) — `sdl-yaml/v1`, explicit migration, typed normalization, and canonical identity
 - [Language-Service Tools](language-service.md) — Agent-facing completions, references, formatting, diagnostics, and structured edits
 - [Agent Guidance Profile](agent-guidance.md) — Machine-readable scope boundaries, invariants, review priorities, and safe-operating expectations
 - [Semantic Validation](validation.md) — Cross-reference checks and what the validator enforces

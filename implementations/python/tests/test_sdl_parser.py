@@ -1,9 +1,10 @@
-"""Tests for SDL parser — YAML loading, key normalization, shorthands."""
+"""Tests for SDL parsing, canonical fields, migration, and shorthands."""
 
 import re
 from pathlib import Path
 
 import pytest
+from aces_sdl import SDLMigrationPolicy
 
 from aces.core.sdl import instantiate_scenario
 from aces.core.sdl._errors import SDLParseError, SDLValidationError
@@ -17,12 +18,20 @@ class TestKeyNormalization:
         assert "sw" in s.nodes
 
     def test_uppercase_keys(self):
-        """Pydantic field keys are normalized but user-defined names are preserved."""
-        s = parse_sdl("Name: test\nNodes:\n  SW:\n    Type: Switch")
+        """Explicit migration normalizes fields while preserving identifiers."""
+        s = parse_sdl(
+            "Name: test\nNodes:\n  SW:\n    Type: Switch",
+            migration_policy=SDLMigrationPolicy.ACCEPT,
+        )
         assert "SW" in s.nodes  # user-defined name preserved as-is
         assert s.nodes["SW"].type == NodeType.SWITCH  # enum value normalized
+        assert [diagnostic.code for diagnostic in s.source_diagnostics] == [
+            "sdl.noncanonical_field",
+            "sdl.noncanonical_field",
+            "sdl.noncanonical_field",
+        ]
 
-    def test_hyphenated_keys(self):
+    def test_hyphenated_identifier_keys(self):
         sdl = """
 name: test
 nodes:
@@ -41,7 +50,7 @@ infrastructure:
     def test_integer_keys_in_user_defined_mapping_are_rejected(self):
         # YAML lets authors write a bare ``1:`` as a key, which yaml.safe_load
         # parses as an integer. User-defined hashmap keys (node names, role
-        # names, etc.) bypass the field-key normalization pass so the
+        # names, etc.) bypass the structural-field pass so the
         # integer survives until Pydantic. Closed-world ``SDLModel`` rejects
         # non-string keys; this test pins that contract so a future loosening
         # of the dict-key types (or a silent coerce-to-string) surfaces as a
@@ -207,7 +216,7 @@ workflows:
       validate:
         type: objective
         objective: validate-release
-        on-success: finish
+        on_success: finish
       finish:
         type: end
 """
@@ -236,84 +245,84 @@ nodes:
       mounts:
         - target: /shuffle-database
           source: aptl_shuffle_data
-          source-sensitivity: plain
-          source-kind: volume
-          filesystem-type: ext4
-          read-only: false
+          source_sensitivity: plain
+          source_kind: volume
+          filesystem_type: ext4
+          read_only: false
           options: [rw, nosuid]
-          options-sensitivity: plain
+          options_sensitivity: plain
           propagation: rprivate
           stability: volume-backed
-          backend-generated: true
-      filesystem-inventory:
+          backend_generated: true
+      filesystem_inventory:
         - path: /app/app.py
-          entry-type: file
-          owner-user: root
-          owner-group: root
+          entry_type: file
+          owner_user: root
+          owner_group: root
           uid: "0"
           gid: "0"
           mode: "0644"
           size: "4096"
-          content-digest: 4f8c2d
-          digest-algorithm: sha256
-          source-path: src/webapp/app.py
+          content_digest: 4f8c2d
+          digest_algorithm: sha256
+          source_path: src/webapp/app.py
           provenance: python-package
           stability: stable
           sensitivity: plain
         - path: /var/log/gunicorn/access.log
-          entry-type: file
+          entry_type: file
           mode: "0600"
           stability: log
           sensitivity: operator-secret
-      local-control-interfaces:
-        - control-interface-id: docker-sock
+      local_control_interfaces:
+        - control_interface_id: docker-sock
           path: /run/docker.sock
           kind: unix-socket
           protocol: docker
-          bind-source-sensitivity: operator-secret
+          bind_source_sensitivity: operator-secret
           access: read-write
       processes:
         - name: shufflebackend
           command: ./shufflebackend
           user: root
-          working-directory: /app
+          working_directory: /app
         - name: supervisord
           pid: 1
           command: supervisord -n
           role: supervisor
         - name: gunicorn
-          parent-pid: 1
+          parent_pid: 1
           command: [gunicorn, app:app]
           role: worker
       environment:
         - name: TECHVAULT_ADMIN_PASSWORD
-          value-classification: redacted
+          value_classification: redacted
           provenance: operator
         - name: SCENARIO_FIXTURE_TOKEN
           value: fixture-token
-          value-classification: secret-fixture
+          value_classification: secret-fixture
           provenance: compose
-      linux-capabilities:
+      linux_capabilities:
         required: [CAP_NET_ADMIN]
         effective: CAP_NET_ADMIN
-        process-overrides:
+        process_overrides:
           - subject:
               name: gunicorn
-              parent-pid: 1
+              parent_pid: 1
             scope: subtree
             drop: [cap-audit-control]
             description: interactive participant shell
-      operational-policy:
+      operational_policy:
         restart: unless-stopped
-        resource-limits:
+        resource_limits:
           memory: 512 MiB
           cpu: 0.5
           pids: 128
       container:
         entrypoint: [/entrypoint.sh]
         command: [gunicorn, app:app]
-        log-driver: json-file
-        log-options:
+        log_driver: json-file
+        log_options:
           max-size: 10m
           max-file: "3"
         namespaces:
@@ -323,74 +332,74 @@ nodes:
           userns: host
           uts: private
         privileged: false
-        read-only-rootfs: false
-        publish-all-ports: false
+        read_only_rootfs: false
+        publish_all_ports: false
         autoremove: false
-        shm-size: 64 MiB
-        masked-paths: [/proc/acpi, /proc/kcore]
-        read-only-paths: /proc/sys
-        cgroup-parent: /docker
-        runtime-name: runc
-        init-process:
+        shm_size: 64 MiB
+        masked_paths: [/proc/acpi, /proc/kcore]
+        read_only_paths: /proc/sys
+        cgroup_parent: /docker
+        runtime_name: runc
+        init_process:
           enabled: true
           implementation: docker-init
-          executable-path: /sbin/docker-init
-          reaps-children: true
+          executable_path: /sbin/docker-init
+          reaps_children: true
           argv: [/sbin/docker-init, "--", /entrypoint.sh]
         devices:
-          - host-path: /dev/null
-            container-path: /dev/null
+          - host_path: /dev/null
+            container_path: /dev/null
             permissions: rwm
-        device-cgroup-rules: c 1:3 rwm
-        extra-hosts:
+        device_cgroup_rules: c 1:3 rwm
+        extra_hosts:
           - hostname: wazuh-manager
             address: 172.20.0.10
         dns: [8.8.8.8]
-        dns-options: ndots:0
-        dns-search: [techvault.local]
-        group-add: [adm, "101"]
+        dns_options: ndots:0
+        dns_search: [techvault.local]
+        group_add: [adm, "101"]
       health:
         status: healthy
-        failing-streak: "0"
+        failing_streak: "0"
         log:
           - start: "2026-05-20T12:00:00Z"
             end: "2026-05-20T12:00:01Z"
-            exit-code: "0"
+            exit_code: "0"
             output: ok
       packages:
         - manager: apk
           name: musl
           version: 1.2.4-r2
-      software-components:
-        - component-id: shuffle-backend-app
+      software_components:
+        - component_id: shuffle-backend-app
           name: shuffle-backend
           version: 1.2.3
-          component-type: application
+          component_type: application
           provenance: scanner
           ecosystem: go
           purl: "pkg:golang/github.com/frikky/shuffle@1.2.3"
           cpe: "cpe:2.3:a:shuffle:shuffle:1.2.3:*:*:*:*:*:*:*"
-          package-manager: apk
-          package-name: shuffle-backend
-          package-version: 1.2.3-r0
-          manifest-path: /app/go.mod
-          installed-paths: [/app/shufflebackend, /app/go.mod]
+          package_manager: apk
+          package_name: shuffle-backend
+          package_version: 1.2.3-r0
+          manifest_path: /app/go.mod
+          installed_paths: [/app/shufflebackend, /app/go.mod]
           hashes:
             - algorithm: sha256
               value: abc123
-      dependency-manifests:
+      dependency_manifests:
         - ecosystem: go
           path: /app/go.mod
           format: go-module
-      package-vulnerabilities:
+      package_vulnerabilities:
         - id: CVE-2026-12345
-          package-name: musl
-          installed-version: 1.2.4-r2
-          fixed-version: 1.2.5-r0
+          package_name: musl
+          installed_version: 1.2.4-r2
+          fixed_version: 1.2.5-r0
           severity: high
           scanner: trivy
-          image-digest: sha256:abc123
-          scan-time: "2026-05-20T12:00:00Z"
+          image_digest: sha256:abc123
+          scan_time: "2026-05-20T12:00:00Z"
 """
         scenario = parse_sdl(sdl)
         node = scenario.nodes["shuffle-backend"]
@@ -489,7 +498,7 @@ nodes:
         assert node.runtime.package_vulnerabilities[0].image_digest == "sha256:abc123"
         assert node.runtime.package_vulnerabilities[0].scan_time == "2026-05-20T12:00:00Z"
 
-    def test_runtime_local_identity_inventory_parses_with_kebab_keys(self):
+    def test_runtime_local_identity_inventory_parses_with_canonical_keys(self):
         sdl = """
 name: techvault-identity-inventory
 nodes:
@@ -497,13 +506,13 @@ nodes:
     type: vm
     os: linux
     runtime:
-      local-identity:
+      local_identity:
         description: getent passwd/group capture
         users:
           - username: root
             uid: 0
-            primary-gid: 0
-            primary-group: root
+            primary_gid: 0
+            primary_group: root
             gecos: root
             home: /root
             shell: /bin/bash
@@ -511,12 +520,12 @@ nodes:
             stability: stable
           - username: www-data
             uid: 33
-            primary-gid: 33
-            primary-group: www-data
+            primary_gid: 33
+            primary_group: www-data
             home: /var/www
             shell: /usr/sbin/nologin
-            supplemental-groups: [wazuh]
-            no-login: true
+            supplemental_groups: [wazuh]
+            no_login: true
             provenance: package
         groups:
           - name: root
@@ -525,10 +534,10 @@ nodes:
           - name: wazuh
             gid: 101
             members: [www-data]
-        sudo-rules:
+        sudo_rules:
           - principal: operator
-            principal-kind: user
-            run-as-users: [root]
+            principal_kind: user
+            run_as_users: [root]
             commands: ["/usr/bin/systemctl restart gunicorn"]
             nopasswd: true
 """
@@ -562,13 +571,13 @@ nodes:
     type: vm
     os: linux
     runtime:
-      local-identity:
+      local_identity:
         users:
           - username: wazuh
             uid: ${svc_uid}
             home: /var/ossec
             shell: /usr/sbin/nologin
-            no-login: true
+            no_login: true
 """
         raw = parse_sdl(sdl)
         assert raw.nodes["techvault-webapp"].runtime.local_identity.users[0].uid == "${svc_uid}"
@@ -577,7 +586,7 @@ nodes:
         assert user.uid == 999
         assert user.no_login is True
 
-    def test_runtime_network_realization_parses_with_kebab_keys(self):
+    def test_runtime_network_realization_parses_with_canonical_keys(self):
         sdl = """
 name: techvault-network-realization
 nodes:
@@ -593,30 +602,30 @@ nodes:
         domainname: techvault.local
         endpoints:
           - network: aptl-dmz
-            network-id: net-a1b2c3d4e5f6
-            network-id-stability: stable
-            endpoint-id: ep-1a2b3c4d5e6f
-            endpoint-id-stability: ephemeral
-            backend-generated: true
-            ip-address: 172.20.0.20
-            ip-prefix-length: "24"
+            network_id: net-a1b2c3d4e5f6
+            network_id_stability: stable
+            endpoint_id: ep-1a2b3c4d5e6f
+            endpoint_id_stability: ephemeral
+            backend_generated: true
+            ip_address: 172.20.0.20
+            ip_prefix_length: "24"
             gateway: 172.20.0.1
-            mac-address: 02:42:ac:14:00:14
+            mac_address: 02:42:ac:14:00:14
             aliases: [aptl-webapp, webapp]
-            dns-names: [aptl-webapp, webapp]
-            generated-dns-names: [a1b2c3d4e5f6]
+            dns_names: [aptl-webapp, webapp]
+            generated_dns_names: [a1b2c3d4e5f6]
             backend:
               driver: bridge
-              ipam-driver: default
-              driver-options:
+              ipam_driver: default
+              driver_options:
                 com.docker.network.bridge.name: br-dmz
-              ipam-options:
+              ipam_options:
                 com.docker.network.driver.mtu: "1500"
-        published-ports:
-          - container-port: "8080"
+        published_ports:
+          - container_port: "8080"
             protocol: tcp
-            host-ip: 127.0.0.1
-            host-port: "8080"
+            host_ip: 127.0.0.1
+            host_port: "8080"
 infrastructure:
   aptl-dmz:
     properties:
@@ -641,7 +650,7 @@ infrastructure:
         assert endpoint.aliases == ["aptl-webapp", "webapp"]
         assert endpoint.dns_names == ["aptl-webapp", "webapp"]
         assert endpoint.generated_dns_names == ["a1b2c3d4e5f6"]
-        # Backend-native option keys are preserved verbatim (not key-normalized).
+        # Backend-native option keys are preserved verbatim as literal-map data.
         assert endpoint.backend.driver == "bridge"
         assert endpoint.backend.driver_options == {"com.docker.network.bridge.name": "br-dmz"}
         assert endpoint.backend.ipam_options == {"com.docker.network.driver.mtu": "1500"}
@@ -668,7 +677,7 @@ nodes:
       network:
         endpoints:
           - network: aptl-dmz
-            ip-address: ${webapp_ip}
+            ip_address: ${webapp_ip}
 infrastructure:
   aptl-dmz:
     properties:
@@ -681,7 +690,7 @@ infrastructure:
         endpoint = instantiated.nodes["techvault-webapp"].runtime.network.endpoints[0]
         assert endpoint.ip_address == "172.20.0.20"
 
-    def test_source_build_provenance_parses_with_kebab_keys(self):
+    def test_source_build_provenance_parses_with_canonical_keys(self):
         sdl = """
 name: techvault-build-provenance
 nodes:
@@ -692,9 +701,9 @@ nodes:
       name: techvault-webapp
       version: local
       build:
-        base-image: python:3.12-slim
-        base-image-digest: sha256:deadbeef
-        dockerfile-path: containers/webapp/Dockerfile
+        base_image: python:3.12-slim
+        base_image_digest: sha256:deadbeef
+        dockerfile_path: containers/webapp/Dockerfile
         instructions:
           - instruction: from
             arguments: [python:3.12-slim]
@@ -702,40 +711,40 @@ nodes:
             arguments: [webapp/app.py, /app/app.py]
         layers:
           - digest: sha256:layer1
-            created-by: FROM python:3.12-slim
+            created_by: FROM python:3.12-slim
             size: "31000000"
-          - created-by: ENV APP_HOME=/app
+          - created_by: ENV APP_HOME=/app
             empty: true
-        build-args:
+        build_args:
           - name: APP_VERSION
             value: 1.4.2
-            value-classification: plain
+            value_classification: plain
           - name: PIP_INDEX_TOKEN
-            value-classification: redacted
-        copied-sources:
-          - source-path: webapp/app.py
-            destination-path: /app/app.py
+            value_classification: redacted
+        copied_sources:
+          - source_path: webapp/app.py
+            destination_path: /app/app.py
         config:
           entrypoint: [/entrypoint.sh]
           command: [gunicorn, app:app]
-          working-directory: /app
-          exposed-ports: [8080/tcp]
+          working_directory: /app
+          exposed_ports: [8080/tcp]
           labels:
             org.opencontainers.image.source: https://example.test/techvault
             com.Example.Tier: webapp
-          default-environment:
+          default_environment:
             - name: APP_HOME
               value: /app
-        source-inputs:
+        source_inputs:
           - identifier: webapp-app
-            source-path: webapp/app.py
-            destination-path: /app/app.py
+            source_path: webapp/app.py
+            destination_path: /app/app.py
             checksum: 4f8c2d
-            checksum-algorithm: sha256
+            checksum_algorithm: sha256
         attestation:
           status: absent
           verification: not-applicable
-          attestation-type: in-toto
+          attestation_type: in-toto
 """
         s = parse_sdl(sdl, skip_semantic_validation=True)
         build = s.nodes["techvault-webapp"].source.build
@@ -884,8 +893,8 @@ events:
   phase-1: {}
 scripts:
   main:
-    start-time: 1 us
-    end-time: 1 mon
+    start_time: 1 us
+    end_time: 1 mon
     speed: 1
     events:
       phase-1: 1 ms
@@ -966,8 +975,8 @@ events:
   phase-1: {}
 scripts:
   main:
-    start-time: -5
-    end-time: 10
+    start_time: -5
+    end_time: 10
     speed: 1
     events:
       phase-1: 1
@@ -1168,7 +1177,7 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish:
         type: end
 """,
@@ -1522,7 +1531,7 @@ class TestLoadRealScenarios:
 
 
 class TestRuntimeApplicationParsing:
-    def test_runtime_application_surface_parses_with_kebab_keys(self):
+    def test_runtime_application_surface_parses_with_canonical_keys(self):
         sdl = """
 name: techvault-application-surface
 nodes:
@@ -1534,27 +1543,27 @@ nodes:
         name: techvault-http
     runtime:
       applications:
-        - application-id: techvault-webapp
+        - application_id: techvault-webapp
           service: techvault-http
           protocol: http
-          base-path: /
+          base_path: /
           framework: flask
           routes:
-            - route-id: login
+            - route_id: login
               path: /login
               methods: [get, post]
-              auth-required: false
-              session-required: false
+              auth_required: false
+              session_required: false
               parameters:
                 - name: username
                   location: form
                   required: true
               responses:
-                - status-code: "200"
-                  content-type: text/html
+                - status_code: "200"
+                  content_type: text/html
               redirects:
                 - target: /dashboard
-                  status-code: "302"
+                  status_code: "302"
 """
         scenario = parse_sdl(sdl)
         applications = scenario.nodes["techvault-webapp"].runtime.applications
@@ -1584,12 +1593,12 @@ nodes:
     os: linux
     runtime:
       applications:
-        - application-id: techvault-webapp
+        - application_id: techvault-webapp
           routes:
-            - route-id: login
+            - route_id: login
               path: /login
               methods: [GET]
-              auth-required: ${login_auth}
+              auth_required: ${login_auth}
 """
         raw = parse_sdl(sdl)
         route = raw.nodes["techvault-webapp"].runtime.applications[0].routes[0]
@@ -1600,7 +1609,7 @@ nodes:
 
 
 class TestRuntimeSshServerParsing:
-    def test_ssh_server_configuration_parses_with_kebab_keys(self):
+    def test_ssh_server_configuration_parses_with_canonical_keys(self):
         sdl = """
 name: techvault-ssh-surface
 nodes:
@@ -1611,26 +1620,26 @@ nodes:
       - port: 22
         name: ssh
     runtime:
-      ssh-servers:
-        - ssh-server-id: sshd-default
+      ssh_servers:
+        - ssh_server_id: sshd-default
           service: ssh
-          accept-env: [APTL_SESSION_ID, APTL_RUN_ID, APTL_TRACE_ID]
-          password-authentication: false
-          pubkey-authentication: true
-          permit-tty: true
-          allow-users: [kali]
-          authentication-methods: [publickey]
-          chroot-directory: /var/empty
-          authorized-keys-file: /etc/ssh/authorized_keys.d/%u
-          match-rules:
-            - match-id: m-kali
+          accept_env: [APTL_SESSION_ID, APTL_RUN_ID, APTL_TRACE_ID]
+          password_authentication: false
+          pubkey_authentication: true
+          permit_tty: true
+          allow_users: [kali]
+          authentication_methods: [publickey]
+          chroot_directory: /var/empty
+          authorized_keys_file: /etc/ssh/authorized_keys.d/%u
+          match_rules:
+            - match_id: m-kali
               criteria:
                 - kind: user
                   pattern: kali
-              forced-command:
-                command-kind: absolute_path
+              forced_command:
+                command_kind: absolute_path
                 command: /usr/local/bin/aptl-wrap-shell.sh
-              permit-tty: true
+              permit_tty: true
 """
         scenario = parse_sdl(sdl)
         ssh_servers = scenario.nodes["techvault-kali"].runtime.ssh_servers
@@ -1665,10 +1674,10 @@ nodes:
       - port: 22
         name: ssh
     runtime:
-      ssh-servers:
-        - ssh-server-id: sshd-default
+      ssh_servers:
+        - ssh_server_id: sshd-default
           service: ssh
-          accept-env: APTL_SESSION_ID
+          accept_env: APTL_SESSION_ID
 """
         scenario = parse_sdl(sdl)
         server = scenario.nodes["techvault-kali"].runtime.ssh_servers[0]
@@ -1689,10 +1698,10 @@ nodes:
       - port: 22
         name: ssh
     runtime:
-      ssh-servers:
-        - ssh-server-id: sshd-default
+      ssh_servers:
+        - ssh_server_id: sshd-default
           service: ssh
-          chroot-directory: ${chroot_path}
+          chroot_directory: ${chroot_path}
 """
         raw = parse_sdl(sdl)
         server = raw.nodes["techvault-kali"].runtime.ssh_servers[0]
@@ -1718,8 +1727,8 @@ nodes:
       - port: 22
         name: ssh
     runtime:
-      ssh-servers:
-        - ssh-server-id: ${server_id}
+      ssh_servers:
+        - ssh_server_id: ${server_id}
           service: ssh
 """
         # The parse step itself should reject a variable-ref symbol-defining identifier
@@ -1729,7 +1738,7 @@ nodes:
 
 
 class TestRuntimeIdentityAuthorityParsing:
-    def test_identity_authority_surface_parses_with_kebab_keys(self):
+    def test_identity_authority_surface_parses_with_canonical_keys(self):
         sdl = """
 name: techvault-directory-identity
 nodes:
@@ -1740,47 +1749,47 @@ nodes:
       - {port: 389, name: ldap}
       - {port: 88, name: kerberos}
     runtime:
-      identity-authorities:
-        - identity-authority-id: techvault-domain
+      identity_authorities:
+        - identity_authority_id: techvault-domain
           kind: domain
           name: TechVault Domain
           namespace: techvault.local
-          domain-name: TECHVAULT
+          domain_name: TECHVAULT
           realm: TECHVAULT.LOCAL
-          base-dn: DC=techvault,DC=local
+          base_dn: DC=techvault,DC=local
           services:
-            - service-id: ldap-endpoint
+            - service_id: ldap-endpoint
               service: ldap
               protocol: LDAP
               address: dc.techvault.local
               port: "389"
           subjects:
-            - subject-id: alice
+            - subject_id: alice
               kind: user
               name: alice
-              principal-name: alice@TECHVAULT.LOCAL
-              distinguished-name: CN=Alice,CN=Users,DC=techvault,DC=local
+              principal_name: alice@TECHVAULT.LOCAL
+              distinguished_name: CN=Alice,CN=Users,DC=techvault,DC=local
               enabled: true
               attributes:
                 - name: department
                   values: security
-            - subject-id: domain-admins
+            - subject_id: domain-admins
               kind: group
               name: Domain Admins
-            - subject-id: ldap-svc
+            - subject_id: ldap-svc
               kind: service-principal
               name: ldap
-              service-principal-names: [LDAP/dc.techvault.local]
+              service_principal_names: [LDAP/dc.techvault.local]
           relationships:
-            - relationship-id: alice-admin
-              relationship-type: member-of
-              source-ref: alice
-              target-ref: domain-admins
+            - relationship_id: alice-admin
+              relationship_type: member-of
+              source_ref: alice
+              target_ref: domain-admins
           policies:
-            - policy-id: default-password-policy
-              policy-kind: password
+            - policy_id: default-password-policy
+              policy_kind: password
               name: Default Domain Policy
-              applies-to-refs: [techvault-domain]
+              applies_to_refs: [techvault-domain]
               settings:
                 - name: min_length
                   values: "14"
@@ -1809,11 +1818,11 @@ nodes:
     type: vm
     os: linux
     runtime:
-      identity-authorities:
-        - identity-authority-id: techvault-idp
+      identity_authorities:
+        - identity_authority_id: techvault-idp
           kind: identity-provider
           namespace: https://idp.techvault.local
-          tenant-id: ${tenant_id}
+          tenant_id: ${tenant_id}
 """
         raw = parse_sdl(sdl)
         authority = raw.nodes["idp"].runtime.identity_authorities[0]
@@ -1832,10 +1841,10 @@ nodes:
     services:
       - {port: 389, name: ldap}
     runtime:
-      identity-authorities:
-        - identity-authority-id: techvault-domain
+      identity_authorities:
+        - identity_authority_id: techvault-domain
           services:
-            - service-id: ldap-endpoint
+            - service_id: ldap-endpoint
               service: missing-ldap
               protocol: ldap
 """
@@ -1850,15 +1859,15 @@ nodes:
     type: vm
     os: windows
     runtime:
-      identity-authorities:
-        - identity-authority-id: techvault-domain
+      identity_authorities:
+        - identity_authority_id: techvault-domain
           subjects:
-            - {subject-id: domain-admins, kind: group, name: Domain Admins}
+            - {subject_id: domain-admins, kind: group, name: Domain Admins}
           relationships:
-            - relationship-id: alice-admin
-              relationship-type: member-of
-              source-ref: alice
-              target-ref: domain-admins
+            - relationship_id: alice-admin
+              relationship_type: member-of
+              source_ref: alice
+              target_ref: domain-admins
 """
         with pytest.raises(SDLValidationError, match="source_ref 'alice' does not resolve"):
             parse_sdl(sdl)
@@ -1871,11 +1880,11 @@ nodes:
     type: vm
     os: windows
     runtime:
-      identity-authorities:
-        - identity-authority-id: techvault-domain
+      identity_authorities:
+        - identity_authority_id: techvault-domain
           policies:
-            - policy-id: default-policy
-              applies-to-refs: [missing-subject]
+            - policy_id: default-policy
+              applies_to_refs: [missing-subject]
 """
         with pytest.raises(SDLValidationError, match="applies_to_ref 'missing-subject' does not resolve"):
             parse_sdl(sdl)
@@ -1890,28 +1899,28 @@ nodes:
     services:
       - {port: 389, name: ldap}
     runtime:
-      identity-authorities:
-        - identity-authority-id: techvault-domain
+      identity_authorities:
+        - identity_authority_id: techvault-domain
           services:
-            - service-id: ldap-endpoint
+            - service_id: ldap-endpoint
               service: ldap
               protocol: ldap
           subjects:
-            - {subject-id: alice, kind: user, name: alice}
-            - {subject-id: domain-admins, kind: group, name: Domain Admins}
+            - {subject_id: alice, kind: user, name: alice}
+            - {subject_id: domain-admins, kind: group, name: Domain Admins}
           relationships:
-            - relationship-id: alice-admin
-              relationship-type: member-of
-              source-ref: alice
-              target-ref: domain-admins
-            - relationship-id: ldap-documents-membership
-              relationship-type: associated
-              source-ref: ldap-endpoint
-              target-ref: alice-admin
+            - relationship_id: alice-admin
+              relationship_type: member-of
+              source_ref: alice
+              target_ref: domain-admins
+            - relationship_id: ldap-documents-membership
+              relationship_type: associated
+              source_ref: ldap-endpoint
+              target_ref: alice-admin
           policies:
-            - policy-id: ldap-audit-policy
-              policy-kind: other
-              applies-to-refs: [ldap-endpoint, alice-admin]
+            - policy_id: ldap-audit-policy
+              policy_kind: other
+              applies_to_refs: [ldap-endpoint, alice-admin]
 """
         authority = parse_sdl(sdl).nodes["ad"].runtime.identity_authorities[0]
 
@@ -1947,23 +1956,23 @@ nodes:
     type: vm
     os: windows
     runtime:
-      identity-authorities:
-        - identity-authority-id: {authority_id}
+      identity_authorities:
+        - identity_authority_id: {authority_id}
           services:
-            - service-id: {service_id}
+            - service_id: {service_id}
               protocol: ldap
           subjects:
-            - subject-id: {subject_id}
+            - subject_id: {subject_id}
               kind: user
               name: alice
           relationships:
-            - relationship-id: {relationship_id}
-              relationship-type: associated
-              source-ref: {subject_id}
-              external-target: external.example
+            - relationship_id: {relationship_id}
+              relationship_type: associated
+              source_ref: {subject_id}
+              external_target: external.example
           policies:
-            - policy-id: {policy_id}
-              applies-to-refs: [{subject_id}]
+            - policy_id: {policy_id}
+              applies_to_refs: [{subject_id}]
 """
         with pytest.raises(SDLParseError, match="Duplicate runtime identity stable id 'shared'"):
             parse_sdl(sdl)
@@ -1979,21 +1988,21 @@ nodes:
     type: vm
     os: windows
     runtime:
-      identity-authorities:
-        - identity-authority-id: techvault-domain
+      identity_authorities:
+        - identity_authority_id: techvault-domain
           services:
-            - {service-id: ldap-endpoint, protocol: ldap}
+            - {service_id: ldap-endpoint, protocol: ldap}
           subjects:
-            - {subject-id: alice, kind: user, name: alice}
-            - {subject-id: domain-admins, kind: group, name: Domain Admins}
+            - {subject_id: alice, kind: user, name: alice}
+            - {subject_id: domain-admins, kind: group, name: Domain Admins}
           policies:
-            - policy-id: default-policy
-              applies-to-refs: [techvault-domain]
+            - policy_id: default-policy
+              applies_to_refs: [techvault-domain]
           relationships:
-            - relationship-id: alice-admin
-              relationship-type: member-of
-              source-ref: alice
-              target-ref: domain-admins
+            - relationship_id: alice-admin
+              relationship_type: member-of
+              source_ref: alice
+              target_ref: domain-admins
 relationships:
   alice-admin:
     type: trusts
@@ -2036,7 +2045,7 @@ imports:
 
 
 class TestRuntimeDnsParsing:
-    def test_dns_service_field_keys_normalized_names_preserved(self):
+    def test_dns_service_canonical_field_keys_preserve_names(self):
         sdl = """
 name: techvault-dns
 nodes:
@@ -2046,25 +2055,25 @@ nodes:
     services:
       - {port: 53, protocol: udp, name: dns}
     runtime:
-      dns-services:
-        - dns-service-id: tv-dns
+      dns_services:
+        - dns_service_id: tv-dns
           service: dns
           implementation: BIND
           roles: [authoritative, recursive-resolver]
-          resolver-policy:
-            recursion-enabled: true
-            dnssec-validation: auto
+          resolver_policy:
+            recursion_enabled: true
+            dnssec_validation: auto
             forwarders:
               - {address: 8.8.8.8, port: 53}
           zones:
-            - zone-id: techvault-local
+            - zone_id: techvault-local
               name: TechVault.Local.
-              zone-class: IN
+              zone_class: IN
               purpose: forward
               rrsets:
-                - rrset-id: web-a
+                - rrset_id: web-a
                   owner: Web.TechVault.Local.
-                  record-type: A
+                  record_type: A
                   ttl: 300
                   records:
                     - {address: 172.20.10.20}
@@ -2094,16 +2103,16 @@ nodes:
     services:
       - {port: 53, protocol: udp, name: dns}
     runtime:
-      dns-services:
-        - dns-service-id: tv-dns
+      dns_services:
+        - dns_service_id: tv-dns
           service: dns
           zones:
-            - zone-id: techvault-local
+            - zone_id: techvault-local
               name: techvault.local.
               rrsets:
-                - rrset-id: web-a
+                - rrset_id: web-a
                   owner: web.techvault.local.
-                  record-type: a
+                  record_type: a
                   ttl: 300
                   records:
                     - {address: 172.20.10.20}
@@ -2135,9 +2144,9 @@ imports:
 
 
 class TestRuntimeDatabaseParsing:
-    def test_database_service_field_keys_normalized_names_preserved(self):
-        # Field keys (hyphenated/cased) normalize; observed object names are
-        # data and survive verbatim — including mixed case and underscores.
+    def test_database_service_canonical_field_keys_preserve_names(self):
+        # Structural fields are canonical; observed object names are data and
+        # survive verbatim, including mixed case and underscores.
         sdl = """
 name: techvault-db
 nodes:
@@ -2147,19 +2156,19 @@ nodes:
     services:
       - {port: 5432, name: pg}
     runtime:
-      database-services:
-        - database-service-id: tv-pg
+      database_services:
+        - database_service_id: tv-pg
           service: pg
           engine: PostgreSQL
           protocol: postgresql
           databases:
-            - database-id: tv-db
+            - database_id: tv-db
               name: TechVault_Prod
               schemas:
-                - schema-id: pub
+                - schema_id: pub
                   name: public
                   tables:
-                    - {table-id: audit, name: Audit_Log}
+                    - {table_id: audit, name: Audit_Log}
           settings:
             - {name: log_statement, value: all, provenance: configuration-file}
 """
@@ -2187,8 +2196,8 @@ nodes:
     services:
       - {port: 5432, name: pg}
     runtime:
-      database-services:
-        - database-service-id: tv-pg
+      database_services:
+        - database_service_id: tv-pg
           service: pg
           engine: postgresql
           protocol: postgresql

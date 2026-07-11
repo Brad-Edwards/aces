@@ -108,3 +108,9 @@ None by design. The repository accepts SDL documents only:
 - If the repository fails to keep authored participant intent distinct from
   participant implementation and runtime apparatus, future agent-support work
   could leak execution-stack concerns back into the SDL surface
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-11 | #721 | Replaced the original implicit case-insensitive parser convention with the normative `sdl-yaml/v1` source profile: YAML 1.2.2 Core resolution, exact `snake_case` structural fields, strict default rejection, and explicit diagnosed migration for legacy case/kebab spellings and disjoint `<<` merges. Distinguished raw YAML from the normalized authoring-object schema and added the `aces-sdl-semantic/v1` RFC 8785 identity profile. The accepted body above remains the historical 2026-03-29 decision; its parser-spelling statements are not the current syntax contract. |

@@ -118,113 +118,113 @@ def _scenario_yaml(*, actions: str = "[scan]", boundaries: str = "[red-view]") -
         entities:
           red-team:
             role: red
-        action-contracts:
+        action_contracts:
           scan:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            behavioral-granularity: atomic
-            procedure-basis: nmap service discovery
-            realization-profile: backend-declared
-            fidelity-claim: records participant discovery intent and terminal observation
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            behavioral_granularity: atomic
+            procedure_basis: nmap service discovery
+            realization_profile: backend-declared
+            fidelity_claim: records participant discovery intent and terminal observation
             preconditions:
-              - precondition-id: authority-in-scope
-                precondition-class: authority
+              - precondition_id: authority-in-scope
+                precondition_class: authority
                 description: red participant is authorized to scan the web service
-                support-refs: [agents.red-agent, nodes.web.services.http]
-              - precondition-id: target-service-present
-                precondition-class: target
+                support_refs: [agents.red-agent, nodes.web.services.http]
+              - precondition_id: target-service-present
+                precondition_class: target
                 description: target service exists in the participant action scope
-                support-refs: [nodes.web.services.http]
-              - precondition-id: backend-can-realize-scan
-                precondition-class: realization
+                support_refs: [nodes.web.services.http]
+              - precondition_id: backend-can-realize-scan
+                precondition_class: realization
                 description: backend can realize the scan action contract
-                support-refs: [backend.participant-runtime]
+                support_refs: [backend.participant-runtime]
             effects:
-              - effect-id: discover-network-services
-                effect-class: intended_effect
+              - effect_id: discover-network-services
+                effect_class: intended_effect
                 description: discover network services
-                target-refs: [nodes.web.services.http]
-              - effect-id: participant-service-knowledge-update
-                effect-class: side_effect
+                target_refs: [nodes.web.services.http]
+              - effect_id: participant-service-knowledge-update
+                effect_class: side_effect
                 description: participant-local service knowledge changes
-                target-refs: [nodes.web.services.http]
-              - effect-id: terminal-scan-observation
-                effect-class: observation_effect
+                target_refs: [nodes.web.services.http]
+              - effect_id: terminal-scan-observation
+                effect_class: observation_effect
                 description: terminal scan observation
-                evidence-refs: [evidence.scan-output]
-              - effect-id: participant-view-discovers-node
-                effect-class: visibility_effect
+                evidence_refs: [evidence.scan-output]
+              - effect_id: participant-view-discovers-node
+                effect_class: visibility_effect
                 description: participant view marks the web node discovered
-                target-refs: [nodes.web]
-              - effect-id: scan-output-evidence
-                effect-class: evidence_effect
+                target_refs: [nodes.web]
+              - effect_id: scan-output-evidence
+                effect_class: evidence_effect
                 description: scan output is retained as evidence
-                evidence-refs: [evidence.scan-output]
-              - effect-id: no-hidden-truth-effect
-                effect-class: no_effect
+                evidence_refs: [evidence.scan-output]
+              - effect_id: no-hidden-truth-effect
+                effect_class: no_effect
                 description: scan does not disclose hidden adjudication material
-            state-transition-effects: [participant knowledge expands]
-            observation-expectations: [terminal scan result]
-            evidence-expectations: [tool output]
-            failure-classes: [target_unavailable, precondition_unsatisfied, backend_error, unknown]
-            backend-failure-mappings:
-              - backend-error-code: backend.target-unreachable
-                failure-class: target_unavailable
+            state_transition_effects: [participant knowledge expands]
+            observation_expectations: [terminal scan result]
+            evidence_expectations: [tool output]
+            failure_classes: [target_unavailable, precondition_unsatisfied, backend_error, unknown]
+            backend_failure_mappings:
+              - backend_error_code: backend.target-unreachable
+                failure_class: target_unavailable
                 diagnostic: backend target unreachable
             interactions:
-              - interaction-class: shared_state_change
+              - interaction_class: shared_state_change
                 target: nodes.web.services.http
                 rationale: scan reads and updates participant-visible service knowledge
-                shared-state-refs: [nodes.web.services.http]
-            external-mappings:
+                shared_state_refs: [nodes.web.services.http]
+            external_mappings:
               - system: attack
                 identifier: T1046
-                loss-label: technique-to-contract
+                loss_label: technique-to-contract
                 rationale: ATT&CK does not encode ACES observation or state-transition semantics
-        observation-boundaries:
+        observation_boundaries:
           red-view:
-            projection-basis: participant-local projection over observed services
-            observable-refs: []
-            hidden-refs: [nodes.web, content.private-answer-key]
-            evidence-refs: [evidence.scan-output]
-            redaction-policy: hidden refs never project without explicit disclosure
-            latency-profile: terminal observation emitted after state transition commit
-            observer-effects: [tool execution may affect telemetry]
-            realized-view-disclosure: backend reports terminal scan output only
-            view-rules:
-              - information-ref: nodes.web
-                boundary-class: observable_resource
+            projection_basis: participant-local projection over observed services
+            observable_refs: []
+            hidden_refs: [nodes.web, content.private-answer-key]
+            evidence_refs: [evidence.scan-output]
+            redaction_policy: hidden refs never project without explicit disclosure
+            latency_profile: terminal observation emitted after state transition commit
+            observer_effects: [tool execution may affect telemetry]
+            realized_view_disclosure: backend reports terminal scan output only
+            view_rules:
+              - information_ref: nodes.web
+                boundary_class: observable_resource
                 disposition: hidden
-                visibility-basis: service is not known before terminal scan output
-                latency-profile: terminal observation latency
-              - information-ref: content.private-answer-key
-                boundary-class: private_answer_key
+                visibility_basis: service is not known before terminal scan output
+                latency_profile: terminal observation latency
+              - information_ref: content.private-answer-key
+                boundary_class: private_answer_key
                 disposition: hidden
-                visibility-basis: adjudication-only hidden truth
-              - information-ref: evidence.scan-output
-                boundary-class: archival_evidence
+                visibility_basis: adjudication-only hidden truth
+              - information_ref: evidence.scan-output
+                boundary_class: archival_evidence
                 disposition: evidence_only
-                visibility-basis: archival run evidence reference
-                evidence-refs: [evidence.scan-output]
-            view-transitions:
-              - transition-id: discover-web-service
-                transition-kind: discovery
-                information-ref: nodes.web
+                visibility_basis: archival run evidence reference
+                evidence_refs: [evidence.scan-output]
+            view_transitions:
+              - transition_id: discover-web-service
+                transition_kind: discovery
+                information_ref: nodes.web
                 trigger: scan terminal observation
-                effective-from: episode-step:scan-0001:terminal-observation
-                effective-order: 30
-                history-event-type: observation_emitted
-                action-instance-id: scan-0001
-                from-disposition: hidden
-                to-disposition: discovered
-                evidence-refs: [evidence.scan-output]
+                effective_from: episode-step:scan-0001:terminal-observation
+                effective_order: 30
+                history_event_type: observation_emitted
+                action_instance_id: scan-0001
+                from_disposition: hidden
+                to_disposition: discovered
+                evidence_refs: [evidence.scan-output]
                 certainty: high
-                latency-profile: terminal observation latency
+                latency_profile: terminal observation latency
         agents:
           red-agent:
             entity: red-team
             actions: {actions}
-            observation-boundaries: {boundaries}
+            observation_boundaries: {boundaries}
         """
     )
 
@@ -269,41 +269,41 @@ def _act607_authority_scope_scenario_yaml() -> str:
             target: web
             items:
               - name: playbook
-        action-contracts:
+        action_contracts:
           scan:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            behavioral-granularity: atomic
-            procedure-basis: scan contract
-            realization-profile: backend-declared
-            fidelity-claim: records scan intent
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            behavioral_granularity: atomic
+            procedure_basis: scan contract
+            realization_profile: backend-declared
+            fidelity_claim: records scan intent
             preconditions:
-              - precondition-id: authority-in-scope
-                precondition-class: authority
+              - precondition_id: authority-in-scope
+                precondition_class: authority
                 description: participant authority is declared in SDL
             effects:
-              - effect-id: no-effect
-                effect-class: no_effect
+              - effect_id: no-effect
+                effect_class: no_effect
                 description: compilation-only contract
-            failure-classes: [authority_denied, unknown]
-        observation-boundaries:
+            failure_classes: [authority_denied, unknown]
+        observation_boundaries:
           red-view:
-            projection-basis: participant view
-            evidence-refs: [evidence.scan-output]
-            redaction-policy: hidden refs are not disclosed
-            latency-profile: immediate
+            projection_basis: participant view
+            evidence_refs: [evidence.scan-output]
+            redaction_policy: hidden refs are not disclosed
+            latency_profile: immediate
         agents:
           red-agent:
             entity: red-team
             actions: [scan]
-            starting-accounts: [operator]
-            initial-knowledge:
+            starting_accounts: [operator]
+            initial_knowledge:
               hosts: [web]
               subnets: [net]
               services: [http]
               accounts: [operator]
-            starting-conditions: [beacon-online]
-            authority-anchors:
+            starting_conditions: [beacon-online]
+            authority_anchors:
               - red-team
               - red-controls-web
               - operator
@@ -311,21 +311,21 @@ def _act607_authority_scope_scenario_yaml() -> str:
               - red-view
               - docs
               - nodes.web.services.http
-            operating-scope:
+            operating_scope:
               - web
               - net
               - nodes.web.services.http
               - docs
               - playbook
-            observation-boundaries: [red-view]
-        behavior-specifications:
+            observation_boundaries: [red-view]
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            action-contract-refs: [scan]
-            observation-boundary-refs: [red-view]
-            authority-scope-refs:
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            observation_boundary_refs: [red-view]
+            authority_scope_refs:
               - nodes.web.services.http
               - operator
               - scan
@@ -333,7 +333,7 @@ def _act607_authority_scope_scenario_yaml() -> str:
               - docs
               - playbook
               - red-controls-web
-            extension-policy: governed-extension
+            extension_policy: governed-extension
         """
     )
 
@@ -374,12 +374,12 @@ def _act607_typed_ref_collision_scenario_yaml() -> str:
         agents:
           red-agent:
             entity: red-team
-            starting-accounts: [operator]
-            initial-knowledge:
+            starting_accounts: [operator]
+            initial_knowledge:
               hosts: [web]
               services: [http]
               accounts: [operator]
-            starting-conditions: [beacon-online]
+            starting_conditions: [beacon-online]
         """
     )
 
@@ -400,22 +400,22 @@ def test_behavior_specifications_parse_validate_and_compile():
         _scenario_yaml()
         + textwrap.dedent(
             """
-        behavior-specifications:
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            participant-role-refs: [red]
-            action-contract-refs: [scan]
-            observation-boundary-refs: [red-view]
-            authority-scope-refs: [nodes.web.services.http]
-            behavior-mode: policy-directed
-            ai-offensive-behavior-refs: [ai-model-access, defense-evasion]
-            offensive-behavior-refs: [reconnaissance, exfiltration]
-            realization-profile-ref: participant-implementation-manifest:reference-red-agent
-            backend-feature-support-refs: [action_contracts]
-            evidence-contract-refs: [participant-behavior-history-event-stream-v1]
-            extension-policy: governed-extension
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            participant_role_refs: [red]
+            action_contract_refs: [scan]
+            observation_boundary_refs: [red-view]
+            authority_scope_refs: [nodes.web.services.http]
+            behavior_mode: policy-directed
+            ai_offensive_behavior_refs: [ai-model-access, defense-evasion]
+            offensive_behavior_refs: [reconnaissance, exfiltration]
+            realization_profile_ref: participant-implementation-manifest:reference-red-agent
+            backend_feature_support_refs: [action_contracts]
+            evidence_contract_refs: [participant-behavior-history-event-stream-v1]
+            extension_policy: governed-extension
             extensions:
               x-acme:review-note:
                 owner: acme
@@ -568,46 +568,46 @@ def test_behavior_specification_refs_are_namespaced_during_module_composition(tm
               exports:
                 entities: [red-team]
                 agents: [red-agent]
-                action-contracts: [scan]
-                observation-boundaries: [red-view]
-                behavior-specifications: [red-scan-behavior]
+                action_contracts: [scan]
+                observation_boundaries: [red-view]
+                behavior_specifications: [red-scan-behavior]
             entities:
               red-team:
                 role: red
             agents:
               red-agent:
                 entity: red-team
-            action-contracts:
+            action_contracts:
               scan:
-                semantic-version: 1.0.0
-                lifecycle-state: active
-                behavioral-granularity: atomic
-                procedure-basis: scan contract
-                realization-profile: backend-declared
-                fidelity-claim: records scan intent
+                semantic_version: 1.0.0
+                lifecycle_state: active
+                behavioral_granularity: atomic
+                procedure_basis: scan contract
+                realization_profile: backend-declared
+                fidelity_claim: records scan intent
                 preconditions:
-                  - precondition-id: authority-in-scope
-                    precondition-class: authority
+                  - precondition_id: authority-in-scope
+                    precondition_class: authority
                     description: participant has authority
                 effects:
-                  - effect-id: no-effect
-                    effect-class: no_effect
+                  - effect_id: no-effect
+                    effect_class: no_effect
                     description: composition-only contract
-                failure-classes: [unknown]
-            observation-boundaries:
+                failure_classes: [unknown]
+            observation_boundaries:
               red-view:
-                projection-basis: participant view
-                evidence-refs: [evidence.scan-output]
-                redaction-policy: no hidden refs are disclosed
-                latency-profile: immediate
-            behavior-specifications:
+                projection_basis: participant view
+                evidence_refs: [evidence.scan-output]
+                redaction_policy: no hidden refs are disclosed
+                latency_profile: immediate
+            behavior_specifications:
               red-scan-behavior:
-                semantic-version: 1.0.0
-                lifecycle-state: active
-                participant-refs: [red-agent]
-                action-contract-refs: [scan]
-                observation-boundary-refs: [red-view]
-                extension-policy: governed-extension
+                semantic_version: 1.0.0
+                lifecycle_state: active
+                participant_refs: [red-agent]
+                action_contract_refs: [scan]
+                observation_boundary_refs: [red-view]
+                extension_policy: governed-extension
             """
         ).lstrip(),
         encoding="utf-8",
@@ -644,13 +644,13 @@ def test_behavior_specification_optional_fields_compile_empty_when_omitted():
         _scenario_yaml()
         + textwrap.dedent(
             """
-        behavior-specifications:
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            action-contract-refs: [scan]
-            extension-policy: governed-extension
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            extension_policy: governed-extension
         """
         )
     )
@@ -678,14 +678,14 @@ def test_act_608_behavior_modes_parse_validate_and_compile(behavior_mode: str):
         _scenario_yaml()
         + textwrap.dedent(
             f"""
-        behavior-specifications:
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            action-contract-refs: [scan]
-            behavior-mode: {behavior_mode}
-            extension-policy: governed-extension
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            behavior_mode: {behavior_mode}
+            extension_policy: governed-extension
         """
         )
     )
@@ -704,14 +704,14 @@ def test_behavior_specification_behavior_mode_allows_governed_extensions():
         _scenario_yaml()
         + textwrap.dedent(
             """
-        behavior-specifications:
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            action-contract-refs: [scan]
-            behavior-mode: x-acme:swarm-control
-            extension-policy: governed-extension
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            behavior_mode: x-acme:swarm-control
+            extension_policy: governed-extension
         """
         )
     )
@@ -727,14 +727,14 @@ def test_act_609_offensive_behavior_refs_allow_governed_extensions():
         _scenario_yaml()
         + textwrap.dedent(
             """
-        behavior-specifications:
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            action-contract-refs: [scan]
-            offensive-behavior-refs: [reconnaissance, x-acme:phishing-campaign]
-            extension-policy: governed-extension
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            offensive_behavior_refs: [reconnaissance, x-acme:phishing-campaign]
+            extension_policy: governed-extension
         """
         )
     )
@@ -750,14 +750,14 @@ def test_act_609_ai_offensive_behavior_refs_allow_governed_extensions():
         _scenario_yaml()
         + textwrap.dedent(
             """
-        behavior-specifications:
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            action-contract-refs: [scan]
-            ai-offensive-behavior-refs: [ai-model-access, x-acme:model-poisoning]
-            extension-policy: governed-extension
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            ai_offensive_behavior_refs: [ai-model-access, x-acme:model-poisoning]
+            extension_policy: governed-extension
         """
         )
     )
@@ -772,26 +772,26 @@ def test_act_609_ai_offensive_behavior_refs_allow_governed_extensions():
     ("field", "replacement", "expected"),
     [
         (
-            "participant-refs: [red-agent]",
-            "participant-refs: [blue-agent]",
+            "participant_refs: [red-agent]",
+            "participant_refs: [blue-agent]",
             "Behavior specification 'red-scan-behavior' participant_ref 'blue-agent' "
             "does not reference a declared agent",
         ),
         (
-            "action-contract-refs: [scan]",
-            "action-contract-refs: [exploit]",
+            "action_contract_refs: [scan]",
+            "action_contract_refs: [exploit]",
             "Behavior specification 'red-scan-behavior' action_contract_ref 'exploit' "
             "does not reference a declared action_contract",
         ),
         (
-            "observation-boundary-refs: [red-view]",
-            "observation-boundary-refs: [leaked-view]",
+            "observation_boundary_refs: [red-view]",
+            "observation_boundary_refs: [leaked-view]",
             "Behavior specification 'red-scan-behavior' observation_boundary_ref 'leaked-view' "
             "does not reference a declared observation_boundary",
         ),
         (
-            "authority-scope-refs: [nodes.web.services.http]",
-            "authority-scope-refs: [nodes.missing.services.http]",
+            "authority_scope_refs: [nodes.web.services.http]",
+            "authority_scope_refs: [nodes.missing.services.http]",
             "Behavior specification 'red-scan-behavior' authority_scope_ref 'nodes.missing.services.http' "
             "does not reference any defined targetable element",
         ),
@@ -800,17 +800,17 @@ def test_act_609_ai_offensive_behavior_refs_allow_governed_extensions():
 def test_behavior_specification_references_fail_closed(field: str, replacement: str, expected: str):
     behavior_spec = textwrap.dedent(
         """
-        behavior-specifications:
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            participant-role-refs: [red]
-            action-contract-refs: [scan]
-            observation-boundary-refs: [red-view]
-            authority-scope-refs: [nodes.web.services.http]
-            behavior-mode: policy-directed
-            extension-policy: governed-extension
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            participant_role_refs: [red]
+            action_contract_refs: [scan]
+            observation_boundary_refs: [red-view]
+            authority_scope_refs: [nodes.web.services.http]
+            behavior_mode: policy-directed
+            extension_policy: governed-extension
         """
     )
     scenario = _scenario_yaml() + behavior_spec.replace(field, replacement)
@@ -824,14 +824,14 @@ def test_behavior_specification_references_fail_closed(field: str, replacement: 
 def test_behavior_specification_behavior_mode_uses_governed_vocabulary():
     scenario = _scenario_yaml() + textwrap.dedent(
         """
-        behavior-specifications:
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            action-contract-refs: [scan]
-            behavior-mode: supervised
-            extension-policy: governed-extension
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            behavior_mode: supervised
+            extension_policy: governed-extension
         """
     )
 
@@ -844,14 +844,14 @@ def test_behavior_specification_behavior_mode_uses_governed_vocabulary():
 def test_behavior_specification_offensive_behavior_refs_use_governed_vocabulary():
     scenario = _scenario_yaml() + textwrap.dedent(
         """
-        behavior-specifications:
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            action-contract-refs: [scan]
-            offensive-behavior-refs: [fabricated-attack]
-            extension-policy: governed-extension
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            offensive_behavior_refs: [fabricated-attack]
+            extension_policy: governed-extension
         """
     )
 
@@ -864,14 +864,14 @@ def test_behavior_specification_offensive_behavior_refs_use_governed_vocabulary(
 def test_behavior_specification_ai_offensive_behavior_refs_use_governed_vocabulary():
     scenario = _scenario_yaml() + textwrap.dedent(
         """
-        behavior-specifications:
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            action-contract-refs: [scan]
-            ai-offensive-behavior-refs: [fabricated-ai-attack]
-            extension-policy: governed-extension
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            ai_offensive_behavior_refs: [fabricated-ai-attack]
+            extension_policy: governed-extension
         """
     )
 
@@ -884,14 +884,14 @@ def test_behavior_specification_ai_offensive_behavior_refs_use_governed_vocabula
 def test_behavior_specification_backend_feature_refs_use_governed_vocabulary():
     scenario = _scenario_yaml() + textwrap.dedent(
         """
-        behavior-specifications:
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            action-contract-refs: [scan]
-            backend-feature-support-refs: [participant-behavior-history]
-            extension-policy: governed-extension
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            backend_feature_support_refs: [participant-behavior-history]
+            extension_policy: governed-extension
         """
     )
 
@@ -907,14 +907,14 @@ def test_behavior_specification_backend_feature_refs_use_governed_vocabulary():
 def test_behavior_specification_evidence_contract_refs_use_published_contract_ids():
     scenario = _scenario_yaml() + textwrap.dedent(
         """
-        behavior-specifications:
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            action-contract-refs: [scan]
-            evidence-contract-refs: [raw-terminal-log-v1]
-            extension-policy: governed-extension
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            evidence_contract_refs: [raw-terminal-log-v1]
+            extension_policy: governed-extension
         """
     )
 
@@ -930,13 +930,13 @@ def test_behavior_specification_evidence_contract_refs_use_published_contract_id
 def test_behavior_specification_extension_keys_are_governed():
     scenario = _scenario_yaml() + textwrap.dedent(
         """
-        behavior-specifications:
+        behavior_specifications:
           red-scan-behavior:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            participant-refs: [red-agent]
-            action-contract-refs: [scan]
-            extension-policy: governed-extension
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            participant_refs: [red-agent]
+            action_contract_refs: [scan]
+            extension_policy: governed-extension
             extensions:
               custom-mode:
                 note: ungoverned
@@ -968,8 +968,8 @@ def test_agent_observation_boundaries_must_resolve_to_declared_boundaries():
 
 def test_participant_interactions_must_resolve_related_action_contracts():
     scenario = _scenario_yaml().replace(
-        "        shared-state-refs: [nodes.web.services.http]",
-        ("        related-actions: [coordinate]\n        shared-state-refs: [nodes.web.services.http]"),
+        "        shared_state_refs: [nodes.web.services.http]",
+        ("        related_actions: [coordinate]\n        shared_state_refs: [nodes.web.services.http]"),
     )
 
     with pytest.raises(SDLValidationError) as excinfo:
@@ -997,8 +997,8 @@ def test_participant_interactions_must_resolve_targets():
 
 def test_participant_interactions_must_resolve_shared_state_refs():
     scenario = _scenario_yaml().replace(
-        "shared-state-refs: [nodes.web.services.http]",
-        "shared-state-refs: [nodes.missing.services.http]",
+        "shared_state_refs: [nodes.web.services.http]",
+        "shared_state_refs: [nodes.missing.services.http]",
     )
 
     with pytest.raises(SDLValidationError) as excinfo:
@@ -1046,58 +1046,58 @@ def test_view_relation_timeline_tracks_inference_and_concealment_transitions():
     scenario = (
         _scenario_yaml()
         .replace(
-            "hidden-refs: [nodes.web, content.private-answer-key]",
-            "hidden-refs: [nodes.web, content.private-answer-key, nodes.web.services.http]",
+            "hidden_refs: [nodes.web, content.private-answer-key]",
+            "hidden_refs: [nodes.web, content.private-answer-key, nodes.web.services.http]",
         )
         .replace(
-            "      - information-ref: evidence.scan-output\n"
-            "        boundary-class: archival_evidence\n"
+            "      - information_ref: evidence.scan-output\n"
+            "        boundary_class: archival_evidence\n"
             "        disposition: evidence_only\n"
-            "        visibility-basis: archival run evidence reference\n"
-            "        evidence-refs: [evidence.scan-output]",
-            "      - information-ref: nodes.web.services.http\n"
-            "        boundary-class: observable_resource\n"
+            "        visibility_basis: archival run evidence reference\n"
+            "        evidence_refs: [evidence.scan-output]",
+            "      - information_ref: nodes.web.services.http\n"
+            "        boundary_class: observable_resource\n"
             "        disposition: hidden\n"
-            "        visibility-basis: service is not known before scan output inference\n"
-            "      - information-ref: evidence.scan-output\n"
-            "        boundary-class: archival_evidence\n"
+            "        visibility_basis: service is not known before scan output inference\n"
+            "      - information_ref: evidence.scan-output\n"
+            "        boundary_class: archival_evidence\n"
             "        disposition: evidence_only\n"
-            "        visibility-basis: archival run evidence reference\n"
-            "        evidence-refs: [evidence.scan-output]",
+            "        visibility_basis: archival run evidence reference\n"
+            "        evidence_refs: [evidence.scan-output]",
         )
         .replace(
-            "        evidence-refs: [evidence.scan-output]\n"
+            "        evidence_refs: [evidence.scan-output]\n"
             "        certainty: high\n"
-            "        latency-profile: terminal observation latency",
-            "        evidence-refs: [evidence.scan-output]\n"
+            "        latency_profile: terminal observation latency",
+            "        evidence_refs: [evidence.scan-output]\n"
             "        certainty: high\n"
-            "        latency-profile: terminal observation latency\n"
-            "      - transition-id: infer-http-service\n"
-            "        transition-kind: inference\n"
-            "        information-ref: nodes.web.services.http\n"
+            "        latency_profile: terminal observation latency\n"
+            "      - transition_id: infer-http-service\n"
+            "        transition_kind: inference\n"
+            "        information_ref: nodes.web.services.http\n"
             "        trigger: interpret scan output\n"
-            "        effective-from: episode-step:scan-0001:analysis\n"
-            "        effective-order: 40\n"
-            "        history-event-type: observation_emitted\n"
-            "        action-instance-id: scan-0001\n"
-            "        from-disposition: hidden\n"
-            "        to-disposition: inferred\n"
-            "        evidence-refs: [evidence.scan-output]\n"
+            "        effective_from: episode-step:scan-0001:analysis\n"
+            "        effective_order: 40\n"
+            "        history_event_type: observation_emitted\n"
+            "        action_instance_id: scan-0001\n"
+            "        from_disposition: hidden\n"
+            "        to_disposition: inferred\n"
+            "        evidence_refs: [evidence.scan-output]\n"
             "        certainty: medium\n"
-            "        latency-profile: participant analysis latency\n"
-            "      - transition-id: conceal-http-service\n"
-            "        transition-kind: concealment\n"
-            "        information-ref: nodes.web.services.http\n"
+            "        latency_profile: participant analysis latency\n"
+            "      - transition_id: conceal-http-service\n"
+            "        transition_kind: concealment\n"
+            "        information_ref: nodes.web.services.http\n"
             "        trigger: redacted follow-up observation\n"
-            "        effective-from: episode-step:scan-0001:redacted-observation\n"
-            "        effective-order: 50\n"
-            "        history-event-type: observation_emitted\n"
-            "        action-instance-id: scan-0001\n"
-            "        from-disposition: inferred\n"
-            "        to-disposition: concealed\n"
-            "        evidence-refs: [evidence.scan-output]\n"
+            "        effective_from: episode-step:scan-0001:redacted-observation\n"
+            "        effective_order: 50\n"
+            "        history_event_type: observation_emitted\n"
+            "        action_instance_id: scan-0001\n"
+            "        from_disposition: inferred\n"
+            "        to_disposition: concealed\n"
+            "        evidence_refs: [evidence.scan-output]\n"
             "        certainty: medium\n"
-            "        latency-profile: redaction latency",
+            "        latency_profile: redaction latency",
         )
     )
 
@@ -1114,8 +1114,8 @@ def test_view_relation_timeline_tracks_inference_and_concealment_transitions():
 
 def test_hidden_truth_cannot_be_observed_without_explicit_disclosure_rule():
     scenario = _scenario_yaml().replace(
-        "observable-refs: []",
-        "observable-refs: [content.private-answer-key]",
+        "observable_refs: []",
+        "observable_refs: [content.private-answer-key]",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1128,8 +1128,8 @@ def test_hidden_truth_cannot_be_observed_without_explicit_disclosure_rule():
 
 def test_evidence_only_refs_cannot_be_boundary_observable_refs():
     scenario = _scenario_yaml().replace(
-        "observable-refs: []",
-        "observable-refs: [evidence.scan-output]",
+        "observable_refs: []",
+        "observable_refs: [evidence.scan-output]",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1143,26 +1143,26 @@ def test_evidence_only_refs_cannot_be_boundary_observable_refs():
 
 def test_hidden_truth_disclosure_is_separate_from_observable_projection():
     scenario = _scenario_yaml().replace(
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency",
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        latency_profile: terminal observation latency",
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency\n"
-        "      - transition-id: disclose-answer-key\n"
-        "        transition-kind: disclosure\n"
-        "        information-ref: content.private-answer-key\n"
+        "        latency_profile: terminal observation latency\n"
+        "      - transition_id: disclose-answer-key\n"
+        "        transition_kind: disclosure\n"
+        "        information_ref: content.private-answer-key\n"
         "        trigger: episode close adjudication\n"
-        "        effective-from: episode-close\n"
-        "        effective-order: 100\n"
-        "        history-event-type: episode_close\n"
-        "        from-disposition: hidden\n"
-        "        to-disposition: disclosed\n"
-        "        disclosure-rule: reveal answer key after episode close\n"
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        effective_from: episode-close\n"
+        "        effective_order: 100\n"
+        "        history_event_type: episode_close\n"
+        "        from_disposition: hidden\n"
+        "        to_disposition: disclosed\n"
+        "        disclosure_rule: reveal answer key after episode close\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: post-run adjudication latency\n"
-        "        realized-backend-disclosure: emitted only in post-run adjudication view",
+        "        latency_profile: post-run adjudication latency\n"
+        "        realized_backend_disclosure: emitted only in post-run adjudication view",
     )
 
     model = compile_runtime_model(parse_sdl(scenario))
@@ -1178,18 +1178,18 @@ def test_hidden_truth_disclosure_is_separate_from_observable_projection():
 def test_hidden_truth_disclosure_does_not_make_observable_refs_safe():
     scenario = _scenario_yaml()
     scenario = scenario.replace(
-        "observable-refs: []",
-        "observable-refs: [content.private-answer-key]",
+        "observable_refs: []",
+        "observable_refs: [content.private-answer-key]",
     ).replace(
-        "      - information-ref: content.private-answer-key\n"
-        "        boundary-class: private_answer_key\n"
+        "      - information_ref: content.private-answer-key\n"
+        "        boundary_class: private_answer_key\n"
         "        disposition: hidden\n"
-        "        visibility-basis: adjudication-only hidden truth",
-        "      - information-ref: content.private-answer-key\n"
-        "        boundary-class: private_answer_key\n"
+        "        visibility_basis: adjudication-only hidden truth",
+        "      - information_ref: content.private-answer-key\n"
+        "        boundary_class: private_answer_key\n"
         "        disposition: disclosed\n"
-        "        visibility-basis: explicit evaluator disclosure\n"
-        "        disclosure-rule: reveal answer key after episode close",
+        "        visibility_basis: explicit evaluator disclosure\n"
+        "        disclosure_rule: reveal answer key after episode close",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1200,14 +1200,14 @@ def test_hidden_truth_disclosure_does_not_make_observable_refs_safe():
 
 def test_private_answer_key_view_rule_requires_disclosure_rule_when_exposed():
     scenario = _scenario_yaml().replace(
-        "      - information-ref: content.private-answer-key\n"
-        "        boundary-class: private_answer_key\n"
+        "      - information_ref: content.private-answer-key\n"
+        "        boundary_class: private_answer_key\n"
         "        disposition: hidden\n"
-        "        visibility-basis: adjudication-only hidden truth",
-        "      - information-ref: content.private-answer-key\n"
-        "        boundary-class: private_answer_key\n"
+        "        visibility_basis: adjudication-only hidden truth",
+        "      - information_ref: content.private-answer-key\n"
+        "        boundary_class: private_answer_key\n"
         "        disposition: disclosed\n"
-        "        visibility-basis: explicit evaluator disclosure",
+        "        visibility_basis: explicit evaluator disclosure",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1218,24 +1218,24 @@ def test_private_answer_key_view_rule_requires_disclosure_rule_when_exposed():
 
 def test_disclosure_transition_requires_disclosure_rule():
     scenario = _scenario_yaml().replace(
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency",
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        latency_profile: terminal observation latency",
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency\n"
-        "      - transition-id: disclose-answer-key\n"
-        "        transition-kind: disclosure\n"
-        "        information-ref: content.private-answer-key\n"
+        "        latency_profile: terminal observation latency\n"
+        "      - transition_id: disclose-answer-key\n"
+        "        transition_kind: disclosure\n"
+        "        information_ref: content.private-answer-key\n"
         "        trigger: episode close adjudication\n"
-        "        effective-from: episode-close\n"
-        "        effective-order: 100\n"
-        "        history-event-type: episode_close\n"
-        "        from-disposition: hidden\n"
-        "        to-disposition: disclosed\n"
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        effective_from: episode-close\n"
+        "        effective_order: 100\n"
+        "        history_event_type: episode_close\n"
+        "        from_disposition: hidden\n"
+        "        to_disposition: disclosed\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: post-run adjudication latency",
+        "        latency_profile: post-run adjudication latency",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1246,14 +1246,14 @@ def test_disclosure_transition_requires_disclosure_rule():
 
 def test_transition_from_disposition_must_match_initial_view_rule():
     scenario = _scenario_yaml().replace(
-        "      - information-ref: nodes.web\n"
-        "        boundary-class: observable_resource\n"
+        "      - information_ref: nodes.web\n"
+        "        boundary_class: observable_resource\n"
         "        disposition: hidden\n"
-        "        visibility-basis: service is not known before terminal scan output",
-        "      - information-ref: nodes.web\n"
-        "        boundary-class: observable_resource\n"
+        "        visibility_basis: service is not known before terminal scan output",
+        "      - information_ref: nodes.web\n"
+        "        boundary_class: observable_resource\n"
         "        disposition: observable\n"
-        "        visibility-basis: incorrectly declared initially visible",
+        "        visibility_basis: incorrectly declared initially visible",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1267,14 +1267,14 @@ def test_transition_from_disposition_must_match_initial_view_rule():
 
 def test_sensitive_view_rule_cannot_be_directly_observable():
     scenario = _scenario_yaml().replace(
-        "      - information-ref: content.private-answer-key\n"
-        "        boundary-class: private_answer_key\n"
+        "      - information_ref: content.private-answer-key\n"
+        "        boundary_class: private_answer_key\n"
         "        disposition: hidden\n"
-        "        visibility-basis: adjudication-only hidden truth",
-        "      - information-ref: content.private-answer-key\n"
-        "        boundary-class: private_answer_key\n"
+        "        visibility_basis: adjudication-only hidden truth",
+        "      - information_ref: content.private-answer-key\n"
+        "        boundary_class: private_answer_key\n"
         "        disposition: observable\n"
-        "        visibility-basis: adjudication-only hidden truth",
+        "        visibility_basis: adjudication-only hidden truth",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1287,8 +1287,8 @@ def test_hidden_truth_view_rule_cannot_be_directly_observable():
     scenario = (
         _scenario_yaml()
         .replace(
-            "        boundary-class: private_answer_key",
-            "        boundary-class: hidden_truth",
+            "        boundary_class: private_answer_key",
+            "        boundary_class: hidden_truth",
         )
         .replace(
             "        disposition: hidden",
@@ -1304,25 +1304,25 @@ def test_hidden_truth_view_rule_cannot_be_directly_observable():
 
 def test_sensitive_inference_transition_requires_disclosure_rule():
     scenario = _scenario_yaml().replace(
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency",
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        latency_profile: terminal observation latency",
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency\n"
-        "      - transition-id: infer-answer-key\n"
-        "        transition-kind: inference\n"
-        "        information-ref: content.private-answer-key\n"
+        "        latency_profile: terminal observation latency\n"
+        "      - transition_id: infer-answer-key\n"
+        "        transition_kind: inference\n"
+        "        information_ref: content.private-answer-key\n"
         "        trigger: leaked benchmark clue\n"
-        "        effective-from: episode-step:scan-0001:leak\n"
-        "        effective-order: 40\n"
-        "        history-event-type: observation_emitted\n"
-        "        action-instance-id: scan-0001\n"
-        "        from-disposition: hidden\n"
-        "        to-disposition: inferred\n"
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        effective_from: episode-step:scan-0001:leak\n"
+        "        effective_order: 40\n"
+        "        history_event_type: observation_emitted\n"
+        "        action_instance_id: scan-0001\n"
+        "        from_disposition: hidden\n"
+        "        to_disposition: inferred\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: low\n"
-        "        latency-profile: terminal observation latency",
+        "        latency_profile: terminal observation latency",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1333,8 +1333,8 @@ def test_sensitive_inference_transition_requires_disclosure_rule():
 
 def test_hidden_truth_evidence_reference_requires_evidence_only_rule():
     scenario = _scenario_yaml().replace(
-        "evidence-refs: [evidence.scan-output]",
-        "evidence-refs: [evidence.scan-output, content.private-answer-key]",
+        "evidence_refs: [evidence.scan-output]",
+        "evidence_refs: [evidence.scan-output, content.private-answer-key]",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1347,8 +1347,8 @@ def test_hidden_truth_evidence_reference_requires_evidence_only_rule():
 
 def test_view_rule_information_ref_must_be_declared_by_boundary_refs():
     scenario = _scenario_yaml().replace(
-        "information-ref: nodes.web",
-        "information-ref: nodes.db",
+        "information_ref: nodes.web",
+        "information_ref: nodes.db",
     )
 
     with pytest.raises(SDLValidationError) as excinfo:
@@ -1366,16 +1366,16 @@ def test_view_rule_information_ref_must_be_declared_by_boundary_refs():
 
 def test_view_rule_evidence_ref_must_be_declared_by_boundary_evidence_refs():
     scenario = _scenario_yaml().replace(
-        "      - information-ref: evidence.scan-output\n"
-        "        boundary-class: archival_evidence\n"
+        "      - information_ref: evidence.scan-output\n"
+        "        boundary_class: archival_evidence\n"
         "        disposition: evidence_only\n"
-        "        visibility-basis: archival run evidence reference\n"
-        "        evidence-refs: [evidence.scan-output]",
-        "      - information-ref: evidence.scan-output\n"
-        "        boundary-class: archival_evidence\n"
+        "        visibility_basis: archival run evidence reference\n"
+        "        evidence_refs: [evidence.scan-output]",
+        "      - information_ref: evidence.scan-output\n"
+        "        boundary_class: archival_evidence\n"
         "        disposition: evidence_only\n"
-        "        visibility-basis: archival run evidence reference\n"
-        "        evidence-refs: [evidence.missing]",
+        "        visibility_basis: archival run evidence reference\n"
+        "        evidence_refs: [evidence.missing]",
     )
 
     with pytest.raises(SDLValidationError) as excinfo:
@@ -1388,8 +1388,8 @@ def test_view_rule_evidence_ref_must_be_declared_by_boundary_evidence_refs():
 
 def test_view_transition_evidence_ref_must_be_declared_by_boundary_evidence_refs():
     scenario = _scenario_yaml().replace(
-        "        evidence-refs: [evidence.scan-output]\n        certainty: high",
-        "        evidence-refs: [evidence.missing]\n        certainty: high",
+        "        evidence_refs: [evidence.scan-output]\n        certainty: high",
+        "        evidence_refs: [evidence.missing]\n        certainty: high",
     )
 
     with pytest.raises(SDLValidationError) as excinfo:
@@ -1403,8 +1403,8 @@ def test_view_transition_evidence_ref_must_be_declared_by_boundary_evidence_refs
 
 def test_view_transition_to_disposition_must_match_transition_kind():
     scenario = _scenario_yaml().replace(
-        "        to-disposition: discovered",
-        "        to-disposition: inferred",
+        "        to_disposition: discovered",
+        "        to_disposition: inferred",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1417,29 +1417,29 @@ def test_view_transition_requires_matching_view_rule():
     scenario = (
         _scenario_yaml()
         .replace(
-            "hidden-refs: [nodes.web, content.private-answer-key]",
-            "hidden-refs: [nodes.web, content.private-answer-key, nodes.web.services.http]",
+            "hidden_refs: [nodes.web, content.private-answer-key]",
+            "hidden_refs: [nodes.web, content.private-answer-key, nodes.web.services.http]",
         )
         .replace(
-            "        evidence-refs: [evidence.scan-output]\n"
+            "        evidence_refs: [evidence.scan-output]\n"
             "        certainty: high\n"
-            "        latency-profile: terminal observation latency",
-            "        evidence-refs: [evidence.scan-output]\n"
+            "        latency_profile: terminal observation latency",
+            "        evidence_refs: [evidence.scan-output]\n"
             "        certainty: high\n"
-            "        latency-profile: terminal observation latency\n"
-            "      - transition-id: infer-http-service\n"
-            "        transition-kind: inference\n"
-            "        information-ref: nodes.web.services.http\n"
+            "        latency_profile: terminal observation latency\n"
+            "      - transition_id: infer-http-service\n"
+            "        transition_kind: inference\n"
+            "        information_ref: nodes.web.services.http\n"
             "        trigger: interpret scan output\n"
-            "        effective-from: episode-step:scan-0001:analysis\n"
-            "        effective-order: 40\n"
-            "        history-event-type: observation_emitted\n"
-            "        action-instance-id: scan-0001\n"
-            "        from-disposition: hidden\n"
-            "        to-disposition: inferred\n"
-            "        evidence-refs: [evidence.scan-output]\n"
+            "        effective_from: episode-step:scan-0001:analysis\n"
+            "        effective_order: 40\n"
+            "        history_event_type: observation_emitted\n"
+            "        action_instance_id: scan-0001\n"
+            "        from_disposition: hidden\n"
+            "        to_disposition: inferred\n"
+            "        evidence_refs: [evidence.scan-output]\n"
             "        certainty: medium\n"
-            "        latency-profile: participant analysis latency",
+            "        latency_profile: participant analysis latency",
         )
     )
 
@@ -1451,16 +1451,16 @@ def test_view_transition_requires_matching_view_rule():
 
 def test_view_rules_require_unique_information_refs():
     scenario = _scenario_yaml().replace(
-        "      - information-ref: evidence.scan-output\n"
-        "        boundary-class: archival_evidence\n"
+        "      - information_ref: evidence.scan-output\n"
+        "        boundary_class: archival_evidence\n"
         "        disposition: evidence_only\n"
-        "        visibility-basis: archival run evidence reference\n"
-        "        evidence-refs: [evidence.scan-output]",
-        "      - information-ref: nodes.web\n"
-        "        boundary-class: archival_evidence\n"
+        "        visibility_basis: archival run evidence reference\n"
+        "        evidence_refs: [evidence.scan-output]",
+        "      - information_ref: nodes.web\n"
+        "        boundary_class: archival_evidence\n"
         "        disposition: evidence_only\n"
-        "        visibility-basis: archival run evidence reference\n"
-        "        evidence-refs: [evidence.scan-output]",
+        "        visibility_basis: archival run evidence reference\n"
+        "        evidence_refs: [evidence.scan-output]",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1471,25 +1471,25 @@ def test_view_rules_require_unique_information_refs():
 
 def test_view_transitions_require_unique_transition_ids():
     scenario = _scenario_yaml().replace(
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency",
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        latency_profile: terminal observation latency",
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency\n"
-        "      - transition-id: discover-web-service\n"
-        "        transition-kind: discovery\n"
-        "        information-ref: nodes.web\n"
+        "        latency_profile: terminal observation latency\n"
+        "      - transition_id: discover-web-service\n"
+        "        transition_kind: discovery\n"
+        "        information_ref: nodes.web\n"
         "        trigger: duplicate scan terminal observation\n"
-        "        effective-from: episode-step:scan-0001:duplicate-terminal-observation\n"
-        "        effective-order: 31\n"
-        "        history-event-type: observation_emitted\n"
-        "        action-instance-id: scan-0001\n"
-        "        from-disposition: hidden\n"
-        "        to-disposition: discovered\n"
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        effective_from: episode-step:scan-0001:duplicate-terminal-observation\n"
+        "        effective_order: 31\n"
+        "        history_event_type: observation_emitted\n"
+        "        action_instance_id: scan-0001\n"
+        "        from_disposition: hidden\n"
+        "        to_disposition: discovered\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency",
+        "        latency_profile: terminal observation latency",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1500,8 +1500,8 @@ def test_view_transitions_require_unique_transition_ids():
 
 def test_view_transition_from_and_to_dispositions_must_differ():
     scenario = _scenario_yaml().replace(
-        "        from-disposition: hidden\n        to-disposition: discovered",
-        "        from-disposition: discovered\n        to-disposition: discovered",
+        "        from_disposition: hidden\n        to_disposition: discovered",
+        "        from_disposition: discovered\n        to_disposition: discovered",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1512,25 +1512,25 @@ def test_view_transition_from_and_to_dispositions_must_differ():
 
 def test_view_transition_from_disposition_must_match_current_relation():
     scenario = _scenario_yaml().replace(
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency",
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        latency_profile: terminal observation latency",
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency\n"
-        "      - transition-id: conceal-web-service\n"
-        "        transition-kind: concealment\n"
-        "        information-ref: nodes.web\n"
+        "        latency_profile: terminal observation latency\n"
+        "      - transition_id: conceal-web-service\n"
+        "        transition_kind: concealment\n"
+        "        information_ref: nodes.web\n"
         "        trigger: redacted scan follow-up\n"
-        "        effective-from: episode-step:scan-0001:redacted-observation\n"
-        "        effective-order: 40\n"
-        "        history-event-type: observation_emitted\n"
-        "        action-instance-id: scan-0001\n"
-        "        from-disposition: hidden\n"
-        "        to-disposition: concealed\n"
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        effective_from: episode-step:scan-0001:redacted-observation\n"
+        "        effective_order: 40\n"
+        "        history_event_type: observation_emitted\n"
+        "        action_instance_id: scan-0001\n"
+        "        from_disposition: hidden\n"
+        "        to_disposition: concealed\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: medium\n"
-        "        latency-profile: redaction latency",
+        "        latency_profile: redaction latency",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1544,21 +1544,21 @@ def test_view_transition_from_disposition_must_match_current_relation():
 
 def test_view_transition_effective_order_drives_timeline_not_declaration_order():
     scenario = _scenario_yaml().replace(
-        "      - transition-id: discover-web-service\n",
-        "      - transition-id: infer-web-service\n"
-        "        transition-kind: inference\n"
-        "        information-ref: nodes.web\n"
+        "      - transition_id: discover-web-service\n",
+        "      - transition_id: infer-web-service\n"
+        "        transition_kind: inference\n"
+        "        information_ref: nodes.web\n"
         "        trigger: participant interprets terminal scan observation\n"
-        "        effective-from: episode-step:scan-0001:analysis\n"
-        "        effective-order: 40\n"
-        "        history-event-type: observation_emitted\n"
-        "        action-instance-id: scan-0001\n"
-        "        from-disposition: discovered\n"
-        "        to-disposition: inferred\n"
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        effective_from: episode-step:scan-0001:analysis\n"
+        "        effective_order: 40\n"
+        "        history_event_type: observation_emitted\n"
+        "        action_instance_id: scan-0001\n"
+        "        from_disposition: discovered\n"
+        "        to_disposition: inferred\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: medium\n"
-        "        latency-profile: participant analysis latency\n"
-        "      - transition-id: discover-web-service\n",
+        "        latency_profile: participant analysis latency\n"
+        "      - transition_id: discover-web-service\n",
     )
 
     model = compile_runtime_model(parse_sdl(scenario))
@@ -1577,25 +1577,25 @@ def test_view_transition_effective_order_drives_timeline_not_declaration_order()
 
 def test_view_transitions_require_unique_effective_order_values():
     scenario = _scenario_yaml().replace(
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency",
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        latency_profile: terminal observation latency",
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency\n"
-        "      - transition-id: duplicate-effective-order\n"
-        "        transition-kind: discovery\n"
-        "        information-ref: nodes.web\n"
+        "        latency_profile: terminal observation latency\n"
+        "      - transition_id: duplicate-effective-order\n"
+        "        transition_kind: discovery\n"
+        "        information_ref: nodes.web\n"
         "        trigger: duplicate scan terminal observation\n"
-        "        effective-from: episode-step:scan-0001:duplicate-terminal-observation\n"
-        "        effective-order: 30\n"
-        "        history-event-type: observation_emitted\n"
-        "        action-instance-id: scan-0001\n"
-        "        from-disposition: hidden\n"
-        "        to-disposition: discovered\n"
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        effective_from: episode-step:scan-0001:duplicate-terminal-observation\n"
+        "        effective_order: 30\n"
+        "        history_event_type: observation_emitted\n"
+        "        action_instance_id: scan-0001\n"
+        "        from_disposition: hidden\n"
+        "        to_disposition: discovered\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency",
+        "        latency_profile: terminal observation latency",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1606,13 +1606,13 @@ def test_view_transitions_require_unique_effective_order_values():
 
 def test_view_transitions_require_evidence_certainty_and_latency():
     scenario = _scenario_yaml().replace(
-        "        to-disposition: discovered\n"
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        to_disposition: discovered\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency",
-        "        to-disposition: discovered\n"
+        "        latency_profile: terminal observation latency",
+        "        to_disposition: discovered\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency",
+        "        latency_profile: terminal observation latency",
     )
 
     with pytest.raises(SDLParseError) as excinfo:
@@ -1625,11 +1625,11 @@ def test_coordination_interactions_require_related_actions():
     scenario = (
         _scenario_yaml()
         .replace(
-            "interaction-class: shared_state_change",
-            "interaction-class: coordination",
+            "interaction_class: shared_state_change",
+            "interaction_class: coordination",
         )
         .replace(
-            "        shared-state-refs: [nodes.web.services.http]\n",
+            "        shared_state_refs: [nodes.web.services.http]\n",
             "",
         )
     )
@@ -1644,11 +1644,11 @@ def test_contention_interactions_require_shared_state_refs():
     scenario = (
         _scenario_yaml()
         .replace(
-            "interaction-class: shared_state_change",
-            "interaction-class: contention",
+            "interaction_class: shared_state_change",
+            "interaction_class: contention",
         )
         .replace(
-            "        shared-state-refs: [nodes.web.services.http]\n",
+            "        shared_state_refs: [nodes.web.services.http]\n",
             "",
         )
     )
@@ -1839,25 +1839,25 @@ def test_behavior_history_rejects_observation_details_that_expose_hidden_truth()
 
 def test_behavior_history_rejects_future_episode_close_disclosure_in_observation_details():
     scenario = _scenario_yaml().replace(
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency",
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        latency_profile: terminal observation latency",
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency\n"
-        "      - transition-id: disclose-answer-key\n"
-        "        transition-kind: disclosure\n"
-        "        information-ref: content.private-answer-key\n"
+        "        latency_profile: terminal observation latency\n"
+        "      - transition_id: disclose-answer-key\n"
+        "        transition_kind: disclosure\n"
+        "        information_ref: content.private-answer-key\n"
         "        trigger: episode close adjudication\n"
-        "        effective-from: episode-close\n"
-        "        effective-order: 100\n"
-        "        history-event-type: episode_close\n"
-        "        from-disposition: hidden\n"
-        "        to-disposition: disclosed\n"
-        "        disclosure-rule: reveal answer key after episode close\n"
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        effective_from: episode-close\n"
+        "        effective_order: 100\n"
+        "        history_event_type: episode_close\n"
+        "        from_disposition: hidden\n"
+        "        to_disposition: disclosed\n"
+        "        disclosure_rule: reveal answer key after episode close\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: post-run adjudication latency",
+        "        latency_profile: post-run adjudication latency",
     )
     model = compile_runtime_model(parse_sdl(scenario))
     events = _complete_behavior_history_payloads(ACTION_INSTANCE)
@@ -1886,25 +1886,25 @@ def test_behavior_history_rejects_future_episode_close_disclosure_in_observation
 
 def test_behavior_history_rejects_unresolved_episode_close_transition_anchor():
     scenario = _scenario_yaml().replace(
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency",
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        latency_profile: terminal observation latency",
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: terminal observation latency\n"
-        "      - transition-id: disclose-answer-key\n"
-        "        transition-kind: disclosure\n"
-        "        information-ref: content.private-answer-key\n"
+        "        latency_profile: terminal observation latency\n"
+        "      - transition_id: disclose-answer-key\n"
+        "        transition_kind: disclosure\n"
+        "        information_ref: content.private-answer-key\n"
         "        trigger: episode close adjudication\n"
-        "        effective-from: episode-close\n"
-        "        effective-order: 100\n"
-        "        history-event-type: episode_close\n"
-        "        from-disposition: hidden\n"
-        "        to-disposition: disclosed\n"
-        "        disclosure-rule: reveal answer key after episode close\n"
-        "        evidence-refs: [evidence.scan-output]\n"
+        "        effective_from: episode-close\n"
+        "        effective_order: 100\n"
+        "        history_event_type: episode_close\n"
+        "        from_disposition: hidden\n"
+        "        to_disposition: disclosed\n"
+        "        disclosure_rule: reveal answer key after episode close\n"
+        "        evidence_refs: [evidence.scan-output]\n"
         "        certainty: high\n"
-        "        latency-profile: post-run adjudication latency",
+        "        latency_profile: post-run adjudication latency",
     )
     model = compile_runtime_model(parse_sdl(scenario))
 
@@ -2079,7 +2079,7 @@ def test_behavior_history_rejects_details_on_non_observation_events():
 
 
 def test_behavior_history_rejects_unresolved_visibility_transition_anchor():
-    scenario = _scenario_yaml().replace("action-instance-id: scan-0001", "action-instance-id: scan-9999")
+    scenario = _scenario_yaml().replace("action_instance_id: scan-0001", "action_instance_id: scan-9999")
     model = compile_runtime_model(parse_sdl(scenario))
 
     violations = list(

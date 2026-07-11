@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from aces_sdl import SDLParseDiagnostic, SDLParseError, parse_sdl, parse_sdl_file
+from aces_sdl import SDLMigrationPolicy, SDLParseDiagnostic, SDLParseError, parse_sdl, parse_sdl_file
 from aces_sdl.language_service import (
     apply_structured_edit,
     language_completions,
@@ -17,9 +17,13 @@ from hypothesis import strategies as st
 FIXTURE_DIR = Path(__file__).parent / "data" / "sdl" / "invalid"
 
 
-def _conflicts(source: str):
+def _conflicts(source: str, *, migration: bool = True):
     with pytest.raises(SDLParseError) as excinfo:
-        parse_sdl(source, skip_semantic_validation=True)
+        parse_sdl(
+            source,
+            skip_semantic_validation=True,
+            migration_policy=SDLMigrationPolicy.ACCEPT if migration else SDLMigrationPolicy.REJECT,
+        )
     diagnostics = excinfo.value.diagnostics
     assert diagnostics
     assert all(item.code == "sdl.mapping_key_conflict" for item in diagnostics)
@@ -75,24 +79,24 @@ nodes:
     assert tuple(scenario.nodes) == ("Web-App", "web_app")
 
 
-def test_implicit_yaml_11_boolean_like_identifiers_remain_distinct_strings() -> None:
+def test_yaml_12_string_like_identifiers_remain_distinct_strings() -> None:
     scenario = parse_sdl(
         """\
 name: boolean-like-identifiers
 nodes:
   on: {type: switch}
-  true: {type: switch}
+  "true": {type: switch}
   OFF: {type: switch}
-  false: {type: switch}
+  "false": {type: switch}
 """
     )
 
     assert tuple(scenario.nodes) == ("on", "true", "OFF", "false")
 
 
-def test_explicit_non_string_mapping_key_is_rejected_with_a_source_range() -> None:
+def test_core_resolved_non_string_mapping_key_is_rejected_with_a_source_range() -> None:
     with pytest.raises(SDLParseError) as excinfo:
-        parse_sdl("name: invalid-key\nnodes:\n  !!int 1: {type: switch}\n")
+        parse_sdl("name: invalid-key\nnodes:\n  1: {type: switch}\n")
 
     diagnostic = excinfo.value.diagnostics[0]
     assert diagnostic.code == "sdl.mapping_key_type"
@@ -116,7 +120,8 @@ nodes:
     resources:
       <<: *resources
       cpu: 2
-"""
+""",
+        migration=True,
     )
 
     assert diagnostics[0].pointer == "/nodes/second/resources/cpu"
@@ -142,7 +147,8 @@ nodes:
     type: vm
     resources:
       <<: [*first, *second]
-"""
+""",
+        migration=True,
     )
 
     assert [item.pointer for item in diagnostics] == [
@@ -152,9 +158,8 @@ nodes:
     assert diagnostics[0].authored_keys == ("ram", "RAM")
 
 
-def test_disjoint_merge_remains_valid() -> None:
-    scenario = parse_sdl(
-        """\
+def test_disjoint_merge_is_valid_only_in_migration_mode() -> None:
+    content = """\
 name: merge-disjoint
 nodes:
   first:
@@ -167,9 +172,17 @@ nodes:
     resources:
       <<: *resources
 """
+    with pytest.raises(SDLParseError) as excinfo:
+        parse_sdl(content)
+    assert excinfo.value.diagnostics[0].code == "sdl.noncanonical_merge"
+
+    scenario = parse_sdl(
+        content,
+        migration_policy=SDLMigrationPolicy.ACCEPT,
     )
 
     assert scenario.nodes["second"].resources.cpu == 1
+    assert [item.code for item in scenario.source_diagnostics] == ["sdl.noncanonical_merge"]
 
 
 def test_cyclic_alias_graph_fails_cleanly() -> None:

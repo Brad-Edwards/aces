@@ -1,8 +1,8 @@
-"""SDL parser — YAML loading with key normalization and shorthand expansion.
+"""SDL parser — canonical YAML loading and typed normalization.
 
 Provides ``parse_sdl()`` as the primary entry point. Handles:
-- Case-insensitive key normalization (``Name`` → ``name``)
-- Hyphen-to-underscore conversion (``min-score`` → ``min_score``)
+- Exact canonical structural fields by default
+- Explicitly requested migration of legacy field spellings
 - Shorthand expansion (``source: "pkg"`` → ``{name: "pkg", version: "*"}``)
 """
 
@@ -12,13 +12,25 @@ from typing import Any, Literal
 from pydantic import ValidationError
 
 from ._base import contains_variable_token, is_variable_ref
-from ._errors import SDLParseError, SDLValidationError
+from ._errors import (
+    SDLParseDiagnostic,
+    SDLParseError,
+    SDLSourcePosition,
+    SDLSourceRange,
+    SDLValidationError,
+)
 from ._mapping_scopes import (
     HASHMAP_SECTIONS,
     NESTED_HASHMAP_FIELDS,
     MappingScope,
     is_literal_map_field,
     normalize_field_key,
+)
+from ._source_profile import (
+    DEFAULT_PARSER_LIMITS,
+    SDL_SOURCE_FORMAT,
+    SDLMigrationPolicy,
+    SDLParserLimits,
 )
 from ._yaml_loader import load_sdl_yaml
 from .scenario import ExpandedScenario, Scenario
@@ -43,10 +55,7 @@ def _child_is_hashmap_field(key: str, value: Any) -> bool:
 
 
 def _normalize_field_key(k: Any) -> Any:
-    """Normalize a Pydantic field key: lowercase + hyphens to underscores."""
-    # PyYAML's YAML 1.1 rules can coerce bare keys like ``on``/``off`` to bools.
-    # SDL field keys are schema-defined strings, so normalize those legacy bool
-    # coercions back into the field names we actually support.
+    """Return the normalized representation of a structural field key."""
     if isinstance(k, str):
         return normalize_field_key(k)
     return k
@@ -86,12 +95,20 @@ def load_sdl_fragment(
     *,
     mapping_keys: Literal["structural", "literal"] = "structural",
     base_pointer: str = "",
+    source_format: str = SDL_SOURCE_FORMAT,
+    migration_policy: SDLMigrationPolicy | str = SDLMigrationPolicy.REJECT,
+    limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
+    source_diagnostics: list[SDLParseDiagnostic] | None = None,
 ) -> object:
     """Safely load an SDL YAML fragment with the canonical key preflight."""
     return load_sdl_yaml(
         content,
         scope=MappingScope(mapping_keys),
         base_pointer=base_pointer,
+        source_format=source_format,
+        migration_policy=migration_policy,
+        limits=limits,
+        source_diagnostics=source_diagnostics,
     )
 
 
@@ -249,6 +266,9 @@ def parse_sdl(
     path: Path | None = None,
     *,
     skip_semantic_validation: bool = False,
+    source_format: str = SDL_SOURCE_FORMAT,
+    migration_policy: SDLMigrationPolicy | str = SDLMigrationPolicy.REJECT,
+    limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
 ) -> Scenario:
     """Parse an SDL YAML string into a validated Scenario.
 
@@ -261,6 +281,10 @@ def parse_sdl(
         path: Optional file path for error messages.
         skip_semantic_validation: If True, only run Pydantic structural
             validation (useful for partial scenarios during development).
+        source_format: Versioned concrete-syntax profile identifier.
+        migration_policy: Strict rejection or explicit acceptance of recognized
+            legacy field/merge syntax with retained diagnostics.
+        limits: Source and alias-processing resource limits.
 
     Returns:
         Validated Scenario object.
@@ -269,7 +293,15 @@ def parse_sdl(
         SDLParseError: If YAML parsing fails or the data isn't a dict.
         SDLValidationError: If semantic validation finds errors.
     """
-    data = _load_normalized_data(content, path=path)
+    source_diagnostics: list[SDLParseDiagnostic] = []
+    data = _load_normalized_data(
+        content,
+        path=path,
+        source_format=source_format,
+        migration_policy=migration_policy,
+        limits=limits,
+        source_diagnostics=source_diagnostics,
+    )
     _reject_removed_scoring_sections(data, path=path)
     module_variable_specs: dict[str, dict[str, object]] = {}
     module_node_variable_refs: dict[str, dict[str, str | None]] = {}
@@ -286,7 +318,14 @@ def parse_sdl(
             namespaces,
             module_variable_specs,
             module_node_variable_refs,
-        ) = expand_sdl_modules(data, path=path)
+        ) = expand_sdl_modules(
+            data,
+            path=path,
+            source_format=source_format,
+            migration_policy=migration_policy,
+            limits=limits,
+            source_diagnostics=source_diagnostics,
+        )
         scenario_cls = ExpandedScenario if namespaces else Scenario
     else:
         scenario_cls = Scenario
@@ -297,10 +336,13 @@ def parse_sdl(
     except ValidationError as e:
         raise SDLParseError(str(e), path=path) from e
 
+    source_diagnostics = _dedupe_source_diagnostics(source_diagnostics)
+
     # Attach the module-import capability-variable provenance BEFORE semantic
     # validation so downstream `instantiate_scenario` can propagate it.
     scenario._set_module_variable_specs(module_variable_specs)
     scenario._set_module_node_variable_refs(module_node_variable_refs)
+    scenario._set_source_diagnostics(source_diagnostics)
 
     # Semantic validation
     if not skip_semantic_validation:
@@ -321,6 +363,29 @@ def parse_sdl(
     return scenario
 
 
+def _dedupe_source_diagnostics(
+    diagnostics: list[SDLParseDiagnostic],
+) -> list[SDLParseDiagnostic]:
+    unique: list[SDLParseDiagnostic] = []
+    seen: set[tuple[object, ...]] = set()
+    for diagnostic in diagnostics:
+        start = diagnostic.primary_range.start
+        end = diagnostic.primary_range.end
+        key = (
+            diagnostic.source,
+            diagnostic.code,
+            diagnostic.pointer,
+            start.line,
+            start.column,
+            end.line,
+            end.column,
+        )
+        if key not in seen:
+            seen.add(key)
+            unique.append(diagnostic)
+    return unique
+
+
 def parse_sdl_file(path: Path, **kwargs: Any) -> Scenario:
     """Parse an SDL YAML file into a validated Scenario.
 
@@ -329,53 +394,38 @@ def parse_sdl_file(path: Path, **kwargs: Any) -> Scenario:
     if not path.exists():
         raise FileNotFoundError(f"SDL file not found: {path}")
 
-    content = path.read_text(encoding="utf-8")
-    data = _load_normalized_data(content, path=path)
-    namespaces: dict[str, str] = {}
-    module_variable_specs: dict[str, dict[str, object]] = {}
-    module_node_variable_refs: dict[str, dict[str, str | None]] = {}
-    if data.get("imports"):
-        from .composition import expand_sdl_modules
-
-        (
-            data,
-            namespaces,
-            module_variable_specs,
-            module_node_variable_refs,
-        ) = expand_sdl_modules(data, path=path)
-    scenario_cls = ExpandedScenario if namespaces else Scenario
     try:
-        scenario = scenario_cls(**data)
-    except ValidationError as e:
-        raise SDLParseError(str(e), path=path) from e
-
-    scenario._set_module_variable_specs(module_variable_specs)
-    scenario._set_module_node_variable_refs(module_node_variable_refs)
-
-    skip_semantic_validation = bool(kwargs.pop("skip_semantic_validation", False))
-    if not skip_semantic_validation:
-        validator = SemanticValidator(scenario)
-        try:
-            validator.validate()
-        except SDLValidationError as e:
-            e.path = path
-            raise
-        scenario._set_advisories(validator.warnings)
-        scenario._set_semantic_validated(True)
-    else:
-        scenario._set_advisories([])
-        scenario._set_semantic_validated(False)
-    if isinstance(scenario, ExpandedScenario):
-        scenario._set_module_namespaces(namespaces)
-    return scenario
+        content = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        position = SDLSourcePosition(1, 1)
+        diagnostic = SDLParseDiagnostic(
+            code="sdl.utf8",
+            message="SDL source must be valid UTF-8.",
+            pointer="",
+            primary_range=SDLSourceRange(start=position, end=position),
+            source=str(path),
+        )
+        raise SDLParseError(diagnostic.message, path=path, diagnostics=(diagnostic,)) from exc
+    return parse_sdl(content, path=path, **kwargs)
 
 
 def _load_normalized_data(
     content: str,
     *,
     path: Path | None = None,
+    source_format: str = SDL_SOURCE_FORMAT,
+    migration_policy: SDLMigrationPolicy | str = SDLMigrationPolicy.REJECT,
+    limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
+    source_diagnostics: list[SDLParseDiagnostic] | None = None,
 ) -> dict[str, Any]:
-    raw = load_sdl_yaml(content, path=path)
+    raw = load_sdl_yaml(
+        content,
+        path=path,
+        source_format=source_format,
+        migration_policy=migration_policy,
+        limits=limits,
+        source_diagnostics=source_diagnostics,
+    )
 
     if not isinstance(raw, dict):
         raise SDLParseError("SDL must be a YAML mapping (not a scalar or list)", path=path)

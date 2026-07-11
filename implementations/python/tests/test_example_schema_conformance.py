@@ -29,6 +29,7 @@ from typing import Any, Protocol
 import pytest
 from aces_contracts.corpus import corpus_family_root
 from aces_contracts.experiment_spec import load_experiment_spec
+from aces_sdl import load_sdl_fragment
 from aces_sdl.scenarios import load_scenario
 from jsonschema import Draft202012Validator
 from paths import EXAMPLES_DIR, EXPERIMENTS_DIR
@@ -46,11 +47,9 @@ class SupportsModelDump(Protocol):
     def model_dump(self, **kwargs: Any) -> dict: ...
 
 
-# ``by_alias=True`` is load-bearing: the published schema is generated from the model with
-# ``model_json_schema()`` (aliases on), so a field-name dump fails on YAML-facing aliases
-# such as ``class``, ``on-success``, and ``max-attempts``. ``mode="json"`` yields JSON-native
-# scalars (enum values, not enum members). These are the same flags the runtime compiler
-# uses for its contract-shaped serialization.
+# ``by_alias=True`` is load-bearing for intentional language keywords such as
+# ``class``, ``type``, ``then``, and ``else``. Ordinary structural wire fields
+# use canonical snake_case. ``mode="json"`` yields JSON-native enum values.
 _PUBLICATION_DUMP_KWARGS = {"mode": "json", "by_alias": True}
 
 
@@ -143,6 +142,17 @@ def test_example_conforms_to_published_schema(entry: CorpusEntry, path: Path) ->
     errors = sorted(entry.validator().iter_errors(payload), key=lambda error: error.json_path)
 
     assert not errors, f"{path.name} violates {entry.contract_id}:\n" + "\n".join(
+        f"  {error.json_path}: {error.message}" for error in errors
+    )
+
+
+@pytest.mark.parametrize("path", sorted(EXAMPLES_DIR.glob("*.sdl.yaml")), ids=lambda path: path.name)
+def test_sdl_example_is_canonical_source_and_direct_normalized_schema_input(path: Path) -> None:
+    """Canonical examples pass strict source decoding and the advertised schema directly."""
+    payload = load_sdl_fragment(path.read_text(encoding="utf-8"))
+    errors = sorted(_AUTHORING_ENTRY.validator().iter_errors(payload), key=lambda error: error.json_path)
+
+    assert not errors, f"{path.name} is not direct normalized authoring-schema input:\n" + "\n".join(
         f"  {error.json_path}: {error.message}" for error in errors
     )
 

@@ -52,8 +52,8 @@ construct by local convention.
 
 Use these existing surfaces before adding anything new:
 
-- SDL shape and local parsing: `aces_sdl.SDLModel`, parser key normalization,
-  variable-key rejection, and `SDLParseError`
+- SDL shape and local parsing: `aces_sdl.SDLModel`, `sdl-yaml/v1` source-profile
+  enforcement, explicit migration, variable-key rejection, and `SDLParseError`
 - static SDL validation: `SemanticValidator` and `SDLValidationError`
 - instantiation: `instantiate_scenario()` and `SDLInstantiationError`
 - shared SDL semantics: `aces_sdl.semantics.objectives` and
