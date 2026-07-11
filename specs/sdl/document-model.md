@@ -15,11 +15,21 @@ and instantiation rules.
 1. An SDL document **MUST** be a YAML 1.1/1.2 document whose top-level value is a
    mapping. A document whose root is a sequence, scalar, or null is not a valid
    SDL document.
-2. Every top-level key **MUST** be a string. Field keys are matched
-   case-sensitively after enum/value normalisation (§5); a key that is not a
-   defined top-level field is rejected (§4).
+2. Every mapping key **MUST** denote a string. In particular, SDL treats an
+   implicitly typed YAML 1.1 spelling such as `on`, `off`, `yes`, or `no` as
+   the authored string spelling when it occurs in key position; it does not
+   allow the YAML loader to turn that spelling into a boolean map key. A
+   non-scalar or explicitly non-string key is rejected.
 3. A document **MUST** be loadable by a safe YAML loader. Constructor tags that
    instantiate arbitrary types **MUST NOT** be honoured.
+4. Every authored mapping entry **MUST** remain distinguishable until the SDL
+   parser has checked key uniqueness. An exact duplicate key at any depth is a
+   parse/structural error; a loader **MUST NOT** construct a last-write-wins
+   dictionary first.
+
+This uniqueness rule follows the YAML 1.2.2 representation model, in which a
+mapping is an unordered association of unique keys and non-unique keys are a
+loading failure ([YAML 1.2.2 §§3.2.1.1, 3.3](https://yaml.org/spec/1.2.2/)).
 
 ## 2. Top-level organisation
 
@@ -65,23 +75,51 @@ to match `contracts/schemas/sdl/sdl-authoring-input-v1.json`.
 3. Closure exists so that a typo in a field name (`vulnerabilites`) fails the
    document rather than silently dropping content. Authors **MUST NOT** rely on
    undeclared keys to carry data.
+4. YAML anchors and aliases remain authoring conveniences, but they do not
+   weaken closure or uniqueness. A merge key (`<<`) is valid only when the
+   effective entries contributed by every merge source and every local entry
+   remain unique after the scope-appropriate key rules in §5 are applied. A
+   merge conflict is a parse/structural error rather than an implicit precedence
+   rule. This is a deliberate ACES restriction over the YAML 1.1 merge-key
+   working draft, which otherwise defines source and local override precedence
+   ([YAML 1.1 merge type](https://yaml.org/type/merge.html)). Cyclic alias
+   graphs are invalid.
 
 > *Implementation evidence (non-normative): the reference models set
 > `extra="forbid"` on the shared SDL base model.*
 
-## 5. Value normalisation
+## 5. Field and value normalisation
 
 1. Enum-valued fields accept their value case-insensitively, and accept a hyphen
    as an alias for an underscore in the value text, so that an authoring value
    such as `search-index` and `search_index` denote the same enum member. This
    is an authoring convenience; the normalised (canonical) form is what the
    document means.
-2. Normalisation applies to enum **values**, not to user-defined identifier
-   **keys**. A user-defined key is preserved verbatim as the element's
-   identifier (§6).
-3. A field that holds a variable placeholder (`${…}`) is **not** normalised as an
+2. Structural field keys retain the authoring aliases established by ADR-001:
+   matching is case-insensitive and `-` is accepted as an alias for `_`.
+   Therefore `semantic-version` and `semantic_version` both address the
+   canonical field `semantic_version`.
+3. Field-key aliases do not create a precedence rule. If two keys in one
+   effective mapping address the same canonical field, including through a YAML
+   merge, the mapping is ambiguous and **MUST** fail during parsing before model
+   construction. The diagnostic contract is defined in
+   [diagnostics.md §6](diagnostics.md).
+4. Field-key normalisation applies only while traversing a schema-defined
+   structural mapping. It **MUST NOT** be applied to user-defined identifier
+   maps, extension maps, or native option/label maps. Keys in those maps are
+   preserved verbatim, including case, hyphens, underscores, and YAML 1.1
+   boolean-like spellings; only exact duplicate identifiers are rejected.
+5. A field that holds a variable placeholder (`${…}`) is **not** normalised as an
    enum value; the placeholder is preserved until instantiation
    ([variables-and-instantiation.md](variables-and-instantiation.md)).
+
+Formally, let `c_scope(k)` lowercase a key and replace hyphens with underscores
+in a structural mapping, and be the identity function in a literal mapping. For every
+pair of distinct entries `i` and `j` in an effective mapping (including merge
+contributions), well-formedness requires
+`c_scope(key_i) != c_scope(key_j)`. This injectivity condition is checked over
+the authored node graph; mapped values do not participate in the comparison or
+its diagnostics.
 
 ## 6. Identifier rules for user-defined keys
 
@@ -120,7 +158,7 @@ of the authored document with progressively fewer unresolved constructs:
 1. **Authored.** The document as written. It **MAY** contain module imports and
    `${…}` variable placeholders. Full semantic validation
    ([references.md](references.md), [diagnostics.md](diagnostics.md)) applies to
-   the authored document, treating unresolved placeholders per §5.3.
+   the authored document, treating unresolved placeholders per §5.5.
 2. **Expanded.** If the document declares a module or imports
    ([sections.md](sections.md) — `module`, `imports`), module composition is
    applied **before** full semantic validation, producing an expanded document

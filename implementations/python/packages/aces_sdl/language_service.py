@@ -15,6 +15,7 @@ import yaml
 from ._errors import SDLParseError, SDLValidationError
 from ._language_diagnostics import diagnostic as _diagnostic
 from ._language_diagnostics import invalid as _invalid
+from ._language_diagnostics import parse_error as _parse_error
 from ._language_edit import apply_edit
 from ._language_metadata import REFERENCE_COMPLETION_TARGETS, SECTION_FIELD_COMPLETIONS
 from ._language_references import find_references
@@ -22,8 +23,6 @@ from .parser import _load_normalized_data, parse_sdl
 from .scenario import Scenario
 
 _MAX_INPUT_BYTES = 64 * 1024
-_CODE_PARSE = "sdl.parse"
-
 _SCENARIO_METADATA_FIELDS = frozenset({"name", "version", "description", "module", "imports"})
 _SECTION_FIELDS = tuple(field for field in Scenario.model_fields if field not in _SCENARIO_METADATA_FIELDS)
 _TOP_LEVEL_KEYS = tuple(Scenario.model_fields)
@@ -98,7 +97,7 @@ def language_format(sdl_content: str) -> dict[str, Any]:
     try:
         data = _load_normalized_data(sdl_content)
     except SDLParseError as exc:
-        return _invalid("parse", _CODE_PARSE, exc.details)
+        return _parse_error(exc)
 
     formatted = yaml.safe_dump(
         data,
@@ -127,7 +126,7 @@ def language_diagnostics(
             skip_semantic_validation=not semantic_validation,
         )
     except SDLParseError as exc:
-        return _invalid("parse", _CODE_PARSE, exc.details)
+        return _parse_error(exc)
     except SDLValidationError as exc:
         return {
             "status": "invalid",
@@ -160,7 +159,7 @@ def apply_structured_edit(
     try:
         data = _load_normalized_data(sdl_content)
     except SDLParseError as exc:
-        return _invalid("parse", _CODE_PARSE, exc.details)
+        return _parse_error(exc)
 
     try:
         tokens = _split_pointer(pointer)
@@ -185,7 +184,7 @@ def _load_completion_data(sdl_content: str) -> tuple[dict[str, Any], dict[str, A
     try:
         return _load_normalized_data(sdl_content), None
     except SDLParseError as exc:
-        return {}, _invalid("parse", _CODE_PARSE, exc.details)
+        return {}, _parse_error(exc)
 
 
 def _completion_target_section(pointer: list[str]) -> str | None:

@@ -54,7 +54,7 @@ def compile_pipeline(sdl_content: str, parameters_json: str) -> dict[str, Any]:
     try:
         scenario = parse_sdl(sdl_content)
     except SDLParseError as exc:
-        return {"error": stage_error("parse", exc.details), "stages": stages, "scenario": None, "model": None}
+        return {"error": stage_error("parse", exc), "stages": stages, "scenario": None, "model": None}
     except SDLValidationError as exc:
         return {
             "error": {
@@ -139,7 +139,15 @@ def stage_ok(stage: str, *, detail: str = "ok") -> dict[str, str]:
     return {"stage": stage, "status": "ok", "detail": detail}
 
 
-def stage_error(stage: str, message: str) -> dict[str, Any]:
+def stage_error(stage: str, error: Any) -> dict[str, Any]:
+    structured = getattr(error, "diagnostics", ())
+    if structured:
+        return {
+            "status": "invalid",
+            "stage": stage,
+            "diagnostics": [item.as_dict() for item in structured],
+        }
+    message = getattr(error, "details", str(error))
     return {
         "status": "invalid",
         "stage": stage,

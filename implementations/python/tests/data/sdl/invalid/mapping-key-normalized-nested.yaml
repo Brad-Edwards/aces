@@ -1,0 +1,5 @@
+name: normalized-nested
+nodes:
+  sw:
+    Type: switch
+    type: switch

@@ -272,6 +272,21 @@ class TestAuthoringTools:
         )
         assert "YAML ERROR" in text
 
+    def test_validate_section_rejects_duplicates_before_fragment_round_trip(self, server):
+        text = _call(
+            server,
+            "sdl_validate_section",
+            {
+                "section": "nodes",
+                "section_yaml": "sw:\n  Type: switch\n  type: switch",
+            },
+        )
+
+        assert "PARSE ERROR" in text
+        assert "sdl.mapping_key_conflict" in text
+        assert "/nodes/sw/type" in text
+        assert "line 3, column 3" in text
+
     def test_validate_section_bad_section(self, server):
         text = _call(
             server,
@@ -630,6 +645,17 @@ class TestOperationTools:
         assert payload["status"] == "invalid"
         assert payload["stage"] == "semantic_validation"
         assert "ghost-feature" in payload["diagnostics"][0]["message"]
+
+    @pytest.mark.parametrize("tool", ["sdl_parse", "sdl_compile"])
+    def test_operation_tools_preserve_mapping_conflict_diagnostics(self, server, tool):
+        payload = _json_call(server, tool, {"sdl_content": "Name: first\nname: second\n"})
+
+        assert payload["status"] == "invalid"
+        diagnostic = payload["diagnostics"][0]
+        assert diagnostic["code"] == "sdl.mapping_key_conflict"
+        assert diagnostic["path"] == "/name"
+        assert diagnostic["authored_keys"] == ["Name", "name"]
+        assert diagnostic["range"]["start"] == {"line": 2, "column": 1}
 
     def test_compile_summarizes_runtime_model(self, server):
         payload = _json_call(server, "sdl_compile", {"sdl_content": FULL_SDL})

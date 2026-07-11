@@ -113,7 +113,7 @@ def register(mcp: FastMCP) -> None:
             return f"INPUT TOO LARGE — limit is {_MAX_INPUT_BYTES} bytes."
 
         import yaml as _yaml
-        from aces_sdl import SDLParseError, SDLValidationError, parse_sdl
+        from aces_sdl import SDLParseError, SDLValidationError, load_sdl_fragment, parse_sdl
 
         section = section.strip().lower().replace("-", "_")
         valid_sections = {
@@ -140,18 +140,24 @@ def register(mcp: FastMCP) -> None:
 
         # Build a minimal valid wrapper
         try:
-            section_data = _yaml.safe_load(section_yaml)
-        except _yaml.YAMLError as exc:
-            return f"YAML ERROR in section content:\n{exc}"
+            section_data = load_sdl_fragment(
+                section_yaml,
+                mapping_keys="literal",
+                base_pointer=f"/{section}",
+            )
+        except SDLParseError as exc:
+            label = "PARSE ERROR" if any(item.code != "sdl.parse" for item in exc.diagnostics) else "YAML ERROR"
+            return f"{label} in section content:\n{exc.details}"
 
         wrapper: dict = {}
         if context_yaml:
             try:
-                ctx = _yaml.safe_load(context_yaml)
+                ctx = load_sdl_fragment(context_yaml)
                 if isinstance(ctx, dict):
                     wrapper.update(ctx)
-            except _yaml.YAMLError as exc:
-                return f"YAML ERROR in context_yaml:\n{exc}"
+            except SDLParseError as exc:
+                label = "PARSE ERROR" if any(item.code != "sdl.parse" for item in exc.diagnostics) else "YAML ERROR"
+                return f"{label} in context_yaml:\n{exc.details}"
 
         # Force a safe synthetic name — always last so context_yaml cannot
         # override it and cause confusing error messages.

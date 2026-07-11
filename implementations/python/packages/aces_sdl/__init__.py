@@ -10,12 +10,16 @@ from importlib import import_module
 __all__ = [
     "instantiate_scenario",
     "InstantiatedScenario",
+    "load_sdl_fragment",
     "parse_sdl",
     "parse_sdl_file",
     "Scenario",
     "SDLError",
     "SDLInstantiationError",
+    "SDLParseDiagnostic",
     "SDLParseError",
+    "SDLSourcePosition",
+    "SDLSourceRange",
     "SDLValidationError",
     "VARIABLE_TOKEN_PATTERN",
 ]
@@ -25,7 +29,10 @@ def __getattr__(name: str):
     if name in {
         "SDLError",
         "SDLInstantiationError",
+        "SDLParseDiagnostic",
         "SDLParseError",
+        "SDLSourcePosition",
+        "SDLSourceRange",
         "SDLValidationError",
     }:
         module = import_module("aces_sdl._errors")
@@ -33,7 +40,7 @@ def __getattr__(name: str):
         module = import_module("aces_sdl._base")
     elif name == "instantiate_scenario":
         module = import_module("aces_sdl.instantiate")
-    elif name in {"parse_sdl", "parse_sdl_file"}:
+    elif name in {"load_sdl_fragment", "parse_sdl", "parse_sdl_file"}:
         module = import_module("aces_sdl.parser")
     elif name in {"InstantiatedScenario", "Scenario"}:
         module = import_module("aces_sdl.scenario")

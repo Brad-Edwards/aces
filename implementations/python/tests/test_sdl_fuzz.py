@@ -397,3 +397,49 @@ def test_fuzz_feature_dependency_cycles(features):
         parse_sdl(yaml_str)
     except (SDLParseError, SDLValidationError):
         pass
+
+
+@given(
+    pair=st.sampled_from(
+        [
+            ("Password-Strength", "password_strength"),
+            ("PASSWORD_STRENGTH", "password-strength"),
+            ("password-strength", "Password_Strength"),
+        ]
+    )
+)
+@settings(max_examples=50, deadline=2000)
+def test_fuzz_structural_key_alias_mutations_fail_closed(pair):
+    """Generated field aliases must never overwrite an earlier spelling."""
+    first, second = pair
+    source = f"""\
+name: fuzz-aliases
+nodes:
+  host: {{type: switch}}
+accounts:
+  alice:
+    username: alice
+    node: host
+    {first}: strong
+    {second}: weak
+"""
+
+    with pytest.raises(SDLParseError) as excinfo:
+        parse_sdl(source)
+    assert excinfo.value.diagnostics[0].code == "sdl.mapping_key_conflict"
+
+
+@given(identifier=slugs)
+@settings(max_examples=50, deadline=2000)
+def test_fuzz_exact_identifier_duplicate_mutations_fail_closed(identifier):
+    """Generated duplicate symbol definitions must fail before construction."""
+    source = f"""\
+name: fuzz-duplicates
+nodes:
+  {identifier}: {{type: switch}}
+  {identifier}: {{type: switch}}
+"""
+
+    with pytest.raises(SDLParseError) as excinfo:
+        parse_sdl(source)
+    assert excinfo.value.diagnostics[0].code == "sdl.mapping_key_conflict"

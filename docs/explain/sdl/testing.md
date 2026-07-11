@@ -66,7 +66,10 @@ cd implementations/python && \
 uv run --extra dev pytest tests/test_sdl_fuzz.py -m fuzz -v
 ```
 
-Property-based testing using [Hypothesis](https://hypothesis.readthedocs.io/). Generates ~1,050 random inputs per run across 6 fuzz strategies:
+Property-based testing using [Hypothesis](https://hypothesis.readthedocs.io/).
+The dedicated mapping-key property tests run in the standard suite; the fuzz
+session adds mutation coverage and generates about 1,150 inputs per run across
+8 strategies:
 
 | Test | Strategy | Examples |
 |------|----------|----------|
@@ -76,6 +79,8 @@ Property-based testing using [Hypothesis](https://hypothesis.readthedocs.io/). G
 | `test_fuzz_service_ports` | Random port/protocol/name combos | 100 |
 | `test_fuzz_vulnerability_class_validation` | Random CWE class strings | 100 |
 | `test_fuzz_feature_dependency_cycles` | Random dependency graphs | 100 |
+| `test_fuzz_structural_key_alias_mutations_fail_closed` | Normalized field-alias collisions | 50 |
+| `test_fuzz_exact_identifier_duplicate_mutations_fail_closed` | Exact symbol-key duplicates | 50 |
 
 The invariant: the parser **never** raises an unhandled exception. Every input either produces a valid `Scenario` or raises `SDLParseError`/`SDLValidationError`.
 
@@ -131,12 +136,14 @@ Use the corpus leg that matches the artifact's purpose:
   specimens rather than reusable examples. Add them to the relevant `SCENARIOS`
   list so the parametrized tests pick them up.
 - **Negative-path cases** should stay close to the parser, model, or validator
-  rule they exercise. Do not add invalid files under `examples/scenarios/`;
-  that directory is the positive example corpus.
+  rule they exercise. Parser-negative SDL fixtures live under
+  `implementations/python/tests/data/sdl/invalid/`. Do not add invalid files
+  under `examples/scenarios/`; that directory is the positive example corpus.
 
 All scenario corpus loading should continue to flow through the existing
-`load_scenario()` / `parse_sdl()` boundary so it receives the same `yaml.safe_load`
-parsing, Pydantic structural validation, semantic validation, advisory logging,
+`load_scenario()` / `parse_sdl()` boundary so it receives the same source-marked
+safe composition, mapping-key preflight, Pydantic structural validation,
+semantic validation, advisory logging,
 and `ScenarioValidationError`/`SDLParseError`/`SDLValidationError` behavior as
 the rest of the SDL stack.
 

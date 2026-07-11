@@ -1,0 +1,5 @@
+name: cyclic-alias
+nodes: &nodes
+  sw:
+    type: switch
+    roles: *nodes
