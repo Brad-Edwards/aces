@@ -110,20 +110,18 @@ URIs, credentials, or private keys).
 ### Evidence-source modes
 
 - `deterministic` (default; no libvirt daemon; used by CI): participant proof,
-  compiled topology, structural negative-boundary evidence, and an evaluator-only
-  translated SOC-readback record explicitly marked as not upstream Wazuh.
+  compiled topology, structural negative-boundary evidence, and declared
+  evaluator-only defensive evidence channels. No SOC state is observed.
 - `native-live` (operator-run): additionally realizes the libvirt VM/network
-  substrate and records the native topology and native SOC readback. Native
-  realization is **gating** — the run only reports `PASS` when the libvirt driver
-  actually realizes substrate, so the mode can never claim success without
-  realizing. The libvirt backend declares no content-type support, so the *reference*
-  scenario's content, orchestration, and evaluation planes are not
-  backend-realized: native-live against this scenario therefore reports the
-  realization gate as **failed** and surfaces the unrealized planes under
-  `unrealized_capabilities` (disclosed, not faked). The artifact is still written
-  and validates, recording the attempt and the disclosure. Native realization
-  passes for a scenario the libvirt backend can fully provision (e.g. a
-  VM/network-only substrate scenario).
+  substrate only when every concern passes the TechVault admission gate, then
+  records bounded daemon-observed fields with a realization binding. Native
+  realization is **gating**. The reference scenario declares unsupported guest
+  content/account/feature concerns, so native-live reports the realization gate
+  as **failed** and surfaces those concerns under `unrealized_capabilities`
+  (disclosed, not faked). The artifact is still written and validates, recording
+  the attempt. Native realization can pass for an admitted VM/network-only
+  substrate scenario. Guest readiness, services, and SOC state remain
+  `not-observed` in both modes.
 
 ### How libvirt evidence differs from APTL Docker/Wazuh evidence
 
@@ -134,21 +132,22 @@ evidence. The libvirt proof realizes a different substrate — native libvirt/QE
 appliances — and its participant runtime is deterministic (#614), so:
 
 - the **substrate** is genuinely different (VM/network appliances vs.
-  containers), which is the point of the n=2 backend-diversity claim;
-- the **defensive evidence** is an evaluator-only *translated/native* SOC
-  readback (or, in deterministic mode, the declared evaluator-only evidence
-  channels), explicitly disclosed as not upstream Wazuh detection output — the
-  artifact makes no Wazuh detection-quality claim;
+  containers) only for concerns admitted and daemon-verified by the bounded
+  native mode;
+- the **defensive evidence** is a declaration of evaluator-only evidence
+  channels, not native SOC readback — the artifact makes no Wazuh
+  detection-quality claim;
 - the **participant action proof** is structural (deterministic domain adapter),
   disclosed as such.
 
-The claim that this difference supports is narrow and explicit: ACES can
-drive the *same authored scenario, action contract, and observation/evaluator
-boundary* across two independent backends, producing comparable evaluator
-evidence shapes for the Brad-Edwards/aces#600 cross-backend **invariant ledger**.
-It is **not** a claim of byte-equivalence, application-internals equivalence,
-Wazuh detection-quality parity, model-defense robustness, or full
-semantic-equivalence between the libvirt and APTL realizations.
+The claim is narrow: ACES can compile the same authored scenario and execute its
+deterministic participant contract while honestly disclosing that the full
+guest/application provisioning plane is not realized by the libvirt TechVault
+mode. A separate bounded scenario demonstrates an independent VM/network
+substrate. This is **not** a claim that the reference scenario is fully realized
+on two backends, nor a claim of byte-equivalence, application-internals
+equivalence, Wazuh detection-quality parity, model-defense robustness, or full
+semantic equivalence.
 
 ## Downstream Links
 

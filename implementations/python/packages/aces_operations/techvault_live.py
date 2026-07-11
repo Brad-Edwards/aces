@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -9,37 +12,18 @@ from pathlib import Path
 from typing import Any
 
 from aces_backend_libvirt.target import create_libvirt_target
-from aces_backend_libvirt.techvault_native import (
-    NativeLibvirtProbe,
-    TechVaultNativeLibvirtDriver,
-    check_native_readiness,
-    expected_surface,
-    native_soc_readback,
-)
+from aces_backend_libvirt.techvault_native import TechVaultNativeLibvirtDriver, expected_surface
 from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.manager import RuntimeManager
 from aces_sdl.parser import parse_sdl_file
 
+from aces_operations._evidence_run_validation import redaction_violations
+from aces_operations._techvault_cleanup import cleanup_native_snapshot
 from aces_operations.run_artifacts import (
     atomic_write_json_artifact,
     is_valid_run_id_label,
+    portable_artifact_ref,
     run_artifact_path,
-)
-
-DEFAULT_EVENT_WINDOW_SECONDS = 180
-DEFAULT_BOOT_TIMEOUT_SECONDS = 180
-_FULL_SOC_NODES = frozenset(
-    {
-        "wazuh-manager",
-        "wazuh-indexer",
-        "wazuh-dashboard",
-        "suricata",
-        "misp",
-        "thehive",
-        "cortex",
-        "shuffle-backend",
-        "shuffle-frontend",
-    }
 )
 
 
@@ -83,11 +67,7 @@ class TechVaultLiveReport:
 class TechVaultLiveConfig:
     """Runtime controls for the native ACES/libvirt TechVault live gate."""
 
-    clean_boot: bool = True
-    event_window_seconds: int = DEFAULT_EVENT_WINDOW_SECONDS
-    boot_timeout_seconds: int = DEFAULT_BOOT_TIMEOUT_SECONDS
     connection_uri: str = "qemu:///system"
-    appliance_memory_mib: int = 128
 
 
 def validate_techvault_live(
@@ -97,7 +77,6 @@ def validate_techvault_live(
     run_id: str,
     config: TechVaultLiveConfig | None = None,
     driver_factory: Callable[[], TechVaultNativeLibvirtDriver] | None = None,
-    probe: NativeLibvirtProbe | None = None,
 ) -> TechVaultLiveReport:
     """Boot and validate a TechVault SDL through native ACES/libvirt."""
 
@@ -116,8 +95,6 @@ def validate_techvault_live(
                 state_dir=run_dir / "libvirt",
                 connection_uri=settings.connection_uri,
                 name_prefix="aces-techvault",
-                appliance_memory_mib=settings.appliance_memory_mib,
-                clean_existing=settings.clean_boot,
             )
         )
         target = create_libvirt_target(driver=driver, name_prefix="aces-techvault")
@@ -128,27 +105,17 @@ def validate_techvault_live(
             boot_check = _apply_plan(target, scenario_path, driver)
             checks.append(boot_check)
             snapshot = driver.last_snapshot
-            evidence: dict[str, object] = {}
             if boot_check.passed:
                 checks.append(_substrate_independence_check(snapshot))
                 checks.append(_surface_check(snapshot))
-                readiness_check = _readiness_check(
-                    snapshot, probe or NativeLibvirtProbe(), settings.boot_timeout_seconds
-                )
-                checks.append(readiness_check)
-                checks.append(_kali_reachability_check(snapshot, probe or NativeLibvirtProbe()))
-                soc_check, soc_evidence = _soc_stack_readback_check(snapshot)
-                checks.append(soc_check)
-                evidence.update(soc_evidence)
-                checks.append(_variation_check(snapshot))
+                cleanup_ok, cleanup_diagnostics = cleanup_native_snapshot(driver, snapshot)
+                checks.append(LiveCheck("verified_native_cleanup", cleanup_ok, cleanup_diagnostics))
             manifest_path = _write_manifest(
                 output_dir,
                 run_id,
                 scenario_path,
-                driver,
+                snapshot,
                 checks,
-                evidence,
-                clean_boot=settings.clean_boot,
             )
             checks.append(
                 LiveCheck(
@@ -170,8 +137,8 @@ def _plan_scenario(target: object, scenario_path: Path) -> tuple[object | None, 
     try:
         scenario = parse_sdl_file(scenario_path)
         execution_plan = RuntimeManager(target).plan(scenario)
-    except Exception as exc:
-        return None, LiveCheck("planning", False, (f"scenario planning failed: {exc}",))
+    except Exception:
+        return None, LiveCheck("planning", False, ("scenario planning failed",))
     diagnostics = tuple(f"{diag.code}: {diag.message}" for diag in execution_plan.diagnostics if diag.is_error)
     if diagnostics:
         return scenario, LiveCheck("planning", False, diagnostics)
@@ -187,8 +154,8 @@ def _apply_plan(target: object, scenario_path: Path, driver: TechVaultNativeLibv
         control_plane = RuntimeControlPlane(target, initial_snapshot=execution_plan.base_snapshot)
         receipt = control_plane.submit_provisioning(execution_plan.provisioning)
         status = control_plane.get_operation(receipt.operation_id)
-    except Exception as exc:
-        diagnostics = (f"provisioning raised: {exc}",)
+    except Exception:
+        diagnostics = ("provisioning failed",)
     else:
         if status is None:
             diagnostics = ("control plane did not record provisioning status",)
@@ -226,96 +193,60 @@ def _surface_check(snapshot: Mapping[str, Any]) -> LiveCheck:
     return LiveCheck("model_derived_native_surface", not diagnostics, tuple(diagnostics))
 
 
-def _readiness_check(snapshot: Mapping[str, Any], probe: NativeLibvirtProbe, timeout_seconds: int) -> LiveCheck:
-    ok, diagnostics = check_native_readiness(snapshot, probe=probe, timeout_seconds=timeout_seconds)
-    return LiveCheck("native_domain_service_readiness", ok, tuple(diagnostics))
-
-
-def _kali_reachability_check(snapshot: Mapping[str, Any], probe: NativeLibvirtProbe) -> LiveCheck:
-    kali = _domain_by_name(snapshot, "kali")
-    if kali is None:
-        return LiveCheck("kali_target_network_reachability", True, ("scenario does not include kali",))
-    targets = _targets_sharing_network(kali, snapshot)
-    diagnostics: list[str] = []
-    for target in targets:
-        ip = _first_ip(target)
-        if ip and not probe.ping(ip).ok:
-            diagnostics.append(f"kali-shared target {target.get('name')} is not reachable at {ip}")
-    return LiveCheck("kali_target_network_reachability", not diagnostics, tuple(diagnostics))
-
-
-def _soc_stack_readback_check(snapshot: Mapping[str, Any]) -> tuple[LiveCheck, dict[str, object]]:
-    names = {str(domain.get("name", "")) for domain in _domains(snapshot)}
-    evidence = {"soc_readback": native_soc_readback(snapshot)}
-    diagnostics: list[str] = []
-    if _FULL_SOC_NODES.issubset(names):
-        diagnostics.extend(_full_soc_diagnostics(evidence["soc_readback"]))
-    return LiveCheck("native_soc_stack_readback", not diagnostics, tuple(diagnostics)), evidence
-
-
-def _full_soc_diagnostics(readback: object) -> tuple[str, ...]:
-    if not isinstance(readback, Mapping):
-        return ("native SOC readback is not structured",)
-    diagnostics: list[str] = []
-    suricata = readback.get("suricata", {})
-    case_mgmt = readback.get("case_management", {})
-    agents = readback.get("wazuh_active_agents", ())
-    if not agents:
-        diagnostics.append("native Wazuh readback reported no active agents")
-    diagnostics.extend(_suricata_diagnostics(suricata))
-    if not _has_case_management(case_mgmt):
-        diagnostics.append("native case-management readback is missing TheHive, MISP, Cortex, or Shuffle")
-    return tuple(diagnostics)
-
-
-def _suricata_diagnostics(suricata: object) -> tuple[str, ...]:
-    if not isinstance(suricata, Mapping):
-        return ("native Suricata readback is not structured",)
-    diagnostics: list[str] = []
-    if suricata.get("rules_loaded", 0) <= 0:
-        diagnostics.append("native Suricata readback reported no loaded rules")
-    if suricata.get("rules_failed", 0) != 0:
-        diagnostics.append("native Suricata readback reported failed rules")
-    if suricata.get("kernel_drops", 0) != 0:
-        diagnostics.append("native Suricata readback reported kernel drops")
-    return tuple(diagnostics)
-
-
-def _has_case_management(case_mgmt: object) -> bool:
-    return isinstance(case_mgmt, Mapping) and all(
-        case_mgmt.get(name) for name in ("thehive", "misp", "cortex", "shuffle")
-    )
-
-
-def _variation_check(snapshot: Mapping[str, Any]) -> LiveCheck:
-    roles = {str(domain.get("role", "")) for domain in _domains(snapshot) if domain.get("role")}
-    if len(roles) >= 1 and len(_domains(snapshot)) != 30:
-        return LiveCheck("scenario_variant_composability", True)
-    if len(roles) >= 4:
-        return LiveCheck("scenario_variant_composability", True)
-    return LiveCheck("scenario_variant_composability", False, ("native surface collapsed to too few role families",))
-
-
 def _write_manifest(
     output_dir: Path,
     run_id: str,
     scenario_path: Path,
-    driver: TechVaultNativeLibvirtDriver,
+    snapshot: Mapping[str, object],
     checks: Sequence[LiveCheck],
-    evidence: Mapping[str, object],
-    *,
-    clean_boot: bool,
 ) -> str | None:
     target = run_artifact_path(output_dir, run_id, "live-gate", "manifest.json")
+    native_succeeded = any(check.name == "aces_libvirt_native_boot" and check.passed for check in checks)
+    observed_snapshot = snapshot if native_succeeded else {}
+    native_surface = expected_surface(observed_snapshot)
+    cleanup_check = next((check for check in checks if check.name == "verified_native_cleanup"), None)
+    cleanup_status = (
+        "verified"
+        if cleanup_check is not None and cleanup_check.passed
+        else "failed"
+        if native_succeeded
+        else "not-required"
+    )
     payload = {
         "schema": "aces.libvirt.techvault-native-live-gate/v1",
-        "scenario": {"path": str(scenario_path), "name": scenario_path.name.split(".")[0]},
+        "scenario": {
+            "path": portable_artifact_ref(scenario_path),
+            "name": scenario_path.name.split(".")[0],
+        },
         "run_id": run_id,
         "recorded_at": datetime.now(UTC).isoformat(),
-        "clean_boot": clean_boot,
-        "aces_libvirt": {
-            "substrate": "libvirt-qemu-initramfs",
-            "surface": expected_surface(driver.last_snapshot),
+        "cleanup_policy": "current-operation-owned-resources-only",
+        "cleanup": {"source": "driver-reported", "status": cleanup_status},
+        "realization_binding": observed_snapshot.get("binding"),
+        "realization_facts": {
+            "authored": {
+                "source": "authored",
+                "scenario_ref": portable_artifact_ref(scenario_path),
+            },
+            "planned": {
+                "source": "planned",
+                "status": "accepted"
+                if any(check.name == "planning" and check.passed for check in checks)
+                else "failed",
+            },
+            "driver_reported": {
+                "source": "driver-reported",
+                "status": "succeeded" if native_succeeded else "failed",
+            },
+            "daemon_observed": {
+                "source": "daemon-observed",
+                "domains": list(native_surface["domains"]),
+                "networks": list(native_surface["networks"]),
+            },
+            "guest_observed": {
+                "source": "guest-observed",
+                "status": "not-observed",
+            },
         },
         "validation": {
             "ok": all(check.passed for check in checks),
@@ -323,9 +254,9 @@ def _write_manifest(
                 {"name": check.name, "ok": check.passed, "diagnostics": list(check.diagnostics)} for check in checks
             ],
         },
-        "snapshot": driver.last_snapshot,
-        "evidence": dict(evidence),
     }
+    if validate_techvault_live_manifest(payload):
+        return None
     try:
         atomic_write_json_artifact(target, payload)
     except OSError:
@@ -333,41 +264,95 @@ def _write_manifest(
     return str(target)
 
 
+def validate_techvault_live_manifest(payload: Mapping[str, object]) -> list[str]:
+    """Validate source separation and redaction before a live manifest is written."""
+
+    violations: list[str] = []
+    if payload.get("schema") != "aces.libvirt.techvault-native-live-gate/v1":
+        violations.append("invalid TechVault live manifest schema")
+    if payload.get("cleanup_policy") != "current-operation-owned-resources-only":
+        violations.append("invalid TechVault cleanup policy")
+    cleanup = payload.get("cleanup")
+    if not isinstance(cleanup, Mapping) or cleanup.get("source") != "driver-reported":
+        violations.append("cleanup must be a driver-reported section")
+    scenario = payload.get("scenario")
+    path = scenario.get("path") if isinstance(scenario, Mapping) else None
+    if not isinstance(path, str) or not path or path.startswith("/") or ".." in Path(path).parts:
+        violations.append("scenario.path must be a portable reference")
+    facts = payload.get("realization_facts")
+    expected_sources = {
+        "authored": "authored",
+        "planned": "planned",
+        "driver_reported": "driver-reported",
+        "daemon_observed": "daemon-observed",
+        "guest_observed": "guest-observed",
+    }
+    if not isinstance(facts, Mapping):
+        violations.append("realization_facts must be a mapping")
+    else:
+        for key, source in expected_sources.items():
+            section = facts.get(key)
+            if not isinstance(section, Mapping) or section.get("source") != source:
+                violations.append(f"{key}.source must be {source}")
+        daemon = facts.get("daemon_observed")
+        domains = daemon.get("domains", ()) if isinstance(daemon, Mapping) else ()
+        networks = daemon.get("networks", ()) if isinstance(daemon, Mapping) else ()
+        for collection_name, values in (("domains", domains), ("networks", networks)):
+            if not isinstance(values, list | tuple) or not all(isinstance(value, str) and value for value in values):
+                violations.append(f"daemon_observed.{collection_name} must contain bounded native names")
+        driver_reported = facts.get("driver_reported")
+        succeeded = isinstance(driver_reported, Mapping) and driver_reported.get("status") == "succeeded"
+        binding = payload.get("realization_binding")
+        cleanup_status = cleanup.get("status") if isinstance(cleanup, Mapping) else None
+        if succeeded and cleanup_status not in {"verified", "failed"}:
+            violations.append("successful native realization requires an explicit cleanup outcome")
+        if not succeeded and cleanup_status != "not-required":
+            violations.append("failed native realization must mark cleanup not-required")
+        if succeeded and (not domains or not isinstance(binding, Mapping)):
+            violations.append("successful native run requires daemon observations and realization binding")
+        if not succeeded and (domains or networks or binding is not None):
+            violations.append("failed native run cannot publish stale daemon observations or binding")
+        if isinstance(binding, Mapping):
+            if binding.get("driver") != "techvault-appliance":
+                violations.append("realization binding driver must be techvault-appliance")
+            for field_name in (
+                "realization_envelope_digest",
+                "configuration_digest",
+                "driver_configuration_digest",
+                "connection_uri_digest",
+                "name_prefix_digest",
+            ):
+                value = binding.get(field_name)
+                if not isinstance(value, str) or not re.fullmatch(r"sha256:[a-f0-9]{64}", value):
+                    violations.append(f"realization binding requires canonical {field_name}")
+            boot_artifacts = binding.get("boot_artifact_digests")
+            if not isinstance(boot_artifacts, Mapping) or set(boot_artifacts) != {"kernel", "initramfs"}:
+                violations.append("realization binding requires kernel and initramfs digests")
+            elif any(
+                not isinstance(value, str) or not re.fullmatch(r"sha256:[a-f0-9]{64}", value)
+                for value in boot_artifacts.values()
+            ):
+                violations.append("realization binding boot digests must be canonical sha256 values")
+            material = {
+                "driver": binding.get("driver"),
+                "configuration_digest": binding.get("configuration_digest"),
+                "boot_artifact_digests": binding.get("boot_artifact_digests"),
+                "connection_uri_digest": binding.get("connection_uri_digest"),
+                "name_prefix_digest": binding.get("name_prefix_digest"),
+            }
+            encoded = json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+            expected_digest = "sha256:" + hashlib.sha256(encoded).hexdigest()
+            if binding.get("driver_configuration_digest") != expected_digest:
+                violations.append("realization binding driver configuration digest does not match its material")
+    rendered = json.dumps(payload, sort_keys=True, default=str)
+    if "native-realized" in rendered:
+        violations.append("native-realized is not an admitted observation basis")
+    if "soc_readback" in rendered:
+        violations.append("daemon substrate cannot supply SOC readback")
+    violations.extend(redaction_violations(payload))
+    return violations
+
+
 def _domains(snapshot: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]:
     raw = snapshot.get("domains", ())
     return tuple(item for item in raw if isinstance(item, Mapping)) if isinstance(raw, list | tuple) else ()
-
-
-def _domain_by_name(snapshot: Mapping[str, Any], name: str) -> Mapping[str, Any] | None:
-    return next((domain for domain in _domains(snapshot) if domain.get("name") == name), None)
-
-
-def _targets_sharing_network(kali: Mapping[str, Any], snapshot: Mapping[str, Any]) -> list[Mapping[str, Any]]:
-    kali_networks = {
-        str(interface.get("network_address", "")) for interface in _interfaces(kali) if interface.get("network_address")
-    }
-    targets: list[Mapping[str, Any]] = []
-    for domain in _domains(snapshot):
-        if domain.get("name") == "kali":
-            continue
-        domain_networks = {
-            str(interface.get("network_address", ""))
-            for interface in _interfaces(domain)
-            if interface.get("network_address")
-        }
-        if kali_networks & domain_networks:
-            targets.append(domain)
-    return targets
-
-
-def _interfaces(domain: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]:
-    raw = domain.get("interfaces", ())
-    return tuple(item for item in raw if isinstance(item, Mapping)) if isinstance(raw, list | tuple) else ()
-
-
-def _first_ip(domain: Mapping[str, Any]) -> str | None:
-    for interface in _interfaces(domain):
-        ip = interface.get("ip")
-        if isinstance(ip, str) and ip:
-            return ip
-    return None

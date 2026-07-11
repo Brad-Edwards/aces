@@ -15,6 +15,7 @@ from .driver import DriverResult, LibvirtDriver
 from .envelopes import LibvirtDriverMode, load_libvirt_realization_envelope
 from .manifest import _provisioner_capabilities
 from .realization import Realization, interpret_provisioning_plan
+from .techvault_concerns import techvault_admission_diagnostics, techvault_observation_diagnostics
 
 _DOMAIN = "runtime"
 INVALID_PLAN_CODE = "libvirt-backend.invalid-plan"
@@ -52,6 +53,9 @@ class LibvirtProvisioner:
         if realization_envelope is not None and realization_envelope != expected_envelope:
             raise ValueError("libvirt provisioner realization envelope does not match driver mode")
         self._provisioner_capabilities = expected_capabilities
+        self._mode = mode
+        self._name_prefix = str(getattr(self._driver, "name_prefix", "aces-techvault"))
+        self._backend_realization_envelope = load_libvirt_realization_envelope(mode)
         self._realization_envelope = expected_envelope
 
     def validate(self, plan: ProvisioningPlan) -> list[Diagnostic]:
@@ -61,7 +65,16 @@ class LibvirtProvisioner:
         if identity_diagnostics:
             return identity_diagnostics
         realization = interpret_provisioning_plan(plan, provisioner_capabilities=self._provisioner_capabilities)
-        return list(realization.diagnostics)
+        diagnostics = list(realization.diagnostics)
+        if self._mode is LibvirtDriverMode.TECHVAULT_APPLIANCE:
+            diagnostics.extend(
+                techvault_admission_diagnostics(
+                    plan,
+                    self._backend_realization_envelope,
+                    name_prefix=self._name_prefix,
+                )
+            )
+        return diagnostics
 
     def apply(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> ApplyResult:
         if not isinstance(plan, ProvisioningPlan):
@@ -81,6 +94,14 @@ class LibvirtProvisioner:
     def _apply_realization(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> ApplyResult:
         realization = interpret_provisioning_plan(plan, provisioner_capabilities=self._provisioner_capabilities)
         diagnostics: list[Diagnostic] = list(realization.diagnostics)
+        if self._mode is LibvirtDriverMode.TECHVAULT_APPLIANCE:
+            diagnostics.extend(
+                techvault_admission_diagnostics(
+                    plan,
+                    self._backend_realization_envelope,
+                    name_prefix=self._name_prefix,
+                )
+            )
         if _has_error(diagnostics):
             return ApplyResult(success=False, snapshot=snapshot, diagnostics=diagnostics)
 
@@ -124,13 +145,35 @@ class LibvirtProvisioner:
         domains = tuple(spec for spec in realization.domains if spec.address in active)
         if networks or domains:
             result = self._driver.realize(networks=networks, domains=domains)
-            diagnostics.extend(result.diagnostics)
-            diagnostics.extend(
-                _unconfirmed_realization_diagnostics(
-                    result,
-                    requested=tuple(spec.address for spec in (*networks, *domains)),
+            realization_diagnostics = [
+                *result.diagnostics,
+                *_unconfirmed_realization_diagnostics(
+                    result, requested=tuple(spec.address for spec in (*networks, *domains))
+                ),
+            ]
+            diagnostics.extend(realization_diagnostics)
+            observation_diagnostics: list[Diagnostic] = []
+            if self._mode is LibvirtDriverMode.TECHVAULT_APPLIANCE and not result.diagnostics:
+                observation_diagnostics = techvault_observation_diagnostics(
+                    networks=networks,
+                    domains=domains,
+                    result=result,
                 )
-            )
+                diagnostics.extend(observation_diagnostics)
+            if self._mode is LibvirtDriverMode.TECHVAULT_APPLIANCE and _has_error(
+                [*realization_diagnostics, *observation_diagnostics]
+            ):
+                cleanup = self._driver.destroy(
+                    networks=tuple(spec.address for spec in networks),
+                    domains=tuple(spec.address for spec in domains),
+                )
+                diagnostics.extend(cleanup.diagnostics)
+                diagnostics.extend(
+                    _unconfirmed_destroy_diagnostics(
+                        cleanup,
+                        requested=tuple(spec.address for spec in (*domains, *networks)),
+                    )
+                )
         if delete_networks or delete_domains:
             result = self._driver.destroy(networks=tuple(delete_networks), domains=tuple(delete_domains))
             diagnostics.extend(result.diagnostics)

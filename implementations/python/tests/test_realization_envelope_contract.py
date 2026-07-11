@@ -12,6 +12,7 @@ from aces_contracts.realization_envelope import (
     BackendRealizationEnvelopeModel,
     ConcernDisposition,
     ObservationStrength,
+    RealizationConcern,
     RealizationConcernDisclosureModel,
     RealizationEnvelopeIdentityModel,
     RealizationEnvelopeModel,
@@ -82,6 +83,7 @@ def _payload() -> dict[str, object]:
                     "content-placement",
                     "account-placement",
                     "feature-binding",
+                    "service",
                     "acl",
                 )
             ],
@@ -123,6 +125,10 @@ def test_backend_realization_envelope_validates_its_canonical_digest():
         digest=model.digest,
         configuration_digest=model.configuration.configuration_digest,
     )
+
+
+def test_realization_concern_taxonomy_accounts_for_declared_services():
+    assert RealizationConcern.SERVICE.value == "service"
 
 
 def test_backend_realization_envelope_rejects_content_tampering():

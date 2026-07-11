@@ -336,6 +336,7 @@
         "content-placement",
         "account-placement",
         "feature-binding",
+        "service",
         "acl"
       ],
       "title": "RealizationConcern",
@@ -882,6 +883,21 @@
           "contains": {
             "properties": {
               "concern": {
+                "const": "service"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "concern": {
                 "const": "acl"
               }
             },
@@ -897,8 +913,8 @@
       "items": {
         "$ref": "#/$defs/RealizationConcernDisclosureModel"
       },
-      "maxItems": 9,
-      "minItems": 9,
+      "maxItems": 10,
+      "minItems": 10,
       "title": "Concerns",
       "type": "array"
     },

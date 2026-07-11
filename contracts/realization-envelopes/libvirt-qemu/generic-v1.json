@@ -33,7 +33,8 @@
     {"concern": "content-placement", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "cloud-init-seed", "transformations": []},
     {"concern": "account-placement", "disposition": "transformed", "observation_strength": "driver-reported", "mechanism": "cloud-init-seed", "transformations": ["default-substitution"]},
     {"concern": "feature-binding", "disposition": "transformed", "observation_strength": "driver-reported", "mechanism": "cloud-init-seed", "transformations": ["descriptor-substitution"]},
+    {"concern": "service", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
     {"concern": "acl", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "libvirt-nwfilter", "transformations": []}
   ],
-  "digest": "sha256:4037b85c2a0e6457081dd33e8953bd98a5134865cdf0173b7e2c5a3d077a5b3a"
+  "digest": "sha256:eb3b54b199249da599cdd59e050612314ed16fe6039630307894ee8d8e2a466f"
 }

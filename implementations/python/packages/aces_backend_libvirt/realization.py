@@ -156,8 +156,8 @@ def _network_spec(resource: PlannedResource, payload: Mapping[str, object]) -> N
     infrastructure = _infrastructure_spec(payload)
     properties = infrastructure.get("properties")
     labels: dict[str, str] = {}
-    if isinstance(properties, Mapping) and properties.get("internal") is True:
-        labels["internal"] = "true"
+    if isinstance(properties, Mapping) and isinstance(properties.get("internal"), bool):
+        labels["internal"] = "true" if properties["internal"] else "false"
     cidr = properties.get("cidr") if isinstance(properties, Mapping) else None
     gateway = properties.get("gateway") if isinstance(properties, Mapping) else None
     return NetworkSpec(

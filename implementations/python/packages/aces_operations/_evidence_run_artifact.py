@@ -20,7 +20,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from aces_backend_libvirt.techvault_native import NativeLibvirtProbe, expected_surface, native_soc_readback
+from aces_backend_libvirt.techvault_native import expected_surface
 from aces_backend_protocols.capabilities import (
     observation_capability_contract_gaps,
     participant_runtime_capability_contract_gaps,
@@ -40,6 +40,7 @@ from aces_operations._evidence_run_types import (
     RealizedNetwork,
     TerminalSnapshot,
 )
+from aces_operations.run_artifacts import portable_artifact_ref
 
 EVIDENCE_RUN_SCHEMA = "aces.libvirt.scenario-evidence-run/v1"
 _LIBVIRT_BACKEND_NAME = "libvirt-qemu"
@@ -68,7 +69,7 @@ def assemble_artifact(inputs: EvidenceArtifactInputs) -> dict[str, Any]:
     manifest = inputs.manifest
     proof = inputs.proof
     native_snapshot = inputs.native_snapshot
-    probe = inputs.probe
+    native_cleanup_verified = inputs.native_cleanup_verified
     unrealized_capabilities = inputs.unrealized_capabilities
 
     substrate_realized = native_snapshot is not None
@@ -82,12 +83,13 @@ def assemble_artifact(inputs: EvidenceArtifactInputs) -> dict[str, Any]:
         "evidence_source_mode": mode,
         "scenario": scenario_section,
         "compiled_artifact": _compiled_artifact_section(model),
-        "backend": _backend_section(manifest, mode, substrate_realized),
+        "backend": _backend_section(manifest, mode, substrate_realized, native_cleanup_verified),
+        "realization_facts": _realization_facts_section(model, native_snapshot, native_cleanup_verified),
         "realized_topology": _topology_section(model, native_snapshot, unrealized_capabilities),
         "participant_action_proof": _participant_proof_section(proof),
         "terminal_observation": _terminal_observation_section(proof["snapshot"]),
         "defensive_evidence": _defensive_evidence_section(native_snapshot, model, recorded_at),
-        "negative_boundary_checks": _negative_boundary_section(boundary_refs, native_snapshot, probe),
+        "negative_boundary_checks": _negative_boundary_section(boundary_refs),
         "evaluator_outcome": _evaluator_outcome_section(proof["lifecycle_clean"], recorded_at),
         "realized_form_disclosures": _realized_form_disclosures(manifest, substrate_realized),
         "limitations": _limitations(mode, unrealized_capabilities),
@@ -111,7 +113,12 @@ def _manifest_version(manifest: BackendManifest) -> str:
     return str(getattr(manifest, "version", "0.0.0+unknown"))
 
 
-def _backend_section(manifest: BackendManifest, mode: str, substrate_realized: bool) -> dict[str, Any]:
+def _backend_section(
+    manifest: BackendManifest,
+    mode: str,
+    substrate_realized: bool,
+    cleanup_verified: bool | None,
+) -> dict[str, Any]:
     """Embed the canonical BackendManifestV2 payload + capability-gap report.
 
     The manifest is rendered through ``backend_manifest_payload`` — the same
@@ -132,7 +139,8 @@ def _backend_section(manifest: BackendManifest, mode: str, substrate_realized: b
             "backend": _manifest_name(manifest),
             "evidence_source_mode": mode,
             "substrate_realized": substrate_realized,
-            "basis": "native-realized" if substrate_realized else "planned-not-realized",
+            "basis": "daemon-observed-substrate" if substrate_realized else "planned-not-realized",
+            "cleanup_verified": cleanup_verified,
         },
     }
 
@@ -149,18 +157,9 @@ def _scenario_section(scenario_path: Path, model: CompiledModel) -> dict[str, An
     return {
         "name": model.scenario_name,
         "version": version,
-        "relative_path": _portable_scenario_ref(scenario_path),
+        "relative_path": portable_artifact_ref(scenario_path),
         "content_sha256": "sha256:" + hashlib.sha256(content).hexdigest(),
     }
-
-
-def _portable_scenario_ref(scenario_path: Path) -> str:
-    """Return a repo-portable scenario reference, never the absolute host path."""
-    parts = scenario_path.parts
-    for anchor in ("examples", "scenarios"):
-        if anchor in parts:
-            return "/".join(parts[parts.index(anchor) :])
-    return scenario_path.name
 
 
 def _compiled_artifact_section(model: CompiledModel) -> dict[str, Any]:
@@ -207,6 +206,48 @@ def _network_properties(network: RealizedNetwork) -> dict[str, Any]:
     return {"cidr": props.get("cidr"), "gateway": props.get("gateway"), "internal": props.get("internal")}
 
 
+def _realization_facts_section(
+    model: CompiledModel,
+    native_snapshot: Mapping[str, Any] | None,
+    cleanup_verified: bool | None,
+) -> dict[str, Any]:
+    observed = native_snapshot if isinstance(native_snapshot, Mapping) else {}
+    daemon_domains = observed.get("domains", ())
+    daemon_networks = observed.get("networks", ())
+    realized_addresses = observed.get("realized_addresses", ())
+    return {
+        "authored": {
+            "source": "authored",
+            "scenario_name": model.scenario_name,
+        },
+        "planned": {
+            "source": "planned",
+            "node_addresses": sorted(model.node_deployments),
+            "network_addresses": sorted(model.networks),
+        },
+        "driver_reported": {
+            "source": "driver-reported",
+            "realized_addresses": list(realized_addresses) if isinstance(realized_addresses, list | tuple) else [],
+        },
+        "daemon_observed": {
+            "source": "daemon-observed",
+            "domains": list(daemon_domains) if isinstance(daemon_domains, list | tuple) else [],
+            "networks": list(daemon_networks) if isinstance(daemon_networks, list | tuple) else [],
+        },
+        "guest_observed": {
+            "source": "guest-observed",
+            "status": "not-observed",
+        },
+        "cleanup": {
+            "source": "driver-reported",
+            "status": (
+                "verified" if cleanup_verified is True else "failed" if cleanup_verified is False else "not-required"
+            ),
+        },
+        "binding": observed.get("binding"),
+    }
+
+
 def _topology_section(
     model: CompiledModel,
     native_snapshot: Mapping[str, Any] | None,
@@ -215,6 +256,7 @@ def _topology_section(
     substrate_realized = native_snapshot is not None
     nodes = [
         {
+            "source": "planned",
             "address": node.address,
             "name": node.name,
             "node_type": getattr(node, "node_type", None),
@@ -225,12 +267,14 @@ def _topology_section(
         for node in model.node_deployments.values()
     ]
     networks = [
-        {"address": net.address, "name": net.name, **_network_properties(net)} for net in model.networks.values()
+        {"source": "planned", "address": net.address, "name": net.name, **_network_properties(net)}
+        for net in model.networks.values()
     ]
     section: dict[str, Any] = {
-        "basis": "native-realized" if substrate_realized else "planned-not-realized",
+        "basis": "mixed-source" if substrate_realized else "planned",
         "disclosure": (
-            "Topology realized through the native libvirt driver."
+            "Compiled topology remains planned; the native surface contains only independently daemon-observed "
+            "substrate fields."
             if substrate_realized
             else "Compiled/planned topology from the authored scenario; no live substrate realized. Network CIDRs and "
             "gateways are authored values, not host-private libvirt addresses."
@@ -327,21 +371,11 @@ def _defensive_evidence_section(
     # assembly, not a freshly synthesized one, so every section shares one
     # consistent run timestamp and the artifact stays reproducible.
     evidence_channels = _boundary_evidence_refs(model)
-    if native_snapshot is not None:
-        return {
-            "evidence_kind": "telemetry",
-            "evidence_source": "native-translated-readback",
-            "visibility": "evaluator-only",
-            "sensitivity": "restricted",
-            "redaction_state": "redacted",
-            "loss_disclosure": (
-                "Native libvirt SOC readback is a translated native readback of generated appliance state, not full "
-                "upstream Wazuh internals; no detection-quality claim is made."
-            ),
-            "evaluator_evidence_channels": evidence_channels,
-            "soc_readback": native_soc_readback(native_snapshot),
-            "captured_at": recorded_at,
-        }
+    substrate_note = (
+        " Daemon-observed libvirt substrate state is present, but it is not guest SOC observation."
+        if native_snapshot is not None
+        else ""
+    )
     return {
         "evidence_kind": "telemetry",
         "evidence_source": "structural-evaluator-channel",
@@ -351,25 +385,21 @@ def _defensive_evidence_section(
         "loss_disclosure": (
             "Deterministic mode: no live SOC substrate is booted. Wazuh/SOC defensive evidence is reported as the "
             "evaluator-only evidence channels declared by the scenario observation boundary, not upstream Wazuh "
-            "detection output; no detection-quality claim is made."
+            f"detection output; no detection-quality claim is made.{substrate_note}"
         ),
         "evaluator_evidence_channels": evidence_channels,
         "payload_summary": (
             "Evaluator-only Wazuh/SOC and policy-decision evidence channels are declared and kept off the participant "
-            "view; live SOC readback is available only under native-live mode."
+            "view; neither evidence mode claims guest SOC readback."
         ),
         "captured_at": recorded_at,
     }
 
 
-def _negative_boundary_section(
-    boundary_refs: Sequence[str],
-    native_snapshot: Mapping[str, Any] | None,
-    probe: NativeLibvirtProbe | None,
-) -> dict[str, Any]:
+def _negative_boundary_section(boundary_refs: Sequence[str]) -> dict[str, Any]:
     internal_refs = [ref for ref in boundary_refs if any(kw in ref for kw in _INTERNAL_SURFACE_KEYWORDS)]
     checks = [{"ref": ref, "exposed_to_participant": False} for ref in internal_refs]
-    section: dict[str, Any] = {
+    return {
         "method": (
             "Structural boundary analysis over the compiled observation boundary (hidden_refs) and the participant "
             "exposure policy (empty visible/disclosed refs). The participant action surface does not expose the "
@@ -380,36 +410,6 @@ def _negative_boundary_section(
         "checks": checks,
         "disclosure": "Negative boundary checks are evaluator-side derived analysis, not participant observations.",
     }
-    if native_snapshot is not None and probe is not None:
-        section["native_reachability"] = _native_reachability_summary(native_snapshot, probe)
-    return section
-
-
-def _native_reachability_summary(native_snapshot: Mapping[str, Any], probe: NativeLibvirtProbe) -> dict[str, Any]:
-    summary: dict[str, Any] = {"reachable_surface_domains": []}
-    raw_domains = native_snapshot.get("domains", ())
-    if not isinstance(raw_domains, list | tuple):
-        return summary
-    for domain in raw_domains:
-        if not isinstance(domain, Mapping):
-            continue
-        name = str(domain.get("name", ""))
-        if any(kw in name for kw in _INTERNAL_SURFACE_KEYWORDS):
-            continue
-        ip = _first_ip(domain)
-        if ip and probe.ping(ip).ok:
-            summary["reachable_surface_domains"].append(name)
-    return summary
-
-
-def _first_ip(domain: Mapping[str, Any]) -> str | None:
-    interfaces = domain.get("interfaces", ())
-    if not isinstance(interfaces, list | tuple):
-        return None
-    for interface in interfaces:
-        if isinstance(interface, Mapping) and isinstance(interface.get("ip"), str) and interface.get("ip"):
-            return str(interface["ip"])
-    return None
 
 
 def _evaluator_outcome_section(lifecycle_clean: bool, recorded_at: str) -> dict[str, Any]:
@@ -459,9 +459,12 @@ def _realized_form_disclosures(manifest: BackendManifest, substrate_realized: bo
                 "realized_by_ref": backend_ref,
                 "realized_value_summary": (
                     f"{backend_name} backend ({backend_version}); substrate "
-                    f"{'realized natively' if substrate_realized else 'planned, not realized'}."
+                    f"{'daemon-observed at bounded fields' if substrate_realized else 'planned, not realized'}."
                 ),
-                "disclosure": "The libvirt-qemu backend realized this scenario-evidence run.",
+                "disclosure": (
+                    "The libvirt-qemu backend supplied the run; live claims are limited to independently "
+                    "daemon-observed substrate fields."
+                ),
             }
         ),
         ExperimentRealizedFormDisclosureModel.model_validate(
@@ -487,13 +490,13 @@ def _limitations(mode: str, unrealized_capabilities: tuple[str, ...] = ()) -> li
     limitations = [
         "The libvirt participant runtime uses the deterministic domain adapter; no live participant domain is "
         "executed (issue #614).",
-        "Wazuh/SOC evidence is evaluator-only and, in native-live mode, is a translated native readback of generated "
-        "appliance state rather than full upstream Wazuh internals.",
+        "Wazuh/SOC evidence is evaluator-only structural evidence; daemon substrate state is not promoted to guest "
+        "or application observation.",
     ]
     if mode != "native-live":
         limitations.append(
-            "Deterministic mode does not realize a live libvirt substrate; topology and SOC readback are "
-            "compiled/structural, explicitly disclosed as not-live."
+            "Deterministic mode does not realize a live libvirt substrate; topology and defensive evidence channels "
+            "are compiled/structural, explicitly disclosed as not-live observations."
         )
     if unrealized_capabilities:
         limitations.append(

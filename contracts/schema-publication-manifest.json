@@ -334,10 +334,10 @@
       "contract_id": "realization-envelope-v1",
       "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
       "stability": "draft",
-      "content_hash": "269a17d2ff15c12dfccd536cf8502a1e6b929883eb41e22f898abe75f6532720",
+      "content_hash": "a5992e81fbc935a7ee6eab3b173a89d6e664274f0f143475e303a54d01a27374",
       "last_change": {
-        "summary": "Initial publication of the ASR-519 configuration-bound realization envelope, concern disclosure, observation strength, and canonical identity contract.",
-        "content_hash": "269a17d2ff15c12dfccd536cf8502a1e6b929883eb41e22f898abe75f6532720"
+        "summary": "Added explicit service-concern disclosure so backend envelopes cannot hide declared guest services inside another concern.",
+        "content_hash": "a5992e81fbc935a7ee6eab3b173a89d6e664274f0f143475e303a54d01a27374"
       }
     },
     {

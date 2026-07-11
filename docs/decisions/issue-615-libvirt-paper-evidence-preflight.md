@@ -13,6 +13,16 @@ participant/evidence scenario. It is guidance only: it does not implement the
 artifact, add schemas, change runtime behavior, or define an implementation
 plan.
 
+## ASR-519 correction
+
+Issue 714 narrows this preflight's native evidence assumptions. A generated
+TechVault domain or reachable listener is not guest, service, or SOC evidence.
+Current native evidence is limited to exact, bounded libvirt daemon readback of
+the admitted VM/network substrate. Wazuh/SOC channels in the paper artifact are
+structural evaluator declarations, not native readback. Generic readiness,
+negative-reachability, and name-derived SOC claims are withdrawn pending
+concern-specific guest observation work.
+
 ## Binding Sources
 
 - `docs/decisions/issue-598-paper-reference-scenario-preflight.md`,
@@ -34,7 +44,8 @@ plan.
 - `docs/decisions/issue-601-techvault-live-verification.md`,
   `aces_operations.techvault_live`, and
   `aces_backend_libvirt.techvault_native` own the native libvirt live-gate
-  substrate, realized surface, readiness checks, and SOC readback helpers.
+  substrate and bounded daemon-observed surface. Guest readiness and SOC state
+  are explicitly `not-observed`.
 - `contracts/schemas/backend-manifest/backend-manifest-v2.json`,
   `BackendManifestV2Model`, and `backend_manifest_payload()` own backend
   manifest/capability shape.
@@ -60,14 +71,14 @@ plan.
   capability/profile/conformance result; libvirt realization provenance;
   realized topology and network attachment matrix; participant action proof
   from `LibvirtParticipantRuntime`; terminal participant observation envelope
-  or behavior-history equivalent; evaluator-only Wazuh/SOC readback or a typed
-  translated readback record with explicit limitation; negative reachability
+  or behavior-history equivalent; evaluator-only declarations of Wazuh/SOC
+  evidence channels with explicit limitation; structural negative-boundary
   checks for internal DB and Wazuh/evaluator surfaces; evaluator outcome and
   limitation records; and redaction/provenance metadata.
 - Wazuh/SOC evidence must remain evaluator-only evidence. If the native libvirt
-  proof uses generated appliance readback or translated native readback rather
-  than full upstream Wazuh internals, the artifact must state that limitation
-  next to the evidence and in the run/evaluator limitation surface.
+  proof has no concern-specific guest observation, the artifact must state
+  `not-observed`; it must not synthesize translated native readback from domain
+  names, declared services, or generic reachability.
 - The participant proof must enter through `RuntimeControlPlane` and
   `LibvirtParticipantRuntime`, reusing the issue-614 action-admission and
   behavior-history machinery. Do not replace the participant proof with a
@@ -88,8 +99,7 @@ Reuse these repo surfaces before adding anything new:
 - Libvirt live-gate surface:
   `validate_techvault_live()`, `TechVaultLiveConfig`,
   `TechVaultLiveReport`, `TechVaultNativeLibvirtDriver`,
-  `NativeLibvirtProbe`, `expected_surface()`, `native_soc_readback()`, and the
-  existing safe `run_id` filesystem-label check.
+  `expected_surface()`, and the existing safe `run_id` filesystem-label check.
 - Libvirt runtime/provisioning surface:
   `create_libvirt_target()`, `create_libvirt_manifest()`,
   `create_libvirt_components()`, `LibvirtProvisioner`,
@@ -152,7 +162,7 @@ Reuse these repo surfaces before adding anything new:
   rejected.
 - Participant visibility gate: participant-visible content is limited to the
   compiled observation boundary and participant implementation exposure
-  policy. Wazuh/SOC readback, internal DB reachability, policy internals,
+  policy. Wazuh/SOC channel declarations, policy internals,
   evaluator limitations, libvirt native details, and negative checks must stay
   outside `visible_refs` and `disclosed_refs` unless an existing governed
   boundary explicitly permits disclosure.
@@ -172,10 +182,10 @@ Reuse these repo surfaces before adding anything new:
   connection URIs with secrets, credentials, private keys, unredacted tool
   transcripts, backend-native inspect payloads, raw Wazuh rule bodies, raw
   prompts, hidden answers, environment dumps, process argv, or full tracebacks.
-- OS-level exposure gate: live probes must keep secrets out of argv and
-  diagnostics. Reuse fixed argv, no `shell=True`, bounded timeouts, controlled
-  working directories, and bounded sanitized diagnostics as in the existing
-  libvirt live-gate helpers.
+- OS-level exposure gate: future concern-specific guest probes must keep
+  secrets out of argv and diagnostics. Generic ping/TCP checks are not
+  realization evidence. Use fixed argv, no `shell=True`, bounded timeouts,
+  controlled working directories, and bounded sanitized diagnostics.
 - Persistence gate: use the existing run archive directory and atomic JSON
   writing pattern where durable control-plane state is needed. Do not add a
   libvirt evidence database, participant store, audit log, schema registry, or
@@ -197,10 +207,10 @@ runtime/evidence contract inputs, parameterized by:
 
 - `scenario_path`, `run_id`, `output_dir`, and optional artifact locator or
   sealing policy;
-- backend target factory/config, including libvirt connection, native probe,
-  boot timeout, clean-boot policy, and participant runtime factory;
-- evidence source policy, including native translated SOC readback versus
-  upstream Wazuh readback and the disclosure text that explains the difference;
+- backend target factory/config, including libvirt connection and participant
+  runtime factory;
+- evidence source policy separating authored, planned, driver-reported,
+  daemon-observed, guest-observed, and derived facts;
 - invariant-ledger mapping, which should reference stable ACES addresses and
   evidence refs rather than libvirt domain names, UUIDs, Docker ids, host paths,
   or APTL-private identifiers.
@@ -230,8 +240,8 @@ Avoid:
   observation envelope;
 - claiming libvirt evaluator or observation capability in the backend manifest
   without actual capability implementation and contract-gap checks;
-- treating native appliance SOC readback as upstream Wazuh detection-quality
-  evidence;
+- fabricating native appliance SOC readback from names, listeners, topology, or
+  daemon-only substrate facts;
 - using libvirt domain UUIDs, XML, MACs, host paths, QEMU commands, Docker ids,
   APTL Compose names, or backend-local action labels as portable semantics;
 - overfitting the artifact to one run id, host, libvirt network naming policy,
