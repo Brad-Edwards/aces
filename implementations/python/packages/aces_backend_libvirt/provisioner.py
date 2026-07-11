@@ -73,7 +73,12 @@ class LibvirtProvisioner:
     def _apply_provisioning_plan(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> ApplyResult:
         identity_diagnostics = self._identity_diagnostics(plan, snapshot)
         if identity_diagnostics:
-            return ApplyResult(success=False, snapshot=snapshot, diagnostics=identity_diagnostics)
+            result = ApplyResult(success=False, snapshot=snapshot, diagnostics=identity_diagnostics)
+        else:
+            result = self._apply_realization(plan, snapshot)
+        return result
+
+    def _apply_realization(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> ApplyResult:
         realization = interpret_provisioning_plan(plan, provisioner_capabilities=self._provisioner_capabilities)
         diagnostics: list[Diagnostic] = list(realization.diagnostics)
         if _has_error(diagnostics):
@@ -138,34 +143,30 @@ class LibvirtProvisioner:
         return diagnostics
 
     def _identity_diagnostics(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> list[Diagnostic]:
+        diagnostics: list[Diagnostic] = []
         if plan.realization_envelope is None:
-            return [
+            diagnostics = [
                 _envelope_diagnostic(
                     MISSING_ENVELOPE_CODE, "Provisioning plan is missing realization envelope identity."
                 )
             ]
-        if plan.realization_envelope != self._realization_envelope:
-            return [
+        elif plan.realization_envelope != self._realization_envelope:
+            diagnostics = [
                 _envelope_diagnostic(
                     MISMATCHED_ENVELOPE_CODE,
                     "Provisioning plan realization envelope does not match the configured libvirt target.",
                 )
             ]
-        if snapshot.realization_envelope is not None and snapshot.realization_envelope != self._realization_envelope:
-            return [
+        elif (
+            snapshot.realization_envelope is not None and snapshot.realization_envelope != self._realization_envelope
+        ) or (_snapshot_has_state(snapshot) and snapshot.realization_envelope is None):
+            diagnostics = [
                 _envelope_diagnostic(
                     BASELINE_ENVELOPE_MISMATCH_CODE,
                     "Runtime snapshot is not bound to the configured libvirt realization envelope.",
                 )
             ]
-        if _snapshot_has_state(snapshot) and snapshot.realization_envelope is None:
-            return [
-                _envelope_diagnostic(
-                    BASELINE_ENVELOPE_MISMATCH_CODE,
-                    "Runtime snapshot is not bound to the configured libvirt realization envelope.",
-                )
-            ]
-        return []
+        return diagnostics
 
 
 def validate(plan: ProvisioningPlan) -> list[Diagnostic]:

@@ -73,6 +73,11 @@ def test_backend_manifest_rejects_hollow_defaults():
         )
 
 
+def test_backend_manifest_rejects_unknown_keywords():
+    with pytest.raises(TypeError, match="unexpected keyword argument.*unknown"):
+        BackendManifest(unknown=True)
+
+
 def test_provisioner_capabilities_reject_hollow_declaration():
     with pytest.raises(ValueError):
         ProvisionerCapabilities(

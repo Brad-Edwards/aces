@@ -18,7 +18,7 @@ from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Protocol, cast
+from typing import ClassVar, Protocol, cast
 
 from aces_contracts.diagnostics import Diagnostic, Severity
 
@@ -67,7 +67,7 @@ class _NativeResource(Protocol):
 class TechVaultNativeLibvirtDriver:
     """Realize TechVault domains directly as libvirt/QEMU appliances."""
 
-    driver_mode = "techvault-appliance"
+    driver_mode: ClassVar[str] = "techvault-appliance"
 
     state_dir: Path
     connection: object | None = None

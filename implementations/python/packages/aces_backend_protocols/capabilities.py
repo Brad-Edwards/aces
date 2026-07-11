@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from aces_contracts.controlled_vocabularies import validate_controlled_vocabulary_scope_values
 from aces_contracts.manifest_authority import validate_backend_supported_contract_versions
@@ -456,7 +456,7 @@ def observation_capability_contract_gaps(manifest: BackendManifest) -> tuple[str
     return tuple(gaps)
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> object:
     """Preserve the historical manifest imports without a circular import."""
 
     if name in {"BackendCompatibility", "BackendManifest"}:

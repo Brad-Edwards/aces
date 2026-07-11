@@ -408,7 +408,7 @@ def scalar_in_domain(value: object, descriptor: DomainDescriptor) -> bool:
 
 # Import after the expression types are defined: the carrier embeds
 # RealizationEnvelopeModel and this module preserves the original public API.
-from aces_contracts.realization_envelope_carrier import (  # noqa: E402
+from aces_contracts.realization_envelope_carrier import (
     BackendRealizationEnvelopeModel,
     ConcernDisposition,
     IntegerBoundsModel,
