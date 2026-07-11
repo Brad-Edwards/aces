@@ -86,7 +86,7 @@ def load_sdl_fragment(
     *,
     mapping_keys: Literal["structural", "literal"] = "structural",
     base_pointer: str = "",
-) -> Any:
+) -> object:
     """Safely load an SDL YAML fragment with the canonical key preflight."""
     return load_sdl_yaml(
         content,

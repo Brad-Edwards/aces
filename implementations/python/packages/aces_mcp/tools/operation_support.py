@@ -139,7 +139,7 @@ def stage_ok(stage: str, *, detail: str = "ok") -> dict[str, str]:
     return {"stage": stage, "status": "ok", "detail": detail}
 
 
-def stage_error(stage: str, error: Any) -> dict[str, Any]:
+def stage_error(stage: str, error: object) -> dict[str, Any]:
     structured = getattr(error, "diagnostics", ())
     if structured:
         return {

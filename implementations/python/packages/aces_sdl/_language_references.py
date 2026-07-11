@@ -23,27 +23,23 @@ def find_references(
 ) -> dict[str, Any]:
     """Return definition and occurrence locations for an SDL symbol."""
     if not sdl_content.strip():
-        return {"status": "ok", "symbol": symbol, "definitions": [], "occurrences": []}
-    root, error = _compose_yaml(sdl_content)
-    if error is not None:
-        return error
+        result = {"status": "ok", "symbol": symbol, "definitions": [], "occurrences": []}
+    else:
+        root, error = _compose_yaml(sdl_content)
+        result = error if error is not None else _reference_result(root, symbol, section_fields)
+    return result
+
+
+def _reference_result(root: Node | None, symbol: str, section_fields: Collection[str]) -> dict[str, Any]:
     if root is None:
         return {"status": "ok", "symbol": symbol, "definitions": [], "occurrences": []}
-
     definitions = _collect_definitions(root, section_fields)
-    matching_definitions = [definition for definition in definitions if _definition_matches_symbol(definition, symbol)]
     occurrences: list[dict[str, Any]] = []
-    _collect_occurrences(
-        root,
-        symbol,
-        [],
-        occurrences,
-        qualified_section=_qualified_symbol_section(symbol),
-    )
+    _collect_occurrences(root, symbol, [], occurrences, qualified_section=_qualified_symbol_section(symbol))
     return {
         "status": "ok",
         "symbol": symbol,
-        "definitions": matching_definitions,
+        "definitions": [item for item in definitions if _definition_matches_symbol(item, symbol)],
         "occurrences": occurrences,
     }
 

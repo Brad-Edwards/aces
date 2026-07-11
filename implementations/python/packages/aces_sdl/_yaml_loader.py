@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import textwrap
-from dataclasses import dataclass
+from collections.abc import Iterator
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ from ._errors import (
 from ._mapping_scopes import MappingScope, is_literal_map_field, normalize_field_key
 
 _BOOL_TAG = "tag:yaml.org,2002:bool"
+_EMPTY_CONTENT_MESSAGE = "SDL content is empty"
 _MERGE_TAG = "tag:yaml.org,2002:merge"
 _STRING_TAG = "tag:yaml.org,2002:str"
 
@@ -63,6 +65,24 @@ class _EffectiveMapping:
     conflicts: tuple[tuple[_Entry, _Entry], ...]
 
 
+@dataclass
+class _EffectiveAccumulator:
+    entries: list[_Entry] = field(default_factory=list)
+    conflicts: list[tuple[_Entry, _Entry]] = field(default_factory=list)
+    seen: dict[str, _Entry] = field(default_factory=dict)
+
+    def add(self, entry: _Entry) -> None:
+        previous = self.seen.get(entry.canonical)
+        if previous is None:
+            self.seen[entry.canonical] = entry
+            self.entries.append(entry)
+        else:
+            self.conflicts.append((previous, entry))
+
+    def build(self) -> _EffectiveMapping:
+        return _EffectiveMapping(tuple(self.entries), tuple(self.conflicts))
+
+
 class _MappingAnalyzer:
     def __init__(self) -> None:
         self.diagnostics: list[SDLParseDiagnostic] = []
@@ -100,85 +120,102 @@ class _MappingAnalyzer:
     ) -> None:
         identity = id(node)
         if identity in active:
-            self._add(
-                SDLParseDiagnostic(
-                    code="sdl.alias_cycle",
-                    message="Cyclic YAML aliases are not valid SDL authoring input.",
-                    pointer=_encode_pointer(tokens),
-                    primary_range=_range_from_node(node),
-                )
+            self._add_alias_cycle(node, tokens)
+        else:
+            walk_key = (identity, scope)
+            if walk_key not in self._walked and isinstance(node, (MappingNode, SequenceNode)):
+                self._walked.add(walk_key)
+                active.add(identity)
+                try:
+                    if isinstance(node, MappingNode):
+                        self._walk_mapping(node, scope=scope, tokens=tokens, active=active)
+                    else:
+                        self._walk_sequence(node, scope=scope, tokens=tokens, active=active)
+                finally:
+                    active.remove(identity)
+
+    def _add_alias_cycle(self, node: Node, tokens: list[str]) -> None:
+        self._add(
+            SDLParseDiagnostic(
+                code="sdl.alias_cycle",
+                message="Cyclic YAML aliases are not valid SDL authoring input.",
+                pointer=_encode_pointer(tokens),
+                primary_range=_range_from_node(node),
             )
+        )
+
+    def _walk_sequence(
+        self,
+        node: SequenceNode,
+        *,
+        scope: MappingScope,
+        tokens: list[str],
+        active: set[int],
+    ) -> None:
+        for index, item in enumerate(node.value):
+            self._walk(item, scope=scope, tokens=[*tokens, str(index)], active=active)
+
+    def _walk_mapping(
+        self,
+        node: MappingNode,
+        *,
+        scope: MappingScope,
+        tokens: list[str],
+        active: set[int],
+    ) -> None:
+        effective = self._effective_mapping(node, scope=scope, active=set())
+        for first, conflicting in effective.conflicts:
+            self._add_conflict(first, conflicting, tokens)
+        for key_node, value_node in node.value:
+            self._walk_mapping_entry(key_node, value_node, scope=scope, tokens=tokens, active=active)
+
+    def _add_conflict(self, first: _Entry, conflicting: _Entry, tokens: list[str]) -> None:
+        self._add(
+            SDLParseDiagnostic(
+                code="sdl.mapping_key_conflict",
+                message=_conflict_message(first, conflicting),
+                pointer=_encode_pointer([*tokens, conflicting.canonical]),
+                authored_keys=(first.authored, conflicting.authored),
+                primary_range=_range_from_node(conflicting.key_node),
+                related_range=_range_from_node(first.key_node),
+                related_message=f"First authored key '{first.authored}'.",
+            )
+        )
+
+    def _walk_mapping_entry(
+        self,
+        key_node: Node,
+        value_node: Node,
+        *,
+        scope: MappingScope,
+        tokens: list[str],
+        active: set[int],
+    ) -> None:
+        if _is_merge_key(key_node):
+            self._walk_merge_value(value_node, scope=scope, tokens=tokens, active=active)
             return
-
-        walk_key = (identity, scope)
-        if walk_key in self._walked:
+        authored = _authored_key(key_node)
+        if not _is_string_key(key_node):
+            self._add_key_type_diagnostic(key_node, authored, tokens)
             return
-        self._walked.add(walk_key)
+        canonical = normalize_field_key(authored) if scope is MappingScope.STRUCTURAL else authored
+        child_scope = _child_scope(scope, canonical, value_node)
+        self._walk(value_node, scope=child_scope, tokens=[*tokens, canonical], active=active)
 
-        if not isinstance(node, (MappingNode, SequenceNode)):
-            return
-        active.add(identity)
-        try:
-            if isinstance(node, SequenceNode):
-                for index, item in enumerate(node.value):
-                    self._walk(item, scope=scope, tokens=[*tokens, str(index)], active=active)
-                return
-
-            effective = self._effective_mapping(node, scope=scope, active=set())
-            for first, conflicting in effective.conflicts:
-                pointer = _encode_pointer([*tokens, conflicting.canonical])
-                if first.authored == conflicting.authored:
-                    message = f"Duplicate mapping key '{conflicting.authored}'."
-                else:
-                    message = (
-                        f"Structural field keys '{first.authored}' and '{conflicting.authored}' "
-                        f"both address '{conflicting.canonical}'."
-                    )
-                self._add(
-                    SDLParseDiagnostic(
-                        code="sdl.mapping_key_conflict",
-                        message=message,
-                        pointer=pointer,
-                        authored_keys=(first.authored, conflicting.authored),
-                        primary_range=_range_from_node(conflicting.key_node),
-                        related_range=_range_from_node(first.key_node),
-                        related_message=f"First authored key '{first.authored}'.",
-                    )
-                )
-
-            for key_node, value_node in node.value:
-                if _is_merge_key(key_node):
-                    self._walk_merge_value(value_node, scope=scope, tokens=tokens, active=active)
-                    continue
-                authored = _authored_key(key_node)
-                if not _is_string_key(key_node):
-                    message = (
-                        "SDL top-level mapping keys must be strings"
-                        if not tokens
-                        else f"SDL mapping key '{authored}' must be a string."
-                    )
-                    self._add(
-                        SDLParseDiagnostic(
-                            code="sdl.mapping_key_type",
-                            message=message,
-                            pointer=_encode_pointer([*tokens, authored]),
-                            primary_range=_range_from_node(key_node),
-                        )
-                    )
-                    continue
-                canonical = normalize_field_key(authored) if scope is MappingScope.STRUCTURAL else authored
-                child_tokens = [*tokens, canonical]
-                if scope is MappingScope.STRUCTURAL and is_literal_map_field(
-                    canonical,
-                    value_is_mapping=isinstance(value_node, MappingNode),
-                    value_is_sequence=isinstance(value_node, SequenceNode),
-                ):
-                    child_scope = MappingScope.LITERAL
-                else:
-                    child_scope = MappingScope.STRUCTURAL
-                self._walk(value_node, scope=child_scope, tokens=child_tokens, active=active)
-        finally:
-            active.remove(identity)
+    def _add_key_type_diagnostic(self, key_node: Node, authored: str, tokens: list[str]) -> None:
+        message = (
+            "SDL top-level mapping keys must be strings"
+            if not tokens
+            else f"SDL mapping key '{authored}' must be a string."
+        )
+        self._add(
+            SDLParseDiagnostic(
+                code="sdl.mapping_key_type",
+                message=message,
+                pointer=_encode_pointer([*tokens, authored]),
+                primary_range=_range_from_node(key_node),
+            )
+        )
 
     def _walk_merge_value(
         self,
@@ -209,49 +246,65 @@ class _MappingAnalyzer:
             return _EffectiveMapping((), ())
 
         active.add(id(node))
-        ordered: list[_Entry] = []
-        conflicts: list[tuple[_Entry, _Entry]] = []
-        seen: dict[str, _Entry] = {}
-
-        def add(entry: _Entry) -> None:
-            previous = seen.get(entry.canonical)
-            if previous is None:
-                seen[entry.canonical] = entry
-                ordered.append(entry)
-            else:
-                conflicts.append((previous, entry))
-
+        accumulator = _EffectiveAccumulator()
         try:
-            merge_keys: list[ScalarNode] = []
-            for key_node, value_node in node.value:
-                if not _is_merge_key(key_node):
-                    continue
-                if isinstance(key_node, ScalarNode):
-                    merge_keys.append(key_node)
-                for source in _merge_sources(value_node):
-                    if id(source) in active:
-                        continue
-                    inherited = self._effective_mapping(source, scope=scope, active=active)
-                    for entry in inherited.entries:
-                        add(entry)
-
-            for first, conflicting in zip(merge_keys, merge_keys[1:], strict=False):
-                add(_Entry("<<", "<<", first))
-                add(_Entry("<<", "<<", conflicting))
-
-            for key_node, _value_node in node.value:
-                if not _is_string_key(key_node) or _is_merge_key(key_node):
-                    continue
-                assert isinstance(key_node, ScalarNode)
-                authored = key_node.value
-                canonical = normalize_field_key(authored) if scope is MappingScope.STRUCTURAL else authored
-                add(_Entry(canonical, authored, key_node))
+            merge_keys = self._inherit_merge_entries(node, scope=scope, active=active, accumulator=accumulator)
+            self._record_duplicate_merge_keys(merge_keys, accumulator)
+            self._add_local_entries(node, scope=scope, accumulator=accumulator)
         finally:
             active.remove(id(node))
 
-        result = _EffectiveMapping(tuple(ordered), tuple(conflicts))
+        result = accumulator.build()
         self._effective_cache[cache_key] = result
         return result
+
+    def _inherit_merge_entries(
+        self,
+        node: MappingNode,
+        *,
+        scope: MappingScope,
+        active: set[int],
+        accumulator: _EffectiveAccumulator,
+    ) -> list[ScalarNode]:
+        merge_keys: list[ScalarNode] = []
+        for key_node, value_node in node.value:
+            if not _is_merge_key(key_node):
+                continue
+            assert isinstance(key_node, ScalarNode)
+            merge_keys.append(key_node)
+            for source in _merge_sources(value_node):
+                if id(source) in active:
+                    continue
+                inherited = self._effective_mapping(source, scope=scope, active=active)
+                for entry in inherited.entries:
+                    accumulator.add(entry)
+        return merge_keys
+
+    @staticmethod
+    def _record_duplicate_merge_keys(
+        merge_keys: list[ScalarNode],
+        accumulator: _EffectiveAccumulator,
+    ) -> None:
+        if len(merge_keys) < 2:
+            return
+        first = _Entry("<<", "<<", merge_keys[0])
+        for key_node in merge_keys[1:]:
+            accumulator.conflicts.append((first, _Entry("<<", "<<", key_node)))
+
+    @staticmethod
+    def _add_local_entries(
+        node: MappingNode,
+        *,
+        scope: MappingScope,
+        accumulator: _EffectiveAccumulator,
+    ) -> None:
+        for key_node, _value_node in node.value:
+            if not _is_string_key(key_node) or _is_merge_key(key_node):
+                continue
+            assert isinstance(key_node, ScalarNode)
+            authored = key_node.value
+            canonical = normalize_field_key(authored) if scope is MappingScope.STRUCTURAL else authored
+            accumulator.add(_Entry(canonical, authored, key_node))
 
     def _add(self, diagnostic: SDLParseDiagnostic) -> None:
         related = diagnostic.related_range
@@ -274,7 +327,7 @@ def load_sdl_yaml(
     path: Path | None = None,
     scope: MappingScope = MappingScope.STRUCTURAL,
     base_pointer: str = "",
-) -> Any:
+) -> object:
     """Validate and safely construct one SDL YAML document or fragment."""
     prepared = _prepare_content(content, path=path)
     loader: _SDLSafeLoader | None = None
@@ -282,7 +335,7 @@ def load_sdl_yaml(
         loader = _SDLSafeLoader(prepared)
         root = loader.get_single_node()
         if root is None:
-            raise SDLParseError("SDL content is empty", path=path)
+            raise SDLParseError(_EMPTY_CONTENT_MESSAGE, path=path)
         _validate_mapping_keys(root, path=path, scope=scope, base_pointer=base_pointer)
         return loader.construct_document(root)
     except SDLParseError:
@@ -308,7 +361,7 @@ def compose_sdl_yaml(
         loader = _SDLSafeLoader(prepared)
         root = loader.get_single_node()
         if root is None:
-            raise SDLParseError("SDL content is empty", path=path)
+            raise SDLParseError(_EMPTY_CONTENT_MESSAGE, path=path)
         _validate_mapping_keys(root, path=path, scope=scope, base_pointer=base_pointer)
         return root
     except SDLParseError:
@@ -347,7 +400,7 @@ def _validate_mapping_keys(
 def _prepare_content(content: str, *, path: Path | None) -> str:
     prepared = textwrap.dedent(content)
     if not prepared.strip():
-        raise SDLParseError("SDL content is empty", path=path)
+        raise SDLParseError(_EMPTY_CONTENT_MESSAGE, path=path)
     return prepared
 
 
@@ -380,12 +433,28 @@ def _authored_key(node: Node) -> str:
     return "?"
 
 
-def _merge_sources(node: Node) -> tuple[MappingNode, ...]:
+def _merge_sources(node: Node) -> Iterator[MappingNode]:
     if isinstance(node, MappingNode):
-        return (node,)
-    if isinstance(node, SequenceNode):
-        return tuple(item for item in node.value if isinstance(item, MappingNode))
-    return ()
+        yield node
+    elif isinstance(node, SequenceNode):
+        yield from (item for item in node.value if isinstance(item, MappingNode))
+
+
+def _child_scope(scope: MappingScope, canonical: str, value_node: Node) -> MappingScope:
+    is_literal = scope is MappingScope.STRUCTURAL and is_literal_map_field(
+        canonical,
+        value_is_mapping=isinstance(value_node, MappingNode),
+        value_is_sequence=isinstance(value_node, SequenceNode),
+    )
+    return MappingScope.LITERAL if is_literal else MappingScope.STRUCTURAL
+
+
+def _conflict_message(first: _Entry, conflicting: _Entry) -> str:
+    if first.authored == conflicting.authored:
+        return f"Duplicate mapping key '{conflicting.authored}'."
+    return (
+        f"Structural field keys '{first.authored}' and '{conflicting.authored}' both address '{conflicting.canonical}'."
+    )
 
 
 def _range_from_node(node: Node) -> SDLSourceRange:
