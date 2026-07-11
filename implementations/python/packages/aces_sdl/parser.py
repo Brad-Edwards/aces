@@ -31,6 +31,7 @@ from ._source_profile import (
     SDL_SOURCE_FORMAT,
     SDLMigrationPolicy,
     SDLParserLimits,
+    SDLSourceParseOptions,
 )
 from ._yaml_loader import load_sdl_yaml
 from .scenario import ExpandedScenario, Scenario
@@ -105,9 +106,11 @@ def load_sdl_fragment(
         content,
         scope=MappingScope(mapping_keys),
         base_pointer=base_pointer,
-        source_format=source_format,
-        migration_policy=migration_policy,
-        limits=limits,
+        source_options=SDLSourceParseOptions(
+            source_format=source_format,
+            migration_policy=migration_policy,
+            limits=limits,
+        ),
         source_diagnostics=source_diagnostics,
     )
 
@@ -421,9 +424,11 @@ def _load_normalized_data(
     raw = load_sdl_yaml(
         content,
         path=path,
-        source_format=source_format,
-        migration_policy=migration_policy,
-        limits=limits,
+        source_options=SDLSourceParseOptions(
+            source_format=source_format,
+            migration_policy=migration_policy,
+            limits=limits,
+        ),
         source_diagnostics=source_diagnostics,
     )
 

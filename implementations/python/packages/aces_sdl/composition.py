@@ -23,7 +23,13 @@ from ._module_symbols import (
 from ._module_symbols import (
     symbol_index as _symbol_index,
 )
-from ._source_profile import DEFAULT_PARSER_LIMITS, SDL_SOURCE_FORMAT, SDLMigrationPolicy, SDLParserLimits
+from ._source_profile import (
+    DEFAULT_PARSER_LIMITS,
+    SDL_SOURCE_FORMAT,
+    SDLMigrationPolicy,
+    SDLParserLimits,
+    SDLSourceParseOptions,
+)
 from .entities import flatten_entities
 from .instantiate import instantiate_scenario
 from .module_registry import (
@@ -388,9 +394,11 @@ def expand_sdl_modules(
             base_dir=resolved_path.parent,
             lockfile=lockfile,
             trust_policy=trust_policy,
-            source_format=source_format,
-            migration_policy=migration_policy,
-            limits=limits,
+            source_options=SDLSourceParseOptions(
+                source_format=source_format,
+                migration_policy=migration_policy,
+                limits=limits,
+            ),
             source_diagnostics=source_diagnostics,
         )
         import_path = resolved_import.root_file

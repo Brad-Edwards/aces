@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
-from typing import Any
+from typing import cast
 
 import yaml
+from yaml.error import Mark
 from yaml.nodes import MappingNode, Node, SequenceNode
 from yaml.tokens import AliasToken, DirectiveToken, ScalarToken, TagToken, Token
 
@@ -112,53 +113,72 @@ def validate_source_tokens(content: str, *, path: Path | None, limits: SDLParser
 
 def validate_source_graph(root: Node, *, path: Path | None, limits: SDLParserLimits) -> None:
     """Bound unique nodes, expanded alias work, and effective depth."""
-    unique: set[int] = set()
-    active: set[int] = set()
-    memoized_metrics: dict[int, tuple[int, int]] = {}
+    _GraphMetrics(path=path, limits=limits).calculate(root, 1)
 
-    def expanded_metrics(node: Node, depth: int) -> tuple[int, int]:
-        if depth > limits.max_depth:
-            _raise_source_limit(f"SDL node depth exceeds {limits.max_depth}.", path=path, node=node)
+
+class _GraphMetrics:
+    def __init__(self, *, path: Path | None, limits: SDLParserLimits) -> None:
+        self.path = path
+        self.limits = limits
+        self.unique: set[int] = set()
+        self.active: set[int] = set()
+        self.memoized: dict[int, tuple[int, int]] = {}
+
+    def calculate(self, node: Node, depth: int) -> tuple[int, int]:
+        self._check_depth(node, depth)
         identity = id(node)
-        if identity in active:
+        if identity in self.active:
             return 0, 0
-        if identity not in unique:
-            unique.add(identity)
-            if len(unique) > limits.max_nodes:
-                _raise_source_limit(
-                    f"SDL node graph has more than {limits.max_nodes} unique nodes.",
-                    path=path,
-                    node=node,
-                )
-        cached = memoized_metrics.get(identity)
+        self._track_unique(node, identity)
+        cached = self.memoized.get(identity)
         if cached is not None:
-            _cost, height = cached
-            if depth + height - 1 > limits.max_depth:
-                _raise_source_limit(f"SDL node depth exceeds {limits.max_depth}.", path=path, node=node)
+            self._check_cached_depth(node, depth, cached)
             return cached
-        active.add(identity)
+        self.active.add(identity)
         try:
-            cost = 1
-            height = 1
-            if isinstance(node, MappingNode):
-                children = (child for pair in node.value for child in pair)
-                for child in children:
-                    child_cost, child_height = expanded_metrics(child, depth + 1)
-                    cost += child_cost
-                    height = max(height, child_height + 1)
-                    _check_expanded_cost(cost, node=node, path=path, limits=limits)
-            elif isinstance(node, SequenceNode):
-                for child in node.value:
-                    child_cost, child_height = expanded_metrics(child, depth + 1)
-                    cost += child_cost
-                    height = max(height, child_height + 1)
-                    _check_expanded_cost(cost, node=node, path=path, limits=limits)
+            metrics = self._calculate_children(node, depth)
         finally:
-            active.remove(identity)
-        memoized_metrics[identity] = (cost, height)
+            self.active.remove(identity)
+        self.memoized[identity] = metrics
+        return metrics
+
+    def _calculate_children(self, node: Node, depth: int) -> tuple[int, int]:
+        cost = 1
+        height = 1
+        for child in self._children(node):
+            child_cost, child_height = self.calculate(child, depth + 1)
+            cost += child_cost
+            height = max(height, child_height + 1)
+            _check_expanded_cost(cost, node=node, path=self.path, limits=self.limits)
         return cost, height
 
-    expanded_metrics(root, 1)
+    @staticmethod
+    def _children(node: Node) -> tuple[Node, ...]:
+        if isinstance(node, MappingNode):
+            return tuple(child for pair in node.value for child in pair)
+        if isinstance(node, SequenceNode):
+            return tuple(node.value)
+        return ()
+
+    def _track_unique(self, node: Node, identity: int) -> None:
+        if identity in self.unique:
+            return
+        self.unique.add(identity)
+        if len(self.unique) > self.limits.max_nodes:
+            _raise_source_limit(
+                f"SDL node graph has more than {self.limits.max_nodes} unique nodes.",
+                path=self.path,
+                node=node,
+            )
+
+    def _check_depth(self, node: Node, depth: int) -> None:
+        if depth > self.limits.max_depth:
+            _raise_source_limit(f"SDL node depth exceeds {self.limits.max_depth}.", path=self.path, node=node)
+
+    def _check_cached_depth(self, node: Node, depth: int, metrics: tuple[int, int]) -> None:
+        _cost, height = metrics
+        if depth + height - 1 > self.limits.max_depth:
+            _raise_source_limit(f"SDL node depth exceeds {self.limits.max_depth}.", path=self.path, node=node)
 
 
 def _check_expanded_cost(
@@ -178,42 +198,67 @@ def _check_expanded_cost(
 
 def validate_constructed_domain(value: object, *, path: Path | None) -> None:
     """Reject values outside the string-keyed JSON data domain."""
-    active: set[int] = set()
-    visited: set[int] = set()
+    _ConstructedDomainValidator(path=path).visit(value)
 
-    def visit(item: object) -> None:
-        if item is None or type(item) in {str, bool, int}:  # noqa: E721 - exact domain is intentional
+
+class _ConstructedDomainValidator:
+    _SCALAR_TYPES = frozenset({str, bool, int})
+
+    def __init__(self, *, path: Path | None) -> None:
+        self.path = path
+        self.active: set[int] = set()
+        self.visited: set[int] = set()
+
+    def visit(self, item: object) -> None:
+        item_type = type(item)
+        if item is None or item_type in self._SCALAR_TYPES:
+            pass
+        elif item_type is float:
+            self._visit_float(cast(float, item))
+        elif item_type is list:
+            self._visit_list(cast(list[object], item))
+        elif item_type is dict:
+            self._visit_dict(cast(dict[object, object], item))
+        else:
+            _raise_domain_error(
+                f"YAML value type '{item_type.__name__}' is outside the SDL JSON domain.", path=self.path
+            )
+
+    def _visit_float(self, item: float) -> None:
+        if not math.isfinite(item):
+            _raise_domain_error("Non-finite numbers are not valid SDL values.", path=self.path)
+
+    def _visit_list(self, item: list[object]) -> None:
+        if not self._begin_container(item):
             return
-        if type(item) is float:  # noqa: E721 - exact domain is intentional
-            if math.isfinite(item):
-                return
-            _raise_domain_error("Non-finite numbers are not valid SDL values.", path=path)
+        try:
+            for child in item:
+                self.visit(child)
+        finally:
+            self._finish_container(item)
+
+    def _visit_dict(self, item: dict[object, object]) -> None:
+        if not self._begin_container(item):
+            return
+        try:
+            for key, child in item.items():
+                if not isinstance(key, str):
+                    _raise_domain_error("SDL mapping keys must construct as strings.", path=self.path)
+                self.visit(child)
+        finally:
+            self._finish_container(item)
+
+    def _begin_container(self, item: object) -> bool:
         identity = id(item)
-        if identity in active or identity in visited:
-            return
-        if type(item) is list:  # noqa: E721 - reject implementation-specific containers
-            active.add(identity)
-            try:
-                for child in item:
-                    visit(child)
-            finally:
-                active.remove(identity)
-            visited.add(identity)
-            return
-        if type(item) is dict:  # noqa: E721 - reject custom mapping constructors
-            active.add(identity)
-            try:
-                for key, child in item.items():
-                    if not isinstance(key, str):
-                        _raise_domain_error("SDL mapping keys must construct as strings.", path=path)
-                    visit(child)
-            finally:
-                active.remove(identity)
-            visited.add(identity)
-            return
-        _raise_domain_error(f"YAML value type '{type(item).__name__}' is outside the SDL JSON domain.", path=path)
+        if identity in self.active or identity in self.visited:
+            return False
+        self.active.add(identity)
+        return True
 
-    visit(value)
+    def _finish_container(self, item: object) -> None:
+        identity = id(item)
+        self.active.remove(identity)
+        self.visited.add(identity)
 
 
 def _raise_domain_error(message: str, *, path: Path | None) -> None:
@@ -270,7 +315,7 @@ def _start_range() -> SDLSourceRange:
     return SDLSourceRange(start=position, end=position)
 
 
-def _range_from_marks(start: Any, end: Any) -> SDLSourceRange:
+def _range_from_marks(start: Mark, end: Mark) -> SDLSourceRange:
     return SDLSourceRange(
         start=SDLSourcePosition(start.line + 1, start.column + 1),
         end=SDLSourcePosition(end.line + 1, end.column + 1),

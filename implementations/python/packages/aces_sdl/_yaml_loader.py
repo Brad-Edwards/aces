@@ -18,10 +18,9 @@ from ._errors import (
 )
 from ._mapping_scopes import MappingScope, is_literal_map_field, normalize_field_key
 from ._source_profile import (
-    DEFAULT_PARSER_LIMITS,
-    SDL_SOURCE_FORMAT,
+    DEFAULT_SOURCE_PARSE_OPTIONS,
     SDLMigrationPolicy,
-    SDLParserLimits,
+    SDLSourceParseOptions,
     install_yaml_12_core_resolvers,
 )
 from ._source_validation import (
@@ -371,23 +370,21 @@ def load_sdl_yaml(
     path: Path | None = None,
     scope: MappingScope = MappingScope.STRUCTURAL,
     base_pointer: str = "",
-    source_format: str = SDL_SOURCE_FORMAT,
-    migration_policy: SDLMigrationPolicy | str = SDLMigrationPolicy.REJECT,
-    limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
+    source_options: SDLSourceParseOptions = DEFAULT_SOURCE_PARSE_OPTIONS,
     source_diagnostics: list[SDLParseDiagnostic] | None = None,
 ) -> object:
     """Validate and safely construct one SDL YAML document or fragment."""
     prepared = prepare_content(content, path=path)
-    policy = coerce_migration_policy(migration_policy, path=path)
-    validate_source_format(source_format, path=path)
-    validate_source_tokens(prepared, path=path, limits=limits)
+    policy = coerce_migration_policy(source_options.migration_policy, path=path)
+    validate_source_format(source_options.source_format, path=path)
+    validate_source_tokens(prepared, path=path, limits=source_options.limits)
     loader: _SDLSafeLoader | None = None
     try:
         loader = _SDLSafeLoader(prepared)
         root = loader.get_single_node()
         if root is None:
             raise SDLParseError(EMPTY_CONTENT_MESSAGE, path=path)
-        validate_source_graph(root, path=path, limits=limits)
+        validate_source_graph(root, path=path, limits=source_options.limits)
         _validate_mapping_keys(
             root,
             path=path,
@@ -414,23 +411,21 @@ def compose_sdl_yaml(
     path: Path | None = None,
     scope: MappingScope = MappingScope.STRUCTURAL,
     base_pointer: str = "",
-    source_format: str = SDL_SOURCE_FORMAT,
-    migration_policy: SDLMigrationPolicy | str = SDLMigrationPolicy.REJECT,
-    limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
+    source_options: SDLSourceParseOptions = DEFAULT_SOURCE_PARSE_OPTIONS,
     source_diagnostics: list[SDLParseDiagnostic] | None = None,
 ) -> Node:
     """Compose and key-validate SDL YAML while retaining source nodes."""
     prepared = prepare_content(content, path=path)
-    policy = coerce_migration_policy(migration_policy, path=path)
-    validate_source_format(source_format, path=path)
-    validate_source_tokens(prepared, path=path, limits=limits)
+    policy = coerce_migration_policy(source_options.migration_policy, path=path)
+    validate_source_format(source_options.source_format, path=path)
+    validate_source_tokens(prepared, path=path, limits=source_options.limits)
     loader: _SDLSafeLoader | None = None
     try:
         loader = _SDLSafeLoader(prepared)
         root = loader.get_single_node()
         if root is None:
             raise SDLParseError(EMPTY_CONTENT_MESSAGE, path=path)
-        validate_source_graph(root, path=path, limits=limits)
+        validate_source_graph(root, path=path, limits=source_options.limits)
         _validate_mapping_keys(
             root,
             path=path,

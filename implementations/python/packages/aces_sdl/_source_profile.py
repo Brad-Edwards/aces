@@ -39,21 +39,32 @@ class SDLParserLimits:
 
 DEFAULT_PARSER_LIMITS = SDLParserLimits()
 
+
+@dataclass(frozen=True)
+class SDLSourceParseOptions:
+    """Versioned source-profile choices shared by internal parse boundaries."""
+
+    source_format: str = SDL_SOURCE_FORMAT
+    migration_policy: SDLMigrationPolicy | str = SDLMigrationPolicy.REJECT
+    limits: SDLParserLimits = DEFAULT_PARSER_LIMITS
+
+
+DEFAULT_SOURCE_PARSE_OPTIONS = SDLSourceParseOptions()
+
+
 _BOOL_RE = re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$")
-_FLOAT_RE = re.compile(
-    r"""^(?:
-        [-+]?(?:
-            \.[0-9]+(?:[eE][-+]?[0-9]+)?
-          | [0-9]+(?:\.[0-9]*)?(?:[eE][-+]?[0-9]+)
-          | [0-9]+\.[0-9]*
-        )
-      | [-+]?\.(?:inf|Inf|INF)
-      | \.(?:nan|NaN|NAN)
-    )$""",
-    re.X,
+_FLOAT_RESOLVERS = tuple(
+    re.compile(pattern, re.ASCII)
+    for pattern in (
+        r"^[-+]?\.\d+(?:[eE][-+]?\d+)?$",
+        r"^[-+]?\d+(?:\.\d*)?[eE][-+]?\d+$",
+        r"^[-+]?\d+\.\d*$",
+        r"^[-+]?\.(?:inf|Inf|INF)$",
+        r"^\.(?:nan|NaN|NAN)$",
+    )
 )
-_INT_RE = re.compile(r"^(?:[-+]?[0-9]+|0o[0-7]+|0x[0-9a-fA-F]+)$")
-_MERGE_RE = re.compile(r"^(?:<<)$")
+_INT_RESOLVERS = tuple(re.compile(pattern, re.ASCII) for pattern in (r"^[-+]?\d+$", r"^0o[0-7]+$", r"^0x[\da-fA-F]+$"))
+_MERGE_RE = re.compile(r"^<<$")
 _NULL_RE = re.compile(r"^(?:~|null|Null|NULL|)$")
 
 
@@ -62,8 +73,10 @@ def install_yaml_12_core_resolvers(loader_cls: type[yaml.SafeLoader]) -> None:
 
     loader_cls.yaml_implicit_resolvers = {}
     loader_cls.add_implicit_resolver("tag:yaml.org,2002:bool", _BOOL_RE, list("tTfF"))
-    loader_cls.add_implicit_resolver("tag:yaml.org,2002:float", _FLOAT_RE, list("-+0123456789."))
-    loader_cls.add_implicit_resolver("tag:yaml.org,2002:int", _INT_RE, list("-+0123456789"))
+    for resolver in _FLOAT_RESOLVERS:
+        loader_cls.add_implicit_resolver("tag:yaml.org,2002:float", resolver, list("-+0123456789."))
+    for resolver in _INT_RESOLVERS:
+        loader_cls.add_implicit_resolver("tag:yaml.org,2002:int", resolver, list("-+0123456789"))
     loader_cls.add_implicit_resolver("tag:yaml.org,2002:merge", _MERGE_RE, ["<"])
     loader_cls.add_implicit_resolver("tag:yaml.org,2002:null", _NULL_RE, ["~", "n", "N", ""])
     loader_cls.add_constructor("tag:yaml.org,2002:int", _construct_core_int)
