@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from aces_backend_libvirt import LibvirtProvisioner
 from aces_backend_libvirt.driver import DomainHandle, DriverResult, NetworkHandle
+from aces_backend_libvirt.envelopes import load_libvirt_realization_envelope
+from aces_contracts.contracts import RealizationEnvelopeIdentityModel
 from aces_contracts.planning import (
     ChangeAction,
     EvaluationPlan,
@@ -88,6 +90,7 @@ def _plan(*resources: PlannedResource, action: ChangeAction = ChangeAction.CREAT
             )
             for resource in resources
         ],
+        realization_envelope=load_libvirt_realization_envelope("generic").identity,
     )
 
 
@@ -119,10 +122,64 @@ def test_apply_reconciles_snapshot_and_drives_libvirt_driver_for_create():
     assert result.snapshot.entries["provision.node.web"].status == "applied"
     assert result.snapshot.entries["provision.node.web"].payload["os_family"] == "linux"
     assert driver.realize_calls
+    assert result.snapshot.realization_envelope == plan.realization_envelope
     domains = driver.realize_calls[0]["domains"]
     networks = driver.realize_calls[0]["networks"]
     assert [spec.address for spec in domains] == ["provision.node.web"]
     assert [spec.address for spec in networks] == ["provision.network.lan"]
+
+
+def test_apply_rejects_missing_envelope_identity_before_driver_io():
+    driver = _RecordingDriver()
+    plan = ProvisioningPlan(operations=_plan(_node_resource()).operations)
+    baseline = RuntimeSnapshot()
+
+    result = LibvirtProvisioner(driver).apply(plan, baseline)
+
+    assert result.success is False
+    assert result.snapshot is baseline
+    assert [diag.code for diag in result.diagnostics] == ["libvirt-backend.realization-envelope.missing"]
+    assert not driver.realize_calls
+
+
+def test_apply_rejects_mismatched_envelope_identity_before_driver_io():
+    driver = _RecordingDriver()
+    plan = _plan(_node_resource())
+    wrong = RealizationEnvelopeIdentityModel(
+        **{**plan.realization_envelope.model_dump(), "digest": "sha256:" + "f" * 64}  # type: ignore[union-attr]
+    )
+    plan = ProvisioningPlan(
+        resources=plan.resources,
+        operations=plan.operations,
+        realization_envelope=wrong,
+    )
+    baseline = RuntimeSnapshot()
+
+    result = LibvirtProvisioner(driver).apply(plan, baseline)
+
+    assert result.success is False
+    assert result.snapshot is baseline
+    assert [diag.code for diag in result.diagnostics] == ["libvirt-backend.realization-envelope.mismatch"]
+    assert not driver.realize_calls
+
+
+def test_apply_rejects_snapshot_bound_to_another_envelope_before_driver_io():
+    driver = _RecordingDriver()
+    plan = _plan(_node_resource())
+    wrong = RealizationEnvelopeIdentityModel(
+        **{**plan.realization_envelope.model_dump(), "configuration_digest": "sha256:" + "e" * 64}  # type: ignore[union-attr]
+    )
+    baseline = RuntimeSnapshot(
+        entries={"existing": SnapshotEntry("existing", RuntimeDomain.PROVISIONING, "node", {})},
+        realization_envelope=wrong,
+    )
+
+    result = LibvirtProvisioner(driver).apply(plan, baseline)
+
+    assert result.success is False
+    assert result.snapshot is baseline
+    assert [diag.code for diag in result.diagnostics] == ["libvirt-backend.realization-envelope.baseline-mismatch"]
+    assert not driver.realize_calls
 
 
 def _account_resource() -> PlannedResource:
@@ -219,6 +276,7 @@ def test_apply_realizes_target_domain_when_only_a_placement_changes():
                 payload=account.payload,
             ),
         ],
+        realization_envelope=load_libvirt_realization_envelope("generic").identity,
     )
 
     result = LibvirtProvisioner(driver).apply(plan, RuntimeSnapshot())
@@ -240,7 +298,8 @@ def test_apply_delete_removes_snapshot_entry_and_drives_destroy():
                 resource_type="node",
                 payload={},
             )
-        }
+        },
+        realization_envelope=load_libvirt_realization_envelope("generic").identity,
     )
     plan = ProvisioningPlan(
         operations=[
@@ -250,7 +309,8 @@ def test_apply_delete_removes_snapshot_entry_and_drives_destroy():
                 resource_type="node",
                 payload={},
             )
-        ]
+        ],
+        realization_envelope=load_libvirt_realization_envelope("generic").identity,
     )
 
     result = LibvirtProvisioner(driver).apply(plan, snapshot)
@@ -273,7 +333,8 @@ def test_apply_delete_of_already_absent_entry_is_idempotent_success():
                 resource_type="node",
                 payload={},
             )
-        ]
+        ],
+        realization_envelope=load_libvirt_realization_envelope("generic").identity,
     )
 
     result = LibvirtProvisioner(driver).apply(plan, RuntimeSnapshot())
@@ -333,6 +394,7 @@ def test_apply_validates_operation_payloads_not_only_resources():
                 payload={"name": "gw", "node_type": "router", "os_family": "linux", "spec": {}},
             )
         ],
+        realization_envelope=load_libvirt_realization_envelope("generic").identity,
     )
 
     result = LibvirtProvisioner(driver).apply(plan, snapshot)
@@ -374,7 +436,8 @@ def test_apply_fails_closed_when_driver_omits_destroy_confirmation():
                 resource_type="node",
                 payload={},
             )
-        }
+        },
+        realization_envelope=load_libvirt_realization_envelope("generic").identity,
     )
     plan = ProvisioningPlan(
         operations=[
@@ -384,7 +447,8 @@ def test_apply_fails_closed_when_driver_omits_destroy_confirmation():
                 resource_type="node",
                 payload={},
             )
-        ]
+        ],
+        realization_envelope=load_libvirt_realization_envelope("generic").identity,
     )
 
     result = LibvirtProvisioner(_SilentDestroyDriver()).apply(plan, snapshot)

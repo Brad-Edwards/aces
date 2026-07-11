@@ -110,9 +110,9 @@ def test_ac2_conformance_passes_with_participant_runtime_manifest():
     # pipeline actually ran end-to-end for the participant-runtime manifest:
     # the provisioning probe + snapshot-mutation cases must be present and green.
     case_names = {case.name for case in report.cases}
-    assert {"live-manifest", "live-provisioning", "live-snapshot"} <= case_names
+    assert {"target-manifest", "target-provisioning", "target-snapshot"} <= case_names
     for case in report.cases:
-        if case.name in {"live-manifest", "live-provisioning", "live-snapshot"}:
+        if case.name in {"target-manifest", "target-provisioning", "target-snapshot"}:
             assert case.passed, [diag.message for diag in case.diagnostics]
 
 

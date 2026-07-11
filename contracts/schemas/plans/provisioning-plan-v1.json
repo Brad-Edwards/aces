@@ -42,6 +42,46 @@
       ],
       "title": "PlanOperationModel",
       "type": "object"
+    },
+    "RealizationEnvelopeIdentityModel": {
+      "additionalProperties": false,
+      "description": "Immutable realization-envelope identity carried across runtime contracts.",
+      "properties": {
+        "configuration_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Configuration Digest",
+          "type": "string"
+        },
+        "contract_id": {
+          "const": "realization-envelope-v1",
+          "default": "realization-envelope-v1",
+          "title": "Contract Id",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "envelope_id": {
+          "minLength": 1,
+          "title": "Envelope Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "realization-envelope/v1",
+          "default": "realization-envelope/v1",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "envelope_id",
+        "digest",
+        "configuration_digest"
+      ],
+      "title": "RealizationEnvelopeIdentityModel",
+      "type": "object"
     }
   },
   "$id": "https://aces.dev/schemas/provisioning-plan-v1.json",
@@ -62,6 +102,17 @@
       },
       "title": "Operations",
       "type": "array"
+    },
+    "realization_envelope": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RealizationEnvelopeIdentityModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "title": "ProvisioningPlanModel",

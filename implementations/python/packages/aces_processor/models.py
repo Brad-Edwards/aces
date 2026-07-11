@@ -235,6 +235,7 @@ from aces_sdl.participant_temporal_semantics import (
     ParticipantTemporalState,
     ParticipantTimeDomain,
 )
+from aces_sdl.scenario import InstantiatedScenario
 from aces_sdl.semantics.workflow import (
     WorkflowStepSemanticContract,
 )
@@ -4231,6 +4232,7 @@ class RuntimeModel:
     # `node_variable_refs`); it never enters the backend-facing
     # `resource_payload()` envelope. Consumed by the planner realization gate.
     realization_requirements: tuple[CompiledRealizationRequirement, ...] = ()
+    realization_instance: InstantiatedScenario | None = None
 
 
 @dataclass(frozen=True)

@@ -4,6 +4,7 @@ from aces_backend_protocols.account_features import provisioner_account_features
 from aces_backend_protocols.capabilities import BackendManifest
 from aces_sdl.infrastructure import MINIMUM_NODE_COUNT
 from aces_sdl.nodes import OSFamily
+from aces_sdl.realization_envelope import member
 from aces_sdl.value_parsing import extract_variable_name, parse_enum_or_var, parse_int_or_var
 
 from .models import (
@@ -762,6 +763,7 @@ def _build_provisioning_plan(
     resources: dict[str, PlannedResource],
     actions: dict[str, ChangeAction],
     deleted_entries: dict[str, SnapshotEntry],
+    manifest: BackendManifest,
 ) -> ProvisioningPlan:
     provisioning_resources = {
         address: resource for address, resource in resources.items() if resource.domain == RuntimeDomain.PROVISIONING
@@ -793,7 +795,13 @@ def _build_provisioning_plan(
                 refresh_dependencies=entry.refresh_dependencies,
             )
         )
-    return ProvisioningPlan(resources=provisioning_resources, operations=ops)
+    return ProvisioningPlan(
+        resources=provisioning_resources,
+        operations=ops,
+        realization_envelope=(
+            manifest.realization_envelope.identity if manifest.realization_envelope is not None else None
+        ),
+    )
 
 
 def _build_orchestration_plan(
@@ -893,15 +901,21 @@ def plan(
 
     snapshot = snapshot or RuntimeSnapshot()
     resources = _collect_resources(model)
+    envelope_diagnostics = (
+        list(member(model.realization_instance, manifest.realization_envelope.expression).diagnostics)
+        if manifest.realization_envelope is not None and model.realization_instance is not None
+        else []
+    )
     diagnostics = [
         *model.diagnostics,
         *_validate_manifest(model, manifest),
         *realization_support_diagnostics(model.realization_requirements, manifest),
+        *envelope_diagnostics,
         *_ordering_cycle_diagnostics(resources),
     ]
     actions, deleted_entries = _build_operations(resources, snapshot)
 
-    provisioning = _build_provisioning_plan(resources, actions, deleted_entries)
+    provisioning = _build_provisioning_plan(resources, actions, deleted_entries, manifest)
     orchestration = _build_orchestration_plan(resources, actions, deleted_entries)
     evaluation = _build_evaluation_plan(resources, actions, deleted_entries)
 

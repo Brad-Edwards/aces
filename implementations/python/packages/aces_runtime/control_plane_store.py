@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
+from aces_contracts.contracts import RealizationEnvelopeIdentityModel
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import RuntimeDomain
 from aces_contracts.runtime_state import (
@@ -115,6 +116,9 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
             }
             for entry in snapshot.realization_provenance
         ],
+        "realization_envelope": (
+            snapshot.realization_envelope.model_dump(mode="json") if snapshot.realization_envelope is not None else None
+        ),
         "metadata": dict(snapshot.metadata),
     }
 
@@ -170,6 +174,11 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
             )
             for item in payload.get("realization_provenance", [])
             if isinstance(item, dict)
+        ),
+        realization_envelope=(
+            RealizationEnvelopeIdentityModel.model_validate(payload["realization_envelope"])
+            if payload.get("realization_envelope") is not None
+            else None
         ),
         metadata=dict(payload.get("metadata", {})),
     )

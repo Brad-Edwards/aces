@@ -95,14 +95,14 @@ _PORTABLE_AUGMENTATION_CARRIER_KINDS = frozenset(
 )
 _RUN_REFINEMENT_CONCERN_KINDS = frozenset({"capture-window", "measurement-channel"})
 
-# Default reference scenario the target-conformance live probe drives when the
+# Default reference scenario the target-conformance adapter probe drives when the
 # caller supplies none. Backend-neutral: a single generic linux vm node.
 #
 # Issue #663 makes this a *default*, not a universal assumption. A fixed-topology
 # emulation or bounded simulation backend that cannot realize this generic
 # scenario supplies one it can realize via
-# ``run_target_conformance(reference_scenario=...)``; the live probe then holds
-# it to full realization of *that* scenario. This is a temporary runner-parameter
+# ``run_target_conformance(reference_scenario=...)``; the target probe then holds
+# it to adapter-level accounting for *that* scenario. This runner-parameter
 # bridge — superseded by the realizability-envelope design (#667) and the
 # scenario/envelope subsumption relation (#668), which will let the probe
 # negotiate an in-envelope witness instead of carrying a default at all.
@@ -1076,7 +1076,7 @@ def profile_for_manifest(manifest: BackendManifest) -> BackendCapabilityProfile:
     A backend that declares orchestrator, evaluator, AND participant
     runtime capabilities is treated as ``FULL_REMOTE_CONTROL_PLANE``,
     so the default ``run_target_conformance`` path automatically
-    validates the live target against the participant-episode contract
+    validates the active target against the participant-episode contract
     family (RUN-311). Backends that only declare orchestrator/evaluator
     fall back to ``ORCHESTRATION_EVALUATION``; orchestrator-only
     declarations fall back to ``ORCHESTRATION_CAPABLE``; provisioner-only
@@ -1184,14 +1184,14 @@ def run_target_conformance(
     if any(diag.code == "conformance.profile-load-failed" for diag in fixture_report.diagnostics):
         # The published profile is the contract set we are supposed to validate
         # against. With no profile loaded we must NOT mutate the backend via
-        # ``_live_target_cases`` — there is nothing to validate against. The
+        # ``_target_adapter_cases`` — there is nothing to validate against. The
         # fixture report already carries the structured profile-load
         # diagnostic and ``passed=False``; surface it as the conformance
         # result for this target.
         return fixture_report
     if _to_known_profile(effective_profile) is None:
         # Target conformance enforces runtime-surface gates (which capability
-        # roles the target must implement, which live probes to run). Those
+        # roles the target must implement, which target probes to run). Those
         # gates depend on knowing the profile's runtime surface contract. For
         # an unknown profile id we have NO runtime-surface authority — letting
         # the run continue would silently certify a target that's missing every
@@ -1256,9 +1256,9 @@ def run_target_conformance(
                 + "; ".join(claim_gaps),
             )
         )
-    live_cases = _live_target_cases(target, effective_profile, reference_scenario=reference_scenario)
-    cases = tuple((*fixture_report.cases, *live_cases))
-    passed = passed and all(case.passed for case in live_cases)
+    target_cases = _target_adapter_cases(target, effective_profile, reference_scenario=reference_scenario)
+    cases = tuple((*fixture_report.cases, *target_cases))
+    passed = passed and all(case.passed for case in target_cases)
     return BackendConformanceReport(
         profile=_to_profile_id(effective_profile),
         passed=passed,
@@ -1445,7 +1445,7 @@ def _provisioning_probe_case(
             )
         )
     return ConformanceCaseResult(
-        name="live-provisioning",
+        name="target-provisioning",
         contract_name="operation-status-v1",
         valid=True,
         passed=not diagnostics,
@@ -1523,7 +1523,7 @@ def _live_snapshot_case(control_plane: RuntimeControlPlane) -> ConformanceCaseRe
             )
         )
     return ConformanceCaseResult(
-        name="live-snapshot",
+        name="target-snapshot",
         contract_name="runtime-snapshot-v1",
         valid=True,
         passed=not diagnostics,
@@ -1531,27 +1531,27 @@ def _live_snapshot_case(control_plane: RuntimeControlPlane) -> ConformanceCaseRe
     )
 
 
-def _live_target_cases(
+def _target_adapter_cases(
     target: RuntimeTarget,
     profile: BackendProfileSelector,
     *,
     reference_scenario: ScenarioInput | None = None,
 ) -> tuple[ConformanceCaseResult, ...]:
-    """Run live probes appropriate for known runtime surfaces only.
+    """Run target-adapter probes appropriate for known runtime surfaces only.
 
     Every known profile requires a provisioner, so target conformance always
-    runs a backend-neutral provisioning probe that proves real snapshot
-    mutation (issue #606) — provisioning-only backends included, which must not
+    runs a backend-neutral provisioning probe that proves adapter-driven snapshot
+    mutation (issue #606), not daemon or guest observation — provisioning-only backends included, which must not
     pass on manifest validation alone. Orchestration, evaluation, and the
     participant-episode probe additionally run for the richer runtime surfaces
     that declare those roles. For an unknown profile id we run only the
-    universally-safe manifest validation case and skip the live probes, since
+    universally-safe manifest validation case and skip the target probes, since
     their runtime contract is not known to this implementation.
 
     The probe drives ``reference_scenario`` when supplied, else
     ``_DEFAULT_CONFORMANCE_SCENARIO`` (issue #663). Whichever scenario is
-    selected is held to full realization (the #606 mutation guard is
-    unchanged); the parameter only stops the probe assuming *every* backend can
+    selected is held to adapter-level operation accounting (the #606 mutation
+    guard is unchanged); the parameter only stops the probe assuming *every* backend can
     realize one hard-coded scenario.
     """
 
@@ -1560,7 +1560,7 @@ def _live_target_cases(
     manifest_diags = _validate_payload("backend-manifest-v2", manifest_payload)
     cases.append(
         ConformanceCaseResult(
-            name="live-manifest",
+            name="target-manifest",
             contract_name="backend-manifest-v2",
             valid=True,
             passed=not manifest_diags,

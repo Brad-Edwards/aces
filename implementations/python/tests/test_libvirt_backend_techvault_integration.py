@@ -22,6 +22,8 @@ _TECHVAULT_PARAMETERS = {
 
 
 class _RecordingLibvirtDriver:
+    driver_mode = "generic"
+
     def __init__(self) -> None:
         self.realize_calls: list[dict[str, object]] = []
         self.destroy_calls: list[dict[str, object]] = []

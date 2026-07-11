@@ -1,0 +1,966 @@
+{
+  "$defs": {
+    "BooleanDomain": {
+      "additionalProperties": false,
+      "description": "Booleans: both ``true``/``false``, or an exact boolean when ``value`` set.",
+      "properties": {
+        "kind": {
+          "const": "boolean",
+          "default": "boolean",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        }
+      },
+      "title": "BooleanDomain",
+      "type": "object"
+    },
+    "Closure": {
+      "description": "Whether unspecified realizable dimensions under a scope are admitted.",
+      "enum": [
+        "open-world",
+        "closed-world"
+      ],
+      "title": "Closure",
+      "type": "string"
+    },
+    "ClosureOverlay": {
+      "additionalProperties": false,
+      "description": "Declares open-world or closed-world closure at a scope path.",
+      "properties": {
+        "closure": {
+          "$ref": "#/$defs/Closure"
+        },
+        "path": {
+          "default": "",
+          "title": "Path",
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/EnvelopeScope"
+        }
+      },
+      "required": [
+        "scope",
+        "closure"
+      ],
+      "title": "ClosureOverlay",
+      "type": "object"
+    },
+    "ConcernDisposition": {
+      "description": "How the selected realizer treats a governed concern.",
+      "enum": [
+        "realized",
+        "transformed",
+        "descriptor-only",
+        "unsupported"
+      ],
+      "title": "ConcernDisposition",
+      "type": "string"
+    },
+    "EnumDomain": {
+      "additionalProperties": false,
+      "description": "A finite value set: values equal to one listed member.",
+      "properties": {
+        "kind": {
+          "const": "enum",
+          "default": "enum",
+          "title": "Kind",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "minItems": 1,
+          "title": "Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "values"
+      ],
+      "title": "EnumDomain",
+      "type": "object"
+    },
+    "EnvelopeBinding": {
+      "additionalProperties": false,
+      "description": "Binds an SDL path (or governed scope ref) to a domain at a scope.\n\n``domain`` names a descriptor in the envelope's ``domains`` map and is required\nfor ``constrained`` / ``exact`` posture and forbidden for ``open`` posture (an\nopen value is left to a downstream realizer). ``overrideable`` allows a\nmore-specific binding to widen a value an enclosing closed scope fixed\n(``envelope-semantics.md`` R2).",
+      "properties": {
+        "domain": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Domain"
+        },
+        "overrideable": {
+          "default": false,
+          "title": "Overrideable",
+          "type": "boolean"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "posture": {
+          "$ref": "#/$defs/Posture"
+        },
+        "scope": {
+          "$ref": "#/$defs/EnvelopeScope"
+        }
+      },
+      "required": [
+        "path",
+        "scope",
+        "posture"
+      ],
+      "title": "EnvelopeBinding",
+      "type": "object"
+    },
+    "EnvelopeScope": {
+      "description": "Semantic extent where a posture or closure applies (most local first).",
+      "enum": [
+        "field",
+        "node",
+        "topology",
+        "app",
+        "scenario"
+      ],
+      "title": "EnvelopeScope",
+      "type": "string"
+    },
+    "ExactDomain": {
+      "additionalProperties": false,
+      "description": "A singleton value set: values equal to ``value``.",
+      "properties": {
+        "kind": {
+          "const": "exact",
+          "default": "exact",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "ExactDomain",
+      "type": "object"
+    },
+    "GovernedReferenceDomain": {
+      "additionalProperties": false,
+      "description": "References in a finite governed set under a named authority.",
+      "properties": {
+        "allowed_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Refs",
+          "type": "array"
+        },
+        "authority": {
+          "minLength": 1,
+          "title": "Authority",
+          "type": "string"
+        },
+        "kind": {
+          "const": "governed-reference",
+          "default": "governed-reference",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authority",
+        "allowed_refs"
+      ],
+      "title": "GovernedReferenceDomain",
+      "type": "object"
+    },
+    "IntegerBoundsModel": {
+      "additionalProperties": false,
+      "description": "Closed positive integer interval used by realizer resource claims.",
+      "properties": {
+        "maximum": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "minimum": {
+          "minimum": 1,
+          "title": "Minimum",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "minimum"
+      ],
+      "title": "IntegerBoundsModel",
+      "type": "object"
+    },
+    "NumericIntervalDomain": {
+      "additionalProperties": false,
+      "description": "Numbers of ``numeric_type`` inside a bounded interval.\n\nBoth endpoints are required (the fragment admits only *bounded* intervals,\n``envelope-semantics.md`` R3). An integer interval requires integral\nendpoints. Empty intervals are rejected at construction.",
+      "properties": {
+        "kind": {
+          "const": "numeric-interval",
+          "default": "numeric-interval",
+          "title": "Kind",
+          "type": "string"
+        },
+        "lower": {
+          "title": "Lower",
+          "type": "number"
+        },
+        "lower_closed": {
+          "default": true,
+          "title": "Lower Closed",
+          "type": "boolean"
+        },
+        "numeric_type": {
+          "$ref": "#/$defs/NumericType"
+        },
+        "upper": {
+          "title": "Upper",
+          "type": "number"
+        },
+        "upper_closed": {
+          "default": true,
+          "title": "Upper Closed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "numeric_type",
+        "lower",
+        "upper"
+      ],
+      "title": "NumericIntervalDomain",
+      "type": "object"
+    },
+    "NumericType": {
+      "description": "Declared numeric type for a numeric-interval domain.",
+      "enum": [
+        "integer",
+        "number"
+      ],
+      "title": "NumericType",
+      "type": "string"
+    },
+    "ObservationStrength": {
+      "description": "Strongest evidence a backend configuration emits for one concern.",
+      "enum": [
+        "none",
+        "driver-reported",
+        "daemon-observed",
+        "guest-observed"
+      ],
+      "title": "ObservationStrength",
+      "type": "string"
+    },
+    "Posture": {
+      "description": "Author/backend intent for a bound value or child scope.",
+      "enum": [
+        "open",
+        "constrained",
+        "exact"
+      ],
+      "title": "Posture",
+      "type": "string"
+    },
+    "RealizationConcern": {
+      "description": "Closed concern taxonomy shared by backend envelope artifacts.",
+      "enum": [
+        "topology",
+        "architecture",
+        "image",
+        "resource-allocation",
+        "network",
+        "content-placement",
+        "account-placement",
+        "feature-binding",
+        "acl"
+      ],
+      "title": "RealizationConcern",
+      "type": "string"
+    },
+    "RealizationConcernDisclosureModel": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "else": {
+            "properties": {
+              "transformations": {
+                "maxItems": 0
+              }
+            }
+          },
+          "if": {
+            "properties": {
+              "disposition": {
+                "const": "transformed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "transformations": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "else": {
+            "properties": {
+              "mechanism": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "observation_strength": {
+                "not": {
+                  "const": "none"
+                }
+              }
+            }
+          },
+          "if": {
+            "properties": {
+              "disposition": {
+                "const": "unsupported"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "mechanism": {
+                "type": "null"
+              },
+              "observation_strength": {
+                "const": "none"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Typed support, transformation, and observation claim for one concern.",
+      "properties": {
+        "concern": {
+          "$ref": "#/$defs/RealizationConcern"
+        },
+        "disposition": {
+          "$ref": "#/$defs/ConcernDisposition"
+        },
+        "mechanism": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mechanism"
+        },
+        "observation_strength": {
+          "$ref": "#/$defs/ObservationStrength"
+        },
+        "transformations": {
+          "items": {
+            "$ref": "#/$defs/TransformationKind"
+          },
+          "title": "Transformations",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "concern",
+        "disposition",
+        "observation_strength"
+      ],
+      "title": "RealizationConcernDisclosureModel",
+      "type": "object"
+    },
+    "RealizationEnvelopeModel": {
+      "additionalProperties": false,
+      "description": "A versioned expression denoting a set of SDL scenario instances.",
+      "properties": {
+        "bindings": {
+          "items": {
+            "$ref": "#/$defs/EnvelopeBinding"
+          },
+          "title": "Bindings",
+          "type": "array"
+        },
+        "closure": {
+          "items": {
+            "$ref": "#/$defs/ClosureOverlay"
+          },
+          "title": "Closure",
+          "type": "array"
+        },
+        "contract_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contract Id"
+        },
+        "digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Digest"
+        },
+        "domains": {
+          "additionalProperties": {
+            "discriminator": {
+              "mapping": {
+                "boolean": "#/$defs/BooleanDomain",
+                "enum": "#/$defs/EnumDomain",
+                "exact": "#/$defs/ExactDomain",
+                "governed-reference": "#/$defs/GovernedReferenceDomain",
+                "numeric-interval": "#/$defs/NumericIntervalDomain",
+                "record": "#/$defs/RecordDomain"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/ExactDomain"
+              },
+              {
+                "$ref": "#/$defs/EnumDomain"
+              },
+              {
+                "$ref": "#/$defs/BooleanDomain"
+              },
+              {
+                "$ref": "#/$defs/NumericIntervalDomain"
+              },
+              {
+                "$ref": "#/$defs/GovernedReferenceDomain"
+              },
+              {
+                "$ref": "#/$defs/RecordDomain"
+              }
+            ]
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Domains",
+          "type": "object"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "realization-envelope/v1",
+          "default": "realization-envelope/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/EnvelopeScope"
+        },
+        "source_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Ref"
+        },
+        "witness_policy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WitnessPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "scope"
+      ],
+      "title": "RealizationEnvelopeModel",
+      "type": "object"
+    },
+    "RealizerConfigurationModel": {
+      "additionalProperties": false,
+      "description": "Secret-free material configuration identity for one realizer mode.",
+      "properties": {
+        "architecture": {
+          "minLength": 1,
+          "title": "Architecture",
+          "type": "string"
+        },
+        "configuration_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Configuration Digest",
+          "type": "string"
+        },
+        "image_policy": {
+          "minLength": 1,
+          "title": "Image Policy",
+          "type": "string"
+        },
+        "memory_mib": {
+          "$ref": "#/$defs/IntegerBoundsModel"
+        },
+        "mode": {
+          "minLength": 1,
+          "title": "Mode",
+          "type": "string"
+        },
+        "network_policy": {
+          "minLength": 1,
+          "title": "Network Policy",
+          "type": "string"
+        },
+        "supported_account_features": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Account Features",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_content_types": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Content Types",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_node_types": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Node Types",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supported_os_families": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Os Families",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "supports_acls": {
+          "default": false,
+          "title": "Supports Acls",
+          "type": "boolean"
+        },
+        "vcpus": {
+          "$ref": "#/$defs/IntegerBoundsModel"
+        }
+      },
+      "required": [
+        "mode",
+        "configuration_digest",
+        "architecture",
+        "image_policy",
+        "network_policy",
+        "supported_node_types",
+        "supported_os_families",
+        "memory_mib",
+        "vcpus"
+      ],
+      "title": "RealizerConfigurationModel",
+      "type": "object"
+    },
+    "RecordDomain": {
+      "additionalProperties": false,
+      "description": "Product structure: each declared field references another named domain.\n\n``extra`` controls undeclared fields: ``False`` (closed) rejects any field not\nnamed in ``fields``; ``True`` (open) admits them. Field values reference domain\nnames resolved against the envelope's ``domains`` map, keeping the structure\nacyclic and free of inline recursion.",
+      "properties": {
+        "extra": {
+          "default": false,
+          "title": "Extra",
+          "type": "boolean"
+        },
+        "fields": {
+          "additionalProperties": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Fields",
+          "type": "object"
+        },
+        "kind": {
+          "const": "record",
+          "default": "record",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fields"
+      ],
+      "title": "RecordDomain",
+      "type": "object"
+    },
+    "TransformationKind": {
+      "description": "Portable disclosure of a material realization transformation.",
+      "enum": [
+        "bounded-normalization",
+        "default-substitution",
+        "descriptor-substitution",
+        "image-substitution",
+        "service-synthesis"
+      ],
+      "title": "TransformationKind",
+      "type": "string"
+    },
+    "WitnessPolicy": {
+      "additionalProperties": false,
+      "description": "Deterministic default-selection policy for witness generation.\n\n``selections`` overrides the default choice for named domains (each value must\nbe a member of the referenced domain); ``seed`` records the selection basis for\nreproducibility. Neither introduces randomness: witness generation stays a pure\nfunction of ``(envelope, policy)``.",
+      "properties": {
+        "seed": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Seed"
+        },
+        "selections": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "propertyNames": {
+            "minLength": 1
+          },
+          "title": "Selections",
+          "type": "object"
+        }
+      },
+      "title": "WitnessPolicy",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/realization-envelope-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Published backend carrier: shared set expression plus truthful realization claims.",
+  "properties": {
+    "concerns": {
+      "allOf": [
+        {
+          "contains": {
+            "properties": {
+              "concern": {
+                "const": "topology"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "concern": {
+                "const": "architecture"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "concern": {
+                "const": "image"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "concern": {
+                "const": "resource-allocation"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "concern": {
+                "const": "network"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "concern": {
+                "const": "content-placement"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "concern": {
+                "const": "account-placement"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "concern": {
+                "const": "feature-binding"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "concern": {
+                "const": "acl"
+              }
+            },
+            "required": [
+              "concern"
+            ],
+            "type": "object"
+          },
+          "maxContains": 1,
+          "minContains": 1
+        }
+      ],
+      "items": {
+        "$ref": "#/$defs/RealizationConcernDisclosureModel"
+      },
+      "maxItems": 9,
+      "minItems": 9,
+      "title": "Concerns",
+      "type": "array"
+    },
+    "configuration": {
+      "$ref": "#/$defs/RealizerConfigurationModel"
+    },
+    "contract_id": {
+      "const": "realization-envelope-v1",
+      "default": "realization-envelope-v1",
+      "title": "Contract Id",
+      "type": "string"
+    },
+    "digest": {
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "title": "Digest",
+      "type": "string"
+    },
+    "expression": {
+      "$ref": "#/$defs/RealizationEnvelopeModel"
+    },
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "realization-envelope/v1",
+      "default": "realization-envelope/v1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "expression",
+    "configuration",
+    "concerns",
+    "digest"
+  ],
+  "title": "BackendRealizationEnvelopeModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Configuration bounds, expression references, canonical configuration and envelope digests, and all cross-field realization disclosure semantics must validate together.",
+      "id": "realization-envelope-canonical-semantics-valid",
+      "inputs": [
+        {
+          "contract_id": "realization-envelope-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.realization_envelope.validate_backend_realization_envelope"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "realization-envelope-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}
