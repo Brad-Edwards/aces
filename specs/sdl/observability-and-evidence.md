@@ -1,9 +1,11 @@
 # Catalog 5 - Observability and Evidence Planes
 
-This catalog states SDL authoring rules for ADR-066. It is normative for SDL
-meaning, but it does not add new top-level fields by itself. Future executable
-work that adds a field must still update `sections.md`, `references.md`, the
-published SDL schemas, the reference implementation, fixtures, and tests.
+This catalog states SDL authoring rules for ADR-066. The implemented
+`evidence_requirements` top-level section carries authored capture intent;
+scenario-native observability remains expressed through the relevant node
+runtime families. A future field still has to update `sections.md`,
+`references.md`, the published SDL schemas, the reference implementation,
+fixtures, and tests.
 
 ## Plane Rule
 

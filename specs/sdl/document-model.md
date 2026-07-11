@@ -68,12 +68,11 @@ The complete, authoritative enumeration of top-level fields, their kinds, value
 shapes, and requiredness is the [section catalog](sections.md), which is written
 to match `contracts/schemas/sdl/sdl-authoring-input-v1.json`.
 
-> **Reconciliation note.** Earlier descriptions of the SDL spoke of "21 named
-> sections, all dicts." That count is stale. The live authoring contract has a
-> larger section set and is **not** uniformly map-keyed: `forwarding_agents` is
-> list-valued, and the participant surfaces (`action_contracts`,
+> **Reconciliation note.** Earlier descriptions treated the authoring surface
+> as uniformly map-keyed. The live contract is **not** uniform:
+> `forwarding_agents` is list-valued, and the participant surfaces (`action_contracts`,
 > `observation_boundaries`, `outcome_interpretation_rules`) are present. The
-> section catalog states the live set; this specification reconciles the
+> section catalog states and mechanically checks the live set; this specification reconciles the
 > language to the published schema rather than freezing a historical count.
 
 ## 3. Requiredness

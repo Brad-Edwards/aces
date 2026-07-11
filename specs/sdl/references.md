@@ -198,6 +198,70 @@ any role-bearing refs
 |--------|-------|--------|
 | any field | `${name}` placeholder | a declared `variables` entry (name only, at authoring time) |
 
+## 6. Machine-checkable reference-edge index
+
+This index gives every editor-visible reference field a stable candidate-domain
+token and makes the participant behavior surface explicit. It complements the
+semantic detail above: subtype-specific relationship and nested-runtime rules
+remain narrower than the broad completion domain recorded here. `targetable`
+means the declaration index excluding `variables`, `evidence_requirements`,
+`objectives`, and `workflows`; it is not a synonym for every named object.
+`derived:*`, `vocabulary:*`, `registry:*`, `contract:*`, and `opaque:*` name
+deliberately distinct resolution mechanisms and MUST NOT be collapsed into a
+generic symbol lookup.
+
+| Source path | Candidate domain | Resolution phase | Failure | Semantic owner |
+| --- | --- | --- | --- | --- |
+| `nodes.*.features[]` | `features` | semantic validation | fatal dangling or ambiguous | [node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
+| `nodes.*.conditions[]` | `conditions` | semantic validation | fatal dangling or ambiguous | [node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
+| `nodes.*.injects[]` | `injects` | semantic validation | fatal dangling or ambiguous | [node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
+| `nodes.*.vulnerabilities[]` | `vulnerabilities` | semantic validation | fatal dangling or ambiguous | [node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
+| `infrastructure.*.links[]` | `infrastructure` | semantic validation | fatal dangling or ambiguous | [infrastructure validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
+| `infrastructure.*.dependencies[]` | `infrastructure` | semantic validation | fatal dangling or ambiguous | [infrastructure validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
+| `features.*.dependencies[]` | `features` | semantic validation | fatal dangling, ambiguous, or cyclic | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `entities.*.vulnerabilities[]` | `vulnerabilities` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `injects.*.from_entity` | `entities` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `injects.*.to_entities[]` | `entities` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `events.*.conditions[]` | `conditions` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `events.*.injects[]` | `injects` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `scripts.*.events[]` | `events` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `stories.*.scripts[]` | `scripts` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `content.*.target` | `nodes` | semantic validation | fatal unless target is a VM node | [content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `accounts.*.node` | `nodes` | semantic validation | fatal unless target is a VM node | [account validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `relationships.*.source` | `targetable` | semantic validation | fatal dangling or ambiguous; subtype may narrow domain | [relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships.py) |
+| `relationships.*.target` | `targetable` | semantic validation | fatal dangling or ambiguous; subtype may narrow domain | [relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships.py) |
+| `agents.*.entity` | `entities` | semantic validation | fatal dangling or ambiguous | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `agents.*.starting_accounts[]` | `accounts` | semantic validation | fatal dangling or ambiguous | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `action_contracts.*.interactions.*.related_action_ref` | `action_contracts` | semantic validation | fatal dangling or ambiguous | [participant semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `observation_boundaries.*.view_rules.*.information_refs[]` | `derived:boundary_information` | semantic validation | fatal outside declared boundary information | [participant semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `outcome_interpretation_rules.*.source_ref` | `action_contracts,objectives,workflows` | semantic validation | fatal dangling or ambiguous | [outcome semantics](../../implementations/python/packages/aces_sdl/semantics/participant_outcome.py) |
+| `behavior_specifications.*.participant_refs[]` | `agents` | semantic validation | fatal dangling or ambiguous | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `behavior_specifications.*.participant_role_refs[]` | `derived:agent_roles` | semantic validation | fatal unless bound by a referenced participant | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `behavior_specifications.*.action_contract_refs[]` | `action_contracts` | semantic validation | fatal dangling or ambiguous | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `behavior_specifications.*.observation_boundary_refs[]` | `observation_boundaries` | semantic validation | fatal dangling or ambiguous | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `behavior_specifications.*.outcome_interpretation_rule_refs[]` | `outcome_interpretation_rules` | semantic validation | fatal dangling or ambiguous | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `behavior_specifications.*.authority_scope_refs[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [behavior validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `behavior_specifications.*.behavior_mode` | `vocabulary:behavior_mode` | structural validation | fatal invalid vocabulary value | [behavior model](behavior-specifications.md) |
+| `behavior_specifications.*.ai_offensive_behavior_refs[]` | `vocabulary:ai_offensive_behavior` | semantic validation | fatal unknown vocabulary identifier | [behavior model](behavior-specifications.md) |
+| `behavior_specifications.*.offensive_behavior_refs[]` | `vocabulary:offensive_behavior` | semantic validation | fatal unknown vocabulary identifier | [behavior model](behavior-specifications.md) |
+| `behavior_specifications.*.realization_profile_ref` | `opaque:realization_profile` | structural validation | fatal invalid reference shape; resolution belongs to realization | [behavior model](behavior-specifications.md) |
+| `behavior_specifications.*.backend_feature_support_refs[]` | `registry:behavior_features` | semantic validation | fatal unsupported feature identifier | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `behavior_specifications.*.evidence_contract_refs[]` | `contract:participant_evidence` | semantic validation | fatal unknown contract identifier | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `evidence_requirements.*.source_refs[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py) |
+| `evidence_requirements.*.scope_refs[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py) |
+| `evidence_requirements.*.channel_refs[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py) |
+| `evidence_requirements.*.trigger_ref` | `targetable` | semantic validation | fatal dangling or ambiguous | [evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py) |
+| `evidence_requirements.*.boundary_ref` | `targetable` | semantic validation | fatal dangling or ambiguous | [evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py) |
+| `objectives.*.agent` | `agents` | semantic validation | fatal dangling or ambiguous | [objective semantics](objective-semantics.md) |
+| `objectives.*.entity` | `entities` | semantic validation | fatal dangling or ambiguous | [objective semantics](objective-semantics.md) |
+| `objectives.*.targets[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [objective semantics](objective-semantics.md) |
+| `objectives.*.depends_on[]` | `objectives` | semantic validation | fatal dangling, ambiguous, or cyclic | [objective semantics](objective-semantics.md) |
+| `workflows.*.start` | `workflow_steps` | semantic validation | fatal dangling step | [workflow semantics](workflow-semantics.md) |
+
+The index is checked against language-service completion metadata and against a
+required behavior-edge set. Adding a completion-aware field or behavior
+reference without a corresponding row fails the repository contract gate.
+
 ## Extending the reference catalog
 
 A new reference edge is added by defining the field's candidate set, adding a

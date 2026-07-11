@@ -141,7 +141,7 @@ class Scenario(SDLModel):
     module: ModuleDescriptor | None = None
     imports: list[ImportDecl] = Field(default_factory=list)
 
-    # --- OCR SDL: 14 sections ---
+    # OCR-derived topology and exercise-narrative sections.
     nodes: dict[str, Node] = Field(default_factory=dict)
     infrastructure: dict[str, InfraNode] = Field(default_factory=dict)
     features: dict[str, Feature] = Field(default_factory=dict)

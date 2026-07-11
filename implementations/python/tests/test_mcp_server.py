@@ -172,11 +172,25 @@ class TestReferenceTools:
     def test_sdl_overview_returns_content(self, server):
         text = _call(server, "sdl_overview")
         assert "SDL" in text
-        # Both pieces of evidence must be present; an OR disjunction over
-        # "17" / "sections" would let either drift go undetected.
-        assert "17" in text
-        assert "sections" in text.lower()
+        assert "authoring sections" in text.lower()
+        assert "17 sections" not in text.lower()
         assert "nodes" in text
+
+    @pytest.mark.parametrize(
+        "section",
+        [
+            "forwarding_agents",
+            "action_contracts",
+            "observation_boundaries",
+            "outcome_interpretation_rules",
+            "behavior_specifications",
+            "evidence_requirements",
+        ],
+    )
+    def test_sdl_section_reference_covers_live_sections(self, server, section):
+        text = _call(server, "sdl_section_reference", {"section": section})
+        assert "Unknown section" not in text
+        assert "not found" not in text
 
     def test_sdl_section_reference_valid(self, server):
         text = _call(server, "sdl_section_reference", {"section": "nodes"})
