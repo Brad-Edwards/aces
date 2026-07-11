@@ -1,0 +1,39 @@
+{
+  "schema_version": "realization-envelope/v1",
+  "contract_id": "realization-envelope-v1",
+  "id": "libvirt-qemu.techvault-appliance.v1",
+  "expression": {
+    "schema_version": "realization-envelope/v1",
+    "id": "libvirt-qemu.techvault-appliance.expression.v1",
+    "scope": "scenario",
+    "domains": {},
+    "bindings": [],
+    "closure": []
+  },
+  "configuration": {
+    "mode": "techvault-appliance",
+    "configuration_digest": "sha256:227dc29681c61c341291ef4ef30b8c777e166103a5e76a74d87cc2164a7bf5ca",
+    "architecture": "x86_64",
+    "image_policy": "generated-initramfs-appliance",
+    "network_policy": "generated-appliance-network",
+    "supported_node_types": ["switch", "vm"],
+    "supported_os_families": ["linux"],
+    "supported_content_types": [],
+    "supported_account_features": [],
+    "supports_acls": false,
+    "memory_mib": {"minimum": 64, "maximum": 128},
+    "vcpus": {"minimum": 1, "maximum": 2}
+  },
+  "concerns": [
+    {"concern": "topology", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "libvirt-domain-network", "transformations": []},
+    {"concern": "architecture", "disposition": "transformed", "observation_strength": "driver-reported", "mechanism": "generated-x86_64-appliance", "transformations": ["image-substitution"]},
+    {"concern": "image", "disposition": "transformed", "observation_strength": "driver-reported", "mechanism": "generated-initramfs-appliance", "transformations": ["image-substitution"]},
+    {"concern": "resource-allocation", "disposition": "transformed", "observation_strength": "driver-reported", "mechanism": "bounded-appliance-domain", "transformations": ["bounded-normalization"]},
+    {"concern": "network", "disposition": "transformed", "observation_strength": "driver-reported", "mechanism": "generated-appliance-network", "transformations": ["default-substitution"]},
+    {"concern": "content-placement", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
+    {"concern": "account-placement", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
+    {"concern": "feature-binding", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
+    {"concern": "acl", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []}
+  ],
+  "digest": "sha256:37bddd6be24bcdef44241d8d77fc619113fe9d4048a61fd603977f7748593a3f"
+}

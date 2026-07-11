@@ -133,19 +133,23 @@ inside a typed domain. Exact means the domain is a singleton. Closed-world
 scope means no unspecified realizable dimensions under that scope are portable
 members of the set.
 
-### 5. Backend manifest carriage is a schema-evolution question
+### 5. Backend manifest carriage uses configuration-bound identity
 
-Current `backend-manifest-v2` can disclose coarse support through
-`realization_support`. It cannot express value-level sets, scoped closure, or a
-portable subsumption relation.
+`backend-manifest-v2.realization_support` discloses coarse support but cannot by
+itself express value-level sets, scoped closure, or a portable subsumption
+relation.
 
-The selected carriage direction is a future manifest evolution that can either:
+Issue #100 implements the selected carriage direction as a reference to a
+published envelope artifact by contract id, envelope id, version, canonical
+content digest, and secret-free material-configuration digest. The same identity
+is carried by provisioning plans and runtime snapshots.
 
-- embed a small envelope expression directly; or
-- reference a published envelope artifact by contract id, digest, and version.
+The published artifact embeds the shared expression and closed typed backend
+realization, transformation, and observation-strength disclosures. Backend
+manifest payloads carry only its immutable identity.
 
-Both modes use the same expression contract. Neither overloads the current
-`constraints: dict[str, str]` prose map as the final semantics.
+This does not overload the current `constraints: dict[str, str]` prose map and
+does not create a backend-local set relation.
 
 ### 6. Closed envelopes require negative conformance
 

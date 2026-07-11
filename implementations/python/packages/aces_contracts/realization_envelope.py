@@ -13,13 +13,10 @@ callbacks, external queries, unbounded regex, recursion, and non-linear arithmet
 are simply not representable, which keeps membership and subsumption reducible to
 local structural checks and witness generation deterministic.
 
-Schema publication (a bundled ``contracts/schemas/`` artifact with a publication
-ledger) and backend-manifest carriage are downstream siblings, not this issue:
-``envelope-semantics.md`` "Realization Status" lists the *schema carrier* and
-*manifest evolution* separately from the *relation helper*, ADR-070 §5 defers
-manifest carriage to a schema-evolution question, and the issue-668 preflight note
-records "the current unpublished envelope shape". This module therefore ships the
-unpublished, first-class contract shape the relation operates over.
+Issue #100 publishes the expression inside a configuration-bound backend carrier
+at ``contracts/schemas/realization-envelope/realization-envelope-v1.json``. The carrier
+adds typed material-configuration, transformation, support, and observation
+disclosures while the relation continues to operate on the same expression.
 """
 
 from __future__ import annotations
@@ -30,19 +27,16 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
-from aces_contracts.contracts import ContractModel, NonEmptyString
-
-# Version identity for the envelope expression. Kept local to this module rather
-# than in ``versions.py`` (which is scoped to *published* external contracts):
-# the envelope schema is intentionally unpublished at this stage — schema
-# publication and manifest carriage are downstream siblings (module docstring).
-REALIZATION_ENVELOPE_SCHEMA_VERSION = "realization-envelope/v1"
+from aces_contracts.contracts import ContractModel, NonEmptyString, RealizationEnvelopeIdentityModel
+from aces_contracts.versions import REALIZATION_ENVELOPE_SCHEMA_VERSION
 
 __all__ = [
+    "BackendRealizationEnvelopeModel",
     "REALIZATION_ENVELOPE_SCHEMA_VERSION",
     "BooleanDomain",
     "Closure",
     "ClosureOverlay",
+    "ConcernDisposition",
     "DomainDescriptor",
     "EnumDomain",
     "EnvelopeBinding",
@@ -51,12 +45,22 @@ __all__ = [
     "GovernedReferenceDomain",
     "NumericIntervalDomain",
     "NumericType",
+    "ObservationStrength",
     "Posture",
     "RealizationEnvelopeModel",
+    "RealizationEnvelopeIdentityModel",
+    "RealizationConcern",
+    "RealizationConcernDisclosureModel",
+    "RealizerConfigurationModel",
+    "IntegerBoundsModel",
     "RecordDomain",
     "WitnessPolicy",
+    "TransformationKind",
     "scalar_in_domain",
     "scalar_matches_numeric_type",
+    "realization_envelope_digest",
+    "realizer_configuration_digest",
+    "validate_backend_realization_envelope",
 ]
 
 # Portable envelope values are JSON scalars. ``bool`` is intentionally distinct
@@ -400,3 +404,20 @@ def scalar_in_domain(value: object, descriptor: DomainDescriptor) -> bool:
     """
     check = _SCALAR_MEMBER_CHECKS.get(type(descriptor))
     return check(value, descriptor) if check is not None else False
+
+
+# Import after the expression types are defined: the carrier embeds
+# RealizationEnvelopeModel and this module preserves the original public API.
+from aces_contracts.realization_envelope_carrier import (  # noqa: E402
+    BackendRealizationEnvelopeModel,
+    ConcernDisposition,
+    IntegerBoundsModel,
+    ObservationStrength,
+    RealizationConcern,
+    RealizationConcernDisclosureModel,
+    RealizerConfigurationModel,
+    TransformationKind,
+    realization_envelope_digest,
+    realizer_configuration_digest,
+    validate_backend_realization_envelope,
+)

@@ -67,6 +67,8 @@ class _NativeResource(Protocol):
 class TechVaultNativeLibvirtDriver:
     """Realize TechVault domains directly as libvirt/QEMU appliances."""
 
+    driver_mode = "techvault-appliance"
+
     state_dir: Path
     connection: object | None = None
     connection_uri: str = _DEFAULT_CONNECTION_URI

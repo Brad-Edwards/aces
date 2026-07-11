@@ -5,19 +5,24 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from aces_backend_protocols.capabilities import ProvisionerCapabilities
+from aces_contracts.contracts import RealizationEnvelopeIdentityModel
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
 
 from ._payload import NETWORK_RESOURCE_TYPE, NODE_RESOURCE_TYPE
 from .driver import DriverResult, LibvirtDriver
-from .manifest import LIBVIRT_PROVISIONER_CAPABILITIES
+from .envelopes import LibvirtDriverMode, load_libvirt_realization_envelope
+from .manifest import _provisioner_capabilities
 from .realization import Realization, interpret_provisioning_plan
 
 _DOMAIN = "runtime"
 INVALID_PLAN_CODE = "libvirt-backend.invalid-plan"
 UNCONFIRMED_DESTROY_CODE = "libvirt-backend.driver.unconfirmed-destroy"
 UNCONFIRMED_REALIZATION_CODE = "libvirt-backend.driver.unconfirmed-realization"
+MISSING_ENVELOPE_CODE = "libvirt-backend.realization-envelope.missing"
+MISMATCHED_ENVELOPE_CODE = "libvirt-backend.realization-envelope.mismatch"
+BASELINE_ENVELOPE_MISMATCH_CODE = "libvirt-backend.realization-envelope.baseline-mismatch"
 
 
 @dataclass
@@ -36,16 +41,25 @@ class LibvirtProvisioner:
         driver: LibvirtDriver | None = None,
         *,
         provisioner_capabilities: ProvisionerCapabilities | None = None,
+        realization_envelope: RealizationEnvelopeIdentityModel | None = None,
     ) -> None:
         self._driver = driver if driver is not None else _default_driver()
-        # The capability envelope every plan term is validated against; defaults to
-        # the libvirt manifest envelope but tracks the manifest the target was built
-        # with when create_libvirt_components passes it in (issue #605).
-        self._provisioner_capabilities = provisioner_capabilities or LIBVIRT_PROVISIONER_CAPABILITIES
+        mode = LibvirtDriverMode(getattr(self._driver, "driver_mode", LibvirtDriverMode.GENERIC.value))
+        expected_capabilities = _provisioner_capabilities(mode)
+        expected_envelope = load_libvirt_realization_envelope(mode).identity
+        if provisioner_capabilities is not None and provisioner_capabilities != expected_capabilities:
+            raise ValueError("libvirt provisioner capabilities do not match driver mode")
+        if realization_envelope is not None and realization_envelope != expected_envelope:
+            raise ValueError("libvirt provisioner realization envelope does not match driver mode")
+        self._provisioner_capabilities = expected_capabilities
+        self._realization_envelope = expected_envelope
 
     def validate(self, plan: ProvisioningPlan) -> list[Diagnostic]:
         if not isinstance(plan, ProvisioningPlan):
             return [_invalid_plan_diagnostic()]
+        identity_diagnostics = self._identity_diagnostics(plan, RuntimeSnapshot())
+        if identity_diagnostics:
+            return identity_diagnostics
         realization = interpret_provisioning_plan(plan, provisioner_capabilities=self._provisioner_capabilities)
         return list(realization.diagnostics)
 
@@ -57,6 +71,9 @@ class LibvirtProvisioner:
         return result
 
     def _apply_provisioning_plan(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> ApplyResult:
+        identity_diagnostics = self._identity_diagnostics(plan, snapshot)
+        if identity_diagnostics:
+            return ApplyResult(success=False, snapshot=snapshot, diagnostics=identity_diagnostics)
         realization = interpret_provisioning_plan(plan, provisioner_capabilities=self._provisioner_capabilities)
         diagnostics: list[Diagnostic] = list(realization.diagnostics)
         if _has_error(diagnostics):
@@ -76,7 +93,10 @@ class LibvirtProvisioner:
 
         return ApplyResult(
             success=True,
-            snapshot=snapshot.with_entries(reconciliation.entries),
+            snapshot=snapshot.with_entries(
+                reconciliation.entries,
+                realization_envelope=self._realization_envelope,
+            ),
             diagnostics=diagnostics,
             changed_addresses=reconciliation.changed_addresses,
         )
@@ -116,6 +136,36 @@ class LibvirtProvisioner:
                 )
             )
         return diagnostics
+
+    def _identity_diagnostics(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> list[Diagnostic]:
+        if plan.realization_envelope is None:
+            return [
+                _envelope_diagnostic(
+                    MISSING_ENVELOPE_CODE, "Provisioning plan is missing realization envelope identity."
+                )
+            ]
+        if plan.realization_envelope != self._realization_envelope:
+            return [
+                _envelope_diagnostic(
+                    MISMATCHED_ENVELOPE_CODE,
+                    "Provisioning plan realization envelope does not match the configured libvirt target.",
+                )
+            ]
+        if snapshot.realization_envelope is not None and snapshot.realization_envelope != self._realization_envelope:
+            return [
+                _envelope_diagnostic(
+                    BASELINE_ENVELOPE_MISMATCH_CODE,
+                    "Runtime snapshot is not bound to the configured libvirt realization envelope.",
+                )
+            ]
+        if _snapshot_has_state(snapshot) and snapshot.realization_envelope is None:
+            return [
+                _envelope_diagnostic(
+                    BASELINE_ENVELOPE_MISMATCH_CODE,
+                    "Runtime snapshot is not bound to the configured libvirt realization envelope.",
+                )
+            ]
+        return []
 
 
 def validate(plan: ProvisioningPlan) -> list[Diagnostic]:
@@ -186,6 +236,26 @@ def _has_error(diagnostics: list[Diagnostic]) -> bool:
     return any(diag.is_error for diag in diagnostics)
 
 
+def _snapshot_has_state(snapshot: RuntimeSnapshot) -> bool:
+    return any(
+        (
+            snapshot.entries,
+            snapshot.orchestration_results,
+            snapshot.orchestration_history,
+            snapshot.evaluation_results,
+            snapshot.evaluation_history,
+            snapshot.participant_episode_results,
+            snapshot.participant_episode_history,
+            snapshot.participant_behavior_history,
+            snapshot.shared_state_records,
+            snapshot.shared_state_history,
+            snapshot.joint_action_records,
+            snapshot.time_management_contexts,
+            snapshot.realization_provenance,
+        )
+    )
+
+
 def _invalid_plan_diagnostic() -> Diagnostic:
     return Diagnostic(
         code=INVALID_PLAN_CODE,
@@ -223,5 +293,15 @@ def _driver_confirmation_diagnostic(address: str, *, code: str) -> Diagnostic:
         domain=_DOMAIN,
         address=address,
         message=f"Libvirt driver did not confirm {action} for '{address}'.",
+        severity=Severity.ERROR,
+    )
+
+
+def _envelope_diagnostic(code: str, message: str) -> Diagnostic:
+    return Diagnostic(
+        code=code,
+        domain=_DOMAIN,
+        address="runtime.libvirt.realization-envelope",
+        message=message,
         severity=Severity.ERROR,
     )

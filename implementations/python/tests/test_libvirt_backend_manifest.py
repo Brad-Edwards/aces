@@ -30,6 +30,7 @@ def test_libvirt_manifest_declares_only_provisioning_contract_surface():
     assert manifest.supported_contract_versions == frozenset(
         {
             "backend-manifest-v2",
+            "realization-envelope-v1",
             "operation-receipt-v1",
             "operation-status-v1",
             "provisioning-plan-v1",
@@ -44,14 +45,12 @@ def test_libvirt_manifest_supports_vm_domains_and_switch_networks():
     assert manifest.provisioner.supported_node_types == frozenset({"switch", "vm"})
 
 
-def test_libvirt_manifest_declares_full_content_and_account_realization():
-    """Issue #603: cloud-init realizes the full governed content/account vocabulary."""
+def test_libvirt_manifest_narrows_unproven_content_and_account_realization():
+    """ASR-519: only terms with a concrete generic-driver mechanism are claimed."""
     provisioner = create_libvirt_manifest().provisioner
 
-    assert provisioner.supported_os_families == frozenset({"linux", "windows", "macos", "freebsd", "other"})
-    assert provisioner.supported_content_types == frozenset({"file", "dataset", "directory"})
-    assert provisioner.supported_account_features == frozenset(
-        {"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}
-    )
+    assert provisioner.supported_os_families == frozenset({"linux"})
+    assert provisioner.supported_content_types == frozenset({"file"})
+    assert provisioner.supported_account_features == frozenset({"groups", "shell", "home", "disabled", "auth_method"})
     assert provisioner.supports_accounts is True
     assert provisioner.supports_acls is True
