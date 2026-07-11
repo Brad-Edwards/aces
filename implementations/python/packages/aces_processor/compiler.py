@@ -2462,4 +2462,5 @@ def compile_runtime_model(scenario: Scenario | InstantiatedScenario) -> RuntimeM
         objectives=objectives,
         diagnostics=diagnostics,
         realization_requirements=_compile_realization_requirements(scenario),
+        realization_instance=scenario,
     )

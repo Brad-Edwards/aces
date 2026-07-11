@@ -32,20 +32,20 @@
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "4485bf2485e1f98be2c540552d42828a170dc6ff5beeb6b091a4e87a55b922ab",
+      "content_hash": "19dd8c5aa113fc8ce21c811bf75ef3e22367ae41fcc454c5139cd85db0fb5a60",
       "last_change": {
-        "summary": "Added experiment-run-v1 to the governed backend manifest contract vocabulary for run-level observability and augmentation evidence disclosure.",
-        "content_hash": "4485bf2485e1f98be2c540552d42828a170dc6ff5beeb6b091a4e87a55b922ab"
+        "summary": "Added typed configuration-bound realization-envelope identity carriage for ASR-519.",
+        "content_hash": "19dd8c5aa113fc8ce21c811bf75ef3e22367ae41fcc454c5139cd85db0fb5a60"
       }
     },
     {
       "contract_id": "backend-profile-v1",
       "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
       "stability": "draft",
-      "content_hash": "3f4152b2d7f1e4a01b30e2782a4d6001654e2785f4b9fe54121ed7e84a37c604",
+      "content_hash": "0c019e86d071bf97bc4464e76d1c224699e9f418e76cdcf117d6b813a3e9ac87",
       "last_change": {
-        "summary": "Added experiment-run-v1 to the backend profile contract vocabulary so profile fixture conformance can exercise run-level observability semantics.",
-        "content_hash": "3f4152b2d7f1e4a01b30e2782a4d6001654e2785f4b9fe54121ed7e84a37c604"
+        "summary": "Added realization-envelope-v1 to the governed backend contract vocabulary for configuration-bound ASR-519 claims.",
+        "content_hash": "0c019e86d071bf97bc4464e76d1c224699e9f418e76cdcf117d6b813a3e9ac87"
       }
     },
     {
@@ -324,7 +324,21 @@
       "contract_id": "provisioning-plan-v1",
       "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
       "stability": "draft",
-      "content_hash": "e200fb7e8e68f05eb61c35cc2f724882e3b8977df7f4d5ae97e70401a1a76e01"
+      "content_hash": "8ff225daf75c1d9e846bf36c492cb42076d1ae8c7c1c3ee0145772e2c7aba7e7",
+      "last_change": {
+        "summary": "Added immutable realization-envelope identity carriage from planning to backend execution for ASR-519.",
+        "content_hash": "8ff225daf75c1d9e846bf36c492cb42076d1ae8c7c1c3ee0145772e2c7aba7e7"
+      }
+    },
+    {
+      "contract_id": "realization-envelope-v1",
+      "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
+      "stability": "draft",
+      "content_hash": "269a17d2ff15c12dfccd536cf8502a1e6b929883eb41e22f898abe75f6532720",
+      "last_change": {
+        "summary": "Initial publication of the ASR-519 configuration-bound realization envelope, concern disclosure, observation strength, and canonical identity contract.",
+        "content_hash": "269a17d2ff15c12dfccd536cf8502a1e6b929883eb41e22f898abe75f6532720"
+      }
     },
     {
       "contract_id": "reference-models-v1",
@@ -346,10 +360,10 @@
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "cb6a599ef5137bcc5954ffd4f451167562186112c7595ec20b50eb94b97e1550",
+      "content_hash": "2c703b182c3bc96176dcf25f1cf1aaf39e661041efdeeacc7f8843fcfa2826bf",
       "last_change": {
-        "summary": "Added first-class joint_action_records and time_management_contexts fields to the runtime snapshot envelope for RUN-308 concurrent participant execution.",
-        "content_hash": "cb6a599ef5137bcc5954ffd4f451167562186112c7595ec20b50eb94b97e1550"
+        "summary": "Added typed realization-envelope identity persistence for ASR-519 runtime provenance.",
+        "content_hash": "2c703b182c3bc96176dcf25f1cf1aaf39e661041efdeeacc7f8843fcfa2826bf"
       }
     },
     {

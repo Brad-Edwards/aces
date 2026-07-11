@@ -55,6 +55,10 @@ authority_roots:
     root: contracts/profiles/
     authority: capability profile declarations
     family: profiles
+  - id: normative_realization_envelopes
+    root: contracts/realization-envelopes/
+    authority: configuration-bound backend realization envelope declarations
+    family: realization-envelopes
   - id: normative_concept_authority
     root: contracts/concept-authority/
     authority: concept-family and controlled-vocabulary authority artifacts
@@ -103,7 +107,8 @@ normative_artifact_families:
 
 # ADR-009 is immutable; the drift guard requires every authority-root token
 # (specs/, contracts/schemas/, contracts/fixtures/, contracts/profiles/,
-# contracts/concept-authority/) to appear in its text. ADR-019 is the
+# contracts/realization-envelopes/, contracts/concept-authority/) to appear
+# across the immutable ADR pair. ADR-019 is the
 # canonical-seam decision — required by adr_refs and by the drift guard.
 _GOOD_ADR_AUTHORITY = """# ADR-009: Normative Artifact Authority and Repository Structure
 
@@ -144,6 +149,7 @@ _GOOD_AUTHORITY_ROOTS: tuple[str, ...] = (
     "contracts/schemas",
     "contracts/fixtures",
     "contracts/profiles",
+    "contracts/realization-envelopes",
     "contracts/concept-authority",
 )
 _GOOD_NON_NORMATIVE_ROOTS: tuple[str, ...] = (
@@ -175,7 +181,7 @@ def _seed_repo(
     *,
     policy_body: str | None = _GOOD_POLICY,
     adr_body: str | None = _GOOD_ADR_AUTHORITY,
-    seam_body: str | None = "ADR-019 stub mentioning concept-authority.\n",
+    seam_body: str | None = "ADR-019 stub mentioning concept-authority and realization-envelopes.\n",
     contracts_readme: str | None = _GOOD_CONTRACTS_README,
     specs_readme: str | None = _GOOD_SPECS_README,
     authority_roots: tuple[str, ...] = _GOOD_AUTHORITY_ROOTS,
@@ -200,7 +206,8 @@ def _seed_repo(
     if seam_body is not None:
         # ADR-019 governs the manifest YAML; the drift guard unions it with
         # ADR-009. The seed writes a stub that mentions `concept-authority`
-        # so the canonical positive case clears the drift check.
+        # and `realization-envelopes` so the canonical positive case clears
+        # the drift check.
         seam_relative = "docs/decisions/adrs/adr-019-normative-authority-boundary-manifest.md"
         seam_path = tmp_path / seam_relative
         seam_path.parent.mkdir(parents=True, exist_ok=True)
@@ -290,14 +297,15 @@ def test_policy_value_is_normative_artifact_authority() -> None:
     assert POLICY_VALUE == "normative-artifact-authority"
 
 
-def test_canonical_authority_root_ids_cover_all_five_families() -> None:
-    # The five families ADR-009 names: prose, schemas, fixtures, profiles,
-    # concept-authority. A YAML that drops any of these fails the gate.
+def test_canonical_authority_root_ids_cover_every_family() -> None:
+    # ADR-009 and ADR-019 name these authority families. A YAML that drops any
+    # of them fails the gate.
     assert set(CANONICAL_AUTHORITY_ROOT_IDS) == {
         "normative_prose",
         "normative_schemas",
         "normative_fixtures",
         "normative_profiles",
+        "normative_realization_envelopes",
         "normative_concept_authority",
     }
 
@@ -518,7 +526,7 @@ def test_authority_root_must_not_traverse_parent(tmp_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Canonical family coverage -- ADR-009's five families MUST each have an      #
+# Canonical family coverage -- every governed family MUST have an entry.      #
 # entry. Reordering or renaming an id is a drift.                             #
 # --------------------------------------------------------------------------- #
 

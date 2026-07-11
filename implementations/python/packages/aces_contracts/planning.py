@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from aces_contracts.contracts import RealizationEnvelopeIdentityModel
 from aces_contracts.diagnostics import Diagnostic
 
 
@@ -68,6 +69,7 @@ class ProvisioningPlan:
     resources: dict[str, PlannedResource] = field(default_factory=dict)
     operations: list[ProvisionOp] = field(default_factory=list)
     diagnostics: list[Diagnostic] = field(default_factory=list)
+    realization_envelope: RealizationEnvelopeIdentityModel | None = None
 
     @property
     def actionable_operations(self) -> list[ProvisionOp]:

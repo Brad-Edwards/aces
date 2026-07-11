@@ -1033,8 +1033,8 @@ def test_run_target_conformance_surfaces_profile_load_failure(tmp_path: Path):
     codes = {diag.code for diag in report.diagnostics}
     assert "conformance.profile-load-failed" in codes
     case_names = {case.name for case in report.cases}
-    assert "live-manifest" not in case_names
-    assert "live-snapshot" not in case_names
+    assert "target-manifest" not in case_names
+    assert "target-snapshot" not in case_names
     assert "participant-initialize" not in case_names
 
 
@@ -1070,8 +1070,8 @@ def test_run_target_conformance_refuses_unknown_profile_id(tmp_path: Path):
     codes = {diag.code for diag in report.diagnostics}
     assert "conformance.profile-runtime-surface-unknown" in codes
     case_names = {case.name for case in report.cases}
-    assert "live-manifest" not in case_names
-    assert "live-snapshot" not in case_names
+    assert "target-manifest" not in case_names
+    assert "target-snapshot" not in case_names
 
 
 def test_run_fixture_suite_path_traversal_id_surfaces_as_load_diagnostic(tmp_path: Path):
@@ -1263,7 +1263,7 @@ def test_target_conformance_default_scenario_fails_fixed_topology_backend():
 
     assert report.profile == BackendCapabilityProfile.PROVISIONING_ONLY
     assert report.passed is False
-    provisioning = next(case for case in report.cases if case.name == "live-provisioning")
+    provisioning = next(case for case in report.cases if case.name == "target-provisioning")
     assert provisioning.passed is False
     assert any(diag.code == "conformance.provisioning-failed" for diag in provisioning.diagnostics)
 
@@ -1278,9 +1278,9 @@ def test_target_conformance_accepts_supplied_reference_scenario():
     )
 
     assert report.passed is True
-    provisioning = next(case for case in report.cases if case.name == "live-provisioning")
+    provisioning = next(case for case in report.cases if case.name == "target-provisioning")
     assert provisioning.passed is True
-    snapshot_case = next(case for case in report.cases if case.name == "live-snapshot")
+    snapshot_case = next(case for case in report.cases if case.name == "target-snapshot")
     assert snapshot_case.passed is True
 
 
@@ -1294,8 +1294,8 @@ def test_supplied_reference_scenario_still_enforces_mutation_guard():
     )
 
     assert report.passed is False
-    provisioning = next(case for case in report.cases if case.name == "live-provisioning")
-    snapshot_case = next(case for case in report.cases if case.name == "live-snapshot")
+    provisioning = next(case for case in report.cases if case.name == "target-provisioning")
+    snapshot_case = next(case for case in report.cases if case.name == "target-snapshot")
     assert provisioning.passed is False
     assert snapshot_case.passed is False
     codes = {diag.code for case in report.cases for diag in case.diagnostics}
