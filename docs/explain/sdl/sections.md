@@ -1,8 +1,9 @@
 # SDL Sections Reference
 
 A scenario is a YAML document with a required top-level `name`, optional
-top-level composition fields (`version`, `module`, `imports`), and up to 22 named SDL
-sections. Aside from `name`, all sections are optional.
+top-level metadata and composition fields, and the authoring sections catalogued
+below. Aside from `name`, every top-level field is optional. The normative,
+machine-checked enumeration is `specs/sdl/sections.md`.
 
 Top-level composition fields are:
 
@@ -18,7 +19,7 @@ Canonical `imports.source` classes are:
 
 ## Section Overview
 
-### From Open Cyber Range SDL (10 sections)
+### OCR-derived core
 
 The OCR scoring pipeline sections (`metrics`, `evaluations`, `tlos`, `goals`)
 were removed from the SDL by
@@ -39,15 +40,20 @@ plane (ADR-055/064/069). `conditions` (observable state) remain.
 | `scripts` | `dict[str, Script]` | Timed event sequences with human-readable durations |
 | `stories` | `dict[str, Story]` | Top-level exercise orchestration grouping scripts |
 
-### Extended Sections (8 sections)
+### ACES extensions
 
 | Section | Type | Purpose | Adapted From |
 |---------|------|---------|--------------|
 | `content` | `dict[str, Content]` | Data placed into systems (files, datasets, emails) | CyRIS `copy_content` |
 | `accounts` | `dict[str, Account]` | Curated scenario/provisioning accounts on nodes, not full runtime identity inventory | CyRIS `add_account` |
 | `relationships` | `dict[str, Relationship]` | Typed edges between elements (auth, trust, federation) | STIX Relationship SRO |
-| `agents` | `dict[str, Agent]` | Autonomous participants (actions, knowledge, scope) | CybORG Agents |
-| `behavior-specifications` | `dict[str, ParticipantBehaviorSpecification]` | Versioned aggregates over participant action, observation, outcome, authority, and mode surfaces | ACES ACT-606 |
+| `forwarding_agents` | `list[RuntimeForwardingAgent]` | Scenario-level forwarding and shipping agents with element-carried identity | ACES ADR-050 |
+| `agents` | `dict[str, Agent]` | Autonomous participants (actions, knowledge, scope) | CybORG Agents, extended by ACES |
+| `action_contracts` | `dict[str, ParticipantActionContract]` | Preconditions, effects, failures, interactions, and fidelity claims for participant actions | ACES participant model |
+| `observation_boundaries` | `dict[str, ParticipantObservationBoundary]` | Participant-visible, hidden, discovered, and evidence-bearing information projections | ACES participant model |
+| `outcome_interpretation_rules` | `dict[str, OutcomeInterpretationRule]` | Rules connecting action observations and evidence to scenario-local outcomes | ACES participant model |
+| `behavior_specifications` | `dict[str, ParticipantBehaviorSpecification]` | Versioned aggregates over participant action, observation, outcome, authority, and mode surfaces | ACES ACT-606 |
+| `evidence_requirements` | `dict[str, EvidenceRequirement]` | Portable authored capture obligations, distinct from captured evidence | ACES DSL-124, ADR-066 |
 | `objectives` | `dict[str, Objective]` | Scenario-local objectives binding actors, targets, windows, and success (against observable `conditions`); not EXP task records | CACAO action/target/agent |
 | `workflows` | `dict[str, Workflow]` | Branching and parallel control graphs over declared objectives | CACAO workflow graph patterns; semantics tightened using Step Functions / Argo / SCXML style control-flow rules |
 | `variables` | `dict[str, Variable]` | Parameterization (types, defaults, substitution) | CACAO playbook_variables |
@@ -1684,6 +1690,62 @@ remain separate apparatus surfaces.
 
 ---
 
+## Forwarding Agents
+
+The top-level `forwarding_agents` list declares scenario-scoped logical
+forwarders. Each element carries a stable `forwarding_agent_id`; relationship
+subtypes may reference it from a `forwarding_edge`. This list is distinct from
+`nodes.<node>.runtime.forwarding_agents`, which places the same logical family
+on one node.
+
+## Action Contracts
+
+`action_contracts` describe participant-visible actions as declared behavior:
+their applicability, intended and side effects, failure classes, interactions,
+and fidelity basis. They do not embed runner commands or claim that a backend
+can realize the action.
+
+```yaml
+action_contracts:
+  inspect-portal:
+    semantic_version: 1.0.0
+    lifecycle_state: active
+    behavioral_granularity: atomic
+    procedure_basis: bounded inspection of the declared portal
+    realization_profile: backend-declared
+```
+
+## Observation Boundaries
+
+`observation_boundaries` define an information projection for a participant:
+what begins observable or hidden, what may become discovered, and which evidence
+supports the transition. They describe scenario meaning, not UI filtering or
+control-plane authorization.
+
+```yaml
+observation_boundaries:
+  red-view:
+    projection_basis: participant-local view of the declared environment
+    observable_refs: [content.task-brief]
+    hidden_refs: [nodes.portal]
+    evidence_refs: [content.terminal-output]
+```
+
+## Outcome Interpretation Rules
+
+`outcome_interpretation_rules` state how participant action outcomes,
+observations, objective results, and evidence claims are interpreted. They keep
+the meaning of an observation separate from graded scoring or evaluator output.
+
+```yaml
+outcome_interpretation_rules:
+  inspect-portal-outcome:
+    semantic_version: 1.0.0
+    participant_scope: participant_local
+    observation_point_basis: inspect-portal terminal observation
+    interpretation_basis: retained terminal evidence supports the local outcome
+```
+
 ## Behavior Specifications
 
 First-class participant behavior specifications name, version, and validate an
@@ -1692,24 +1754,24 @@ aggregate over existing participant behavior surfaces. They do not replace
 rules, authority refs, backend feature claims, or runtime evidence.
 
 ```yaml
-behavior-specifications:
+behavior_specifications:
   red-scan-behavior:
-    semantic-version: 1.0.0
-    lifecycle-state: active
-    participant-refs: [red-agent]
-    participant-role-refs: [red]
-    action-contract-refs: [scan]
-    observation-boundary-refs: [red-view]
-    outcome-interpretation-rule-refs: [red-outcome]
-    authority-scope-refs:
+    semantic_version: 1.0.0
+    lifecycle_state: active
+    participant_refs: [red-agent]
+    participant_role_refs: [red]
+    action_contract_refs: [scan]
+    observation_boundary_refs: [red-view]
+    outcome_interpretation_rule_refs: [red-outcome]
+    authority_scope_refs:
       - nodes.web-server.services.https
-    behavior-mode: policy-directed
-    ai-offensive-behavior-refs: [ai-model-access, defense-evasion]
-    offensive-behavior-refs: [reconnaissance, exfiltration]
-    realization-profile-ref: participant-implementation-manifest:red-agent
-    backend-feature-support-refs: [behavior_history]
-    evidence-contract-refs: [participant-behavior-history-event-stream-v1]
-    extension-policy: governed-extension
+    behavior_mode: policy-directed
+    ai_offensive_behavior_refs: [ai-model-access, defense-evasion]
+    offensive_behavior_refs: [reconnaissance, exfiltration]
+    realization_profile_ref: participant-implementation-manifest:red-agent
+    backend_feature_support_refs: [behavior_history]
+    evidence_contract_refs: [participant-behavior-history-event-stream-v1]
+    extension_policy: governed-extension
     extensions:
       x-acme:review-note:
         owner: acme
@@ -1741,6 +1803,36 @@ Compiled behavior specifications use stable
 `participant.behavior-specification.<name>` addresses and preserve dependency
 links to the participant behavior, action contract, observation boundary, and
 outcome-rule runtime addresses.
+
+---
+
+## Evidence Requirements
+
+`evidence_requirements` are portable capture obligations authored with the
+scenario. They state sources, scope, trigger or boundary, channel, artifact
+role, media types, handling, integrity, retention, and loss-disclosure intent.
+They are not evidence records and do not prove that capture occurred.
+
+```yaml
+evidence_requirements:
+  portal-trace:
+    description: Retain the declared portal observation for the study.
+    source_refs: [nodes.portal]
+    scope_refs: [nodes.portal]
+    trigger_ref: conditions.portal-online
+    channel: application_log
+    artifact_role: participant_observation
+    media_types: [application/json]
+    sensitivity: plain
+    redaction: none
+    integrity: checksum
+    retention: study_lifetime
+    loss_disclosure: required
+```
+
+Realized capture, checksums, provenance, loss reports, and derived analysis live
+in processor/backend and experiment evidence contracts. They remain separate
+from the authored requirement.
 
 ---
 
