@@ -24,9 +24,7 @@ PLAN_ADDRESS_ROOT_BY_DOMAIN = {
     "evaluation": "evaluation",
 }
 PLAN_RESOURCE_TYPES_BY_DOMAIN = {
-    "provisioning": frozenset(
-        {"network", "node", "feature-binding", "content-placement", "account-placement"}
-    ),
+    "provisioning": frozenset({"network", "node", "feature-binding", "content-placement", "account-placement"}),
     "orchestration": frozenset({"inject-binding", "inject", "event", "script", "story", "workflow"}),
     "evaluation": frozenset({"condition-binding", "objective"}),
 }
