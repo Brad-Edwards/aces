@@ -39,6 +39,7 @@ PROFILES = "profiles"
 FIXTURES = "fixtures"
 CONCEPT_AUTHORITY = "concept-authority"
 SCHEMAS = "schemas"
+REALIZATION_ENVELOPES = "realization-envelopes"
 
 
 def _bundled_corpus_root() -> Path | None:
@@ -120,6 +121,7 @@ __all__ = [
     "CONCEPT_AUTHORITY",
     "FIXTURES",
     "PROFILES",
+    "REALIZATION_ENVELOPES",
     "SCHEMAS",
     "corpus_family_root",
     "corpus_root",

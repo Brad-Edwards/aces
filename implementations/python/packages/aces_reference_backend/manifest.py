@@ -34,6 +34,9 @@ from aces_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
 from aces_contracts.vocabulary import RealizationSupportMode
 
 REFERENCE_BACKEND_NAME = "reference-emulation"
+REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(
+    contract_id for contract_id in BACKEND_SUPPORTED_CONTRACT_IDS if contract_id != "realization-envelope-v1"
+)
 
 _PARTICIPANT_ROLES = frozenset(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE])
 _PARTICIPANT_BEHAVIOR_FEATURES = frozenset(
@@ -205,7 +208,7 @@ def create_reference_backend_manifest(**config) -> BackendManifest:
     return BackendManifest(
         name=REFERENCE_BACKEND_NAME,
         version=_current_backend_version(),
-        supported_contract_versions=frozenset(BACKEND_SUPPORTED_CONTRACT_IDS),
+        supported_contract_versions=REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS,
         compatible_processors=frozenset({"aces-reference-processor"}),
         concept_bindings=_concept_bindings(),
         realization_support=_realization_support(),

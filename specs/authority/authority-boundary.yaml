@@ -60,6 +60,11 @@ authority_roots:
     authority: capability profile declarations
     family: profiles
 
+  - id: normative_realization_envelopes
+    root: contracts/realization-envelopes/
+    authority: configuration-bound backend realization envelope declarations
+    family: realization-envelopes
+
   - id: normative_concept_authority
     root: contracts/concept-authority/
     authority: concept-family and controlled-vocabulary authority artifacts

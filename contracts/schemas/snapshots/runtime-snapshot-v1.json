@@ -3443,6 +3443,46 @@
       "title": "RawDataIntegrityModel",
       "type": "object"
     },
+    "RealizationEnvelopeIdentityModel": {
+      "additionalProperties": false,
+      "description": "Immutable realization-envelope identity carried across runtime contracts.",
+      "properties": {
+        "configuration_digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Configuration Digest",
+          "type": "string"
+        },
+        "contract_id": {
+          "const": "realization-envelope-v1",
+          "default": "realization-envelope-v1",
+          "title": "Contract Id",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "envelope_id": {
+          "minLength": 1,
+          "title": "Envelope Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "realization-envelope/v1",
+          "default": "realization-envelope/v1",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "envelope_id",
+        "digest",
+        "configuration_digest"
+      ],
+      "title": "RealizationEnvelopeIdentityModel",
+      "type": "object"
+    },
     "RealizationProvenanceEntryModel": {
       "additionalProperties": false,
       "description": "SEM-218 invariant I5: provenance for one realized realization concern.\n\nDistinguishes ``author-declared`` / ``processor-derived`` / ``backend-realized``\norigins for a realized concern recorded on the snapshot's result / history\nsurfaces. Carries field-path and kind references only (never the realized\nvalue, per the SEM-218 host-exposure gate). Kept distinct from ADR-054\nlifecycle ``phase_realization`` and API-407 participant feature support.",
@@ -4054,6 +4094,17 @@
       },
       "title": "Participant Episode Results",
       "type": "object"
+    },
+    "realization_envelope": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RealizationEnvelopeIdentityModel"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "realization_provenance": {
       "items": {

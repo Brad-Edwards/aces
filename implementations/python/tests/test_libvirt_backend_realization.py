@@ -478,9 +478,9 @@ def test_out_of_envelope_content_type_fails_closed():
     assert _domain(realization).cloud_init.write_files == ()
 
 
-def test_governed_vocabulary_realizes_without_envelope_error():
-    # The full issue #603 governed vocabulary (all content types + account features)
-    # is in-envelope and must realize without any capability-envelope diagnostic.
+def test_descriptor_only_vocabulary_is_rejected_by_the_narrowed_envelope():
+    # ASR-519: dataset/directory descriptors and mail/SPN descriptors are not
+    # allowed to inherit a stronger generic realization claim.
     account = _resource(
         "account-placement",
         "provision.account.admin",
@@ -518,7 +518,12 @@ def test_governed_vocabulary_realizes_without_envelope_error():
     realization = interpret_provisioning_plan(_plan(_node(), account, file_content, dir_content, dataset_content))
 
     envelope_codes = [d.code for d in realization.diagnostics if "unsupported-" in d.code]
-    assert envelope_codes == []
+    assert envelope_codes == [
+        "libvirt-backend.realization.unsupported-account-feature",
+        "libvirt-backend.realization.unsupported-account-feature",
+        "libvirt-backend.realization.unsupported-content-type",
+        "libvirt-backend.realization.unsupported-content-type",
+    ]
 
 
 def test_account_feature_outside_narrowed_envelope_fails_closed():

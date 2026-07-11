@@ -38,7 +38,9 @@ from pydantic import ValidationError
 FIXTURES_ROOT = Path(__file__).resolve().parents[3] / "contracts" / "fixtures"
 V2_VALID_DIR = FIXTURES_ROOT / "backend-manifest" / "backend-manifest-v2" / "valid"
 V2_INVALID_DIR = FIXTURES_ROOT / "backend-manifest" / "backend-manifest-v2" / "invalid"
-EXPECTED_SUPPORTED_CONTRACT_VERSIONS_V2 = list(BACKEND_SUPPORTED_CONTRACT_IDS)
+EXPECTED_SUPPORTED_CONTRACT_VERSIONS_V2 = [
+    contract_id for contract_id in BACKEND_SUPPORTED_CONTRACT_IDS if contract_id != "realization-envelope-v1"
+]
 
 
 def test_backend_workflow_vocab_enum_values():
@@ -69,6 +71,11 @@ def test_backend_manifest_rejects_hollow_defaults():
                 supported_os_families=frozenset({"linux"}),
             ),
         )
+
+
+def test_backend_manifest_rejects_unknown_keywords():
+    with pytest.raises(TypeError, match="unexpected keyword argument.*unknown"):
+        BackendManifest(unknown=True)
 
 
 def test_provisioner_capabilities_reject_hollow_declaration():
@@ -103,7 +110,9 @@ def test_backend_manifest_v2_roundtrip_from_stub_manifest():
         WorkflowFeature.TIMEOUTS,
     ]
     assert model.realization_support[0].support_mode.value == "constrained"
-    assert model.model_dump(mode="json") == payload
+    roundtrip = model.model_dump(mode="json")
+    roundtrip.pop("realization_envelope", None)
+    assert roundtrip == payload
 
 
 def test_backend_manifest_v2_declares_participant_capability_dimensions():

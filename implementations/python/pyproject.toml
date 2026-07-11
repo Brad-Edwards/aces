@@ -157,3 +157,4 @@ ignore = [
 "packages/aces_runtime/control_plane_api.py" = ["B008"]  # fastapi Depends() pattern
 "packages/aces_runtime/control_plane.py" = ["S112"]      # intentional exception suppression
 "packages/aces_sdl/module_registry.py" = ["S310", "S202"]  # explicit OCI URL fetch and tarball extract
+"packages/aces_contracts/realization_envelope.py" = ["E402"]  # late import breaks a carrier dependency cycle

@@ -15,26 +15,42 @@ from aces_backend_protocols.capabilities import (
 from aces_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
 from aces_contracts.vocabulary import ParticipantFeatureSupportLevel, RealizationSupportMode
 
+from .envelopes import LibvirtDriverMode, load_libvirt_realization_envelope
+
 LIBVIRT_BACKEND_NAME = "libvirt-qemu"
 
-# The libvirt provisioning capability envelope: the maximum governed provisioning
-# vocabulary the driver realizes through cloud-init. Single source of truth for
-# both the rendered manifest and the backend's capability-envelope diagnostics
-# (issue #605), so the declared envelope and the enforced envelope cannot drift.
-LIBVIRT_PROVISIONER_CAPABILITIES = ProvisionerCapabilities(
-    name="libvirt-provisioner",
-    supported_node_types=frozenset({"switch", "vm"}),
-    supported_os_families=frozenset({"linux", "windows", "macos", "freebsd", "other"}),
-    supported_content_types=frozenset({"file", "dataset", "directory"}),
-    supported_account_features=frozenset({"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}),
-    max_total_nodes=None,
-    supports_acls=True,
-    supports_accounts=True,
-)
+
+def _provisioner_capabilities(mode: LibvirtDriverMode) -> ProvisionerCapabilities:
+    """Derive the coarse manifest projection from the selected governed envelope."""
+
+    envelope = load_libvirt_realization_envelope(mode)
+    configuration = envelope.configuration
+    account_features = frozenset(configuration.supported_account_features)
+    return ProvisionerCapabilities(
+        name=(
+            "libvirt-techvault-appliance-provisioner"
+            if mode is LibvirtDriverMode.TECHVAULT_APPLIANCE
+            else "libvirt-provisioner"
+        ),
+        supported_node_types=frozenset(configuration.supported_node_types),
+        supported_os_families=frozenset(configuration.supported_os_families),
+        supported_content_types=frozenset(configuration.supported_content_types),
+        supported_account_features=account_features,
+        max_total_nodes=None,
+        supports_acls=configuration.supports_acls,
+        supports_accounts=bool(account_features),
+    )
+
+
+# Compatibility exports remain, but their values are derived from the normative
+# envelope artifacts so manifest and execution gates cannot drift independently.
+LIBVIRT_PROVISIONER_CAPABILITIES = _provisioner_capabilities(LibvirtDriverMode.GENERIC)
+TECHVAULT_PROVISIONER_CAPABILITIES = _provisioner_capabilities(LibvirtDriverMode.TECHVAULT_APPLIANCE)
 
 _LIBVIRT_BASE_CONTRACT_VERSIONS = frozenset(
     {
         "backend-manifest-v2",
+        "realization-envelope-v1",
         "operation-receipt-v1",
         "operation-status-v1",
         "provisioning-plan-v1",
@@ -120,17 +136,17 @@ def _participant_runtime_capabilities() -> ParticipantRuntimeCapabilities:
 def create_libvirt_manifest(**config: object) -> BackendManifest:
     """Return the libvirt backend manifest.
 
-    The manifest declares the *maximum* governed provisioning vocabulary the
-    libvirt/QEMU driver realizes through cloud-init: all node types, all OS
-    families, all content types (file/dataset/directory), and all account
-    features. Because every declared term is genuinely realized, the manifest
-    cannot over-claim. "Provisioning-only" here is domain scope only — by default
-    the backend implements the Provisioner protocol, not the orchestrator or
-    evaluator. Pass ``participant_runtime=True`` to additionally declare
-    participant episode support (``LibvirtParticipantRuntime`` with the
-    deterministic domain adapter).
+    The manifest projects its governed provisioning vocabulary from the
+    configuration-selected envelope. Generic qcow2/cloud-init and TechVault
+    appliance modes therefore disclose distinct capabilities. "Provisioning-only"
+    is domain scope only: by default the backend implements the Provisioner
+    protocol, not the orchestrator or evaluator. Pass ``participant_runtime=True``
+    to additionally declare participant episode support.
     """
     enable_participant_runtime = bool(config.get("participant_runtime", False))
+    mode = LibvirtDriverMode(str(config.get("driver_mode", LibvirtDriverMode.GENERIC.value)))
+    realization_envelope = load_libvirt_realization_envelope(mode)
+    provisioner_capabilities = _provisioner_capabilities(mode)
 
     supported_contract_versions = (
         _LIBVIRT_BASE_CONTRACT_VERSIONS | _LIBVIRT_PARTICIPANT_CONTRACT_VERSIONS
@@ -167,7 +183,8 @@ def create_libvirt_manifest(**config: object) -> BackendManifest:
             ),
         ),
         capabilities=BackendCapabilitySet(
-            provisioner=LIBVIRT_PROVISIONER_CAPABILITIES,
+            provisioner=provisioner_capabilities,
             participant_runtime=participant_runtime_cap,
         ),
+        realization_envelope=realization_envelope,
     )

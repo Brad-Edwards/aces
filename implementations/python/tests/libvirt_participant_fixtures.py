@@ -40,6 +40,7 @@ __all__ = [
 
 
 class NullLibvirtDriver:
+    driver_mode = "generic"
     """No-op libvirt driver for structural tests that never call realize()."""
 
     def realize(self, *, networks, domains):

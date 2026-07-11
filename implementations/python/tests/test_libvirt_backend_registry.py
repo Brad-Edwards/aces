@@ -15,6 +15,8 @@ from aces.core.runtime.registry import BackendRegistry, RuntimeTarget
 
 
 class _NoopDriver:
+    driver_mode = "generic"
+
     def realize(self, *, networks, domains):
         from aces_backend_libvirt.driver import DriverResult
 

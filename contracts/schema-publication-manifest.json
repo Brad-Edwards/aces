@@ -32,20 +32,20 @@
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "4485bf2485e1f98be2c540552d42828a170dc6ff5beeb6b091a4e87a55b922ab",
+      "content_hash": "19dd8c5aa113fc8ce21c811bf75ef3e22367ae41fcc454c5139cd85db0fb5a60",
       "last_change": {
-        "summary": "Added experiment-run-v1 to the governed backend manifest contract vocabulary for run-level observability and augmentation evidence disclosure.",
-        "content_hash": "4485bf2485e1f98be2c540552d42828a170dc6ff5beeb6b091a4e87a55b922ab"
+        "summary": "Added typed configuration-bound realization-envelope identity carriage for ASR-519.",
+        "content_hash": "19dd8c5aa113fc8ce21c811bf75ef3e22367ae41fcc454c5139cd85db0fb5a60"
       }
     },
     {
       "contract_id": "backend-profile-v1",
       "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
       "stability": "draft",
-      "content_hash": "3f4152b2d7f1e4a01b30e2782a4d6001654e2785f4b9fe54121ed7e84a37c604",
+      "content_hash": "0c019e86d071bf97bc4464e76d1c224699e9f418e76cdcf117d6b813a3e9ac87",
       "last_change": {
-        "summary": "Added experiment-run-v1 to the backend profile contract vocabulary so profile fixture conformance can exercise run-level observability semantics.",
-        "content_hash": "3f4152b2d7f1e4a01b30e2782a4d6001654e2785f4b9fe54121ed7e84a37c604"
+        "summary": "Added realization-envelope-v1 to the governed backend contract vocabulary for configuration-bound ASR-519 claims.",
+        "content_hash": "0c019e86d071bf97bc4464e76d1c224699e9f418e76cdcf117d6b813a3e9ac87"
       }
     },
     {
@@ -336,10 +336,20 @@
       "contract_id": "provisioning-plan-v1",
       "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
       "stability": "draft",
-      "content_hash": "6bfc460c85d6e34b54de93e07968870d81120ac5ec33a78e65136a3428277c29",
+      "content_hash": "e3d9a1357af4e49b78d591cca10547a4d0113aee794686e0f8d96e32bb940e49",
       "last_change": {
-        "summary": "Constrained provisioning operations to the provision address domain and closed resource-type vocabulary for DSL-101/DSL-102/SEM-205.",
-        "content_hash": "6bfc460c85d6e34b54de93e07968870d81120ac5ec33a78e65136a3428277c29"
+        "summary": "Added immutable realization-envelope identity carriage for ASR-519 and constrained operations to the provisioning address and resource-type domain for DSL-101/DSL-102/SEM-205.",
+        "content_hash": "e3d9a1357af4e49b78d591cca10547a4d0113aee794686e0f8d96e32bb940e49"
+      }
+    },
+    {
+      "contract_id": "realization-envelope-v1",
+      "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
+      "stability": "draft",
+      "content_hash": "269a17d2ff15c12dfccd536cf8502a1e6b929883eb41e22f898abe75f6532720",
+      "last_change": {
+        "summary": "Initial publication of the ASR-519 configuration-bound realization envelope, concern disclosure, observation strength, and canonical identity contract.",
+        "content_hash": "269a17d2ff15c12dfccd536cf8502a1e6b929883eb41e22f898abe75f6532720"
       }
     },
     {
@@ -362,10 +372,10 @@
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "d1eb16822e0a092930d7988fe7c4607262fd25b5bdc173fdacb93049eb6128b0",
+      "content_hash": "e3fa3702a06d7c025d34b90a8830b9099034fbea663cbe23c75368fabe72530d",
       "last_change": {
-        "summary": "Closed the snapshot entries map to canonical compiled-address keys so unmatched keys cannot bypass SnapshotEntry validation for DSL-101/DSL-102/SEM-205.",
-        "content_hash": "d1eb16822e0a092930d7988fe7c4607262fd25b5bdc173fdacb93049eb6128b0"
+        "summary": "Added typed realization-envelope identity persistence for ASR-519 and closed snapshot entries to canonical compiled-address keys for DSL-101/DSL-102/SEM-205.",
+        "content_hash": "e3fa3702a06d7c025d34b90a8830b9099034fbea663cbe23c75368fabe72530d"
       }
     },
     {

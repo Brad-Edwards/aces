@@ -10,6 +10,7 @@ from typing import Any
 from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 from aces_contracts.addressing import require_compiled_address
+from aces_contracts.contracts import RealizationEnvelopeIdentityModel
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import RuntimeDomain
 from aces_contracts.versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
@@ -84,6 +85,7 @@ class RuntimeSnapshot:
     # SEM-218 invariant I5: per-concern provenance for realized realization
     # concerns recorded across this snapshot's result / history surfaces.
     realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
+    realization_envelope: RealizationEnvelopeIdentityModel | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -158,6 +160,11 @@ class RuntimeSnapshot:
                 "realization_provenance",
                 self.realization_provenance,
             ),
+            realization_envelope=_identity_update(
+                updates,
+                "realization_envelope",
+                self.realization_envelope,
+            ),
             metadata=_mapping_update(updates, "metadata", self.metadata),
         )
 
@@ -175,6 +182,7 @@ _SNAPSHOT_UPDATE_KEYS = {
     "joint_action_records",
     "time_management_contexts",
     "realization_provenance",
+    "realization_envelope",
     "metadata",
 }
 
@@ -221,6 +229,19 @@ def _provenance_update(
         return tuple(current)
     if not isinstance(raw, tuple) or any(not isinstance(entry, RealizationProvenanceEntry) for entry in raw):
         raise TypeError(f"{key} must be a tuple of RealizationProvenanceEntry")
+    return raw
+
+
+def _identity_update(
+    updates: Mapping[str, object],
+    key: str,
+    current: RealizationEnvelopeIdentityModel | None,
+) -> RealizationEnvelopeIdentityModel | None:
+    raw = updates.get(key)
+    if raw is None:
+        return current
+    if not isinstance(raw, RealizationEnvelopeIdentityModel):
+        raise TypeError(f"{key} must be a RealizationEnvelopeIdentityModel")
     return raw
 
 

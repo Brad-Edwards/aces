@@ -19,6 +19,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "sdl" / f"{name}.json"
     if name.startswith("backend-manifest-v"):
         return schemas_dir / "backend-manifest" / f"{name}.json"
+    if name.startswith("realization-envelope-v"):
+        return schemas_dir / "realization-envelope" / f"{name}.json"
     if name.startswith("processor-manifest-v"):
         return schemas_dir / "processor-manifest" / f"{name}.json"
     if name.startswith("participant-implementation-manifest-v"):

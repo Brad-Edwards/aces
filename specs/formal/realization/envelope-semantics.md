@@ -18,11 +18,10 @@ This note governs:
 - envelope subsumption;
 - deterministic witness generation;
 - negative conformance for closed envelopes;
-- backend-manifest carriage constraints for future schema evolution.
+- backend-manifest carriage constraints for schema evolution.
 
 Out of scope:
 
-- publishing a concrete JSON schema for envelope expressions;
 - replacing `run_target_conformance(reference_scenario=...)`;
 - adding implementation helpers, CLI commands, APIs, persistence, or runtime
   behavior;
@@ -40,17 +39,20 @@ contract model, fixtures, and property tests are implemented by issue #668:
 - `aces_sdl.realization_envelope` implements `member`, `subsumes`, `witness`, and
   `generate_negative_probes` as one deterministic engine over that contract.
 
-The **schema carrier** (a published `contracts/schemas/` artifact with a
-publication-ledger entry), **backend-manifest carriage** (R7), and
-**target-conformance integration** (replacing the #663 `reference_scenario`
-bridge) remain downstream siblings. The envelope contract is intentionally
-unpublished until manifest carriage lands, so its shape can still evolve.
+Issue #100 publishes the schema carrier at
+`contracts/schemas/realization-envelope/realization-envelope-v1.json`, packages governed
+backend instances under `contracts/realization-envelopes/`, and carries an
+immutable envelope/configuration identity through backend-manifest-v2,
+provisioning-plan-v1, and runtime-snapshot-v1. Backend carriers embed this same
+expression and add closed realization/observation disclosures; they do not
+introduce a second set language.
 
-Until that downstream work lands:
+The remaining downstream boundary is target-conformance integration:
 
 - SEM-218 remains the active exact/constrained/open realization authority;
-- `backend-manifest-v2.realization_support` remains the coarse capability and
-  disclosure surface;
+- `backend-manifest-v2.realization_support` remains the coarse capability floor,
+  while the selected envelope is the configuration-bound value and disclosure
+  authority;
 - `run_target_conformance(reference_scenario=...)` remains the temporary #663
   bridge for fixed-topology and simulation backends.
 

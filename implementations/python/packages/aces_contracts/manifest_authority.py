@@ -34,6 +34,7 @@ PROCESSOR_SUPPORTED_CONTRACT_IDS = (
 # separate authority surfaces and do not belong in this declaration field.
 BACKEND_SUPPORTED_CONTRACT_IDS = (
     "backend-manifest-v2",
+    "realization-envelope-v1",
     "provisioning-plan-v1",
     "orchestration-plan-v1",
     "evaluation-plan-v1",

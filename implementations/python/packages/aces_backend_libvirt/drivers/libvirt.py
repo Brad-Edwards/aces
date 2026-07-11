@@ -133,6 +133,8 @@ Connector = Callable[[str], object | None]
 class LibvirtDeploymentDriver:
     """Realize portable specs against a libvirt connection."""
 
+    driver_mode = "generic"
+
     def __init__(
         self,
         *,

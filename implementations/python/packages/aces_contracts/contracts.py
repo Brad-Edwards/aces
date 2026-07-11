@@ -40,7 +40,13 @@ from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler, StrictI
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
-from .addressing import COMPILED_ADDRESS_JSON_SCHEMA, CompiledAddress
+from .addressing import (
+    COMPILED_ADDRESS_JSON_SCHEMA,
+    PLAN_ADDRESS_ROOT_BY_DOMAIN,
+    PLAN_RESOURCE_TYPES_BY_DOMAIN,
+    CompiledAddress,
+    require_plan_operation_identity,
+)
 from .corpus import CONCEPT_AUTHORITY, corpus_family_root
 from .manifest_authority import (
     BACKEND_SUPPORTED_CONTRACT_IDS,
@@ -61,12 +67,6 @@ from .participant_behavior import (
     ParticipantPhaseRealization,
     ParticipantRuntimeLifecyclePhase,
     participant_lifecycle_field_violation_messages,
-)
-from .planning import (
-    PLAN_ADDRESS_ROOT_BY_DOMAIN,
-    PLAN_RESOURCE_TYPES_BY_DOMAIN,
-    RuntimeDomain,
-    require_plan_operation_identity,
 )
 from .versions import (
     ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
@@ -663,9 +663,9 @@ def _attach_compiled_address_map_constraints(contract_id: str, json_schema: dict
 
 
 _PLAN_CONTRACT_DOMAIN = {
-    "provisioning-plan-v1": RuntimeDomain.PROVISIONING,
-    "orchestration-plan-v1": RuntimeDomain.ORCHESTRATION,
-    "evaluation-plan-v1": RuntimeDomain.EVALUATION,
+    "provisioning-plan-v1": "provisioning",
+    "orchestration-plan-v1": "orchestration",
+    "evaluation-plan-v1": "evaluation",
 }
 
 
@@ -2129,7 +2129,7 @@ def _require_unique_operation_addresses(operations: list[PlanOperationModel]) ->
         raise ValueError("Plan operation addresses must be unique")
 
 
-def _require_operation_identities(operations: list[PlanOperationModel], domain: RuntimeDomain) -> None:
+def _require_operation_identities(operations: list[PlanOperationModel], domain: str) -> None:
     for operation in operations:
         require_plan_operation_identity(domain, operation.address, operation.resource_type)
 
@@ -2146,14 +2146,25 @@ def _require_startup_order_addresses(
         raise ValueError("Plan startup_order must reference admitted operation addresses")
 
 
+class RealizationEnvelopeIdentityModel(ContractModel):
+    """Immutable realization-envelope identity carried across runtime contracts."""
+
+    contract_id: Literal["realization-envelope-v1"] = "realization-envelope-v1"
+    envelope_id: NonEmptyString
+    schema_version: Literal["realization-envelope/v1"] = "realization-envelope/v1"
+    digest: Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
+    configuration_digest: Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
+
+
 class ProvisioningPlanModel(ContractModel):
     operations: list[PlanOperationModel] = Field(default_factory=list)
     diagnostics: list[dict[str, Any]] = Field(default_factory=list)
+    realization_envelope: RealizationEnvelopeIdentityModel | None = None
 
     @model_validator(mode="after")
     def _validate_operation_addresses(self) -> ProvisioningPlanModel:
         _require_unique_operation_addresses(self.operations)
-        _require_operation_identities(self.operations, RuntimeDomain.PROVISIONING)
+        _require_operation_identities(self.operations, "provisioning")
         return self
 
 
@@ -2165,7 +2176,7 @@ class OrchestrationPlanModel(ContractModel):
     @model_validator(mode="after")
     def _validate_operation_addresses(self) -> OrchestrationPlanModel:
         _require_unique_operation_addresses(self.operations)
-        _require_operation_identities(self.operations, RuntimeDomain.ORCHESTRATION)
+        _require_operation_identities(self.operations, "orchestration")
         _require_startup_order_addresses(self.operations, self.startup_order)
         return self
 
@@ -2178,7 +2189,7 @@ class EvaluationPlanModel(ContractModel):
     @model_validator(mode="after")
     def _validate_operation_addresses(self) -> EvaluationPlanModel:
         _require_unique_operation_addresses(self.operations)
-        _require_operation_identities(self.operations, RuntimeDomain.EVALUATION)
+        _require_operation_identities(self.operations, "evaluation")
         _require_startup_order_addresses(self.operations, self.startup_order)
         return self
 
@@ -2239,6 +2250,7 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     joint_action_records: dict[str, ParticipantJointActionRecordModel] = Field(default_factory=dict)
     time_management_contexts: dict[str, ParticipantTimeManagementContextModel] = Field(default_factory=dict)
     realization_provenance: list[RealizationProvenanceEntryModel] = Field(default_factory=list)
+    realization_envelope: RealizationEnvelopeIdentityModel | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -2781,6 +2793,7 @@ class BackendManifestV2Model(ContractModel):
     supported_contract_versions: list[NonEmptyString] = Field(min_length=1)
     compatibility: BackendCompatibilityModel
     realization_support: list[RealizationSupportDeclarationModel] = Field(min_length=1)
+    realization_envelope: RealizationEnvelopeIdentityModel | None = None
     concept_bindings: list[ConceptBindingEntryModel] = Field(min_length=1)
     constraints: dict[str, str] = Field(default_factory=dict)
     capabilities: BackendCapabilitiesV2Model
@@ -2788,6 +2801,11 @@ class BackendManifestV2Model(ContractModel):
     @model_validator(mode="after")
     def _validate_unique_binding_scopes(self) -> BackendManifestV2Model:
         validate_backend_supported_contract_versions(self.supported_contract_versions)
+        envelope_contract_declared = "realization-envelope-v1" in self.supported_contract_versions
+        if self.realization_envelope is not None and not envelope_contract_declared:
+            raise ValueError("realization_envelope requires realization-envelope-v1 support")
+        if envelope_contract_declared and self.realization_envelope is None:
+            raise ValueError("realization-envelope-v1 support requires realization_envelope identity")
         scopes = [binding.scope for binding in self.concept_bindings]
         if len(scopes) != len(set(scopes)):
             raise ValueError("concept_bindings must not contain duplicate scopes")
@@ -2803,6 +2821,33 @@ class BackendManifestV2Model(ContractModel):
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
         json_schema["properties"]["supported_contract_versions"]["items"]["enum"] = list(BACKEND_SUPPORTED_CONTRACT_IDS)
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {
+                        "properties": {"realization_envelope": {"not": {"type": "null"}}},
+                        "required": ["realization_envelope"],
+                    },
+                    "then": {
+                        "properties": {
+                            "supported_contract_versions": {"contains": {"const": "realization-envelope-v1"}}
+                        }
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "supported_contract_versions": {"contains": {"const": "realization-envelope-v1"}}
+                        },
+                        "required": ["supported_contract_versions"],
+                    },
+                    "then": {
+                        "properties": {"realization_envelope": {"not": {"type": "null"}}},
+                        "required": ["realization_envelope"],
+                    },
+                },
+            ]
+        )
         return json_schema
 
 
@@ -7372,12 +7417,15 @@ class ReusableAssetTrustPolicyModel(ContractModel):
 def schema_bundle() -> dict[str, dict[str, Any]]:
     """Return the repo-published JSON Schemas for external contracts."""
 
+    from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel
+
     bundle = {
         "aces-semantic-invariants-v1": _aces_semantic_invariant_profile_schema_for_bundle(),
         "sdl-authoring-input-v1": Scenario.model_json_schema(),
         "instantiated-scenario-v1": InstantiatedScenario.model_json_schema(),
         "scenario-instantiation-request-v1": InstantiationRequestModel.model_json_schema(),
         "backend-manifest-v2": BackendManifestV2Model.model_json_schema(),
+        "realization-envelope-v1": BackendRealizationEnvelopeModel.model_json_schema(),
         "processor-manifest-v2": ProcessorManifestV2Model.model_json_schema(),
         "participant-implementation-manifest-v1": ParticipantImplementationManifestModel.model_json_schema(),
         "participant-implementation-provenance-v1": ParticipantImplementationProvenanceModel.model_json_schema(),
@@ -7609,6 +7657,7 @@ __all__ = [
     "ProcessorCapabilitiesV2Model",
     "ProvisionerCapabilitiesModel",
     "ProvisioningPlanModel",
+    "RealizationEnvelopeIdentityModel",
     "RawDataIntegrityModel",
     "RealizationProvenanceEntryModel",
     "RealizationSupportDeclarationModel",
