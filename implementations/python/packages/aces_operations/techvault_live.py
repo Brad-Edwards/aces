@@ -352,14 +352,30 @@ def _validate_live_outcome(
     networks: object,
     binding: object,
 ) -> list[str]:
+    if succeeded:
+        return _validate_successful_live_outcome(cleanup_status, domains, binding)
+    return _validate_failed_live_outcome(cleanup_status, domains, networks, binding)
+
+
+def _validate_successful_live_outcome(cleanup_status: object, domains: object, binding: object) -> list[str]:
     violations: list[str] = []
-    if succeeded and cleanup_status not in {"verified", "failed"}:
+    if cleanup_status not in {"verified", "failed"}:
         violations.append("successful native realization requires an explicit cleanup outcome")
-    if not succeeded and cleanup_status != "not-required":
-        violations.append("failed native realization must mark cleanup not-required")
-    if succeeded and (not domains or not isinstance(binding, Mapping)):
+    if not domains or not isinstance(binding, Mapping):
         violations.append("successful native run requires daemon observations and realization binding")
-    if not succeeded and (domains or networks or binding is not None):
+    return violations
+
+
+def _validate_failed_live_outcome(
+    cleanup_status: object,
+    domains: object,
+    networks: object,
+    binding: object,
+) -> list[str]:
+    violations: list[str] = []
+    if cleanup_status != "not-required":
+        violations.append("failed native realization must mark cleanup not-required")
+    if domains or networks or binding is not None:
         violations.append("failed native run cannot publish stale daemon observations or binding")
     return violations
 

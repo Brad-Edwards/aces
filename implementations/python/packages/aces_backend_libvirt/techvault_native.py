@@ -194,10 +194,8 @@ class TechVaultNativeLibvirtDriver:
         return self._verify_and_finalize(
             connection,
             matrix,
-            networks=networks,
-            domains=domains,
-            network_handles=network_handles,
-            domain_handles=domain_handles,
+            specs=(networks, domains),
+            handles=(network_handles, domain_handles),
             observations=observations,
             envelope_digest=envelope_digest,
             configuration_digest=configuration_digest,
@@ -208,14 +206,14 @@ class TechVaultNativeLibvirtDriver:
         connection: object,
         matrix: Mapping[str, object],
         *,
-        networks: tuple[NetworkSpec, ...],
-        domains: tuple[DomainSpec, ...],
-        network_handles: list[NetworkHandle],
-        domain_handles: list[DomainHandle],
+        specs: tuple[tuple[NetworkSpec, ...], tuple[DomainSpec, ...]],
+        handles: tuple[list[NetworkHandle], list[DomainHandle]],
         observations: tuple[RealizationObservation, ...],
         envelope_digest: str,
         configuration_digest: str,
     ) -> DriverResult:
+        networks, domains = specs
+        network_handles, domain_handles = handles
         observation_diagnostics = techvault_observation_diagnostics(
             networks=networks,
             domains=domains,
