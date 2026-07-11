@@ -29,9 +29,7 @@ from aces_contracts.versions import EVALUATION_STATE_SCHEMA_VERSION
 from aces_contracts.vocabulary import RealizationSupportMode
 from aces_runtime.registry import RuntimeTarget, RuntimeTargetComponents
 
-REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = tuple(
-    filter(lambda contract_id: contract_id != "realization-envelope-v1", BACKEND_SUPPORTED_CONTRACT_IDS)
-)
+REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(BACKEND_SUPPORTED_CONTRACT_IDS) - {"realization-envelope-v1"}
 REFERENCE_PARTICIPANT_ROLES = frozenset(
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE]
 )
