@@ -212,8 +212,8 @@ class _ConstructedDomainValidator:
     def visit(self, item: object) -> None:
         item_type = type(item)
         if item is None or item_type in self._SCALAR_TYPES:
-            pass
-        elif item_type is float:
+            return
+        if item_type is float:
             self._visit_float(cast(float, item))
         elif item_type is list:
             self._visit_list(cast(list[object], item))
