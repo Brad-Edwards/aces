@@ -193,6 +193,8 @@ map, secret, or traceback.
 | `sdl.mapping_key_type` | Mapping key does not construct as a string | error | error |
 | `sdl.mapping_key_conflict` | Duplicate or canonicalized collision | error | error |
 | `sdl.alias_cycle` | Alias graph is cyclic | error | error |
+| `sdl.identifier.invalid` | Declaration identity violates the portable local-id contract | error | error |
+| `sdl.model.invalid` | Typed model field violates its declared structural contract | error | error |
 | `sdl.noncanonical_field` | Recognized legacy structural-field spelling | error | warning |
 | `sdl.noncanonical_merge` | YAML 1.1 `<<` migration syntax | error | warning |
 
@@ -202,3 +204,18 @@ canonical spellings, and the path points to the canonical field. For
 are retained on the successfully migrated scenario and by formatting, MCP, and
 CLI adapters. Strict validation is the default at every ordinary parse ingress;
 migration acceptance requires an explicit caller choice.
+
+An identifier diagnostic points to the exact defining key or scalar-id token
+and carries that token's source range. Its bounded message states the grammar
+without echoing the invalid spelling, adjacent value, document fragment,
+parameter map, or traceback. `SDLMigrationPolicy.ACCEPT` does not demote or
+rewrite an invalid identity; identifier migration requires an explicit atomic
+rename of the declaration and all resolved references.
+
+A typed-model diagnostic preserves the validator-owned contract statement so
+an author can determine why the field is invalid. The parser excludes
+Pydantic's input rendering and documentation URL, removes framework prefixes,
+escapes control characters, and bounds each message to 512 characters before
+placing it in `sdl.model.invalid`. The JSON Pointer and source range remain the
+authoritative locator; a raw `ValidationError`, input object, traceback, or
+unbounded validator rendering is never exposed.

@@ -14,7 +14,8 @@ from aces_contracts.contracts import (
     ParticipantStatusViewModel,
 )
 from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
-from aces_contracts.runtime_state import RuntimeSnapshot
+from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp
+from aces_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
 from aces_processor.models import (
     iter_participant_behavior_history_violations,
     iter_participant_episode_snapshot_violations,
@@ -281,6 +282,56 @@ nodes:
     assert snapshot.snapshot.entries
 
 
+def test_control_plane_rejects_dependency_outside_plan_and_snapshot() -> None:
+    plan = ProvisioningPlan(
+        operations=[
+            ProvisionOp(
+                action=ChangeAction.CREATE,
+                address="provision.node.vm",
+                resource_type="node",
+                payload={},
+                ordering_dependencies=("provision.network.missing",),
+            )
+        ]
+    )
+    control_plane = RuntimeControlPlane(create_stub_target())
+
+    receipt = control_plane.submit_provisioning(plan)
+
+    assert receipt.accepted is False
+    assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["runtime.plan-dependency-unresolved"]
+
+
+def test_control_plane_rejects_snapshot_resource_identity_disagreement() -> None:
+    address = "provision.node.vm"
+    snapshot = RuntimeSnapshot(
+        entries={
+            address: SnapshotEntry(
+                address=address,
+                domain=RuntimeDomain.EVALUATION,
+                resource_type="objective",
+                payload={},
+            )
+        }
+    )
+    plan = ProvisioningPlan(
+        operations=[
+            ProvisionOp(
+                action=ChangeAction.UPDATE,
+                address=address,
+                resource_type="node",
+                payload={},
+            )
+        ]
+    )
+    control_plane = RuntimeControlPlane(create_stub_target(), initial_snapshot=snapshot)
+
+    receipt = control_plane.submit_provisioning(plan)
+
+    assert receipt.accepted is False
+    assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["runtime.plan-resource-incoherent"]
+
+
 def test_control_plane_submits_orchestration_with_portable_workflow_state():
     scenario = _scenario("""
 name: workflow
@@ -313,6 +364,10 @@ workflows:
     execution_plan = plan(compile_runtime_model(scenario), target.manifest)
     control_plane = RuntimeControlPlane(target)
 
+    provisioning_receipt = control_plane.submit_provisioning(execution_plan.provisioning)
+    assert provisioning_receipt.accepted is True
+    evaluation_receipt = control_plane.submit_evaluation(execution_plan.evaluation)
+    assert evaluation_receipt.accepted is True
     receipt = control_plane.submit_orchestration(execution_plan.orchestration)
     status = control_plane.get_operation(receipt.operation_id)
     snapshot = control_plane.get_snapshot()

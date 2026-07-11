@@ -10,6 +10,7 @@ from enum import Enum
 from pydantic import Field, field_validator
 
 from ._base import SDLModel, parse_enum_or_var
+from ._identifiers import PortableIdentifier
 
 
 class ExerciseRole(str, Enum):
@@ -43,7 +44,7 @@ class Entity(SDLModel):
     vulnerabilities: list[str] = Field(default_factory=list)
     facts: dict[str, str] = Field(default_factory=dict)
     events: list[str] = Field(default_factory=list)
-    entities: dict[str, "Entity"] = Field(default_factory=dict)
+    entities: dict[PortableIdentifier, "Entity"] = Field(default_factory=dict)
 
 
 def flatten_entities(entities: dict[str, Entity], prefix: str = "") -> dict[str, Entity]:

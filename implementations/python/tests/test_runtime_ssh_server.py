@@ -260,7 +260,7 @@ class TestSshMatchRule:
     def test_variable_ref_match_id_rejected(self):
         with pytest.raises(ValidationError) as exc:
             SshMatchRule(
-                match_id="${MATCH_ID}",
+                match_id="${match_id}",
                 criteria=[SshMatchCriterion(kind=SshMatchCriterionKind.USER, pattern="kali")],
             )
         assert "match_id" in str(exc.value)
@@ -341,7 +341,7 @@ class TestRuntimeSshServer:
 
     def test_variable_ref_server_id_rejected(self):
         with pytest.raises(ValidationError) as exc:
-            RuntimeSshServer(ssh_server_id="${SERVER_ID}", service="ssh")
+            RuntimeSshServer(ssh_server_id="${server_id}", service="ssh")
         assert "ssh_server_id" in str(exc.value)
 
     def test_service_required(self):
@@ -621,6 +621,12 @@ class TestRuntimeFamilyRegistrySshCoverage:
             """
 name: shared-ssh
 version: 1.0.0
+module:
+  id: aces/shared-ssh
+  version: 1.0.0
+  exports:
+    nodes: [kali]
+    relationships: [ssh-policy]
 nodes:
   kali:
     type: vm

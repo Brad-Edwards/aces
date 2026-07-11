@@ -26,6 +26,7 @@ closed enrollment lattice because they intentionally carry no raw value field.
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from ._base import SDLModel, is_variable_ref, parse_int_or_var
+from ._identifiers import require_qualified_identifier
 from .runtime_forwarding_agent_vocab import (
     RuntimeForwardingAgentImplementation,
     RuntimeForwardingAgentKind,
@@ -306,7 +307,7 @@ class RuntimeForwardingAgent(SDLModel):
     @field_validator("forwarding_agent_id")
     @classmethod
     def validate_forwarding_agent_id(cls, v: str) -> str:
-        return require_symbol(v, field_name="forwarding_agent_id")
+        return require_qualified_identifier(v, field_name="forwarding_agent_id")
 
     @field_validator("implementation", mode="before")
     @classmethod

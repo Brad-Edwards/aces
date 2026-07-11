@@ -12,15 +12,15 @@ def test_format_api_migrates_fields_and_expands_shorthands() -> None:
         """\
 Name: migrate-me
 Nodes:
-  Web-App:
+  web-app:
     Type: VM
     roles: {admin: operator}
 infrastructure:
-  Web-App: 1
+  web-app: 1
 """
     )
 
-    assert result.content.startswith("name: migrate-me\nnodes:\n  Web-App:\n    type: vm\n")
+    assert result.content.startswith("name: migrate-me\nnodes:\n  web-app:\n    type: vm\n")
     assert "username: operator" in result.content
     assert "count: 1" in result.content
     assert [item.code for item in result.diagnostics] == [

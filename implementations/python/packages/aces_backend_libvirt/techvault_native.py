@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol, cast
 
+from aces_backend_protocols.naming import provider_resource_name
 from aces_contracts.diagnostics import Diagnostic, Severity
 
 from .driver import DomainHandle, DomainSpec, DriverResult, NetworkHandle, NetworkSpec, ServiceSpec
@@ -494,7 +495,8 @@ def _role(name: str) -> str:
 
 
 def _runtime_name(prefix: str, address: str, preferred: str | None = None) -> str:
-    return _safe_name(preferred or address.rsplit(".", 1)[-1], fallback=address.rsplit(".", 1)[-1], prefix=prefix)
+    del preferred
+    return provider_resource_name(address, prefix=prefix)
 
 
 def _safe_name(candidate: str, *, fallback: str, prefix: str) -> str:

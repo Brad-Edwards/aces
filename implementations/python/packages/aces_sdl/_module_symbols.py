@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from ._identifiers import QualifiedName
 from ._module_runtime_aliases import nested_node_runtime_aliases
 from .entities import flatten_entities
 from .scenario import ModuleDescriptor, Scenario
@@ -37,14 +38,15 @@ HASHMAP_SECTIONS = (
     "workflows",
 )
 _HASHMAP_SECTIONS = HASHMAP_SECTIONS
+FORWARDING_AGENTS_SECTION = "forwarding_agents"
 
 
 def _prefix(namespace: str, name: str) -> str:
-    return f"{namespace}.{name}" if namespace else name
+    return QualifiedName.parse(name).prefixed(namespace).render() if namespace else QualifiedName.parse(name).render()
 
 
 def _private_prefix(namespace: str, name: str) -> str:
-    return _prefix(namespace, f"__private.{name}")
+    return QualifiedName.parse(name).prefixed(namespace, private=True).render()
 
 
 def explicit_exports(
@@ -156,6 +158,13 @@ def symbol_index(
     named.update(nested_node_runtime_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_content_item_aliases(scenario, section_maps.get("content", {})))
 
+    forwarding_agent_map = _section_rename_map(
+        {agent.forwarding_agent_id: agent for agent in scenario.forwarding_agents},
+        namespace=namespace,
+        exported_names=exported.get(FORWARDING_AGENTS_SECTION, set()),
+    )
+    named.update(_qualified_section_aliases(FORWARDING_AGENTS_SECTION, forwarding_agent_map))
+
     return {
         "nodes": section_maps.get("nodes", {}),
         "infrastructure": section_maps.get("infrastructure", {}),
@@ -178,8 +187,9 @@ def symbol_index(
         "evidence_requirements": section_maps.get("evidence_requirements", {}),
         "objectives": section_maps.get("objectives", {}),
         "workflows": section_maps.get("workflows", {}),
+        FORWARDING_AGENTS_SECTION: forwarding_agent_map,
         "named": named,
     }
 
 
-__all__ = ["HASHMAP_SECTIONS", "explicit_exports", "symbol_index"]
+__all__ = ["FORWARDING_AGENTS_SECTION", "HASHMAP_SECTIONS", "explicit_exports", "symbol_index"]

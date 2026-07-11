@@ -8,7 +8,9 @@ from aces_backend_protocols.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
+from aces_contracts.addressing import render_compiled_address
 from aces_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
+from aces_sdl import build_declaration_index
 from aces_sdl.entities import flatten_entities
 from aces_sdl.explicitness import ExplicitnessClass
 from aces_sdl.instantiate import instantiate_scenario
@@ -77,7 +79,7 @@ def _dump(model: Any) -> dict[str, Any]:
 
 
 def _address(*parts: str) -> str:
-    return ".".join(part for part in parts if part)
+    return render_compiled_address(*parts)
 
 
 def _dedupe(items: list[str]) -> tuple[str, ...]:
@@ -224,13 +226,17 @@ def _service_address(node_name: str, service_name: str) -> str:
     return _address("provision", "node", node_name, "service", service_name)
 
 
-def _split_node_service_ref(ref: object) -> tuple[str, str] | None:
-    if not isinstance(ref, str) or not ref.startswith("nodes."):
+def _resolve_node_service_ref(
+    scenario: InstantiatedScenario,
+    ref: object,
+) -> tuple[str, str] | None:
+    if not isinstance(ref, str):
         return None
-    node_name, sep, service_name = ref[len("nodes.") :].partition(".services.")
-    if not sep or not node_name or not service_name:
-        return None
-    return node_name, service_name
+    for node_name, node in scenario.nodes.items():
+        for service in node.services:
+            if service.name and ref == f"nodes.{node_name}.services.{service.name}":
+                return node_name, service.name
+    return None
 
 
 def _action_contract_address(name: str) -> str:
@@ -453,7 +459,7 @@ def _condition_addresses_for_refs(scenario: InstantiatedScenario, refs: list[str
 def _service_addresses_for_refs(scenario: InstantiatedScenario, refs: list[str]) -> tuple[str, ...]:
     addresses: list[str] = []
     for ref in dict.fromkeys(refs):
-        split = _split_node_service_ref(ref)
+        split = _resolve_node_service_ref(scenario, ref)
         if split is not None:
             node_name, service_name = split
             node = scenario.nodes.get(node_name)
@@ -624,11 +630,8 @@ def _resolve_resource_refs(
     resolved: list[str] = []
     diagnostics: list[Diagnostic] = []
     for ref_name in dict.fromkeys(ref_names):
-        matched_address = next(
-            (address for address, resource in resources.items() if resource.name == ref_name),
-            None,
-        )
-        if matched_address is None:
+        matched_addresses = sorted(address for address, resource in resources.items() if resource.name == ref_name)
+        if not matched_addresses:
             diagnostics.append(
                 Diagnostic(
                     code=f"{code_prefix}-unbound",
@@ -638,7 +641,20 @@ def _resolve_resource_refs(
                 )
             )
             continue
-        resolved.append(matched_address)
+        if len(matched_addresses) > 1:
+            diagnostics.append(
+                Diagnostic(
+                    code=f"{code_prefix}-ambiguous",
+                    domain=domain,
+                    address=owner_address,
+                    message=(
+                        f"Reference '{ref_name}' resolves to multiple {resource_label}s: "
+                        f"{', '.join(matched_addresses)}."
+                    ),
+                )
+            )
+            continue
+        resolved.append(matched_addresses[0])
     return _dedupe(resolved), diagnostics
 
 
@@ -2337,19 +2353,15 @@ def _node_variable_refs_by_address(
 
 
 def _realization_requirement_address(scenario: InstantiatedScenario, field_path: str) -> str:
-    """Resolve the compiled resource address for a realization-concern path.
+    """Resolve the compiled resource address for a realization-concern path."""
 
-    Falls back to the field path (an equivalent field identifier) when the
-    concern is not tied to a single compiled provisioning resource.
-    """
-
-    parts = field_path.split(".")
-    head, name = parts[0], parts[1]
-    if head == "nodes":
-        node = scenario.nodes.get(name)
-        is_switch = node is not None and node.type == NodeType.SWITCH
-        return _network_address(name) if is_switch else _node_address(name)
-    return _content_address(name) if head == "content" else field_path
+    for name, node in scenario.nodes.items():
+        if field_path in {f"nodes.{name}.os", f"nodes.{name}.type"}:
+            return _network_address(name) if node.type == NodeType.SWITCH else _node_address(name)
+    for name in scenario.content:
+        if field_path == f"content.{name}.type":
+            return _content_address(name)
+    raise ValueError("realization concern must resolve to one compiled resource address")
 
 
 def _compile_realization_requirements(
@@ -2366,7 +2378,10 @@ def _compile_realization_requirements(
     for field_path, record in scenario.explicitness.items():
         if record.classification is ExplicitnessClass.OPEN:
             continue
-        concern_kind = resolve_realization_concern(field_path)
+        concern_kind = resolve_realization_concern(
+            field_path,
+            declaration_names={"nodes": scenario.nodes, "content": scenario.content},
+        )
         if concern_kind is None:
             continue
         requirements.append(
@@ -2402,6 +2417,7 @@ def compile_runtime_model(scenario: Scenario | InstantiatedScenario) -> RuntimeM
 
     if not isinstance(scenario, InstantiatedScenario):
         scenario = instantiate_scenario(scenario, validate_semantics=False)
+    build_declaration_index(scenario)
     node_variable_refs = dict(scenario.node_variable_refs)
     diagnostics: list[Diagnostic] = []
 

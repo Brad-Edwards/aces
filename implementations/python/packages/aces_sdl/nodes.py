@@ -15,6 +15,7 @@ from ._base import (
     parse_enum_or_var,
     parse_int_or_var,
 )
+from ._identifiers import OptionalPortableIdentifier, PortableIdentifier
 from ._runtime_service_families import install_runtime_service_family_exports
 from ._source import Source
 from .image_provenance import (
@@ -254,7 +255,7 @@ class ServicePort(SDLModel):
 
     port: int | str
     protocol: str = "tcp"
-    name: str = ""
+    name: OptionalPortableIdentifier = ""
     description: str = ""
 
     @field_validator("port", mode="before")
@@ -286,7 +287,7 @@ class Node(SDLModel):
     conditions: dict[str, str] = Field(default_factory=dict)
     injects: dict[str, str] = Field(default_factory=dict)
     vulnerabilities: list[str] = Field(default_factory=list)
-    roles: dict[str, Role] = Field(default_factory=dict)
+    roles: dict[PortableIdentifier, Role] = Field(default_factory=dict)
     services: list[ServicePort] = Field(default_factory=list)
     asset_value: AssetValue | None = None
     runtime: RuntimeConfiguration | None = None

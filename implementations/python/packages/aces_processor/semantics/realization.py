@@ -20,9 +20,11 @@ exact string membership plus support-mode compatibility.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
 from aces_backend_protocols.capabilities import BackendManifest
+from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp
 from aces_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
@@ -91,8 +93,15 @@ class CompiledRealizationRequirement:
     requirement_kind: str
     explicitness: ExplicitnessClass
 
+    def __post_init__(self) -> None:
+        require_compiled_address(self.address)
 
-def resolve_realization_concern(field_path: str) -> str | None:
+
+def resolve_realization_concern(
+    field_path: str,
+    *,
+    declaration_names: Mapping[str, Iterable[str]],
+) -> str | None:
     """Return the realization concern kind for a classifier path, or ``None``.
 
     Only the concerns the planner validates against backend capabilities map to
@@ -100,11 +109,10 @@ def resolve_realization_concern(field_path: str) -> str | None:
     a published kind and yields ``None``.
     """
 
-    parts = field_path.split(".")
-    if len(parts) != 3:
-        return None
-    head, _name, leaf = parts
-    return _CONCERN_KIND_BY_PATH.get((head, leaf))
+    for (head, leaf), concern_kind in _CONCERN_KIND_BY_PATH.items():
+        if any(field_path == f"{head}.{name}.{leaf}" for name in declaration_names.get(head, ())):
+            return concern_kind
+    return None
 
 
 def realization_support_diagnostics(

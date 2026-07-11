@@ -3489,6 +3489,12 @@
       "additionalProperties": false,
       "properties": {
         "address": {
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
           "title": "Address",
           "type": "string"
         },
@@ -3498,6 +3504,12 @@
         },
         "ordering_dependencies": {
           "items": {
+            "maxLength": 2048,
+            "minLength": 3,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
             "type": "string"
           },
           "title": "Ordering Dependencies",
@@ -3510,6 +3522,12 @@
         },
         "refresh_dependencies": {
           "items": {
+            "maxLength": 2048,
+            "minLength": 3,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
             "type": "string"
           },
           "title": "Refresh Dependencies",
@@ -3946,8 +3964,20 @@
   "description": "Published envelope for a live runtime snapshot.\n\nParticipant episode surfaces (``participant_episode_results`` and\n``participant_episode_history``) are both keyed by the stable\n``participant_address`` of the participant the state/history belongs\nto. SEM-208 participant behavior history is keyed the same way and\nrecords action, observation, and state-transition events with compiled\nbehavior-contract addresses. The episode results map carries the\ncurrently-live episode state per participant; prior episodes survive only\nthrough append-only history streams and the ``previous_episode_id`` chain\non each state.",
   "properties": {
     "entries": {
-      "additionalProperties": {
-        "$ref": "#/$defs/SnapshotEntryModel"
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$": {
+          "$ref": "#/$defs/SnapshotEntryModel"
+        }
+      },
+      "propertyNames": {
+        "maxLength": 2048,
+        "minLength": 3,
+        "not": {
+          "pattern": "[^a-z0-9_.-]"
+        },
+        "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
+        "type": "string"
       },
       "title": "Entries",
       "type": "object"

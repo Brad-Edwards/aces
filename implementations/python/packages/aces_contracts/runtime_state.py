@@ -9,6 +9,7 @@ from typing import Any
 
 from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
+from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import RuntimeDomain
 from aces_contracts.versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
@@ -35,6 +36,11 @@ class SnapshotEntry:
     ordering_dependencies: tuple[str, ...] = ()
     refresh_dependencies: tuple[str, ...] = ()
     status: str = "ready"
+
+    def __post_init__(self) -> None:
+        require_compiled_address(self.address)
+        for dependency in (*self.ordering_dependencies, *self.refresh_dependencies):
+            require_compiled_address(dependency, field_name="dependency address")
 
 
 @dataclass(frozen=True)
@@ -79,6 +85,12 @@ class RuntimeSnapshot:
     # concerns recorded across this snapshot's result / history surfaces.
     realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        for map_key, entry in self.entries.items():
+            require_compiled_address(map_key, field_name="snapshot map key")
+            if map_key != entry.address:
+                raise ValueError("RuntimeSnapshot entries map key must equal embedded address")
 
     def get(self, address: str) -> SnapshotEntry | None:
         return self.entries.get(address)
@@ -222,6 +234,9 @@ class ApplyResult:
     changed_addresses: list[str] = field(default_factory=list)
     details: dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        _validate_changed_addresses(self.changed_addresses)
+
 
 @dataclass(frozen=True)
 class OperationReceipt:
@@ -247,6 +262,16 @@ class OperationStatus:
     updated_at: str = ""
     diagnostics: list[Diagnostic] = field(default_factory=list)
     changed_addresses: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _validate_changed_addresses(self.changed_addresses)
+
+
+def _validate_changed_addresses(addresses: list[str]) -> None:
+    for address in addresses:
+        require_compiled_address(address, field_name="changed address")
+    if len(addresses) != len(set(addresses)):
+        raise ValueError("changed addresses must be unique")
 
 
 @dataclass(frozen=True)

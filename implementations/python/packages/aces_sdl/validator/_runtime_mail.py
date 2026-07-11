@@ -17,13 +17,6 @@ class _MailServiceLocalIds:
     routing_refs: set[str]
 
 
-@dataclass(frozen=True)
-class _MailRefTail:
-    service_id: str
-    collection_name: str
-    child_id: str
-
-
 _MailChildIdReader = Callable[[object], Iterable[str]]
 _MAIL_CHILD_ID_READERS: dict[str, _MailChildIdReader] = {
     "components": lambda service: (component.component_id for component in service.components),
@@ -43,11 +36,6 @@ def _mail_services_for_node(node: object) -> Sequence[object]:
     return () if runtime is None else runtime.mail_services
 
 
-def _mail_services_for_node_name(scenario: object, node_name: str) -> Sequence[object]:
-    node = scenario.nodes.get(node_name)
-    return () if node is None else _mail_services_for_node(node)
-
-
 def _collect_mail_service_local_ids(service: object) -> _MailServiceLocalIds:
     mailbox_ids = {mailbox.mailbox_id for mailbox in service.mailboxes}
     alias_ids = {alias.alias_id for alias in service.aliases}
@@ -60,35 +48,6 @@ def _collect_mail_service_local_ids(service: object) -> _MailServiceLocalIds:
         aliases=alias_ids,
         routing_refs=mailbox_ids | alias_ids | domain_ids,
     )
-
-
-def _parse_mail_ref_tail(tail: str) -> _MailRefTail | None:
-    tail_parts = tail.split(".")
-    if len(tail_parts) == 1:
-        return _MailRefTail(tail_parts[0], "", "")
-    if len(tail_parts) == 3:
-        return _MailRefTail(*tail_parts)
-    return None
-
-
-def _resolve_mail_service_tail(
-    mail_services: Sequence[object],
-    parsed_tail: _MailRefTail,
-) -> object | None:
-    for service in mail_services:
-        if service.mail_service_id != parsed_tail.service_id:
-            continue
-        return _matched_service_for_tail(service, parsed_tail)
-    return None
-
-
-def _matched_service_for_tail(service: object, parsed_tail: _MailRefTail) -> object | None:
-    matches_service = not parsed_tail.collection_name
-    matches_child = bool(
-        parsed_tail.collection_name
-        and _mail_child_ref_exists(service, parsed_tail.collection_name, parsed_tail.child_id)
-    )
-    return service if matches_service or matches_child else None
 
 
 def _mail_child_ref_exists(service: object, collection_name: str, child_id: str) -> bool:
@@ -294,14 +253,7 @@ class _RuntimeMailMixin:
 
     def _resolve_mail_service_ref(self, ref: object) -> object | None:
         """Resolve a qualified runtime mail-service or child ref to the service."""
-        split = self._split_runtime_ref(ref, surface="mail_services")
-        if split is None:
+        reference = self._runtime_reference(ref)
+        if reference is None or reference.family.collection_name != "mail_services":
             return None
-        node_name, tail = split
-        parsed_tail = _parse_mail_ref_tail(tail)
-        if parsed_tail is None:
-            return None
-        return _resolve_mail_service_tail(
-            _mail_services_for_node_name(self._s, node_name),
-            parsed_tail,
-        )
+        return reference.owning_item

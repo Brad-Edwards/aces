@@ -750,12 +750,14 @@ content:
     target: analytics-lake
     format: markdown
     items:
-    - name: canary-rollback.md
+    - name: canary-rollback
+      display_name: canary-rollback.md
       tags:
       - rollback
       - release
       description: Canary rollback checklist
-    - name: edge-validation.md
+    - name: edge-validation
+      display_name: edge-validation.md
       tags:
       - validation
       - edge

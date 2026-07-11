@@ -836,12 +836,14 @@ content:
     target: exchange01
     format: eml
     items:
-    - name: payroll-adjustment.eml
+    - name: payroll-adjustment
+      display_name: payroll-adjustment.eml
       tags:
       - phishing
       - attachment
       description: Message crafted to lure helpdesk review
-    - name: vendor-followup.eml
+    - name: vendor-followup
+      display_name: vendor-followup.eml
       tags:
       - phishing
       - vendor

@@ -306,3 +306,6 @@ adrs:
   - id: ADR-074
     path: docs/decisions/adrs/adr-074-experiment-authoring-input-contract-boundary.md
     pin: 74dd29e3e5f3a2b7bdf836bd40908c0840c51f46a1a89efbb191e6ce7f620ce5
+  - id: ADR-076
+    path: docs/decisions/adrs/adr-076-portable-sdl-identifiers-and-canonical-addresses.md
+    pin: cd28329002c1befb1920f0037c07517adbe3811d15e4f559455d05b893c69203

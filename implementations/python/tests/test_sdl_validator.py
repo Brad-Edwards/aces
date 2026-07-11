@@ -1,6 +1,7 @@
 """Tests for SDL semantic validation."""
 
 import pytest
+from pydantic import ValidationError
 
 from aces.core.sdl._errors import SDLValidationError
 from aces.core.sdl.scenario import Scenario
@@ -59,13 +60,8 @@ class TestVerifyNodes:
 
     def test_node_name_too_long(self):
         long_name = "a" * 36
-        s = _make_scenario(
-            nodes={
-                long_name: {"type": "switch"},
-            },
-        )
-        errors = _validate(s)
-        assert any("35 characters" in e for e in errors)
+        with pytest.raises(ValidationError, match="35 characters"):
+            _make_scenario(nodes={long_name: {"type": "switch"}})
 
     @pytest.mark.parametrize(
         ("field_name", "section_name", "section_value", "error_fragment"),
@@ -251,12 +247,12 @@ class TestVerifyRuntimeNetwork:
 
     def test_endpoint_network_variable_reference_is_skipped(self):
         s = _make_scenario(
-            variables={"TARGET_NET": {"type": "string", "required": True}},
+            variables={"target_net": {"type": "string", "required": True}},
             nodes={
                 "vm": {
                     "type": "vm",
                     "resources": {"ram": "1 gib", "cpu": 1},
-                    "runtime": {"network": {"endpoints": [{"network": "${TARGET_NET}"}]}},
+                    "runtime": {"network": {"endpoints": [{"network": "${target_net}"}]}},
                 },
             },
         )
@@ -319,7 +315,7 @@ class TestVerifyRuntimeCapabilityOverrides:
 
     def test_override_with_variable_subject_name_is_skipped(self):
         s = _make_scenario(
-            variables={"SHELL_NAME": {"type": "string", "required": True}},
+            variables={"shell_name": {"type": "string", "required": True}},
             nodes={
                 "vm": {
                     "type": "vm",
@@ -331,7 +327,7 @@ class TestVerifyRuntimeCapabilityOverrides:
                         "linux_capabilities": {
                             "process_overrides": [
                                 {
-                                    "subject": {"name": "${SHELL_NAME}"},
+                                    "subject": {"name": "${shell_name}"},
                                     "scope": "subtree",
                                     "drop": ["CAP_AUDIT_CONTROL"],
                                 }
@@ -636,14 +632,14 @@ class TestVerifyRelationships:
         errors = _validate(s)
         assert not errors
 
-    def test_relationship_can_target_variable(self):
+    def test_relationship_rejects_non_targetable_variable(self):
         s = _make_scenario(
             nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
             variables={"env": {"type": "string", "default": "prod"}},
             relationships={"r1": {"type": "connects_to", "source": "vm", "target": "env"}},
         )
         errors = _validate(s)
-        assert not errors
+        assert any("does not reference any defined targetable element" in error for error in errors)
 
     def test_relationship_can_target_other_relationship(self):
         s = _make_scenario(
@@ -663,11 +659,11 @@ class TestVerifyRelationships:
                 "dataset": {
                     "type": "dataset",
                     "target": "vm",
-                    "items": [{"name": "budget.eml"}],
+                    "items": [{"name": "budget-email", "display_name": "budget.eml"}],
                 }
             },
             relationships={
-                "r1": {"type": "connects_to", "source": "vm", "target": "budget.eml"},
+                "r1": {"type": "connects_to", "source": "vm", "target": "budget-email"},
             },
         )
         errors = _validate(s)
@@ -2712,7 +2708,11 @@ class TestVerifyRuntimeApplication:
     def test_application_qualified_service_ref_other_node_is_rejected(self):
         s = _make_scenario(
             nodes={
-                "other": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "other": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "services": [{"port": 8081, "name": "http"}],
+                },
                 "vm": self._node_with_application(
                     {"application_id": "app", "service": "nodes.other.services.http"},
                     services=[{"port": 8080, "name": "http"}],
@@ -2724,9 +2724,9 @@ class TestVerifyRuntimeApplication:
 
     def test_application_service_variable_reference_is_skipped(self):
         s = _make_scenario(
-            variables={"SVC": {"type": "string", "required": True}},
+            variables={"svc": {"type": "string", "required": True}},
             nodes={
-                "vm": self._node_with_application({"application_id": "app", "service": "${SVC}"}),
+                "vm": self._node_with_application({"application_id": "app", "service": "${svc}"}),
             },
         )
         assert _validate(s) == []
@@ -3391,7 +3391,7 @@ class TestVerifyRelationshipDatabaseAccess:
 
     def test_database_access_variable_source_is_skipped(self):
         # An unresolved ${var} source is left for instantiation, not flagged.
-        s = self._scenario_with_app_and_db(source="${APP_REF}")
+        s = self._scenario_with_app_and_db(source="${app_ref}")
         assert not any("does not resolve to a runtime application" in e for e in _validate(s))
 
 
@@ -3616,19 +3616,12 @@ class TestVerifyRelationshipProxyUpstream:
         )
         assert _validate(s) == []
 
-    def test_proxy_upstream_accepts_dotted_node_names_in_qualified_service_refs(self):
-        s = self._scenario_with_proxy(
-            route_upstream={
-                "target_node_ref": "app.backend",
-                "target_service": "nodes.app.backend.services.app",
-                "tls_terminated_here": True,
-            },
-            proxy_upstream={"client_tls_terminated": True},
-            proxy_node_name="front.proxy",
-            backend_node_name="app.backend",
-            relationship_target="nodes.app.backend.services.app",
-        )
-        assert _validate(s) == []
+    def test_proxy_upstream_rejects_dotted_authored_node_names(self):
+        with pytest.raises(ValidationError, match="nodes declaration key must be a portable SDL identifier"):
+            self._scenario_with_proxy(
+                proxy_node_name="front.proxy",
+                backend_node_name="app.backend",
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -3682,7 +3675,11 @@ class TestVerifyRuntimeSshServer:
     def test_qualified_service_ref_other_node_rejected(self):
         s = _make_scenario(
             nodes={
-                "other": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "other": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "services": [{"port": 2222, "name": "ssh"}],
+                },
                 "vm": self._node_with_ssh_server(
                     {"ssh_server_id": "sshd-default", "service": "nodes.other.services.ssh"},
                     services=[{"port": 22, "name": "ssh"}],
@@ -3705,10 +3702,10 @@ class TestVerifyRuntimeSshServer:
 
     def test_service_variable_reference_skipped(self):
         s = _make_scenario(
-            variables={"SVC": {"type": "string", "required": True}},
+            variables={"svc": {"type": "string", "required": True}},
             nodes={
                 "vm": self._node_with_ssh_server(
-                    {"ssh_server_id": "sshd-default", "service": "${SVC}"},
+                    {"ssh_server_id": "sshd-default", "service": "${svc}"},
                 ),
             },
         )

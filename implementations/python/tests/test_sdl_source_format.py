@@ -129,20 +129,20 @@ def test_migration_policy_accepts_aliases_with_source_ranged_advisories(tmp_path
 
 
 def test_literal_identifiers_are_not_migration_aliases() -> None:
-    scenario = parse_sdl(
-        textwrap.dedent(
-            """
-            name: literal-ids
-            nodes:
-              Web-App: {type: switch}
-              web_app: {type: switch}
-            """
-        ),
-        migration_policy=SDLMigrationPolicy.ACCEPT,
-    )
+    with pytest.raises(SDLParseError) as exc_info:
+        parse_sdl(
+            textwrap.dedent(
+                """
+                name: literal-ids
+                nodes:
+                  Web-App: {type: switch}
+                  web_app: {type: switch}
+                """
+            ),
+            migration_policy=SDLMigrationPolicy.ACCEPT,
+        )
 
-    assert set(scenario.nodes) == {"Web-App", "web_app"}
-    assert scenario.source_diagnostics == ()
+    assert _diagnostic_codes(exc_info.value) == {"sdl.identifier.invalid"}
 
 
 def test_merge_keys_are_migration_only_and_conflicts_remain_fatal() -> None:

@@ -111,6 +111,36 @@ workflows:
     }
 
 
+def test_valid_document_completions_use_typed_nested_declarations() -> None:
+    sdl = """\
+name: nested-completions
+nodes:
+  web:
+    type: vm
+    resources: {ram: 1 GiB, cpu: 1}
+    services: [{name: http, port: 80}]
+  api:
+    type: vm
+    resources: {ram: 1 GiB, cpu: 1}
+    services: [{name: http, port: 8080}]
+content:
+  fixtures:
+    type: dataset
+    target: web
+    items: [{name: seed-file, display_name: seed.json}]
+relationships:
+  serves: {type: connects_to, source: web, target: api}
+"""
+
+    result = language_completions(sdl, cursor_path="/relationships/serves/target")
+    by_detail = {item["detail"]: item for item in result["items"]}
+
+    assert result["context"] == "reference:targetable"
+    assert by_detail["content.fixtures.items.seed-file"]["label"] == "seed-file"
+    assert by_detail["nodes.web.services.http"]["label"] == "nodes.web.services.http"
+    assert by_detail["nodes.api.services.http"]["label"] == "nodes.api.services.http"
+
+
 def test_qualified_targetable_reference_reports_occurrence() -> None:
     sdl = """\
 name: targetable-reference

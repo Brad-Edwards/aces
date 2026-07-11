@@ -20,6 +20,7 @@ from aces_backend_protocols.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
+from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic as Diagnostic
 from aces_contracts.diagnostics import Severity as Severity
 from aces_contracts.evaluation import (
@@ -4231,6 +4232,47 @@ class RuntimeModel:
     # `node_variable_refs`); it never enters the backend-facing
     # `resource_payload()` envelope. Consumed by the planner realization gate.
     realization_requirements: tuple[CompiledRealizationRequirement, ...] = ()
+
+    def __post_init__(self) -> None:
+        owners: dict[str, str] = {}
+        address_map_fields = (
+            "networks",
+            "node_deployments",
+            "feature_bindings",
+            "condition_bindings",
+            "injects",
+            "inject_bindings",
+            "content_placements",
+            "account_placements",
+            "action_contracts",
+            "observation_boundaries",
+            "outcome_interpretation_rules",
+            "participant_behaviors",
+            "behavior_specifications",
+            "events",
+            "scripts",
+            "stories",
+            "workflows",
+            "objectives",
+        )
+        for field_name in address_map_fields:
+            value = getattr(self, field_name)
+            for map_key, item in value.items():
+                address = getattr(item, "address", None)
+                if not isinstance(address, str):
+                    raise TypeError(f"RuntimeModel {field_name} entries must carry an address")
+                require_compiled_address(address)
+                require_compiled_address(map_key, field_name="runtime model map key")
+                if map_key != address:
+                    raise ValueError(f"RuntimeModel {field_name} map key must equal embedded address")
+                previous_owner = owners.get(address)
+                if previous_owner is not None and previous_owner != field_name:
+                    raise ValueError(
+                        f"RuntimeModel duplicate compiled address across {previous_owner} and {field_name}"
+                    )
+                owners[address] = field_name
+        for address in self.node_variable_refs:
+            require_compiled_address(address, field_name="node variable reference map key")
 
 
 @dataclass(frozen=True)

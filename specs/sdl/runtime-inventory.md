@@ -82,8 +82,9 @@ not contradict these.
 
 1. **Identity (`<noun>_id`).** Every family element and every addressable child
    element carries a stable `<noun>_id`. The id **MUST** be unique within its
-   collection and symbol-shaped (no whitespace or quoting that would make it
-   unaddressable in a qualified path; [document-model.md §6](document-model.md)).
+   collection and use the portable local-identifier grammar
+   ([document-model.md §6](document-model.md)). Runtime/native/provider ids that
+   are not ACES-local declaration identities retain their owning contracts.
    References address elements by these ids ([references.md](references.md)).
 2. **Enum sentinels.** An open enum carries a closed core of well-defined values
    plus the sentinels `unknown` and `other`, so an authored value can record

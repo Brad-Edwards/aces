@@ -51,7 +51,7 @@ def test_format_round_trip_preserves_semantic_identity_and_canonical_bytes() -> 
         Description: same
         Name: round-trip
         nodes:
-          Web-App: {Type: SWITCH}
+          web-app: {Type: SWITCH}
         """
     )
     before = parse_sdl(source, migration_policy=SDLMigrationPolicy.ACCEPT)
@@ -89,8 +89,8 @@ def test_canonical_bytes_preserve_authored_field_presence() -> None:
 
 
 def test_canonical_bytes_do_not_normalize_unicode() -> None:
-    composed = parse_sdl("name: caf\N{LATIN SMALL LETTER E WITH ACUTE}\n")
-    decomposed = parse_sdl("name: cafe\N{COMBINING ACUTE ACCENT}\n")
+    composed = parse_sdl("name: unicode\ndescription: caf\N{LATIN SMALL LETTER E WITH ACUTE}\n")
+    decomposed = parse_sdl("name: unicode\ndescription: cafe\N{COMBINING ACUTE ACCENT}\n")
 
     assert canonical_sdl_bytes(composed) != canonical_sdl_bytes(decomposed)
 

@@ -207,8 +207,8 @@ class TestReferenceProcessorEndToEndEvidence:
         control_plane = RuntimeControlPlane(target)
         for sub_plan, submit in (
             (result.execution_plan.provisioning, control_plane.submit_provisioning),
-            (result.execution_plan.orchestration, control_plane.submit_orchestration),
             (result.execution_plan.evaluation, control_plane.submit_evaluation),
+            (result.execution_plan.orchestration, control_plane.submit_orchestration),
         ):
             receipt = submit(sub_plan)
             assert receipt.accepted, receipt.diagnostics

@@ -297,6 +297,7 @@ def parse_sdl(
         SDLValidationError: If semantic validation finds errors.
     """
     source_diagnostics: list[SDLParseDiagnostic] = []
+    source_ranges: dict[str, SDLSourceRange] = {}
     data = _load_normalized_data(
         content,
         path=path,
@@ -304,6 +305,7 @@ def parse_sdl(
         migration_policy=migration_policy,
         limits=limits,
         source_diagnostics=source_diagnostics,
+        source_ranges=source_ranges,
     )
     _reject_removed_scoring_sections(data, path=path)
     module_variable_specs: dict[str, dict[str, object]] = {}
@@ -337,7 +339,7 @@ def parse_sdl(
     try:
         scenario = scenario_cls(**data)
     except ValidationError as e:
-        raise SDLParseError(str(e), path=path) from e
+        raise _model_parse_error(e, path=path, source_ranges=source_ranges) from e
 
     source_diagnostics = _dedupe_source_diagnostics(source_diagnostics)
 
@@ -389,6 +391,71 @@ def _dedupe_source_diagnostics(
     return unique
 
 
+def _pointer_from_location(location: tuple[object, ...]) -> str:
+    tokens = [str(part) for part in location if str(part) != "[key]"]
+    return "".join(f"/{token.replace('~', '~0').replace('/', '~1')}" for token in tokens)
+
+
+def _nearest_source_range(pointer: str, source_ranges: dict[str, SDLSourceRange]) -> SDLSourceRange:
+    candidate = pointer
+    while candidate:
+        source_range = source_ranges.get(candidate)
+        if source_range is not None:
+            return source_range
+        candidate = candidate.rsplit("/", 1)[0]
+    source_range = source_ranges.get("")
+    if source_range is not None:
+        return source_range
+    position = SDLSourcePosition(1, 1)
+    return SDLSourceRange(start=position, end=position)
+
+
+_MODEL_DIAGNOSTIC_MESSAGE_MAX_LENGTH = 512
+
+
+def _bounded_model_message(message: str) -> str:
+    """Render validator-owned prose without Pydantic's input or traceback."""
+
+    if message.startswith("Value error, "):
+        message = message.removeprefix("Value error, ")
+    escaped = "".join(character if character.isprintable() else f"\\u{ord(character):04x}" for character in message)
+    if len(escaped) <= _MODEL_DIAGNOSTIC_MESSAGE_MAX_LENGTH:
+        return escaped
+    return escaped[: _MODEL_DIAGNOSTIC_MESSAGE_MAX_LENGTH - 3] + "..."
+
+
+def _model_parse_error(
+    error: ValidationError,
+    *,
+    path: Path | None,
+    source_ranges: dict[str, SDLSourceRange],
+) -> SDLParseError:
+    diagnostics: list[SDLParseDiagnostic] = []
+    for item in error.errors(include_input=False, include_url=False):
+        pointer = _pointer_from_location(tuple(item.get("loc", ())))
+        raw_message = str(item.get("msg", ""))
+        is_identifier = "portable SDL identifier" in raw_message or "qualified SDL identifier" in raw_message
+        message = _bounded_model_message(raw_message)
+        diagnostics.append(
+            SDLParseDiagnostic(
+                code="sdl.identifier.invalid" if is_identifier else "sdl.model.invalid",
+                message=message,
+                pointer=pointer,
+                primary_range=_nearest_source_range(pointer, source_ranges),
+                source=str(path) if path is not None else None,
+            )
+        )
+    diagnostics = _dedupe_source_diagnostics(diagnostics)
+    rendered = "; ".join(f"{diagnostic.pointer or '/'}: {diagnostic.message}" for diagnostic in diagnostics[:8])
+    if len(diagnostics) > 8:
+        rendered += f", and {len(diagnostics) - 8} more"
+    return SDLParseError(
+        f"SDL model validation failed at {rendered or '/'}",
+        path=path,
+        diagnostics=diagnostics,
+    )
+
+
 def parse_sdl_file(path: Path, **kwargs: Any) -> Scenario:
     """Parse an SDL YAML file into a validated Scenario.
 
@@ -420,6 +487,7 @@ def _load_normalized_data(
     migration_policy: SDLMigrationPolicy | str = SDLMigrationPolicy.REJECT,
     limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
     source_diagnostics: list[SDLParseDiagnostic] | None = None,
+    source_ranges: dict[str, SDLSourceRange] | None = None,
 ) -> dict[str, Any]:
     raw = load_sdl_yaml(
         content,
@@ -430,6 +498,7 @@ def _load_normalized_data(
             limits=limits,
         ),
         source_diagnostics=source_diagnostics,
+        source_ranges=source_ranges,
     )
 
     if not isinstance(raw, dict):

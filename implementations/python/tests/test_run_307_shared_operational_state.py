@@ -290,7 +290,7 @@ def test_backend_apply_rejects_shared_state_in_metadata() -> None:
     )
 
     assert result.success is False
-    assert any("shared_state_records" in diagnostic.message for diagnostic in result.diagnostics)
+    assert any(diagnostic.code == "runtime.backend-contract-invalid" for diagnostic in result.diagnostics)
 
 
 def test_backend_apply_rejects_shared_state_history_rewrite() -> None:

@@ -26,6 +26,7 @@ import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from aces_backend_protocols.naming import provider_resource_name
 from aces_contracts.diagnostics import Diagnostic, Severity
 
 from aces_reference_backend.driver import (
@@ -158,16 +159,18 @@ class OciDeploymentDriver:
         diagnostics: list[Diagnostic] = []
         network_handles: list[NetworkHandle] = []
         for spec in networks:
-            argv = [self._runtime, "network", "create", *self._label_args(), spec.name]
+            runtime_name = provider_resource_name(spec.address, prefix="aces")
+            argv = [self._runtime, "network", "create", *self._label_args(), runtime_name]
             ok, kind = self._run(argv)
             if ok:
                 self._realized.add(spec.address)
-                self._names[spec.address] = spec.name
+                self._names[spec.address] = runtime_name
                 network_handles.append(NetworkHandle(address=spec.address, realized=True))
             else:
                 diagnostics.append(self._failure(spec.address, kind))
         container_handles: list[ContainerHandle] = []
         for spec in containers:
+            runtime_name = provider_resource_name(spec.address, prefix="aces")
             image = self._image_policy.image_for(spec.image_ref)
             if not self._image_policy.permits(image):
                 diagnostics.append(self._image_rejected(spec.address))
@@ -179,7 +182,7 @@ class OciDeploymentDriver:
                 "--rm",
                 *self._label_args(),
                 "--name",
-                spec.name,
+                runtime_name,
                 # Attach the container to every requested network (created above
                 # in this same realize() call) so planned topology is honored,
                 # not silently left on the runtime default network. spec.networks
@@ -194,7 +197,7 @@ class OciDeploymentDriver:
             ok, kind = self._run(argv)
             if ok:
                 self._realized.add(spec.address)
-                self._names[spec.address] = spec.name
+                self._names[spec.address] = runtime_name
                 container_handles.append(ContainerHandle(address=spec.address, realized=True))
             else:
                 diagnostics.append(self._failure(spec.address, kind))
@@ -228,9 +231,7 @@ class OciDeploymentDriver:
             self.destroy(networks=realized_networks, containers=realized_containers)
 
     def _name_for(self, address: str) -> str:
-        # Remove by the name realize() used; fall back to the address's last
-        # segment for resources this driver did not create (best effort).
-        return self._names.get(address, address.rsplit(".", 1)[-1])
+        return self._names.get(address, provider_resource_name(address, prefix="aces"))
 
     def destroy(
         self,

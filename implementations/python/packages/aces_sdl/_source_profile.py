@@ -22,7 +22,7 @@ class SDLMigrationPolicy(str, Enum):
 
 @dataclass(frozen=True)
 class SDLParserLimits:
-    """Operational work limits for one SDL YAML source document."""
+    """Operational work limits for one source and its composition graph."""
 
     max_input_bytes: int = 8 * 1024 * 1024
     max_scalar_bytes: int = 1024 * 1024
@@ -30,6 +30,11 @@ class SDLParserLimits:
     max_nodes: int = 100_000
     max_aliases: int = 256
     max_expanded_nodes: int = 250_000
+    max_imports: int = 256
+    max_composed_nodes: int = 500_000
+    max_composed_bytes: int = 32 * 1024 * 1024
+    max_composition_depth: int = 32
+    max_namespace_depth: int = 32
 
     def __post_init__(self) -> None:
         for name, value in vars(self).items():

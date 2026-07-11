@@ -1268,11 +1268,11 @@ class TestNode:
 
     def test_runtime_container_seccomp_consistency_allows_variable_placeholder(self):
         container = RuntimeContainerConfiguration(
-            seccomp_profile="${SECCOMP}",
+            seccomp_profile="${seccomp}",
             security_opt=["seccomp:unconfined"],
         )
 
-        assert container.seccomp_profile == "${SECCOMP}"
+        assert container.seccomp_profile == "${seccomp}"
 
     def test_runtime_container_seccomp_rejects_disagreeing_security_opt_entries(self):
         with pytest.raises(ValidationError, match="seccomp_profile"):
@@ -1851,14 +1851,14 @@ class TestRuntimeNetworkRealization:
     def test_endpoint_accepts_variable_placeholders(self):
         ep = RuntimeNetworkEndpoint(
             network="aptl-dmz",
-            ip_address="${WEBAPP_IP}",
-            gateway="${DMZ_GATEWAY}",
-            mac_address="${WEBAPP_MAC}",
-            ip_prefix_length="${PREFIX}",
+            ip_address="${webapp_ip}",
+            gateway="${dmz_gateway}",
+            mac_address="${webapp_mac}",
+            ip_prefix_length="${prefix}",
         )
-        assert ep.ip_address == "${WEBAPP_IP}"
-        assert ep.mac_address == "${WEBAPP_MAC}"
-        assert ep.ip_prefix_length == "${PREFIX}"
+        assert ep.ip_address == "${webapp_ip}"
+        assert ep.mac_address == "${webapp_mac}"
+        assert ep.ip_prefix_length == "${prefix}"
 
     def test_published_port_protocol_normalized_and_required(self):
         binding = RuntimePublishedPort(container_port="443", protocol="TCP")
@@ -2313,7 +2313,7 @@ class TestContent:
             type="dataset",
             target="exchange",
             format="eml",
-            items=[ContentItem(name="email.eml", tags=["phishing"])],
+            items=[ContentItem(name="email", display_name="email.eml", tags=["phishing"])],
         )
         assert len(c.items) == 1
         assert c.items[0].tags == ["phishing"]
@@ -3011,11 +3011,11 @@ class TestRuntimeApplicationSurface:
             RuntimeApplicationRoute(route_id="r1", path="/login", methods=["FETCH"])
 
     def test_route_id_rejects_variable_placeholder(self):
-        with pytest.raises(ValidationError, match="must be a stable identifier"):
+        with pytest.raises(ValidationError, match="portable SDL identifier"):
             RuntimeApplicationRoute(route_id="${rid}", path="/login", methods=["GET"])
 
     def test_application_id_rejects_variable_placeholder(self):
-        with pytest.raises(ValidationError, match="must be a stable identifier"):
+        with pytest.raises(ValidationError, match="portable SDL identifier"):
             RuntimeApplicationSurface(application_id="${aid}")
 
     def test_response_status_code_range(self):
@@ -3623,11 +3623,11 @@ class TestRuntimeDatabaseService:
             DatabaseListener(address="*", port=70000)
 
     def test_database_service_id_rejects_variable_placeholder(self):
-        with pytest.raises(ValidationError, match="database_service_id must be a stable identifier"):
+        with pytest.raises(ValidationError, match="database_service_id must be a portable SDL identifier"):
             RuntimeDatabaseService(database_service_id="${svc}")
 
     def test_table_id_rejects_variable_placeholder(self):
-        with pytest.raises(ValidationError, match="table_id must be a stable identifier"):
+        with pytest.raises(ValidationError, match="table_id must be a portable SDL identifier"):
             DatabaseTable(table_id="${t}", name="users")
 
     def test_object_name_allows_variable_placeholder(self):
@@ -3711,8 +3711,8 @@ class TestRuntimeDatabaseService:
         assert setting.value_classification == RuntimeSensitivityClassification.PLAIN
 
     def test_secret_bearing_name_with_variable_classification_is_skipped(self):
-        setting = DatabaseSetting(name="password", value_classification="${CLS}")
-        assert setting.value_classification == "${CLS}"
+        setting = DatabaseSetting(name="password", value_classification="${cls}")
+        assert setting.value_classification == "${cls}"
 
     def test_non_secret_setting_keeps_default_unknown_classification(self):
         setting = DatabaseSetting(name="shared_buffers", value="128MB")
@@ -3740,9 +3740,9 @@ class TestRuntimeDatabaseService:
             RuntimeDatabaseService(database_service_id="svc", engine="cobol-db")
 
     def test_engine_protocol_accept_variable_placeholder(self):
-        svc = RuntimeDatabaseService(database_service_id="svc", engine="${ENGINE}", protocol="${PROTO}")
-        assert svc.engine == "${ENGINE}"
-        assert svc.protocol == "${PROTO}"
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="${engine}", protocol="${proto}")
+        assert svc.engine == "${engine}"
+        assert svc.protocol == "${proto}"
 
     @pytest.mark.parametrize(
         "engine,bad_protocol,expected_protocol",
@@ -3766,8 +3766,8 @@ class TestRuntimeDatabaseService:
             RuntimeDatabaseService(database_service_id="svc", engine="postgresql")
 
     def test_engine_with_variable_protocol_is_skipped(self):
-        svc = RuntimeDatabaseService(database_service_id="svc", engine="postgresql", protocol="${PROTO}")
-        assert svc.protocol == "${PROTO}"
+        svc = RuntimeDatabaseService(database_service_id="svc", engine="postgresql", protocol="${proto}")
+        assert svc.protocol == "${proto}"
 
     def test_mariadb_engine_accepts_mysql_protocol(self):
         svc = RuntimeDatabaseService(database_service_id="svc", engine="mariadb", protocol="mysql")

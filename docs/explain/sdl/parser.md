@@ -10,9 +10,10 @@ construction. It is usually an `FM0` surface under the repository's
 [coding standards](../reference/coding-standards.md): parser work normally
 needs ordinary tests, not state-machine modeling or solver-backed formal
 artifacts, unless it also introduces new semantic invariants above raw syntax.
-The mapping-key injectivity gate is such an invariant and is treated as `FM1`:
-table-driven and property tests pin ambiguity rejection and literal-map
-preservation.
+The mapping-key gate is `FM1`; portable declaration identity, canonical-address
+injectivity, and cross-stage coherence are `FM2`. Table-driven, property, and
+differential tests pin grammar parity, ambiguity rejection, literal-map
+preservation, and processor/runtime agreement.
 
 ## Canonical Fields and Migration
 
@@ -22,12 +23,15 @@ Canonical SDL structural fields use exact lower-case `snake_case`:
 - `start_time` is canonical; `start-time` is migration syntax.
 - `semantic_version` is canonical; `Semantic-Version` is migration syntax.
 
-**User-defined names are preserved as-is.** Node names, feature names, account names, entity fact keys, and other HashMap keys are not transformed. This ensures cross-references remain consistent.
+Declaration identities are preserved exactly but must already use the portable
+local-id grammar `^[a-z0-9][a-z0-9_-]{0,63}$` (node local ids have a 35-character
+maximum). The parser never lowercases or sanitizes an invalid id. Native/data
+map keys such as entity facts remain under their own contracts.
 
 ```yaml
-# "My-Switch" is preserved; structural field "type" is exact.
+# "my-switch" is a portable declaration id; structural field "type" is exact.
 nodes:
-  My-Switch:
+  my-switch:
     type: switch
 ```
 
@@ -35,13 +39,13 @@ Ordinary parsing is strict. Callers doing a deliberate conversion can select
 `SDLMigrationPolicy.ACCEPT` or use `aces sdl format`; each recognized rewrite
 produces a source-ranged `sdl.noncanonical_field` or
 `sdl.noncanonical_merge` warning. The formatter emits strict, typed, longhand
-YAML and never rewrites literal identifiers.
+YAML and never invents identifier renames.
 
 Field aliases do not imply precedence. Writing both `Name` and `name`, or both
 `password-strength` and `password_strength`, in one structural mapping is a
 fatal `sdl.mapping_key_conflict`. Exact duplicates are also fatal in
-user-defined and native maps, but distinct literal keys such as `Web-App` and
-`web_app` remain distinct identifiers.
+user-defined and native maps, but distinct valid declaration ids such as
+`web-app` and `web_app` remain distinct.
 
 The check runs over the composed YAML node graph before a Python dictionary is
 constructed, so it retains both authored spellings and source ranges. YAML
@@ -77,7 +81,12 @@ placeholder. For example, `infrastructure: {web: ${replicas}}` expands to
 
 ## Variables
 
-Full-value `${var_name}` placeholders and embedded `${var_name}` tokens are preserved as literal strings during parsing. Structural validation currently accepts placeholders in ordinary string fields, common scalar/time fields, many reference values, and selected leaf enum-backed property fields. The parser does not substitute variables or evaluate expressions. It also rejects placeholder tokens in user-defined mapping keys, because those keys define the SDL symbol table and must stay concrete.
+Full-value `${var_name}` placeholders and embedded `${var_name}` tokens are
+preserved as literal strings during parsing. Variable names use the same
+portable local-id grammar. Structural validation accepts placeholders only in
+fields whose owning contract permits parameterization. The parser does not
+substitute variables or evaluate expressions, and no placeholder may define or
+rename an SDL identity.
 
 The intended boundary is:
 
@@ -127,8 +136,9 @@ their strict decoded object validates against it directly.
 4. **Safe construction** — construct JSON-domain native values only after ambiguity checks
 5. **Typed normalization** — expand shorthands and normalize declared field values
 6. **Pydantic construction** — structural validation (types, ranges, required fields)
-7. **Module expansion** — resolve file-backed imports before full semantic validation
-8. **Semantic validation** — cross-reference checks plus variable-reference checks (see [validation.md](validation.md))
+7. **Module expansion** — resolve descriptor-bearing file-backed imports with explicit namespaces and one aggregate composition budget
+8. **Declaration indexing** — retain typed provenance, reject canonical-address collisions, and build aliases
+9. **Semantic validation** — exact cross-reference checks plus variable-reference checks (see [validation.md](validation.md))
 
 On success, the returned `Scenario` may still carry non-fatal advisories in `scenario.advisories` (for example, VM nodes without explicit `resources`).
 
@@ -177,7 +187,7 @@ asserts the compiled output is byte-identical.
 
 Top-level composition supports:
 
-- optional `module` descriptors for publishable SDL modules
+- explicit `module` descriptors on every imported unit
 - `imports` using backward-compatible `path:` or canonical `source:`
 - `source:` classes `local:`, `oci:`, and `locked:`
 - repo-owned trust and resolution files:
@@ -188,9 +198,17 @@ Import `source:` values are not treated as ordinary SDL package-source
 shorthand. They are resolved by the composition layer, not expanded into
 `{name, version}` package dictionaries.
 
+Every import supplies one portable `namespace`; filenames and source paths are
+never converted into identity. Composition alone creates dotted qualified
+names and the reserved `__private` segment. Raw dotted declaration keys are
+invalid, including when migration acceptance is enabled.
+
 ## Error Types
 
 - `SDLParseError` — YAML syntax errors and structural validation failures;
   mapping-key failures carry structured `.diagnostics` with stable code, JSON
-  Pointer, authored spellings, and source ranges
+  Pointer, authored spellings, and source ranges; invalid declaration keys and
+  scalar ids use `sdl.identifier.invalid` and do not echo the invalid spelling;
+  other typed-model failures use `sdl.model.invalid` with a control-escaped,
+  512-character-bounded domain message and no Pydantic input rendering
 - `SDLValidationError` — semantic validation failures (has `.errors` list with all issues)

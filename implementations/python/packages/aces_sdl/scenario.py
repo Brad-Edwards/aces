@@ -13,12 +13,19 @@ outside the SDL.
 """
 
 from collections.abc import Mapping
-from typing import Annotated
+from typing import ClassVar
 
-from pydantic import ConfigDict, Field, PrivateAttr, StringConstraints, model_validator
+from pydantic import ConfigDict, Field, PrivateAttr, model_validator
 
-from ._base import VARIABLE_NAME_PATTERN, VARIABLE_TOKEN_RE, SDLModel
+from ._base import VARIABLE_TOKEN_RE, SDLModel
 from ._errors import SDLParseDiagnostic
+from ._identifiers import (
+    PortableIdentifier,
+    QualifiedName,
+    require_module_identifier,
+    require_portable_identifier,
+)
+from ._mapping_scopes import HASHMAP_SECTIONS
 from .accounts import Account
 from .agents import Agent
 from .conditions import Condition
@@ -42,8 +49,8 @@ from .runtime_forwarding_agent import RuntimeForwardingAgent
 from .variables import Variable
 from .vulnerabilities import Vulnerability
 
-VariableName = Annotated[str, StringConstraints(pattern=f"^{VARIABLE_NAME_PATTERN}$")]
-VariableDefinitions = dict[VariableName, Variable]
+VariableName = PortableIdentifier
+VariableDefinitions = dict[PortableIdentifier, Variable]
 
 
 def _collect_variable_tokens(value: object) -> list[str]:
@@ -70,14 +77,13 @@ class ModuleDescriptor(SDLModel):
 
     id: str
     version: str
-    parameters: list[str] = Field(default_factory=list)
+    parameters: list[PortableIdentifier] = Field(default_factory=list)
     exports: dict[str, list[str]] = Field(default_factory=dict)
     description: str = ""
 
     @model_validator(mode="after")
     def validate_descriptor(self) -> "ModuleDescriptor":
-        if "/" not in self.id or self.id.startswith("/") or self.id.endswith("/"):
-            raise ValueError("module.id must use canonical 'publisher/name' format")
+        require_module_identifier(self.id)
         if len(self.parameters) != len(set(self.parameters)):
             raise ValueError("module.parameters must be unique")
         for section, names in self.exports.items():
@@ -93,7 +99,7 @@ class ImportDecl(SDLModel):
     path: str = ""
     namespace: str = ""
     version: str = "*"
-    parameters: dict[str, object] = Field(default_factory=dict)
+    parameters: dict[PortableIdentifier, object] = Field(default_factory=dict)
     digest: str = ""
 
     @model_validator(mode="after")
@@ -102,11 +108,9 @@ class ImportDecl(SDLModel):
             raise ValueError("Import requires either 'source' or deprecated 'path'")
         if self.source and self.path:
             raise ValueError("Import may specify only one of 'source' or 'path'")
-        if self.path and not self.namespace:
-            # Local path imports remain backward compatible and may derive namespace.
-            return self
-        if self.source.startswith("oci:") and not self.namespace:
-            raise ValueError("OCI imports require an explicit namespace")
+        if not self.namespace:
+            raise ValueError("Import requires an explicit namespace")
+        require_portable_identifier(self.namespace, field_name="namespace")
         return self
 
     @property
@@ -134,8 +138,10 @@ class Scenario(SDLModel):
         },
     )
 
+    _allows_qualified_declaration_keys: ClassVar[bool] = False
+
     # --- Identity ---
-    name: str
+    name: PortableIdentifier
     version: str = "*"
     description: str = ""
     module: ModuleDescriptor | None = None
@@ -185,6 +191,58 @@ class Scenario(SDLModel):
     _module_variable_specs: dict[str, dict[str, object]] = PrivateAttr(default_factory=dict)
     _module_node_variable_refs: dict[str, dict[str, str | None]] = PrivateAttr(default_factory=dict)
     _explicitness: dict[str, ExplicitnessRecord] = PrivateAttr(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_declaration_keys(cls, value: object) -> object:
+        if not isinstance(value, Mapping):
+            return value
+        for section_name in HASHMAP_SECTIONS:
+            declarations = value.get(section_name)
+            if not isinstance(declarations, Mapping):
+                continue
+            for identifier in declarations:
+                if cls._allows_qualified_declaration_keys:
+                    QualifiedName.parse(identifier)
+                else:
+                    require_portable_identifier(identifier, field_name=f"{section_name} declaration key")
+                if section_name == "nodes":
+                    local_name = QualifiedName.parse(identifier).parts[-1]
+                    if len(local_name) > 35:
+                        raise ValueError("nodes declaration key must be at most 35 characters")
+        for agent in value.get("forwarding_agents", ()):
+            identifier = (
+                agent.forwarding_agent_id
+                if isinstance(agent, RuntimeForwardingAgent)
+                else agent.get("forwarding_agent_id")
+                if isinstance(agent, Mapping)
+                else None
+            )
+            if cls._allows_qualified_declaration_keys:
+                QualifiedName.parse(identifier)
+            else:
+                require_portable_identifier(identifier, field_name="forwarding_agent_id")
+        for node in value.get("nodes", {}).values() if isinstance(value.get("nodes"), Mapping) else ():
+            runtime = (
+                node.runtime if isinstance(node, Node) else node.get("runtime") if isinstance(node, Mapping) else None
+            )
+            runtime_agents = (
+                runtime.forwarding_agents
+                if hasattr(runtime, "forwarding_agents")
+                else runtime.get("forwarding_agents", ())
+                if isinstance(runtime, Mapping)
+                else ()
+            )
+            for agent in runtime_agents:
+                identifier = (
+                    agent.forwarding_agent_id
+                    if isinstance(agent, RuntimeForwardingAgent)
+                    else agent.get("forwarding_agent_id")
+                    if isinstance(agent, Mapping)
+                    else None
+                )
+                require_portable_identifier(identifier, field_name="runtime forwarding_agent_id")
+        return value
 
     @property
     def advisories(self) -> list[str]:
@@ -250,6 +308,8 @@ class InstantiatedScenario(Scenario):
     it), the schema and this validator treat it as non-concrete and reject it.
     """
 
+    _allows_qualified_declaration_keys: ClassVar[bool] = True
+
     model_config = ConfigDict(
         title="SDL Instantiated Scenario v1",
         json_schema_extra={
@@ -306,6 +366,8 @@ class InstantiatedScenario(Scenario):
 
 class ExpandedScenario(Scenario):
     """Scenario produced by module/import expansion."""
+
+    _allows_qualified_declaration_keys: ClassVar[bool] = True
 
     _module_namespaces: dict[str, str] = PrivateAttr(default_factory=dict)
 

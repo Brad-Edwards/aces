@@ -1103,11 +1103,14 @@ content:
     description: "Spearphishing emails targeting finance analyst"
     sensitive: true
     items:
-      - name: "Q3 Budget Review - Action Required.eml"
+      - name: q3-budget-review
+        display_name: "Q3 Budget Review - Action Required.eml"
         tags: [phishing, attachment, macro]
-      - name: "Urgent Wire Transfer Approval.eml"
+      - name: urgent-wire-transfer
+        display_name: "Urgent Wire Transfer Approval.eml"
         tags: [phishing, link, credential-harvesting]
-      - name: "Updated Benefits Enrollment.eml"
+      - name: updated-benefits-enrollment
+        display_name: "Updated Benefits Enrollment.eml"
         tags: [phishing, attachment, exe-in-zip]
   sensitive-financials:
     type: dataset
@@ -1117,9 +1120,11 @@ content:
     description: "Legitimate confidential financial emails"
     sensitive: true
     items:
-      - name: "Board Minutes - Q3 Confidential.eml"
+      - name: board-minutes-q3
+        display_name: "Board Minutes - Q3 Confidential.eml"
         tags: [pii, financial, exfil-target]
-      - name: "M&A Target List - Internal Only.eml"
+      - name: merger-target-list
+        display_name: "M&A Target List - Internal Only.eml"
         tags: [financial, exfil-target]
   planted-webshell:
     type: file

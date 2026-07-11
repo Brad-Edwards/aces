@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 
 import pytest
+from aces_backend_protocols.naming import provider_resource_name
 from aces_reference_backend.driver import ContainerSpec, NetworkSpec
 from aces_reference_backend.drivers.oci import ImageTrustPolicy, OciDeploymentDriver
 
@@ -50,7 +51,7 @@ def test_oci_realize_uses_fixed_argv_list_never_shell():
                 address="provision.node.web",
                 name="web",
                 image_ref="aces-reference/linux",
-                networks=("lan",),
+                networks=("provision.network.lan",),
             ),
         ),
     )
@@ -157,9 +158,7 @@ def test_oci_rejects_unknown_runtime():
 
 
 def test_oci_destroy_removes_by_the_name_realize_used():
-    """Regression: when a payload pins an explicit name that differs from the
-    address's last segment, destroy must remove the name realize() actually
-    created, not a name re-derived from the address."""
+    """Destroy uses the canonical-address-derived name created by realize."""
 
     recorder = _Recorder(stdout="id\n")
     driver = _driver(recorder)
@@ -172,7 +171,8 @@ def test_oci_destroy_removes_by_the_name_realize_used():
     driver.destroy(networks=(), containers=("provision.node.web",))
 
     rm_calls = [call["argv"] for call in recorder.calls]
-    assert rm_calls == [["docker", "rm", "--force", "pinned-web-name"]]
+    runtime_name = provider_resource_name("provision.node.web", prefix="aces")
+    assert rm_calls == [["docker", "rm", "--force", runtime_name]]
 
 
 def test_oci_attaches_container_to_requested_networks():
@@ -198,7 +198,7 @@ def test_oci_attaches_container_to_requested_networks():
 
     run_argv = next(call["argv"] for call in recorder.calls if "run" in call["argv"])
     assert "--network" in run_argv
-    assert run_argv[run_argv.index("--network") + 1] == "lan"
+    assert run_argv[run_argv.index("--network") + 1] == provider_resource_name("provision.network.lan", prefix="aces")
 
 
 def test_oci_rejects_plan_pinned_image_without_allowlist():
@@ -265,5 +265,10 @@ def test_oci_rolls_back_realized_resources_on_partial_failure():
     assert result.networks == ()  # no resource is reported as realized
     assert result.containers == ()
     # The successfully-created network was rolled back.
-    assert ["docker", "network", "rm", "lan"] in runner.calls
+    assert [
+        "docker",
+        "network",
+        "rm",
+        provider_resource_name("provision.network.lan", prefix="aces"),
+    ] in runner.calls
     assert driver.realized_addresses() == frozenset()

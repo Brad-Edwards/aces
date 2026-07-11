@@ -120,6 +120,7 @@ adr-072-validation-and-admission-profiles
 adr-073-scoring-reward-language-scope
 adr-074-experiment-authoring-input-contract-boundary
 adr-075-ecosystem-versioning-deprecation-and-migration-governance
+adr-076-portable-sdl-identifiers-and-canonical-addresses
 ```
 
 | ADR | Title | Status | Date |
@@ -200,3 +201,4 @@ adr-075-ecosystem-versioning-deprecation-and-migration-governance
 | [073](adr-073-scoring-reward-language-scope.md) | Scoring and Reward Language Scope in the SDL | accepted | 2026-07-05 |
 | [074](adr-074-experiment-authoring-input-contract-boundary.md) | Experiment Authoring-Input Contract Boundary | accepted | 2026-07-08 |
 | [075](adr-075-ecosystem-versioning-deprecation-and-migration-governance.md) | Ecosystem Versioning, Deprecation, and Migration Governance | proposed | 2026-07-11 |
+| [076](adr-076-portable-sdl-identifiers-and-canonical-addresses.md) | Portable SDL Identifiers and Canonical Addresses | accepted | 2026-07-11 |

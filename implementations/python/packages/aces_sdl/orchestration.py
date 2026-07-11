@@ -21,6 +21,7 @@ from ._base import (
     parse_float_or_var,
     parse_int_or_var,
 )
+from ._identifiers import PortableIdentifier
 from ._source import Source
 
 # OCR uses duration-str's fixed calendar conversions: 30d/month, 365d/year.
@@ -578,7 +579,7 @@ class Workflow(SDLModel):
     start: str
     timeout: WorkflowTimeoutPolicy | None = None
     compensation: WorkflowCompensationPolicy | None = None
-    steps: dict[str, WorkflowStep] = Field(min_length=1)
+    steps: dict[PortableIdentifier, WorkflowStep] = Field(min_length=1)
 
     @field_validator("timeout", mode="before")
     @classmethod

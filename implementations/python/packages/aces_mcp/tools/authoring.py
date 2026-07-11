@@ -171,7 +171,7 @@ def register(mcp: FastMCP) -> None:
 
         # Force a safe synthetic name — always last so context_yaml cannot
         # override it and cause confusing error messages.
-        wrapper["name"] = "__mcp_validation_fragment"
+        wrapper["name"] = "mcp-validation-fragment"
         wrapper[section] = section_data
         combined = _yaml.dump(wrapper, default_flow_style=False, sort_keys=False)
 

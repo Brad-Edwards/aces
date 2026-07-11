@@ -1126,6 +1126,12 @@ infrastructure:
             """
 name: shared
 version: 1.0.0
+module:
+  id: aces/shared
+  version: 1.0.0
+  parameters: [os_name]
+  exports:
+    nodes: [vm]
 variables:
   os_name:
     type: string

@@ -12,7 +12,13 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from aces_contracts.diagnostics import Diagnostic
-from aces_contracts.planning import EvaluationPlan, OrchestrationPlan, ProvisioningPlan, RuntimeDomain
+from aces_contracts.planning import (
+    EvaluationPlan,
+    OrchestrationPlan,
+    ProvisioningPlan,
+    RuntimeDomain,
+    require_plan_operation_identity,
+)
 from aces_contracts.runtime_state import (
     OperationReceipt,
     OperationState,
@@ -58,6 +64,49 @@ _TERMINAL_WORKFLOW_STATUSES = {
 
 def _utc_now() -> str:
     return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _submitted_plan_diagnostics(
+    plan: ProvisioningPlan | OrchestrationPlan | EvaluationPlan,
+    domain: RuntimeDomain,
+    snapshot: RuntimeSnapshot,
+) -> list[Diagnostic]:
+    admitted = set(snapshot.entries) | {operation.address for operation in plan.operations}
+    for operation in plan.operations:
+        try:
+            require_plan_operation_identity(domain, operation.address, operation.resource_type)
+        except ValueError:
+            return [
+                Diagnostic(
+                    code="runtime.plan-resource-incoherent",
+                    domain="runtime",
+                    address=f"runtime.control-plane.{domain.value}",
+                    message="Submitted plan operation disagrees with the endpoint resource identity.",
+                )
+            ]
+        dependencies = {*operation.ordering_dependencies, *operation.refresh_dependencies}
+        if dependencies - admitted:
+            return [
+                Diagnostic(
+                    code="runtime.plan-dependency-unresolved",
+                    domain="runtime",
+                    address=f"runtime.control-plane.{domain.value}",
+                    message="Submitted plan contains a dependency outside its operations and admitted snapshot.",
+                )
+            ]
+        existing = snapshot.entries.get(operation.address)
+        if existing is not None and (
+            existing.domain is not domain or existing.resource_type != operation.resource_type
+        ):
+            return [
+                Diagnostic(
+                    code="runtime.plan-resource-incoherent",
+                    domain="runtime",
+                    address=f"runtime.control-plane.{domain.value}",
+                    message="Submitted plan disagrees with the admitted snapshot resource identity.",
+                )
+            ]
+    return []
 
 
 class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):
@@ -106,6 +155,14 @@ class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):
         idempotency_key: str = "",
         request_fingerprint: str = "",
     ) -> OperationReceipt:
+        diagnostics = _submitted_plan_diagnostics(plan, RuntimeDomain.PROVISIONING, self._snapshot)
+        if diagnostics:
+            return self._reject_diagnostics(
+                domain=RuntimeDomain.PROVISIONING,
+                diagnostics=diagnostics,
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            )
         diagnostics = _call_backend_diagnostics(
             self._target.provisioner.validate,
             plan,
@@ -138,6 +195,14 @@ class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):
                 domain=RuntimeDomain.ORCHESTRATION,
                 message="Target does not provide an orchestrator.",
             )
+        diagnostics = _submitted_plan_diagnostics(plan, RuntimeDomain.ORCHESTRATION, self._snapshot)
+        if diagnostics:
+            return self._reject_diagnostics(
+                domain=RuntimeDomain.ORCHESTRATION,
+                diagnostics=diagnostics,
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
+            )
         return execute_operation(
             self,
             OperationExecutionRequest(
@@ -164,6 +229,14 @@ class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):
             return self._reject_submission(
                 domain=RuntimeDomain.EVALUATION,
                 message="Target does not provide an evaluator.",
+            )
+        diagnostics = _submitted_plan_diagnostics(plan, RuntimeDomain.EVALUATION, self._snapshot)
+        if diagnostics:
+            return self._reject_diagnostics(
+                domain=RuntimeDomain.EVALUATION,
+                diagnostics=diagnostics,
+                idempotency_key=idempotency_key,
+                request_fingerprint=request_fingerprint,
             )
         return execute_operation(
             self,

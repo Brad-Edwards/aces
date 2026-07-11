@@ -683,12 +683,14 @@ content:
     target: customs-gateway
     format: json
     items:
-    - name: hold-HZ-204.json
+    - name: hold-hz-204
+      display_name: hold-HZ-204.json
       tags:
       - customs
       - hold
       description: Hold order for hazardous container HZ-204
-    - name: hold-HZ-991.json
+    - name: hold-hz-991
+      display_name: hold-HZ-991.json
       tags:
       - customs
       - hold
