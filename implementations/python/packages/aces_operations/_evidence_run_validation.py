@@ -62,6 +62,29 @@ _REQUIRED_SECTIONS = (
     "invariant_ledger_refs",
 )
 
+_SHA256_RE = re.compile(r"sha256:[a-f0-9]{64}")
+_DAEMON_REQUIRED_FIELDS = {
+    "domains": {
+        "address",
+        "name",
+        "architecture",
+        "image_policy",
+        "memory_mib",
+        "vcpus",
+        "network_attachments",
+        "observation_source",
+    },
+    "networks": {
+        "address",
+        "name",
+        "cidr",
+        "gateway",
+        "internal",
+        "forward_mode",
+        "observation_source",
+    },
+}
+
 
 def validate_libvirt_evidence_run_artifact(payload: Mapping[str, Any]) -> list[str]:
     """Validate a scenario-evidence artifact: schema, required surfaces, embedded contracts, redaction, boundary.
@@ -91,6 +114,25 @@ def _validate_realization_sources(payload: Mapping[str, Any]) -> list[str]:
     facts = payload.get("realization_facts", {})
     if not isinstance(facts, Mapping):
         return [*problems, "realization_facts must be a mapping"]
+    problems.extend(_validate_fact_sources(facts))
+    topology = payload.get("realized_topology", {})
+    problems.extend(_validate_topology_sources(topology))
+    backend = payload.get("backend", {})
+    provenance = backend.get("realization_provenance", {}) if isinstance(backend, Mapping) else {}
+    substrate_realized = isinstance(provenance, Mapping) and provenance.get("substrate_realized") is True
+    cleanup = facts.get("cleanup")
+    problems.extend(_validate_cleanup_source(cleanup))
+    if substrate_realized:
+        problems.extend(_validate_realized_substrate(backend, facts, topology, provenance, cleanup))
+    elif isinstance(provenance, Mapping) and provenance.get("basis") != "planned-not-realized":
+        problems.append("unrealized substrate basis must be planned-not-realized")
+    else:
+        problems.extend(_validate_unrealized_substrate(facts, provenance, cleanup))
+    problems.extend(_validate_guest_observation_boundary(payload))
+    return problems
+
+
+def _validate_fact_sources(facts: Mapping[str, Any]) -> list[str]:
     expected_sources = {
         "authored": "authored",
         "planned": "planned",
@@ -98,101 +140,152 @@ def _validate_realization_sources(payload: Mapping[str, Any]) -> list[str]:
         "daemon_observed": "daemon-observed",
         "guest_observed": "guest-observed",
     }
-    for key, source in expected_sources.items():
-        section = facts.get(key)
-        if not isinstance(section, Mapping) or section.get("source") != source:
-            problems.append(f"realization source violation: {key}.source must be {source!r}")
+    return [
+        f"realization source violation: {key}.source must be {source!r}"
+        for key, source in expected_sources.items()
+        if not isinstance(facts.get(key), Mapping) or facts[key].get("source") != source
+    ]
 
-    topology = payload.get("realized_topology", {})
-    if isinstance(topology, Mapping):
-        if topology.get("basis") not in {"planned", "mixed-source"}:
-            problems.append("realized_topology.basis must be planned or mixed-source")
-        for collection in ("nodes", "networks"):
-            for item in topology.get(collection, ()) or ():
-                if isinstance(item, Mapping) and item.get("source") != "planned":
-                    problems.append(f"realization source violation: realized_topology.{collection} is planned")
-        native_surface = topology.get("native_surface")
-        if isinstance(native_surface, Mapping) and native_surface.get("source") != "daemon-observed":
-            problems.append("realization source violation: native_surface must be daemon-observed")
 
-    backend = payload.get("backend", {})
-    provenance = backend.get("realization_provenance", {}) if isinstance(backend, Mapping) else {}
-    substrate_realized = isinstance(provenance, Mapping) and provenance.get("substrate_realized") is True
-    cleanup = facts.get("cleanup")
-    if not isinstance(cleanup, Mapping) or cleanup.get("source") != "driver-reported":
-        problems.append("realization cleanup must be driver-reported")
-    if substrate_realized:
-        if provenance.get("basis") != "daemon-observed-substrate":
-            problems.append("realization provenance basis must be daemon-observed-substrate")
-        cleanup_verified = provenance.get("cleanup_verified")
-        expected_cleanup_status = "verified" if cleanup_verified is True else "failed"
-        if (
-            not isinstance(cleanup_verified, bool)
-            or not isinstance(cleanup, Mapping)
-            or cleanup.get("status") != expected_cleanup_status
-        ):
-            problems.append("daemon-observed substrate requires a consistent cleanup outcome")
-        daemon = facts.get("daemon_observed", {})
-        domains = daemon.get("domains", ()) if isinstance(daemon, Mapping) else ()
-        if not isinstance(domains, list | tuple) or not domains:
-            problems.append("daemon-observed substrate requires at least one observed domain")
-        for collection in ("domains", "networks"):
-            for item in daemon.get(collection, ()) if isinstance(daemon, Mapping) else ():
-                if isinstance(item, Mapping) and item.get("observation_source") != "daemon-observed":
+def _validate_topology_sources(topology: object) -> list[str]:
+    if not isinstance(topology, Mapping):
+        return []
+    problems: list[str] = []
+    if topology.get("basis") not in {"planned", "mixed-source"}:
+        problems.append("realized_topology.basis must be planned or mixed-source")
+    for collection in ("nodes", "networks"):
+        for item in topology.get(collection, ()) or ():
+            if isinstance(item, Mapping) and item.get("source") != "planned":
+                problems.append(f"realization source violation: realized_topology.{collection} is planned")
+    native_surface = topology.get("native_surface")
+    if isinstance(native_surface, Mapping) and native_surface.get("source") != "daemon-observed":
+        problems.append("realization source violation: native_surface must be daemon-observed")
+    return problems
+
+
+def _validate_cleanup_source(cleanup: object) -> list[str]:
+    if isinstance(cleanup, Mapping) and cleanup.get("source") == "driver-reported":
+        return []
+    return ["realization cleanup must be driver-reported"]
+
+
+def _validate_realized_substrate(
+    backend: object,
+    facts: Mapping[str, Any],
+    topology: object,
+    provenance: Mapping[str, Any],
+    cleanup: object,
+) -> list[str]:
+    daemon = facts.get("daemon_observed", {})
+    daemon_items = _daemon_items(daemon)
+    problems = _validate_realized_provenance(provenance, cleanup)
+    problems.extend(_validate_daemon_observations(daemon))
+    problems.extend(_validate_reported_addresses(facts, daemon_items))
+    problems.extend(_validate_native_surface(topology, daemon))
+    if isinstance(backend, Mapping):
+        problems.extend(_validate_realization_binding(backend, facts))
+    else:
+        problems.append("daemon-observed substrate requires a realization binding")
+    return problems
+
+
+def _validate_realized_provenance(provenance: Mapping[str, Any], cleanup: object) -> list[str]:
+    problems: list[str] = []
+    if provenance.get("basis") != "daemon-observed-substrate":
+        problems.append("realization provenance basis must be daemon-observed-substrate")
+    cleanup_verified = provenance.get("cleanup_verified")
+    expected_cleanup_status = "verified" if cleanup_verified is True else "failed"
+    cleanup_consistent = (
+        isinstance(cleanup_verified, bool)
+        and isinstance(cleanup, Mapping)
+        and cleanup.get("status") == expected_cleanup_status
+    )
+    if not cleanup_consistent:
+        problems.append("daemon-observed substrate requires a consistent cleanup outcome")
+    return problems
+
+
+def _validate_daemon_observations(daemon: object) -> list[str]:
+    problems: list[str] = []
+    domains = daemon.get("domains", ()) if isinstance(daemon, Mapping) else ()
+    if not isinstance(domains, list | tuple) or not domains:
+        problems.append("daemon-observed substrate requires at least one observed domain")
+    for collection in ("domains", "networks"):
+        values = daemon.get(collection, ()) if isinstance(daemon, Mapping) else ()
+        for item in values:
+            if isinstance(item, Mapping):
+                if item.get("observation_source") != "daemon-observed":
                     problems.append(f"realization source violation: daemon_observed.{collection} item source")
-                if isinstance(item, Mapping):
-                    problems.extend(_validate_daemon_observation_item(collection, item))
-        daemon_items = [
-            item
-            for collection in ("domains", "networks")
+                problems.extend(_validate_daemon_observation_item(collection, item))
+    return problems
+
+
+def _daemon_items(daemon: object) -> list[Mapping[str, Any]]:
+    if not isinstance(daemon, Mapping):
+        return []
+    return [
+        item
+        for collection in ("domains", "networks")
+        for item in daemon.get(collection, ())
+        if isinstance(item, Mapping)
+    ]
+
+
+def _validate_reported_addresses(
+    facts: Mapping[str, Any],
+    daemon_items: list[Mapping[str, Any]],
+) -> list[str]:
+    observed_addresses = {item.get("address") for item in daemon_items}
+    driver_reported = facts.get("driver_reported", {})
+    reported_addresses = driver_reported.get("realized_addresses", ()) if isinstance(driver_reported, Mapping) else ()
+    valid = (
+        isinstance(reported_addresses, list | tuple)
+        and all(isinstance(item, str) for item in reported_addresses)
+        and set(reported_addresses) == observed_addresses
+    )
+    return [] if valid else ["driver-reported addresses do not match daemon observations"]
+
+
+def _validate_native_surface(topology: object, daemon: object) -> list[str]:
+    native_surface = topology.get("native_surface") if isinstance(topology, Mapping) else None
+    if not isinstance(native_surface, Mapping):
+        return ["daemon-observed substrate requires a native surface"]
+    problems: list[str] = []
+    for collection in ("domains", "networks"):
+        observed_names = sorted(
+            str(item.get("name"))
             for item in (daemon.get(collection, ()) if isinstance(daemon, Mapping) else ())
             if isinstance(item, Mapping)
-        ]
-        observed_addresses = {item.get("address") for item in daemon_items}
-        driver_reported = facts.get("driver_reported", {})
-        reported_addresses = (
-            driver_reported.get("realized_addresses", ()) if isinstance(driver_reported, Mapping) else ()
         )
-        if (
-            not isinstance(reported_addresses, list | tuple)
-            or not all(isinstance(item, str) for item in reported_addresses)
-            or set(reported_addresses) != observed_addresses
-        ):
-            problems.append("driver-reported addresses do not match daemon observations")
-        native_surface = topology.get("native_surface") if isinstance(topology, Mapping) else None
-        if not isinstance(native_surface, Mapping):
-            problems.append("daemon-observed substrate requires a native surface")
-        else:
-            for collection in ("domains", "networks"):
-                observed_names = sorted(
-                    str(item.get("name"))
-                    for item in (daemon.get(collection, ()) if isinstance(daemon, Mapping) else ())
-                    if isinstance(item, Mapping)
-                )
-                surface_names = native_surface.get(collection, ())
-                if (
-                    not isinstance(surface_names, list | tuple)
-                    or sorted(str(item) for item in surface_names) != observed_names
-                ):
-                    problems.append(f"native surface {collection} do not match daemon observations")
-        problems.extend(_validate_realization_binding(backend, facts))
-    elif isinstance(provenance, Mapping) and provenance.get("basis") != "planned-not-realized":
-        problems.append("unrealized substrate basis must be planned-not-realized")
-    else:
-        daemon = facts.get("daemon_observed", {})
-        daemon_domains = daemon.get("domains", ()) if isinstance(daemon, Mapping) else ()
-        daemon_networks = daemon.get("networks", ()) if isinstance(daemon, Mapping) else ()
-        if daemon_domains or daemon_networks or facts.get("binding") is not None:
-            problems.append("unrealized substrate cannot publish daemon observations or realization binding")
-        if isinstance(provenance, Mapping) and provenance.get("cleanup_verified") is not None:
-            problems.append("unrealized substrate cleanup must be not-applicable")
-        if isinstance(cleanup, Mapping) and cleanup.get("status") != "not-required":
-            problems.append("unrealized substrate cleanup status must be not-required")
+        surface_names = native_surface.get(collection, ())
+        if not isinstance(surface_names, list | tuple) or sorted(str(item) for item in surface_names) != observed_names:
+            problems.append(f"native surface {collection} do not match daemon observations")
+    return problems
 
+
+def _validate_unrealized_substrate(
+    facts: Mapping[str, Any],
+    provenance: Mapping[str, Any],
+    cleanup: object,
+) -> list[str]:
+    problems: list[str] = []
+    daemon = facts.get("daemon_observed", {})
+    daemon_domains = daemon.get("domains", ()) if isinstance(daemon, Mapping) else ()
+    daemon_networks = daemon.get("networks", ()) if isinstance(daemon, Mapping) else ()
+    if daemon_domains or daemon_networks or facts.get("binding") is not None:
+        problems.append("unrealized substrate cannot publish daemon observations or realization binding")
+    if provenance.get("cleanup_verified") is not None:
+        problems.append("unrealized substrate cleanup must be not-applicable")
+    if isinstance(cleanup, Mapping) and cleanup.get("status") != "not-required":
+        problems.append("unrealized substrate cleanup status must be not-required")
+    return problems
+
+
+def _validate_guest_observation_boundary(payload: Mapping[str, Any]) -> list[str]:
     defensive = payload.get("defensive_evidence", {})
     if isinstance(defensive, Mapping) and "soc_readback" in defensive:
-        problems.append("guest observation violation: daemon substrate cannot supply SOC readback")
-    return problems
+        return ["guest observation violation: daemon substrate cannot supply SOC readback"]
+    return []
 
 
 def _validate_realization_binding(backend: Mapping[str, Any], facts: Mapping[str, Any]) -> list[str]:
@@ -201,28 +294,42 @@ def _validate_realization_binding(backend: Mapping[str, Any], facts: Mapping[str
     envelope = manifest.get("realization_envelope", {}) if isinstance(manifest, Mapping) else {}
     if not isinstance(binding, Mapping) or not isinstance(envelope, Mapping):
         return ["daemon-observed substrate requires a realization binding"]
+    problems = _validate_binding_identity(binding, envelope)
+    problems.extend(_validate_boot_artifact_binding(binding))
+    expected_driver_digest = _driver_configuration_digest(binding)
+    if binding.get("driver_configuration_digest") != expected_driver_digest:
+        problems.append("realization binding driver configuration digest does not match its material")
+    return problems
+
+
+def _validate_binding_identity(binding: Mapping[str, Any], envelope: Mapping[str, Any]) -> list[str]:
     problems: list[str] = []
     if binding.get("realization_envelope_digest") != envelope.get("digest"):
         problems.append("realization binding envelope digest does not match backend manifest")
     if binding.get("configuration_digest") != envelope.get("configuration_digest"):
         problems.append("realization binding configuration digest does not match backend manifest")
     driver_digest = binding.get("driver_configuration_digest")
-    if not isinstance(driver_digest, str) or not re.fullmatch(r"sha256:[a-f0-9]{64}", driver_digest):
+    if not _is_canonical_sha256(driver_digest):
         problems.append("realization binding requires a canonical driver configuration digest")
     if binding.get("driver") != "techvault-appliance":
         problems.append("realization binding driver does not match the TechVault appliance")
     for field_name in ("connection_uri_digest", "name_prefix_digest"):
-        value = binding.get(field_name)
-        if not isinstance(value, str) or not re.fullmatch(r"sha256:[a-f0-9]{64}", value):
+        if not _is_canonical_sha256(binding.get(field_name)):
             problems.append(f"realization binding requires canonical {field_name}")
+    return problems
+
+
+def _validate_boot_artifact_binding(binding: Mapping[str, Any]) -> list[str]:
+    problems: list[str] = []
     boot_artifacts = binding.get("boot_artifact_digests")
     if not isinstance(boot_artifacts, Mapping) or set(boot_artifacts) != {"kernel", "initramfs"}:
         problems.append("realization binding requires kernel and initramfs artifact digests")
-    elif any(
-        not isinstance(value, str) or not re.fullmatch(r"sha256:[a-f0-9]{64}", value)
-        for value in boot_artifacts.values()
-    ):
+    elif not all(_is_canonical_sha256(value) for value in boot_artifacts.values()):
         problems.append("realization binding boot artifact digests must be canonical sha256 values")
+    return problems
+
+
+def _driver_configuration_digest(binding: Mapping[str, Any]) -> str:
     material = {
         "driver": binding.get("driver"),
         "configuration_digest": binding.get("configuration_digest"),
@@ -231,62 +338,52 @@ def _validate_realization_binding(backend: Mapping[str, Any], facts: Mapping[str
         "name_prefix_digest": binding.get("name_prefix_digest"),
     }
     encoded = json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
-    expected_driver_digest = "sha256:" + hashlib.sha256(encoded).hexdigest()
-    if driver_digest != expected_driver_digest:
-        problems.append("realization binding driver configuration digest does not match its material")
-    return problems
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+def _is_canonical_sha256(value: object) -> bool:
+    return isinstance(value, str) and _SHA256_RE.fullmatch(value) is not None
 
 
 def _validate_daemon_observation_item(collection: str, item: Mapping[str, Any]) -> list[str]:
-    required = {
-        "domains": {
-            "address",
-            "name",
-            "architecture",
-            "image_policy",
-            "memory_mib",
-            "vcpus",
-            "network_attachments",
-            "observation_source",
-        },
-        "networks": {
-            "address",
-            "name",
-            "cidr",
-            "gateway",
-            "internal",
-            "forward_mode",
-            "observation_source",
-        },
-    }[collection]
-    if set(item) != required:
-        noun = "domain" if collection == "domains" else "network"
-        return [f"incomplete daemon {noun} observation"]
-    if not all(isinstance(item.get(key), str) and item.get(key) for key in ("address", "name")):
-        return [f"incomplete daemon {collection[:-1]} observation"]
-    if collection == "domains":
-        if (
-            not isinstance(item.get("architecture"), str)
-            or not item.get("architecture")
-            or not isinstance(item.get("image_policy"), str)
-            or not item.get("image_policy")
-            or not isinstance(item.get("memory_mib"), int)
-            or item["memory_mib"] <= 0
-            or not isinstance(item.get("vcpus"), int)
-            or item["vcpus"] <= 0
-            or not isinstance(item.get("network_attachments"), list | tuple)
-        ):
-            return ["incomplete daemon domain observation"]
-    elif (
-        not isinstance(item.get("cidr"), str)
-        or not item.get("cidr")
-        or not isinstance(item.get("gateway"), str)
-        or not item.get("gateway")
-        or not isinstance(item.get("internal"), bool)
-        or item.get("forward_mode") not in {"none", "nat"}
-    ):
-        return ["incomplete daemon network observation"]
-    return []
+    noun = "domain" if collection == "domains" else "network"
+    problems: list[str] = []
+    if set(item) != _DAEMON_REQUIRED_FIELDS[collection] or not _valid_observation_identity(item):
+        problems.append(f"incomplete daemon {noun} observation")
+    elif collection == "domains" and not _valid_domain_observation(item):
+        problems.append("incomplete daemon domain observation")
+    elif collection == "networks" and not _valid_network_observation(item):
+        problems.append("incomplete daemon network observation")
+    return problems
+
+
+def _valid_observation_identity(item: Mapping[str, Any]) -> bool:
+    return all(_nonempty_string(item.get(key)) for key in ("address", "name"))
+
+
+def _valid_domain_observation(item: Mapping[str, Any]) -> bool:
+    checks = (
+        _nonempty_string(item.get("architecture")),
+        _nonempty_string(item.get("image_policy")),
+        isinstance(item.get("memory_mib"), int) and item["memory_mib"] > 0,
+        isinstance(item.get("vcpus"), int) and item["vcpus"] > 0,
+        isinstance(item.get("network_attachments"), list | tuple),
+    )
+    return all(checks)
+
+
+def _valid_network_observation(item: Mapping[str, Any]) -> bool:
+    checks = (
+        _nonempty_string(item.get("cidr")),
+        _nonempty_string(item.get("gateway")),
+        isinstance(item.get("internal"), bool),
+        item.get("forward_mode") in {"none", "nat"},
+    )
+    return all(checks)
+
+
+def _nonempty_string(value: object) -> bool:
+    return isinstance(value, str) and bool(value)
 
 
 def _try_validate(model_cls: type[BaseModel], value: object, label: str) -> list[str]:

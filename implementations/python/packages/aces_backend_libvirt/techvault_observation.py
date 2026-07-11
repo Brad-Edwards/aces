@@ -5,11 +5,12 @@ from __future__ import annotations
 import hashlib
 import ipaddress
 import json
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as StdET
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from aces_contracts.realization_envelope import ObservationStrength, RealizationConcern
+from defusedxml import ElementTree as SafeET
 
 from .driver import RealizationObservation
 from .techvault_matrix import as_sequence
@@ -149,7 +150,7 @@ def canonical_digest(payload: object) -> str:
     return "sha256:" + hashlib.sha256(encoded).hexdigest()
 
 
-def native_xml(native: object) -> ET.Element:
+def native_xml(native: object) -> StdET.Element:
     reader = getattr(native, "XMLDesc", None)
     if not callable(reader):
         raise TypeError("native resource does not expose XML readback")
@@ -158,7 +159,7 @@ def native_xml(native: object) -> ET.Element:
         raise TypeError("native XML readback is not text")
     if len(payload) > _MAX_NATIVE_XML_CHARS:
         raise ValueError("native XML readback exceeds the bounded size limit")
-    return ET.fromstring(payload)  # noqa: S314 - bounded XML comes from the selected local libvirt daemon
+    return SafeET.fromstring(payload)
 
 
 def native_active(native: object) -> bool:
@@ -168,7 +169,7 @@ def native_active(native: object) -> bool:
     return reader() == 1
 
 
-def memory_mib(root: ET.Element) -> int:
+def memory_mib(root: StdET.Element) -> int:
     memory = root.find("memory")
     if memory is None:
         return 0

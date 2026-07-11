@@ -35,6 +35,18 @@ from .techvault_appliance import (
     make_libvirt_readable,
 )
 from .techvault_concerns import techvault_observation_diagnostics, techvault_spec_diagnostics
+from .techvault_lifecycle import (
+    NativeOwnershipConflict as _OwnershipConflict,
+)
+from .techvault_lifecycle import (
+    deactivate_and_undefine as _deactivate_and_undefine,
+)
+from .techvault_lifecycle import (
+    resolve_native as _resolve_native,
+)
+from .techvault_lifecycle import (
+    verify_native_removed as _verify_native_removed,
+)
 from .techvault_matrix import (
     as_sequence as _as_sequence,
 )
@@ -46,9 +58,6 @@ from .techvault_matrix import (
 )
 from .techvault_matrix import (
     network_xml as _network_xml,
-)
-from .techvault_matrix import (
-    runtime_name as _runtime_name,
 )
 from .techvault_matrix import (
     safe_name as _safe_name,
@@ -92,10 +101,6 @@ class _NativeResource(Protocol):
     def destroy(self) -> None: ...
 
     def undefine(self) -> None: ...
-
-
-class _OwnershipConflict(Exception):
-    """A native name is not owned by the requested ACES address."""
 
 
 @dataclass
@@ -158,6 +163,25 @@ class TechVaultNativeLibvirtDriver:
             connection = self._conn()
         except Exception:
             return DriverResult(diagnostics=(_diagnostic(_CODE_UNAVAILABLE, "runtime.libvirt.connection"),))
+        return self._realize_matrix(
+            connection,
+            matrix,
+            networks=networks,
+            domains=domains,
+            envelope_digest=envelope.digest,
+            configuration_digest=envelope.configuration.configuration_digest,
+        )
+
+    def _realize_matrix(
+        self,
+        connection: object,
+        matrix: Mapping[str, object],
+        *,
+        networks: tuple[NetworkSpec, ...],
+        domains: tuple[DomainSpec, ...],
+        envelope_digest: str,
+        configuration_digest: str,
+    ) -> DriverResult:
         network_handles, network_diagnostics, network_observations = self._define_networks(connection, matrix)
         if network_diagnostics:
             network_diagnostics.extend(self._rollback(connection, network_handles, ()))
@@ -166,7 +190,32 @@ class TechVaultNativeLibvirtDriver:
         if domain_diagnostics:
             domain_diagnostics.extend(self._rollback(connection, network_handles, domain_handles))
             return DriverResult(diagnostics=tuple(domain_diagnostics))
-        observations = tuple((*network_observations, *domain_observations))
+        observations = (*network_observations, *domain_observations)
+        return self._verify_and_finalize(
+            connection,
+            matrix,
+            networks=networks,
+            domains=domains,
+            network_handles=network_handles,
+            domain_handles=domain_handles,
+            observations=observations,
+            envelope_digest=envelope_digest,
+            configuration_digest=configuration_digest,
+        )
+
+    def _verify_and_finalize(
+        self,
+        connection: object,
+        matrix: Mapping[str, object],
+        *,
+        networks: tuple[NetworkSpec, ...],
+        domains: tuple[DomainSpec, ...],
+        network_handles: list[NetworkHandle],
+        domain_handles: list[DomainHandle],
+        observations: tuple[RealizationObservation, ...],
+        envelope_digest: str,
+        configuration_digest: str,
+    ) -> DriverResult:
         observation_diagnostics = techvault_observation_diagnostics(
             networks=networks,
             domains=domains,
@@ -176,7 +225,7 @@ class TechVaultNativeLibvirtDriver:
             observation_diagnostics.extend(self._rollback(connection, network_handles, domain_handles))
             return DriverResult(diagnostics=tuple(observation_diagnostics))
         try:
-            binding = self._material_binding(envelope.digest, envelope.configuration.configuration_digest)
+            binding = self._material_binding(envelope_digest, configuration_digest)
             snapshot = snapshot_from_observations(matrix, observations, binding=binding)
         except Exception:
             binding_diagnostics = [_diagnostic(_CODE_OPERATION_FAILED, "runtime.libvirt.binding")]
@@ -212,6 +261,9 @@ class TechVaultNativeLibvirtDriver:
     ) -> tuple[NetworkHandle | None, Diagnostic | None, tuple[RealizationObservation, ...]]:
         address = str(network.get("address", ""))
         native: _NativeResource | None = None
+        handle: NetworkHandle | None = None
+        diagnostic: Diagnostic | None = None
+        observations: tuple[RealizationObservation, ...] = ()
         self._names[address] = str(network.get("runtime_name", ""))
         try:
             _ensure_name_available(
@@ -225,20 +277,22 @@ class TechVaultNativeLibvirtDriver:
                 native.create()
         except _OwnershipConflict:
             self._names.pop(address, None)
-            return None, _diagnostic(_CODE_OWNERSHIP_CONFLICT, address), ()
+            diagnostic = _diagnostic(_CODE_OWNERSHIP_CONFLICT, address)
         except Exception:
             if native is None:
                 self._names.pop(address, None)
-                return None, _diagnostic(_CODE_OPERATION_FAILED, address), ()
+            else:
+                self._realized.add(address)
+                handle = NetworkHandle(address=address)
+            diagnostic = _diagnostic(_CODE_OPERATION_FAILED, address)
+        else:
             self._realized.add(address)
-            return NetworkHandle(address=address), _diagnostic(_CODE_OPERATION_FAILED, address), ()
-        self._realized.add(address)
-        handle = NetworkHandle(address=address, realized=True)
-        try:
-            observations = network_observations(native, network)
-        except Exception:
-            return handle, _diagnostic(_CODE_READBACK_FAILED, address), ()
-        return handle, None, observations
+            handle = NetworkHandle(address=address, realized=True)
+            try:
+                observations = network_observations(native, network)
+            except Exception:
+                diagnostic = _diagnostic(_CODE_READBACK_FAILED, address)
+        return handle, diagnostic, observations
 
     def _define_domains(
         self, connection: object, matrix: Mapping[str, object]
@@ -271,7 +325,9 @@ class TechVaultNativeLibvirtDriver:
     ) -> tuple[DomainHandle | None, Diagnostic | None, tuple[RealizationObservation, ...]]:
         address = str(domain.get("address", ""))
         native: _NativeResource | None = None
-        initrd: Path | None = None
+        handle: DomainHandle | None = None
+        diagnostic: Diagnostic | None = None
+        observations: tuple[RealizationObservation, ...] = ()
         self._names[address] = str(domain.get("runtime_name", ""))
         try:
             _ensure_name_available(
@@ -295,27 +351,29 @@ class TechVaultNativeLibvirtDriver:
                 native.create()
         except _OwnershipConflict:
             self._names.pop(address, None)
-            return None, _diagnostic(_CODE_OWNERSHIP_CONFLICT, address), ()
+            diagnostic = _diagnostic(_CODE_OWNERSHIP_CONFLICT, address)
         except Exception:
             if native is None:
                 self._cleanup_artifacts(address)
                 self._names.pop(address, None)
-                return None, _diagnostic(_CODE_OPERATION_FAILED, address), ()
+            else:
+                self._realized.add(address)
+                handle = DomainHandle(address=address)
+            diagnostic = _diagnostic(_CODE_OPERATION_FAILED, address)
+        else:
             self._realized.add(address)
-            return DomainHandle(address=address), _diagnostic(_CODE_OPERATION_FAILED, address), ()
-        self._realized.add(address)
-        handle = DomainHandle(address=address, realized=True)
-        try:
-            observations = domain_observations(
-                native,
-                domain,
-                network_addresses,
-                kernel=kernel,
-                initrd=initrd,
-            )
-        except Exception:
-            return handle, _diagnostic(_CODE_READBACK_FAILED, address), ()
-        return handle, None, observations
+            handle = DomainHandle(address=address, realized=True)
+            try:
+                observations = domain_observations(
+                    native,
+                    domain,
+                    network_addresses,
+                    kernel=kernel,
+                    initrd=initrd,
+                )
+            except Exception:
+                diagnostic = _diagnostic(_CODE_READBACK_FAILED, address)
+        return handle, diagnostic, observations
 
     def destroy(
         self,
@@ -371,62 +429,31 @@ class TechVaultNativeLibvirtDriver:
 
     def _destroy_one(self, connection: object, lookup_method: str, address: str) -> bool:
         list_method = "listAllDomains" if lookup_method == "lookupByName" else "listAllNetworks"
-        name = self._names.get(address)
-        lookup = getattr(connection, lookup_method, None)
-        if not callable(lookup):
-            return False
-        if name is None:
-            native_items = _list_native(connection, list_method)
-            if native_items is None:
-                return False
-            owned = [item for item in native_items if _existing_uuid(item) == _aces_uuid(address)]
-            if not owned:
-                fallback_name = _runtime_name(self.name_prefix, address)
-                if any(_native_name(item) == fallback_name for item in native_items):
+        resolved = _resolve_native(
+            connection,
+            lookup_method,
+            list_method,
+            address,
+            known_name=self._names.get(address),
+            name_prefix=self.name_prefix,
+        )
+        cleaned = False
+        if resolved is not None:
+            if resolved.native is None:
+                cleaned = True
+            else:
+                if _existing_uuid(resolved.native) != _aces_uuid(address):
                     raise _OwnershipConflict(address)
-                self._record_verified_absence(address)
-                return True
-            if len(owned) != 1:
-                return False
-            native = owned[0]
-            name = _native_name(native)
-            if not name:
-                return False
-        else:
-            try:
-                native = lookup(name)
-            except KeyError:
-                return self._verify_absence_by_uuid(connection, list_method, address)
-            except Exception as exc:
-                if _error_code(exc) in {42, 43}:
-                    return self._verify_absence_by_uuid(connection, list_method, address)
-                return False
-        if _existing_uuid(native) != _aces_uuid(address):
-            raise _OwnershipConflict(address)
-        try:
-            native.destroy()
-        except Exception as exc:
-            if _error_code(exc) not in {42, 43, 55}:
-                return False
-        try:
-            native.undefine()
-        except Exception as exc:
-            if _error_code(exc) not in {42, 43}:
-                return False
-        native_items = _list_native(connection, list_method)
-        if native_items is None or any(_native_name(item) == name for item in native_items):
-            return False
-        if any(_existing_uuid(item) == _aces_uuid(address) for item in native_items):
-            return False
-        self._record_verified_absence(address)
-        return True
-
-    def _verify_absence_by_uuid(self, connection: object, list_method: str, address: str) -> bool:
-        native_items = _list_native(connection, list_method)
-        if native_items is None or any(_existing_uuid(item) == _aces_uuid(address) for item in native_items):
-            return False
-        self._record_verified_absence(address)
-        return True
+                removed = _deactivate_and_undefine(resolved.native)
+                cleaned = removed and _verify_native_removed(
+                    connection,
+                    list_method,
+                    address,
+                    resolved.name,
+                )
+        if cleaned:
+            self._record_verified_absence(address)
+        return cleaned
 
     def _record_verified_absence(self, address: str) -> None:
         self._realized.discard(address)
@@ -468,24 +495,28 @@ class TechVaultNativeLibvirtDriver:
         networks: Sequence[NetworkHandle],
         domains: Sequence[DomainHandle],
     ) -> list[Diagnostic]:
+        return [
+            *self._rollback_handles(connection, domains, "lookupByName"),
+            *self._rollback_handles(connection, networks, "networkLookupByName"),
+        ]
+
+    def _rollback_handles(
+        self,
+        connection: object,
+        handles: Sequence[DomainHandle | NetworkHandle],
+        lookup_method: str,
+    ) -> list[Diagnostic]:
         diagnostics: list[Diagnostic] = []
-        for handle in domains:
-            if handle.realized:
-                try:
-                    cleaned = self._destroy_one(connection, "lookupByName", handle.address)
-                except Exception:
-                    cleaned = False
-                if not cleaned:
-                    diagnostics.append(_diagnostic(_CODE_RESIDUAL_STATE, handle.address))
-        for handle in networks:
-            if handle.realized:
-                try:
-                    cleaned = self._destroy_one(connection, "networkLookupByName", handle.address)
-                except Exception:
-                    cleaned = False
-                if not cleaned:
-                    diagnostics.append(_diagnostic(_CODE_RESIDUAL_STATE, handle.address))
+        for handle in handles:
+            if handle.realized and not self._try_destroy(connection, lookup_method, handle.address):
+                diagnostics.append(_diagnostic(_CODE_RESIDUAL_STATE, handle.address))
         return diagnostics
+
+    def _try_destroy(self, connection: object, lookup_method: str, address: str) -> bool:
+        try:
+            return self._destroy_one(connection, lookup_method, address)
+        except Exception:
+            return False
 
 
 def _default_connector(connection_uri: str) -> object | None:
@@ -515,28 +546,6 @@ def _ensure_name_available(connection: object, method_name: str, name: str, addr
     if _existing_uuid(native) != _aces_uuid(address):
         raise _OwnershipConflict(address)
     raise RuntimeError("owned native object already exists for CREATE")
-
-
-def _list_native(connection: object, method_name: str) -> tuple[object, ...] | None:
-    method = getattr(connection, method_name, None)
-    if not callable(method):
-        return None
-    try:
-        native = method()
-    except Exception:
-        return None
-    return tuple(native) if isinstance(native, list | tuple) else None
-
-
-def _native_name(native: object) -> str:
-    method = getattr(native, "name", None)
-    if not callable(method):
-        return ""
-    try:
-        value = method()
-    except Exception:
-        return ""
-    return value if isinstance(value, str) else ""
 
 
 def _artifact_token(address: str) -> str:

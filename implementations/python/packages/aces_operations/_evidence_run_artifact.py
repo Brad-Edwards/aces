@@ -240,12 +240,16 @@ def _realization_facts_section(
         },
         "cleanup": {
             "source": "driver-reported",
-            "status": (
-                "verified" if cleanup_verified is True else "failed" if cleanup_verified is False else "not-required"
-            ),
+            "status": _cleanup_status(cleanup_verified),
         },
         "binding": observed.get("binding"),
     }
+
+
+def _cleanup_status(cleanup_verified: bool | None) -> str:
+    if cleanup_verified is None:
+        return "not-required"
+    return "verified" if cleanup_verified else "failed"
 
 
 def _topology_section(

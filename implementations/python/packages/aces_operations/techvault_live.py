@@ -26,6 +26,9 @@ from aces_operations.run_artifacts import (
     run_artifact_path,
 )
 
+_LIVE_SCHEMA = "aces.libvirt.techvault-native-live-gate/v1"
+_SHA256_RE = re.compile(r"sha256:[a-f0-9]{64}")
+
 
 @dataclass(frozen=True)
 class LiveCheck:
@@ -205,15 +208,9 @@ def _write_manifest(
     observed_snapshot = snapshot if native_succeeded else {}
     native_surface = expected_surface(observed_snapshot)
     cleanup_check = next((check for check in checks if check.name == "verified_native_cleanup"), None)
-    cleanup_status = (
-        "verified"
-        if cleanup_check is not None and cleanup_check.passed
-        else "failed"
-        if native_succeeded
-        else "not-required"
-    )
+    cleanup_status = _live_cleanup_status(native_succeeded, cleanup_check)
     payload = {
-        "schema": "aces.libvirt.techvault-native-live-gate/v1",
+        "schema": _LIVE_SCHEMA,
         "scenario": {
             "path": portable_artifact_ref(scenario_path),
             "name": scenario_path.name.split(".")[0],
@@ -264,22 +261,64 @@ def _write_manifest(
     return str(target)
 
 
+def _live_cleanup_status(native_succeeded: bool, cleanup_check: LiveCheck | None) -> str:
+    if not native_succeeded:
+        return "not-required"
+    return "verified" if cleanup_check is not None and cleanup_check.passed else "failed"
+
+
 def validate_techvault_live_manifest(payload: Mapping[str, object]) -> list[str]:
     """Validate source separation and redaction before a live manifest is written."""
 
+    violations = _validate_live_manifest_metadata(payload)
+    violations.extend(_validate_live_scenario(payload))
+    violations.extend(_validate_live_realization_facts(payload))
+    violations.extend(_validate_live_forbidden_terms(payload))
+    violations.extend(redaction_violations(payload))
+    return violations
+
+
+def _validate_live_manifest_metadata(payload: Mapping[str, object]) -> list[str]:
     violations: list[str] = []
-    if payload.get("schema") != "aces.libvirt.techvault-native-live-gate/v1":
+    if payload.get("schema") != _LIVE_SCHEMA:
         violations.append("invalid TechVault live manifest schema")
     if payload.get("cleanup_policy") != "current-operation-owned-resources-only":
         violations.append("invalid TechVault cleanup policy")
     cleanup = payload.get("cleanup")
     if not isinstance(cleanup, Mapping) or cleanup.get("source") != "driver-reported":
         violations.append("cleanup must be a driver-reported section")
+    return violations
+
+
+def _validate_live_scenario(payload: Mapping[str, object]) -> list[str]:
     scenario = payload.get("scenario")
     path = scenario.get("path") if isinstance(scenario, Mapping) else None
     if not isinstance(path, str) or not path or path.startswith("/") or ".." in Path(path).parts:
-        violations.append("scenario.path must be a portable reference")
+        return ["scenario.path must be a portable reference"]
+    return []
+
+
+def _validate_live_realization_facts(payload: Mapping[str, object]) -> list[str]:
     facts = payload.get("realization_facts")
+    if not isinstance(facts, Mapping):
+        return ["realization_facts must be a mapping"]
+    violations = _validate_live_fact_sources(facts)
+    daemon = facts.get("daemon_observed")
+    domains = daemon.get("domains", ()) if isinstance(daemon, Mapping) else ()
+    networks = daemon.get("networks", ()) if isinstance(daemon, Mapping) else ()
+    violations.extend(_validate_live_daemon_names(domains, networks))
+    driver_reported = facts.get("driver_reported")
+    succeeded = isinstance(driver_reported, Mapping) and driver_reported.get("status") == "succeeded"
+    binding = payload.get("realization_binding")
+    cleanup = payload.get("cleanup")
+    cleanup_status = cleanup.get("status") if isinstance(cleanup, Mapping) else None
+    violations.extend(_validate_live_outcome(succeeded, cleanup_status, domains, networks, binding))
+    if isinstance(binding, Mapping):
+        violations.extend(_validate_live_binding(binding))
+    return violations
+
+
+def _validate_live_fact_sources(facts: Mapping[str, object]) -> list[str]:
     expected_sources = {
         "authored": "authored",
         "planned": "planned",
@@ -287,69 +326,101 @@ def validate_techvault_live_manifest(payload: Mapping[str, object]) -> list[str]
         "daemon_observed": "daemon-observed",
         "guest_observed": "guest-observed",
     }
-    if not isinstance(facts, Mapping):
-        violations.append("realization_facts must be a mapping")
-    else:
-        for key, source in expected_sources.items():
-            section = facts.get(key)
-            if not isinstance(section, Mapping) or section.get("source") != source:
-                violations.append(f"{key}.source must be {source}")
-        daemon = facts.get("daemon_observed")
-        domains = daemon.get("domains", ()) if isinstance(daemon, Mapping) else ()
-        networks = daemon.get("networks", ()) if isinstance(daemon, Mapping) else ()
-        for collection_name, values in (("domains", domains), ("networks", networks)):
-            if not isinstance(values, list | tuple) or not all(isinstance(value, str) and value for value in values):
-                violations.append(f"daemon_observed.{collection_name} must contain bounded native names")
-        driver_reported = facts.get("driver_reported")
-        succeeded = isinstance(driver_reported, Mapping) and driver_reported.get("status") == "succeeded"
-        binding = payload.get("realization_binding")
-        cleanup_status = cleanup.get("status") if isinstance(cleanup, Mapping) else None
-        if succeeded and cleanup_status not in {"verified", "failed"}:
-            violations.append("successful native realization requires an explicit cleanup outcome")
-        if not succeeded and cleanup_status != "not-required":
-            violations.append("failed native realization must mark cleanup not-required")
-        if succeeded and (not domains or not isinstance(binding, Mapping)):
-            violations.append("successful native run requires daemon observations and realization binding")
-        if not succeeded and (domains or networks or binding is not None):
-            violations.append("failed native run cannot publish stale daemon observations or binding")
-        if isinstance(binding, Mapping):
-            if binding.get("driver") != "techvault-appliance":
-                violations.append("realization binding driver must be techvault-appliance")
-            for field_name in (
-                "realization_envelope_digest",
-                "configuration_digest",
-                "driver_configuration_digest",
-                "connection_uri_digest",
-                "name_prefix_digest",
-            ):
-                value = binding.get(field_name)
-                if not isinstance(value, str) or not re.fullmatch(r"sha256:[a-f0-9]{64}", value):
-                    violations.append(f"realization binding requires canonical {field_name}")
-            boot_artifacts = binding.get("boot_artifact_digests")
-            if not isinstance(boot_artifacts, Mapping) or set(boot_artifacts) != {"kernel", "initramfs"}:
-                violations.append("realization binding requires kernel and initramfs digests")
-            elif any(
-                not isinstance(value, str) or not re.fullmatch(r"sha256:[a-f0-9]{64}", value)
-                for value in boot_artifacts.values()
-            ):
-                violations.append("realization binding boot digests must be canonical sha256 values")
-            material = {
-                "driver": binding.get("driver"),
-                "configuration_digest": binding.get("configuration_digest"),
-                "boot_artifact_digests": binding.get("boot_artifact_digests"),
-                "connection_uri_digest": binding.get("connection_uri_digest"),
-                "name_prefix_digest": binding.get("name_prefix_digest"),
-            }
-            encoded = json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
-            expected_digest = "sha256:" + hashlib.sha256(encoded).hexdigest()
-            if binding.get("driver_configuration_digest") != expected_digest:
-                violations.append("realization binding driver configuration digest does not match its material")
+    return [
+        f"{key}.source must be {source}"
+        for key, source in expected_sources.items()
+        if not isinstance(facts.get(key), Mapping) or facts[key].get("source") != source
+    ]
+
+
+def _validate_live_daemon_names(domains: object, networks: object) -> list[str]:
+    violations: list[str] = []
+    for collection_name, values in (("domains", domains), ("networks", networks)):
+        if not _bounded_native_names(values):
+            violations.append(f"daemon_observed.{collection_name} must contain bounded native names")
+    return violations
+
+
+def _bounded_native_names(values: object) -> bool:
+    return isinstance(values, list | tuple) and all(isinstance(value, str) and value for value in values)
+
+
+def _validate_live_outcome(
+    succeeded: bool,
+    cleanup_status: object,
+    domains: object,
+    networks: object,
+    binding: object,
+) -> list[str]:
+    violations: list[str] = []
+    if succeeded and cleanup_status not in {"verified", "failed"}:
+        violations.append("successful native realization requires an explicit cleanup outcome")
+    if not succeeded and cleanup_status != "not-required":
+        violations.append("failed native realization must mark cleanup not-required")
+    if succeeded and (not domains or not isinstance(binding, Mapping)):
+        violations.append("successful native run requires daemon observations and realization binding")
+    if not succeeded and (domains or networks or binding is not None):
+        violations.append("failed native run cannot publish stale daemon observations or binding")
+    return violations
+
+
+def _validate_live_binding(binding: Mapping[str, object]) -> list[str]:
+    violations = _validate_live_binding_identity(binding)
+    violations.extend(_validate_live_boot_digests(binding))
+    expected_digest = _live_binding_digest(binding)
+    if binding.get("driver_configuration_digest") != expected_digest:
+        violations.append("realization binding driver configuration digest does not match its material")
+    return violations
+
+
+def _validate_live_binding_identity(binding: Mapping[str, object]) -> list[str]:
+    violations: list[str] = []
+    if binding.get("driver") != "techvault-appliance":
+        violations.append("realization binding driver must be techvault-appliance")
+    for field_name in (
+        "realization_envelope_digest",
+        "configuration_digest",
+        "driver_configuration_digest",
+        "connection_uri_digest",
+        "name_prefix_digest",
+    ):
+        if not _canonical_digest(binding.get(field_name)):
+            violations.append(f"realization binding requires canonical {field_name}")
+    return violations
+
+
+def _validate_live_boot_digests(binding: Mapping[str, object]) -> list[str]:
+    boot_artifacts = binding.get("boot_artifact_digests")
+    if not isinstance(boot_artifacts, Mapping) or set(boot_artifacts) != {"kernel", "initramfs"}:
+        return ["realization binding requires kernel and initramfs digests"]
+    if not all(_canonical_digest(value) for value in boot_artifacts.values()):
+        return ["realization binding boot digests must be canonical sha256 values"]
+    return []
+
+
+def _live_binding_digest(binding: Mapping[str, object]) -> str:
+    material = {
+        "driver": binding.get("driver"),
+        "configuration_digest": binding.get("configuration_digest"),
+        "boot_artifact_digests": binding.get("boot_artifact_digests"),
+        "connection_uri_digest": binding.get("connection_uri_digest"),
+        "name_prefix_digest": binding.get("name_prefix_digest"),
+    }
+    encoded = json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+def _canonical_digest(value: object) -> bool:
+    return isinstance(value, str) and _SHA256_RE.fullmatch(value) is not None
+
+
+def _validate_live_forbidden_terms(payload: Mapping[str, object]) -> list[str]:
+    violations: list[str] = []
     rendered = json.dumps(payload, sort_keys=True, default=str)
     if "native-realized" in rendered:
         violations.append("native-realized is not an admitted observation basis")
     if "soc_readback" in rendered:
         violations.append("daemon substrate cannot supply SOC readback")
-    violations.extend(redaction_violations(payload))
     return violations
 
 

@@ -6,7 +6,7 @@ import ipaddress
 from collections.abc import Mapping
 
 from aces_contracts.diagnostics import Diagnostic, Severity
-from aces_contracts.planning import ChangeAction, ProvisioningPlan
+from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp
 from aces_contracts.realization_envelope import (
     BackendRealizationEnvelopeModel,
     ObservationStrength,
@@ -67,38 +67,53 @@ def techvault_admission_diagnostics(
     intentionally pure and runs before snapshot reconciliation or driver IO.
     """
 
-    diagnostics: list[Diagnostic] = []
-    planned_names: list[tuple[str, str]] = []
+    diagnostics = _transaction_diagnostics(plan)
+    planned_names = _planned_native_names(plan)
+    for operation in plan.operations:
+        diagnostics.extend(_operation_admission_diagnostics(operation, envelope))
+    diagnostics.extend(_native_name_diagnostics(planned_names, name_prefix))
+    return diagnostics
+
+
+def _transaction_diagnostics(plan: ProvisioningPlan) -> list[Diagnostic]:
     mutations = [operation for operation in plan.operations if operation.action is not ChangeAction.UNCHANGED]
-    if len(mutations) > 1 and any(operation.action is ChangeAction.DELETE for operation in mutations):
+    mixes_delete = len(mutations) > 1 and any(operation.action is ChangeAction.DELETE for operation in mutations)
+    if not mixes_delete:
+        return []
+    return [
+        _diagnostic(
+            _CODE_TRANSACTION_UNSUPPORTED,
+            "runtime.libvirt.transaction",
+            "TechVault plans cannot combine deletion with another mutation without a verified restore path.",
+        )
+    ]
+
+
+def _planned_native_names(plan: ProvisioningPlan) -> list[tuple[str, str]]:
+    return [
+        (operation.address, _resource_name(operation, operation.payload))
+        for operation in plan.operations
+        if operation.action is not ChangeAction.DELETE
+        and isinstance(operation.payload, Mapping)
+        and operation.resource_type in {NETWORK_RESOURCE_TYPE, NODE_RESOURCE_TYPE}
+    ]
+
+
+def _operation_admission_diagnostics(
+    operation: ProvisionOp,
+    envelope: BackendRealizationEnvelopeModel,
+) -> list[Diagnostic]:
+    diagnostics: list[Diagnostic] = []
+    payload = operation.payload
+    if operation.action is ChangeAction.UPDATE:
         diagnostics.append(
             _diagnostic(
-                _CODE_TRANSACTION_UNSUPPORTED,
-                "runtime.libvirt.transaction",
-                "TechVault plans cannot combine deletion with another mutation without a verified restore path.",
+                _CODE_UPDATE_UNSUPPORTED,
+                operation.address,
+                "TechVault appliance updates are not supported without a verified native restore path.",
             )
         )
-    for operation in plan.operations:
-        payload = operation.payload
-        if (
-            operation.action is not ChangeAction.DELETE
-            and isinstance(payload, Mapping)
-            and operation.resource_type in {NETWORK_RESOURCE_TYPE, NODE_RESOURCE_TYPE}
-        ):
-            planned_names.append((operation.address, _resource_name(operation, payload)))
-        if operation.action in {ChangeAction.DELETE, ChangeAction.UNCHANGED}:
-            continue
-        if operation.action is ChangeAction.UPDATE:
-            diagnostics.append(
-                _diagnostic(
-                    _CODE_UPDATE_UNSUPPORTED,
-                    operation.address,
-                    "TechVault appliance updates are not supported without a verified native restore path.",
-                )
-            )
-            continue
-        if not isinstance(payload, Mapping):
-            continue
+    elif operation.action not in {ChangeAction.DELETE, ChangeAction.UNCHANGED} and isinstance(payload, Mapping):
         if operation.resource_type in _GUEST_PLACEMENTS:
             diagnostics.append(
                 _diagnostic(
@@ -111,7 +126,6 @@ def techvault_admission_diagnostics(
             diagnostics.extend(_node_diagnostics(operation.address, payload, envelope))
         elif operation.resource_type == NETWORK_RESOURCE_TYPE:
             diagnostics.extend(_network_diagnostics(operation.address, payload))
-    diagnostics.extend(_native_name_diagnostics(planned_names, name_prefix))
     return diagnostics
 
 
@@ -173,68 +187,119 @@ def techvault_spec_diagnostics(
     for spec in networks:
         diagnostics.extend(_network_spec_diagnostics(spec))
     for spec in domains:
-        configuration = envelope.configuration
-        if not _within(
-            spec.memory_mib, configuration.memory_mib.minimum, configuration.memory_mib.maximum
-        ) or not _within(spec.vcpus, configuration.vcpus.minimum, configuration.vcpus.maximum):
-            diagnostics.append(
-                _diagnostic(
-                    _CODE_RESOURCE_OUT_OF_ENVELOPE,
-                    spec.address,
-                    "TechVault appliance resource values must be inside the governed envelope and are never clamped.",
-                )
-            )
-        if spec.image_ref is not None:
-            diagnostics.append(
-                _diagnostic(
-                    _CODE_IMAGE_UNSUPPORTED,
-                    spec.address,
-                    "TechVault appliance mode cannot honor a requested image and refuses image substitution.",
-                )
-            )
-        if spec.services:
-            diagnostics.append(
-                _diagnostic(
-                    _CODE_SERVICE_UNSUPPORTED,
-                    spec.address,
-                    "TechVault appliance mode does not realize declared guest services.",
-                )
-            )
-        cloud_init = spec.cloud_init
-        if cloud_init is not None and (
-            cloud_init.hostname not in {None, spec.name}
-            or cloud_init.users
-            or cloud_init.write_files
-            or cloud_init.packages
-            or cloud_init.runcmd
-        ):
-            diagnostics.append(
-                _diagnostic(
-                    _CODE_GUEST_PLACEMENT_UNSUPPORTED,
-                    spec.address,
-                    "TechVault appliance mode does not realize cloud-init guest placements.",
-                )
-            )
-        if spec.labels:
-            diagnostics.append(
-                _diagnostic(
-                    _CODE_METADATA_UNSUPPORTED,
-                    spec.address,
-                    "TechVault appliance mode does not consume unbound domain metadata.",
-                )
-            )
-        if spec.network_acls:
-            diagnostics.append(
-                _diagnostic(
-                    _CODE_ACL_UNSUPPORTED,
-                    spec.address,
-                    "TechVault appliance mode does not realize declared network ACLs.",
-                )
-            )
-        if any(address not in network_addresses for address in spec.networks):
-            diagnostics.append(_network_exactness_diagnostic(spec.address))
+        diagnostics.extend(_domain_spec_diagnostics(spec, envelope, network_addresses))
     diagnostics.extend(_network_capacity_diagnostics(networks, domains))
     return diagnostics
+
+
+def _domain_spec_diagnostics(
+    spec: DomainSpec,
+    envelope: BackendRealizationEnvelopeModel,
+    network_addresses: set[str],
+) -> list[Diagnostic]:
+    return [
+        *_domain_resource_diagnostics(spec, envelope),
+        *_domain_image_diagnostics(spec),
+        *_domain_service_diagnostics(spec),
+        *_domain_guest_placement_diagnostics(spec),
+        *_domain_metadata_diagnostics(spec),
+        *_domain_acl_diagnostics(spec),
+        *_domain_network_diagnostics(spec, network_addresses),
+    ]
+
+
+def _domain_resource_diagnostics(
+    spec: DomainSpec,
+    envelope: BackendRealizationEnvelopeModel,
+) -> list[Diagnostic]:
+    configuration = envelope.configuration
+    memory_valid = _within(spec.memory_mib, configuration.memory_mib.minimum, configuration.memory_mib.maximum)
+    vcpus_valid = _within(spec.vcpus, configuration.vcpus.minimum, configuration.vcpus.maximum)
+    if memory_valid and vcpus_valid:
+        return []
+    return [
+        _diagnostic(
+            _CODE_RESOURCE_OUT_OF_ENVELOPE,
+            spec.address,
+            "TechVault appliance resource values must be inside the governed envelope and are never clamped.",
+        )
+    ]
+
+
+def _domain_image_diagnostics(spec: DomainSpec) -> list[Diagnostic]:
+    if spec.image_ref is None:
+        return []
+    return [
+        _diagnostic(
+            _CODE_IMAGE_UNSUPPORTED,
+            spec.address,
+            "TechVault appliance mode cannot honor a requested image and refuses image substitution.",
+        )
+    ]
+
+
+def _domain_service_diagnostics(spec: DomainSpec) -> list[Diagnostic]:
+    if not spec.services:
+        return []
+    return [
+        _diagnostic(
+            _CODE_SERVICE_UNSUPPORTED,
+            spec.address,
+            "TechVault appliance mode does not realize declared guest services.",
+        )
+    ]
+
+
+def _domain_guest_placement_diagnostics(spec: DomainSpec) -> list[Diagnostic]:
+    cloud_init = spec.cloud_init
+    has_guest_placement = cloud_init is not None and any(
+        (
+            cloud_init.hostname not in {None, spec.name},
+            bool(cloud_init.users),
+            bool(cloud_init.write_files),
+            bool(cloud_init.packages),
+            bool(cloud_init.runcmd),
+        )
+    )
+    if not has_guest_placement:
+        return []
+    return [
+        _diagnostic(
+            _CODE_GUEST_PLACEMENT_UNSUPPORTED,
+            spec.address,
+            "TechVault appliance mode does not realize cloud-init guest placements.",
+        )
+    ]
+
+
+def _domain_metadata_diagnostics(spec: DomainSpec) -> list[Diagnostic]:
+    if not spec.labels:
+        return []
+    return [
+        _diagnostic(
+            _CODE_METADATA_UNSUPPORTED,
+            spec.address,
+            "TechVault appliance mode does not consume unbound domain metadata.",
+        )
+    ]
+
+
+def _domain_acl_diagnostics(spec: DomainSpec) -> list[Diagnostic]:
+    if not spec.network_acls:
+        return []
+    return [
+        _diagnostic(
+            _CODE_ACL_UNSUPPORTED,
+            spec.address,
+            "TechVault appliance mode does not realize declared network ACLs.",
+        )
+    ]
+
+
+def _domain_network_diagnostics(spec: DomainSpec, network_addresses: set[str]) -> list[Diagnostic]:
+    if all(address in network_addresses for address in spec.networks):
+        return []
+    return [_network_exactness_diagnostic(spec.address)]
 
 
 def _name_diagnostics(
@@ -289,25 +354,9 @@ def _network_capacity_diagnostics(
 
 
 def _network_spec_diagnostics(spec: NetworkSpec) -> list[Diagnostic]:
-    if (
-        not spec.cidr
-        or not spec.gateway
-        or set(spec.labels) != {"internal"}
-        or spec.labels.get("internal") not in {"true", "false"}
-    ):
-        return [_network_exactness_diagnostic(spec.address)]
-    try:
-        network = ipaddress.ip_network(spec.cidr, strict=True)
-        gateway = ipaddress.ip_address(spec.gateway)
-    except ValueError:
-        return [_network_exactness_diagnostic(spec.address)]
-    if (
-        not isinstance(network, ipaddress.IPv4Network)
-        or gateway not in network
-        or gateway in {network.network_address, network.broadcast_address}
-    ):
-        return [_network_exactness_diagnostic(spec.address)]
-    return []
+    labels_valid = set(spec.labels) == {"internal"} and spec.labels.get("internal") in {"true", "false"}
+    valid = labels_valid and _valid_ipv4_network(spec.cidr, spec.gateway)
+    return [] if valid else [_network_exactness_diagnostic(spec.address)]
 
 
 def _expected_observations(
@@ -388,25 +437,27 @@ def _node_diagnostics(
 
 def _network_diagnostics(address: str, payload: Mapping[str, object]) -> list[Diagnostic]:
     properties = _infrastructure_spec(payload).get("properties")
-    if not isinstance(properties, Mapping):
-        return [_network_exactness_diagnostic(address)]
-    cidr = properties.get("cidr")
-    gateway = properties.get("gateway")
-    internal = properties.get("internal")
-    if not isinstance(cidr, str) or not isinstance(gateway, str) or not isinstance(internal, bool):
-        return [_network_exactness_diagnostic(address)]
+    valid = False
+    if isinstance(properties, Mapping):
+        valid = isinstance(properties.get("internal"), bool) and _valid_ipv4_network(
+            properties.get("cidr"), properties.get("gateway")
+        )
+    return [] if valid else [_network_exactness_diagnostic(address)]
+
+
+def _valid_ipv4_network(cidr: object, gateway: object) -> bool:
+    if not isinstance(cidr, str) or not isinstance(gateway, str):
+        return False
     try:
         network = ipaddress.ip_network(cidr, strict=True)
         parsed_gateway = ipaddress.ip_address(gateway)
     except ValueError:
-        return [_network_exactness_diagnostic(address)]
-    if (
-        not isinstance(network, ipaddress.IPv4Network)
-        or parsed_gateway not in network
-        or parsed_gateway in {network.network_address, network.broadcast_address}
-    ):
-        return [_network_exactness_diagnostic(address)]
-    return []
+        return False
+    return (
+        isinstance(network, ipaddress.IPv4Network)
+        and parsed_gateway in network
+        and parsed_gateway not in {network.network_address, network.broadcast_address}
+    )
 
 
 def _within(value: int, minimum: int, maximum: int | None) -> bool:
