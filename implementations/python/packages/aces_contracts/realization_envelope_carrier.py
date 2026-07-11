@@ -47,6 +47,7 @@ class RealizationConcern(str, Enum):
     CONTENT_PLACEMENT = "content-placement"
     ACCOUNT_PLACEMENT = "account-placement"
     FEATURE_BINDING = "feature-binding"
+    SERVICE = "service"
     ACL = "acl"
 
 

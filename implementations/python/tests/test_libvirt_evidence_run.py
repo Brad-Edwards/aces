@@ -10,10 +10,11 @@ connection (no daemon), mirroring ``test_libvirt_backend_techvault_native``.
 from __future__ import annotations
 
 import json
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
-from aces_backend_libvirt.techvault_native import ProbeResult, TechVaultNativeLibvirtDriver
+from aces_backend_libvirt.techvault_native import TechVaultNativeLibvirtDriver
 from aces_contracts.contracts import (
     BackendManifestV2Model,
     EvaluationHistoryEventModel,
@@ -40,6 +41,7 @@ _REQUIRED_SECTIONS = (
     "scenario",
     "compiled_artifact",
     "backend",
+    "realization_facts",
     "realized_topology",
     "participant_action_proof",
     "terminal_observation",
@@ -58,20 +60,32 @@ _REQUIRED_SECTIONS = (
 
 
 class _NativeObject:
-    def __init__(self, name: str = "") -> None:
+    def __init__(self, name: str = "", xml: str = "") -> None:
         self._name = name
+        self._xml = xml
+        self._active = False
+        self._undefined = False
 
     def name(self) -> str:
         return self._name
 
     def create(self) -> None:  # pragma: no cover - structural stub
-        pass
+        self._active = True
 
     def destroy(self) -> None:  # pragma: no cover - structural stub
-        pass
+        self._active = False
 
     def undefine(self) -> None:  # pragma: no cover - structural stub
-        pass
+        self._undefined = True
+
+    def isActive(self):  # noqa: N802 - mirrors libvirt API
+        return int(self._active)
+
+    def XMLDesc(self, _flags=0):  # noqa: N802 - mirrors libvirt API
+        return self._xml
+
+    def UUIDString(self):  # noqa: N802 - mirrors libvirt API
+        return ET.fromstring(self._xml).findtext("uuid")  # noqa: S314 - test-generated XML
 
 
 def _name_from_xml(xml: str) -> str:
@@ -84,12 +98,12 @@ class _FakeConnection:
         self.domains: dict[str, _NativeObject] = {}
 
     def networkDefineXML(self, xml: str):  # noqa: N802 - mirrors libvirt API
-        obj = _NativeObject(_name_from_xml(xml))
+        obj = _NativeObject(_name_from_xml(xml), xml)
         self.networks[obj.name()] = obj
         return obj
 
     def defineXML(self, xml: str):  # noqa: N802 - mirrors libvirt API
-        obj = _NativeObject(_name_from_xml(xml))
+        obj = _NativeObject(_name_from_xml(xml), xml)
         self.domains[obj.name()] = obj
         return obj
 
@@ -100,10 +114,10 @@ class _FakeConnection:
         return self.domains[name]
 
     def listAllDomains(self):  # noqa: N802 - mirrors libvirt API
-        return list(self.domains.values())
+        return [item for item in self.domains.values() if not item._undefined]
 
     def listAllNetworks(self):  # noqa: N802 - mirrors libvirt API
-        return list(self.networks.values())
+        return [item for item in self.networks.values() if not item._undefined]
 
 
 class _InitramfsBuilder:
@@ -111,14 +125,6 @@ class _InitramfsBuilder:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(b"initramfs")
         return target
-
-
-class _Probe:
-    def ping(self, ip: str):
-        return ProbeResult(True)
-
-    def tcp(self, ip: str, port: int):
-        return ProbeResult(True)
 
 
 def _native_driver_factory(tmp_path: Path):
@@ -135,6 +141,30 @@ def _native_driver_factory(tmp_path: Path):
         )
 
     return factory
+
+
+def _bounded_scenario(tmp_path: Path) -> Path:
+    scenario = tmp_path / "bounded-techvault.sdl.yaml"
+    scenario.write_text(
+        """\
+name: bounded-techvault
+nodes:
+  lab:
+    type: switch
+  demo:
+    type: vm
+    os: linux
+    resources: {ram: 128 MiB, cpu: 1}
+    services: []
+infrastructure:
+  lab:
+    properties: {cidr: 192.0.2.0/24, gateway: 192.0.2.1, internal: true}
+  demo:
+    links: [lab]
+""",
+        encoding="utf-8",
+    )
+    return scenario
 
 
 # --- deterministic mode --------------------------------------------------------
@@ -280,6 +310,76 @@ def test_validator_flags_participant_boundary_exposure(tmp_path):
     assert any("boundary violation" in p for p in problems)
 
 
+def test_validator_rejects_nonempty_domain_list_as_daemon_observation(tmp_path):
+    artifact = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO,
+        project_dir=tmp_path,
+        run_id="evidence-source-mutation-1",
+    ).artifact
+    envelope = artifact["backend"]["manifest"]["realization_envelope"]
+    artifact["backend"]["realization_provenance"].update(
+        {"substrate_realized": True, "basis": "daemon-observed-substrate"}
+    )
+    artifact["realized_topology"]["basis"] = "mixed-source"
+    artifact["realization_facts"]["daemon_observed"]["domains"] = [
+        {"name": "fabricated", "observation_source": "daemon-observed"}
+    ]
+    artifact["realization_facts"]["binding"] = {
+        "driver": "techvault-appliance",
+        "realization_envelope_digest": envelope["digest"],
+        "configuration_digest": envelope["configuration_digest"],
+        "driver_configuration_digest": "sha256:" + "0" * 64,
+        "boot_artifact_digests": {},
+    }
+
+    problems = validate_libvirt_evidence_run_artifact(artifact)
+
+    assert any("incomplete daemon domain observation" in problem for problem in problems)
+
+
+def test_validator_rejects_planned_topology_relabelled_as_observed(tmp_path):
+    artifact = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO,
+        project_dir=tmp_path,
+        run_id="evidence-source-mutation-2",
+    ).artifact
+    artifact["realized_topology"]["nodes"][0]["source"] = "daemon-observed"
+
+    problems = validate_libvirt_evidence_run_artifact(artifact)
+
+    assert any("realized_topology.nodes is planned" in problem for problem in problems)
+
+
+def test_validator_rejects_native_realized_label_and_fabricated_soc_readback(tmp_path):
+    artifact = run_libvirt_evidence_run(
+        scenario_path=_REFERENCE_SCENARIO,
+        project_dir=tmp_path,
+        run_id="evidence-source-mutation-3",
+    ).artifact
+    artifact["realized_topology"]["basis"] = "native-realized"
+    artifact["defensive_evidence"]["soc_readback"] = {"wazuh_active_agents": ["fabricated"]}
+
+    problems = validate_libvirt_evidence_run_artifact(artifact)
+
+    assert any("native-realized" in problem for problem in problems)
+    assert any("cannot supply SOC readback" in problem for problem in problems)
+
+
+def test_validator_rejects_mismatched_realization_binding(tmp_path):
+    artifact = run_libvirt_evidence_run(
+        scenario_path=_bounded_scenario(tmp_path),
+        project_dir=tmp_path,
+        run_id="evidence-source-mutation-4",
+        config=LibvirtEvidenceRunConfig(evidence_source_mode="native-live"),
+        driver_factory=_native_driver_factory(tmp_path),
+    ).artifact
+    artifact["realization_facts"]["binding"]["realization_envelope_digest"] = "sha256:" + "f" * 64
+
+    problems = validate_libvirt_evidence_run_artifact(artifact)
+
+    assert any("envelope digest does not match" in problem for problem in problems)
+
+
 # --- native-live mode ----------------------------------------------------------
 
 
@@ -290,7 +390,6 @@ def test_native_live_reference_scenario_discloses_unrealized_content_plane(tmp_p
         run_id="evidence-live-1",
         config=LibvirtEvidenceRunConfig(evidence_source_mode="native-live"),
         driver_factory=_native_driver_factory(tmp_path),
-        probe=_Probe(),
     )
     # ASR-519: the TechVault appliance driver does not consume the generic cloud-init
     # content/account surfaces. A native domain must not hide that gap.
@@ -307,28 +406,38 @@ def test_native_live_reference_scenario_discloses_unrealized_content_plane(tmp_p
 
 def test_native_live_realizes_substrate_for_provisionable_scenario(tmp_path):
     report = run_libvirt_evidence_run(
-        scenario_path=_TECHVAULT_SCENARIO,
+        scenario_path=_bounded_scenario(tmp_path),
         project_dir=tmp_path,
         run_id="tv-live-1",
         config=LibvirtEvidenceRunConfig(evidence_source_mode="native-live"),
         driver_factory=_native_driver_factory(tmp_path),
-        probe=_Probe(),
     )
-    # This is the only native-live success path: real domain/network snapshot data
-    # flows through artifact assembly, so it must clear the full check set and the
-    # redaction/contract validator (the path most able to leak host-private data).
     assert report.passed, report.render()
     artifact = report.artifact
     assert validate_libvirt_evidence_run_artifact(artifact) == []
     assert artifact["backend"]["realization_provenance"]["substrate_realized"] is True
+    assert artifact["backend"]["realization_provenance"]["basis"] == "daemon-observed-substrate"
+    assert artifact["backend"]["realization_provenance"]["cleanup_verified"] is True
+    assert any(check.name == "native_substrate_cleanup" and check.passed for check in report.checks)
+    assert artifact["realized_topology"]["basis"] == "mixed-source"
     native_surface = artifact["realized_topology"]["native_surface"]
-    assert len(native_surface["domains"]) == 30
-    assert len(native_surface["networks"]) == 4
-    # Native SOC readback is the translated native readback, explicitly disclosed.
+    assert native_surface["source"] == "daemon-observed"
+    assert native_surface["domains"] == ("evidence-test-demo",)
+    assert native_surface["networks"] == ("evidence-test-lab",)
+    facts = artifact["realization_facts"]
+    assert facts["planned"]["source"] == "planned"
+    assert facts["driver_reported"]["source"] == "driver-reported"
+    assert facts["daemon_observed"]["source"] == "daemon-observed"
+    assert facts["guest_observed"] == {"source": "guest-observed", "status": "not-observed"}
+    assert (
+        facts["binding"]["realization_envelope_digest"]
+        == artifact["backend"]["manifest"]["realization_envelope"]["digest"]
+    )
     defensive = artifact["defensive_evidence"]
-    assert defensive["evidence_source"] == "native-translated-readback"
-    assert "soc_readback" in defensive
+    assert defensive["evidence_source"] == "structural-evaluator-channel"
+    assert "soc_readback" not in defensive
     assert defensive["captured_at"] == artifact["recorded_at"]
+    assert "native_reachability" not in artifact["negative_boundary_checks"]
 
 
 def test_native_live_without_realized_substrate_fails(tmp_path):

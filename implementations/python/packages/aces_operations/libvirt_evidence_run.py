@@ -21,14 +21,13 @@ Two honestly-disclosed evidence-source modes:
 
 * ``deterministic`` (default, no libvirt daemon — used by tests / CI): participant
   lifecycle proof + compiled topology + structural negative-boundary evidence + an
-  evaluator-only translated SOC-readback record explicitly marked as not upstream
-  Wazuh.
-* ``native-live`` (operator-run; injected/default native driver + probe):
-  additionally realizes the libvirt VM/network substrate (including the scenario's
-  content and account placements, via cloud-init) and records the native topology
-  and native SOC readback. Any provisioning capability the backend genuinely cannot
-  realize is disclosed as ``unrealized_capabilities`` (and fails native-live), not
-  faked; orchestration/evaluation planes are outside a provisioning-only target.
+  evaluator-only declaration of defensive evidence channels; no SOC state is
+  observed.
+* ``native-live`` (operator-run; injected/default native driver):
+  additionally realizes only the bounded VM/network substrate that passes the
+  TechVault concern-admission gate and records independently daemon-observed fields.
+  Guest content, accounts, features, ACLs, services, and SOC state are rejected or
+  disclosed as not observed; orchestration/evaluation remain separate planes.
 
 Artifact assembly lives in ``_evidence_run_artifact`` and validation in
 ``_evidence_run_validation`` (kept separate for the ADR-015 source-size cap).
@@ -43,7 +42,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from aces_backend_libvirt.target import create_libvirt_target
-from aces_backend_libvirt.techvault_native import NativeLibvirtProbe, TechVaultNativeLibvirtDriver
+from aces_backend_libvirt.techvault_native import TechVaultNativeLibvirtDriver
 from aces_runtime.control_plane import RuntimeControlPlane
 from aces_runtime.manager import RuntimeManager
 from aces_sdl.parser import parse_sdl_file
@@ -56,6 +55,7 @@ from aces_operations._evidence_run_types import (
     ParticipantBehavior,
 )
 from aces_operations._evidence_run_validation import validate_libvirt_evidence_run_artifact
+from aces_operations._techvault_cleanup import cleanup_native_snapshot
 from aces_operations.deterministic_participant_fixtures import (
     build_participant_admission_request,
     iter_admission_pairs,
@@ -97,9 +97,6 @@ class LibvirtEvidenceRunConfig:
 
     evidence_source_mode: EvidenceSourceMode = "deterministic"
     connection_uri: str = "qemu:///system"
-    boot_timeout_seconds: int = 180
-    appliance_memory_mib: int = 128
-    clean_boot: bool = True
 
 
 @dataclass(frozen=True)
@@ -141,7 +138,6 @@ def run_libvirt_evidence_run(
     run_id: str,
     config: LibvirtEvidenceRunConfig | None = None,
     driver_factory: Callable[[], TechVaultNativeLibvirtDriver] | None = None,
-    probe: NativeLibvirtProbe | None = None,
 ) -> LibvirtEvidenceRunReport:
     """Produce the libvirt scenario evaluator-evidence artifact for ``scenario_path``."""
     settings = config or LibvirtEvidenceRunConfig()
@@ -163,8 +159,8 @@ def run_libvirt_evidence_run(
         target = create_libvirt_target(participant_runtime=True, driver=native_driver)
         execution_plan = RuntimeManager(target).plan(parse_sdl_file(scenario_path))
         control_plane = RuntimeControlPlane(target)
-    except Exception as exc:
-        checks.append(EvidenceCheck("scenario_plan", False, (f"failed to plan scenario: {exc}",)))
+    except Exception:
+        checks.append(EvidenceCheck("scenario_plan", False, ("failed to plan scenario",)))
         return LibvirtEvidenceRunReport(scenario_path.name, run_id, str(project_dir), mode, tuple(checks))
 
     model = execution_plan.model
@@ -172,12 +168,16 @@ def run_libvirt_evidence_run(
     checks.append(EvidenceCheck("participant_action_proof", proof["lifecycle_clean"], tuple(proof["diagnostics"])))
 
     native_snapshot: Mapping[str, Any] | None = None
+    native_cleanup_verified: bool | None = None
     unrealized_capabilities: tuple[str, ...] = ()
     if mode == "native-live":
         native_snapshot, realize_check, unrealized_capabilities = _realize_native_substrate(
             execution_plan, control_plane, native_driver
         )
         checks.append(realize_check)
+        if native_snapshot is not None and native_driver is not None:
+            native_cleanup_verified, cleanup_diagnostics = cleanup_native_snapshot(native_driver, native_snapshot)
+            checks.append(EvidenceCheck("native_substrate_cleanup", native_cleanup_verified, cleanup_diagnostics))
 
     inputs = EvidenceArtifactInputs(
         scenario_path=scenario_path,
@@ -188,7 +188,7 @@ def run_libvirt_evidence_run(
         manifest=execution_plan.manifest,
         proof=proof,
         native_snapshot=native_snapshot,
-        probe=probe if mode == "native-live" else None,
+        native_cleanup_verified=native_cleanup_verified,
         unrealized_capabilities=unrealized_capabilities,
     )
     artifact, artifact_path = _finalize_artifact(inputs, project_dir, checks)
@@ -222,8 +222,8 @@ def _persist_artifact(
     try:
         target_path = run_artifact_path(project_dir, run_id, "scenario-evidence", "libvirt-scenario-evidence-run.json")
         atomic_write_json_artifact(target_path, artifact)
-    except OSError as exc:
-        return None, EvidenceCheck("artifact_write", False, (f"artifact write failed: {exc}",))
+    except OSError:
+        return None, EvidenceCheck("artifact_write", False, ("artifact write failed",))
     return str(target_path), EvidenceCheck("artifact_write", True)
 
 
@@ -332,8 +332,6 @@ def _default_native_driver_factory(
             state_dir=state_dir,
             connection_uri=settings.connection_uri,
             name_prefix="aces-evidence",
-            appliance_memory_mib=settings.appliance_memory_mib,
-            clean_existing=settings.clean_boot,
         )
 
     return factory
@@ -346,23 +344,18 @@ def _realize_native_substrate(
 ) -> tuple[Mapping[str, Any] | None, EvidenceCheck, tuple[str, ...]]:
     """Realize the libvirt provisioning substrate (VMs + networks) for the scenario.
 
-    The libvirt backend realizes the full provisioning plane — nodes, networks, and
-    content/account/feature placements (via cloud-init) — so a governed provisioning
-    capability is realized rather than disclosed. Any capability the backend still
-    cannot realize (an ungoverned provisioning term, or orchestration/evaluation
-    outside a provisioning-only target) is returned as ``unrealized_capabilities``
-    and disclosed in the artifact. The check is gating and passes only when the
-    native driver realized at least one domain — native-live must never report
-    success without realizing — so a scenario the backend cannot provision fails
-    native-live and surfaces its unrealized capabilities rather than silently passing.
+    Native-live passes only when the runtime operation succeeds and the fresh driver
+    report contains independently daemon-observed domains bound to the selected
+    realization-envelope/configuration identity. A domain handle or planned matrix
+    alone is never sufficient.
     """
     if native_driver is None:
         return None, EvidenceCheck("native_substrate_realization", False, ("no native driver",)), ()
     try:
         receipt = control_plane.submit_provisioning(execution_plan.provisioning)
         status = control_plane.get_operation(receipt.operation_id)
-    except Exception as exc:
-        return None, EvidenceCheck("native_substrate_realization", False, (f"native realization raised: {exc}",)), ()
+    except Exception:
+        return None, EvidenceCheck("native_substrate_realization", False, ("native realization failed",)), ()
     unrealized = _dedupe(
         f"{d.code}: {d.message}"
         for source in (execution_plan.diagnostics, () if status is None else status.diagnostics)
@@ -370,7 +363,8 @@ def _realize_native_substrate(
         if d.is_error
     )
     snapshot = native_driver.last_snapshot
-    realized = _snapshot_has_domains(snapshot)
+    operation_succeeded = status is not None and status.state.value == "succeeded"
+    realized = operation_succeeded and _snapshot_has_daemon_observations(snapshot)
     check = EvidenceCheck(
         "native_substrate_realization",
         realized,
@@ -388,8 +382,14 @@ def _dedupe(items: Iterable[str]) -> tuple[str, ...]:
     return tuple(seen)
 
 
-def _snapshot_has_domains(snapshot: Mapping[str, Any] | None) -> bool:
+def _snapshot_has_daemon_observations(snapshot: Mapping[str, Any] | None) -> bool:
     if not isinstance(snapshot, Mapping):
         return False
     domains = snapshot.get("domains", ())
-    return isinstance(domains, list | tuple) and len(domains) > 0
+    binding = snapshot.get("binding")
+    return (
+        snapshot.get("source") == "daemon-observed"
+        and isinstance(domains, list | tuple)
+        and len(domains) > 0
+        and isinstance(binding, Mapping)
+    )

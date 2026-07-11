@@ -61,14 +61,12 @@ def make_libvirt_readable(path: Path) -> None:
 def _write_appliance_root(root: Path, busybox_path: Path, domain: Mapping[str, object]) -> None:
     bin_dir = root / "bin"
     etc_dir = root / "etc" / "aces"
-    www_dir = root / "www"
-    for directory in (bin_dir, etc_dir, www_dir, root / "proc", root / "sys", root / "dev", root / "tmp", root / "run"):
+    for directory in (bin_dir, etc_dir, root / "proc", root / "sys", root / "dev", root / "tmp", root / "run"):
         directory.mkdir(parents=True, exist_ok=True)
     shutil.copy2(busybox_path, bin_dir / "busybox")
-    for applet in ("sh", "mount", "mdev", "ip", "ifconfig", "httpd", "nc", "sleep", "cat", "hostname", "printf"):
+    for applet in ("sh", "mount", "mdev", "ip", "ifconfig", "sleep", "cat", "hostname", "printf"):
         (bin_dir / applet).symlink_to("busybox")
     (etc_dir / "domain.json").write_text(json.dumps(domain, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    (www_dir / "index.html").write_text(_html_status(domain), encoding="utf-8")
     (root / "init").write_text(_init_script(domain), encoding="utf-8")
     os.chmod(root / "init", 0o700)
     os.chmod(bin_dir / "busybox", 0o700)
@@ -101,24 +99,8 @@ def _init_script(domain: Mapping[str, object]) -> str:
             ]
         )
     lines.extend(["  esac", "done"])
-    for service in _as_sequence(domain.get("services")):
-        if not isinstance(service, Mapping) or str(service.get("protocol", "tcp")).lower() != "tcp":
-            continue
-        port = _int(service.get("port"))
-        if port > 0:
-            lines.append(f"httpd -p 0.0.0.0:{port} -h /www")
     lines.extend(["while true; do sleep 3600; done", ""])
     return "\n".join(lines)
-
-
-def _html_status(domain: Mapping[str, object]) -> str:
-    return (
-        "<html><body><h1>ACES TechVault appliance</h1>"
-        f"<p>node={domain.get('name')}</p>"
-        f"<p>role={domain.get('role')}</p>"
-        f"<pre>{json.dumps(domain, sort_keys=True)}</pre>"
-        "</body></html>\n"
-    )
 
 
 def _cpio_newc(root: Path) -> bytes:
@@ -140,10 +122,6 @@ def _cpio_paths(root: Path) -> list[str]:
 
 def _as_sequence(value: object) -> Sequence[object]:
     return value if isinstance(value, list | tuple) else ()
-
-
-def _int(value: object) -> int:
-    return value if isinstance(value, int) else 0
 
 
 def _shell_quote(value: str) -> str:

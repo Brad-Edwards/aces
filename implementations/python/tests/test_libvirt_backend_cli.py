@@ -14,7 +14,7 @@ class _Report:
     passed: bool = True
 
     def render(self) -> str:
-        return "live ok"
+        return "live ok" if self.passed else "live failed"
 
 
 def test_libvirt_techvault_validate_live_cli_invokes_gate(monkeypatch, tmp_path):
@@ -44,10 +44,6 @@ def test_libvirt_techvault_validate_live_cli_invokes_gate(monkeypatch, tmp_path)
             "--yes",
             "--connection-uri",
             "qemu:///session",
-            "--appliance-memory-mib",
-            "96",
-            "--boot-timeout-seconds",
-            "7",
         ],
     )
 
@@ -60,8 +56,95 @@ def test_libvirt_techvault_validate_live_cli_invokes_gate(monkeypatch, tmp_path)
             "run_id": "cli-run",
             "config": TechVaultLiveConfig(
                 connection_uri="qemu:///session",
-                appliance_memory_mib=96,
-                boot_timeout_seconds=7,
             ),
         }
     ]
+
+
+def test_libvirt_techvault_validate_live_cli_returns_failure_exit(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "aces_cli.libvirt.validate_techvault_live",
+        lambda **_kwargs: _Report(passed=False),
+    )
+    scenario = tmp_path / "scenario.sdl.yaml"
+    scenario.write_text("name: cli\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "libvirt",
+            "techvault",
+            "validate-live",
+            "--scenario",
+            str(scenario),
+            "--project-dir",
+            str(tmp_path),
+            "--run-id",
+            "cli-run",
+            "--yes",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "live failed" in result.output
+
+
+def test_libvirt_techvault_cli_has_no_unbound_memory_override(monkeypatch, tmp_path):
+    calls: list[dict[str, object]] = []
+
+    def _validate(**kwargs):
+        calls.append(kwargs)
+        return _Report()
+
+    monkeypatch.setattr("aces_cli.libvirt.validate_techvault_live", _validate)
+    scenario = tmp_path / "scenario.sdl.yaml"
+    scenario.write_text("name: cli\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "libvirt",
+            "techvault",
+            "validate-live",
+            "--scenario",
+            str(scenario),
+            "--project-dir",
+            str(tmp_path),
+            "--run-id",
+            "cli-run",
+            "--yes",
+            "--appliance-memory-mib",
+            "96",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert calls == []
+
+
+def test_libvirt_techvault_cli_rejects_connection_uri_credentials(monkeypatch, tmp_path):
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr("aces_cli.libvirt.validate_techvault_live", lambda **kwargs: calls.append(kwargs))
+    scenario = tmp_path / "scenario.sdl.yaml"
+    scenario.write_text("name: cli\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "libvirt",
+            "techvault",
+            "validate-live",
+            "--scenario",
+            str(scenario),
+            "--project-dir",
+            str(tmp_path),
+            "--run-id",
+            "cli-run",
+            "--yes",
+            "--connection-uri",
+            "qemu+ssh://operator:credential@example/system",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert calls == []

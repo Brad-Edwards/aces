@@ -77,6 +77,29 @@ def test_node_without_placements_gets_hostname_only_cloud_init():
     assert cloud_init.write_files == ()
 
 
+def test_network_preserves_explicit_false_internal_setting():
+    network = _resource(
+        "network",
+        "provision.network.external",
+        {
+            "name": "external",
+            "spec": {
+                "infrastructure": {
+                    "properties": {
+                        "cidr": "192.0.2.0/24",
+                        "gateway": "192.0.2.1",
+                        "internal": False,
+                    }
+                }
+            },
+        },
+    )
+
+    realization = interpret_provisioning_plan(_plan(network))
+
+    assert realization.networks[0].labels["internal"] == "false"
+
+
 def test_account_placement_realizes_user_with_all_features():
     account = _resource(
         "account-placement",

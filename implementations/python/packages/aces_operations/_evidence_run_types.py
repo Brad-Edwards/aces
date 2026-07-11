@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from aces_backend_libvirt.techvault_native import NativeLibvirtProbe
 from aces_backend_protocols.capabilities import BackendManifest
 
 __all__ = [
@@ -28,7 +27,6 @@ __all__ = [
     "CompiledModel",
     "EvidenceArtifactInputs",
     "ExecutionPlan",
-    "NativeLibvirtProbe",
     "NodeDeployment",
     "ObservationBoundary",
     "ParticipantBehavior",
@@ -116,5 +114,5 @@ class EvidenceArtifactInputs:
     manifest: BackendManifest
     proof: Mapping[str, Any]
     native_snapshot: Mapping[str, Any] | None
-    probe: NativeLibvirtProbe | None
+    native_cleanup_verified: bool | None
     unrealized_capabilities: tuple[str, ...] = ()

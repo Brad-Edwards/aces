@@ -65,6 +65,13 @@ def test_techvault_driver_selects_narrow_appliance_envelope(tmp_path):
     assert not target.manifest.provisioner.supports_accounts
     assert not target.manifest.provisioner.supports_acls
 
+    claims = {claim.concern.value: claim for claim in envelope.concerns}
+    assert claims["service"].disposition.value == "unsupported"
+    assert claims["service"].observation_strength.value == "none"
+    for concern in ("topology", "architecture", "image", "resource-allocation", "network"):
+        assert claims[concern].observation_strength.value == "daemon-observed"
+        assert claims[concern].disposition.value == "realized"
+
 
 def test_driver_and_declared_mode_must_match(tmp_path):
     driver = TechVaultNativeLibvirtDriver(state_dir=tmp_path)

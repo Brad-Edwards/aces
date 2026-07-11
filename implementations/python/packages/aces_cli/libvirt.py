@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import typer
 from aces_operations.libvirt_evidence_run import LibvirtEvidenceRunConfig, run_libvirt_evidence_run
@@ -19,6 +20,13 @@ _LIVE_WARNING = """\
 This will create native libvirt/QEMU resources for the selected TechVault
 scenario and write a live-gate archive under the output directory.
 """
+
+
+def _noncredential_connection_uri(value: str) -> str:
+    parsed = urlsplit(value)
+    if parsed.username is not None or parsed.password is not None:
+        raise typer.BadParameter("connection URI must not contain credentials")
+    return value
 
 
 @techvault_app.command("validate-live")
@@ -48,19 +56,8 @@ def validate_live(
     connection_uri: str = typer.Option(
         "qemu:///system",
         "--connection-uri",
+        callback=_noncredential_connection_uri,
         help="libvirt connection URI.",
-    ),
-    appliance_memory_mib: int = typer.Option(
-        128,
-        "--appliance-memory-mib",
-        min=64,
-        help="Memory per generated TechVault appliance VM.",
-    ),
-    boot_timeout_seconds: int = typer.Option(
-        180,
-        "--boot-timeout-seconds",
-        min=1,
-        help="Maximum native appliance readiness wait.",
     ),
 ) -> None:
     """Boot TechVault through native ACES/libvirt and run the live validation gate."""
@@ -77,8 +74,6 @@ def validate_live(
         run_id=resolved_run_id,
         config=TechVaultLiveConfig(
             connection_uri=connection_uri,
-            appliance_memory_mib=appliance_memory_mib,
-            boot_timeout_seconds=boot_timeout_seconds,
         ),
     )
     typer.echo(report.render())
@@ -112,6 +107,7 @@ def validate_evidence(
     connection_uri: str = typer.Option(
         "qemu:///system",
         "--connection-uri",
+        callback=_noncredential_connection_uri,
         help="libvirt connection URI (native-live only).",
     ),
 ) -> None:
