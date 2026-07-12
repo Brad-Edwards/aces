@@ -70,6 +70,11 @@ authority_roots:
     authority: concept-family and controlled-vocabulary authority artifacts
     family: concept-authority
 
+  - id: normative_provenance
+    root: contracts/provenance/
+    authority: revision-pinned SDL lineage and third-party provenance records
+    family: provenance
+
 # Roots that are non-normative. These consume authority; they do not define it.
 # A reference implementation, an explanatory doc, a worked example, a research
 # note, and the tooling tree all live here. Adding a new top-level directory

@@ -1,0 +1,3100 @@
+{
+  "schema_version": "sdl-lineage-ledger/v1",
+  "reviewed_on": "2026-07-12",
+  "citations": [
+    {
+      "citation_id": "ocr-sdl-v0.21.2",
+      "title": "Open Cyber Range SDL Parser v0.21.2",
+      "authors_or_maintainer": [
+        "CR14 / Norwegian Cyber Range"
+      ],
+      "year": 2024,
+      "canonical_url": "https://github.com/Open-Cyber-Range/SDL-parser/commit/fe83e8281fc4b954967fbaa5a0d099007ddcb06c",
+      "verified_on": "2026-07-12",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#open-cyber-range-sdl"
+    },
+    {
+      "citation_id": "cacao-v2.0",
+      "title": "CACAO Security Playbooks Version 2.0",
+      "authors_or_maintainer": [
+        "OASIS Open"
+      ],
+      "year": 2023,
+      "canonical_url": "https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.html",
+      "verified_on": "2026-07-12",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#cacao-v20"
+    },
+    {
+      "citation_id": "stix-v2.1",
+      "title": "STIX Version 2.1",
+      "authors_or_maintainer": [
+        "OASIS Open"
+      ],
+      "year": 2021,
+      "canonical_url": "https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html",
+      "verified_on": "2026-07-12",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#stix-v21"
+    },
+    {
+      "citation_id": "cyris-2018",
+      "title": "Cybersecurity Education and Training Support System: CyRIS",
+      "authors_or_maintainer": [
+        "Razvan Beuran",
+        "Cuong Pham",
+        "Dat Tang",
+        "Ken-ichi Chinen",
+        "Yasuo Tan",
+        "Yoichi Shinoda"
+      ],
+      "year": 2018,
+      "container_title": "IEICE Transactions on Information and Systems",
+      "doi": "10.1587/transinf.2017EDP7207",
+      "canonical_url": "https://doi.org/10.1587/transinf.2017EDP7207",
+      "verified_on": "2026-07-12",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#cyris"
+    },
+    {
+      "citation_id": "cyborg-2021",
+      "title": "CybORG: A Gym for the Development of Autonomous Cyber Agents",
+      "authors_or_maintainer": [
+        "Max Standen et al."
+      ],
+      "year": 2021,
+      "container_title": "IJCAI-21 1st International Workshop on Adaptive Cyber Defense",
+      "canonical_url": "https://arxiv.org/abs/2108.09118",
+      "verified_on": "2026-07-12",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#cyborg"
+    },
+    {
+      "citation_id": "crack-nca-2018",
+      "title": "Scenario Design and Validation for Next Generation Cyber Ranges",
+      "authors_or_maintainer": [
+        "Enrico Russo",
+        "Gabriele Costa",
+        "Alessandro Armando"
+      ],
+      "year": 2018,
+      "container_title": "2018 IEEE 17th International Symposium on Network Computing and Applications (NCA)",
+      "doi": "10.1109/NCA.2018.8548324",
+      "canonical_url": "https://doi.org/10.1109/NCA.2018.8548324",
+      "verified_on": "2026-07-12",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#crack-publications"
+    },
+    {
+      "citation_id": "crack-cose-2020",
+      "title": "Building next generation Cyber Ranges with CRACK",
+      "authors_or_maintainer": [
+        "Enrico Russo",
+        "Gabriele Costa",
+        "Alessandro Armando"
+      ],
+      "year": 2020,
+      "container_title": "Computers & Security",
+      "doi": "10.1016/j.cose.2020.101837",
+      "canonical_url": "https://doi.org/10.1016/j.cose.2020.101837",
+      "verified_on": "2026-07-12",
+      "verification_evidence": "docs/research/lineage/source-audit-2026-07-12.md#crack-publications"
+    }
+  ],
+  "sources": [
+    {
+      "source_id": "ocr-sdl-v0.21.2",
+      "kind": "git",
+      "title": "Open Cyber Range SDL Parser",
+      "version_or_edition": "v0.21.2",
+      "canonical_url": "https://github.com/Open-Cyber-Range/SDL-parser/tree/fe83e8281fc4b954967fbaa5a0d099007ddcb06c",
+      "repository_url": "https://github.com/Open-Cyber-Range/SDL-parser",
+      "commit": "fe83e8281fc4b954967fbaa5a0d099007ddcb06c",
+      "citation_ref": "ocr-sdl-v0.21.2",
+      "license_expression": "MIT",
+      "license_url": "https://github.com/Open-Cyber-Range/SDL-parser/blob/fe83e8281fc4b954967fbaa5a0d099007ddcb06c/LICENSE",
+      "license_evidence_ref": "docs/research/lineage/source-audit-2026-07-12.md#open-cyber-range-sdl"
+    },
+    {
+      "source_id": "cacao-v2.0",
+      "kind": "standard",
+      "title": "CACAO Security Playbooks",
+      "version_or_edition": "Version 2.0 Committee Specification 01",
+      "canonical_url": "https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.html",
+      "maintaining_body": "OASIS Open",
+      "citation_ref": "cacao-v2.0"
+    },
+    {
+      "source_id": "stix-v2.1",
+      "kind": "standard",
+      "title": "Structured Threat Information Expression",
+      "version_or_edition": "Version 2.1 OASIS Standard",
+      "canonical_url": "https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html",
+      "maintaining_body": "OASIS Open",
+      "citation_ref": "stix-v2.1"
+    },
+    {
+      "source_id": "cyris-2018",
+      "kind": "publication",
+      "title": "CyRIS",
+      "version_or_edition": "published 2018",
+      "canonical_url": "https://doi.org/10.1587/transinf.2017EDP7207",
+      "citation_ref": "cyris-2018"
+    },
+    {
+      "source_id": "cyborg-2021",
+      "kind": "publication",
+      "title": "CybORG",
+      "version_or_edition": "arXiv:2108.09118v1",
+      "canonical_url": "https://arxiv.org/abs/2108.09118",
+      "citation_ref": "cyborg-2021"
+    }
+  ],
+  "subjects": [
+    {
+      "subject_id": "sdl-field:accounts",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/accounts",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "adapted",
+          "source_refs": [
+            "cyris-2018"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/accounts"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "CyRIS account operations",
+              "symbol_or_pointer": "add_account and modify_account"
+            }
+          ],
+          "divergence": "ACES preserves only the stated concern and applies its own closed models, reference rules, lifecycle, and validation semantics.",
+          "compatibility": "none",
+          "citation_refs": [
+            "cyris-2018"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:action_contracts",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/action_contracts",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/action_contracts"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/sections.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:agents",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/agents",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "adapted",
+          "source_refs": [
+            "cyborg-2021"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/agents"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "CybORG scenario YAML",
+              "symbol_or_pointer": "Agents and scenario agent configuration"
+            }
+          ],
+          "divergence": "ACES preserves only the stated concern and applies its own closed models, reference rules, lifecycle, and validation semantics.",
+          "compatibility": "none",
+          "citation_refs": [
+            "cyborg-2021"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:assertions",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/assertions",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/assertions"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/sections.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:behavior_specifications",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/behavior_specifications",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/behavior_specifications"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/sections.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:conditions",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/conditions",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/conditions"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/condition.rs",
+              "symbol_or_pointer": "v0.21.2 model for conditions"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/conditions.py",
+              "symbol_or_pointer": "conditions"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/condition.rs",
+              "symbol_or_pointer": "v0.21.2 model for conditions"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:content",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/content",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "adapted",
+          "source_refs": [
+            "cyris-2018"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/content"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "CyRIS content operations",
+              "symbol_or_pointer": "copy_content and emulate_traffic_capture"
+            }
+          ],
+          "divergence": "ACES preserves only the stated concern and applies its own closed models, reference rules, lifecycle, and validation semantics.",
+          "compatibility": "none",
+          "citation_refs": [
+            "cyris-2018"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:description",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/description",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/description"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/lib.rs",
+              "symbol_or_pointer": "v0.21.2 model for description"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/scenario.py",
+              "symbol_or_pointer": "description"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/lib.rs",
+              "symbol_or_pointer": "v0.21.2 model for description"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:entities",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/entities",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/entities"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/entity.rs",
+              "symbol_or_pointer": "v0.21.2 model for entities"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/entities.py",
+              "symbol_or_pointer": "entities"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/entity.rs",
+              "symbol_or_pointer": "v0.21.2 model for entities"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:events",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/events",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/events"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/event.rs",
+              "symbol_or_pointer": "v0.21.2 model for events"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/orchestration.py",
+              "symbol_or_pointer": "events"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/event.rs",
+              "symbol_or_pointer": "v0.21.2 model for events"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:evidence_requirements",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/evidence_requirements",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/evidence_requirements"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/sections.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:features",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/features",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/features"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/feature.rs",
+              "symbol_or_pointer": "v0.21.2 model for features"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/features.py",
+              "symbol_or_pointer": "features"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/feature.rs",
+              "symbol_or_pointer": "v0.21.2 model for features"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:forwarding_agents",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/forwarding_agents",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/forwarding_agents"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/sections.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:imports",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/imports",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/imports"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/sections.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:infrastructure",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/infrastructure",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/infrastructure"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/infrastructure.rs",
+              "symbol_or_pointer": "v0.21.2 model for infrastructure"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/infrastructure.py",
+              "symbol_or_pointer": "infrastructure"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/infrastructure.rs",
+              "symbol_or_pointer": "v0.21.2 model for infrastructure"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:injects",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/injects",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/injects"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/inject.rs",
+              "symbol_or_pointer": "v0.21.2 model for injects"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/orchestration.py",
+              "symbol_or_pointer": "injects"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/inject.rs",
+              "symbol_or_pointer": "v0.21.2 model for injects"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:module",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/module",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/module"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/sections.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:name",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/name",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/name"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/lib.rs",
+              "symbol_or_pointer": "v0.21.2 model for name"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/scenario.py",
+              "symbol_or_pointer": "name"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/lib.rs",
+              "symbol_or_pointer": "v0.21.2 model for name"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:nodes",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/nodes",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/nodes"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/node.rs",
+              "symbol_or_pointer": "v0.21.2 model for nodes"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/nodes.py",
+              "symbol_or_pointer": "nodes"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/node.rs",
+              "symbol_or_pointer": "v0.21.2 model for nodes"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:objectives",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/objectives",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "adapted",
+          "source_refs": [
+            "cacao-v2.0"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/objectives"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "CACAO v2.0",
+              "symbol_or_pointer": "playbook objective and workflow context"
+            }
+          ],
+          "divergence": "ACES preserves only the stated concern and applies its own closed models, reference rules, lifecycle, and validation semantics.",
+          "compatibility": "none",
+          "citation_refs": [
+            "cacao-v2.0"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:observation_boundaries",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/observation_boundaries",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/observation_boundaries"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/sections.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:outcome_interpretation_rules",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/outcome_interpretation_rules",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/outcome_interpretation_rules"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/sections.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:propositions",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/propositions",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/propositions"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/sections.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:relationships",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/relationships",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "stix-v2.1"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/relationships"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "STIX v2.1",
+              "symbol_or_pointer": "Relationship SRO"
+            }
+          ],
+          "divergence": "ACES preserves only the stated concern and applies its own closed models, reference rules, lifecycle, and validation semantics.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "stix-v2.1"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:scripts",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/scripts",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/scripts"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/script.rs",
+              "symbol_or_pointer": "v0.21.2 model for scripts"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/orchestration.py",
+              "symbol_or_pointer": "scripts"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/script.rs",
+              "symbol_or_pointer": "v0.21.2 model for scripts"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:stories",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/stories",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/stories"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/story.rs",
+              "symbol_or_pointer": "v0.21.2 model for stories"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/orchestration.py",
+              "symbol_or_pointer": "stories"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/story.rs",
+              "symbol_or_pointer": "v0.21.2 model for stories"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:variables",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/variables",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "cacao-v2.0"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/variables"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "CACAO v2.0",
+              "symbol_or_pointer": "playbook_variables"
+            }
+          ],
+          "divergence": "ACES preserves only the stated concern and applies its own closed models, reference rules, lifecycle, and validation semantics.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "cacao-v2.0"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:version",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/version",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/version"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/lib.rs",
+              "symbol_or_pointer": "v0.21.2 model for version"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/scenario.py",
+              "symbol_or_pointer": "version"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/lib.rs",
+              "symbol_or_pointer": "v0.21.2 model for version"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:vulnerabilities",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/vulnerabilities",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/vulnerabilities"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/vulnerability.rs",
+              "symbol_or_pointer": "v0.21.2 model for vulnerabilities"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/vulnerabilities.py",
+              "symbol_or_pointer": "vulnerabilities"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/vulnerability.rs",
+              "symbol_or_pointer": "v0.21.2 model for vulnerabilities"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:workflows",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/workflows",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "cacao-v2.0"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/workflows"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "CACAO v2.0",
+              "symbol_or_pointer": "workflow step graph"
+            }
+          ],
+          "divergence": "ACES preserves only the stated concern and applies its own closed models, reference rules, lifecycle, and validation semantics.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "cacao-v2.0"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:service_listeners",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/service_listeners",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/service_listeners"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:applications",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/applications",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/applications"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:database_services",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/database_services",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/database_services"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:dns_services",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/dns_services",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/dns_services"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:identity_authorities",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/identity_authorities",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/identity_authorities"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:file_services",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/file_services",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/file_services"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:mail_services",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/mail_services",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/mail_services"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:network_sensors",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/network_sensors",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/network_sensors"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:network_detection_engines",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/network_detection_engines",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/network_detection_engines"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:security_monitoring_managers",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/security_monitoring_managers",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/security_monitoring_managers"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:ssh_servers",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/ssh_servers",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/ssh_servers"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:app_authorizations",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/app_authorizations",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/app_authorizations"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:scheduled_jobs",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/scheduled_jobs",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/scheduled_jobs"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:datastore_services",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/datastore_services",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/datastore_services"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:platform_applications",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/platform_applications",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/platform_applications"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:forwarding_agents",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/forwarding_agents",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/forwarding_agents"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "runtime-family:orchestration_authorities",
+      "subject_kind": "runtime_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/$defs/RuntimeConfiguration/properties/orchestration_authorities",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/$defs/RuntimeConfiguration/properties/orchestration_authorities"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/sdl/runtime-inventory.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:actions-and-events",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/actions-and-events"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/actions-and-events"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:apparatus-declarations",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/apparatus-declarations"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/apparatus-declarations"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:assets",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/assets"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/assets"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:episodes",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/episodes"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/episodes"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:identities",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/identities"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/identities"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:observables",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/observables"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/observables"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:provenance-and-evidence",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/provenance-and-evidence"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/provenance-and-evidence"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:realization-and-disclosure",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/realization-and-disclosure"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/realization-and-disclosure"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:relationships",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/relationships"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/relationships"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:runtime-inventory",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/runtime-inventory"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/runtime-inventory"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:scenarios",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/scenarios"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/scenarios"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:tasks-runs-studies",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/tasks-runs-studies"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/tasks-runs-studies"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:time-and-apparatus",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/time-and-apparatus"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/time-and-apparatus"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "concept-family:tools-and-artifacts",
+      "subject_kind": "concept_family",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/concept-families-v1.json",
+        "pointer": "#/families/tools-and-artifacts"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/concept-families-v1.json",
+              "symbol_or_pointer": "#/families/tools-and-artifacts"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/concept-authority.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-account",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-account"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "adapted",
+          "source_refs": [
+            "cyris-2018"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-account"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "CyRIS account operations",
+              "symbol_or_pointer": "add_account and modify_account"
+            }
+          ],
+          "divergence": "ACES preserves only the stated concern and applies its own closed models, reference rules, lifecycle, and validation semantics.",
+          "compatibility": "none",
+          "citation_refs": [
+            "cyris-2018"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-assertion",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-assertion"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-assertion"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/reference-models.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-condition",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-condition"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-condition"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/condition.rs",
+              "symbol_or_pointer": "v0.21.2 model for conditions"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/conditions.py",
+              "symbol_or_pointer": "conditions"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/condition.rs",
+              "symbol_or_pointer": "v0.21.2 model for conditions"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-content",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-content"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "adapted",
+          "source_refs": [
+            "cyris-2018"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-content"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "CyRIS content operations",
+              "symbol_or_pointer": "copy_content and emulate_traffic_capture"
+            }
+          ],
+          "divergence": "ACES preserves only the stated concern and applies its own closed models, reference rules, lifecycle, and validation semantics.",
+          "compatibility": "none",
+          "citation_refs": [
+            "cyris-2018"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-event",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-event"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-event"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/event.rs",
+              "symbol_or_pointer": "v0.21.2 model for events"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/orchestration.py",
+              "symbol_or_pointer": "events"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/event.rs",
+              "symbol_or_pointer": "v0.21.2 model for events"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-node",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-node"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-node"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/node.rs",
+              "symbol_or_pointer": "v0.21.2 model for nodes"
+            }
+          ],
+          "divergence": "Translated into the ACES Python/Pydantic authoring contract and subsequently extended or narrowed; field-name overlap does not imply full parser compatibility.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        },
+        {
+          "plane": "artifact_code",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "implementations/python/packages/aces_sdl/nodes.py",
+              "symbol_or_pointer": "nodes"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/node.rs",
+              "symbol_or_pointer": "v0.21.2 model for nodes"
+            }
+          ],
+          "divergence": "The initial ACES implementation explicitly described these structures as ports; current code has diverged materially but retains translated model structure.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-node-runtime",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-node-runtime"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-node-runtime"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/reference-models.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-proposition",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-proposition"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-proposition"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/concept-authority/reference-models.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
+      "subject_id": "reference-model:scenario-relationship",
+      "subject_kind": "reference_model",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/concept-authority/reference-models-v1.json",
+        "pointer": "#/models/scenario-relationship"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "stix-v2.1"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/concept-authority/reference-models-v1.json",
+              "symbol_or_pointer": "#/models/scenario-relationship"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "STIX v2.1",
+              "symbol_or_pointer": "Relationship SRO"
+            }
+          ],
+          "divergence": "ACES preserves only the stated concern and applies its own closed models, reference rules, lifecycle, and validation semantics.",
+          "compatibility": "partial",
+          "citation_refs": [
+            "stix-v2.1"
+          ],
+          "internal_authority_refs": [],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:metrics",
+      "subject_kind": "top_level_field",
+      "disposition": "removed",
+      "authority": {
+        "artifact": "docs/decisions/adrs/adr-073-scoring-reward-language-scope.md",
+        "pointer": "#removed-metrics"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "docs/decisions/adrs/adr-073-scoring-reward-language-scope.md",
+              "symbol_or_pointer": "removed OCR metrics surface"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/metric.rs",
+              "symbol_or_pointer": "v0.21.2 metrics model"
+            }
+          ],
+          "divergence": "Removed from authored SDL; graded evaluation and scoring are separate experiment/evaluator-plane concerns.",
+          "compatibility": "none",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [
+            "docs/decisions/adrs/adr-073-scoring-reward-language-scope.md"
+          ],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:evaluations",
+      "subject_kind": "top_level_field",
+      "disposition": "removed",
+      "authority": {
+        "artifact": "docs/decisions/adrs/adr-073-scoring-reward-language-scope.md",
+        "pointer": "#removed-evaluations"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "docs/decisions/adrs/adr-073-scoring-reward-language-scope.md",
+              "symbol_or_pointer": "removed OCR evaluations surface"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/evaluation.rs",
+              "symbol_or_pointer": "v0.21.2 evaluations model"
+            }
+          ],
+          "divergence": "Removed from authored SDL; graded evaluation and scoring are separate experiment/evaluator-plane concerns.",
+          "compatibility": "none",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [
+            "docs/decisions/adrs/adr-073-scoring-reward-language-scope.md"
+          ],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:tlos",
+      "subject_kind": "top_level_field",
+      "disposition": "removed",
+      "authority": {
+        "artifact": "docs/decisions/adrs/adr-073-scoring-reward-language-scope.md",
+        "pointer": "#removed-tlos"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "docs/decisions/adrs/adr-073-scoring-reward-language-scope.md",
+              "symbol_or_pointer": "removed OCR tlos surface"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/training_learning_objective.rs",
+              "symbol_or_pointer": "v0.21.2 tlos model"
+            }
+          ],
+          "divergence": "Removed from authored SDL; graded evaluation and scoring are separate experiment/evaluator-plane concerns.",
+          "compatibility": "none",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [
+            "docs/decisions/adrs/adr-073-scoring-reward-language-scope.md"
+          ],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    },
+    {
+      "subject_id": "sdl-field:goals",
+      "subject_kind": "top_level_field",
+      "disposition": "removed",
+      "authority": {
+        "artifact": "docs/decisions/adrs/adr-073-scoring-reward-language-scope.md",
+        "pointer": "#removed-goals"
+      },
+      "claims": [
+        {
+          "plane": "syntax",
+          "classification": "adapted",
+          "source_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "aces_boundaries": [
+            {
+              "artifact": "docs/decisions/adrs/adr-073-scoring-reward-language-scope.md",
+              "symbol_or_pointer": "removed OCR goals surface"
+            }
+          ],
+          "source_boundaries": [
+            {
+              "artifact": "sdl-parser/src/goal.rs",
+              "symbol_or_pointer": "v0.21.2 goals model"
+            }
+          ],
+          "divergence": "Removed from authored SDL; graded evaluation and scoring are separate experiment/evaluator-plane concerns.",
+          "compatibility": "none",
+          "citation_refs": [
+            "ocr-sdl-v0.21.2"
+          ],
+          "internal_authority_refs": [
+            "docs/decisions/adrs/adr-073-scoring-reward-language-scope.md"
+          ],
+          "compatibility_direction": "aces_relative_to_source"
+        }
+      ]
+    }
+  ],
+  "third_party_dispositions": [
+    {
+      "source_ref": "ocr-sdl-v0.21.2",
+      "derivation_scope": [
+        {
+          "artifact": "implementations/python/packages/aces_sdl/scenario.py",
+          "symbol_or_pointer": "Scenario identity fields and OCR-derived top-level section structure"
+        },
+        {
+          "artifact": "implementations/python/packages/aces_sdl/nodes.py",
+          "symbol_or_pointer": "Node, VM, Switch, Resources, and Role model lineage"
+        },
+        {
+          "artifact": "implementations/python/packages/aces_sdl/conditions.py",
+          "symbol_or_pointer": "Condition model lineage"
+        },
+        {
+          "artifact": "implementations/python/packages/aces_sdl/entities.py",
+          "symbol_or_pointer": "Entity model lineage"
+        },
+        {
+          "artifact": "implementations/python/packages/aces_sdl/orchestration.py",
+          "symbol_or_pointer": "Inject, Event, Script, and Story model lineage"
+        },
+        {
+          "artifact": "implementations/python/packages/aces_sdl/infrastructure.py",
+          "symbol_or_pointer": "InfraNode model lineage"
+        },
+        {
+          "artifact": "implementations/python/packages/aces_sdl/features.py",
+          "symbol_or_pointer": "Feature model lineage"
+        },
+        {
+          "artifact": "implementations/python/packages/aces_sdl/vulnerabilities.py",
+          "symbol_or_pointer": "Vulnerability model lineage"
+        }
+      ],
+      "derivation_extent": "Translated and structurally adapted model definitions identified as OCR ports in the initial ACES history; later ACES changes substantially extend and narrow the current implementation.",
+      "reviewed_license_ref": "ocr-sdl-v0.21.2 license at fe83e8281fc4b954967fbaa5a0d099007ddcb06c",
+      "notice_decision": "required_included",
+      "notice_artifact": "THIRD_PARTY_NOTICES.md",
+      "rationale": "Conservative compliance disposition: the pinned MIT license requires its copyright and permission notice in copies or substantial portions, and ACES history explicitly identifies translated OCR model structure.",
+      "reviewed_on": "2026-07-12",
+      "evidence_refs": [
+        "docs/research/lineage/source-audit-2026-07-12.md#open-cyber-range-sdl",
+        "git:2e73ee6ce11ef42fef10e1837ee2bb96570d030d"
+      ]
+    }
+  ]
+}

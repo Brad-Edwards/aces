@@ -36,7 +36,10 @@ _FAMILY_PROBES = {
     "fixtures": "aces_contracts/_corpus/fixtures/",
     "concept-authority": "aces_contracts/_corpus/concept-authority/controlled-vocabularies-v1.json",
     "schemas": "aces_contracts/_corpus/schemas/",
+    "provenance": "aces_contracts/_corpus/provenance/sdl-lineage-ledger-v1.json",
 }
+
+_NOTICE_PATH = "aces_contracts/_corpus/provenance/THIRD_PARTY_NOTICES.md"
 
 _UV = shutil.which("uv")
 requires_uv = pytest.mark.skipif(_UV is None, reason="uv toolchain not available")
@@ -96,6 +99,14 @@ def test_built_wheel_bundles_each_corpus_family(built_wheel: Path, family: str):
     assert any(n == probe or n.startswith(probe) for n in names), (
         f"corpus family {family!r} ({probe}) missing from wheel"
     )
+
+
+@requires_uv
+def test_built_wheel_includes_third_party_notice(built_wheel: Path):
+    with zipfile.ZipFile(built_wheel) as zf:
+        notice = zf.read(_NOTICE_PATH).decode("utf-8")
+    assert "Copyright (c) 2022 CR14" in notice
+    assert "fe83e8281fc4b954967fbaa5a0d099007ddcb06c" in notice
 
 
 @requires_uv

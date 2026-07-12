@@ -143,6 +143,7 @@ research/realization-envelope/index
 research/scoring-scope/index
 research/validation-admission-profiles/index
 research/primary/index
+research/lineage/source-audit-2026-07-12
 research/related-work-comparison/index
 research/participant-backend-contracts/index
 ```

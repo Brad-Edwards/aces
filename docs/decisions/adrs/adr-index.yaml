@@ -81,6 +81,9 @@ adrs:
     pin: 2fe5373440403ec5cbc4221eb417827bea28a7d1ea0b1c7fb142cdeeecc6883d
     amendments:
       - ref: "#100"
+      - date: 2026-07-12
+        ref: "issue #726"
+        summary: "Registered contracts/provenance as the normative authority for revision-pinned SDL lineage, derivation, citation identity, and notice dispositions."
   - id: ADR-020
     path: docs/decisions/adrs/adr-020-declarative-participant-framing-boundaries.md
     pin: 4a5d146fc0ffd6da97af94e9f2d257a893de0ab7f63c709339d27f33178609d0
@@ -330,3 +333,6 @@ adrs:
   - id: ADR-079
     path: docs/decisions/adrs/adr-079-backend-neutral-proposition-and-truth-semantics.md
     pin: a16e021301c9b411c8efe54ac4933819a50bd10a27d13741cc7ce78d6bffbe14
+  - id: ADR-080
+    path: docs/decisions/adrs/adr-080-revision-pinned-sdl-lineage-and-provenance-ledger.md
+    pin: e5b44525b5c2bfcef5516e3661c6d3d3a6cb816c10d4c4bb05d720554cea6663

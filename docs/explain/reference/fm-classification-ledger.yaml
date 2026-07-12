@@ -460,3 +460,12 @@ entries:
       - kind: property_based_or_differential_tests
         path: implementations/python/tests/test_sdl_phase_contracts.py
     waived_artifacts: []
+  - adr: ADR-080
+    surface: Revision-pinned SDL lineage and third-party provenance ledger
+    fm_level: FM1
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-080-revision-pinned-sdl-lineage-and-provenance-ledger.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_lineage.py
+    waived_artifacts: []

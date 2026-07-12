@@ -608,6 +608,10 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
         lambda: _run_project_python(session, "tools/check_sdl_catalog_parity.py"),
     )
     reporter.run(
+        "contracts / SDL lineage provenance",
+        lambda: _run_project_python(session, "tools/check_sdl_lineage.py"),
+    )
+    reporter.run(
         "contracts / json artifact validation",
         lambda: _run_project_python(session, "tools/check_json_artifacts.py", *json_artifact_args),
     )

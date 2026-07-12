@@ -13,7 +13,12 @@ becoming a validator-only interpretation of the SDL.
 
 ## Validation Passes
 
-### OCR SDL passes (ported from Rust `Scenario::formalize()`)
+### OCR-Ancestry SDL Passes
+
+These checks have translated algorithmic ancestry in OCR v0.21.2
+`Scenario::formalize()` at revision
+`fe83e8281fc4b954967fbaa5a0d099007ddcb06c`; current behavior is governed by
+ACES validators and is not claimed compatible with the OCR implementation.
 
 | Pass | What It Checks |
 |------|----------------|

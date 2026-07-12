@@ -7904,6 +7904,8 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
 
     from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel
 
+    from .provenance import SDLLineageLedgerModel
+
     bundle = {
         "aces-semantic-invariants-v1": _aces_semantic_invariant_profile_schema_for_bundle(),
         "sdl-authoring-input-v1": Scenario.model_json_schema(),
@@ -7943,6 +7945,7 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "workflow-cancellation-request-v1": WorkflowCancellationRequestModel.model_json_schema(),
         "evaluation-result-envelope-v1": EvaluationResultStateModel.model_json_schema(),
         "proposition-truth-result-v1": PropositionTruthResultModel.model_json_schema(),
+        "sdl-lineage-ledger-v1": SDLLineageLedgerModel.model_json_schema(),
         "evaluation-history-event-stream-v1": _event_stream_schema(
             "EvaluationHistoryEventStream",
             EvaluationHistoryEventModel.model_json_schema(),

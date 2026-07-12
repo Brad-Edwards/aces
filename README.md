@@ -225,3 +225,5 @@ If you use ACES SDL in academic work, cite the repository:
 ## License
 
 Released under the MIT License. See [LICENSE](https://github.com/Brad-Edwards/aces/blob/main/LICENSE).
+Third-party attribution and license notices are recorded in
+[THIRD_PARTY_NOTICES.md](https://github.com/Brad-Edwards/aces/blob/main/THIRD_PARTY_NOTICES.md).
