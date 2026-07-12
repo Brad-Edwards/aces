@@ -7982,21 +7982,25 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
     _add_aces_invariant(
         bundle["scientific-completeness-taxonomy-v1"],
         "scientific-completeness-taxonomy-rectangular",
-        "Concern and profile ids must be unique, and every profile disposition map must exactly cover the taxonomy concern set.",
+        "Concern and profile ids must be unique, and every profile disposition "
+        "map must exactly cover the taxonomy concern set.",
         validator="aces_contracts.scientific_completeness.ScientificCompletenessTaxonomyModel",
         inputs=[{"contract_id": "scientific-completeness-taxonomy-v1", "instance_path": "#"}],
     )
     _add_aces_invariant(
         bundle["scientific-completeness-assessment-v1"],
         "scientific-completeness-assessment-status-evidence",
-        "Concern ids must be unique and each delivery status must carry its required executable evidence, external binding, issue refs, or exclusion rationale.",
+        "Concern ids must be unique and each delivery status must carry its "
+        "required executable evidence, external binding, issue refs, or "
+        "exclusion rationale.",
         validator="aces_contracts.scientific_completeness.ScientificCompletenessAssessmentModel",
         inputs=[{"contract_id": "scientific-completeness-assessment-v1", "instance_path": "#"}],
     )
     _add_aces_invariant(
         bundle["scientific-completeness-assessment-v1"],
         "scientific-completeness-taxonomy-assessment-join",
-        "Assessment family, taxonomy revision, and concern ids must exactly match the joined taxonomy before completeness is computed.",
+        "Assessment family, taxonomy revision, and concern ids must exactly "
+        "match the joined taxonomy before completeness is computed.",
         validator="aces_contracts.scientific_completeness.evaluate_profile_completeness",
         inputs=[
             {"contract_id": "scientific-completeness-taxonomy-v1", "instance_path": "#"},

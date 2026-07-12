@@ -131,38 +131,47 @@ class ConcernDeliveryAssessmentModel(ContractModel):
     binding_obligation: NonEmptyString | None = None
     exclusion_rationale: NonEmptyString | None = None
 
-    @model_validator(mode="after")
-    def validate_status_evidence(self) -> ConcernDeliveryAssessmentModel:
+    def _validate_implemented_evidence(self) -> None:
         if self.status is DeliveryStatus.IMPLEMENTED and not any(
             item.kind in _EXECUTABLE_EVIDENCE_KINDS for item in self.evidence
         ):
             raise ValueError("implemented status requires executable evidence")
-        if self.status is DeliveryStatus.EXTERNAL_CONTRACT:
-            if (
-                not self.external_contract_refs
-                or not self.satisfiability_witness_refs
-                or self.binding_obligation is None
-            ):
-                raise ValueError(
-                    "external-contract status requires named contract refs, "
-                    "satisfiability witnesses, and a binding obligation"
-                )
-            evidence_contracts = {item.contract_id for item in self.evidence if item.contract_id is not None}
-            if not set(self.external_contract_refs).issubset(evidence_contracts):
-                raise ValueError("external-contract status requires evidence for every named contract")
-            if set(self.satisfiability_witness_refs) != set(self.external_contract_refs):
-                raise ValueError(
-                    "external-contract status requires exactly one satisfiability witness for every named contract"
-                )
-        elif self.external_contract_refs or self.satisfiability_witness_refs or self.binding_obligation is not None:
-            raise ValueError("external contract bindings are valid only for external-contract status")
+
+    def _validate_external_contract(self) -> None:
+        if self.status is not DeliveryStatus.EXTERNAL_CONTRACT:
+            if self.external_contract_refs or self.satisfiability_witness_refs or self.binding_obligation is not None:
+                raise ValueError("external contract bindings are valid only for external-contract status")
+            return
+        if not self.external_contract_refs or not self.satisfiability_witness_refs or self.binding_obligation is None:
+            raise ValueError(
+                "external-contract status requires named contract refs, "
+                "satisfiability witnesses, and a binding obligation"
+            )
+        evidence_contracts = {item.contract_id for item in self.evidence if item.contract_id is not None}
+        if not set(self.external_contract_refs).issubset(evidence_contracts):
+            raise ValueError("external-contract status requires evidence for every named contract")
+        if set(self.satisfiability_witness_refs) != set(self.external_contract_refs):
+            raise ValueError(
+                "external-contract status requires exactly one satisfiability witness for every named contract"
+            )
+
+    def _validate_exclusion(self) -> None:
         if self.status is DeliveryStatus.DELIBERATELY_EXCLUDED:
             if self.exclusion_rationale is None:
                 raise ValueError("deliberately-excluded status requires exclusion_rationale")
         elif self.exclusion_rationale is not None:
             raise ValueError("exclusion_rationale is valid only for deliberately-excluded status")
+
+    def _validate_issue_refs(self) -> None:
         if self.status in {DeliveryStatus.PARTIAL, DeliveryStatus.MISSING} and not self.issue_refs:
             raise ValueError("partial and missing statuses require at least one issue ref")
+
+    @model_validator(mode="after")
+    def validate_status_evidence(self) -> ConcernDeliveryAssessmentModel:
+        self._validate_implemented_evidence()
+        self._validate_external_contract()
+        self._validate_exclusion()
+        self._validate_issue_refs()
         return self
 
 
