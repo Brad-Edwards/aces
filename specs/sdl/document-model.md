@@ -45,11 +45,19 @@ construction:
 8. No Unicode normalization is performed. Code-point sequences remain as
    authored after YAML escape processing.
 
-The profile has fixed denial-of-service bounds: at most 8 MiB of UTF-8 source,
+Each source document has fixed denial-of-service bounds: at most 8 MiB of UTF-8 source,
 1 MiB in one scalar, depth 128, 100,000 unique representation nodes, 256 alias
 occurrences, and 250,000 nodes of alias-expanded traversal work. Exceeding any
 bound is a source error. A future syntax, scalar policy, or incompatible limit
 set requires a new source-profile identifier.
+
+A file-backed composition request additionally carries one aggregate budget
+across the complete import graph. It bounds the number of imports, aggregate
+decoded scalar bytes, aggregate structured nodes, recursion depth, generated
+namespace depth, and qualified-name length. The structured-node count is also a
+conservative declaration bound because every declaration consumes at least one
+counted node. Exceeding any aggregate bound is a source error; recursively
+starting a fresh per-file budget is non-conforming.
 
 This uniqueness rule follows the YAML 1.2.2 representation model, in which a
 mapping is an unordered association of unique keys and non-unique keys are a
@@ -145,34 +153,58 @@ contributions), well-formedness requires
 the authored node graph; mapped values do not participate in the comparison or
 its diagnostics.
 
-## 6. Identifier rules for user-defined keys
+## 6. Portable identifiers and declaration identity
 
-A user-defined key in a map-valued section is the **identifier** by which an
-element is referenced from elsewhere ([references.md](references.md)). The
-following rules govern identifiers:
+Every ACES-local **declaration identity** uses one portable local-identifier
+grammar:
 
-1. **Preservation.** A map key is preserved verbatim as the element identifier;
-   it is not lowercased, trimmed, or otherwise rewritten.
-2. **Uniqueness.** An identifier **MUST** be unique within its collection. Map
-   semantics make duplicate keys within one section ill-formed; runtime-family
-   `<noun>_id` values **MUST** likewise be unique within their collection
-   ([runtime-inventory.md](runtime-inventory.md)).
-3. **No placeholders in defining keys.** An identifier-defining key **MUST NOT**
-   be a variable placeholder. Variables parameterise *values*, never the
-   identity of an element. (`${x}: …` as a section entry is invalid.)
-4. **Node identifiers** **MUST** be at most 35 characters. A node identifier
-   **MAY** contain `.` — dotted node identifiers such as `wazuh.manager` are
-   used to name service families — and reference resolution accounts for dotted
-   node names ([references.md](references.md)).
-5. **Workflow step identifiers** **MUST NOT** contain `.`, because `.` is the
-   path separator used to address a step from an objective window
-   (`<workflow>.<step>`).
-6. **Runtime `<noun>_id` values** are stable, symbol-shaped handles: they
-   identify an element across references and **MUST NOT** carry whitespace or
-   quoting that would make them unaddressable in a qualified path.
+```text
+portable-id = id-start *63id-char
+id-start    = %x61-7A / DIGIT
+id-char     = id-start / "-" / "_"
+```
 
-Beyond these rules, identifier *spelling* is the author's choice; the language
-does not impose a global identifier grammar on ordinary section keys.
+Equivalently, a portable id is a full-string match for
+`^[a-z0-9][a-z0-9_-]{0,63}$`. Implementations **MUST** use full-match semantics;
+a `$`-anchored regex alone is insufficient in engines that match before a final
+line terminator. The spelling is exact: an implementation **MUST NOT** trim,
+case-fold, Unicode-normalize, escape, sanitize, or repair it. Uppercase,
+non-ASCII, whitespace, controls, `.`, `/`, `:`, and `${…}` are invalid.
+
+The rule applies by semantic role, not field spelling. It covers `Scenario.name`;
+map-valued section and variable keys; nested entity, role, and workflow-step
+keys; named services, ACLs, and content items; scenario-level forwarding-agent
+ids; and every ACES-local primary or child id in the runtime-family registry.
+It does **not** apply merely because a field is called `name` or ends in `_id`.
+Display labels, usernames, DNS names, URLs, paths, LDAP DNs, environment names,
+versions, external/native/provider ids, and opaque evidence refs retain their
+owning types. Where one object needs both a stable identity and a filename or
+label, those are separate fields.
+
+Identifiers **MUST** be unique within their owning collection. Before aliases
+are deduplicated, every declaration is also entered in a document-scoped typed
+address index; two distinct declarations that render the same canonical address
+make the document invalid. The admitted-document invariant is:
+
+```text
+for all d1,d2 in Declarations(document):
+  render(address(d1)) = render(address(d2)) implies d1 = d2
+```
+
+Variables parameterise values, never declarations. A placeholder **MUST NOT**
+appear in any defining identity, and changing a parameter mapping **MUST NOT**
+change the declaration set or any canonical address. Node local ids retain the
+stricter 35-character maximum. Because YAML Core resolution precedes model
+construction, an all-digit id must be quoted so it remains a string.
+
+Composition is the only operation that creates a **qualified name**: zero or
+more portable namespace segments followed by one portable local id, rendered
+with `.` separators. The reserved `__private` namespace segment may be generated
+for non-exported module declarations but is invalid author input. Qualified
+names are bounded to 2048 characters. Raw and normalized authoring objects admit
+local ids only; expanded and instantiated objects may carry generated qualified
+top-level identities. Nested owner-local ids, including node runtime-family ids,
+remain local.
 
 ## 7. Document phases and schema boundary
 
@@ -193,7 +225,11 @@ of the authored document with progressively fewer unresolved constructs:
 3. **Expanded authoring object.** If the document declares imports, module
    composition is applied **before** full semantic validation, producing an
    expanded authoring object in which imported content has been merged under
-   its namespace
+   its explicit portable namespace. Each imported unit declares a module
+   descriptor whose `module.id` is exactly `portable-id "/" portable-id`;
+   filenames and source paths never supply module or namespace identity. Public
+   exports receive the namespace prefix and non-exported declarations receive
+   the generated `__private` prefix
    ([ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md)).
    Full semantic validation
    ([references.md](references.md), [diagnostics.md](diagnostics.md)) applies to
@@ -246,3 +282,8 @@ units, preserves array order, emits UTF-8, and rejects non-finite or out-of-doma
 numbers. The profile digest is SHA-256 over those bytes and is rendered
 `sha256:<64 lower-case hexadecimal digits>`. A change to the envelope,
 presence rule, or canonicalization algorithm requires a new profile identifier.
+
+JCS is the serialization rule for this profile; it is not the source of SDL's
+identifier grammar or address semantics. RFC 8785 does not normalize Unicode,
+and SDL likewise preserves display/data strings exactly while restricting only
+declaration identities to the portable ASCII grammar above.

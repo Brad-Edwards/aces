@@ -434,3 +434,16 @@ entries:
     waived_artifacts:
       - kind: property_based_or_differential_tests
         rationale: Historical backfill records current evidence; no dedicated property-based or differential artifact was recorded for this accepted ADR.
+  - adr: ADR-076
+    surface: Portable SDL identifiers and canonical cross-stage addresses
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: docs/decisions/adrs/adr-076-portable-sdl-identifiers-and-canonical-addresses.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_identifiers.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/packages/aces_sdl/_declarations.py
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_sdl_identifiers.py
+    waived_artifacts: []

@@ -15,6 +15,7 @@ from enum import Enum
 from pydantic import Field, field_validator, model_validator
 
 from ._base import SDLModel, normalize_enum_value, parse_bool_or_var
+from ._identifiers import PortableIdentifier
 from ._source import Source
 
 
@@ -29,7 +30,8 @@ class ContentType(str, Enum):
 class ContentItem(SDLModel):
     """A single item within a dataset (e.g., one email, one record)."""
 
-    name: str
+    name: PortableIdentifier
+    display_name: str = ""
     tags: list[str] = Field(default_factory=list)
     description: str = ""
 

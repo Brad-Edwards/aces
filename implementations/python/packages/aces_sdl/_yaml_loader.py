@@ -16,7 +16,9 @@ from ._errors import (
     SDLSourcePosition,
     SDLSourceRange,
 )
+from ._identifiers import is_portable_identifier
 from ._mapping_scopes import MappingScope, is_literal_map_field, normalize_field_key
+from ._source_identifier_paths import is_declaration_key_path, is_scalar_identifier_path
 from ._source_profile import (
     DEFAULT_SOURCE_PARSE_OPTIONS,
     SDLMigrationPolicy,
@@ -77,13 +79,20 @@ class _EffectiveAccumulator:
 
 
 class _MappingAnalyzer:
-    def __init__(self, *, migration_policy: SDLMigrationPolicy, path: Path | None) -> None:
+    def __init__(
+        self,
+        *,
+        migration_policy: SDLMigrationPolicy,
+        path: Path | None,
+        source_ranges: dict[str, SDLSourceRange] | None = None,
+    ) -> None:
         self.diagnostics: list[SDLParseDiagnostic] = []
         self._migration_policy = migration_policy
         self._source = str(path) if path is not None else None
         self._effective_cache: dict[tuple[int, MappingScope], _EffectiveMapping] = {}
         self._diagnostic_keys: set[tuple[Any, ...]] = set()
         self._walked: set[tuple[int, MappingScope]] = set()
+        self._source_ranges = source_ranges
 
     def analyze(
         self,
@@ -113,6 +122,8 @@ class _MappingAnalyzer:
         tokens: list[str],
         active: set[int],
     ) -> None:
+        if self._source_ranges is not None:
+            self._source_ranges[_encode_pointer(tokens)] = _range_from_node(node)
         identity = id(node)
         if identity in active:
             self._add_alias_cycle(node, tokens)
@@ -220,8 +231,46 @@ class _MappingAnalyzer:
                 pointer=_encode_pointer([*tokens, canonical]),
                 authored_keys=(authored, canonical),
             )
+        child_tokens = [*tokens, canonical]
+        if is_declaration_key_path(tokens) and not suppress_field_migration:
+            self._validate_identifier_node(key_node, pointer_tokens=child_tokens)
+            if tokens == ["nodes"] and len(authored) > 35:
+                self._add_identifier_diagnostic(key_node, pointer_tokens=child_tokens, node_limit=True)
+        if child_tokens == ["name"]:
+            self._validate_identifier_node(value_node, pointer_tokens=child_tokens)
+        if is_scalar_identifier_path(child_tokens):
+            self._validate_identifier_node(value_node, pointer_tokens=child_tokens)
         child_scope = _child_scope(scope, canonical, value_node)
-        self._walk(value_node, scope=child_scope, tokens=[*tokens, canonical], active=active)
+        self._walk(value_node, scope=child_scope, tokens=child_tokens, active=active)
+
+    def _validate_identifier_node(self, node: Node, *, pointer_tokens: list[str]) -> None:
+        if not isinstance(node, ScalarNode) or node.tag != _STRING_TAG or not is_portable_identifier(node.value):
+            self._add_identifier_diagnostic(node, pointer_tokens=pointer_tokens)
+
+    def _add_identifier_diagnostic(
+        self,
+        node: Node,
+        *,
+        pointer_tokens: list[str],
+        node_limit: bool = False,
+    ) -> None:
+        message = (
+            "Authored node identifiers must be at most 35 characters."
+            if node_limit
+            else (
+                "Authored identifiers must be 1-64 lowercase ASCII letters, digits, hyphens, or "
+                "underscores and start with a letter or digit."
+            )
+        )
+        self._add(
+            SDLParseDiagnostic(
+                code="sdl.identifier.invalid",
+                message=message,
+                pointer=_encode_pointer(pointer_tokens),
+                primary_range=_range_from_node(node),
+                source=self._source,
+            )
+        )
 
     def _add_key_type_diagnostic(self, key_node: Node, authored: str, tokens: list[str]) -> None:
         message = (
@@ -372,6 +421,7 @@ def load_sdl_yaml(
     base_pointer: str = "",
     source_options: SDLSourceParseOptions = DEFAULT_SOURCE_PARSE_OPTIONS,
     source_diagnostics: list[SDLParseDiagnostic] | None = None,
+    source_ranges: dict[str, SDLSourceRange] | None = None,
 ) -> object:
     """Validate and safely construct one SDL YAML document or fragment."""
     prepared = prepare_content(content, path=path)
@@ -392,6 +442,7 @@ def load_sdl_yaml(
             base_pointer=base_pointer,
             migration_policy=policy,
             source_diagnostics=source_diagnostics,
+            source_ranges=source_ranges,
         )
         constructed = loader.construct_document(root)
         validate_constructed_domain(constructed, path=path)
@@ -413,6 +464,7 @@ def compose_sdl_yaml(
     base_pointer: str = "",
     source_options: SDLSourceParseOptions = DEFAULT_SOURCE_PARSE_OPTIONS,
     source_diagnostics: list[SDLParseDiagnostic] | None = None,
+    source_ranges: dict[str, SDLSourceRange] | None = None,
 ) -> Node:
     """Compose and key-validate SDL YAML while retaining source nodes."""
     prepared = prepare_content(content, path=path)
@@ -433,6 +485,7 @@ def compose_sdl_yaml(
             base_pointer=base_pointer,
             migration_policy=policy,
             source_diagnostics=source_diagnostics,
+            source_ranges=source_ranges,
         )
         return root
     except SDLParseError:
@@ -452,8 +505,13 @@ def _validate_mapping_keys(
     base_pointer: str,
     migration_policy: SDLMigrationPolicy,
     source_diagnostics: list[SDLParseDiagnostic] | None,
+    source_ranges: dict[str, SDLSourceRange] | None,
 ) -> None:
-    diagnostics = _MappingAnalyzer(migration_policy=migration_policy, path=path).analyze(
+    diagnostics = _MappingAnalyzer(
+        migration_policy=migration_policy,
+        path=path,
+        source_ranges=source_ranges,
+    ).analyze(
         root,
         scope=scope,
         base_tokens=_decode_pointer(base_pointer),

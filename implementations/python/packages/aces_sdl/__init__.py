@@ -10,6 +10,7 @@ from importlib import import_module
 __all__ = [
     "canonical_sdl_bytes",
     "canonical_sdl_digest",
+    "build_declaration_index",
     "instantiate_scenario",
     "InstantiatedScenario",
     "SDLCanonicalDigest",
@@ -58,6 +59,8 @@ def __getattr__(name: str):
         module = import_module("aces_sdl._source_profile")
     elif name == "VARIABLE_TOKEN_PATTERN":
         module = import_module("aces_sdl._base")
+    elif name == "build_declaration_index":
+        module = import_module("aces_sdl._declarations")
     elif name == "instantiate_scenario":
         module = import_module("aces_sdl.instantiate")
     elif name in {"load_sdl_fragment", "parse_sdl", "parse_sdl_file"}:

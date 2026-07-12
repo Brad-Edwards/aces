@@ -227,12 +227,14 @@ class _ContentObjectivesMixin:
                     rel.source,
                     owner_label=f"Relationship '{name}'",
                     ref_label="source",
+                    targetable=True,
                 )
             if not self._is_unresolved_var(rel.target):
                 self._validate_named_ref(
                     rel.target,
                     owner_label=f"Relationship '{name}'",
                     ref_label="target",
+                    targetable=True,
                 )
 
     def _verify_agents(self) -> None:

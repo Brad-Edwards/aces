@@ -74,7 +74,11 @@
       "contract_id": "evaluation-plan-v1",
       "schema_path": "contracts/schemas/plans/evaluation-plan-v1.json",
       "stability": "draft",
-      "content_hash": "eeff605ae19059eb23648c717438189758f22ea8a35510c4561aa6f5f469a573"
+      "content_hash": "96a94d633471cab89a5c68ddf3f230c4d6aa93f89a92aaf8e99383062f7595da",
+      "last_change": {
+        "summary": "Constrained evaluation operations to the evaluation address domain and closed resource-type vocabulary for DSL-101/DSL-102/SEM-205.",
+        "content_hash": "96a94d633471cab89a5c68ddf3f230c4d6aa93f89a92aaf8e99383062f7595da"
+      }
     },
     {
       "contract_id": "evaluation-result-envelope-v1",
@@ -166,10 +170,10 @@
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "733046b498635268546eadc1e8c0977492cfe64fa9f71ac07c5f43ac7b5956c7",
+      "content_hash": "d72907f81de54bb182232ef6e6ad719d798fc08efc8e1fca1b4ce0308981394f",
       "last_change": {
-        "summary": "Aligned workflow wire fields with canonical snake_case and propagated the SDL normalized-object phase metadata into the instantiated contract definitions for DSL-105.",
-        "content_hash": "733046b498635268546eadc1e8c0977492cfe64fa9f71ac07c5f43ac7b5956c7"
+        "summary": "Published bounded composition-generated qualified declaration keys and list-preserving forwarding-agent identities for DSL-101/DSL-102/SEM-205.",
+        "content_hash": "d72907f81de54bb182232ef6e6ad719d798fc08efc8e1fca1b4ce0308981394f"
       }
     },
     {
@@ -182,13 +186,21 @@
       "contract_id": "operation-status-v1",
       "schema_path": "contracts/schemas/control-plane/operation-status-v1.json",
       "stability": "draft",
-      "content_hash": "a4db430e1bef55cc954e9620fdd91897175baeab8d132088647642c02792f0ec"
+      "content_hash": "fd9af93db03252516e91ffe2cc4eae6c006221b5a10ef6b9998762ec51a5ed53",
+      "last_change": {
+        "summary": "Constrained backend-reported changed addresses to unique canonical compiled addresses for DSL-101/DSL-102.",
+        "content_hash": "fd9af93db03252516e91ffe2cc4eae6c006221b5a10ef6b9998762ec51a5ed53"
+      }
     },
     {
       "contract_id": "orchestration-plan-v1",
       "schema_path": "contracts/schemas/plans/orchestration-plan-v1.json",
       "stability": "draft",
-      "content_hash": "9f132b651267f5cafa460879550a49eb18d735ab1e02b241e664ec6c73275bae"
+      "content_hash": "2ada1a85e8049b7ab52e8c867ab6360fb7fe2833c62ab9469d0b7a49aa0dd2e7",
+      "last_change": {
+        "summary": "Constrained orchestration operations to the orchestration address domain and closed resource-type vocabulary for DSL-101/DSL-102/SEM-205.",
+        "content_hash": "2ada1a85e8049b7ab52e8c867ab6360fb7fe2833c62ab9469d0b7a49aa0dd2e7"
+      }
     },
     {
       "contract_id": "participant-behavior-history-event-stream-v1",
@@ -324,10 +336,10 @@
       "contract_id": "provisioning-plan-v1",
       "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
       "stability": "draft",
-      "content_hash": "8ff225daf75c1d9e846bf36c492cb42076d1ae8c7c1c3ee0145772e2c7aba7e7",
+      "content_hash": "e3d9a1357af4e49b78d591cca10547a4d0113aee794686e0f8d96e32bb940e49",
       "last_change": {
-        "summary": "Added immutable realization-envelope identity carriage from planning to backend execution for ASR-519.",
-        "content_hash": "8ff225daf75c1d9e846bf36c492cb42076d1ae8c7c1c3ee0145772e2c7aba7e7"
+        "summary": "Added immutable realization-envelope identity carriage and constrained provisioning operations to canonical provision addresses and resource types.",
+        "content_hash": "e3d9a1357af4e49b78d591cca10547a4d0113aee794686e0f8d96e32bb940e49"
       }
     },
     {
@@ -360,26 +372,30 @@
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "2c703b182c3bc96176dcf25f1cf1aaf39e661041efdeeacc7f8843fcfa2826bf",
+      "content_hash": "e3fa3702a06d7c025d34b90a8830b9099034fbea663cbe23c75368fabe72530d",
       "last_change": {
-        "summary": "Added typed realization-envelope identity persistence for ASR-519 runtime provenance.",
-        "content_hash": "2c703b182c3bc96176dcf25f1cf1aaf39e661041efdeeacc7f8843fcfa2826bf"
+        "summary": "Added typed realization-envelope identity persistence and closed snapshot entries to canonical compiled-address keys.",
+        "content_hash": "e3fa3702a06d7c025d34b90a8830b9099034fbea663cbe23c75368fabe72530d"
       }
     },
     {
       "contract_id": "scenario-instantiation-request-v1",
       "schema_path": "contracts/schemas/sdl/scenario-instantiation-request-v1.json",
       "stability": "draft",
-      "content_hash": "72a4a1969bc39d551efd0be364804dcdfca7694eceb2a58c402a026d981cd470"
+      "content_hash": "130a103664dd69819c1dbe13437e94436dfb2b5db871f135e9f1750c741b412f",
+      "last_change": {
+        "summary": "Constrained instantiation parameter names to portable local identifiers while leaving parameter values outside declaration identity for DSL-101.",
+        "content_hash": "130a103664dd69819c1dbe13437e94436dfb2b5db871f135e9f1750c741b412f"
+      }
     },
     {
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "495345b06294ac9379009ad7b03b14df60ec54c25036764589355c9a1bc4f257",
+      "content_hash": "657347edf6a62da2fe6cf1ee5d16bea5531069beef896c467d2ce2792d05a15f",
       "last_change": {
-        "summary": "Declared the DSL-105 normalized authoring-object boundary, marked it as distinct from raw sdl-yaml/v1 source, and aligned workflow wire fields with canonical snake_case.",
-        "content_hash": "495345b06294ac9379009ad7b03b14df60ec54c25036764589355c9a1bc4f257"
+        "summary": "Published phase-specific portable local identifiers, bounded qualified references, explicit module namespaces, and stable list-valued forwarding-agent identities for DSL-101/DSL-102/SEM-205.",
+        "content_hash": "657347edf6a62da2fe6cf1ee5d16bea5531069beef896c467d2ce2792d05a15f"
       }
     },
     {

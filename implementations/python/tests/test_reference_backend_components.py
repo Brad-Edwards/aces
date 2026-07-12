@@ -54,6 +54,7 @@ def _control_plane():
 def test_orchestrator_start_records_workflow_result_and_history():
     target, control_plane, execution_plan = _control_plane()
     control_plane.submit_provisioning(execution_plan.provisioning)
+    control_plane.submit_evaluation(execution_plan.evaluation)
 
     receipt = control_plane.submit_orchestration(execution_plan.orchestration)
     status = control_plane.get_operation(receipt.operation_id)

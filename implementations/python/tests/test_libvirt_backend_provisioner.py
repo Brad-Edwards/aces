@@ -170,7 +170,9 @@ def test_apply_rejects_snapshot_bound_to_another_envelope_before_driver_io():
         **{**plan.realization_envelope.model_dump(), "configuration_digest": "sha256:" + "e" * 64}  # type: ignore[union-attr]
     )
     baseline = RuntimeSnapshot(
-        entries={"existing": SnapshotEntry("existing", RuntimeDomain.PROVISIONING, "node", {})},
+        entries={
+            "provision.node.existing": SnapshotEntry("provision.node.existing", RuntimeDomain.PROVISIONING, "node", {})
+        },
         realization_envelope=wrong,
     )
 

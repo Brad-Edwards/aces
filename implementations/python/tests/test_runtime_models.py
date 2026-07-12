@@ -893,12 +893,21 @@ workflows:
         }
         assert not model.diagnostics
 
-    def test_module_expansion_compiles_like_flat_scenario(self, tmp_path: Path):
+    def test_module_expansion_compiles_namespaced_runtime_addresses(self, tmp_path: Path):
         imported = tmp_path / "shared.yaml"
         imported.write_text(
             """
 name: shared
 version: 1.0.0
+module:
+  id: aces/shared
+  version: 1.0.0
+  exports:
+    nodes: [vm]
+    conditions: [health]
+    entities: [blue]
+    objectives: [validate]
+    workflows: [response]
 nodes:
   vm:
     type: vm
@@ -942,51 +951,11 @@ imports:
 """,
             encoding="utf-8",
         )
-        flat = parse_sdl(
-            textwrap.dedent(
-                """
-                name: root
-                nodes:
-                  shared.vm:
-                    type: vm
-                    os: linux
-                    resources: {ram: 1 gib, cpu: 1}
-                    conditions: {shared.health: ops}
-                    roles: {ops: operator}
-                conditions:
-                  shared.health:
-                    command: /bin/true
-                    interval: 15
-                entities:
-                  shared.blue:
-                    role: blue
-                objectives:
-                  shared.validate:
-                    entity: shared.blue
-                    success:
-                      conditions: [shared.health]
-                workflows:
-                  shared.response:
-                    start: run
-                    steps:
-                      run:
-                        type: objective
-                        objective: shared.validate
-                        on_success: finish
-                      finish:
-                        type: end
-                """
-            )
-        )
-
         expanded_model = compile_runtime_model(parse_sdl_file(root))
-        flat_model = compile_runtime_model(flat)
 
         assert not expanded_model.diagnostics
-        assert not flat_model.diagnostics
-        assert expanded_model.workflows.keys() == flat_model.workflows.keys()
-        assert expanded_model.objectives.keys() == flat_model.objectives.keys()
-        assert expanded_model.condition_bindings.keys() == flat_model.condition_bindings.keys()
+        assert set(expanded_model.workflows) == {"orchestration.workflow.shared.response"}
+        assert set(expanded_model.objectives) == {"evaluation.objective.shared.validate"}
         workflow = expanded_model.workflows["orchestration.workflow.shared.response"]
         assert workflow.referenced_objective_addresses == ("evaluation.objective.shared.validate",)
         assert workflow.control_steps["run"].objective_address == "evaluation.objective.shared.validate"

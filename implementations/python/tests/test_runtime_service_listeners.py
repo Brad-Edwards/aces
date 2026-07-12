@@ -248,10 +248,10 @@ def test_runtime_service_listener_published_port_match_defers_unresolved_listene
     scenario = Scenario(
         name="listeners",
         variables={
-            "HTTP_PORT": {"type": "integer", "default": 80},
-            "TRANSPORT": {"type": "string", "default": "tcp"},
+            "http_port": {"type": "integer", "default": 80},
+            "transport": {"type": "string", "default": "tcp"},
         },
-        nodes={"misp": _node(_listener(port="${HTTP_PORT}", protocol="${TRANSPORT}"))},
+        nodes={"misp": _node(_listener(port="${http_port}", protocol="${transport}"))},
     )
 
     assert _validate(scenario) == []

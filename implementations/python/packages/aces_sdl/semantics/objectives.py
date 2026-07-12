@@ -6,6 +6,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 
+from .._identifiers import QualifiedName
+
 
 class ObjectiveWindowReferenceKind(str, Enum):
     """Normalized objective-window reference kinds."""
@@ -107,17 +109,18 @@ def _ordered_unique(items: list[str]) -> tuple[str, ...]:
 
 
 def parse_workflow_step_ref(step_ref: str) -> ParsedWorkflowStepRef | None:
-    """Parse ``<workflow>.<step>`` syntax used by objective windows."""
+    """Parse a qualified workflow name followed by one local step segment."""
 
-    if "." not in step_ref:
+    try:
+        parts = QualifiedName.parse(step_ref).parts
+    except (TypeError, ValueError):
         return None
-    workflow_name, step_name = step_ref.rsplit(".", 1)
-    if not workflow_name or not step_name:
+    if len(parts) < 2:
         return None
     return ParsedWorkflowStepRef(
         raw=step_ref,
-        workflow_name=workflow_name,
-        step_name=step_name,
+        workflow_name=QualifiedName(parts[:-1]).render(),
+        step_name=parts[-1],
     )
 
 

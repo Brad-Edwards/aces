@@ -5,14 +5,17 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
-from aces_contracts.contracts import RealizationEnvelopeIdentityModel
+from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import RuntimeDomain
 from aces_contracts.versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
+
+if TYPE_CHECKING:
+    from aces_contracts.contracts import RealizationEnvelopeIdentityModel
 
 
 class OperationState(str, Enum):
@@ -36,6 +39,11 @@ class SnapshotEntry:
     ordering_dependencies: tuple[str, ...] = ()
     refresh_dependencies: tuple[str, ...] = ()
     status: str = "ready"
+
+    def __post_init__(self) -> None:
+        require_compiled_address(self.address)
+        for dependency in (*self.ordering_dependencies, *self.refresh_dependencies):
+            require_compiled_address(dependency, field_name="dependency address")
 
 
 @dataclass(frozen=True)
@@ -81,6 +89,12 @@ class RuntimeSnapshot:
     realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
     realization_envelope: RealizationEnvelopeIdentityModel | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        for map_key, entry in self.entries.items():
+            require_compiled_address(map_key, field_name="snapshot map key")
+            if map_key != entry.address:
+                raise ValueError("RuntimeSnapshot entries map key must equal embedded address")
 
     def get(self, address: str) -> SnapshotEntry | None:
         return self.entries.get(address)
@@ -225,6 +239,8 @@ def _identity_update(
     key: str,
     current: RealizationEnvelopeIdentityModel | None,
 ) -> RealizationEnvelopeIdentityModel | None:
+    from aces_contracts.contracts import RealizationEnvelopeIdentityModel
+
     raw = updates.get(key)
     if raw is None:
         return current
@@ -242,6 +258,9 @@ class ApplyResult:
     diagnostics: list[Diagnostic] = field(default_factory=list)
     changed_addresses: list[str] = field(default_factory=list)
     details: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        _validate_changed_addresses(self.changed_addresses)
 
 
 @dataclass(frozen=True)
@@ -268,6 +287,16 @@ class OperationStatus:
     updated_at: str = ""
     diagnostics: list[Diagnostic] = field(default_factory=list)
     changed_addresses: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _validate_changed_addresses(self.changed_addresses)
+
+
+def _validate_changed_addresses(addresses: list[str]) -> None:
+    for address in addresses:
+        require_compiled_address(address, field_name="changed address")
+    if len(addresses) != len(set(addresses)):
+        raise ValueError("changed addresses must be unique")
 
 
 @dataclass(frozen=True)

@@ -24,8 +24,8 @@ A reference is a string that names a target element. Five forms exist:
    `…<collection>.<id>.<child-collection>.<child-id>` to any depth the family
    defines ([runtime-inventory.md](runtime-inventory.md)).
 4. **Workflow-step** — `<workflow>.<step>`, naming a step within a workflow.
-   Used by objective windows. Because `.` separates the workflow from the step,
-   workflow **step** identifiers MUST NOT contain `.`
+   Used by objective windows. The workflow portion may be a composition-generated
+   qualified name and the step is exactly one portable local-id segment
    ([document-model.md §6](document-model.md)).
 5. **Module-composed (namespaced)** — after a module import is expanded, imported
    elements are addressed under their import namespace, and node segments are
@@ -33,13 +33,11 @@ A reference is a string that names a target element. Five forms exist:
    the expanded document
    ([ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md)).
 
-### Dotted node identifiers
-
-A node identifier MAY itself contain `.` (e.g. `wazuh.manager`). A qualified
-reference that traverses a node segment therefore resolves the **longest**
-node-identifier match rather than splitting on the first `.`. Resolution MUST
-account for dotted node names so that `nodes.wazuh.manager.runtime.…` addresses
-the `wazuh.manager` node, not a `wazuh` node with a `manager` member.
+Dots are path syntax, never authored identifier content. A dotted node key in a
+raw or normalized authoring object is invalid. A dotted node segment seen after
+composition is a validated namespace path and is carried structurally until the
+canonical renderer produces the external string; it is not recovered with a
+longest-match rule.
 
 ## 2. Resolution algorithm
 
@@ -51,7 +49,11 @@ the `wazuh.manager` node, not a `wazuh` node with a `manager` member.
    objective's `target`, a relationship's `source`/`target`). The candidate set
    is part of each field's definition and is reflected in the edge catalog (§5).
 3. A **bare** reference resolves against the candidate set. A **qualified**
-   reference resolves against the named section/path and MUST match it exactly.
+   reference resolves by exact lookup of the typed canonical address and
+   **MUST** match it exactly. Implementations **MUST NOT** discover ownership by
+   `split`, `partition`, `rsplit`, longest-prefix guessing, declaration order,
+   or first match. Compact aliases such as `<qualified-workflow>.<step>` are
+   constructed and resolved from declared workflow/step pairs.
 4. Some targetable candidate sets are deliberately restricted. For example, an
    objective `target` excludes the `variables`, `objectives`, and `workflows`
    prefixes; an agent `operating_scope` is restricted to VM nodes,
@@ -59,6 +61,10 @@ the `wazuh.manager` node, not a `wazuh` node with a `manager` member.
    field's candidate set does not resolve and fails as dangling (§4).
 5. Resolution is **declaration-based**: only declared elements are resolution
    targets. There is no implicit creation of a target by referencing it.
+6. Alias lookup occurs only after the canonical declaration index has retained
+   kind and provenance for every declaration and rejected address collisions.
+   A set or map that has already erased a duplicate rendering is not evidence of
+   uniqueness.
 
 ## 3. Unresolved variable placeholders
 

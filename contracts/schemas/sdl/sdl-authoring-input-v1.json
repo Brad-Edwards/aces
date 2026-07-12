@@ -41,9 +41,22 @@
           "type": "string"
         },
         "name": {
+          "anyOf": [
+            {
+              "const": ""
+            },
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            }
+          ],
           "default": "",
-          "title": "Name",
-          "type": "string"
+          "title": "Name"
         },
         "ports": {
           "items": {
@@ -609,7 +622,18 @@
           "title": "Description",
           "type": "string"
         },
+        "display_name": {
+          "default": "",
+          "title": "Display Name",
+          "type": "string"
+        },
         "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "title": "Name",
           "type": "string"
         },
@@ -642,7 +666,12 @@
       "description": "An observed logical database within a database service.",
       "properties": {
         "database_id": {
-          "title": "Database Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "description": {
@@ -1473,7 +1502,12 @@
           "type": "array"
         },
         "rrset_id": {
-          "title": "Rrset Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "ttl": {
@@ -1839,7 +1873,12 @@
           "type": "array"
         },
         "zone_id": {
-          "title": "Zone Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -2032,8 +2071,17 @@
           "type": "string"
         },
         "entities": {
-          "additionalProperties": {
-            "$ref": "#/$defs/Entity"
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/Entity"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
           },
           "title": "Entities",
           "type": "object"
@@ -2864,7 +2912,16 @@
           "type": "string"
         },
         "parameters": {
-          "additionalProperties": true,
+          "patternProperties": {
+            "^[a-z0-9]": {}
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
           "title": "Parameters",
           "type": "object"
         },
@@ -3063,6 +3120,12 @@
         },
         "parameters": {
           "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
             "type": "string"
           },
           "title": "Parameters",
@@ -3153,8 +3216,17 @@
           "default": null
         },
         "roles": {
-          "additionalProperties": {
-            "$ref": "#/$defs/Role"
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/Role"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
           },
           "title": "Roles",
           "type": "object"
@@ -5121,7 +5193,12 @@
       "description": "Application-internal RBAC store inventory for a single owning spine.",
       "properties": {
         "app_authorization_id": {
-          "title": "App Authorization Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "auth_enabled": {
@@ -5242,7 +5319,12 @@
           "title": "Effect"
         },
         "grant_id": {
-          "title": "Grant Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "resource_kind": {
@@ -5346,7 +5428,12 @@
           "type": "string"
         },
         "principal_id": {
-          "title": "Principal Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "reserved": {
@@ -5412,7 +5499,12 @@
           "type": "string"
         },
         "role_id": {
-          "title": "Role Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -5446,7 +5538,12 @@
           "type": "array"
         },
         "mapping_id": {
-          "title": "Mapping Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "role_ref": {
@@ -5483,7 +5580,12 @@
           "type": "string"
         },
         "tenant_id": {
-          "title": "Tenant Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -5931,7 +6033,12 @@
       "description": "An observed application surface hosted by a transport service on a node.\n\n``service`` references the owning same-node ``Node.services[].name`` (bare\nname or the qualified ``nodes.<node>.services.<name>`` form). The surface is\nobservation metadata; it never mutates ``Node.services``.",
       "properties": {
         "application_id": {
-          "title": "Application Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "base_path": {
@@ -6122,7 +6229,25 @@
         },
         "forwarding_agents": {
           "items": {
-            "$ref": "#/$defs/RuntimeForwardingAgent"
+            "allOf": [
+              {
+                "$ref": "#/$defs/RuntimeForwardingAgent"
+              },
+              {
+                "properties": {
+                  "forwarding_agent_id": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "not": {
+                      "pattern": "[^a-z0-9_-]"
+                    },
+                    "pattern": "^[a-z0-9]",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            ]
           },
           "title": "Forwarding Agents",
           "type": "array"
@@ -6661,7 +6786,12 @@
       "description": "An observed database service hosted by a transport service on a node.\n\n``service`` references the owning same-node ``Node.services[].name`` (bare\nname or the qualified ``nodes.<node>.services.<name>`` form). The inventory\nis observation metadata; it never mutates ``Node.services``.",
       "properties": {
         "database_service_id": {
-          "title": "Database Service Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "databases": {
@@ -6919,7 +7049,12 @@
           "type": "string"
         },
         "plugin_id": {
-          "title": "Plugin Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "version": {
@@ -7032,7 +7167,12 @@
           "title": "Leaf Field Count"
         },
         "mapping_id": {
-          "title": "Mapping Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "name": {
@@ -7169,7 +7309,12 @@
           "type": "string"
         },
         "node_id": {
-          "title": "Node Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "plugins": {
@@ -7215,7 +7360,12 @@
           "type": "string"
         },
         "endpoint_id": {
-          "title": "Endpoint Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "port": {
@@ -7385,7 +7535,12 @@
           "type": "string"
         },
         "partition_id": {
-          "title": "Partition Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "per_dc_factor_map": {
@@ -7616,7 +7771,12 @@
           "title": "Data Model"
         },
         "datastore_service_id": {
-          "title": "Datastore Service Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "description": {
@@ -7799,7 +7959,12 @@
           "title": "Scope"
         },
         "setting_id": {
-          "title": "Setting Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "value": {
@@ -7895,7 +8060,12 @@
           "type": "string"
         },
         "template_id": {
-          "title": "Template Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -8059,7 +8229,12 @@
           "type": "string"
         },
         "dns_service_id": {
-          "title": "Dns Service Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "dynamic_update": {
@@ -8288,7 +8463,12 @@
           "type": "string"
         },
         "file_service_id": {
-          "title": "File Service Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "principals": {
@@ -8407,7 +8587,12 @@
           "type": "string"
         },
         "observation_id": {
-          "title": "Observation Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "outcome": {
@@ -8514,7 +8699,12 @@
           "type": "string"
         },
         "rule_id": {
-          "title": "Rule Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "subject_ref": {
@@ -8609,7 +8799,12 @@
           "title": "Origin"
         },
         "principal_id": {
-          "title": "Principal Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "status": {
@@ -8780,7 +8975,12 @@
           "title": "Read Only"
         },
         "share_id": {
-          "title": "Share Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "valid_groups": {
@@ -9301,7 +9501,12 @@
           "title": "Kind"
         },
         "reload_channel_id": {
-          "title": "Reload Channel Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "target_ref": {
@@ -9369,7 +9574,12 @@
           "title": "Provenance"
         },
         "setting_id": {
-          "title": "Setting Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "value": {
@@ -9471,7 +9681,12 @@
           "title": "Protocol"
         },
         "target_id": {
-          "title": "Target Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "target_node_ref": {
@@ -9535,7 +9750,12 @@
           "type": "string"
         },
         "source_id": {
-          "title": "Source Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -9584,7 +9804,12 @@
           "type": "string"
         },
         "transform_id": {
-          "title": "Transform Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -9799,7 +10024,12 @@
           "type": "string"
         },
         "identity_authority_id": {
-          "title": "Identity Authority Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "issuer": {
@@ -9954,7 +10184,12 @@
           "type": "string"
         },
         "service_id": {
-          "title": "Service Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -9986,7 +10221,12 @@
           "type": "string"
         },
         "policy_id": {
-          "title": "Policy Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "policy_kind": {
@@ -10076,7 +10316,12 @@
           "type": "string"
         },
         "relationship_id": {
-          "title": "Relationship Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "relationship_type": {
@@ -10213,7 +10458,12 @@
           "type": "array"
         },
         "subject_id": {
-          "title": "Subject Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -10638,7 +10888,12 @@
           "type": "string"
         },
         "alias_id": {
-          "title": "Alias Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "description": {
@@ -10696,7 +10951,12 @@
       "description": "A mail-service engine/component such as Postfix, Dovecot, or a filter.",
       "properties": {
         "component_id": {
-          "title": "Component Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "description": {
@@ -10778,7 +11038,12 @@
           "type": "string"
         },
         "domain_id": {
-          "title": "Domain Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "name": {
@@ -10866,7 +11131,12 @@
           "type": "string"
         },
         "listener_id": {
-          "title": "Listener Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "protocol": {
@@ -11001,7 +11271,12 @@
           "type": "string"
         },
         "mailbox_id": {
-          "title": "Mailbox Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "role": {
@@ -11097,7 +11372,12 @@
           "type": "string"
         },
         "store_id": {
-          "title": "Store Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -11182,7 +11462,12 @@
           "type": "string"
         },
         "queue_id": {
-          "title": "Queue Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "stability": {
@@ -11277,7 +11562,12 @@
           "type": "string"
         },
         "rule_id": {
-          "title": "Rule Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "source_ref": {
@@ -11340,7 +11630,12 @@
           "type": "array"
         },
         "mail_service_id": {
-          "title": "Mail Service Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "mailbox_stores": {
@@ -11431,7 +11726,12 @@
           "title": "Provenance"
         },
         "setting_id": {
-          "title": "Setting Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "source_path": {
@@ -11864,7 +12164,12 @@
           "type": "array"
         },
         "channel_id": {
-          "title": "Channel Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "description": {
@@ -11997,7 +12302,12 @@
           "type": "string"
         },
         "network_detection_engine_id": {
-          "title": "Network Detection Engine Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "network_sets": {
@@ -12141,7 +12451,12 @@
           "type": "array"
         },
         "set_id": {
-          "title": "Set Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -12238,7 +12553,12 @@
           "type": "string"
         },
         "stream_id": {
-          "title": "Stream Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -12347,7 +12667,12 @@
           "title": "Rule Count"
         },
         "source_id": {
-          "title": "Source Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -12653,7 +12978,12 @@
           "type": "string"
         },
         "network_sensor_id": {
-          "title": "Network Sensor Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "process_ref": {
@@ -12830,7 +13160,12 @@
           "type": "string"
         },
         "orchestration_authority_id": {
-          "title": "Orchestration Authority Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "privilege_class": {
@@ -12965,7 +13300,12 @@
           "type": "string"
         },
         "workload_id": {
-          "title": "Workload Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -13018,7 +13358,12 @@
           "type": "string"
         },
         "template_id": {
-          "title": "Template Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -13212,7 +13557,12 @@
           "type": "array"
         },
         "platform_application_id": {
-          "title": "Platform Application Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "platform_kind": {
@@ -13275,7 +13625,12 @@
       "description": "A connector/integration wired into the platform.\n\nA connector never carries a raw credential value; its credential posture is\nrecorded purely via :attr:`credential_classification`.",
       "properties": {
         "connector_id": {
-          "title": "Connector Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "credential_classification": {
@@ -13358,7 +13713,12 @@
           "type": "object"
         },
         "content_object_id": {
-          "title": "Content Object Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "description": {
@@ -13513,7 +13873,12 @@
           "type": "string"
         },
         "marking_id": {
-          "title": "Marking Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "scheme": {
@@ -13565,7 +13930,12 @@
           "type": "string"
         },
         "organization_id": {
-          "title": "Organization Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -13619,7 +13989,12 @@
           "type": "string"
         },
         "setting_id": {
-          "title": "Setting Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "value": {
@@ -13673,7 +14048,12 @@
           "type": "string"
         },
         "tenant_id": {
-          "title": "Tenant Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -13688,7 +14068,12 @@
       "description": "An outbound binding to an upstream node/service (data source, backend).",
       "properties": {
         "binding_id": {
-          "title": "Binding Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "description": {
@@ -14156,7 +14541,12 @@
           "default": null
         },
         "scheduled_job_id": {
-          "title": "Scheduled Job Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -14268,7 +14658,12 @@
           "type": "string"
         },
         "agent_id": {
-          "title": "Agent Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "description": {
@@ -14339,7 +14734,12 @@
           "type": "string"
         },
         "group_id": {
-          "title": "Group Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "member_refs": {
@@ -14381,7 +14781,12 @@
       "description": "A manager daemon, module, or internal component.",
       "properties": {
         "component_id": {
-          "title": "Component Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "description": {
@@ -14525,7 +14930,12 @@
       "description": "A manager-owned rule, decoder, policy, list, or query corpus.",
       "properties": {
         "content_id": {
-          "title": "Content Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "description": {
@@ -14649,7 +15059,12 @@
           "type": "array"
         },
         "definition_id": {
-          "title": "Definition Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "definition_kind": {
@@ -15066,7 +15481,12 @@
           "type": "string"
         },
         "listener_id": {
-          "title": "Listener Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "protocol": {
@@ -15236,7 +15656,12 @@
           "type": "string"
         },
         "security_monitoring_manager_id": {
-          "title": "Security Monitoring Manager Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "service": {
@@ -15310,7 +15735,12 @@
           "title": "Provenance"
         },
         "setting_id": {
-          "title": "Setting Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "source_path": {
@@ -15494,7 +15924,12 @@
           "type": "string"
         },
         "service_listener_id": {
-          "title": "Service Listener Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "socket_path": {
@@ -15799,7 +16234,12 @@
           "type": "string"
         },
         "ssh_server_id": {
-          "title": "Ssh Server Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         }
       },
@@ -16158,9 +16598,22 @@
           "type": "string"
         },
         "name": {
+          "anyOf": [
+            {
+              "const": ""
+            },
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "not": {
+                "pattern": "[^a-z0-9_-]"
+              },
+              "pattern": "^[a-z0-9]",
+              "type": "string"
+            }
+          ],
           "default": "",
-          "title": "Name",
-          "type": "string"
+          "title": "Name"
         },
         "port": {
           "anyOf": [
@@ -16561,7 +17014,12 @@
           "default": null
         },
         "match_id": {
-          "title": "Match Id",
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
           "type": "string"
         },
         "password_authentication": {
@@ -16804,10 +17262,19 @@
           "type": "string"
         },
         "steps": {
-          "additionalProperties": {
-            "$ref": "#/$defs/WorkflowStep"
-          },
           "minProperties": 1,
+          "patternProperties": {
+            "^[a-z0-9]": {
+              "$ref": "#/$defs/WorkflowStep"
+            }
+          },
+          "propertyNames": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            }
+          },
           "title": "Steps",
           "type": "object"
         },
@@ -17149,12 +17616,30 @@
       "additionalProperties": {
         "$ref": "#/$defs/Account"
       },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
       "title": "Accounts",
       "type": "object"
     },
     "action_contracts": {
       "additionalProperties": {
         "$ref": "#/$defs/ParticipantActionContract"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
       },
       "title": "Action Contracts",
       "type": "object"
@@ -17163,12 +17648,30 @@
       "additionalProperties": {
         "$ref": "#/$defs/Agent"
       },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
       "title": "Agents",
       "type": "object"
     },
     "behavior_specifications": {
       "additionalProperties": {
         "$ref": "#/$defs/ParticipantBehaviorSpecification"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
       },
       "title": "Behavior Specifications",
       "type": "object"
@@ -17177,12 +17680,30 @@
       "additionalProperties": {
         "$ref": "#/$defs/Condition"
       },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
       "title": "Conditions",
       "type": "object"
     },
     "content": {
       "additionalProperties": {
         "$ref": "#/$defs/Content"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
       },
       "title": "Content",
       "type": "object"
@@ -17196,12 +17717,30 @@
       "additionalProperties": {
         "$ref": "#/$defs/Entity"
       },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
       "title": "Entities",
       "type": "object"
     },
     "events": {
       "additionalProperties": {
         "$ref": "#/$defs/Event"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
       },
       "title": "Events",
       "type": "object"
@@ -17210,6 +17749,15 @@
       "additionalProperties": {
         "$ref": "#/$defs/EvidenceRequirement"
       },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
       "title": "Evidence Requirements",
       "type": "object"
     },
@@ -17217,12 +17765,39 @@
       "additionalProperties": {
         "$ref": "#/$defs/Feature"
       },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
       "title": "Features",
       "type": "object"
     },
     "forwarding_agents": {
       "items": {
-        "$ref": "#/$defs/RuntimeForwardingAgent"
+        "allOf": [
+          {
+            "$ref": "#/$defs/RuntimeForwardingAgent"
+          },
+          {
+            "properties": {
+              "forwarding_agent_id": {
+                "maxLength": 64,
+                "minLength": 1,
+                "not": {
+                  "pattern": "[^a-z0-9_-]"
+                },
+                "pattern": "^[a-z0-9]",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          }
+        ]
       },
       "title": "Forwarding Agents",
       "type": "array"
@@ -17238,12 +17813,30 @@
       "additionalProperties": {
         "$ref": "#/$defs/InfraNode"
       },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
       "title": "Infrastructure",
       "type": "object"
     },
     "injects": {
       "additionalProperties": {
         "$ref": "#/$defs/Inject"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
       },
       "title": "Injects",
       "type": "object"
@@ -17260,12 +17853,27 @@
       "default": null
     },
     "name": {
+      "maxLength": 64,
+      "minLength": 1,
+      "not": {
+        "pattern": "[^a-z0-9_-]"
+      },
+      "pattern": "^[a-z0-9]",
       "title": "Name",
       "type": "string"
     },
     "nodes": {
       "additionalProperties": {
         "$ref": "#/$defs/Node"
+      },
+      "propertyNames": {
+        "maxLength": 35,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
       },
       "title": "Nodes",
       "type": "object"
@@ -17274,12 +17882,30 @@
       "additionalProperties": {
         "$ref": "#/$defs/Objective"
       },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
       "title": "Objectives",
       "type": "object"
     },
     "observation_boundaries": {
       "additionalProperties": {
         "$ref": "#/$defs/ParticipantObservationBoundary"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
       },
       "title": "Observation Boundaries",
       "type": "object"
@@ -17288,12 +17914,30 @@
       "additionalProperties": {
         "$ref": "#/$defs/OutcomeInterpretationRule"
       },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
       "title": "Outcome Interpretation Rules",
       "type": "object"
     },
     "relationships": {
       "additionalProperties": {
         "$ref": "#/$defs/Relationship"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
       },
       "title": "Relationships",
       "type": "object"
@@ -17302,6 +17946,15 @@
       "additionalProperties": {
         "$ref": "#/$defs/Script"
       },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
       "title": "Scripts",
       "type": "object"
     },
@@ -17309,15 +17962,33 @@
       "additionalProperties": {
         "$ref": "#/$defs/Story"
       },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
       "title": "Stories",
       "type": "object"
     },
     "variables": {
       "additionalProperties": false,
       "patternProperties": {
-        "^[A-Za-z_][A-Za-z0-9_-]*$": {
+        "^[a-z0-9]": {
           "$ref": "#/$defs/Variable"
         }
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
       },
       "title": "Variables",
       "type": "object"
@@ -17331,12 +18002,30 @@
       "additionalProperties": {
         "$ref": "#/$defs/Vulnerability"
       },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
+      },
       "title": "Vulnerabilities",
       "type": "object"
     },
     "workflows": {
       "additionalProperties": {
         "$ref": "#/$defs/Workflow"
+      },
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_-]"
+        },
+        "pattern": "^[a-z0-9]",
+        "type": "string"
       },
       "title": "Workflows",
       "type": "object"

@@ -21,6 +21,7 @@ from aces_backend_libvirt.techvault_native import (
     expected_surface,
     native_soc_readback,
 )
+from aces_backend_protocols.naming import provider_resource_name
 from aces_operations import techvault_live
 from aces_operations.techvault_live import (
     TechVaultLiveConfig,
@@ -332,8 +333,8 @@ def test_bounded_substrate_emits_complete_daemon_observations(tmp_path):
     assert {observation.source.value for observation in result.observations} == {"daemon-observed"}
     surface = expected_surface(driver.last_snapshot)
     assert surface["source"] == "daemon-observed"
-    assert surface["domains"] == ("native-test-demo",)
-    assert surface["networks"] == ("native-test-lab",)
+    assert surface["domains"] == (provider_resource_name(domain.address, prefix="native-test"),)
+    assert surface["networks"] == (provider_resource_name(network.address, prefix="native-test"),)
     assert "service_count" not in surface
     network_uuid = ET.fromstring(connection.network_xml[0]).findtext("uuid")  # noqa: S314 - test XML
     domain_uuid = ET.fromstring(connection.domain_xml[0]).findtext("uuid")  # noqa: S314 - test XML
@@ -378,8 +379,8 @@ def test_native_driver_rejects_inactive_daemon_readback_and_rolls_back(tmp_path)
     result = driver.realize(networks=(network,), domains=(domain,))
 
     assert [diagnostic.code for diagnostic in result.diagnostics] == ["libvirt-backend.techvault.observation-mismatch"]
-    assert connection.domains["native-test-demo"].undefined is True
-    assert connection.networks["native-test-lab"].undefined is True
+    assert connection.domains[provider_resource_name(domain.address, prefix="native-test")].undefined is True
+    assert connection.networks[provider_resource_name(network.address, prefix="native-test")].undefined is True
     assert driver.last_snapshot == {}
 
 
@@ -399,8 +400,8 @@ def test_native_driver_rejects_substituted_boot_artifact_readback(tmp_path):
     result = driver.realize(networks=(network,), domains=(domain,))
 
     assert [diagnostic.code for diagnostic in result.diagnostics] == ["libvirt-backend.techvault.observation-mismatch"]
-    assert connection.domains["native-test-demo"].undefined is True
-    assert connection.networks["native-test-lab"].undefined is True
+    assert connection.domains[provider_resource_name(domain.address, prefix="native-test")].undefined is True
+    assert connection.networks[provider_resource_name(network.address, prefix="native-test")].undefined is True
 
 
 def test_native_driver_rejects_extra_unbound_network_attachment(tmp_path):
@@ -463,8 +464,8 @@ def test_native_driver_rolls_back_when_evidence_binding_cannot_be_built(tmp_path
     assert [diagnostic.code for diagnostic in result.diagnostics] == [
         "libvirt-backend.techvault-native.operation-failed"
     ]
-    assert connection.domains["native-test-demo"].undefined is True
-    assert connection.networks["native-test-lab"].undefined is True
+    assert connection.domains[provider_resource_name(domain.address, prefix="native-test")].undefined is True
+    assert connection.networks[provider_resource_name(network.address, prefix="native-test")].undefined is True
     assert driver.last_snapshot == {}
 
 
@@ -529,8 +530,8 @@ def test_native_driver_recovers_owned_resources_by_uuid_after_restart(tmp_path):
     result = restarted.destroy(networks=(network.address,), domains=(domain.address,))
 
     assert not result.diagnostics
-    assert connection.domains["native-test-demo-display"].undefined is True
-    assert connection.networks["native-test-lab-display"].undefined is True
+    assert connection.domains[provider_resource_name(domain.address, prefix="native-test")].undefined is True
+    assert connection.networks[provider_resource_name(network.address, prefix="native-test")].undefined is True
     assert all(not path.exists() for path in artifact_paths)
 
 
@@ -669,7 +670,7 @@ def test_native_driver_verifies_partial_create_rollback_and_reports_residual_sta
 
     assert result.domains == ()
     assert "libvirt-backend.techvault-native.operation-failed" in {diagnostic.code for diagnostic in result.diagnostics}
-    first = connection.domains["aces-techvault-demo-1"]
+    first = connection.domains[provider_resource_name(domains[0].address, prefix="aces-techvault")]
     if rollback_fails:
         assert "libvirt-backend.techvault-native.residual-state" in {
             diagnostic.code for diagnostic in result.diagnostics
@@ -688,9 +689,10 @@ def test_native_driver_verifies_partial_create_rollback_and_reports_residual_sta
 
 def test_native_driver_refuses_to_destroy_foreign_name_collision(tmp_path):
     connection = _FakeConnection()
+    foreign_name = provider_resource_name("provision.node.demo", prefix="aces-techvault")
     foreign = _NativeObject(
-        "aces-techvault-demo",
-        "<domain><name>aces-techvault-demo</name><uuid>00000000-0000-4000-8000-000000000000</uuid></domain>",
+        foreign_name,
+        f"<domain><name>{foreign_name}</name><uuid>00000000-0000-4000-8000-000000000000</uuid></domain>",
     )
     foreign.created = True
     connection.domains[foreign.name()] = foreign
@@ -708,9 +710,10 @@ def test_native_driver_refuses_to_destroy_foreign_name_collision(tmp_path):
 
 def test_native_driver_refuses_to_replace_foreign_name_collision(tmp_path):
     connection = _FakeConnection()
+    foreign_name = provider_resource_name("provision.node.demo", prefix="aces-techvault")
     foreign = _NativeObject(
-        "aces-techvault-demo",
-        "<domain><name>aces-techvault-demo</name><uuid>00000000-0000-4000-8000-000000000000</uuid></domain>",
+        foreign_name,
+        f"<domain><name>{foreign_name}</name><uuid>00000000-0000-4000-8000-000000000000</uuid></domain>",
     )
     foreign.created = True
     connection.domains[foreign.name()] = foreign
@@ -828,7 +831,9 @@ def test_validate_techvault_live_accepts_bounded_daemon_observed_substrate(tmp_p
     payload = json.loads(
         (tmp_path / "runs" / "bounded-live" / "live-gate" / "manifest.json").read_text(encoding="utf-8")
     )
-    assert payload["realization_facts"]["daemon_observed"]["domains"] == ["live-test-demo"]
+    assert payload["realization_facts"]["daemon_observed"]["domains"] == [
+        provider_resource_name("provision.node.demo", prefix="live-test")
+    ]
     assert payload["realization_facts"]["guest_observed"]["status"] == "not-observed"
     assert payload["cleanup"] == {"source": "driver-reported", "status": "verified"}
     assert all(native.undefined for native in (*connection.domains.values(), *connection.networks.values()))
@@ -881,9 +886,16 @@ def test_native_driver_rejects_unbound_material_or_secret_configuration(tmp_path
         TechVaultNativeLibvirtDriver(state_dir=tmp_path / "state", **kwargs)
 
 
-def test_native_driver_rejects_silently_normalized_resource_name(tmp_path):
+def test_native_driver_derives_provider_name_from_address_not_display_name(tmp_path):
     connection = _FakeConnection()
-    driver = TechVaultNativeLibvirtDriver(state_dir=tmp_path / "state", connection=connection)
+    kernel = tmp_path / "vmlinuz"
+    kernel.write_bytes(b"kernel")
+    driver = TechVaultNativeLibvirtDriver(
+        state_dir=tmp_path / "state",
+        connection=connection,
+        kernel_path=kernel,
+        initramfs_builder=_Builder(),
+    )
     domain = DomainSpec(
         address="provision.node.demo",
         name="unsafe name",
@@ -894,8 +906,9 @@ def test_native_driver_rejects_silently_normalized_resource_name(tmp_path):
 
     result = driver.realize(networks=(), domains=(domain,))
 
-    assert [diagnostic.code for diagnostic in result.diagnostics] == ["libvirt-backend.techvault.name-unsupported"]
-    assert connection.domain_xml == []
+    assert not result.diagnostics
+    assert provider_resource_name(domain.address, prefix="aces-techvault") in connection.domain_xml[0]
+    assert "unsafe name" not in connection.domain_xml[0]
 
 
 def test_busybox_initramfs_builder_writes_gzip_cpio(tmp_path):

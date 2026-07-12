@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 from aces_backend_libvirt.techvault_native import TechVaultNativeLibvirtDriver
+from aces_backend_protocols.naming import provider_resource_name
 from aces_contracts.contracts import (
     BackendManifestV2Model,
     EvaluationHistoryEventModel,
@@ -422,8 +423,8 @@ def test_native_live_realizes_substrate_for_provisionable_scenario(tmp_path):
     assert artifact["realized_topology"]["basis"] == "mixed-source"
     native_surface = artifact["realized_topology"]["native_surface"]
     assert native_surface["source"] == "daemon-observed"
-    assert native_surface["domains"] == ("evidence-test-demo",)
-    assert native_surface["networks"] == ("evidence-test-lab",)
+    assert native_surface["domains"] == (provider_resource_name("provision.node.demo", prefix="evidence-test"),)
+    assert native_surface["networks"] == (provider_resource_name("provision.network.lab", prefix="evidence-test"),)
     facts = artifact["realization_facts"]
     assert facts["planned"]["source"] == "planned"
     assert facts["driver_reported"]["source"] == "driver-reported"

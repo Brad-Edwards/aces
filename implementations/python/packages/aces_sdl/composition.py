@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Any
 
 from ._base import is_variable_ref
+from ._composition_budget import CompositionBudget, CompositionTraversal
 from ._errors import SDLInstantiationError, SDLParseDiagnostic, SDLParseError
+from ._identifiers import QualifiedName
 from ._module_provenance import (
     add_unique_provenance as _add_unique_provenance,
 )
@@ -17,8 +19,10 @@ from ._module_provenance import (
 from ._module_provenance import (
     rename_variable_ref,
 )
+from ._module_symbols import FORWARDING_AGENTS_SECTION
+from ._module_symbols import HASHMAP_SECTIONS as _HASHMAP_SECTIONS
 from ._module_symbols import (
-    HASHMAP_SECTIONS as _HASHMAP_SECTIONS,
+    rewrite_objective_window_ref as _rewrite_objective_window_ref,
 )
 from ._module_symbols import (
     symbol_index as _symbol_index,
@@ -38,15 +42,15 @@ from .module_registry import (
     resolve_import,
 )
 from .parser import _load_normalized_data
-from .scenario import ImportDecl, ModuleDescriptor, Scenario
+from .scenario import ExpandedScenario, ImportDecl, ModuleDescriptor, Scenario
 
 
 def _prefix(namespace: str, name: str) -> str:
-    return f"{namespace}.{name}" if namespace else name
+    return QualifiedName.parse(name).prefixed(namespace).render() if namespace else QualifiedName.parse(name).render()
 
 
 def _private_prefix(namespace: str, name: str) -> str:
-    return _prefix(namespace, f"__private.{name}")
+    return QualifiedName.parse(name).prefixed(namespace, private=True).render()
 
 
 def _maybe_rename(name: str, name_map: Mapping[str, str]) -> str:
@@ -60,7 +64,13 @@ def _validate_descriptor_exports(
     descriptor: ModuleDescriptor,
 ) -> None:
     for section_name, exported_names in descriptor.exports.items():
-        if section_name == "entities":
+        if section_name not in {*_HASHMAP_SECTIONS, FORWARDING_AGENTS_SECTION}:
+            raise SDLParseError(f"Module '{descriptor.id}' exports unknown SDL section '{section_name}'")
+        for exported_name in exported_names:
+            QualifiedName.parse(exported_name)
+        if section_name == FORWARDING_AGENTS_SECTION:
+            available_names = {agent.forwarding_agent_id for agent in scenario.forwarding_agents}
+        elif section_name == "entities":
             available_names = set(flatten_entities(scenario.entities))
         else:
             section_payload = getattr(scenario, section_name, None)
@@ -117,15 +127,6 @@ def _rewrite_entity(payload: dict[str, Any], symbols: dict[str, dict[str, str] |
     for child in payload.get("entities", {}).values():
         if isinstance(child, dict):
             _rewrite_entity(child, symbols)
-
-
-def _rewrite_objective_window_ref(ref: str, workflow_names: Mapping[str, str]) -> str:
-    if "." not in ref or is_variable_ref(ref):
-        return ref
-    workflow_name, step_name = ref.rsplit(".", 1)
-    if workflow_name not in workflow_names:
-        return ref
-    return f"{workflow_names[workflow_name]}.{step_name}"
 
 
 def _rewrite_workflow(payload: dict[str, Any], symbols: dict[str, dict[str, str] | set[str]]) -> None:
@@ -215,6 +216,12 @@ def _namespace_payload(
                 relationship["source"] = _maybe_rename(str(relationship["source"]), symbols["named"])
             if relationship.get("target"):
                 relationship["target"] = _maybe_rename(str(relationship["target"]), symbols["named"])
+            forwarding_edge = relationship.get("forwarding_edge")
+            if isinstance(forwarding_edge, dict) and forwarding_edge.get("forwarder_ref"):
+                forwarding_edge["forwarder_ref"] = _maybe_rename(
+                    str(forwarding_edge["forwarder_ref"]),
+                    symbols[FORWARDING_AGENTS_SECTION],
+                )
     for agent in namespaced.get("agents", {}).values():
         if isinstance(agent, dict):
             if agent.get("entity"):
@@ -309,6 +316,17 @@ def _namespace_payload(
         namespaced[section_name] = {
             symbols[section_name].get(name, _prefix(namespace, name)): value for name, value in section_payload.items()
         }
+    forwarding_agents = namespaced.get(FORWARDING_AGENTS_SECTION, [])
+    if isinstance(forwarding_agents, list):
+        for agent in forwarding_agents:
+            if not isinstance(agent, dict):
+                continue
+            identifier = agent.get("forwarding_agent_id")
+            if isinstance(identifier, str):
+                agent["forwarding_agent_id"] = symbols[FORWARDING_AGENTS_SECTION].get(
+                    identifier,
+                    _private_prefix(namespace, identifier),
+                )
     namespaced["variables"] = {}
     namespaced["module"] = None
     namespaced["imports"] = []
@@ -330,6 +348,14 @@ def _merge_sections(
             raise SDLParseError(f"Import from {path} collides on {section_name}: {', '.join(collisions)}")
         current.update(additions)
         merged[section_name] = current
+    current_agents = list(merged.get(FORWARDING_AGENTS_SECTION, []))
+    incoming_agents = list(incoming.get(FORWARDING_AGENTS_SECTION, []))
+    current_ids = {agent.get("forwarding_agent_id") for agent in current_agents if isinstance(agent, dict)}
+    incoming_ids = {agent.get("forwarding_agent_id") for agent in incoming_agents if isinstance(agent, dict)}
+    collisions = sorted(identifier for identifier in current_ids.intersection(incoming_ids) if identifier)
+    if collisions:
+        raise SDLParseError(f"Import from {path} collides on {FORWARDING_AGENTS_SECTION}: {', '.join(collisions)}")
+    merged[FORWARDING_AGENTS_SECTION] = [*current_agents, *incoming_agents]
     merged["imports"] = []
     return merged
 
@@ -344,11 +370,11 @@ def expand_sdl_modules(
     data: dict[str, Any],
     *,
     path: Path,
-    seen: set[Path] | None = None,
     source_format: str = SDL_SOURCE_FORMAT,
     migration_policy: SDLMigrationPolicy | str = SDLMigrationPolicy.REJECT,
     limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
     source_diagnostics: list[SDLParseDiagnostic] | None = None,
+    _traversal: CompositionTraversal | None = None,
 ) -> tuple[
     dict[str, Any],
     dict[str, str],
@@ -367,11 +393,18 @@ def expand_sdl_modules(
     node and variable names namespace-prefixed) for downstream consumers.
     """
 
-    seen = set() if seen is None else set(seen)
+    traversal = _traversal or CompositionTraversal(
+        seen=frozenset(),
+        budget=CompositionBudget(limits),
+        depth=0,
+    )
+    budget = traversal.budget
+    budget.check_depth(traversal.depth, path=path)
+    budget.add_document(data, path=path)
     resolved_path = path.resolve()
-    if resolved_path in seen:
+    if resolved_path in traversal.seen:
         raise SDLParseError(f"Import cycle detected at {resolved_path}", path=path)
-    seen.add(resolved_path)
+    child_traversal = traversal.descend_from(resolved_path)
 
     merged = dict(data)
     merged.setdefault("imports", [])
@@ -383,6 +416,7 @@ def expand_sdl_modules(
     trust_policy = load_trust_policy(resolved_path.parent)
 
     for raw_import in list(merged.get("imports", [])):
+        budget.add_import(path=path)
         import_decl = _import_decl(raw_import)
         if "__private." in import_decl.namespace:
             raise SDLParseError(
@@ -418,14 +452,14 @@ def expand_sdl_modules(
         ) = expand_sdl_modules(
             imported_raw,
             path=import_path,
-            seen=seen,
             source_format=source_format,
             migration_policy=migration_policy,
             limits=limits,
             source_diagnostics=source_diagnostics,
+            _traversal=child_traversal,
         )
         try:
-            imported_scenario = Scenario.model_validate(imported_expanded)
+            imported_scenario = ExpandedScenario.model_validate(imported_expanded)
             # Re-attach the deeper-import provenance so `instantiate_scenario`
             # can propagate it onto the `InstantiatedScenario` alongside
             # whatever local refs it captures.
@@ -439,18 +473,11 @@ def expand_sdl_modules(
         except SDLInstantiationError as exc:
             raise SDLParseError(str(exc), path=import_path) from exc
         imported_instantiated.module = resolved_import.module_descriptor
-        namespace = import_decl.namespace or resolved_import.module_descriptor.id.split("/")[-1]
+        namespace = import_decl.namespace
 
-        descriptor = imported_instantiated.module or ModuleDescriptor(
-            id=imported_instantiated.name,
-            version=imported_instantiated.version,
-            parameters=sorted(imported_instantiated.variables.keys()),
-            exports={
-                section: sorted(getattr(imported_instantiated, section).keys())
-                for section in _HASHMAP_SECTIONS
-                if getattr(imported_instantiated, section)
-            },
-        )
+        descriptor = imported_instantiated.module
+        if descriptor is None:
+            raise SDLParseError("Imported SDL units require an explicit module descriptor", path=import_path)
         symbols = _symbol_index(imported_instantiated, namespace=namespace, descriptor=descriptor)
 
         # Local imported variables get namespace-prefixed (private prefix; they
@@ -519,6 +546,7 @@ def expand_sdl_modules(
             imported_instantiated,
             namespace,
         )
+        budget.check_namespaces(namespaced_payload, path=import_path)
         merged = _merge_sections(merged, namespaced_payload, path=import_path)
         namespaces[str(import_path)] = namespace
         namespaces.update(imported_namespaces)

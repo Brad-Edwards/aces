@@ -61,22 +61,6 @@ def _local_module(path: Path, *, version: str = "1.2.3", exports: str = "nodes: 
     )
 
 
-def _flat_equivalent(path: Path) -> Path:
-    return _write(
-        path,
-        """
-        name: flat
-        nodes:
-          shared.vm:
-            type: vm
-            os: linux
-            resources: {ram: 1 gib, cpu: 1}
-        infrastructure:
-          shared.vm: 1
-        """,
-    )
-
-
 def _root_import(path: Path, import_body: str) -> Path:
     lines = textwrap.dedent(import_body).strip().splitlines()
     import_lines = [f"  - {lines[0].strip()}"]
@@ -181,7 +165,6 @@ def test_local_path_source_and_locked_imports_compile_equivalently(tmp_path: Pat
         tmp_path / "root-source.yaml",
         "source: local:shared.yaml\n            namespace: shared\n            version: 1.2.3",
     )
-    flat = _flat_equivalent(tmp_path / "flat.yaml")
 
     runner = CliRunner()
     resolve_result = runner.invoke(app, ["sdl", "resolve", str(root_source)])
@@ -198,20 +181,14 @@ def test_local_path_source_and_locked_imports_compile_equivalently(tmp_path: Pat
     path_model = compile_runtime_model(parse_sdl_file(root_path))
     source_model = compile_runtime_model(parse_sdl_file(root_source))
     locked_model = compile_runtime_model(parse_sdl_file(root_locked))
-    flat_model = compile_runtime_model(parse_sdl_file(flat))
 
     assert (
         path_model.node_deployments.keys()
         == source_model.node_deployments.keys()
         == locked_model.node_deployments.keys()
-        == flat_model.node_deployments.keys()
+        == {"provision.node.shared.vm"}
     )
-    assert (
-        path_model.networks.keys()
-        == source_model.networks.keys()
-        == locked_model.networks.keys()
-        == flat_model.networks.keys()
-    )
+    assert path_model.networks.keys() == source_model.networks.keys() == locked_model.networks.keys() == set()
     assert module_path.exists()
 
 
@@ -275,11 +252,57 @@ def test_module_exports_are_enforced_for_importers(tmp_path: Path):
         parse_sdl_file(root)
 
 
+@pytest.mark.parametrize("exported", [True, False])
+def test_scenario_forwarding_agents_compose_by_stable_list_identity(tmp_path: Path, exported: bool):
+    exports = "    forwarding_agents: [shipper]\n" if exported else ""
+    _write(
+        tmp_path / "shared.yaml",
+        f"""
+        name: shared
+        version: 1.0.0
+        module:
+          id: aces/shared-forwarder
+          version: 1.0.0
+          exports:
+            nodes: [source, sink]
+            relationships: [shipping]
+        {exports.rstrip()}
+        nodes:
+          source: {{type: switch}}
+          sink: {{type: switch}}
+        forwarding_agents:
+          - forwarding_agent_id: shipper
+        relationships:
+          shipping:
+            type: connects_to
+            source: source
+            target: sink
+            forwarding_edge:
+              forwarder_ref: shipper
+        """,
+    )
+    root = _root_import(
+        tmp_path / "root.yaml",
+        "source: local:shared.yaml\n            namespace: shared",
+    )
+
+    scenario = parse_sdl_file(root)
+
+    expected = "shared.shipper" if exported else "shared.__private.shipper"
+    assert isinstance(scenario.forwarding_agents, list)
+    assert [agent.forwarding_agent_id for agent in scenario.forwarding_agents] == [expected]
+    assert scenario.relationships["shared.shipping"].forwarding_edge.forwarder_ref == expected
+
+
 def test_import_cycles_and_namespace_collisions_are_rejected(tmp_path: Path):
     a = _write(
         tmp_path / "a.yaml",
         """
         name: a
+        version: 1.0.0
+        module:
+          id: aces/a
+          version: 1.0.0
         imports:
           - source: local:b.yaml
             namespace: other
@@ -289,6 +312,10 @@ def test_import_cycles_and_namespace_collisions_are_rejected(tmp_path: Path):
         tmp_path / "b.yaml",
         """
         name: b
+        version: 1.0.0
+        module:
+          id: aces/b
+          version: 1.0.0
         imports:
           - source: local:a.yaml
             namespace: other
@@ -727,15 +754,11 @@ def test_signed_oci_import_resolution_and_publish_cli(tmp_path: Path):
             tmp_path / "root-locked.yaml",
             f"source: locked:{lockfile.imports[0].resolved_source}\n            namespace: shared",
         )
-        flat = _flat_equivalent(tmp_path / "flat.yaml")
         remote_model = compile_runtime_model(parse_sdl_file(root))
         locked_model = compile_runtime_model(parse_sdl_file(locked))
-        flat_model = compile_runtime_model(parse_sdl_file(flat))
 
         assert (
-            remote_model.node_deployments.keys()
-            == locked_model.node_deployments.keys()
-            == flat_model.node_deployments.keys()
+            remote_model.node_deployments.keys() == locked_model.node_deployments.keys() == {"provision.node.shared.vm"}
         )
 
 

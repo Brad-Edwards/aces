@@ -114,36 +114,9 @@ class ResolvedModule:
 def _scenario_module_descriptor(scenario: Scenario, *, source_id: str) -> ModuleDescriptor:
     if scenario.module is not None:
         return scenario.module
-    normalized_source_id = source_id.replace("\\", "/")
-    if "/" not in normalized_source_id:
-        normalized_source_id = f"local/{normalized_source_id}"
-    return ModuleDescriptor(
-        id=normalized_source_id,
-        version=scenario.version,
-        parameters=sorted(scenario.variables.keys()),
-        exports={
-            section: sorted(getattr(scenario, section).keys())
-            for section in (
-                "nodes",
-                "infrastructure",
-                "features",
-                "conditions",
-                "vulnerabilities",
-                "entities",
-                "injects",
-                "events",
-                "scripts",
-                "stories",
-                "content",
-                "accounts",
-                "relationships",
-                "agents",
-                "objectives",
-                "workflows",
-            )
-            if getattr(scenario, section)
-        },
-        description=scenario.description,
+    raise SDLParseError(
+        "Imported SDL units require an explicit module descriptor",
+        path=Path(source_id),
     )
 
 
@@ -759,7 +732,7 @@ def resolve_lock_records(
         records.append(
             LockRecord(
                 source=import_decl.normalized_source,
-                namespace=import_decl.namespace or resolved.module_descriptor.id.split("/")[-1],
+                namespace=import_decl.namespace,
                 requested_version=import_decl.version or "*",
                 resolved_source=resolved.resolved_source,
                 module_id=resolved.module_descriptor.id,

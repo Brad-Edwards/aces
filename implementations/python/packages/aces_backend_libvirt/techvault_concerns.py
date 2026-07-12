@@ -313,15 +313,14 @@ def _name_diagnostics(
 def _native_name_diagnostics(names: list[tuple[str, str]], name_prefix: str) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
     native_names: set[str] = set()
-    for address, name in names:
-        exact_name = f"{name_prefix}-{name}" if name_prefix else name
-        selected_name = runtime_name(name_prefix, address, name)
-        if not name or selected_name != exact_name or selected_name in native_names:
+    for address, display_name in names:
+        selected_name = runtime_name(name_prefix, address, display_name)
+        if selected_name in native_names:
             diagnostics.append(
                 _diagnostic(
                     _CODE_NAME_UNSUPPORTED,
                     address,
-                    "TechVault native names must be unique, libvirt-safe, and realizable without normalization.",
+                    "TechVault provider-name projections must be unique for canonical resource addresses.",
                 )
             )
         native_names.add(selected_name)

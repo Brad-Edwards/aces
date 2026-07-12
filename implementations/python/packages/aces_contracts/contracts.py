@@ -6,12 +6,14 @@ import importlib
 import json
 import re
 from collections.abc import Mapping
+from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Annotated, Any, Literal
 
 from aces_sdl import VARIABLE_TOKEN_PATTERN
 from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from aces_sdl.identifiers import PORTABLE_IDENTIFIER_JSON_SCHEMA, QUALIFIED_IDENTIFIER_MAX_LENGTH
 from aces_sdl.observability_plane_semantics import classify_contract_plane
 from aces_sdl.participant_attribution_semantics import (
     ParticipantAttributionCandidateKind,
@@ -33,10 +35,12 @@ from aces_sdl.participant_temporal_semantics import (
     ParticipantTimeDomain,
 )
 from aces_sdl.scenario import InstantiatedScenario, Scenario
+from aces_sdl.schema_catalogs import HASHMAP_SECTIONS, RUNTIME_SERVICE_FAMILIES, RuntimeReferenceChild
 from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler, StrictInt, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
+from .addressing import COMPILED_ADDRESS_JSON_SCHEMA, CompiledAddress
 from .corpus import CONCEPT_AUTHORITY, corpus_family_root
 from .manifest_authority import (
     BACKEND_SUPPORTED_CONTRACT_IDS,
@@ -57,6 +61,12 @@ from .participant_behavior import (
     ParticipantPhaseRealization,
     ParticipantRuntimeLifecyclePhase,
     participant_lifecycle_field_violation_messages,
+)
+from .planning import (
+    PLAN_ADDRESS_ROOT_BY_DOMAIN,
+    PLAN_RESOURCE_TYPES_BY_DOMAIN,
+    RuntimeDomain,
+    require_plan_operation_identity,
 )
 from .versions import (
     ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
@@ -431,6 +441,8 @@ def _extend_reported_value_status_schema(json_schema: JsonSchemaValue) -> None:
 
 _DEFS_KEY = "$defs"
 _INSTANTIATION_INVARIANT_CONTRACT_ID = "instantiated-scenario-v1"
+_SDL_AUTHORING_CONTRACT_ID = "sdl-authoring-input-v1"
+_SDL_IDENTIFIER_CONTRACT_IDS = frozenset({_SDL_AUTHORING_CONTRACT_ID, _INSTANTIATION_INVARIANT_CONTRACT_ID})
 _SCHEMA_MAP_KEYS = ("properties", "patternProperties", _DEFS_KEY)
 _SCHEMA_SUBSCHEMA_KEYS = (
     "additionalProperties",
@@ -441,6 +453,135 @@ _SCHEMA_SUBSCHEMA_KEYS = (
     "oneOf",
     "prefixItems",
 )
+
+
+def _portable_property_names(*, maximum: int = 64) -> dict[str, Any]:
+    schema = deepcopy(PORTABLE_IDENTIFIER_JSON_SCHEMA)
+    schema["maxLength"] = maximum
+    return schema
+
+
+def _qualified_property_names(*, local_maximum: int = 64) -> dict[str, Any]:
+    local_tail = local_maximum - 1
+    segment = r"(?:[a-z0-9][a-z0-9_-]{0,63}|__private)"
+    return {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": QUALIFIED_IDENTIFIER_MAX_LENGTH,
+        "pattern": rf"^(?:{segment}\.)*[a-z0-9][a-z0-9_-]{{0,{local_tail}}}$",
+        "not": {"pattern": "[^a-z0-9_.-]"},
+    }
+
+
+def _resolve_local_ref(schema: dict[str, Any], node: object) -> dict[str, Any] | None:
+    if not isinstance(node, dict):
+        return None
+    ref = node.get("$ref")
+    if isinstance(ref, str) and ref.startswith("#/$defs/"):
+        resolved = schema.get(_DEFS_KEY, {}).get(ref.removeprefix("#/$defs/"))
+        return resolved if isinstance(resolved, dict) else None
+    return node
+
+
+def _collection_item_schema(
+    schema: dict[str, Any], owner: dict[str, Any], collection_name: str
+) -> dict[str, Any] | None:
+    collection = owner.get("properties", {}).get(collection_name)
+    collection = _resolve_local_ref(schema, collection)
+    if not isinstance(collection, dict):
+        return None
+    items = collection.get("items")
+    return _resolve_local_ref(schema, items)
+
+
+def _constrain_runtime_children(
+    schema: dict[str, Any],
+    owner: dict[str, Any],
+    children: tuple[RuntimeReferenceChild, ...],
+) -> None:
+    for child in children:
+        child_schema = _collection_item_schema(schema, owner, child.collection_name)
+        if child_schema is None:
+            continue
+        child_schema.setdefault("properties", {})[child.id_field] = _portable_property_names()
+        _constrain_runtime_children(schema, child_schema, child.children)
+
+
+def _attach_runtime_identifier_constraints(schema: dict[str, Any]) -> None:
+    runtime = schema.get(_DEFS_KEY, {}).get("RuntimeConfiguration")
+    if not isinstance(runtime, dict):
+        return
+    for family in RUNTIME_SERVICE_FAMILIES:
+        item_schema = _collection_item_schema(schema, runtime, family.collection_name)
+        if item_schema is None:
+            continue
+        if family.collection_name != "forwarding_agents":
+            item_schema.setdefault("properties", {})[family.id_field] = _portable_property_names()
+        _constrain_runtime_children(schema, item_schema, family.child_refs)
+
+
+def _constrain_collection_item_field(
+    owner: dict[str, Any],
+    collection_name: str,
+    field_name: str,
+    field_schema: dict[str, Any],
+) -> None:
+    collection = owner.get("properties", {}).get(collection_name)
+    if not isinstance(collection, dict):
+        return
+    items = collection.get("items")
+    if not isinstance(items, dict):
+        return
+    collection["items"] = {
+        "allOf": [
+            items,
+            {"properties": {field_name: field_schema}, "type": "object"},
+        ]
+    }
+
+
+def _attach_instantiation_request_identifier_constraints(schema: dict[str, Any]) -> None:
+    parameters = schema.get("properties", {}).get("parameters")
+    if isinstance(parameters, dict):
+        parameters["propertyNames"] = _portable_property_names()
+
+
+def _attach_sdl_identifier_constraints(contract_id: str, schema: dict[str, Any]) -> None:
+    if contract_id == "scenario-instantiation-request-v1":
+        _attach_instantiation_request_identifier_constraints(schema)
+    elif contract_id in _SDL_IDENTIFIER_CONTRACT_IDS:
+        _attach_scenario_identifier_constraints(contract_id, schema)
+
+
+def _attach_scenario_identifier_constraints(contract_id: str, schema: dict[str, Any]) -> None:
+
+    qualified = contract_id == _INSTANTIATION_INVARIANT_CONTRACT_ID
+    for section_name in HASHMAP_SECTIONS:
+        section = schema.get("properties", {}).get(section_name)
+        if not isinstance(section, dict):
+            continue
+        local_maximum = 35 if section_name == "nodes" else 64
+        section["propertyNames"] = (
+            _qualified_property_names(local_maximum=local_maximum)
+            if qualified
+            else _portable_property_names(maximum=local_maximum)
+        )
+    _attach_runtime_identifier_constraints(schema)
+    forwarding_id_schema = _qualified_property_names() if qualified else _portable_property_names()
+    _constrain_collection_item_field(
+        schema,
+        "forwarding_agents",
+        "forwarding_agent_id",
+        forwarding_id_schema,
+    )
+    runtime = schema.get(_DEFS_KEY, {}).get("RuntimeConfiguration")
+    if isinstance(runtime, dict):
+        _constrain_collection_item_field(
+            runtime,
+            "forwarding_agents",
+            "forwarding_agent_id",
+            _portable_property_names(),
+        )
 
 
 def _apply_string_token_constraint(node: dict[str, Any]) -> None:
@@ -515,6 +656,39 @@ def _schema_id_for_contract_id(contract_id: str) -> str:
 def _attach_json_schema_metadata(contract_id: str, json_schema: dict[str, Any]) -> None:
     json_schema.setdefault("$schema", _JSON_SCHEMA_DRAFT_2020_12)
     json_schema.setdefault("$id", _schema_id_for_contract_id(contract_id))
+
+
+def _attach_compiled_address_map_constraints(contract_id: str, json_schema: dict[str, Any]) -> None:
+    if contract_id != "runtime-snapshot-v1":
+        return
+    entries = json_schema.get("properties", {}).get("entries")
+    if not isinstance(entries, dict):
+        return
+    entries["propertyNames"] = deepcopy(COMPILED_ADDRESS_JSON_SCHEMA)
+    entries["additionalProperties"] = False
+
+
+_PLAN_CONTRACT_DOMAIN = {
+    "provisioning-plan-v1": RuntimeDomain.PROVISIONING,
+    "orchestration-plan-v1": RuntimeDomain.ORCHESTRATION,
+    "evaluation-plan-v1": RuntimeDomain.EVALUATION,
+}
+
+
+def _attach_plan_identity_constraints(contract_id: str, json_schema: dict[str, Any]) -> None:
+    domain = _PLAN_CONTRACT_DOMAIN.get(contract_id)
+    if domain is None:
+        return
+    operation = json_schema.get(_DEFS_KEY, {}).get("PlanOperationModel")
+    if not isinstance(operation, dict):
+        return
+    properties = operation.get("properties", {})
+    address = properties.get("address")
+    resource_type = properties.get("resource_type")
+    if isinstance(address, dict):
+        address.setdefault("allOf", []).append({"pattern": rf"^{PLAN_ADDRESS_ROOT_BY_DOMAIN[domain]}\."})
+    if isinstance(resource_type, dict):
+        resource_type["enum"] = sorted(PLAN_RESOURCE_TYPES_BY_DOMAIN[domain])
 
 
 _SEMANTIC_PROFILE_PHASE_ALLOWED_BINDING_SCOPES = {
@@ -1948,11 +2122,34 @@ class ParticipantContextViewModel(ContractModel):
 
 class PlanOperationModel(ContractModel):
     action: str
-    address: str
+    address: CompiledAddress
     resource_type: str
     payload: dict[str, Any] = Field(default_factory=dict)
-    ordering_dependencies: list[str] = Field(default_factory=list)
-    refresh_dependencies: list[str] = Field(default_factory=list)
+    ordering_dependencies: list[CompiledAddress] = Field(default_factory=list)
+    refresh_dependencies: list[CompiledAddress] = Field(default_factory=list)
+
+
+def _require_unique_operation_addresses(operations: list[PlanOperationModel]) -> None:
+    addresses = [operation.address for operation in operations]
+    if len(addresses) != len(set(addresses)):
+        raise ValueError("Plan operation addresses must be unique")
+
+
+def _require_operation_identities(operations: list[PlanOperationModel], domain: RuntimeDomain) -> None:
+    for operation in operations:
+        require_plan_operation_identity(domain, operation.address, operation.resource_type)
+
+
+def _require_startup_order_addresses(
+    operations: list[PlanOperationModel],
+    startup_order: list[str],
+) -> None:
+    if len(startup_order) != len(set(startup_order)):
+        raise ValueError("Plan startup_order addresses must be unique")
+    operation_addresses = {operation.address for operation in operations}
+    unknown = set(startup_order) - operation_addresses
+    if unknown:
+        raise ValueError("Plan startup_order must reference admitted operation addresses")
 
 
 class RealizationEnvelopeIdentityModel(ContractModel):
@@ -1970,26 +2167,46 @@ class ProvisioningPlanModel(ContractModel):
     diagnostics: list[dict[str, Any]] = Field(default_factory=list)
     realization_envelope: RealizationEnvelopeIdentityModel | None = None
 
+    @model_validator(mode="after")
+    def _validate_operation_addresses(self) -> ProvisioningPlanModel:
+        _require_unique_operation_addresses(self.operations)
+        _require_operation_identities(self.operations, RuntimeDomain.PROVISIONING)
+        return self
+
 
 class OrchestrationPlanModel(ContractModel):
     operations: list[PlanOperationModel] = Field(default_factory=list)
-    startup_order: list[str] = Field(default_factory=list)
+    startup_order: list[CompiledAddress] = Field(default_factory=list)
     diagnostics: list[dict[str, Any]] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_operation_addresses(self) -> OrchestrationPlanModel:
+        _require_unique_operation_addresses(self.operations)
+        _require_operation_identities(self.operations, RuntimeDomain.ORCHESTRATION)
+        _require_startup_order_addresses(self.operations, self.startup_order)
+        return self
 
 
 class EvaluationPlanModel(ContractModel):
     operations: list[PlanOperationModel] = Field(default_factory=list)
-    startup_order: list[str] = Field(default_factory=list)
+    startup_order: list[CompiledAddress] = Field(default_factory=list)
     diagnostics: list[dict[str, Any]] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_operation_addresses(self) -> EvaluationPlanModel:
+        _require_unique_operation_addresses(self.operations)
+        _require_operation_identities(self.operations, RuntimeDomain.EVALUATION)
+        _require_startup_order_addresses(self.operations, self.startup_order)
+        return self
 
 
 class SnapshotEntryModel(ContractModel):
-    address: str
+    address: CompiledAddress
     domain: str
     resource_type: str
     payload: dict[str, Any] = Field(default_factory=dict)
-    ordering_dependencies: list[str] = Field(default_factory=list)
-    refresh_dependencies: list[str] = Field(default_factory=list)
+    ordering_dependencies: list[CompiledAddress] = Field(default_factory=list)
+    refresh_dependencies: list[CompiledAddress] = Field(default_factory=list)
     status: str = "ready"
 
 
@@ -2026,7 +2243,7 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     """
 
     schema_version: Literal[RUNTIME_SNAPSHOT_SCHEMA_VERSION] = RUNTIME_SNAPSHOT_SCHEMA_VERSION
-    entries: dict[str, SnapshotEntryModel] = Field(default_factory=dict)
+    entries: dict[CompiledAddress, SnapshotEntryModel] = Field(default_factory=dict)
     orchestration_results: dict[str, WorkflowExecutionStateModel] = Field(default_factory=dict)
     orchestration_history: dict[str, list[WorkflowHistoryEventModel]] = Field(default_factory=dict)
     evaluation_results: dict[str, EvaluationResultStateModel] = Field(default_factory=dict)
@@ -2041,6 +2258,13 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     realization_provenance: list[RealizationProvenanceEntryModel] = Field(default_factory=list)
     realization_envelope: RealizationEnvelopeIdentityModel | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _validate_entry_addresses(self) -> RuntimeSnapshotEnvelopeModel:
+        for map_key, entry in self.entries.items():
+            if map_key != entry.address:
+                raise ValueError("Runtime snapshot entries map key must equal embedded address")
+        return self
 
 
 class OperationReceiptModel(ContractModel):
@@ -2060,7 +2284,13 @@ class OperationStatusModel(ContractModel):
     submitted_at: str
     updated_at: str
     diagnostics: list[dict[str, Any]] = Field(default_factory=list)
-    changed_addresses: list[str] = Field(default_factory=list)
+    changed_addresses: list[CompiledAddress] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_changed_addresses(self) -> OperationStatusModel:
+        if len(self.changed_addresses) != len(set(self.changed_addresses)):
+            raise ValueError("changed addresses must be unique")
+        return self
 
 
 class ProvisionerCapabilitiesModel(ContractModel):
@@ -7259,9 +7489,12 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "reusable-asset-trust-policy-v1": ReusableAssetTrustPolicyModel.model_json_schema(),
     }
     for contract_id, json_schema in bundle.items():
+        _attach_sdl_identifier_constraints(contract_id, json_schema)
         _attach_instantiation_invariants(contract_id, json_schema)
         _attach_experiment_datetime_invariants(contract_id, json_schema)
         _attach_json_schema_metadata(contract_id, json_schema)
+        _attach_compiled_address_map_constraints(contract_id, json_schema)
+        _attach_plan_identity_constraints(contract_id, json_schema)
         _attach_aces_semantic_profile(contract_id, json_schema)
     known_contract_ids = frozenset(bundle)
     for contract_id, json_schema in bundle.items():

@@ -65,10 +65,26 @@ def _window_issue_codes(analysis) -> set[str]:
 
 def _write_objective_window_scenario(path: Path, *, namespace: str = "") -> None:
     prefix = f"{namespace}." if namespace else ""
+    module_descriptor = ""
+    if not namespace:
+        module_descriptor = """
+module:
+  id: aces/window
+  version: 1.0.0
+  exports:
+    conditions: [health]
+    entities: [blue]
+    stories: [intro]
+    scripts: [timeline]
+    events: [kickoff]
+    objectives: [observe]
+    workflows: [flow]
+"""
     path.write_text(
         f"""
 name: {namespace or "window"}
 version: 1.0.0
+{module_descriptor}
 conditions:
   {prefix}health:
     command: /bin/true
@@ -309,9 +325,11 @@ class TestObjectiveWindowSemantics:
         self, tmp_path: Path
     ) -> None:
         plain = tmp_path / "plain.yaml"
-        namespaced = tmp_path / "namespaced.yaml"
+        imported = tmp_path / "window-module.yaml"
+        namespaced = tmp_path / "namespaced-root.yaml"
         _write_objective_window_scenario(plain)
-        _write_objective_window_scenario(namespaced, namespace="shared")
+        _write_objective_window_scenario(imported)
+        _write_importing_root(namespaced, imported.name, namespace="shared")
         plain_scenario = parse_sdl_file(plain)
         namespaced_scenario = parse_sdl_file(namespaced)
 

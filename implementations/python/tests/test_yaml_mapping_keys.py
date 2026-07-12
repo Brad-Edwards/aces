@@ -71,12 +71,12 @@ def test_literal_identifiers_are_not_field_normalized() -> None:
         """\
 name: literal-identifiers
 nodes:
-  Web-App: {type: switch}
+  web-app: {type: switch}
   web_app: {type: switch}
 """
     )
 
-    assert tuple(scenario.nodes) == ("Web-App", "web_app")
+    assert tuple(scenario.nodes) == ("web-app", "web_app")
 
 
 def test_yaml_12_string_like_identifiers_remain_distinct_strings() -> None:
@@ -86,12 +86,12 @@ name: boolean-like-identifiers
 nodes:
   on: {type: switch}
   "true": {type: switch}
-  OFF: {type: switch}
+  off: {type: switch}
   "false": {type: switch}
 """
     )
 
-    assert tuple(scenario.nodes) == ("on", "true", "OFF", "false")
+    assert tuple(scenario.nodes) == ("on", "true", "off", "false")
 
 
 def test_core_resolved_non_string_mapping_key_is_rejected_with_a_source_range() -> None:
@@ -373,7 +373,7 @@ accounts:
     assert diagnostics[0].pointer == "/accounts/alice/password_strength"
 
 
-@given(st.sampled_from([("Web-App", "web_app"), ("DB", "db"), ("a-b", "a_b")]))
+@given(st.sampled_from([("web-app", "web_app"), ("db-1", "db_1"), ("a-b", "a_b")]))
 def test_property_literal_identifier_aliases_remain_distinct(pair: tuple[str, str]) -> None:
     first, second = pair
     scenario = parse_sdl(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from aces_backend_libvirt.realization import interpret_provisioning_plan
 from aces_backend_protocols.capabilities import ProvisionerCapabilities
 from aces_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
@@ -414,12 +415,11 @@ def test_acl_with_wildcard_protocol_and_ports_fails_closed():
     assert _domain(realization).network_acls == ()
 
 
-def test_unsupported_resource_type_still_emits_error_diagnostic():
+def test_unsupported_resource_type_is_rejected_at_plan_admission():
     bogus = _resource("mystery", "provision.mystery.x", {"name": "x"})
 
-    realization = interpret_provisioning_plan(_plan(_node(), bogus))
-
-    assert [d.code for d in realization.diagnostics] == ["libvirt-backend.realization.unsupported-resource"]
+    with pytest.raises(ValueError, match="resource_type must belong"):
+        _plan(_node(), bogus)
 
 
 def test_placement_targeting_unknown_node_fails_closed_with_diagnostic():

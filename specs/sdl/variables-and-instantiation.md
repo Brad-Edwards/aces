@@ -29,7 +29,8 @@ Type conformance rules, enforced when the variable is defined:
 3. If both `default` and `allowed_values` are set, `default` **MUST** be a member
    of `allowed_values`.
 
-The variable **name** (the map key) **MUST** match `[A-Za-z_][A-Za-z0-9_-]*`
+The variable **name** (the map key) **MUST** use the portable local-identifier
+grammar `^[a-z0-9][a-z0-9_-]{0,63}$`
 ([document-model.md §6](document-model.md)).
 
 ## 2. Reference syntax
@@ -47,6 +48,12 @@ variable-name grammar above. Two placeholder positions are distinguished:
 A placeholder **MUST NOT** appear in an identifier-defining map key
 ([document-model.md §6](document-model.md)); variables parameterise values, not
 identities.
+
+Module parameter names, import-parameter keys, and
+`scenario-instantiation-request-v1.parameters` keys use the same grammar.
+Parameter values retain their owning field types. For any declaration `d` and
+two valid parameter environments `p1` and `p2`, canonical identity is invariant:
+`address(d, p1) = address(d, p2)`.
 
 Variables are **not** resolved at parse time. An authored document preserves
 `${…}` placeholders structurally; resolution happens only at instantiation.

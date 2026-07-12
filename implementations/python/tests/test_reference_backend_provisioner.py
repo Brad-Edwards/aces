@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import textwrap
 
+import pytest
 from aces_contracts.planning import (
     ChangeAction,
     PlannedResource,
@@ -142,21 +143,19 @@ def test_snapshot_payload_carries_only_portable_facts():
         assert forbidden not in rendered
 
 
-def test_validate_surfaces_realization_diagnostics_without_driver():
+def test_invalid_resource_type_is_rejected_before_provisioner_validation():
     driver = InProcessDriver()
-    target = _target_with_driver(driver)
-    bad_plan = ProvisioningPlan(
-        resources={
-            "provision.mystery.x": PlannedResource(
-                address="provision.mystery.x",
-                domain=RuntimeDomain.PROVISIONING,
-                resource_type="mystery",
-                payload={"name": "x"},
-            )
-        }
-    )
+    _target_with_driver(driver)
 
-    diagnostics = target.provisioner.validate(bad_plan)
-
-    assert any(diag.code == "reference-backend.realization.unsupported-resource" for diag in diagnostics)
+    with pytest.raises(ValueError, match="resource_type must belong"):
+        ProvisioningPlan(
+            resources={
+                "provision.mystery.x": PlannedResource(
+                    address="provision.mystery.x",
+                    domain=RuntimeDomain.PROVISIONING,
+                    resource_type="mystery",
+                    payload={"name": "x"},
+                )
+            }
+        )
     assert not driver.recorded_ops

@@ -10,6 +10,8 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import cast
 
+from aces_backend_protocols.naming import provider_resource_name
+
 from .driver import DomainSpec, NetworkSpec
 from .drivers.libvirt import _aces_uuid
 
@@ -154,7 +156,8 @@ def domain_xml(domain: Mapping[str, object], *, kernel: Path, initrd: Path) -> s
 
 
 def runtime_name(prefix: str, address: str, preferred: str | None = None) -> str:
-    return safe_name(preferred or address.rsplit(".", 1)[-1], fallback=address.rsplit(".", 1)[-1], prefix=prefix)
+    del preferred
+    return provider_resource_name(address, prefix=prefix)
 
 
 def safe_name(candidate: str, *, fallback: str, prefix: str) -> str:

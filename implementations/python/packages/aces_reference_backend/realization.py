@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from aces_backend_protocols.naming import provider_resource_name
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
 
@@ -96,7 +97,7 @@ def _network_address_lookup(networks: list[NetworkSpec]) -> dict[str, str]:
 
     lookup: dict[str, str] = {}
     for spec in networks:
-        for key in (spec.address, spec.name, spec.address.rsplit(".", 1)[-1]):
+        for key in (spec.address, spec.name):
             if key:
                 lookup[key] = spec.address
     return lookup
@@ -106,7 +107,7 @@ def _resource_name(resource: PlannedResource, payload: Mapping[str, object]) -> 
     name = payload.get("name") or payload.get("node_name")
     if isinstance(name, str) and name:
         return name
-    return resource.address.rsplit(".", 1)[-1]
+    return provider_resource_name(resource.address, prefix="aces")
 
 
 def _infrastructure_spec(payload: Mapping[str, object]) -> Mapping[str, object]:

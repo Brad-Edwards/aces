@@ -13,6 +13,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol, cast
 
+from aces_backend_protocols.naming import provider_resource_name
 from aces_contracts.diagnostics import Diagnostic, Severity
 
 from aces_backend_libvirt.driver import (
@@ -326,10 +327,11 @@ class LibvirtDeploymentDriver:
         return self._connection
 
     def _runtime_name(self, address: str, preferred: str) -> str:
-        return _safe_name(preferred, fallback=address.rsplit(".", 1)[-1], prefix=self._name_prefix)
+        del preferred
+        return provider_resource_name(address, prefix=self._name_prefix)
 
     def _name_for(self, address: str) -> str:
-        return self._names.get(address, self._runtime_name(address, address.rsplit(".", 1)[-1]))
+        return self._names.get(address, self._runtime_name(address, ""))
 
     def _build_seed(self, spec: DomainSpec, name: str) -> Path | None:
         cloud_init = spec.cloud_init

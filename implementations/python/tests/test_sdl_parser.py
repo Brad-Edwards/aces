@@ -1,6 +1,5 @@
 """Tests for SDL parsing, canonical fields, migration, and shorthands."""
 
-import re
 from pathlib import Path
 
 import pytest
@@ -18,13 +17,13 @@ class TestKeyNormalization:
         assert "sw" in s.nodes
 
     def test_uppercase_keys(self):
-        """Explicit migration normalizes fields while preserving identifiers."""
+        """Explicit migration normalizes fields without rewriting identifiers."""
         s = parse_sdl(
-            "Name: test\nNodes:\n  SW:\n    Type: Switch",
+            "Name: test\nNodes:\n  sw:\n    Type: Switch",
             migration_policy=SDLMigrationPolicy.ACCEPT,
         )
-        assert "SW" in s.nodes  # user-defined name preserved as-is
-        assert s.nodes["SW"].type == NodeType.SWITCH  # enum value normalized
+        assert "sw" in s.nodes
+        assert s.nodes["sw"].type == NodeType.SWITCH
         assert [diagnostic.code for diagnostic in s.source_diagnostics] == [
             "sdl.noncanonical_field",
             "sdl.noncanonical_field",
@@ -148,11 +147,12 @@ objectives:
         ],
     )
     def test_variable_placeholders_rejected_in_mapping_keys(self, sdl, key_path):
-        with pytest.raises(
-            SDLParseError,
-            match=re.escape(f"user-defined mapping keys: '{key_path}'"),
-        ):
+        with pytest.raises(SDLParseError) as caught:
             parse_sdl(sdl)
+        if ".properties" in key_path:
+            assert f"user-defined mapping keys: '{key_path}'" in str(caught.value)
+        else:
+            assert caught.value.diagnostics[0].code == "sdl.identifier.invalid"
 
     def test_variable_declaration_names_must_match_contract_grammar(self):
         sdl = """
@@ -162,8 +162,10 @@ variables:
     type: string
     default: value
 """
-        with pytest.raises(SDLParseError, match="String should match pattern"):
+        with pytest.raises(SDLParseError) as caught:
             parse_sdl(sdl)
+        assert caught.value.diagnostics[0].code == "sdl.identifier.invalid"
+        assert caught.value.diagnostics[0].pointer == "/variables/bad.name"
 
 
 class TestShorthandExpansion:
@@ -984,8 +986,10 @@ stories:
   exercise:
     scripts: [main]
 """
-        with pytest.raises(SDLParseError, match="Invalid duration"):
+        with pytest.raises(SDLParseError) as caught:
             parse_sdl(sdl)
+        assert caught.value.diagnostics[0].code == "sdl.model.invalid"
+        assert caught.value.diagnostics[0].pointer == "/scripts/main/start_time"
 
 
 class TestFormat:
@@ -1004,8 +1008,10 @@ nodes:
       - port: 80
         name: http
 """
-        with pytest.raises(SDLParseError, match="Switch nodes cannot have VM-only fields"):
+        with pytest.raises(SDLParseError) as caught:
             parse_sdl(sdl)
+        assert caught.value.diagnostics[0].code == "sdl.model.invalid"
+        assert caught.value.diagnostics[0].pointer == "/nodes/sw"
 
     @pytest.mark.parametrize(
         "field_name",
@@ -1062,8 +1068,10 @@ variables:
     default: hello
 """,
         }
-        with pytest.raises(SDLParseError, match=rf"{field_name}[\s\S]*Input should be"):
+        with pytest.raises(SDLParseError) as caught:
             parse_sdl(sdl_by_field[field_name], skip_semantic_validation=True)
+        assert caught.value.diagnostics[0].code == "sdl.model.invalid"
+        assert caught.value.diagnostics[0].pointer == "/" + field_name.replace(".", "/")
 
     @pytest.mark.parametrize(
         ("sdl", "message"),
@@ -1098,8 +1106,15 @@ agents:
         ],
     )
     def test_extension_sections_reject_missing_anchor_fields(self, sdl, message):
-        with pytest.raises(SDLParseError, match=message):
+        with pytest.raises(SDLParseError) as caught:
             parse_sdl(sdl)
+        assert caught.value.diagnostics[0].code == "sdl.model.invalid"
+        assert caught.value.diagnostics[0].pointer.startswith(
+            {"Content requires 'target'": "/content/c1", "Account requires 'node'": "/accounts/a1"}.get(
+                message,
+                "/agents/red-agent",
+            )
+        )
 
 
 class TestErrorHandling:
@@ -1140,6 +1155,7 @@ class TestModuleImports:
                 name: root
                 imports:
                   - path: common.yaml
+                    namespace: common
                 """
             )
 
@@ -1149,6 +1165,15 @@ class TestModuleImports:
             """
 name: common
 version: 1.2.0
+module:
+  id: aces/common
+  version: 1.2.0
+  exports:
+    nodes: [vm]
+    conditions: [health]
+    entities: [blue]
+    objectives: [validate]
+    workflows: [response]
 nodes:
   vm:
     type: vm
@@ -1216,6 +1241,17 @@ imports:
             """
 name: common
 version: 1.2.0
+module:
+  id: aces/common
+  version: 1.2.0
+  exports:
+    nodes: [vm, net]
+    infrastructure: [vm, net]
+    entities: [blue]
+    conditions: [health]
+    content: [docs]
+    relationships: [blue-controls-vm]
+    agents: [blue-agent]
 nodes:
   vm:
     type: vm
@@ -1308,6 +1344,16 @@ imports:
             """
 name: common
 version: 1.2.0
+module:
+  id: aces/common
+  version: 1.2.0
+  exports:
+    nodes: [vm, net]
+    infrastructure: [vm, net]
+    entities: [blue]
+    conditions: [health]
+    relationships: [blue-controls-vm]
+    agents: [blue-agent]
 nodes:
   vm:
     type: vm
@@ -1377,6 +1423,11 @@ imports:
             """
 name: common
 version: 2.0.0
+module:
+  id: aces/common
+  version: 2.0.0
+  exports:
+    nodes: [sw]
 nodes:
   sw:
     type: switch
@@ -1389,6 +1440,7 @@ nodes:
 name: root
 imports:
   - path: common.yaml
+    namespace: common
     version: 1.0.0
 """,
             encoding="utf-8",
@@ -1402,6 +1454,12 @@ imports:
         first.write_text(
             """
 name: shared
+version: 1.0.0
+module:
+  id: aces/first
+  version: 1.0.0
+  exports:
+    nodes: [vm]
 nodes:
   vm:
     type: vm
@@ -1414,6 +1472,12 @@ nodes:
         second.write_text(
             """
 name: shared
+version: 1.0.0
+module:
+  id: aces/second
+  version: 1.0.0
+  exports:
+    nodes: [vm]
 nodes:
   vm:
     type: vm
@@ -1451,6 +1515,12 @@ imports:
             """
 name: shared-db
 version: 1.0.0
+module:
+  id: aces/shared-db
+  version: 1.0.0
+  exports:
+    nodes: [db, web]
+    relationships: [webapp-to-db]
 nodes:
   db:
     type: vm
@@ -1974,8 +2044,10 @@ nodes:
             - policy_id: {policy_id}
               applies_to_refs: [{subject_id}]
 """
-        with pytest.raises(SDLParseError, match="Duplicate runtime identity stable id 'shared'"):
+        with pytest.raises(SDLParseError) as caught:
             parse_sdl(sdl)
+        assert caught.value.diagnostics[0].code == "sdl.model.invalid"
+        assert caught.value.diagnostics[0].pointer == "/nodes/ad/runtime/identity_authorities/0"
 
     def test_imported_identity_authority_refs_survive_module_namespacing(self, tmp_path):
         imported = tmp_path / "shared-directory.yaml"
@@ -1983,6 +2055,12 @@ nodes:
             """
 name: shared-directory
 version: 1.0.0
+module:
+  id: aces/shared-directory
+  version: 1.0.0
+  exports:
+    nodes: [ad]
+    relationships: [alice-admin, ldap-policy, membership-policy]
 nodes:
   ad:
     type: vm
@@ -2096,6 +2174,12 @@ nodes:
             """
 name: shared-dns
 version: 1.0.0
+module:
+  id: aces/shared-dns
+  version: 1.0.0
+  exports:
+    nodes: [dns]
+    relationships: [dns-record]
 nodes:
   dns:
     type: vm
