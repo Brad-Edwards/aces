@@ -49,7 +49,7 @@ decision:
    - `concept-authority` under `contracts/concept-authority/`
 
    It also enumerates each non-normative root (`implementations/`, `docs/`,
-   `examples/`, `research/`, `notes/`, `tools/`, `changelog.d/`), the
+   `examples/`, `research/`, `notes/`, `tools/`), the
    legacy top-level directories ADR-009 transitioned out (`schemas`,
    `conformance`, `src`), and a `schema_authority` block that pins the
    normative schema root, the publication manifest path, and the codegen
@@ -123,3 +123,4 @@ decision:
 |------|-----------------|---------|
 | 2026-07-11 | #100 | Added `contracts/realization-envelopes/` as the normative authority for configuration-bound backend realization disclosures. |
 | 2026-07-12 | issue #726 | Added `contracts/provenance/` as the normative `provenance` authority for revision-pinned SDL lineage, derivation, citation identity, and third-party notice dispositions. |
+| 2026-07-12 | issue #240 | Removed `changelog.d/` from the enumerated non-normative roots: release-please (#684) replaced the towncrier fragment workflow, so the fragment directory is no longer part of the authority boundary (GOV-901). |

@@ -27,7 +27,7 @@
 - [ ] Code follows project coding standards (`docs/explain/reference/coding-standards.md`)
 - [ ] FM level classified if semantic change
 - [ ] Published contract schemas regenerated if models changed
-- [ ] Towncrier fragment added under `changelog.d/`, or not needed
+- [ ] PR title is a Conventional Commit (release-please derives the version and `CHANGELOG.md` from it)
 - [ ] Architectural docs updated if applicable
 
 ## Notes for Review

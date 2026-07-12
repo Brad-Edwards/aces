@@ -168,6 +168,12 @@ surface adds a more specific checker:
 - release classification and version bump evidence: PR title guard,
   release-please config, release PR, Git tag, GitHub Release, and PyPI
   artifact;
+- version-identifier derivation: the docs build, CLI `--version`, and
+  control-plane OpenAPI description versions derive from the installed
+  distribution metadata (the release-please-owned source of truth) and fall
+  back to the honest PEP 440 `0.0.0+unknown` sentinel when the distribution is
+  not installed, rather than a hard-coded literal that would imply an
+  unearned release; verified by version-classification tests;
 - published schema evolution: schema publication checker, generated-schema
   parity, fixture validation, manifest hashes, change ledger, and tombstones;
 - ADR evolution: ADR index and accepted-content pin gate;

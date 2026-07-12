@@ -104,10 +104,6 @@ non_normative_roots:
     root: tools/
     note: maintenance, codegen, and release helpers
 
-  - id: changelog_fragments
-    root: changelog.d/
-    note: towncrier changelog fragments; collated into CHANGELOG.md at release
-
 # Top-level directories explicitly transitioned out by ADR-009. The gate fails
 # if any of these reappears at the repo root.
 legacy_top_level_dirs:

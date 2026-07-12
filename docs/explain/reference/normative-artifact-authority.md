@@ -126,7 +126,7 @@ Avoid:
 - adding new authority-bearing artifacts anywhere other than `specs/` (for
   normative prose) or `contracts/` (for normative machine-readable
   artifacts). `docs/`, `implementations/`, `examples/`, `research/`,
-  `notes/`, `tools/`, and `changelog.d/` are non-normative roots per the
+  `notes/`, and `tools/` are non-normative roots per the
   authority manifest and may not host authority artifacts
 - adding implementation logic under the compatibility-only
   `implementations/python/src/aces/` tree
