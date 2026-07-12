@@ -6,7 +6,7 @@ import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import BinaryIO, TypeAlias, cast
+from typing import BinaryIO, cast
 
 import rfc8785
 from aces_sdl import canonical_sdl_digest
@@ -28,7 +28,7 @@ _DOMAIN = "associated-artifact"
 _CHUNK_SIZE = 64 * 1024
 _ARTIFACTS_ADDRESS = "#/artifacts"
 
-JSONValue: TypeAlias = None | bool | int | float | str | list["JSONValue"] | dict[str, "JSONValue"]
+JSONValue = None | bool | int | float | str | list["JSONValue"] | dict[str, "JSONValue"]
 
 
 @dataclass(frozen=True)
