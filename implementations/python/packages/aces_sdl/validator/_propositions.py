@@ -5,6 +5,11 @@ from ..propositions import AssertionRole
 
 class _PropositionsMixin:
     def _verify_propositions_and_assertions(self) -> None:
+        self._verify_proposition_refs()
+        self._verify_assertion_refs()
+        self._verify_condition_proposition_refs()
+
+    def _verify_proposition_refs(self) -> None:
         for name, proposition in self._s.propositions.items():
             label = f"Proposition '{name}'"
             for subject in proposition.subjects:
@@ -22,9 +27,13 @@ class _PropositionsMixin:
                     f"{proposition_label} evidence_requirement '{ref}' not in evidence_requirements section"
                 ),
             )
+
+    def _verify_assertion_refs(self) -> None:
         for name, assertion in self._s.assertions.items():
             if not self._is_unresolved_var(assertion.proposition) and assertion.proposition not in self._s.propositions:
                 self._err(f"Assertion '{name}' proposition '{assertion.proposition}' not in propositions section")
+
+    def _verify_condition_proposition_refs(self) -> None:
         for name, condition in self._s.conditions.items():
             if condition.proposition and not self._is_unresolved_var(condition.proposition):
                 if condition.proposition not in self._s.propositions:

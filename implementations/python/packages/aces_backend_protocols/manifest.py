@@ -18,6 +18,29 @@ from aces_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
 from .capabilities import BackendManifest
 
 
+def _evaluator_capability_payload(manifest: BackendManifest) -> dict[str, Any] | None:
+    evaluator = manifest.evaluator
+    if evaluator is None:
+        return None
+    payload: dict[str, Any] = {
+        "name": evaluator.name,
+        "supported_sections": sorted(evaluator.supported_sections),
+        "supports_scoring": evaluator.supports_scoring,
+        "supports_objectives": evaluator.supports_objectives,
+        "constraints": dict(evaluator.constraints),
+    }
+    if {"propositions", "assertions"}.issubset(evaluator.supported_sections):
+        payload.update(
+            supported_predicate_families=sorted(evaluator.supported_predicate_families),
+            supported_quantifiers=sorted(evaluator.supported_quantifiers),
+            supported_truth_outcomes=sorted(evaluator.supported_truth_outcomes),
+            supported_evidence_channels=sorted(evaluator.supported_evidence_channels),
+            supported_time_domains=sorted(evaluator.supported_time_domains),
+            preserves_binding_provenance=evaluator.preserves_binding_provenance,
+        )
+    return payload
+
+
 def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Model:
     """Render a backend manifest as the authoritative v2 contract model."""
 
@@ -85,29 +108,7 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                 if manifest.orchestrator is not None
                 else None
             ),
-            "evaluator": (
-                {
-                    "name": manifest.evaluator.name,
-                    "supported_sections": sorted(manifest.evaluator.supported_sections),
-                    "supports_scoring": manifest.evaluator.supports_scoring,
-                    "supports_objectives": manifest.evaluator.supports_objectives,
-                    **(
-                        {
-                            "supported_predicate_families": sorted(manifest.evaluator.supported_predicate_families),
-                            "supported_quantifiers": sorted(manifest.evaluator.supported_quantifiers),
-                            "supported_truth_outcomes": sorted(manifest.evaluator.supported_truth_outcomes),
-                            "supported_evidence_channels": sorted(manifest.evaluator.supported_evidence_channels),
-                            "supported_time_domains": sorted(manifest.evaluator.supported_time_domains),
-                            "preserves_binding_provenance": manifest.evaluator.preserves_binding_provenance,
-                        }
-                        if {"propositions", "assertions"}.issubset(manifest.evaluator.supported_sections)
-                        else {}
-                    ),
-                    "constraints": dict(manifest.evaluator.constraints),
-                }
-                if manifest.evaluator is not None
-                else None
-            ),
+            "evaluator": _evaluator_capability_payload(manifest),
             "participant_runtime": (
                 {
                     "name": manifest.participant_runtime.name,

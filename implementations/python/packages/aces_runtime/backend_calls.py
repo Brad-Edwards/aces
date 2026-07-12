@@ -219,16 +219,18 @@ def _apply_result_details_violation(result: ApplyResult, address: str) -> str | 
 
 
 def _snapshot_contract_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic]:
-    diagnostics = workflow_result_contract_diagnostics(snapshot)
-    if diagnostics:
-        return diagnostics
-    diagnostics = evaluation_result_contract_diagnostics(snapshot)
-    if diagnostics:
-        return diagnostics
-    diagnostics = proposition_truth_contract_diagnostics(snapshot)
-    if diagnostics:
-        return diagnostics
-    return participant_runtime_state_contract_diagnostics(snapshot)
+    checks = (
+        workflow_result_contract_diagnostics,
+        evaluation_result_contract_diagnostics,
+        proposition_truth_contract_diagnostics,
+        participant_runtime_state_contract_diagnostics,
+    )
+    diagnostics: list[Diagnostic] = []
+    for check in checks:
+        diagnostics = check(snapshot)
+        if diagnostics:
+            break
+    return diagnostics
 
 
 def _snapshot_address_contract_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic]:

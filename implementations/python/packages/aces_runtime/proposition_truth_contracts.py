@@ -18,7 +18,7 @@ def _invalid(address: str, message: str) -> Diagnostic:
 
 
 def _validation_message(exc: ValidationError) -> str:
-    error = exc.errors(include_url=False, include_context=False, include_input=False)[0]
+    error = exc.errors()[0]
     location = ".".join(str(part) for part in error.get("loc", ()))
     prefix = f"{location}: " if location else ""
     return prefix + str(error.get("msg", "invalid proposition truth result"))

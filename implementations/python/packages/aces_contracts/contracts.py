@@ -1060,18 +1060,24 @@ class PropositionTruthResultModel(ContractModel):
 
     def _validate_basis_evidence(self) -> None:
         decided = self.proposition_outcome in {PropositionTruthOutcome.TRUE, PropositionTruthOutcome.FALSE}
-        if self.evaluation_basis is PropositionEvaluationBasis.OBSERVED_STATE and decided:
-            if self.probe_binding is None:
-                raise ValueError("observed-state decided truth requires probe_binding")
-            if not self.evidence_refs:
-                raise ValueError("observed-state decided truth requires evidence_refs")
-            if self.temporal_context is None:
-                raise ValueError("observed-state decided truth requires temporal_context")
+        if decided and self.evaluation_basis is PropositionEvaluationBasis.OBSERVED_STATE:
+            self._validate_observed_evidence()
         if self.probe_binding is not None and self.probe_binding.proposition_address != self.proposition_address:
             raise ValueError("probe_binding proposition_address must match proposition_address")
-        if self.evaluation_basis is PropositionEvaluationBasis.DECLARED_STATE and decided:
-            if self.declared_artifact_digest is None:
-                raise ValueError("declared-state decided truth requires declared_artifact_digest")
+        if (
+            decided
+            and self.evaluation_basis is PropositionEvaluationBasis.DECLARED_STATE
+            and self.declared_artifact_digest is None
+        ):
+            raise ValueError("declared-state decided truth requires declared_artifact_digest")
+
+    def _validate_observed_evidence(self) -> None:
+        if self.probe_binding is None:
+            raise ValueError("observed-state decided truth requires probe_binding")
+        if not self.evidence_refs:
+            raise ValueError("observed-state decided truth requires evidence_refs")
+        if self.temporal_context is None:
+            raise ValueError("observed-state decided truth requires temporal_context")
 
     def _validate_loss_bounds(self) -> None:
         decided = self.proposition_outcome in {PropositionTruthOutcome.TRUE, PropositionTruthOutcome.FALSE}

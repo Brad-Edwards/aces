@@ -52,6 +52,34 @@ def _compose_at_least(values: Sequence[TruthValue], threshold: int) -> TruthValu
     return _indeterminate(values)
 
 
+def _validate_composition(
+    values: Sequence[TruthValue],
+    mode: TruthCompositionMode,
+    threshold: int | None,
+) -> None:
+    if not values:
+        raise ValueError("truth composition requires at least one truth value")
+    if mode is TruthCompositionMode.AT_LEAST:
+        if threshold is None:
+            raise ValueError("at_least truth composition requires threshold")
+        if threshold < 1 or threshold > len(values):
+            raise ValueError("at_least threshold must be within the truth-value count")
+    elif threshold is not None:
+        raise ValueError(f"{mode.value} truth composition must not declare threshold")
+
+
+def _compose_all(values: Sequence[TruthValue]) -> TruthValue:
+    if TruthValue.FALSE in values:
+        return TruthValue.FALSE
+    return TruthValue.TRUE if all(value is TruthValue.TRUE for value in values) else _indeterminate(values)
+
+
+def _compose_any(values: Sequence[TruthValue]) -> TruthValue:
+    if TruthValue.TRUE in values:
+        return TruthValue.TRUE
+    return TruthValue.FALSE if all(value is TruthValue.FALSE for value in values) else _indeterminate(values)
+
+
 def compose_truth(
     values: Sequence[TruthValue],
     *,
@@ -60,23 +88,13 @@ def compose_truth(
 ) -> TruthValue:
     """Compose non-empty assertion outcomes using the portable truth tables."""
 
-    if not values:
-        raise ValueError("truth composition requires at least one truth value")
+    _validate_composition(values, mode, threshold)
     if mode is TruthCompositionMode.AT_LEAST:
-        if threshold is None:
-            raise ValueError("at_least truth composition requires threshold")
-        if threshold < 1 or threshold > len(values):
-            raise ValueError("at_least threshold must be within the truth-value count")
+        assert threshold is not None
         return _compose_at_least(values, threshold)
-    if threshold is not None:
-        raise ValueError(f"{mode.value} truth composition must not declare threshold")
     if mode is TruthCompositionMode.ALL_OF:
-        if TruthValue.FALSE in values:
-            return TruthValue.FALSE
-        return TruthValue.TRUE if all(value is TruthValue.TRUE for value in values) else _indeterminate(values)
-    if TruthValue.TRUE in values:
-        return TruthValue.TRUE
-    return TruthValue.FALSE if all(value is TruthValue.FALSE for value in values) else _indeterminate(values)
+        return _compose_all(values)
+    return _compose_any(values)
 
 
 def quantify_subject_truth(
