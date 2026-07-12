@@ -197,6 +197,7 @@
             "scenario",
             "scenario-snapshot",
             "task",
+            "authoring-input",
             "protocol",
             "apparatus-context",
             "run",
