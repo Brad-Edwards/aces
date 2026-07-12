@@ -84,7 +84,9 @@ def assemble_artifact(inputs: EvidenceArtifactInputs) -> dict[str, Any]:
         "scenario": scenario_section,
         "compiled_artifact": _compiled_artifact_section(model),
         "backend": _backend_section(manifest, mode, substrate_realized, native_cleanup_verified),
-        "realization_facts": _realization_facts_section(model, native_snapshot, native_cleanup_verified),
+        "realization_facts": _realization_facts_section(
+            model, native_snapshot, native_cleanup_verified, inputs.guest_observed
+        ),
         "realized_topology": _topology_section(model, native_snapshot, unrealized_capabilities),
         "participant_action_proof": _participant_proof_section(proof),
         "terminal_observation": _terminal_observation_section(proof["snapshot"]),
@@ -210,6 +212,7 @@ def _realization_facts_section(
     model: CompiledModel,
     native_snapshot: Mapping[str, Any] | None,
     cleanup_verified: bool | None,
+    guest_observed: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     observed = native_snapshot if isinstance(native_snapshot, Mapping) else {}
     daemon_domains = observed.get("domains", ())
@@ -234,16 +237,25 @@ def _realization_facts_section(
             "domains": list(daemon_domains) if isinstance(daemon_domains, list | tuple) else [],
             "networks": list(daemon_networks) if isinstance(daemon_networks, list | tuple) else [],
         },
-        "guest_observed": {
-            "source": "guest-observed",
-            "status": "not-observed",
-        },
+        "guest_observed": _guest_observed_section(guest_observed),
         "cleanup": {
             "source": "driver-reported",
             "status": _cleanup_status(cleanup_verified),
         },
         "binding": observed.get("binding"),
     }
+
+
+def _guest_observed_section(guest_observed: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Return the guest-observed fact section: the bound report, or a not-observed stub.
+
+    A daemon-only run discloses ``not-observed`` honestly; a guest-certified run
+    embeds the operation-joined, challenge-bound, per-domain guest report.
+    """
+
+    if not isinstance(guest_observed, Mapping):
+        return {"source": "guest-observed", "status": "not-observed"}
+    return {**guest_observed, "source": "guest-observed"}
 
 
 def _cleanup_status(cleanup_verified: bool | None) -> str:

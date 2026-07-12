@@ -24,12 +24,19 @@ def native_matrix(
     networks: tuple[NetworkSpec, ...],
     domains: tuple[DomainSpec, ...],
     name_prefix: str,
+    include_placements: bool = False,
 ) -> dict[str, object]:
     runtime_networks = [runtime_network(spec, name_prefix) for spec in networks]
     runtime_network_by_address = {str(item["address"]): item for item in runtime_networks}
     allocations = allocate_interfaces(domains, runtime_network_by_address, name_prefix)
     runtime_domains = [
-        runtime_domain(spec, name_prefix=name_prefix, interfaces=allocations.get(spec.address, ())) for spec in domains
+        runtime_domain(
+            spec,
+            name_prefix=name_prefix,
+            interfaces=allocations.get(spec.address, ()),
+            include_placements=include_placements,
+        )
+        for spec in domains
     ]
     return {
         "substrate": _SUBSTRATE,
@@ -93,8 +100,9 @@ def runtime_domain(
     *,
     name_prefix: str,
     interfaces: tuple[dict[str, object], ...],
+    include_placements: bool = False,
 ) -> dict[str, object]:
-    return {
+    domain: dict[str, object] = {
         "address": spec.address,
         "name": spec.name,
         "runtime_name": runtime_name(name_prefix, spec.address, spec.name),
@@ -102,6 +110,35 @@ def runtime_domain(
         "vcpus": spec.vcpus,
         "interfaces": list(interfaces),
     }
+    if include_placements:
+        domain.update(domain_placements(spec))
+    return domain
+
+
+def domain_placements(spec: DomainSpec) -> dict[str, object]:
+    """Project a domain's realizable content/account/service placements.
+
+    Guest-certified realization boots these placements into the appliance and
+    reads them back from inside the guest; daemon-only modes ignore them.
+    """
+
+    cloud_init = spec.cloud_init
+    accounts = [
+        {
+            "name": user.name,
+            "groups": sorted(user.groups),
+            "shell": user.shell,
+            "home": user.home,
+            "disabled": bool(user.lock_passwd),
+        }
+        for user in (cloud_init.users if cloud_init is not None else ())
+    ]
+    content = [
+        {"path": item.path, "content": item.content, "mode": item.permissions}
+        for item in (cloud_init.write_files if cloud_init is not None else ())
+    ]
+    services = [{"name": service.name, "port": service.port} for service in spec.services]
+    return {"accounts": accounts, "content": content, "services": services}
 
 
 def network_xml(network: Mapping[str, object]) -> str:
@@ -126,7 +163,15 @@ def network_xml(network: Mapping[str, object]) -> str:
     return ET.tostring(root, encoding="unicode")
 
 
-def domain_xml(domain: Mapping[str, object], *, kernel: Path, initrd: Path) -> str:
+def domain_xml(
+    domain: Mapping[str, object],
+    *,
+    kernel: Path,
+    initrd: Path,
+    appliance: str = "techvault",
+    challenge: str | None = None,
+    fact_channel_path: Path | None = None,
+) -> str:
     root = ET.Element("domain", {"type": "qemu"})
     ET.SubElement(root, "name").text = str(domain.get("runtime_name", ""))
     ET.SubElement(root, "uuid").text = _aces_uuid(str(domain.get("address", "")))
@@ -136,7 +181,7 @@ def domain_xml(domain: Mapping[str, object], *, kernel: Path, initrd: Path) -> s
     ET.SubElement(os_node, "type", {"arch": "x86_64"}).text = "hvm"
     ET.SubElement(os_node, "kernel").text = str(kernel)
     ET.SubElement(os_node, "initrd").text = str(initrd)
-    ET.SubElement(os_node, "cmdline").text = "console=ttyS0 panic=-1 aces.appliance=techvault"
+    ET.SubElement(os_node, "cmdline").text = _domain_cmdline(appliance, challenge)
     features = ET.SubElement(root, "features")
     ET.SubElement(features, "acpi")
     devices = ET.SubElement(root, "devices")
@@ -145,6 +190,10 @@ def domain_xml(domain: Mapping[str, object], *, kernel: Path, initrd: Path) -> s
     ET.SubElement(serial, "target", {"port": "0"})
     console = ET.SubElement(devices, "console", {"type": "pty"})
     ET.SubElement(console, "target", {"type": "serial", "port": "0"})
+    if fact_channel_path is not None:
+        fact_serial = ET.SubElement(devices, "serial", {"type": "file"})
+        ET.SubElement(fact_serial, "source", {"path": str(fact_channel_path)})
+        ET.SubElement(fact_serial, "target", {"port": "1"})
     for interface_spec in as_sequence(domain.get("interfaces")):
         if not isinstance(interface_spec, Mapping):
             continue
@@ -178,4 +227,19 @@ def as_sequence(value: object) -> Sequence[object]:
     return value if isinstance(value, list | tuple) else ()
 
 
-__all__ = ["as_sequence", "domain_xml", "native_matrix", "network_xml", "runtime_name", "safe_name"]
+def _domain_cmdline(appliance: str, challenge: str | None) -> str:
+    parts = ["console=ttyS0", "panic=-1", f"aces.appliance={appliance}"]
+    if challenge:
+        parts.append(f"aces.challenge={challenge}")
+    return " ".join(parts)
+
+
+__all__ = [
+    "as_sequence",
+    "domain_placements",
+    "domain_xml",
+    "native_matrix",
+    "network_xml",
+    "runtime_name",
+    "safe_name",
+]

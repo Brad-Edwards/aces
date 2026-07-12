@@ -8,15 +8,20 @@ substrate boundary here is libvirt.
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import ClassVar, Protocol, cast
+from typing import TYPE_CHECKING, ClassVar, Protocol, cast
 from urllib.parse import urlsplit
 
 from aces_contracts.diagnostics import Diagnostic, Severity
+
+from ._techvault_native_helpers import default_connector as _default_connector
+from ._techvault_native_helpers import default_kernel_path as _default_kernel_path
+
+if TYPE_CHECKING:
+    from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel
 
 from .driver import (
     DomainHandle,
@@ -149,15 +154,10 @@ class TechVaultNativeLibvirtDriver:
         domains: tuple[DomainSpec, ...],
     ) -> DriverResult:
         envelope = load_libvirt_realization_envelope(self.driver_mode)
-        spec_diagnostics = techvault_spec_diagnostics(
-            networks=networks,
-            domains=domains,
-            envelope=envelope,
-            name_prefix=self.name_prefix,
-        )
+        spec_diagnostics = self._admission_diagnostics(networks, domains, envelope)
         if spec_diagnostics:
             return DriverResult(diagnostics=tuple(spec_diagnostics))
-        matrix = _native_matrix(networks=networks, domains=domains, name_prefix=self.name_prefix)
+        matrix = self._build_matrix(networks, domains)
         self.state_dir.mkdir(parents=True, exist_ok=True)
         try:
             connection = self._conn()
@@ -214,14 +214,19 @@ class TechVaultNativeLibvirtDriver:
     ) -> DriverResult:
         networks, domains = specs
         network_handles, domain_handles = handles
-        observation_diagnostics = techvault_observation_diagnostics(
+        diagnostics = techvault_observation_diagnostics(
             networks=networks,
             domains=domains,
             result=DriverResult(observations=observations),
         )
-        if observation_diagnostics:
-            observation_diagnostics.extend(self._rollback(connection, network_handles, domain_handles))
-            return DriverResult(diagnostics=tuple(observation_diagnostics))
+        # Staged: the guest observation runs only after the daemon gate passes and a
+        # later stage never repairs an earlier one.
+        guest_observations: tuple[RealizationObservation, ...] = ()
+        if not diagnostics:
+            guest_observations, diagnostics = self._guest_stage(connection, matrix, specs, observations)
+        if diagnostics:
+            diagnostics.extend(self._rollback(connection, network_handles, domain_handles))
+            return DriverResult(diagnostics=tuple(diagnostics))
         try:
             binding = self._material_binding(envelope_digest, configuration_digest)
             snapshot = snapshot_from_observations(matrix, observations, binding=binding)
@@ -233,8 +238,45 @@ class TechVaultNativeLibvirtDriver:
         return DriverResult(
             networks=tuple(network_handles),
             domains=tuple(domain_handles),
-            observations=observations,
+            observations=(*observations, *guest_observations),
         )
+
+    def _admission_diagnostics(
+        self,
+        networks: tuple[NetworkSpec, ...],
+        domains: tuple[DomainSpec, ...],
+        envelope: object,
+    ) -> list[Diagnostic]:
+        return techvault_spec_diagnostics(
+            networks=networks,
+            domains=domains,
+            envelope=cast("BackendRealizationEnvelopeModel", envelope),
+            name_prefix=self.name_prefix,
+        )
+
+    def _build_matrix(
+        self,
+        networks: tuple[NetworkSpec, ...],
+        domains: tuple[DomainSpec, ...],
+    ) -> dict[str, object]:
+        return _native_matrix(networks=networks, domains=domains, name_prefix=self.name_prefix)
+
+    # Base extension hooks need no instance state; the guest-certified subclass overrides them.
+    @staticmethod
+    def _render_domain_xml(domain: Mapping[str, object], *, kernel: Path, initrd: Path) -> str:
+        return _domain_xml(domain, kernel=kernel, initrd=initrd)
+
+    @staticmethod
+    def _guest_stage(
+        connection: object,
+        matrix: Mapping[str, object],
+        specs: tuple[tuple[NetworkSpec, ...], tuple[DomainSpec, ...]],
+        observations: tuple[RealizationObservation, ...],
+    ) -> tuple[tuple[RealizationObservation, ...], list[Diagnostic]]:
+        """Daemon-only modes contribute no guest observations; subclasses override."""
+
+        del connection, matrix, specs, observations
+        return (), []
 
     def _define_networks(
         self, connection: object, matrix: Mapping[str, object]
@@ -344,7 +386,7 @@ class TechVaultNativeLibvirtDriver:
             )
             make_libvirt_readable(initrd)
             self._artifacts[address] = (kernel, initrd)
-            native = _call(connection, "defineXML", _domain_xml(domain, kernel=kernel, initrd=initrd))
+            native = _call(connection, "defineXML", self._render_domain_xml(domain, kernel=kernel, initrd=initrd))
             if not self.define_only:
                 native.create()
         except _OwnershipConflict:
@@ -517,13 +559,6 @@ class TechVaultNativeLibvirtDriver:
             return False
 
 
-def _default_connector(connection_uri: str) -> object | None:
-    import importlib
-
-    libvirt = importlib.import_module("libvirt")
-    return libvirt.open(connection_uri)
-
-
 def _call(connection: object, method_name: str, payload: str) -> _NativeResource:
     method = cast(Callable[[str], _NativeResource], getattr(connection, method_name))
     return method(payload)
@@ -550,23 +585,15 @@ def _artifact_token(address: str) -> str:
     return _aces_uuid(address).replace("-", "")
 
 
-def _default_kernel_path() -> Path:
-    running = Path(f"/boot/vmlinuz-{os.uname().release}")
-    if running.exists():
-        return running
-    candidates = sorted(Path("/boot").glob("vmlinuz-*"))
-    return candidates[-1] if candidates else Path("/boot/vmlinuz")
+_MESSAGES = {
+    _CODE_UNAVAILABLE: "Libvirt connection is unavailable for native TechVault realization.",
+    _CODE_RESIDUAL_STATE: "TechVault rollback could not verify cleanup for '{address}'; residual state may remain.",
+    _CODE_OWNERSHIP_CONFLICT: "Native object for '{address}' is not owned by that ACES address; refusing mutation.",
+    _CODE_READBACK_FAILED: "Native libvirt TechVault readback for '{address}' did not succeed.",
+}
+_DEFAULT_MESSAGE = "Native libvirt TechVault operation for '{address}' did not succeed."
 
 
 def _diagnostic(code: str, address: str) -> Diagnostic:
-    if code == _CODE_UNAVAILABLE:
-        message = "Libvirt connection is unavailable for native TechVault realization."
-    elif code == _CODE_RESIDUAL_STATE:
-        message = f"Native TechVault rollback could not verify cleanup for '{address}'; residual state may remain."
-    elif code == _CODE_OWNERSHIP_CONFLICT:
-        message = f"Native object for '{address}' is not owned by that ACES address; refusing mutation."
-    elif code == _CODE_READBACK_FAILED:
-        message = f"Native libvirt TechVault readback for '{address}' did not succeed."
-    else:
-        message = f"Native libvirt TechVault operation for '{address}' did not succeed."
+    message = _MESSAGES.get(code, _DEFAULT_MESSAGE).format(address=address)
     return Diagnostic(code=code, domain=_DOMAIN, address=address, message=message, severity=Severity.ERROR)

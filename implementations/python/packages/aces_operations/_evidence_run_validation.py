@@ -129,6 +129,75 @@ def _validate_realization_sources(payload: Mapping[str, Any]) -> list[str]:
     else:
         problems.extend(_validate_unrealized_substrate(facts, provenance, cleanup))
     problems.extend(_validate_guest_observation_boundary(payload))
+    problems.extend(_validate_guest_observations(facts))
+    return problems
+
+
+def _validate_guest_observations(facts: Mapping[str, Any]) -> list[str]:
+    """Validate the guest-observed fact section when a guest report is present.
+
+    A daemon-only run carries ``{"source": "guest-observed", "status": "not-observed"}``
+    and is skipped here. A guest-certified run must bind every observed domain to the
+    control-plane operation, a fresh challenge, a canonical native correlation, and a
+    daemon-observed domain (rejecting unjoined or cross-operation evidence).
+    """
+
+    guest = facts.get("guest_observed")
+    if not isinstance(guest, Mapping) or guest.get("status") == "not-observed":
+        return []
+    problems = _validate_guest_metadata(guest)
+    domains = guest.get("domains")
+    if not isinstance(domains, list | tuple) or not domains:
+        return [*problems, "guest observation requires at least one observed domain"]
+    daemon_addresses = _daemon_domain_addresses(facts)
+    for item in domains:
+        problems.extend(_validate_guest_domain(item, daemon_addresses))
+    return problems
+
+
+_GUEST_METADATA_FIELDS = (
+    ("observation timestamp", "observed_at"),
+    ("probe policy", "probe_policy"),
+    ("fresh challenge", "challenge"),
+)
+
+
+def _validate_guest_metadata(guest: Mapping[str, Any]) -> list[str]:
+    problems: list[str] = []
+    if not _is_canonical_sha256(guest.get("operation_ref")):
+        problems.append("guest observation requires a canonical operation reference")
+    if not isinstance(guest.get("certifying"), bool):
+        problems.append("guest observation requires an explicit certifying flag")
+    problems.extend(
+        f"guest observation requires a {label}"
+        for label, field_name in _GUEST_METADATA_FIELDS
+        if not _nonempty_string(guest.get(field_name))
+    )
+    return problems
+
+
+def _daemon_domain_addresses(facts: Mapping[str, Any]) -> set[object]:
+    daemon = facts.get("daemon_observed", {})
+    domains = daemon.get("domains", ()) if isinstance(daemon, Mapping) else ()
+    return {item.get("address") for item in domains if isinstance(item, Mapping)}
+
+
+_GUEST_DOMAIN_FIELDS = ("architecture", "vcpus", "memory_mib", "network", "content", "accounts", "services")
+
+
+def _validate_guest_domain(item: object, daemon_addresses: set[object]) -> list[str]:
+    if not isinstance(item, Mapping):
+        return ["guest observation domain must be a mapping"]
+    problems: list[str] = []
+    if not _is_canonical_sha256(item.get("correlation")):
+        problems.append("guest observation requires a canonical native correlation")
+    if item.get("address") not in daemon_addresses:
+        problems.append("guest observation is not joined to a daemon-observed domain")
+    problems.extend(
+        f"guest observation domain missing {field_name}"
+        for field_name in _GUEST_DOMAIN_FIELDS
+        if field_name not in item
+    )
     return problems
 
 
@@ -274,6 +343,9 @@ def _validate_unrealized_substrate(
     daemon_networks = daemon.get("networks", ()) if isinstance(daemon, Mapping) else ()
     if daemon_domains or daemon_networks or facts.get("binding") is not None:
         problems.append("unrealized substrate cannot publish daemon observations or realization binding")
+    guest = facts.get("guest_observed")
+    if isinstance(guest, Mapping) and guest.get("status") != "not-observed":
+        problems.append("unrealized substrate cannot publish guest observations")
     if provenance.get("cleanup_verified") is not None:
         problems.append("unrealized substrate cleanup must be not-applicable")
     if isinstance(cleanup, Mapping) and cleanup.get("status") != "not-required":
@@ -311,8 +383,8 @@ def _validate_binding_identity(binding: Mapping[str, Any], envelope: Mapping[str
     driver_digest = binding.get("driver_configuration_digest")
     if not _is_canonical_sha256(driver_digest):
         problems.append("realization binding requires a canonical driver configuration digest")
-    if binding.get("driver") != "techvault-appliance":
-        problems.append("realization binding driver does not match the TechVault appliance")
+    if binding.get("driver") not in {"techvault-appliance", "guest-certified-appliance"}:
+        problems.append("realization binding driver does not match a governed appliance mode")
     for field_name in ("connection_uri_digest", "name_prefix_digest"):
         if not _is_canonical_sha256(binding.get(field_name)):
             problems.append(f"realization binding requires canonical {field_name}")

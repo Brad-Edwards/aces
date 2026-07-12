@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ipaddress
+import re
 from collections.abc import Mapping
 
 from aces_contracts.diagnostics import Diagnostic, Severity
@@ -52,6 +53,8 @@ _GUEST_PLACEMENTS = frozenset(
         "feature-binding",
     }
 )
+
+_SAFE_TOKEN_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 
 
 def techvault_admission_diagnostics(
@@ -190,6 +193,86 @@ def techvault_spec_diagnostics(
         diagnostics.extend(_domain_spec_diagnostics(spec, envelope, network_addresses))
     diagnostics.extend(_network_capacity_diagnostics(networks, domains))
     return diagnostics
+
+
+def guest_certified_spec_diagnostics(
+    *,
+    networks: tuple[NetworkSpec, ...],
+    domains: tuple[DomainSpec, ...],
+    envelope: BackendRealizationEnvelopeModel,
+    name_prefix: str,
+) -> list[Diagnostic]:
+    """Admit the bounded placements the guest-certified appliance realizes.
+
+    Unlike the daemon-only appliance, this mode boots accounts, files, and a
+    bounded service into the guest and reads them back, so those placements are
+    accepted. Requested images, ACLs, packages, runcmd, hostname overrides, and
+    out-of-envelope resources remain rejected before any native mutation.
+    """
+
+    diagnostics: list[Diagnostic] = []
+    diagnostics.extend(_name_diagnostics(networks, domains, name_prefix))
+    network_addresses = {spec.address for spec in networks}
+    for spec in networks:
+        diagnostics.extend(_network_spec_diagnostics(spec))
+    for spec in domains:
+        diagnostics.extend(_guest_domain_spec_diagnostics(spec, envelope, network_addresses))
+    diagnostics.extend(_network_capacity_diagnostics(networks, domains))
+    return diagnostics
+
+
+def _guest_domain_spec_diagnostics(
+    spec: DomainSpec,
+    envelope: BackendRealizationEnvelopeModel,
+    network_addresses: set[str],
+) -> list[Diagnostic]:
+    return [
+        *_domain_resource_diagnostics(spec, envelope),
+        *_domain_image_diagnostics(spec),
+        *_domain_metadata_diagnostics(spec),
+        *_domain_acl_diagnostics(spec),
+        *_domain_network_diagnostics(spec, network_addresses),
+        *_guest_placement_bounds_diagnostics(spec),
+        *_guest_service_bounds_diagnostics(spec),
+    ]
+
+
+def _guest_placement_bounds_diagnostics(spec: DomainSpec) -> list[Diagnostic]:
+    cloud_init = spec.cloud_init
+    if cloud_init is None:
+        return []
+    unsupported = (
+        bool(cloud_init.packages) or bool(cloud_init.runcmd) or cloud_init.hostname not in {None, "", spec.name}
+    )
+    unsafe_content = any(not _safe_guest_path(item.path) for item in cloud_init.write_files)
+    unsafe_account = any(not _SAFE_TOKEN_RE.match(user.name) for user in cloud_init.users)
+    if unsupported or unsafe_content or unsafe_account:
+        return [
+            _diagnostic(
+                _CODE_GUEST_PLACEMENT_UNSUPPORTED,
+                spec.address,
+                "Guest-certified appliance realizes bounded accounts and files only; "
+                "packages, runcmd, hostname overrides, unsafe paths, and unsafe account names are rejected.",
+            )
+        ]
+    return []
+
+
+def _guest_service_bounds_diagnostics(spec: DomainSpec) -> list[Diagnostic]:
+    invalid = any(not _SAFE_TOKEN_RE.match(service.name) or not 1 <= service.port <= 65535 for service in spec.services)
+    if not invalid:
+        return []
+    return [
+        _diagnostic(
+            _CODE_SERVICE_UNSUPPORTED,
+            spec.address,
+            "Guest-certified services require a libvirt-safe name and a valid port.",
+        )
+    ]
+
+
+def _safe_guest_path(path: str) -> bool:
+    return path.startswith("/") and ".." not in path.split("/")
 
 
 def _domain_spec_diagnostics(
@@ -476,6 +559,7 @@ def _diagnostic(code: str, address: str, message: str) -> Diagnostic:
 
 
 __all__ = [
+    "guest_certified_spec_diagnostics",
     "techvault_admission_diagnostics",
     "techvault_observation_diagnostics",
     "techvault_spec_diagnostics",

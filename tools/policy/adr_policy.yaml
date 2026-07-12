@@ -168,6 +168,7 @@ module_boundaries:
         aces_backend_libvirt:
           - aces_backend_libvirt.target
           - aces_backend_libvirt.techvault_native
+          - aces_backend_libvirt.guest_certified_driver
         aces_backend_protocols:
           - aces_backend_protocols.manifest
           - aces_backend_protocols.capabilities
