@@ -478,7 +478,7 @@ def _resolve_local_ref(schema: dict[str, Any], node: object) -> dict[str, Any] |
         return None
     ref = node.get("$ref")
     if isinstance(ref, str) and ref.startswith("#/$defs/"):
-        resolved = schema.get("$defs", {}).get(ref.removeprefix("#/$defs/"))
+        resolved = schema.get(_DEFS_KEY, {}).get(ref.removeprefix("#/$defs/"))
         return resolved if isinstance(resolved, dict) else None
     return node
 
@@ -508,7 +508,7 @@ def _constrain_runtime_children(
 
 
 def _attach_runtime_identifier_constraints(schema: dict[str, Any]) -> None:
-    runtime = schema.get("$defs", {}).get("RuntimeConfiguration")
+    runtime = schema.get(_DEFS_KEY, {}).get("RuntimeConfiguration")
     if not isinstance(runtime, dict):
         return
     for family in RUNTIME_SERVICE_FAMILIES:
@@ -540,14 +540,20 @@ def _constrain_collection_item_field(
     }
 
 
+def _attach_instantiation_request_identifier_constraints(schema: dict[str, Any]) -> None:
+    parameters = schema.get("properties", {}).get("parameters")
+    if isinstance(parameters, dict):
+        parameters["propertyNames"] = _portable_property_names()
+
+
 def _attach_sdl_identifier_constraints(contract_id: str, schema: dict[str, Any]) -> None:
-    if contract_id not in _SDL_IDENTIFIER_CONTRACT_IDS and contract_id != "scenario-instantiation-request-v1":
-        return
     if contract_id == "scenario-instantiation-request-v1":
-        parameters = schema.get("properties", {}).get("parameters")
-        if isinstance(parameters, dict):
-            parameters["propertyNames"] = _portable_property_names()
-        return
+        _attach_instantiation_request_identifier_constraints(schema)
+    elif contract_id in _SDL_IDENTIFIER_CONTRACT_IDS:
+        _attach_scenario_identifier_constraints(contract_id, schema)
+
+
+def _attach_scenario_identifier_constraints(contract_id: str, schema: dict[str, Any]) -> None:
 
     qualified = contract_id == _INSTANTIATION_INVARIANT_CONTRACT_ID
     for section_name in HASHMAP_SECTIONS:
@@ -568,7 +574,7 @@ def _attach_sdl_identifier_constraints(contract_id: str, schema: dict[str, Any])
         "forwarding_agent_id",
         forwarding_id_schema,
     )
-    runtime = schema.get("$defs", {}).get("RuntimeConfiguration")
+    runtime = schema.get(_DEFS_KEY, {}).get("RuntimeConfiguration")
     if isinstance(runtime, dict):
         _constrain_collection_item_field(
             runtime,
@@ -673,7 +679,7 @@ def _attach_plan_identity_constraints(contract_id: str, json_schema: dict[str, A
     domain = _PLAN_CONTRACT_DOMAIN.get(contract_id)
     if domain is None:
         return
-    operation = json_schema.get("$defs", {}).get("PlanOperationModel")
+    operation = json_schema.get(_DEFS_KEY, {}).get("PlanOperationModel")
     if not isinstance(operation, dict):
         return
     properties = operation.get("properties", {})

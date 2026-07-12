@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from contextlib import suppress
 from typing import Any
 
+from ._base import is_variable_ref
 from ._identifiers import QualifiedName
 from ._module_runtime_aliases import nested_node_runtime_aliases
 from .entities import flatten_entities
@@ -47,6 +49,21 @@ def _prefix(namespace: str, name: str) -> str:
 
 def _private_prefix(namespace: str, name: str) -> str:
     return QualifiedName.parse(name).prefixed(namespace, private=True).render()
+
+
+def rewrite_objective_window_ref(ref: str, workflow_names: Mapping[str, str]) -> str:
+    """Rewrite a workflow-step window reference through a symbol map."""
+
+    rewritten = ref
+    parts: tuple[str, ...] = ()
+    if not is_variable_ref(ref):
+        with suppress(TypeError, ValueError):
+            parts = QualifiedName.parse(ref).parts
+    if len(parts) >= 2:
+        workflow_name = QualifiedName(parts[:-1]).render()
+        if workflow_name in workflow_names:
+            rewritten = f"{workflow_names[workflow_name]}.{parts[-1]}"
+    return rewritten
 
 
 def explicit_exports(

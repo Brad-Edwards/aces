@@ -431,7 +431,7 @@ def _model_parse_error(
     source_ranges: dict[str, SDLSourceRange],
 ) -> SDLParseError:
     diagnostics: list[SDLParseDiagnostic] = []
-    for item in error.errors(include_input=False, include_url=False):
+    for item in error.errors():
         pointer = _pointer_from_location(tuple(item.get("loc", ())))
         raw_message = str(item.get("msg", ""))
         is_identifier = "portable SDL identifier" in raw_message or "qualified SDL identifier" in raw_message

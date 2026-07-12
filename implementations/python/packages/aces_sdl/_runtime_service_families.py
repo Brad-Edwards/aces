@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping, MutableMapping
 from dataclasses import dataclass
 from types import ModuleType
-from typing import Any
 
 from . import runtime_app_authorization as _runtime_app_authorization
 from . import runtime_application as _runtime_application
@@ -57,8 +56,8 @@ class RuntimeFamilyReference:
     address: str
     node_name: str
     family: RuntimeServiceFamily
-    item: Any
-    owning_item: Any
+    item: object
+    owning_item: object
     collection_path: tuple[str, ...] = ()
 
 
@@ -274,18 +273,18 @@ def runtime_service_family_export_names() -> tuple[str, ...]:
     return tuple(names)
 
 
-def runtime_service_family_exports() -> dict[str, Any]:
+def runtime_service_family_exports() -> dict[str, object]:
     """Return the public model symbols exported by all registered families."""
 
     runtime_service_family_export_names()
-    exports: dict[str, Any] = {}
+    exports: dict[str, object] = {}
     for family in RUNTIME_SERVICE_FAMILIES:
         for name in family.public_symbols:
             exports[name] = getattr(family.module, name)
     return exports
 
 
-def install_runtime_service_family_exports(namespace: MutableMapping[str, Any]) -> tuple[str, ...]:
+def install_runtime_service_family_exports(namespace: MutableMapping[str, object]) -> tuple[str, ...]:
     """Install family symbols into a facade module namespace."""
 
     exports = runtime_service_family_exports()
@@ -296,7 +295,7 @@ def install_runtime_service_family_exports(namespace: MutableMapping[str, Any]) 
 
 
 def collect_qualified_runtime_family_refs(
-    scenario: Any,
+    scenario: object,
     *,
     family_keys: Iterable[str] | None = None,
 ) -> set[str]:
@@ -306,7 +305,7 @@ def collect_qualified_runtime_family_refs(
 
 
 def iter_runtime_family_references(
-    scenario: Any,
+    scenario: object,
     *,
     family_keys: Iterable[str] | None = None,
 ) -> Iterable[RuntimeFamilyReference]:
@@ -339,12 +338,12 @@ def iter_runtime_family_references(
 
 
 def _iter_child_references(
-    item: Any,
+    item: object,
     *,
     base: str,
     node_name: str,
     family: RuntimeServiceFamily,
-    owning_item: Any,
+    owning_item: object,
     collection_path: tuple[str, ...],
     child_specs: tuple[RuntimeReferenceChild, ...],
 ) -> Iterable[RuntimeFamilyReference]:
@@ -374,7 +373,7 @@ def _iter_child_references(
 
 
 def nested_node_runtime_family_aliases(
-    scenario: Any,
+    scenario: object,
     node_rename_map: Mapping[str, str],
     *,
     family_keys: Iterable[str] | None = None,
@@ -411,17 +410,22 @@ def _families(selected: set[str] | None) -> Iterable[RuntimeServiceFamily]:
 
 
 def _runtime_instances(
-    scenario: Any,
+    scenario: object,
     node_rename_map: Mapping[str, str],
-) -> Iterable[tuple[str, str, Any]]:
-    for node_name, node in scenario.nodes.items():
+) -> Iterable[tuple[str, str, object]]:
+    nodes = getattr(scenario, "nodes", {})
+    if not isinstance(nodes, Mapping):
+        return
+    for node_name, node in nodes.items():
+        if not isinstance(node_name, str):
+            continue
         prefixed_node = node_rename_map.get(node_name, node_name)
         runtime = getattr(node, "runtime", None)
         if runtime is not None:
             yield node_name, prefixed_node, runtime
 
 
-def _runtime_family_refs(*, node_name: str, runtime: Any, family: RuntimeServiceFamily) -> set[str]:
+def _runtime_family_refs(*, node_name: str, runtime: object, family: RuntimeServiceFamily) -> set[str]:
     refs: set[str] = set()
     for item in getattr(runtime, family.collection_name, []):
         item_id = getattr(item, family.id_field, "")
@@ -433,7 +437,7 @@ def _runtime_family_refs(*, node_name: str, runtime: Any, family: RuntimeService
     return refs
 
 
-def _child_refs(item: Any, base: str, child_specs: tuple[RuntimeReferenceChild, ...]) -> set[str]:
+def _child_refs(item: object, base: str, child_specs: tuple[RuntimeReferenceChild, ...]) -> set[str]:
     refs: set[str] = set()
     for child_spec in child_specs:
         for child in getattr(item, child_spec.collection_name, []):
@@ -450,7 +454,7 @@ def _runtime_family_aliases(
     *,
     node_name: str,
     prefixed_node: str,
-    runtime: Any,
+    runtime: object,
     family: RuntimeServiceFamily,
 ) -> dict[str, str]:
     aliases: dict[str, str] = {}
@@ -466,7 +470,7 @@ def _runtime_family_aliases(
 
 
 def _child_aliases(
-    item: Any,
+    item: object,
     bare_base: str,
     prefixed_base: str,
     child_specs: tuple[RuntimeReferenceChild, ...],

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from ._errors import SDLValidationError
 from ._identifiers import QualifiedName
@@ -14,6 +14,7 @@ from ._reference_targetability import is_targetable_section
 from ._runtime_service_families import RUNTIME_SERVICE_FAMILIES, RuntimeReferenceChild
 
 if TYPE_CHECKING:
+    from .entities import Entity
     from .scenario import Scenario
 
 
@@ -148,7 +149,7 @@ def _add(
 
 def _add_entities(
     index: DeclarationIndex,
-    entities: dict[str, Any],
+    entities: dict[str, Entity],
     *,
     address_prefix: tuple[str, ...],
     model_prefix: str,
@@ -176,7 +177,7 @@ def _add_entities(
 
 def _add_runtime_children(
     index: DeclarationIndex,
-    owner: Any,
+    owner: object,
     *,
     address_prefix: tuple[str, ...],
     model_prefix: str,
@@ -262,52 +263,46 @@ def _add_node_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
                 )
 
 
-def build_declaration_index(
-    scenario: Scenario,
-    *,
-    raise_on_collision: bool = True,
-) -> DeclarationIndex:
-    """Index every catalogued declaration and reject non-injective rendering."""
+_REFERENCEABLE_SECTIONS = frozenset(
+    {
+        "features",
+        "conditions",
+        "vulnerabilities",
+        "injects",
+        "events",
+        "scripts",
+        "stories",
+        "accounts",
+        "relationships",
+        "agents",
+        "action_contracts",
+        "observation_boundaries",
+        "behavior_specifications",
+        "evidence_requirements",
+        "objectives",
+    }
+)
+_SPECIAL_SECTIONS = frozenset({"nodes", "infrastructure", "entities", "content", "workflows"})
 
-    index = DeclarationIndex()
-    _add(
-        index,
-        kind="scenario",
-        address_parts=("scenario", scenario.name),
-        model_path="name",
-    )
 
-    special_sections = {"nodes", "infrastructure", "entities", "content", "workflows"}
+def _add_section_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
     for section_name in HASHMAP_SECTIONS:
-        if section_name in special_sections:
+        if section_name in _SPECIAL_SECTIONS:
             continue
         for name in getattr(scenario, section_name):
-            referenceable = section_name in {
-                "features",
-                "conditions",
-                "vulnerabilities",
-                "injects",
-                "events",
-                "scripts",
-                "stories",
-                "accounts",
-                "relationships",
-                "agents",
-                "action_contracts",
-                "observation_boundaries",
-                "behavior_specifications",
-                "evidence_requirements",
-                "objectives",
-            }
+            referenceable = section_name in _REFERENCEABLE_SECTIONS
             _add(
                 index,
                 kind=section_name,
                 address_parts=(section_name, *_qualified_parts(name)),
                 model_path=f"{section_name}.{name}",
-                aliases=(() if section_name == "infrastructure" else (name,)),
+                aliases=(name,),
                 referenceable=referenceable,
                 targetable=referenceable and is_targetable_section(section_name),
             )
+
+
+def _add_variable_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
     for name in scenario.variables:
         _add(
             index,
@@ -318,7 +313,8 @@ def build_declaration_index(
             referenceable=True,
         )
 
-    _add_node_declarations(index, scenario)
+
+def _add_infrastructure_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
     for name, infrastructure in scenario.infrastructure.items():
         parts = _qualified_parts(name)
         _add(
@@ -340,7 +336,8 @@ def build_declaration_index(
                     targetable=True,
                 )
 
-    _add_entities(index, scenario.entities, address_prefix=(), model_prefix="entities")
+
+def _add_content_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
     for name, content in scenario.content.items():
         parts = _qualified_parts(name)
         _add(
@@ -363,6 +360,8 @@ def build_declaration_index(
                 targetable=True,
             )
 
+
+def _add_workflow_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
     for name, workflow in scenario.workflows.items():
         parts = _qualified_parts(name)
         _add(
@@ -382,6 +381,8 @@ def build_declaration_index(
                 aliases=(f"{name}.{step_name}",),
             )
 
+
+def _add_forwarding_agent_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
     for position, agent in enumerate(scenario.forwarding_agents):
         _add(
             index,
@@ -389,6 +390,31 @@ def build_declaration_index(
             address_parts=("forwarding_agents", *_qualified_parts(agent.forwarding_agent_id)),
             model_path=f"forwarding_agents.{position}.forwarding_agent_id",
         )
+
+
+def build_declaration_index(
+    scenario: Scenario,
+    *,
+    raise_on_collision: bool = True,
+) -> DeclarationIndex:
+    """Index every catalogued declaration and reject non-injective rendering."""
+
+    index = DeclarationIndex()
+    _add(
+        index,
+        kind="scenario",
+        address_parts=("scenario", scenario.name),
+        model_path="name",
+    )
+
+    _add_section_declarations(index, scenario)
+    _add_variable_declarations(index, scenario)
+    _add_node_declarations(index, scenario)
+    _add_infrastructure_declarations(index, scenario)
+    _add_entities(index, scenario.entities, address_prefix=(), model_prefix="entities")
+    _add_content_declarations(index, scenario)
+    _add_workflow_declarations(index, scenario)
+    _add_forwarding_agent_declarations(index, scenario)
 
     if raise_on_collision:
         index.raise_for_collisions()

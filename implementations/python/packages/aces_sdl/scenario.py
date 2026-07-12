@@ -72,6 +72,86 @@ def _collect_variable_tokens(value: object) -> list[str]:
     return found
 
 
+def _validate_declaration_identifier(
+    identifier: object,
+    *,
+    section_name: str,
+    allow_qualified: bool,
+) -> None:
+    if allow_qualified:
+        local_name = QualifiedName.parse(identifier).parts[-1]
+    else:
+        local_name = require_portable_identifier(identifier, field_name=f"{section_name} declaration key")
+    if section_name == "nodes" and len(local_name) > 35:
+        raise ValueError("nodes declaration key must be at most 35 characters")
+
+
+def _validate_section_declaration_keys(value: Mapping[object, object], *, allow_qualified: bool) -> None:
+    for section_name in HASHMAP_SECTIONS:
+        declarations = value.get(section_name)
+        if not isinstance(declarations, Mapping):
+            continue
+        for identifier in declarations:
+            _validate_declaration_identifier(
+                identifier,
+                section_name=section_name,
+                allow_qualified=allow_qualified,
+            )
+
+
+def _forwarding_agent_identifier(agent: object) -> object:
+    if isinstance(agent, RuntimeForwardingAgent):
+        return agent.forwarding_agent_id
+    if isinstance(agent, Mapping):
+        return agent.get("forwarding_agent_id")
+    return None
+
+
+def _validate_forwarding_agent_identifiers(
+    agents: object,
+    *,
+    allow_qualified: bool,
+    field_name: str,
+) -> None:
+    if not isinstance(agents, (list, tuple)):
+        return
+    for agent in agents:
+        identifier = _forwarding_agent_identifier(agent)
+        if allow_qualified:
+            QualifiedName.parse(identifier)
+        else:
+            require_portable_identifier(identifier, field_name=field_name)
+
+
+def _node_runtime(node: object) -> object | None:
+    if isinstance(node, Node):
+        return node.runtime
+    if isinstance(node, Mapping):
+        return node.get("runtime")
+    return None
+
+
+def _runtime_forwarding_agents(runtime: object) -> object:
+    if isinstance(runtime, Mapping):
+        return runtime.get("forwarding_agents", ())
+    return getattr(runtime, "forwarding_agents", ())
+
+
+def _validate_runtime_forwarding_agent_identifiers(value: Mapping[object, object]) -> None:
+    nodes = value.get("nodes")
+    if not isinstance(nodes, Mapping):
+        return
+    for node in nodes.values():
+        runtime = _node_runtime(node)
+        if runtime is None:
+            continue
+        _validate_forwarding_agent_identifiers(
+            _runtime_forwarding_agents(runtime),
+            allow_qualified=False,
+            field_name="runtime forwarding_agent_id",
+        )
+
+
 class ModuleDescriptor(SDLModel):
     """Published module metadata for SDL composition."""
 
@@ -197,51 +277,14 @@ class Scenario(SDLModel):
     def _validate_declaration_keys(cls, value: object) -> object:
         if not isinstance(value, Mapping):
             return value
-        for section_name in HASHMAP_SECTIONS:
-            declarations = value.get(section_name)
-            if not isinstance(declarations, Mapping):
-                continue
-            for identifier in declarations:
-                if cls._allows_qualified_declaration_keys:
-                    QualifiedName.parse(identifier)
-                else:
-                    require_portable_identifier(identifier, field_name=f"{section_name} declaration key")
-                if section_name == "nodes":
-                    local_name = QualifiedName.parse(identifier).parts[-1]
-                    if len(local_name) > 35:
-                        raise ValueError("nodes declaration key must be at most 35 characters")
-        for agent in value.get("forwarding_agents", ()):
-            identifier = (
-                agent.forwarding_agent_id
-                if isinstance(agent, RuntimeForwardingAgent)
-                else agent.get("forwarding_agent_id")
-                if isinstance(agent, Mapping)
-                else None
-            )
-            if cls._allows_qualified_declaration_keys:
-                QualifiedName.parse(identifier)
-            else:
-                require_portable_identifier(identifier, field_name="forwarding_agent_id")
-        for node in value.get("nodes", {}).values() if isinstance(value.get("nodes"), Mapping) else ():
-            runtime = (
-                node.runtime if isinstance(node, Node) else node.get("runtime") if isinstance(node, Mapping) else None
-            )
-            runtime_agents = (
-                runtime.forwarding_agents
-                if hasattr(runtime, "forwarding_agents")
-                else runtime.get("forwarding_agents", ())
-                if isinstance(runtime, Mapping)
-                else ()
-            )
-            for agent in runtime_agents:
-                identifier = (
-                    agent.forwarding_agent_id
-                    if isinstance(agent, RuntimeForwardingAgent)
-                    else agent.get("forwarding_agent_id")
-                    if isinstance(agent, Mapping)
-                    else None
-                )
-                require_portable_identifier(identifier, field_name="runtime forwarding_agent_id")
+        allow_qualified = cls._allows_qualified_declaration_keys
+        _validate_section_declaration_keys(value, allow_qualified=allow_qualified)
+        _validate_forwarding_agent_identifiers(
+            value.get("forwarding_agents", ()),
+            allow_qualified=allow_qualified,
+            field_name="forwarding_agent_id",
+        )
+        _validate_runtime_forwarding_agent_identifiers(value)
         return value
 
     @property

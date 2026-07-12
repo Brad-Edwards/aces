@@ -15,6 +15,7 @@ from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import (
     EvaluationPlan,
     OrchestrationPlan,
+    PlanOperation,
     ProvisioningPlan,
     RuntimeDomain,
     require_plan_operation_identity,
@@ -72,41 +73,54 @@ def _submitted_plan_diagnostics(
     snapshot: RuntimeSnapshot,
 ) -> list[Diagnostic]:
     admitted = set(snapshot.entries) | {operation.address for operation in plan.operations}
+    diagnostic: Diagnostic | None = None
     for operation in plan.operations:
-        try:
-            require_plan_operation_identity(domain, operation.address, operation.resource_type)
-        except ValueError:
-            return [
-                Diagnostic(
-                    code="runtime.plan-resource-incoherent",
-                    domain="runtime",
-                    address=f"runtime.control-plane.{domain.value}",
-                    message="Submitted plan operation disagrees with the endpoint resource identity.",
-                )
-            ]
-        dependencies = {*operation.ordering_dependencies, *operation.refresh_dependencies}
-        if dependencies - admitted:
-            return [
-                Diagnostic(
-                    code="runtime.plan-dependency-unresolved",
-                    domain="runtime",
-                    address=f"runtime.control-plane.{domain.value}",
-                    message="Submitted plan contains a dependency outside its operations and admitted snapshot.",
-                )
-            ]
-        existing = snapshot.entries.get(operation.address)
-        if existing is not None and (
-            existing.domain is not domain or existing.resource_type != operation.resource_type
-        ):
-            return [
-                Diagnostic(
-                    code="runtime.plan-resource-incoherent",
-                    domain="runtime",
-                    address=f"runtime.control-plane.{domain.value}",
-                    message="Submitted plan disagrees with the admitted snapshot resource identity.",
-                )
-            ]
-    return []
+        diagnostic = _submitted_operation_diagnostic(operation, domain, snapshot, admitted)
+        if diagnostic is not None:
+            break
+    return [diagnostic] if diagnostic is not None else []
+
+
+def _submitted_operation_diagnostic(
+    operation: PlanOperation,
+    domain: RuntimeDomain,
+    snapshot: RuntimeSnapshot,
+    admitted: set[str],
+) -> Diagnostic | None:
+    diagnostic: Diagnostic | None = None
+    address = f"runtime.control-plane.{domain.value}"
+    try:
+        require_plan_operation_identity(domain, operation.address, operation.resource_type)
+    except ValueError:
+        diagnostic = Diagnostic(
+            code="runtime.plan-resource-incoherent",
+            domain="runtime",
+            address=address,
+            message="Submitted plan operation disagrees with the endpoint resource identity.",
+        )
+
+    dependencies = {*operation.ordering_dependencies, *operation.refresh_dependencies}
+    if diagnostic is None and dependencies - admitted:
+        diagnostic = Diagnostic(
+            code="runtime.plan-dependency-unresolved",
+            domain="runtime",
+            address=address,
+            message="Submitted plan contains a dependency outside its operations and admitted snapshot.",
+        )
+
+    existing = snapshot.entries.get(operation.address)
+    if (
+        diagnostic is None
+        and existing is not None
+        and (existing.domain is not domain or existing.resource_type != operation.resource_type)
+    ):
+        diagnostic = Diagnostic(
+            code="runtime.plan-resource-incoherent",
+            domain="runtime",
+            address=address,
+            message="Submitted plan disagrees with the admitted snapshot resource identity.",
+        )
+    return diagnostic
 
 
 class RuntimeControlPlane(ParticipantControlMixin, ParticipantRetrievalMixin):

@@ -1,5 +1,7 @@
 """Aggregate resource bounds for one SDL module-composition request."""
 
+from __future__ import annotations
+
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -66,3 +68,19 @@ class CompositionBudget:
                 raise SDLParseError("SDL composition produced an invalid qualified identifier", path=path) from exc
             if namespace_depth > self.limits.max_namespace_depth:
                 raise SDLParseError("SDL composition namespace-depth budget exceeded", path=path)
+
+
+@dataclass(frozen=True)
+class CompositionTraversal:
+    """Immutable ancestry plus the request-scoped mutable resource budget."""
+
+    seen: frozenset[Path]
+    budget: CompositionBudget
+    depth: int
+
+    def descend_from(self, path: Path) -> CompositionTraversal:
+        return CompositionTraversal(
+            seen=self.seen | {path},
+            budget=self.budget,
+            depth=self.depth + 1,
+        )

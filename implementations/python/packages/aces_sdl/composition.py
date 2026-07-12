@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from ._base import is_variable_ref
-from ._composition_budget import CompositionBudget
+from ._composition_budget import CompositionBudget, CompositionTraversal
 from ._errors import SDLInstantiationError, SDLParseDiagnostic, SDLParseError
 from ._identifiers import QualifiedName
 from ._module_provenance import (
@@ -21,6 +21,9 @@ from ._module_provenance import (
 )
 from ._module_symbols import FORWARDING_AGENTS_SECTION
 from ._module_symbols import HASHMAP_SECTIONS as _HASHMAP_SECTIONS
+from ._module_symbols import (
+    rewrite_objective_window_ref as _rewrite_objective_window_ref,
+)
 from ._module_symbols import (
     symbol_index as _symbol_index,
 )
@@ -124,22 +127,6 @@ def _rewrite_entity(payload: dict[str, Any], symbols: dict[str, dict[str, str] |
     for child in payload.get("entities", {}).values():
         if isinstance(child, dict):
             _rewrite_entity(child, symbols)
-
-
-def _rewrite_objective_window_ref(ref: str, workflow_names: Mapping[str, str]) -> str:
-    if is_variable_ref(ref):
-        return ref
-    try:
-        parts = QualifiedName.parse(ref).parts
-    except (TypeError, ValueError):
-        return ref
-    if len(parts) < 2:
-        return ref
-    workflow_name = QualifiedName(parts[:-1]).render()
-    step_name = parts[-1]
-    if workflow_name not in workflow_names:
-        return ref
-    return f"{workflow_names[workflow_name]}.{step_name}"
 
 
 def _rewrite_workflow(payload: dict[str, Any], symbols: dict[str, dict[str, str] | set[str]]) -> None:
@@ -383,13 +370,11 @@ def expand_sdl_modules(
     data: dict[str, Any],
     *,
     path: Path,
-    seen: set[Path] | None = None,
     source_format: str = SDL_SOURCE_FORMAT,
     migration_policy: SDLMigrationPolicy | str = SDLMigrationPolicy.REJECT,
     limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
     source_diagnostics: list[SDLParseDiagnostic] | None = None,
-    _budget: CompositionBudget | None = None,
-    _depth: int = 0,
+    _traversal: CompositionTraversal | None = None,
 ) -> tuple[
     dict[str, Any],
     dict[str, str],
@@ -408,14 +393,18 @@ def expand_sdl_modules(
     node and variable names namespace-prefixed) for downstream consumers.
     """
 
-    seen = set() if seen is None else set(seen)
-    budget = _budget or CompositionBudget(limits)
-    budget.check_depth(_depth, path=path)
+    traversal = _traversal or CompositionTraversal(
+        seen=frozenset(),
+        budget=CompositionBudget(limits),
+        depth=0,
+    )
+    budget = traversal.budget
+    budget.check_depth(traversal.depth, path=path)
     budget.add_document(data, path=path)
     resolved_path = path.resolve()
-    if resolved_path in seen:
+    if resolved_path in traversal.seen:
         raise SDLParseError(f"Import cycle detected at {resolved_path}", path=path)
-    seen.add(resolved_path)
+    child_traversal = traversal.descend_from(resolved_path)
 
     merged = dict(data)
     merged.setdefault("imports", [])
@@ -463,13 +452,11 @@ def expand_sdl_modules(
         ) = expand_sdl_modules(
             imported_raw,
             path=import_path,
-            seen=seen,
             source_format=source_format,
             migration_policy=migration_policy,
             limits=limits,
             source_diagnostics=source_diagnostics,
-            _budget=budget,
-            _depth=_depth + 1,
+            _traversal=child_traversal,
         )
         try:
             imported_scenario = ExpandedScenario.model_validate(imported_expanded)
