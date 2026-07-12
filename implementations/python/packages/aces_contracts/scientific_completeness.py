@@ -139,9 +139,17 @@ class ConcernDeliveryAssessmentModel(ContractModel):
 
     def _validate_external_contract(self) -> None:
         if self.status is not DeliveryStatus.EXTERNAL_CONTRACT:
-            if self.external_contract_refs or self.satisfiability_witness_refs or self.binding_obligation is not None:
+            if self._has_external_contract_bindings():
                 raise ValueError("external contract bindings are valid only for external-contract status")
             return
+        self._validate_external_contract_bindings()
+
+    def _has_external_contract_bindings(self) -> bool:
+        return bool(
+            self.external_contract_refs or self.satisfiability_witness_refs or self.binding_obligation is not None
+        )
+
+    def _validate_external_contract_bindings(self) -> None:
         if not self.external_contract_refs or not self.satisfiability_witness_refs or self.binding_obligation is None:
             raise ValueError(
                 "external-contract status requires named contract refs, "
