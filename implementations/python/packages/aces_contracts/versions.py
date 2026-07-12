@@ -19,6 +19,7 @@ WORKFLOW_CANCELLATION_REQUEST_SCHEMA_VERSION = "workflow-cancellation-request/v1
 RUNTIME_SNAPSHOT_SCHEMA_VERSION = "runtime-snapshot/v1"
 OPERATION_SCHEMA_VERSION = "runtime-operation/v1"
 EVALUATION_STATE_SCHEMA_VERSION = "evaluation-result-state/v1"
+PROPOSITION_TRUTH_RESULT_SCHEMA_VERSION = "proposition-truth-result/v1"
 PARTICIPANT_EPISODE_STATE_SCHEMA_VERSION = "participant-episode-state/v1"
 PARTICIPANT_LIFECYCLE_EVENT_V1_SCHEMA_VERSION = "participant-lifecycle-event/v1"
 PARTICIPANT_OBSERVATION_ENVELOPE_V1_SCHEMA_VERSION = "participant-observation-envelope/v1"

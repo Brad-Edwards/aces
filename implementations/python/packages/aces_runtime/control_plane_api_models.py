@@ -152,6 +152,7 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
             "orchestration_history": dict(snapshot.orchestration_history),
             "evaluation_results": dict(snapshot.evaluation_results),
             "evaluation_history": dict(snapshot.evaluation_history),
+            "proposition_truth_results": dict(snapshot.proposition_truth_results),
             "participant_episode_results": dict(snapshot.participant_episode_results),
             "participant_episode_history": dict(snapshot.participant_episode_history),
             "participant_behavior_history": dict(snapshot.participant_behavior_history),

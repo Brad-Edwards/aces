@@ -258,6 +258,14 @@ def _act607_authority_scope_scenario_yaml() -> str:
           beacon-online:
             command: /usr/local/bin/check-beacon
             interval: 30
+        propositions:
+          beacon-online:
+            description: The governed web host has declared beacon state.
+            subjects: [nodes.web]
+            basis: declared_state
+            predicate: {kind: boolean, property: beacon-online, semantic_ref: urn:aces:declared-property:beacon-online, operator: equals, expected: true}
+        assertions:
+          beacon-online: {proposition: beacon-online, role: precondition, polarity: positive}
         relationships:
           red-controls-web:
             type: manages
@@ -302,7 +310,7 @@ def _act607_authority_scope_scenario_yaml() -> str:
               subnets: [net]
               services: [http]
               accounts: [operator]
-            starting_conditions: [beacon-online]
+            starting_assertions: [beacon-online]
             authority_anchors:
               - red-team
               - red-controls-web
@@ -358,6 +366,14 @@ def _act607_typed_ref_collision_scenario_yaml() -> str:
           beacon-online:
             command: /usr/local/bin/check-beacon
             interval: 30
+        propositions:
+          beacon-online:
+            description: The governed web host has declared beacon state.
+            subjects: [nodes.web]
+            basis: declared_state
+            predicate: {kind: boolean, property: beacon-online, semantic_ref: urn:aces:declared-property:beacon-online, operator: equals, expected: true}
+        assertions:
+          beacon-online: {proposition: beacon-online, role: precondition, polarity: positive}
         content:
           operator:
             type: dataset
@@ -379,7 +395,7 @@ def _act607_typed_ref_collision_scenario_yaml() -> str:
               hosts: [web]
               services: [http]
               accounts: [operator]
-            starting_conditions: [beacon-online]
+            starting_assertions: [beacon-online]
         """
     )
 
@@ -458,8 +474,8 @@ def test_participant_behavior_runtime_carries_act607_authority_scope_metadata():
         "provision.node.web.service.http",
         "provision.account.operator",
     )
-    assert compiled.starting_condition_refs == ("beacon-online",)
-    assert compiled.starting_condition_addresses == ("template.condition.beacon-online",)
+    assert compiled.starting_assertion_refs == ("beacon-online",)
+    assert compiled.starting_assertion_addresses == ("evaluation.assertion.beacon-online",)
     assert compiled.authority_anchor_refs == (
         "red-team",
         "red-controls-web",
@@ -497,7 +513,7 @@ def test_participant_behavior_runtime_carries_act607_authority_scope_metadata():
         "provision.node.web",
         "provision.network.net",
         "provision.node.web.service.http",
-        "template.condition.beacon-online",
+        "evaluation.assertion.beacon-online",
         "provision.content.docs",
         "provision.content.docs.items.playbook",
     )
@@ -514,12 +530,12 @@ def test_participant_typed_authority_refs_ignore_global_alias_collisions():
         "provision.node.web.service.http",
         "provision.account.operator",
     )
-    assert compiled.starting_condition_addresses == ("template.condition.beacon-online",)
+    assert compiled.starting_assertion_addresses == ("evaluation.assertion.beacon-online",)
     assert compiled.refresh_dependencies == (
         "provision.account.operator",
         "provision.node.web",
         "provision.node.web.service.http",
-        "template.condition.beacon-online",
+        "evaluation.assertion.beacon-online",
     )
 
 

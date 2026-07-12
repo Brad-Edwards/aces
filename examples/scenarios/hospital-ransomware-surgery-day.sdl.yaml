@@ -644,6 +644,7 @@ conditions:
     command: /usr/local/bin/check-vpn-auth
     interval: 30
   vendor-session-established:
+    proposition: vendor-session-established
     command: /usr/local/bin/check-vendor-session
     interval: 30
   domain-auth-healthy:
@@ -656,44 +657,260 @@ conditions:
     command: /usr/local/bin/check-exchange-owa
     interval: 30
   phish-mail-delivered:
+    proposition: phish-mail-delivered
     command: /usr/local/bin/check-phish-delivery
     interval: 60
   ehr-api-healthy:
+    proposition: ehr-api-healthy
     command: /usr/local/bin/check-ehr-api
     interval: 15
   clinical-disruption-observed:
+    proposition: clinical-disruption-observed
     command: /usr/local/bin/check-clinical-disruption
     interval: 30
   ehr-db-healthy:
     command: /usr/local/bin/check-postgres
     interval: 15
   phi-staging-observed:
+    proposition: phi-staging-observed
     command: /usr/local/bin/check-staged-phi
     interval: 60
   pacs-archive-healthy:
+    proposition: pacs-archive-healthy
     command: /usr/local/bin/check-pacs
     interval: 15
   radiology-workflow-delayed:
+    proposition: radiology-workflow-delayed
     command: /usr/local/bin/check-radiology-delay
     interval: 30
   device-mesh-healthy:
     command: /usr/local/bin/check-device-mesh
     interval: 30
   backup-catalog-intact:
+    proposition: backup-catalog-intact
     command: /usr/local/bin/check-backup-catalog
     interval: 30
   restore-runbook-ready:
     command: /usr/local/bin/check-restore-runbook
     interval: 60
   soc-pipeline-up:
+    proposition: soc-pipeline-up
     command: /usr/local/bin/check-siem-ingest
     interval: 30
   triage-case-submitted:
+    proposition: triage-case-submitted
     command: /usr/local/bin/check-triage-case
     interval: 60
   vendor-jump-online:
     command: /usr/local/bin/check-vendor-rdp
     interval: 30
+propositions:
+  backup-catalog-intact:
+    description: The governed backup-catalog-intact observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.backup-vault
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: backup-catalog-intact
+      semantic_ref: urn:aces:observable:backup-catalog-intact
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  clinical-disruption-observed:
+    description: The governed clinical-disruption-observed observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.ehr-frontend
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: clinical-disruption-observed
+      semantic_ref: urn:aces:observable:clinical-disruption-observed
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  ehr-api-healthy:
+    description: The governed ehr-api-healthy observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.ehr-frontend
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: ehr-api-healthy
+      semantic_ref: urn:aces:observable:ehr-api-healthy
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  pacs-archive-healthy:
+    description: The governed pacs-archive-healthy observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.pacs01
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: pacs-archive-healthy
+      semantic_ref: urn:aces:observable:pacs-archive-healthy
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  phi-staging-observed:
+    description: The governed phi-staging-observed observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.ehr-db
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: phi-staging-observed
+      semantic_ref: urn:aces:observable:phi-staging-observed
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  phish-mail-delivered:
+    description: The governed phish-mail-delivered observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.exchange01
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: phish-mail-delivered
+      semantic_ref: urn:aces:observable:phish-mail-delivered
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  radiology-workflow-delayed:
+    description: The governed radiology-workflow-delayed observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.pacs01
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: radiology-workflow-delayed
+      semantic_ref: urn:aces:observable:radiology-workflow-delayed
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  soc-pipeline-up:
+    description: The governed soc-pipeline-up observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.siem01
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: soc-pipeline-up
+      semantic_ref: urn:aces:observable:soc-pipeline-up
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  triage-case-submitted:
+    description: The governed triage-case-submitted observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.siem01
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: triage-case-submitted
+      semantic_ref: urn:aces:observable:triage-case-submitted
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  vendor-session-established:
+    description: The governed vendor-session-established observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.vpn-gateway
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: vendor-session-established
+      semantic_ref: urn:aces:observable:vendor-session-established
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+assertions:
+  backup-catalog-intact:
+    proposition: backup-catalog-intact
+    role: postcondition
+    polarity: positive
+  clinical-disruption-observed:
+    proposition: clinical-disruption-observed
+    role: postcondition
+    polarity: positive
+  ehr-api-healthy:
+    proposition: ehr-api-healthy
+    role: postcondition
+    polarity: positive
+  pacs-archive-healthy:
+    proposition: pacs-archive-healthy
+    role: postcondition
+    polarity: positive
+  phi-staging-observed:
+    proposition: phi-staging-observed
+    role: postcondition
+    polarity: positive
+  radiology-workflow-delayed:
+    proposition: radiology-workflow-delayed
+    role: postcondition
+    polarity: positive
+  soc-pipeline-up:
+    proposition: soc-pipeline-up
+    role: postcondition
+    polarity: positive
+  triage-case-submitted:
+    proposition: triage-case-submitted
+    role: postcondition
+    polarity: positive
+  vendor-session-established:
+    proposition: vendor-session-established
+    role: postcondition
+    polarity: positive
+  pre-clinical-disruption-observed:
+    proposition: clinical-disruption-observed
+    role: precondition
+    polarity: positive
+  pre-phish-mail-delivered:
+    proposition: phish-mail-delivered
+    role: precondition
+    polarity: positive
+evidence_requirements:
+  objective-truth-evidence:
+    description: Capture evidence used to decide authored proposition assertions.
+    source_refs:
+    - nodes.ehr-frontend
+    - nodes.backup-vault
+    - nodes.exchange01
+    - nodes.siem01
+    - nodes.pacs01
+    - nodes.vpn-gateway
+    - nodes.ehr-db
+    scope: authored objective, event, workflow, and participant assertion evaluation
+    boundary_kind: assertion_evaluation
+    channel: log
+    artifact_role: proposition_truth_evidence
+    media_types: [application/json]
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: study_lifetime
+    loss_disclosure: required
 vulnerabilities:
   macro-lure:
     name: Phishing macro lure
@@ -773,13 +990,13 @@ events:
     injects:
     - vendor-advisory
   phishing-delivery:
-    conditions:
-    - phish-mail-delivered
+    assertions:
+    - pre-phish-mail-delivered
     injects:
     - phishing-wave
   surgery-pressure:
-    conditions:
-    - clinical-disruption-observed
+    assertions:
+    - pre-clinical-disruption-observed
     injects:
     - surgery-escalation
 scripts:
@@ -1071,7 +1288,7 @@ objectives:
     - infrastructure.corp-it.acls.allow-vendor-support
     - vpn-vendor-support-path
     success:
-      conditions:
+      assertions:
       - vendor-session-established
     window:
       stories:
@@ -1090,7 +1307,7 @@ objectives:
     - ehr-to-database
     - ehr-db
     success:
-      conditions:
+      assertions:
       - phi-staging-observed
     window:
       stories:
@@ -1106,7 +1323,7 @@ objectives:
     - radiology-images
     - pacs-sync-to-backup
     success:
-      conditions:
+      assertions:
       - radiology-workflow-delayed
       - clinical-disruption-observed
     window:
@@ -1131,7 +1348,7 @@ objectives:
     - nodes.vpn-gateway.services.vpn-portal
     - infrastructure.corp-it.acls.allow-vendor-support
     success:
-      conditions:
+      assertions:
       - soc-pipeline-up
       - triage-case-submitted
     window:
@@ -1152,7 +1369,7 @@ objectives:
     - pacs01
     - backup-manages-ehr
     success:
-      conditions:
+      assertions:
       - ehr-api-healthy
       - pacs-archive-healthy
       - backup-catalog-intact

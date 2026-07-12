@@ -137,9 +137,6 @@ class _SectionsMixin:
 
     def _verify_event_refs(self, name: str, event: object) -> None:
         self._verify_membership_refs(
-            event.conditions, self._s.conditions, lambda ref: f"Event '{name}' references undefined condition '{ref}'"
-        )
-        self._verify_membership_refs(
             event.injects, self._s.injects, lambda ref: f"Event '{name}' references undefined inject '{ref}'"
         )
 

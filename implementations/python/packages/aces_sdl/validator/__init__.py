@@ -6,6 +6,7 @@ from ._content_objectives import _ContentObjectivesMixin
 from ._core import _ValidatorCore
 from ._evidence_requirements import _EvidenceRequirementsMixin
 from ._nodes_infra_network import _NodesInfraNetworkMixin
+from ._propositions import _PropositionsMixin
 from ._relationships import _RelationshipsMixin
 from ._relationships_proxy import _RelationshipsProxyMixin
 from ._runtime_identity_data import _RuntimeIdentityDataMixin
@@ -30,6 +31,7 @@ class SemanticValidator(
     _RelationshipsMixin,
     _RelationshipsProxyMixin,
     _ContentObjectivesMixin,
+    _PropositionsMixin,
     _EvidenceRequirementsMixin,
     _WorkflowAnalysisMixin,
     _WorkflowVerifyMixin,

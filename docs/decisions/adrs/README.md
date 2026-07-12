@@ -123,6 +123,7 @@ adr-075-ecosystem-versioning-deprecation-and-migration-governance
 adr-076-portable-sdl-identifiers-and-canonical-addresses
 adr-077-associated-artifact-manifest-boundary
 adr-078-closed-sdl-phase-contracts-and-portable-derivation-evidence
+adr-079-backend-neutral-proposition-and-truth-semantics
 ```
 
 | ADR | Title | Status | Date |
@@ -206,3 +207,4 @@ adr-078-closed-sdl-phase-contracts-and-portable-derivation-evidence
 | [076](adr-076-portable-sdl-identifiers-and-canonical-addresses.md) | Portable SDL Identifiers and Canonical Addresses | accepted | 2026-07-11 |
 | [077](adr-077-associated-artifact-manifest-boundary.md) | Associated Artifact Manifest Boundary | accepted | 2026-07-12 |
 | [078](adr-078-closed-sdl-phase-contracts-and-portable-derivation-evidence.md) | Closed SDL Phase Contracts and Portable Derivation Evidence | accepted | 2026-07-12 |
+| [079](adr-079-backend-neutral-proposition-and-truth-semantics.md) | Backend-Neutral Proposition and Truth Semantics | accepted | 2026-07-12 |

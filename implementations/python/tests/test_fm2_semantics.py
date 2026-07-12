@@ -52,11 +52,20 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 entities:
   blue: {role: blue}
 events:
-  kickoff: {conditions: [health]}
-  cleanup: {conditions: [health]}
+  kickoff: {assertions: [pre-health]}
+  cleanup: {assertions: [pre-health]}
 scripts:
   timeline: {start_time: 0, end_time: 60, speed: 1, events: {kickoff: 10}}
   side: {start_time: 0, end_time: 60, speed: 1, events: {cleanup: 20}}
@@ -65,7 +74,7 @@ stories:
 objectives:
   initial:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
     window:
       stories: [main]
       scripts: [side]
@@ -107,12 +116,21 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   initial:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
     window:
       workflows: [flow]
       steps: [flow.branch]
@@ -122,7 +140,7 @@ workflows:
     steps:
       branch:
         type: decision
-        when: {conditions: [health]}
+        when: {assertions: [pre-health]}
         then: finish
         else: finish
       finish: {type: end}
@@ -135,7 +153,10 @@ workflows:
 
         mutated = compile_runtime_model(
             parse_sdl(
-                raw.replace("/bin/true", "/bin/false"),
+                raw.replace("/bin/true", "/bin/false").replace(
+                    "urn:aces:declared-property:runtime",
+                    "urn:aces:declared-property:runtime-v2",
+                ),
                 skip_semantic_validation=False,
             )
         )
@@ -162,7 +183,7 @@ entities:
 objectives:
   base:
     entity: blue
-    success: {conditions: [missing-condition]}
+    success: {assertions: [missing-assertion]}
     depends_on: [missing-objective]
 """)
 
@@ -171,7 +192,7 @@ objectives:
 
         errors = exc_info.value.errors
         assert any(
-            "Objective 'base' references undefined condition 'missing-condition' in success criteria" in e
+            "Objective 'base' references undefined assertion 'missing-assertion' in success criteria" in e
             for e in errors
         )
         assert any("Objective 'base' depends on undefined objective 'missing-objective'" in e for e in errors)
@@ -193,15 +214,29 @@ nodes:
 conditions:
   ready: {command: /bin/true, interval: 15}
   gate: {command: /bin/echo, interval: 15}
+propositions:
+  ready:
+    description: The governed VM has declared ready state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: boolean, property: ready, semantic_ref: urn:aces:declared-property:ready, operator: equals, expected: true}
+  gate:
+    description: The governed VM has declared gate state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: boolean, property: gate, semantic_ref: urn:aces:declared-property:gate, operator: equals, expected: true}
+assertions:
+  ready: {proposition: ready, role: postcondition, polarity: positive}
+  gate: {proposition: gate, role: postcondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   base:
     entity: blue
-    success: {conditions: [ready]}
+    success: {assertions: [ready]}
   dependent:
     entity: blue
-    success: {conditions: [gate]}
+    success: {assertions: [gate]}
     depends_on: [base]
 """)
         compiled = compile_runtime_model(parse_sdl(raw))
@@ -212,7 +247,14 @@ objectives:
         baseline = plan(compiled, create_stub_manifest())
         snapshot = _snapshot_from_plan(baseline)
 
-        mutated = compile_runtime_model(parse_sdl(raw.replace("/bin/true", "/bin/false")))
+        mutated = compile_runtime_model(
+            parse_sdl(
+                raw.replace("/bin/true", "/bin/false").replace(
+                    "urn:aces:declared-property:ready",
+                    "urn:aces:declared-property:ready-v2",
+                )
+            )
+        )
         updated = plan(mutated, create_stub_manifest(), snapshot=snapshot)
 
         actions = {op.address: op.action.value for op in updated.evaluation.operations}

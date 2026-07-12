@@ -32,7 +32,7 @@ PLAN_RESOURCE_TYPES_BY_DOMAIN = {
         {"network", "node", "feature-binding", "content-placement", "account-placement"}
     ),
     RuntimeDomain.ORCHESTRATION: frozenset({"inject-binding", "inject", "event", "script", "story", "workflow"}),
-    RuntimeDomain.EVALUATION: frozenset({"condition-binding", "objective"}),
+    RuntimeDomain.EVALUATION: frozenset({"condition-binding", "proposition", "assertion", "objective"}),
 }
 
 

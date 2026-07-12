@@ -786,11 +786,45 @@ entities:
 
 conditions:
   scada-hmi-responsive:
+    proposition: scada-hmi-responsive
     command: /usr/bin/check-hmi-availability
     interval: 60
   scada-hmi-disrupted:
+    proposition: scada-hmi-disrupted
     command: /usr/bin/check-hmi-disruption
     interval: 60
+
+evidence_requirements:
+  scada-state-evidence:
+    description: Capture governed HMI state observations.
+    source_refs: [nodes.hmi-server]
+    scope_refs: [nodes.hmi-server]
+    boundary_kind: assertion_evaluation
+    channel: log
+    artifact_role: proposition_truth_evidence
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: study_lifetime
+    loss_disclosure: required
+
+propositions:
+  scada-hmi-responsive:
+    description: The governed SCADA HMI is responsive.
+    subjects: [nodes.hmi-server]
+    basis: observed_state
+    predicate: {kind: boolean, property: hmi-responsive, semantic_ref: urn:aces:observable:hmi-responsive, operator: equals, expected: true}
+    evidence_requirements: [scada-state-evidence]
+  scada-hmi-disrupted:
+    description: The governed SCADA HMI is disrupted.
+    subjects: [nodes.hmi-server]
+    basis: observed_state
+    predicate: {kind: boolean, property: hmi-disrupted, semantic_ref: urn:aces:observable:hmi-disrupted, operator: equals, expected: true}
+    evidence_requirements: [scada-state-evidence]
+
+assertions:
+  scada-hmi-responsive: {proposition: scada-hmi-responsive, role: postcondition, polarity: positive}
+  scada-hmi-disrupted: {proposition: scada-hmi-disrupted, role: postcondition, polarity: positive}
 
 events:
   disruption-wave: {}
@@ -814,7 +848,7 @@ objectives:
     entity: crimsonia-red
     targets: [hmi-controls-power, hmi-controls-water, hmi-server]
     success:
-      conditions: [scada-hmi-disrupted]
+      assertions: [scada-hmi-disrupted]
     window:
       stories: [main-exercise]
       scripts: [locked-shields-day-1]
@@ -824,7 +858,7 @@ objectives:
     entity: berylia-blue.ot-team
     targets: [hmi-server, plc-power, plc-water]
     success:
-      conditions: [scada-hmi-responsive]
+      assertions: [scada-hmi-responsive]
     window:
       stories: [main-exercise]
       scripts: [locked-shields-day-1]

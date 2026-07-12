@@ -722,7 +722,15 @@
       "terms": {
         "conditions": {
           "title": "Conditions",
-          "description": "Condition section support."
+          "description": "Legacy executable probe declaration support."
+        },
+        "propositions": {
+          "title": "Propositions",
+          "description": "Backend-neutral typed observable proposition support."
+        },
+        "assertions": {
+          "title": "Assertions",
+          "description": "Typed proposition-use and truth composition support."
         },
         "objectives": {
           "title": "Objectives",

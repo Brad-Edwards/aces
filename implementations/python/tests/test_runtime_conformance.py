@@ -1230,10 +1230,18 @@ nodes:
     roles: {{ops: operator}}
 conditions:
   health: {{command: /bin/true, interval: 15}}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.{node_name}]
+    basis: declared_state
+    predicate: {{kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}}
+assertions:
+  health: {{proposition: health, role: postcondition, polarity: positive}}
 entities:
   blue: {{role: blue}}
 objectives:
-  validate: {{entity: blue, success: {{conditions: [health]}}}}
+  validate: {{entity: blue, success: {{assertions: [health]}}}}
 workflows:
   response:
     start: run

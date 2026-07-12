@@ -30,15 +30,28 @@ def _scenario_with_specificity_levels():
           red-agent:
             entity: red
             description: ${participant_label}
-        conditions:
+        propositions:
           objective-complete:
-            command: /bin/true
-            interval: 5
+            description: The red participant has completed the governed assessment activity.
+            subjects: [entities.red]
+            basis: declared_state
+            predicate:
+              kind: boolean
+              property: assessment-complete
+              semantic_ref: urn:aces:declared-property:assessment-complete
+              operator: equals
+              expected: true
+        assertions:
+          objective-complete:
+            description: Assessment completion is required at the objective boundary.
+            proposition: objective-complete
+            role: postcondition
+            polarity: positive
         objectives:
           assess:
             agent: red-agent
             success:
-              conditions: [objective-complete]
+              assertions: [objective-complete]
         """)
     )
 
@@ -55,7 +68,7 @@ def test_specificity_classifies_scenario_participant_and_evaluation_concerns():
         _scenario_with_specificity_levels(),
         admitted_open_paths=(
             "version",
-            "objectives.assess.success.conditions[0]",
+            "objectives.assess.success.assertions[0]",
             "agents.red-agent.initial_knowledge",
             "objectives.assess.window",
         ),
@@ -63,7 +76,7 @@ def test_specificity_classifies_scenario_participant_and_evaluation_concerns():
 
     assert result.records["version"].classification is ExplicitnessClass.CONSTRAINED
     assert result.records["agents.red-agent.description"].classification is ExplicitnessClass.CONSTRAINED
-    assert result.records["objectives.assess.success.conditions[0]"].classification is ExplicitnessClass.EXACT
+    assert result.records["objectives.assess.success.assertions[0]"].classification is ExplicitnessClass.EXACT
     assert result.records["agents.red-agent.initial_knowledge"].classification is ExplicitnessClass.OPEN
     assert result.records["objectives.assess.window"].classification is ExplicitnessClass.OPEN
 

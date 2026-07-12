@@ -95,10 +95,36 @@ features:
 
 conditions:
   service-check:
+    proposition: service-ready
     command: /usr/local/bin/check.sh
     interval: 30
   lib-condition:
     source: checker-pkg
+
+evidence_requirements:
+  service-check-evidence:
+    description: Capture the governed service readiness observation.
+    source_refs: [nodes.win-10]
+    scope_refs: [nodes.win-10]
+    boundary_kind: assertion_evaluation
+    channel: log
+    artifact_role: proposition_truth_evidence
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: study_lifetime
+    loss_disclosure: required
+
+propositions:
+  service-ready:
+    description: The governed service is ready for the event.
+    subjects: [nodes.win-10]
+    basis: observed_state
+    predicate: {kind: boolean, property: service-ready, semantic_ref: urn:aces:observable:service-ready, operator: equals, expected: true}
+    evidence_requirements: [service-check-evidence]
+
+assertions:
+  service-ready: {proposition: service-ready, role: precondition, polarity: positive}
 
 vulnerabilities:
   sqli-vuln:
@@ -127,8 +153,8 @@ injects:
 
 events:
   attack-event:
-    conditions:
-      - service-check
+    assertions:
+      - service-ready
     injects:
       - attack-inject
 
@@ -1189,11 +1215,45 @@ vulnerabilities:
 
 conditions:
   enterprise0-compromised:
+    proposition: enterprise0-compromised
     command: /usr/bin/check-enterprise0-compromise
     interval: 60
   enterprise0-detected:
+    proposition: enterprise0-detected
     command: /usr/bin/check-enterprise0-detection
     interval: 60
+
+evidence_requirements:
+  enterprise0-state-evidence:
+    description: Capture governed enterprise0 state observations.
+    source_refs: [nodes.enterprise0]
+    scope_refs: [nodes.enterprise0]
+    boundary_kind: assertion_evaluation
+    channel: log
+    artifact_role: proposition_truth_evidence
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: study_lifetime
+    loss_disclosure: required
+
+propositions:
+  enterprise0-compromised:
+    description: The governed enterprise0 host is compromised.
+    subjects: [nodes.enterprise0]
+    basis: observed_state
+    predicate: {kind: boolean, property: compromised, semantic_ref: urn:aces:observable:compromised, operator: equals, expected: true}
+    evidence_requirements: [enterprise0-state-evidence]
+  enterprise0-detected:
+    description: Compromise of the governed enterprise0 host was detected.
+    subjects: [nodes.enterprise0]
+    basis: observed_state
+    predicate: {kind: boolean, property: compromise-detected, semantic_ref: urn:aces:observable:compromise-detected, operator: equals, expected: true}
+    evidence_requirements: [enterprise0-state-evidence]
+
+assertions:
+  enterprise0-compromised: {proposition: enterprise0-compromised, role: postcondition, polarity: positive}
+  enterprise0-detected: {proposition: enterprise0-detected, role: postcondition, polarity: positive}
 
 accounts:
   phished-user:
@@ -1275,7 +1335,7 @@ objectives:
     actions: [DiscoverRemoteSystems, ExploitRemoteService, EternalBlue]
     targets: [enterprise0]
     success:
-      conditions: [enterprise0-compromised]
+      assertions: [enterprise0-compromised]
     window:
       stories: [exercise]
       scripts: [day-1]
@@ -1286,7 +1346,7 @@ objectives:
     actions: [Monitor, Analyse]
     targets: [enterprise0, velociraptor]
     success:
-      conditions: [enterprise0-detected]
+      assertions: [enterprise0-detected]
     window:
       stories: [exercise]
       scripts: [day-1]
@@ -1439,8 +1499,34 @@ entities:
 
 conditions:
   federation-service-up:
+    proposition: federation-service-up
     command: /usr/bin/check-adfs-federation
     interval: 60
+
+evidence_requirements:
+  federation-state-evidence:
+    description: Capture governed federation service observations.
+    source_refs: [nodes.adfs]
+    scope_refs: [nodes.adfs]
+    boundary_kind: assertion_evaluation
+    channel: log
+    artifact_role: proposition_truth_evidence
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: study_lifetime
+    loss_disclosure: required
+
+propositions:
+  federation-service-up:
+    description: The governed federation service is available.
+    subjects: [nodes.adfs]
+    basis: observed_state
+    predicate: {kind: boolean, property: federation-service-up, semantic_ref: urn:aces:observable:federation-service-up, operator: equals, expected: true}
+    evidence_requirements: [federation-state-evidence]
+
+assertions:
+  federation-service-up: {proposition: federation-service-up, role: postcondition, polarity: positive}
 
 events:
   federation-cutover: {}
@@ -1462,7 +1548,7 @@ objectives:
     entity: blue-team
     targets: [adfs-service, child-trusts-parent]
     success:
-      conditions: [federation-service-up]
+      assertions: [federation-service-up]
     window:
       stories: [federation-exercise]
       scripts: [identity-day]

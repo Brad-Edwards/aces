@@ -2237,17 +2237,17 @@ class TestStory:
 
 class TestObjectiveSuccess:
     def test_requires_at_least_one_reference(self):
-        with pytest.raises(ValidationError, match="at least one condition"):
+        with pytest.raises(ValidationError, match="at least one assertion"):
             ObjectiveSuccess()
 
-    def test_accepts_condition_reference(self):
-        success = ObjectiveSuccess(conditions=["exercise-passed"])
-        assert success.conditions == ["exercise-passed"]
+    def test_accepts_assertion_reference(self):
+        success = ObjectiveSuccess(assertions=["exercise-passed"])
+        assert success.assertions == ["exercise-passed"]
 
     def test_mode_placeholder(self):
         success = ObjectiveSuccess(
             mode="${objective_mode}",
-            conditions=["exercise-passed"],
+            assertions=["exercise-passed"],
         )
         assert success.mode == "${objective_mode}"
 
@@ -2256,14 +2256,14 @@ class TestObjective:
     def test_requires_exactly_one_actor_binding(self):
         with pytest.raises(ValidationError, match="exactly one"):
             Objective(
-                success={"conditions": ["c1"]},
+                success={"assertions": ["c1"]},
             )
 
         with pytest.raises(ValidationError, match="exactly one"):
             Objective(
                 agent="red-agent",
                 entity="red-team",
-                success={"conditions": ["c1"]},
+                success={"assertions": ["c1"]},
             )
 
     def test_valid_agent_objective(self):
@@ -2271,7 +2271,7 @@ class TestObjective:
             agent="red-agent",
             actions=["Scan"],
             targets=["web-server"],
-            success={"conditions": ["initial-access"]},
+            success={"assertions": ["initial-access"]},
             window={
                 "scripts": ["main-timeline"],
                 "events": ["attack-wave"],
@@ -2281,14 +2281,14 @@ class TestObjective:
             depends_on=["recon"],
         )
         assert objective.agent == "red-agent"
-        assert objective.success.conditions == ["initial-access"]
+        assert objective.success.assertions == ["initial-access"]
         assert isinstance(objective.window, ObjectiveWindow)
         assert objective.window.steps == ["response-flow.validate"]
 
     def test_valid_entity_objective(self):
         objective = Objective(
             entity="blue-team",
-            success={"conditions": ["report-quality"]},
+            success={"assertions": ["report-quality"]},
         )
         assert objective.entity == "blue-team"
 
@@ -2551,7 +2551,7 @@ class TestWorkflow:
             ValidationError,
             match="requires 'when', 'then', and 'else'",
         ):
-            WorkflowStep(type="decision", when={"conditions": ["c1"]})
+            WorkflowStep(type="decision", when={"assertions": ["c1"]})
 
     def test_parallel_step_requires_unique_branches(self):
         with pytest.raises(ValidationError, match="branches must be unique"):
@@ -2595,7 +2595,7 @@ class TestWorkflow:
             type="switch",
             cases=[
                 {
-                    "when": {"conditions": ["c1"]},
+                    "when": {"assertions": ["c1"]},
                     "next": "done",
                 }
             ],
@@ -2698,7 +2698,7 @@ class TestWorkflow:
         ):
             WorkflowStep(
                 type="decision",
-                when={"conditions": ["c1"]},
+                when={"assertions": ["c1"]},
                 **{"then": "a", "else": "b", "on_failure": "recover"},
             )
 
@@ -2723,7 +2723,7 @@ class TestWorkflow:
 
     def test_legacy_workflow_step_type_rejected(self):
         with pytest.raises(ValidationError, match="no longer supported"):
-            WorkflowStep(type="if", when={"conditions": ["c1"]}, **{"then": "a", "else": "b"})
+            WorkflowStep(type="if", when={"assertions": ["c1"]}, **{"then": "a", "else": "b"})
 
     def test_predicate_empty_rejected(self):
         with pytest.raises(ValidationError, match="must reference at least one"):
@@ -2802,13 +2802,13 @@ class TestAgent:
 
     def test_default_framing_lists_are_empty(self):
         a = Agent(entity="red-team")
-        assert a.starting_conditions == []
+        assert a.starting_assertions == []
         assert a.authority_anchors == []
         assert a.operating_scope == []
 
-    def test_starting_conditions_field(self):
-        a = Agent(entity="red-team", starting_conditions=["beacon-online", "vpn-up"])
-        assert a.starting_conditions == ["beacon-online", "vpn-up"]
+    def test_starting_assertions_field(self):
+        a = Agent(entity="red-team", starting_assertions=["beacon-online", "vpn-up"])
+        assert a.starting_assertions == ["beacon-online", "vpn-up"]
 
     def test_authority_anchors_field(self):
         a = Agent(
@@ -2827,11 +2827,11 @@ class TestAgent:
     def test_framing_fields_accept_variable_placeholders(self):
         a = Agent(
             entity="red-team",
-            starting_conditions=["${beacon_condition}"],
+            starting_assertions=["${beacon_condition}"],
             authority_anchors=["${authority_ref}"],
             operating_scope=["${scope_ref}"],
         )
-        assert a.starting_conditions == ["${beacon_condition}"]
+        assert a.starting_assertions == ["${beacon_condition}"]
         assert a.authority_anchors == ["${authority_ref}"]
         assert a.operating_scope == ["${scope_ref}"]
 

@@ -42,20 +42,20 @@
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "19dd8c5aa113fc8ce21c811bf75ef3e22367ae41fcc454c5139cd85db0fb5a60",
+      "content_hash": "e2beb9d9f20f7564c8b485b653c706b8b3d83ebdc535bff62e80fbcd82d8200f",
       "last_change": {
-        "summary": "Added typed configuration-bound realization-envelope identity carriage for ASR-519.",
-        "content_hash": "19dd8c5aa113fc8ce21c811bf75ef3e22367ae41fcc454c5139cd85db0fb5a60"
+        "summary": "Published evaluator proposition, assertion, evidence, truth-outcome, temporal, and binding-provenance capability declarations and assertion-aware orchestration support.",
+        "content_hash": "e2beb9d9f20f7564c8b485b653c706b8b3d83ebdc535bff62e80fbcd82d8200f"
       }
     },
     {
       "contract_id": "backend-profile-v1",
       "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
       "stability": "draft",
-      "content_hash": "0c019e86d071bf97bc4464e76d1c224699e9f418e76cdcf117d6b813a3e9ac87",
+      "content_hash": "7796e171b81cc47e15446d77097c63d56564235b96a5f82e8e813753d4f7b709",
       "last_change": {
-        "summary": "Added realization-envelope-v1 to the governed backend contract vocabulary for configuration-bound ASR-519 claims.",
-        "content_hash": "0c019e86d071bf97bc4464e76d1c224699e9f418e76cdcf117d6b813a3e9ac87"
+        "summary": "Added proposition-truth-result-v1 to the governed backend contract vocabulary.",
+        "content_hash": "7796e171b81cc47e15446d77097c63d56564235b96a5f82e8e813753d4f7b709"
       }
     },
     {
@@ -84,10 +84,10 @@
       "contract_id": "evaluation-plan-v1",
       "schema_path": "contracts/schemas/plans/evaluation-plan-v1.json",
       "stability": "draft",
-      "content_hash": "96a94d633471cab89a5c68ddf3f230c4d6aa93f89a92aaf8e99383062f7595da",
+      "content_hash": "804f1970cbf9d80e80c3f984deb1d0f034470df7b25ee10ce7c7959b6ad69a4b",
       "last_change": {
-        "summary": "Constrained evaluation operations to the evaluation address domain and closed resource-type vocabulary for DSL-101/DSL-102/SEM-205.",
-        "content_hash": "96a94d633471cab89a5c68ddf3f230c4d6aa93f89a92aaf8e99383062f7595da"
+        "summary": "Added proposition and assertion semantic-admission resources to the closed evaluation-plan vocabulary.",
+        "content_hash": "804f1970cbf9d80e80c3f984deb1d0f034470df7b25ee10ce7c7959b6ad69a4b"
       }
     },
     {
@@ -180,20 +180,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "f912c41c8d6a726b7f220bdc8435a6ad37f3c0478e3aee9ba4010a5dc8fd19c3",
+      "content_hash": "8670e3cf3aafc452f25311e4eb98ed82bb89561faaaf368a9232448c8440a3c3",
       "last_change": {
-        "summary": "Introduced the required-profile JCS envelope and annotated derivation evidence as artifact metadata outside the realization-envelope dimension projection.",
-        "content_hash": "f912c41c8d6a726b7f220bdc8435a6ad37f3c0478e3aee9ba4010a5dc8fd19c3"
+        "summary": "Published backend-neutral propositions and assertions in canonical instantiated scenario snapshots.",
+        "content_hash": "8670e3cf3aafc452f25311e4eb98ed82bb89561faaaf368a9232448c8440a3c3"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "563e15f0da47093795cb5daec53d268bb6f436299e6c258be0d71f7aefc60bd3",
+      "content_hash": "58d4f2e69b91ad1639717d7892499bd1b2f007e23c0cb980314cbd701c2cd000",
       "last_change": {
-        "summary": "Closed the instantiated phase shape, required portable derivation evidence, forbade live authoring machinery, and marked provenance as non-realizable artifact metadata.",
-        "content_hash": "563e15f0da47093795cb5daec53d268bb6f436299e6c258be0d71f7aefc60bd3"
+        "summary": "Published backend-neutral propositions, assertions, role-constrained truth references, and explicit condition-to-proposition bindings.",
+        "content_hash": "58d4f2e69b91ad1639717d7892499bd1b2f007e23c0cb980314cbd701c2cd000"
       }
     },
     {
@@ -350,7 +350,21 @@
       "contract_id": "processor-manifest-v2",
       "schema_path": "contracts/schemas/processor-manifest/processor-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "f47537f72e1f607b634b0d1f9d8854cc8abd11e0edec7272549d4d910f38993e"
+      "content_hash": "882ea02e0294d3ed7fb62b6bafec699236a5e3d42f4e22de27107ef3f2c25510",
+      "last_change": {
+        "summary": "Added proposition-truth-result-v1 to the processor contract surface.",
+        "content_hash": "882ea02e0294d3ed7fb62b6bafec699236a5e3d42f4e22de27107ef3f2c25510"
+      }
+    },
+    {
+      "contract_id": "proposition-truth-result-v1",
+      "schema_path": "contracts/schemas/control-plane/proposition-truth-result-v1.json",
+      "stability": "draft",
+      "content_hash": "4a37fa964b8a7e3e641f381a27ea6960e9bc1efb8edfe426b9c19e173f7a045f",
+      "last_change": {
+        "summary": "Initial publication of portable four-valued proposition truth results with typed evidence, provenance, temporal context, loss disclosure, and capability-bounded unsupported outcomes.",
+        "content_hash": "4a37fa964b8a7e3e641f381a27ea6960e9bc1efb8edfe426b9c19e173f7a045f"
+      }
     },
     {
       "contract_id": "provisioning-plan-v1",
@@ -392,10 +406,10 @@
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "e3fa3702a06d7c025d34b90a8830b9099034fbea663cbe23c75368fabe72530d",
+      "content_hash": "4e20e5c91ccd425c88be75a0e55be97f07d311e6499fc6bf73c3db4b37fa51bf",
       "last_change": {
-        "summary": "Added typed realization-envelope identity persistence and closed snapshot entries to canonical compiled-address keys.",
-        "content_hash": "e3fa3702a06d7c025d34b90a8830b9099034fbea663cbe23c75368fabe72530d"
+        "summary": "Added portable proposition truth results as a distinct runtime snapshot carrier outside ordinary evaluation result envelopes.",
+        "content_hash": "4e20e5c91ccd425c88be75a0e55be97f07d311e6499fc6bf73c3db4b37fa51bf"
       }
     },
     {
@@ -412,10 +426,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "657347edf6a62da2fe6cf1ee5d16bea5531069beef896c467d2ce2792d05a15f",
+      "content_hash": "17f941e916ffcbeb3e36b894029332326257bc7e4d1ab3419bc6e06c7f06f801",
       "last_change": {
-        "summary": "Published phase-specific portable local identifiers, bounded qualified references, explicit module namespaces, and stable list-valued forwarding-agent identities for DSL-101/DSL-102/SEM-205.",
-        "content_hash": "657347edf6a62da2fe6cf1ee5d16bea5531069beef896c467d2ce2792d05a15f"
+        "summary": "Published backend-neutral proposition and assertion authoring, role-constrained objective/event/workflow/participant references, and explicit probe bindings.",
+        "content_hash": "17f941e916ffcbeb3e36b894029332326257bc7e4d1ab3419bc6e06c7f06f801"
       }
     },
     {

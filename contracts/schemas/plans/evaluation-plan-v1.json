@@ -55,8 +55,10 @@
         },
         "resource_type": {
           "enum": [
+            "assertion",
             "condition-binding",
-            "objective"
+            "objective",
+            "proposition"
           ],
           "title": "Resource Type",
           "type": "string"

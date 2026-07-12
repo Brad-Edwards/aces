@@ -74,7 +74,7 @@
     },
     "scenario-condition": {
       "title": "Scenario Condition",
-      "description": "Shared reference model for observable condition declarations.",
+      "description": "Shared reference model for legacy executable probe declarations; a condition is a realization mechanism, not an observable proposition.",
       "concept_family": "observables",
       "authoritative_schema": {
         "contract_id": "sdl-authoring-input-v1",
@@ -89,10 +89,57 @@
         }
       ],
       "key_fields": [
+        "proposition",
         "command",
         "interval",
         "source",
         "environment"
+      ]
+    },
+    "scenario-proposition": {
+      "title": "Scenario Proposition",
+      "description": "Shared reference model for backend-neutral typed claims over declared or observed scenario state.",
+      "concept_family": "observables",
+      "authoritative_schema": {
+        "contract_id": "sdl-authoring-input-v1",
+        "schema_pointer": "#/$defs/Proposition",
+        "instance_path": "propositions.*"
+      },
+      "reused_schemas": [
+        {
+          "contract_id": "instantiated-scenario-v1",
+          "schema_pointer": "#/$defs/Proposition",
+          "instance_path": "propositions.*"
+        }
+      ],
+      "key_fields": [
+        "subjects",
+        "basis",
+        "predicate",
+        "quantifier",
+        "evidence_requirements"
+      ]
+    },
+    "scenario-assertion": {
+      "title": "Scenario Assertion",
+      "description": "Shared reference model for a precondition, invariant, or postcondition use of a proposition.",
+      "concept_family": "observables",
+      "authoritative_schema": {
+        "contract_id": "sdl-authoring-input-v1",
+        "schema_pointer": "#/$defs/Assertion",
+        "instance_path": "assertions.*"
+      },
+      "reused_schemas": [
+        {
+          "contract_id": "instantiated-scenario-v1",
+          "schema_pointer": "#/$defs/Assertion",
+          "instance_path": "assertions.*"
+        }
+      ],
+      "key_fields": [
+        "proposition",
+        "role",
+        "polarity"
       ]
     },
     "scenario-event": {
@@ -114,7 +161,7 @@
       "key_fields": [
         "name",
         "source",
-        "conditions",
+        "assertions",
         "injects"
       ]
     },

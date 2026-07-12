@@ -12,7 +12,7 @@ are a deployment-layer concern.
 The ``Agent`` model is the SDL-authoring surface for declarative
 participant framing (ACT-601, ADR-020). Identity binds to a declared
 ``entities`` entry, role reuses ``entities.role``, starting conditions
-combine ``starting_accounts``/``initial_knowledge``/``starting_conditions``,
+combine ``starting_accounts``/``initial_knowledge``/``starting_assertions``,
 authority anchors point at declared SDL elements, and operating scope
 combines ``allowed_subnets`` with the broader ``operating_scope`` list.
 """
@@ -46,9 +46,9 @@ class Agent(SDLModel):
     - ``starting_accounts`` links to the accounts section
     - ``allowed_subnets`` links to infrastructure entries
     - ``initial_knowledge`` references nodes and infrastructure
-    - ``starting_conditions`` links to the conditions section, giving the
-      authoring surface a declarative hook for participant-relevant
-      precondition checks (ACT-601)
+    - ``starting_assertions`` links to precondition assertions, giving the
+      authoring surface a declarative hook for participant-relevant starting
+      state without equating a probe implementation with truth (ACT-601)
     - ``authority_anchors`` links to declared SDL elements (entities,
       relationships, content, etc.) that anchor what the participant is
       allowed or expected to do in scenario meaning (ACT-601, ADR-020)
@@ -70,10 +70,20 @@ class Agent(SDLModel):
     starting_accounts: list[str] = Field(default_factory=list)
     initial_knowledge: InitialKnowledge | None = None
     allowed_subnets: list[str] = Field(default_factory=list)
-    starting_conditions: list[str] = Field(default_factory=list)
+    starting_assertions: list[str] = Field(default_factory=list)
     authority_anchors: list[str] = Field(default_factory=list)
     operating_scope: list[str] = Field(default_factory=list)
     observation_boundaries: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_legacy_starting_conditions(cls, value: object) -> object:
+        if isinstance(value, dict) and "starting_conditions" in value:
+            raise ValueError(
+                "agent starting_conditions cannot state backend-neutral truth; "
+                "reference precondition assertions via starting_assertions"
+            )
+        return value
 
     @model_validator(mode="after")
     def validate_required_entity(self) -> "Agent":

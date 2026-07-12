@@ -83,8 +83,44 @@ features:
 
 conditions:
   alive:
+    proposition: web-alive
     command: "curl -sf http://localhost/ || exit 1"
     interval: 15
+
+evidence_requirements:
+  web-health-evidence:
+    description: Capture the governed web health observation.
+    source_refs: [nodes.web]
+    scope_refs: [nodes.web]
+    trigger_ref: conditions.alive
+    channel: api_response
+    artifact_role: proposition_truth_evidence
+    media_types: [application/json]
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: study_lifetime
+    loss_disclosure: required
+
+propositions:
+  web-alive:
+    description: The governed web service responds successfully.
+    subjects: [nodes.web]
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: service-alive
+      semantic_ref: urn:aces:observable:service-alive
+      operator: equals
+      expected: true
+    evidence_requirements: [web-health-evidence]
+
+assertions:
+  web-alive:
+    description: The web service must be alive at the objective boundary.
+    proposition: web-alive
+    role: postcondition
+    polarity: positive
 
 vulnerabilities:
   sqli: {name: SQL Injection, description: "SQLi in login", technical: true, class: CWE-89}
@@ -141,7 +177,7 @@ objectives:
     agent: red-agent
     actions: [Scan]
     targets: [web]
-    success: {conditions: [alive]}
+    success: {assertions: [web-alive]}
     window: {stories: [exercise]}
 
 workflows:

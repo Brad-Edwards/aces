@@ -118,13 +118,27 @@ _DEFAULT_CONFORMANCE_SCENARIO = dedent(
         conditions: {health: ops}
         roles: {ops: operator}
     conditions:
-      health: {command: /bin/true, interval: 15}
+      health: {proposition: health-state, command: /bin/true, interval: 15}
     entities:
       blue: {role: blue}
+    propositions:
+      health-state:
+        description: The conformance VM is declared in the admitted scenario.
+        subjects: [nodes.vm]
+        basis: declared_state
+        predicate:
+          kind: presence
+          property: node
+          semantic_ref: urn:aces:declared-property:node
+          operator: exists
+    assertions:
+      health:
+        proposition: health-state
+        role: postcondition
     objectives:
       validate:
         entity: blue
-        success: {conditions: [health]}
+        success: {assertions: [health]}
     workflows:
       response:
         start: run

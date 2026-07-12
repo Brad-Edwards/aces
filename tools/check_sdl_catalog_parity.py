@@ -97,6 +97,9 @@ _EVIDENCE_VALIDATOR = (
 )
 _OBJECTIVE_SEMANTICS = "[objective semantics](objective-semantics.md)"
 _WORKFLOW_SEMANTICS = "[workflow semantics](workflow-semantics.md)"
+_PROPOSITION_VALIDATOR = (
+    "[proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py)"
+)
 _SEMANTIC = "semantic validation"
 _STRUCTURAL = "structural validation"
 _DANGLING = "fatal dangling or ambiguous"
@@ -107,9 +110,43 @@ _DANGLING = "fatal dangling or ambiguous"
 _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
     "nodes.*.features[]": ("features", _SEMANTIC, _DANGLING, _NODE_VALIDATOR),
     "nodes.*.conditions[]": ("conditions", _SEMANTIC, _DANGLING, _NODE_VALIDATOR),
+    "conditions.*.proposition": (
+        "propositions",
+        _SEMANTIC,
+        "fatal dangling or ambiguous when present",
+        _PROPOSITION_VALIDATOR,
+    ),
+    "propositions.*.subjects[]": (
+        "targetable",
+        _SEMANTIC,
+        _DANGLING,
+        _PROPOSITION_VALIDATOR,
+    ),
+    "propositions.*.evidence_requirements[]": (
+        "evidence_requirements",
+        _SEMANTIC,
+        _DANGLING,
+        _PROPOSITION_VALIDATOR,
+    ),
+    "assertions.*.proposition": (
+        "propositions",
+        _SEMANTIC,
+        _DANGLING,
+        _PROPOSITION_VALIDATOR,
+    ),
     "nodes.*.injects[]": ("injects", _SEMANTIC, _DANGLING, _NODE_VALIDATOR),
-    "nodes.*.vulnerabilities[]": ("vulnerabilities", _SEMANTIC, _DANGLING, _NODE_VALIDATOR),
-    "infrastructure.*.links[]": ("infrastructure", _SEMANTIC, _DANGLING, _INFRASTRUCTURE_VALIDATOR),
+    "nodes.*.vulnerabilities[]": (
+        "vulnerabilities",
+        _SEMANTIC,
+        _DANGLING,
+        _NODE_VALIDATOR,
+    ),
+    "infrastructure.*.links[]": (
+        "infrastructure",
+        _SEMANTIC,
+        _DANGLING,
+        _INFRASTRUCTURE_VALIDATOR,
+    ),
     "infrastructure.*.dependencies[]": (
         "infrastructure",
         _SEMANTIC,
@@ -122,15 +159,35 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         "fatal dangling, ambiguous, or cyclic",
         _SECTION_VALIDATOR,
     ),
-    "entities.*.vulnerabilities[]": ("vulnerabilities", _SEMANTIC, _DANGLING, _SECTION_VALIDATOR),
+    "entities.*.vulnerabilities[]": (
+        "vulnerabilities",
+        _SEMANTIC,
+        _DANGLING,
+        _SECTION_VALIDATOR,
+    ),
     "injects.*.from_entity": ("entities", _SEMANTIC, _DANGLING, _SECTION_VALIDATOR),
     "injects.*.to_entities[]": ("entities", _SEMANTIC, _DANGLING, _SECTION_VALIDATOR),
-    "events.*.conditions[]": ("conditions", _SEMANTIC, _DANGLING, _SECTION_VALIDATOR),
+    "events.*.assertions[]": (
+        "assertions",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or non-precondition role",
+        _PROPOSITION_VALIDATOR,
+    ),
     "events.*.injects[]": ("injects", _SEMANTIC, _DANGLING, _SECTION_VALIDATOR),
     "scripts.*.events[]": ("events", _SEMANTIC, _DANGLING, _SECTION_VALIDATOR),
     "stories.*.scripts[]": ("scripts", _SEMANTIC, _DANGLING, _SECTION_VALIDATOR),
-    "content.*.target": ("nodes", _SEMANTIC, "fatal unless target is a vm node", _CONTENT_VALIDATOR),
-    "accounts.*.node": ("nodes", _SEMANTIC, "fatal unless target is a vm node", _ACCOUNT_VALIDATOR),
+    "content.*.target": (
+        "nodes",
+        _SEMANTIC,
+        "fatal unless target is a vm node",
+        _CONTENT_VALIDATOR,
+    ),
+    "accounts.*.node": (
+        "nodes",
+        _SEMANTIC,
+        "fatal unless target is a vm node",
+        _ACCOUNT_VALIDATOR,
+    ),
     "relationships.*.source": (
         "targetable",
         _SEMANTIC,
@@ -144,7 +201,18 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _RELATIONSHIP_VALIDATOR,
     ),
     "agents.*.entity": ("entities", _SEMANTIC, _DANGLING, _PARTICIPANT_VALIDATOR),
-    "agents.*.starting_accounts[]": ("accounts", _SEMANTIC, _DANGLING, _PARTICIPANT_VALIDATOR),
+    "agents.*.starting_accounts[]": (
+        "accounts",
+        _SEMANTIC,
+        _DANGLING,
+        _PARTICIPANT_VALIDATOR,
+    ),
+    "agents.*.starting_assertions[]": (
+        "assertions",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or non-precondition role",
+        _PROPOSITION_VALIDATOR,
+    ),
     "action_contracts.*.interactions.*.related_action_ref": (
         "action_contracts",
         _SEMANTIC,
@@ -163,7 +231,12 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _DANGLING,
         _OUTCOME_SEMANTICS,
     ),
-    "behavior_specifications.*.participant_refs[]": ("agents", _SEMANTIC, _DANGLING, _BEHAVIOR_SEMANTICS),
+    "behavior_specifications.*.participant_refs[]": (
+        "agents",
+        _SEMANTIC,
+        _DANGLING,
+        _BEHAVIOR_SEMANTICS,
+    ),
     "behavior_specifications.*.participant_role_refs[]": (
         "derived:agent_roles",
         _SEMANTIC,
@@ -230,21 +303,68 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         "fatal unknown contract identifier",
         _BEHAVIOR_SEMANTICS,
     ),
-    "evidence_requirements.*.source_refs[]": ("targetable", _SEMANTIC, _DANGLING, _EVIDENCE_VALIDATOR),
-    "evidence_requirements.*.scope_refs[]": ("targetable", _SEMANTIC, _DANGLING, _EVIDENCE_VALIDATOR),
-    "evidence_requirements.*.channel_refs[]": ("targetable", _SEMANTIC, _DANGLING, _EVIDENCE_VALIDATOR),
-    "evidence_requirements.*.trigger_ref": ("targetable", _SEMANTIC, _DANGLING, _EVIDENCE_VALIDATOR),
-    "evidence_requirements.*.boundary_ref": ("targetable", _SEMANTIC, _DANGLING, _EVIDENCE_VALIDATOR),
+    "evidence_requirements.*.source_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        _DANGLING,
+        _EVIDENCE_VALIDATOR,
+    ),
+    "evidence_requirements.*.scope_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        _DANGLING,
+        _EVIDENCE_VALIDATOR,
+    ),
+    "evidence_requirements.*.channel_refs[]": (
+        "targetable",
+        _SEMANTIC,
+        _DANGLING,
+        _EVIDENCE_VALIDATOR,
+    ),
+    "evidence_requirements.*.trigger_ref": (
+        "targetable",
+        _SEMANTIC,
+        _DANGLING,
+        _EVIDENCE_VALIDATOR,
+    ),
+    "evidence_requirements.*.boundary_ref": (
+        "targetable",
+        _SEMANTIC,
+        _DANGLING,
+        _EVIDENCE_VALIDATOR,
+    ),
     "objectives.*.agent": ("agents", _SEMANTIC, _DANGLING, _OBJECTIVE_SEMANTICS),
     "objectives.*.entity": ("entities", _SEMANTIC, _DANGLING, _OBJECTIVE_SEMANTICS),
-    "objectives.*.targets[]": ("targetable", _SEMANTIC, _DANGLING, _OBJECTIVE_SEMANTICS),
+    "objectives.*.targets[]": (
+        "targetable",
+        _SEMANTIC,
+        _DANGLING,
+        _OBJECTIVE_SEMANTICS,
+    ),
+    "objectives.*.success.assertions[]": (
+        "assertions",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or precondition role",
+        _OBJECTIVE_SEMANTICS,
+    ),
     "objectives.*.depends_on[]": (
         "objectives",
         _SEMANTIC,
         "fatal dangling, ambiguous, or cyclic",
         _OBJECTIVE_SEMANTICS,
     ),
-    "workflows.*.start": ("workflow_steps", _SEMANTIC, "fatal dangling step", _WORKFLOW_SEMANTICS),
+    "workflows.*.start": (
+        "workflow_steps",
+        _SEMANTIC,
+        "fatal dangling step",
+        _WORKFLOW_SEMANTICS,
+    ),
+    "workflows.*.steps.*.when.assertions[]": (
+        "assertions",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or non-precondition role",
+        _WORKFLOW_SEMANTICS,
+    ),
 }
 
 

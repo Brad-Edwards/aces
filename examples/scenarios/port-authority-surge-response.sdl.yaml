@@ -508,9 +508,11 @@ conditions:
     command: /usr/local/bin/check-portal
     interval: 30
   manifest-integrity-ok:
+    proposition: manifest-integrity-ok
     command: /usr/local/bin/check-manifest-integrity
     interval: 30
   tampered-manifest-observed:
+    proposition: tampered-manifest-observed
     command: /usr/local/bin/check-tampered-manifest
     interval: 60
   terminal-throughput-healthy:
@@ -520,9 +522,11 @@ conditions:
     command: /usr/local/bin/check-port-sso
     interval: 30
   customs-link-healthy:
+    proposition: customs-link-healthy
     command: /usr/local/bin/check-customs-link
     interval: 30
   crane-safe-mode:
+    proposition: crane-safe-mode
     command: /usr/local/bin/check-crane-safe-mode
     interval: 15
   operator-visibility-healthy:
@@ -538,9 +542,11 @@ conditions:
     command: /usr/local/bin/check-camera-analytics
     interval: 30
   yard-telemetry-flowing:
+    proposition: yard-telemetry-flowing
     command: /usr/local/bin/check-yard-telemetry
     interval: 15
   historian-replication-ok:
+    proposition: historian-replication-ok
     command: /usr/local/bin/check-historian-replication
     interval: 30
   vendor-jump-healthy:
@@ -555,6 +561,138 @@ conditions:
   blackstart-runbook-ready:
     command: /usr/local/bin/check-blackstart-runbook
     interval: 60
+propositions:
+  crane-safe-mode:
+    description: The governed crane-safe-mode observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.yard-hmi
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: crane-safe-mode
+      semantic_ref: urn:aces:observable:crane-safe-mode
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  customs-link-healthy:
+    description: The governed customs-link-healthy observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.customs-gateway
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: customs-link-healthy
+      semantic_ref: urn:aces:observable:customs-link-healthy
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  historian-replication-ok:
+    description: The governed historian-replication-ok observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.historian01
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: historian-replication-ok
+      semantic_ref: urn:aces:observable:historian-replication-ok
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  manifest-integrity-ok:
+    description: The governed manifest-integrity-ok observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.manifest-db
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: manifest-integrity-ok
+      semantic_ref: urn:aces:observable:manifest-integrity-ok
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  tampered-manifest-observed:
+    description: The governed tampered-manifest-observed observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.manifest-db
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: tampered-manifest-observed
+      semantic_ref: urn:aces:observable:tampered-manifest-observed
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  yard-telemetry-flowing:
+    description: The governed yard-telemetry-flowing observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.historian01
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: yard-telemetry-flowing
+      semantic_ref: urn:aces:observable:yard-telemetry-flowing
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+assertions:
+  crane-safe-mode:
+    proposition: crane-safe-mode
+    role: postcondition
+    polarity: positive
+  customs-link-healthy:
+    proposition: customs-link-healthy
+    role: postcondition
+    polarity: positive
+  historian-replication-ok:
+    proposition: historian-replication-ok
+    role: postcondition
+    polarity: positive
+  manifest-integrity-ok:
+    proposition: manifest-integrity-ok
+    role: postcondition
+    polarity: positive
+  tampered-manifest-observed:
+    proposition: tampered-manifest-observed
+    role: postcondition
+    polarity: positive
+  yard-telemetry-flowing:
+    proposition: yard-telemetry-flowing
+    role: postcondition
+    polarity: positive
+  pre-tampered-manifest-observed:
+    proposition: tampered-manifest-observed
+    role: precondition
+    polarity: positive
+evidence_requirements:
+  objective-truth-evidence:
+    description: Capture evidence used to decide authored proposition assertions.
+    source_refs:
+    - nodes.manifest-db
+    - nodes.historian01
+    - nodes.customs-gateway
+    - nodes.yard-hmi
+    scope: authored objective, event, workflow, and participant assertion evaluation
+    boundary_kind: assertion_evaluation
+    channel: log
+    artifact_role: proposition_truth_evidence
+    media_types: [application/json]
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: study_lifetime
+    loss_disclosure: required
 vulnerabilities:
   stale-customs-token:
     name: Stale customs federation token
@@ -634,8 +772,8 @@ events:
     injects:
     - customs-priority-ticket
   yard-standdown:
-    conditions:
-    - tampered-manifest-observed
+    assertions:
+    - pre-tampered-manifest-observed
     injects:
     - safety-standdown
 scripts:
@@ -882,7 +1020,7 @@ objectives:
     - manifest-db
     - portal-to-manifest
     success:
-      conditions:
+      assertions:
       - tampered-manifest-observed
     window:
       stories:
@@ -897,7 +1035,7 @@ objectives:
     - crane-plc
     - hmi-manages-crane
     success:
-      conditions:
+      assertions:
       - tampered-manifest-observed
     window:
       stories:
@@ -919,7 +1057,7 @@ objectives:
     - manifest-db
     - customs-federates-port
     success:
-      conditions:
+      assertions:
       - customs-link-healthy
       - manifest-integrity-ok
     window:
@@ -947,7 +1085,7 @@ objectives:
     - nodes.crane-plc.services.crane-opcua
     - infrastructure.yard-ot.acls.allow-yard-control
     success:
-      conditions:
+      assertions:
       - crane-safe-mode
       - yard-telemetry-flowing
     window:
@@ -975,7 +1113,7 @@ objectives:
     - nodes.historian01.services.historian-ui
     - infrastructure.yard-ot.acls.allow-yard-control
     success:
-      conditions:
+      assertions:
       - yard-telemetry-flowing
       - historian-replication-ok
     window:
@@ -1007,8 +1145,8 @@ workflows:
       assess-yard:
         type: decision
         when:
-          conditions:
-          - tampered-manifest-observed
+          assertions:
+          - pre-tampered-manifest-observed
         then: fanout-blackstart
         else: finish
       fanout-blackstart:

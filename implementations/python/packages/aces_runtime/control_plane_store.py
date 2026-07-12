@@ -90,6 +90,7 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
         "orchestration_history": {address: list(events) for address, events in snapshot.orchestration_history.items()},
         "evaluation_results": dict(snapshot.evaluation_results),
         "evaluation_history": {address: list(events) for address, events in snapshot.evaluation_history.items()},
+        "proposition_truth_results": dict(snapshot.proposition_truth_results),
         "participant_episode_results": dict(snapshot.participant_episode_results),
         "participant_episode_history": {
             participant_address: list(events)
@@ -146,6 +147,7 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
         },
         evaluation_results=dict(payload.get("evaluation_results", {})),
         evaluation_history={address: list(events) for address, events in payload.get("evaluation_history", {}).items()},
+        proposition_truth_results=dict(payload.get("proposition_truth_results", {})),
         participant_episode_results=dict(payload.get("participant_episode_results", {})),
         participant_episode_history={
             participant_address: list(events)

@@ -8,7 +8,7 @@ Objective semantics are declarative SDL meaning. They answer:
 
 - which declared actor owns the objective
 - which declared scenario elements the objective names as targets
-- which observable `conditions` define success
+- which invariant and postcondition assertions define success
 - which window bounds when the objective matters
 - which other objectives must precede it
 
@@ -26,8 +26,7 @@ The implementation must build on these existing authorities:
   explicit migration, variable-key rejection, and `SDLParseError`
 - static validation: `SemanticValidator` and `SDLValidationError`
 - objective-window analysis: `aces_sdl.semantics.objectives`
-- condition resolution: the targetable named-reference index over declared
-  `conditions`
+- assertion resolution over declared backend-neutral propositions
 - runtime compilation: `compile_runtime_model()` and
   `aces_processor.models.ObjectiveRuntime`
 - dependency graph semantics: `aces_processor.semantics.planner`
@@ -59,11 +58,11 @@ Target resolution:
 
 Success interpretation:
 
-- success references only declared `conditions` (observable state). The OCR
+- success references only declared invariant or postcondition assertions. The OCR
   scoring surfaces `metrics`, `evaluations`, `tlos`, and `goals` were removed by
   [ADR-073](../../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md);
   objective success is no longer expressible against a graded score
-- objective success mode describes interpretation of the referenced conditions;
+- objective success mode composes the referenced assertion outcomes;
   it must not encode evaluator implementation mechanics
 - runtime result and execution contracts remain the portable observation
   boundary for evaluated success
@@ -96,8 +95,8 @@ Dependency roles (which references propagate through the planner):
   compiles actor or target into runtime addresses lifts the role constant in
   lockstep
 - the derived per-objective `ordering_names` / `refresh_names` tuples are
-  kind-qualified (`condition.<n>`, `objective.<n>`, `story.<n>`, `script.<n>`,
-  `event.<n>`, `workflow.<n>`) so a condition and an objective with the same SDL
+  kind-qualified (`assertion.<n>`, `objective.<n>`, `story.<n>`, `script.<n>`,
+  `event.<n>`, `workflow.<n>`) so an assertion and an objective with the same SDL
   name remain distinguishable
 
 ## Cross-Cutting Gates

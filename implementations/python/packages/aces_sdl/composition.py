@@ -152,7 +152,7 @@ def _rewrite_workflow(payload: dict[str, Any], symbols: dict[str, dict[str, str]
             step["compensate_with"] = _maybe_rename(str(step["compensate_with"]), symbols["workflows"])
         when = step.get("when")
         if isinstance(when, dict):
-            when["conditions"] = [_maybe_rename(name, symbols["conditions"]) for name in when.get("conditions", [])]
+            when["assertions"] = [_maybe_rename(name, symbols["assertions"]) for name in when.get("assertions", [])]
             when["objectives"] = [_maybe_rename(name, symbols["objectives"]) for name in when.get("objectives", [])]
 
 
@@ -191,6 +191,21 @@ def _namespace_payload(
     for feature in namespaced.get("features", {}).values():
         if isinstance(feature, dict):
             _rewrite_feature(feature, symbols)
+    for condition in namespaced.get("conditions", {}).values():
+        if isinstance(condition, dict) and condition.get("proposition"):
+            condition["proposition"] = _maybe_rename(str(condition["proposition"]), symbols["propositions"])
+    for proposition in namespaced.get("propositions", {}).values():
+        if isinstance(proposition, dict):
+            proposition["subjects"] = [
+                _maybe_rename(name, symbols["named"]) for name in proposition.get("subjects", [])
+            ]
+            proposition["evidence_requirements"] = [
+                _maybe_rename(name, symbols["evidence_requirements"])
+                for name in proposition.get("evidence_requirements", [])
+            ]
+    for assertion in namespaced.get("assertions", {}).values():
+        if isinstance(assertion, dict) and assertion.get("proposition"):
+            assertion["proposition"] = _maybe_rename(str(assertion["proposition"]), symbols["propositions"])
     for entity in namespaced.get("entities", {}).values():
         if isinstance(entity, dict):
             _rewrite_entity(entity, symbols)
@@ -201,7 +216,7 @@ def _namespace_payload(
             inject["to_entities"] = [_maybe_rename(name, symbols["entities"]) for name in inject.get("to_entities", [])]
     for event in namespaced.get("events", {}).values():
         if isinstance(event, dict):
-            event["conditions"] = [_maybe_rename(name, symbols["conditions"]) for name in event.get("conditions", [])]
+            event["assertions"] = [_maybe_rename(name, symbols["assertions"]) for name in event.get("assertions", [])]
             event["injects"] = [_maybe_rename(name, symbols["injects"]) for name in event.get("injects", [])]
     for script in namespaced.get("scripts", {}).values():
         if isinstance(script, dict):
@@ -252,8 +267,8 @@ def _namespace_payload(
             # symbols["named"] carries both forms after the symbol-index
             # update, so a single rename handles `health` and
             # `conditions.health` symmetrically.
-            agent["starting_conditions"] = [
-                _maybe_rename(name, symbols["named"]) for name in agent.get("starting_conditions", [])
+            agent["starting_assertions"] = [
+                _maybe_rename(name, symbols["assertions"]) for name in agent.get("starting_assertions", [])
             ]
             agent["authority_anchors"] = [
                 _maybe_rename(name, symbols["named"]) for name in agent.get("authority_anchors", [])
@@ -297,8 +312,8 @@ def _namespace_payload(
         ]
         success = objective.get("success")
         if isinstance(success, dict):
-            success["conditions"] = [
-                _maybe_rename(name, symbols["conditions"]) for name in success.get("conditions", [])
+            success["assertions"] = [
+                _maybe_rename(name, symbols["assertions"]) for name in success.get("assertions", [])
             ]
         window = objective.get("window")
         if isinstance(window, dict):

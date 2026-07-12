@@ -62,7 +62,7 @@ def test_top_level_catalog_drift_is_flagged(tmp_path: Path, old: str, new: str, 
 
 def test_checked_summary_drift_is_flagged(tmp_path: Path) -> None:
     repo = _seed_repo(tmp_path)
-    _replace(repo, "specs/sdl/sections.md", "sections=23", "sections=22")
+    _replace(repo, "specs/sdl/sections.md", "sections=25", "sections=24")
     assert "sdl-catalog-summary" in _rule_ids(repo)
 
 
@@ -152,7 +152,7 @@ def test_catalog_parser_rejects_oversized_input() -> None:
 
 def test_cli_reports_json_failure(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     repo = _seed_repo(tmp_path)
-    _replace(repo, "specs/sdl/sections.md", "sections=23", "sections=22")
+    _replace(repo, "specs/sdl/sections.md", "sections=25", "sections=24")
     assert main(["--repo-root", str(repo), "--json"]) == 1
     assert '"rule_id": "sdl-catalog-summary"' in capsys.readouterr().out
 

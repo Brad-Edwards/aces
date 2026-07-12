@@ -143,7 +143,7 @@ class OrchestratorCapabilities:
     name: str
     supported_sections: frozenset[str] = frozenset()
     supports_workflows: bool = False
-    supports_condition_refs: bool = True
+    supports_assertion_refs: bool = True
     supports_inject_bindings: bool = True
     supported_workflow_features: frozenset[WorkflowFeature] = frozenset()
     supported_workflow_state_predicates: frozenset[WorkflowStatePredicateFeature] = frozenset()
@@ -186,6 +186,12 @@ class EvaluatorCapabilities:
     supported_sections: frozenset[str] = frozenset()
     supports_scoring: bool = True
     supports_objectives: bool = True
+    supported_predicate_families: frozenset[str] = frozenset()
+    supported_quantifiers: frozenset[str] = frozenset()
+    supported_truth_outcomes: frozenset[str] = frozenset()
+    supported_evidence_channels: frozenset[str] = frozenset()
+    supported_time_domains: frozenset[str] = frozenset()
+    preserves_binding_provenance: bool = False
     constraints: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -201,6 +207,23 @@ class EvaluatorCapabilities:
         )
         if not self.supports_scoring and not self.supports_objectives:
             raise ValueError("EvaluatorCapabilities must support scoring, objectives, or both")
+        self._validate_proposition_support()
+
+    def _validate_proposition_support(self) -> None:
+        proposition_sections = {"propositions", "assertions"}
+        if not proposition_sections.intersection(self.supported_sections):
+            return
+        if not proposition_sections.issubset(self.supported_sections):
+            raise ValueError("Evaluator proposition support requires both propositions and assertions sections")
+        if not self.supported_predicate_families or not self.supported_quantifiers:
+            raise ValueError("Evaluator proposition support requires predicate families and quantifiers")
+        portable_outcomes = {"true", "false", "unknown", "unsupported"}
+        if set(self.supported_truth_outcomes) != portable_outcomes:
+            raise ValueError("Evaluator proposition support requires all portable truth outcomes")
+        if not self.supported_evidence_channels or not self.supported_time_domains:
+            raise ValueError("Evaluator proposition support requires evidence channels and time domains")
+        if not self.preserves_binding_provenance:
+            raise ValueError("Evaluator proposition support requires binding provenance")
 
 
 def _validate_unique_non_empty_strings(field_name: str, values: tuple[str, ...]) -> None:

@@ -398,8 +398,42 @@ features:
 
 conditions:
   web-healthy:
+    proposition: web-available
     command: "curl -sf https://localhost/ || exit 1"
     interval: 15
+
+propositions:
+  web-available:
+    description: The web service reports its availability as healthy.
+    subjects: [nodes.web-server.services.https]
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: service-healthy
+      semantic_ref: urn:aces:observable:service-healthy
+      operator: equals
+      expected: true
+    evidence_requirements: [web-health-evidence]
+
+assertions:
+  web-healthy:
+    proposition: web-available
+    role: postcondition
+
+evidence_requirements:
+  web-health-evidence:
+    description: Capture evidence used to decide web availability.
+    source_refs: [nodes.web-server.services.https]
+    scope_refs: [nodes.web-server]
+    boundary_kind: objective_completion
+    channel: api_response
+    artifact_role: proposition_truth_evidence
+    media_types: [application/json]
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: run_lifetime
+    loss_disclosure: required
 
 vulnerabilities:
   sqli:
@@ -416,7 +450,7 @@ entities:
     name: Red Team
     role: Red
 
-# Objective success references observable state (conditions) per ADR-073.
+# Objective success references assertions over typed propositions per ADR-079.
 # Graded scoring/reward, if a study needs it, lives in the experiment/evaluator
 # plane (ADR-055/064/069), not in the SDL.
 objectives:
@@ -424,7 +458,7 @@ objectives:
     description: Keep the web application available
     entity: blue-team
     success:
-      conditions: [web-healthy]
+      assertions: [web-healthy]
 
 accounts:
   web-admin-account:
@@ -510,8 +544,42 @@ features:
 
 conditions:
   web-healthy:
+    proposition: web-available
     command: "curl -sf https://localhost/ || exit 1"
     interval: 15
+
+propositions:
+  web-available:
+    description: The web service reports its availability as healthy.
+    subjects: [nodes.web-server.services.https]
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: service-healthy
+      semantic_ref: urn:aces:observable:service-healthy
+      operator: equals
+      expected: true
+    evidence_requirements: [web-health-evidence]
+
+assertions:
+  web-healthy:
+    proposition: web-available
+    role: postcondition
+
+evidence_requirements:
+  web-health-evidence:
+    description: Capture evidence used to decide web availability.
+    source_refs: [nodes.web-server.services.https]
+    scope_refs: [nodes.web-server]
+    boundary_kind: objective_completion
+    channel: api_response
+    artifact_role: proposition_truth_evidence
+    media_types: [application/json]
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: run_lifetime
+    loss_disclosure: required
 
 vulnerabilities:
   sqli:
@@ -599,13 +667,13 @@ objectives:
     actions: [Scan, Exploit]
     targets: [web-server, sqli]
     success:
-      conditions: [web-healthy]
+      assertions: [web-healthy]
     window:
       stories: [exercise]
   blue-defend:
     entity: blue-team
     success:
-      conditions: [web-healthy]
+      assertions: [web-healthy]
     depends_on: [red-access]
 
 # --- Workflows ---

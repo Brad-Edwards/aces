@@ -282,7 +282,7 @@ Authority and scope are authored semantics. The model distinguishes:
 | --- | --- | --- |
 | `starting_accounts` | Initial declared access anchors | proof of authority |
 | `initial_knowledge` | Participant starting knowledge refs | hidden truth |
-| `starting_conditions` | Declared state or setup preconditions | setup commands |
+| `starting_assertions` | Precondition assertions over declared propositions | setup commands or proof that a probe passed |
 | `authority_anchors` | Declared bases for allowed or expected action | bearer tokens, HTTP auth, OS user |
 | `operating_scope` | Declared targetable action/observation boundary | backend sandbox, process boundary |
 | action preconditions | Contract-level applicability checks | free-form policy prose |
@@ -312,7 +312,7 @@ Executable ACT-607 work must extend the existing participant-authoring and
 behavior surfaces. The canonical incumbents are:
 
 - SDL authored semantics: `agents.*.starting_accounts`,
-  `initial_knowledge`, `starting_conditions`, `authority_anchors`,
+  `initial_knowledge`, `starting_assertions`, `authority_anchors`,
   `operating_scope`, and behavior-specification `authority_scope_refs`.
 - Action and observation semantics: typed participant action preconditions,
   governed failure classes such as `authority_denied`, observation boundaries,

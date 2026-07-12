@@ -19,11 +19,14 @@ adrs:
         summary: "Replaced implicit case-insensitive field parsing with strict sdl-yaml/v1, explicit diagnosed migration, an honest normalized-authoring-object schema boundary, and RFC 8785 semantic identity."
   - id: ADR-002
     path: docs/decisions/adrs/adr-002-declarative-sdl-objectives.md
-    pin: 7550c868306aa4f6ff7a1522796b71ae8797aa0015d7faec37c8f7011e60c536
+    pin: 70db360e393dd0a02b0bed7aaa668a68ed6961eda0f9246905a536b9c6cba82c
     amendments:
       - date: 2026-07-05
         ref: "#682"
         summary: "Per ADR-073, narrowed the objective-success clause to reference observable state (conditions) only; the OCR scoring pipeline (metrics/evaluations/tlos/goals) was removed from the SDL and graded scoring/reward moved to the experiment/evaluator plane (ADR-055/064/069)."
+      - date: 2026-07-12
+        ref: "#725"
+        summary: "Per ADR-079, corrected the condition/proposition conflation: objective success composes assertions over typed propositions; conditions are probe realizations only."
   - id: ADR-003
     path: docs/decisions/adrs/adr-003-workflows-targetable-subobjects-and-enum-variables.md
     pin: 0039bea0de4e4d5d08ccf300a7fb7516a0ea01977f38f1e2e111409a13e108df
@@ -300,11 +303,14 @@ adrs:
     pin: d0f0d15945a91e97870d794986d7c7453cea7fade5c74c673d271ceaf05a6b7e
   - id: ADR-073
     path: docs/decisions/adrs/adr-073-scoring-reward-language-scope.md
-    pin: 5c0f6a0fe961bd9fc3f0b268ee99e1bdf6e6b576fbbe470dd3969a543dc07356
+    pin: b48e0d4184556ec1da17e58d4ea74197e383fed8bbf70d8069eaa2d978fbb893
     amendments:
       - date: 2026-07-06
         ref: "#682"
         summary: "Accepted (proposed → accepted) and realized under SEM-206: removed the SDL scoring/reward surfaces, narrowed objectives.success to conditions, amended ADR-002, and updated the published SDL schemas."
+      - date: 2026-07-12
+        ref: "#725"
+        summary: "Per ADR-079, corrected executable conditions from observable facts to probe realizations and moved objective truth to typed propositions/assertions."
   - id: ADR-074
     path: docs/decisions/adrs/adr-074-experiment-authoring-input-contract-boundary.md
     pin: 74dd29e3e5f3a2b7bdf836bd40908c0840c51f46a1a89efbb191e6ce7f620ce5
@@ -321,3 +327,6 @@ adrs:
       - date: 2026-07-12
         ref: "#724"
         summary: "Clarified that required instantiation provenance remains validated artifact identity metadata but is excluded from realization-envelope child-dimension enumeration."
+  - id: ADR-079
+    path: docs/decisions/adrs/adr-079-backend-neutral-proposition-and-truth-semantics.md
+    pin: a16e021301c9b411c8efe54ac4933819a50bd10a27d13741cc7ce78d6bffbe14

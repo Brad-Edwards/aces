@@ -302,6 +302,25 @@ class FeatureBinding(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class PropositionRuntime(ResolvedResource):
+    """Compiled backend-neutral proposition with resolved finite subjects."""
+
+    subject_addresses: tuple[str, ...] = ()
+    predicate_kind: str = ""
+    evaluation_basis: str = ""
+    evidence_requirement_refs: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class AssertionRuntime(ResolvedResource):
+    """Compiled assertion use over one proposition."""
+
+    proposition_address: str = ""
+    role: str = ""
+    polarity: str = ""
+
+
+@dataclass(frozen=True)
 class ConditionBinding(ResolvedResource):
     """Condition template bound to a specific node role."""
 
@@ -310,6 +329,7 @@ class ConditionBinding(ResolvedResource):
     condition_name: str = ""
     template_address: str = ""
     role_name: str = ""
+    proposition_address: str = ""
     result_contract: "EvaluationResultContract" = field(
         default_factory=lambda: EvaluationResultContract(resource_type="condition-binding")
     )
@@ -581,8 +601,8 @@ class ParticipantBehaviorRuntime(ResolvedResource):
     starting_account_refs: tuple[str, ...] = ()
     starting_account_addresses: tuple[str, ...] = ()
     initial_knowledge_addresses: tuple[str, ...] = ()
-    starting_condition_refs: tuple[str, ...] = ()
-    starting_condition_addresses: tuple[str, ...] = ()
+    starting_assertion_refs: tuple[str, ...] = ()
+    starting_assertion_addresses: tuple[str, ...] = ()
     authority_anchor_refs: tuple[str, ...] = ()
     authority_anchor_addresses: tuple[str, ...] = ()
     operating_scope_refs: tuple[str, ...] = ()
@@ -620,8 +640,8 @@ class ParticipantBehaviorSpecificationRuntime(ResolvedResource):
 class EventRuntime(ResolvedResource):
     """Resolved orchestration event."""
 
-    condition_names: tuple[str, ...] = ()
-    condition_addresses: tuple[str, ...] = ()
+    assertion_names: tuple[str, ...] = ()
+    assertion_addresses: tuple[str, ...] = ()
     inject_names: tuple[str, ...] = ()
     inject_addresses: tuple[str, ...] = ()
 
@@ -666,7 +686,7 @@ class WorkflowStepStatePredicateRuntime:
 class WorkflowPredicateRuntime:
     """Resolved workflow predicate semantics."""
 
-    condition_addresses: tuple[str, ...] = ()
+    assertion_addresses: tuple[str, ...] = ()
     objective_addresses: tuple[str, ...] = ()
     step_state_predicates: tuple[WorkflowStepStatePredicateRuntime, ...] = ()
 
@@ -675,7 +695,7 @@ class WorkflowPredicateRuntime:
         seen: set[str] = set()
         ordered: list[str] = []
         for address in (
-            *self.condition_addresses,
+            *self.assertion_addresses,
             *self.objective_addresses,
         ):
             if address in seen:
@@ -730,7 +750,7 @@ class WorkflowRuntime(ResolvedResource):
     control_steps: dict[str, WorkflowStepRuntime] = field(default_factory=dict)
     control_edges: dict[str, tuple[str, ...]] = field(default_factory=dict)
     join_owners: dict[str, str] = field(default_factory=dict)
-    step_condition_addresses: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    step_assertion_addresses: dict[str, tuple[str, ...]] = field(default_factory=dict)
     step_predicate_addresses: dict[str, tuple[str, ...]] = field(default_factory=dict)
     required_features: tuple[WorkflowFeature, ...] = ()
     required_state_predicate_features: tuple[WorkflowStatePredicateFeature, ...] = ()
@@ -4225,6 +4245,8 @@ class RuntimeModel:
     networks: dict[str, NetworkRuntime] = field(default_factory=dict)
     node_deployments: dict[str, NodeRuntime] = field(default_factory=dict)
     feature_bindings: dict[str, FeatureBinding] = field(default_factory=dict)
+    propositions: dict[str, PropositionRuntime] = field(default_factory=dict)
+    assertions: dict[str, AssertionRuntime] = field(default_factory=dict)
     condition_bindings: dict[str, ConditionBinding] = field(default_factory=dict)
     injects: dict[str, InjectRuntime] = field(default_factory=dict)
     inject_bindings: dict[str, InjectBinding] = field(default_factory=dict)
@@ -4253,6 +4275,8 @@ class RuntimeModel:
             "networks",
             "node_deployments",
             "feature_bindings",
+            "propositions",
+            "assertions",
             "condition_bindings",
             "injects",
             "inject_bindings",

@@ -49,13 +49,21 @@ _SCENARIO = dedent(
         conditions: {health: ops}
         roles: {ops: operator}
     conditions:
-      health: {command: /bin/true, interval: 15}
+      health: {proposition: health-state, command: /bin/true, interval: 15}
     entities:
       blue: {role: blue}
+    propositions:
+      health-state:
+        description: The admitted scenario declares the VM used by this test.
+        subjects: [nodes.vm1]
+        basis: declared_state
+        predicate: {kind: presence, property: node, semantic_ref: "urn:aces:declared-property:node", operator: exists}
+    assertions:
+      health: {proposition: health-state, role: postcondition}
     objectives:
       validate:
         entity: blue
-        success: {conditions: [health]}
+        success: {assertions: [health]}
     workflows:
       response:
         start: run
@@ -80,13 +88,21 @@ _PARAM_SCENARIO = dedent(
         conditions: {health: ops}
         roles: {ops: operator}
     conditions:
-      health: {command: /bin/true, interval: 15}
+      health: {proposition: health-state, command: /bin/true, interval: 15}
     entities:
       blue: {role: blue}
+    propositions:
+      health-state:
+        description: The admitted scenario declares the VM used by this test.
+        subjects: [nodes.vm1]
+        basis: declared_state
+        predicate: {kind: presence, property: node, semantic_ref: "urn:aces:declared-property:node", operator: exists}
+    assertions:
+      health: {proposition: health-state, role: postcondition}
     objectives:
       validate:
         entity: blue
-        success: {conditions: [health]}
+        success: {assertions: [health]}
     workflows:
       response:
         start: run

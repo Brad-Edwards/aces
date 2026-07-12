@@ -241,13 +241,13 @@ def test_module_exports_are_enforced_for_importers(tmp_path: Path):
           check:
             entity: blue
             success:
-              conditions: [shared.health]
+              assertions: [shared.health]
         """,
     )
 
     with pytest.raises(
         SDLValidationError,
-        match=r"Objective 'check' references undefined condition 'shared\.health' in success criteria",
+        match=r"Objective 'check' references undefined assertion 'shared\.health' in success criteria",
     ):
         parse_sdl_file(root)
 

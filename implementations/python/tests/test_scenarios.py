@@ -142,8 +142,10 @@ def test_complex_examples_have_experiment_semantics(path):
     assert scenario.relationships
     assert scenario.content
     assert scenario.stories
-    # Post ADR-073: objective success references observable conditions (no scoring sections).
-    assert any(objective.success.conditions for objective in scenario.objectives.values())
+    # Post ADR-079: objective success references backend-neutral assertions.
+    assert scenario.propositions
+    assert scenario.assertions
+    assert any(objective.success.assertions for objective in scenario.objectives.values())
 
 
 def test_complex_examples_cover_new_sdl_surfaces():

@@ -194,8 +194,8 @@ def _reject_removed_scoring_sections(data: dict[str, Any], *, path: Path | None)
     raise SDLParseError(
         "SDL scoring sections "
         f"{', '.join(present)} were removed from the language by ADR-073. "
-        "Express objective success against observable state via "
-        "'objectives.*.success.conditions', and route graded scoring, reward, "
+        "Express objective success through backend-neutral propositions and "
+        "'objectives.*.success.assertions', and route graded scoring, reward, "
         "and evaluation outputs to the experiment/evaluator plane "
         "(ADR-055/064/069). The CybORG 'agents.*.reward_calculator' label was "
         "removed for the same reason.",
