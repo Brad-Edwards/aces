@@ -4184,6 +4184,25 @@ class ObjectiveRuntime(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class CompiledCapabilityConstraint:
+    """One finite SDL capability domain lowered onto a compiled resource."""
+
+    address: str
+    concern: str
+    parameter: tuple[str, ...]
+    allowed_values: tuple[str | int | float | bool, ...]
+
+    def __post_init__(self) -> None:
+        require_compiled_address(self.address, field_name="capability constraint address")
+        if self.concern not in {"nodes.os", "infrastructure.count"}:
+            raise ValueError("compiled capability constraint has an unsupported concern")
+        if not self.parameter or any(not segment for segment in self.parameter):
+            raise ValueError("compiled capability constraint requires a parameter identity")
+        if not self.allowed_values:
+            raise ValueError("compiled capability constraint requires a non-empty domain")
+
+
+@dataclass(frozen=True)
 class RuntimeModel:
     """Compiled SDL runtime model.
 
@@ -4199,16 +4218,10 @@ class RuntimeModel:
     entity_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
     agent_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
     relationship_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
-    variable_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
-    # Pre-instantiation `${name}` refs on `nodes.os` and `infrastructure.count`,
-    # keyed by the network/node resource address. Lets the planner reach a
-    # variable's `allowed_values` even after `compile_runtime_model` substitutes
-    # the resolved values onto the corresponding runtime resources. Kept on the
-    # model rather than on the resources themselves so the provenance does not
-    # leak into the backend-facing `resource_payload()` envelope. Inner dict
-    # carries `"os"` and `"count"` keys; missing or `None` values mean the
-    # field was authored as a concrete literal rather than a variable ref.
-    node_variable_refs: dict[str, dict[str, str | None]] = field(default_factory=dict)
+    # Typed compiler metadata for finite pre-instantiation domains. It is
+    # consumed by planner capability checks and never enters backend resource
+    # payloads.
+    capability_constraints: tuple[CompiledCapabilityConstraint, ...] = ()
     networks: dict[str, NetworkRuntime] = field(default_factory=dict)
     node_deployments: dict[str, NodeRuntime] = field(default_factory=dict)
     feature_bindings: dict[str, FeatureBinding] = field(default_factory=dict)
@@ -4229,8 +4242,7 @@ class RuntimeModel:
     objectives: dict[str, ObjectiveRuntime] = field(default_factory=dict)
     diagnostics: list[Diagnostic] = field(default_factory=list)
     # SEM-218 typed compiler emission: each authored realization concern with
-    # its preserved explicitness class. Model-side metadata (like
-    # `node_variable_refs`); it never enters the backend-facing
+    # its preserved explicitness class. Model-side metadata; it never enters the backend-facing
     # `resource_payload()` envelope. Consumed by the planner realization gate.
     realization_requirements: tuple[CompiledRealizationRequirement, ...] = ()
     realization_instance: InstantiatedScenario | None = None
@@ -4273,8 +4285,9 @@ class RuntimeModel:
                         f"RuntimeModel duplicate compiled address across {previous_owner} and {field_name}"
                     )
                 owners[address] = field_name
-        for address in self.node_variable_refs:
-            require_compiled_address(address, field_name="node variable reference map key")
+        capability_keys = [(constraint.address, constraint.concern) for constraint in self.capability_constraints]
+        if len(capability_keys) != len(set(capability_keys)):
+            raise ValueError("RuntimeModel capability constraints must address unique fields")
 
 
 @dataclass(frozen=True)

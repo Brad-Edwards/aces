@@ -9,19 +9,44 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, ClassVar
 
-from pydantic import ValidationError
+from pydantic import ConfigDict, ValidationError
 
 from ._base import VARIABLE_TOKEN_RE, extract_variable_name
 from ._errors import SDLInstantiationError, SDLValidationError
-from .explicitness import derive_instantiated_explicitness
-from .scenario import InstantiatedScenario, Scenario
+from .canonical import canonical_sdl_digest
+from .explicitness import ExplicitnessRecord, derive_instantiated_explicitness
+from .phase_contracts import (
+    BindingOrigin,
+    CapabilityConstraint,
+    ExplicitnessProvenanceRecord,
+    InstantiationProvenance,
+    ParameterBinding,
+    SemanticDigest,
+)
+from .scenario import ExpandedScenario, InstantiatedScenario, Scenario, ScenarioContent
 from .validator import SemanticValidator
 from .variables import Variable, VariableType
 
 JSONScalar = str | int | float | bool | None
 JSONLike = JSONScalar | list["JSONLike"] | dict[str, "JSONLike"]
+
+
+class _BoundScenarioContent(ScenarioContent):
+    """Private structural result of substitution, before public admission."""
+
+    _allows_qualified_declaration_keys: ClassVar[bool] = True
+    model_config = ConfigDict(title="SDL Private Bound Content", extra="forbid")
+
+
+@dataclass(frozen=True)
+class _BoundScenarioResult:
+    content: _BoundScenarioContent
+    bindings: tuple[ParameterBinding, ...]
+    capability_constraints: tuple[CapabilityConstraint, ...]
+    explicitness: tuple[ExplicitnessProvenanceRecord, ...]
 
 
 def _matches_value_type(value: object, variable: Variable) -> bool:
@@ -37,17 +62,20 @@ def _matches_value_type(value: object, variable: Variable) -> bool:
 
 
 def _resolve_variable_values(
-    scenario: Scenario,
+    scenario: Scenario | ExpandedScenario,
     parameters: Mapping[str, JSONLike],
-) -> tuple[dict[str, JSONLike], list[str]]:
+) -> tuple[dict[str, JSONLike], dict[str, BindingOrigin], list[str]]:
     resolved: dict[str, JSONLike] = {}
+    origins: dict[str, BindingOrigin] = {}
     errors: list[str] = []
 
     for name, variable in scenario.variables.items():
         if name in parameters:
             value = parameters[name]
+            origin = BindingOrigin.PROVIDED
         elif variable.default is not None:
             value = variable.default
+            origin = BindingOrigin.DEFAULT
         elif variable.required:
             errors.append(f"Variable '{name}' is required and has no provided value or default.")
             continue
@@ -58,15 +86,16 @@ def _resolve_variable_values(
             errors.append(f"Variable '{name}' expects type '{variable.type.value}', got {type(value).__name__}.")
             continue
         if variable.allowed_values and value not in variable.allowed_values:
-            errors.append(f"Variable '{name}' must be one of {variable.allowed_values!r}; got {value!r}.")
+            errors.append(f"Variable '{name}' does not satisfy its allowed_values constraint.")
             continue
         resolved[name] = value
+        origins[name] = origin
 
     undeclared = sorted(name for name in parameters if name not in scenario.variables)
     for name in undeclared:
         errors.append(f"Instantiation parameter '{name}' is not a declared variable.")
 
-    return resolved, errors
+    return resolved, origins, errors
 
 
 def _substitute_value(
@@ -113,65 +142,75 @@ def _substitute_value(
     return VARIABLE_TOKEN_RE.sub(replace_token, value)
 
 
-def _capture_node_variable_refs(
-    scenario: Scenario,
-) -> dict[str, dict[str, str | None]]:
-    """Snapshot `${name}` refs on `nodes.os` and `infrastructure.count`.
+def _json_pointer_segment(value: str) -> str:
+    return value.replace("~", "~0").replace("/", "~1")
 
-    Captured before variable substitution so downstream consumers
-    (typically the runtime planner via `InstantiatedScenario.node_variable_refs`)
-    can still reach each variable's `allowed_values` after the resolved
-    values have been written onto the concrete scenario. Covers every node
-    name regardless of `NodeType` because the runtime planner's
-    `max_total_nodes` check runs across both networks (switches) and node
-    deployments.
-    """
 
-    refs: dict[str, dict[str, str | None]] = {}
+def _capture_capability_constraints(
+    scenario: Scenario | ExpandedScenario,
+) -> tuple[CapabilityConstraint, ...]:
+    """Retain the finite domains needed by pre-realization capability checks."""
+
+    constraints: list[CapabilityConstraint] = []
     for node_name, node in scenario.nodes.items():
         os_ref = extract_variable_name(node.os) if isinstance(node.os, str) else None
-        count_ref: str | None = None
-        infra = scenario.infrastructure.get(node_name)
-        if infra is not None and isinstance(infra.count, str):
-            count_ref = extract_variable_name(infra.count)
-        if os_ref is None and count_ref is None:
-            continue
-        refs[node_name] = {"os": os_ref, "count": count_ref}
-    return refs
+        variable = scenario.variables.get(os_ref) if os_ref is not None else None
+        if variable is not None and variable.allowed_values:
+            constraints.append(
+                CapabilityConstraint(
+                    field_pointer=f"/nodes/{_json_pointer_segment(node_name)}/os",
+                    parameter=(os_ref,),
+                    allowed_values=tuple(variable.allowed_values),
+                )
+            )
+    for node_name, infrastructure in scenario.infrastructure.items():
+        count_ref = extract_variable_name(infrastructure.count) if isinstance(infrastructure.count, str) else None
+        variable = scenario.variables.get(count_ref) if count_ref is not None else None
+        if variable is not None and variable.allowed_values:
+            constraints.append(
+                CapabilityConstraint(
+                    field_pointer=f"/infrastructure/{_json_pointer_segment(node_name)}/count",
+                    parameter=(count_ref,),
+                    allowed_values=tuple(variable.allowed_values),
+                )
+            )
+    return tuple(constraints)
 
 
-def instantiate_scenario(
-    raw_scenario: Scenario,
-    parameters: Mapping[str, JSONLike] | None = None,
-    profile: str | None = None,
+def _portable_explicitness_record(record: ExplicitnessRecord) -> ExplicitnessProvenanceRecord:
+    return ExplicitnessProvenanceRecord(
+        model_path=record.path,
+        classification=record.classification,
+        provenance=record.provenance,
+        reason=record.reason,
+        parameters=tuple((name,) for name in record.variables),
+    )
+
+
+def _safe_model_validation_errors(
+    exc: ValidationError,
     *,
-    validate_semantics: bool | None = None,
-) -> InstantiatedScenario:
-    """Return a fully concrete scenario ready for compilation.
+    subject: str = "Bound scenario",
+) -> list[str]:
+    diagnostics: list[str] = []
+    for error in exc.errors(include_input=False, include_url=False)[:50]:
+        location = "/" + "/".join(str(segment) for segment in error.get("loc", ()))
+        error_type = str(error.get("type", "invalid_value"))
+        diagnostics.append(f"{subject} is invalid at {location or '/'} ({error_type}).")
+    return diagnostics or [f"{subject} failed structural validation."]
 
-    Instantiation applies parameter values and variable defaults, rejects
-    unresolved placeholders, rebuilds the Pydantic model, and reruns semantic
-    validation on the concrete result.
-    """
 
-    effective_parameters = dict(parameters or {})
-    # Capture `${var}` refs on `nodes.os` and `infrastructure.count` BEFORE
-    # substitution so downstream consumers (e.g. the runtime planner's
-    # capability checks) can still reach each variable's `allowed_values`
-    # after the resolved values are written onto the concrete scenario.
-    node_variable_refs = _capture_node_variable_refs(raw_scenario)
-    # Merge in any module-import provenance attached by `expand_sdl_modules`
-    # (composition.py). Outer node names take precedence over deeper ones if
-    # the same key appears in both (cannot happen with namespaced names, but
-    # guard explicitly to keep the merge predictable).
-    module_node_refs = raw_scenario.module_node_variable_refs
-    for node_name, refs in module_node_refs.items():
-        node_variable_refs.setdefault(node_name, refs)
-    module_variable_specs = raw_scenario.module_variable_specs
-    variable_values, errors = _resolve_variable_values(raw_scenario, effective_parameters)
+def _bind_scenario_content(
+    raw_scenario: Scenario | ExpandedScenario,
+    parameters: Mapping[str, JSONLike] | None = None,
+) -> _BoundScenarioResult:
+    """Bind one already-expanded object without minting a public phase artifact."""
+
+    variable_values, binding_origins, errors = _resolve_variable_values(raw_scenario, dict(parameters or {}))
     if errors:
         raise SDLInstantiationError(errors)
 
+    local_constraints = _capture_capability_constraints(raw_scenario)
     raw_payload = raw_scenario.model_dump(mode="python", by_alias=True)
     unresolved_refs: set[str] = set()
     substituted_payload = _substitute_value(
@@ -185,31 +224,102 @@ def instantiate_scenario(
             [f"Scenario contains unresolved variable references after instantiation: {unresolved_list}."]
         )
 
+    for authoring_field in ("variables", "imports", "module", "expansion_provenance"):
+        substituted_payload.pop(authoring_field, None)
     try:
-        instantiated = InstantiatedScenario.model_validate(substituted_payload)
+        content = _BoundScenarioContent.model_validate(substituted_payload)
     except ValidationError as exc:
-        raise SDLInstantiationError([str(exc)]) from exc
+        raise SDLInstantiationError(_safe_model_validation_errors(exc)) from exc
 
-    should_validate_semantics = raw_scenario.semantic_validated if validate_semantics is None else validate_semantics
-    if should_validate_semantics:
-        validator = SemanticValidator(instantiated)
-        try:
-            validator.validate()
-        except SDLValidationError as exc:
-            raise SDLInstantiationError(exc.errors) from exc
-        instantiated._set_advisories(validator.warnings)
-        instantiated._set_semantic_validated(True)
-    else:
-        instantiated._set_advisories(list(raw_scenario.advisories))
-        instantiated._set_semantic_validated(False)
-    instantiated._set_instantiation_context(
-        parameters=variable_values,
-        profile=profile,
+    derived = derive_instantiated_explicitness(raw_scenario, content)
+    if derived.errors:
+        raise SDLInstantiationError(list(derived.errors))
+    explicitness_by_path = {record.path: _portable_explicitness_record(record) for record in derived.records.values()}
+    constraints: tuple[CapabilityConstraint, ...] = local_constraints
+    if isinstance(raw_scenario, ExpandedScenario):
+        constraints = (*raw_scenario.expansion_provenance.capability_constraints, *local_constraints)
+        explicitness_by_path.update(
+            {record.model_path: record for record in raw_scenario.expansion_provenance.explicitness}
+        )
+
+    return _BoundScenarioResult(
+        content=content,
+        bindings=tuple(
+            ParameterBinding(
+                parameter=(name,),
+                origin=binding_origins[name],
+                value=value,
+            )
+            for name, value in variable_values.items()
+        ),
+        capability_constraints=constraints,
+        explicitness=tuple(explicitness_by_path.values()),
     )
-    instantiated._set_node_variable_refs(node_variable_refs)
-    instantiated._set_module_variable_specs(module_variable_specs)
-    explicitness = derive_instantiated_explicitness(raw_scenario, instantiated)
-    if explicitness.errors:
-        raise SDLInstantiationError(list(explicitness.errors))
-    instantiated._set_explicitness(explicitness.records)
-    return instantiated
+
+
+def _validate_authoring_scenario(scenario: Scenario | ExpandedScenario) -> None:
+    if isinstance(scenario, Scenario) and scenario.imports:
+        raise SDLInstantiationError(["Scenario imports must be resolved by file-backed parsing before instantiation."])
+    validator = SemanticValidator(scenario)
+    try:
+        validator.validate()
+    except SDLValidationError as exc:
+        raise SDLInstantiationError(list(exc.errors)) from exc
+    scenario._set_advisories(validator.warnings)
+    scenario._set_semantic_validated(True)
+
+
+def admit_instantiated_scenario(
+    artifact: InstantiatedScenario | Mapping[str, object],
+) -> InstantiatedScenario:
+    """Structurally and semantically admit a portable instantiated artifact."""
+
+    if isinstance(artifact, InstantiatedScenario):
+        admitted = artifact
+    else:
+        try:
+            admitted = InstantiatedScenario.model_validate(artifact)
+        except ValidationError as exc:
+            raise SDLInstantiationError(_safe_model_validation_errors(exc, subject="Instantiated artifact")) from exc
+    validator = SemanticValidator(admitted)
+    validator.validate()
+    admitted._set_advisories(validator.warnings)
+    admitted._set_semantic_validated(True)
+    return admitted
+
+
+def instantiate_scenario(
+    raw_scenario: Scenario | ExpandedScenario,
+    parameters: Mapping[str, JSONLike] | None = None,
+    profile: str | None = None,
+) -> InstantiatedScenario:
+    """Return a fully concrete scenario ready for compilation.
+
+    Instantiation applies parameter values and variable defaults, rejects
+    unresolved placeholders, rebuilds the Pydantic model, and reruns semantic
+    validation on the concrete result.
+    """
+
+    _validate_authoring_scenario(raw_scenario)
+    authored_digest = canonical_sdl_digest(raw_scenario)
+    bound = _bind_scenario_content(raw_scenario, parameters)
+    expansion = raw_scenario.expansion_provenance if isinstance(raw_scenario, ExpandedScenario) else None
+    provenance = InstantiationProvenance(
+        authored_digest=SemanticDigest(**authored_digest.as_dict()),
+        selected_profile=profile,
+        bindings=bound.bindings,
+        imports=expansion.imports if expansion is not None else (),
+        capability_constraints=bound.capability_constraints,
+        explicitness=bound.explicitness,
+    )
+    payload = bound.content.model_dump(mode="python", by_alias=True)
+    payload["instantiation_provenance"] = provenance.model_dump(mode="python")
+
+    try:
+        instantiated = InstantiatedScenario.model_validate(payload)
+    except ValidationError as exc:
+        raise SDLInstantiationError(_safe_model_validation_errors(exc)) from exc
+    try:
+        return admit_instantiated_scenario(instantiated)
+    except SDLValidationError as exc:
+        raise SDLInstantiationError(list(exc.errors)) from exc

@@ -82,8 +82,8 @@ CONCERN_PAYLOAD_PATH: dict[str, tuple[str, ...]] = {
 class CompiledRealizationRequirement:
     """A compiled realization concern carrying its SEM-218 explicitness class.
 
-    Owned by ``RuntimeModel`` as model-side metadata — like the existing
-    ``node_variable_refs`` provenance it never enters the backend-facing
+    Owned by ``RuntimeModel`` as model-side metadata; like compiled capability
+    constraints, it never enters the backend-facing
     ``resource_payload()`` envelope — and consumed directly by the planner gate.
     """
 

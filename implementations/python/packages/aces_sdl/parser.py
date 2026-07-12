@@ -308,8 +308,6 @@ def parse_sdl(
         source_ranges=source_ranges,
     )
     _reject_removed_scoring_sections(data, path=path)
-    module_variable_specs: dict[str, dict[str, object]] = {}
-    module_node_variable_refs: dict[str, dict[str, str | None]] = {}
     if data.get("imports"):
         if path is None:
             raise SDLParseError(
@@ -318,12 +316,7 @@ def parse_sdl(
             )
         from .composition import expand_sdl_modules
 
-        (
-            data,
-            namespaces,
-            module_variable_specs,
-            module_node_variable_refs,
-        ) = expand_sdl_modules(
+        data, _expansion_provenance = expand_sdl_modules(
             data,
             path=path,
             source_format=source_format,
@@ -331,7 +324,7 @@ def parse_sdl(
             limits=limits,
             source_diagnostics=source_diagnostics,
         )
-        scenario_cls = ExpandedScenario if namespaces else Scenario
+        scenario_cls = ExpandedScenario
     else:
         scenario_cls = Scenario
 
@@ -343,10 +336,6 @@ def parse_sdl(
 
     source_diagnostics = _dedupe_source_diagnostics(source_diagnostics)
 
-    # Attach the module-import capability-variable provenance BEFORE semantic
-    # validation so downstream `instantiate_scenario` can propagate it.
-    scenario._set_module_variable_specs(module_variable_specs)
-    scenario._set_module_node_variable_refs(module_node_variable_refs)
     scenario._set_source_diagnostics(source_diagnostics)
 
     # Semantic validation
@@ -362,9 +351,6 @@ def parse_sdl(
     else:
         scenario._set_advisories([])
         scenario._set_semantic_validated(False)
-    if isinstance(scenario, ExpandedScenario):
-        scenario._set_module_namespaces(locals().get("namespaces", {}))
-
     return scenario
 
 

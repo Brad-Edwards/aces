@@ -15,7 +15,7 @@ from ._runtime_service_families import RUNTIME_SERVICE_FAMILIES, RuntimeReferenc
 
 if TYPE_CHECKING:
     from .entities import Entity
-    from .scenario import Scenario
+    from .scenario import ScenarioContent
 
 
 @dataclass(frozen=True)
@@ -204,7 +204,7 @@ def _add_runtime_children(
             )
 
 
-def _add_node_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
+def _add_node_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
     for node_name, node in scenario.nodes.items():
         node_parts = _qualified_parts(node_name)
         _add(
@@ -285,7 +285,7 @@ _REFERENCEABLE_SECTIONS = frozenset(
 _SPECIAL_SECTIONS = frozenset({"nodes", "infrastructure", "entities", "content", "workflows"})
 
 
-def _add_section_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
+def _add_section_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
     for section_name in HASHMAP_SECTIONS:
         if section_name in _SPECIAL_SECTIONS:
             continue
@@ -302,8 +302,8 @@ def _add_section_declarations(index: DeclarationIndex, scenario: Scenario) -> No
             )
 
 
-def _add_variable_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
-    for name in scenario.variables:
+def _add_variable_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
+    for name in getattr(scenario, "variables", {}):
         _add(
             index,
             kind="variable",
@@ -314,7 +314,7 @@ def _add_variable_declarations(index: DeclarationIndex, scenario: Scenario) -> N
         )
 
 
-def _add_infrastructure_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
+def _add_infrastructure_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
     for name, infrastructure in scenario.infrastructure.items():
         parts = _qualified_parts(name)
         _add(
@@ -337,7 +337,7 @@ def _add_infrastructure_declarations(index: DeclarationIndex, scenario: Scenario
                 )
 
 
-def _add_content_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
+def _add_content_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
     for name, content in scenario.content.items():
         parts = _qualified_parts(name)
         _add(
@@ -361,7 +361,7 @@ def _add_content_declarations(index: DeclarationIndex, scenario: Scenario) -> No
             )
 
 
-def _add_workflow_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
+def _add_workflow_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
     for name, workflow in scenario.workflows.items():
         parts = _qualified_parts(name)
         _add(
@@ -382,7 +382,7 @@ def _add_workflow_declarations(index: DeclarationIndex, scenario: Scenario) -> N
             )
 
 
-def _add_forwarding_agent_declarations(index: DeclarationIndex, scenario: Scenario) -> None:
+def _add_forwarding_agent_declarations(index: DeclarationIndex, scenario: ScenarioContent) -> None:
     for position, agent in enumerate(scenario.forwarding_agents):
         _add(
             index,
@@ -393,7 +393,7 @@ def _add_forwarding_agent_declarations(index: DeclarationIndex, scenario: Scenar
 
 
 def build_declaration_index(
-    scenario: Scenario,
+    scenario: ScenarioContent,
     *,
     raise_on_collision: bool = True,
 ) -> DeclarationIndex:

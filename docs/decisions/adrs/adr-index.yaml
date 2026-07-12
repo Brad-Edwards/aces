@@ -311,3 +311,10 @@ adrs:
   - id: ADR-076
     path: docs/decisions/adrs/adr-076-portable-sdl-identifiers-and-canonical-addresses.md
     pin: cd28329002c1befb1920f0037c07517adbe3811d15e4f559455d05b893c69203
+  - id: ADR-077
+    path: docs/decisions/adrs/adr-077-closed-sdl-phase-contracts-and-portable-derivation-evidence.md
+    pin: d0b979f7415ddc3af6fc7d32477416757473acaba76308732ba77d6063eeb287
+    amendments:
+      - date: 2026-07-12
+        ref: "#724"
+        summary: "Clarified that required instantiation provenance remains validated artifact identity metadata but is excluded from realization-envelope child-dimension enumeration."

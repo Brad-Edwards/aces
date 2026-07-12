@@ -9,6 +9,7 @@ from aces_sdl.value_parsing import extract_variable_name, parse_enum_or_var, par
 
 from .models import (
     ChangeAction,
+    CompiledCapabilityConstraint,
     Diagnostic,
     EvaluationOp,
     EvaluationPlan,
@@ -21,7 +22,6 @@ from .models import (
     RuntimeDomain,
     RuntimeModel,
     RuntimeSnapshot,
-    Severity,
     SnapshotEntry,
     resource_payload,
 )
@@ -193,37 +193,20 @@ def _entry_matches_resource(entry: SnapshotEntry, resource: PlannedResource) -> 
     )
 
 
-def _variable_ref(
+def _capability_constraint(
     model: RuntimeModel,
-    value: object,
-) -> tuple[str | None, dict[str, object] | None, bool]:
-    if not isinstance(value, str):
-        return None, None, False
-    variable_name = extract_variable_name(value)
-    if variable_name is None:
-        return None, None, False
-    return _resolve_variable_ref(model, variable_name)
-
-
-def _resolve_variable_ref(
-    model: RuntimeModel,
-    variable_name: str,
-) -> tuple[str | None, dict[str, object] | None, bool]:
-    """Look up a variable's spec by name and report whether it is declared."""
-
-    spec = model.variable_specs.get(variable_name)
-    if isinstance(spec, dict):
-        return variable_name, spec, True
-    return variable_name, None, False
-
-
-def _has_allowed_values(variable_spec: dict[str, object] | None) -> bool:
-    """Return whether `variable_spec` declares a non-empty `allowed_values`."""
-
-    if not isinstance(variable_spec, dict):
-        return False
-    allowed_values = variable_spec.get("allowed_values")
-    return isinstance(allowed_values, list) and bool(allowed_values)
+    *,
+    address: str,
+    concern: str,
+) -> CompiledCapabilityConstraint | None:
+    return next(
+        (
+            constraint
+            for constraint in model.capability_constraints
+            if constraint.address == address and constraint.concern == concern
+        ),
+        None,
+    )
 
 
 def _error_diagnostic(code: str, address: str, message: str) -> Diagnostic:
@@ -235,35 +218,12 @@ def _error_diagnostic(code: str, address: str, message: str) -> Diagnostic:
     )
 
 
-def _variable_default_suffix(variable_name: str, variable_spec: dict[str, object] | None) -> str:
-    if variable_spec is None or variable_spec.get("default") is None:
-        return f" Variable '{variable_name}' has no finite pre-instantiation domain."
-    return (
-        f" Variable '{variable_name}' has default {variable_spec['default']!r}, "
-        "but defaults are informative only before instantiation."
-    )
-
-
-def _warning_diagnostic(code: str, address: str, message: str) -> Diagnostic:
-    return Diagnostic(
-        code=code,
-        domain="provisioning",
-        address=address,
-        message=message,
-        severity=Severity.WARNING,
-    )
-
-
 def _validate_os_allowed_values(
     variable_name: str,
-    variable_spec: dict[str, object],
+    allowed_values: tuple[str | int | float | bool, ...],
     *,
     address: str,
 ) -> tuple[tuple[str, ...] | None, Diagnostic | None]:
-    allowed_values = variable_spec.get("allowed_values")
-    if not isinstance(allowed_values, list) or not allowed_values:
-        return None, None
-
     validated_values: list[str] = []
     for raw_value in allowed_values:
         try:
@@ -275,7 +235,11 @@ def _validate_os_allowed_values(
                 (f"Variable '{variable_name}' allowed_values contain value {raw_value!r} invalid for nodes.os: {exc}."),
             )
         if extract_variable_name(parsed) is not None:
-            return None, None
+            return None, _error_diagnostic(
+                "provisioner.os-family-variable-domain-invalid",
+                address,
+                f"Variable '{variable_name}' has a non-concrete nodes.os domain.",
+            )
         if isinstance(parsed, OSFamily):
             validated_values.append(parsed.value)
             continue
@@ -300,22 +264,20 @@ def _validate_node_os_family(
     if not node.os_family:
         return []
 
-    # Prefer the pre-instantiation variable ref captured by the compiler over
-    # any `${...}` placeholder still on the resolved value, but only when the
-    # variable carries an explicit `allowed_values` domain. Without
-    # allowed_values the documented planner contract is "trust the
-    # instantiated default"; widening the captured-ref path to those variables
-    # would emit a spurious validation-deferred warning even though the
-    # default is a concrete supported value.
-    variable_name, variable_spec, is_declared = None, None, False
-    captured_ref = model.node_variable_refs.get(node.address, {}).get("os")
-    if captured_ref:
-        ref_name, ref_spec, ref_declared = _resolve_variable_ref(model, captured_ref)
-        if _has_allowed_values(ref_spec):
-            variable_name, variable_spec, is_declared = ref_name, ref_spec, ref_declared
-    if variable_name is None:
-        variable_name, variable_spec, is_declared = _variable_ref(model, node.os_family)
-    if variable_name is None:
+    constraint = _capability_constraint(model, address=node.address, concern="nodes.os")
+    if constraint is None:
+        unresolved = extract_variable_name(node.os_family)
+        if unresolved is not None:
+            return [
+                _error_diagnostic(
+                    "provisioner.os-family-variable-ref-unbound",
+                    node.address,
+                    (
+                        "Provisioner capability validation cannot resolve undeclared "
+                        f"variable '{unresolved}' referenced by nodes.os."
+                    ),
+                )
+            ]
         if node.os_family in supported_os_families:
             return []
         return [
@@ -326,21 +288,10 @@ def _validate_node_os_family(
                 message=f"Provisioner does not support OS family '{node.os_family}'.",
             )
         ]
-    if not is_declared:
-        return [
-            _error_diagnostic(
-                "provisioner.os-family-variable-ref-unbound",
-                node.address,
-                (
-                    "Provisioner capability validation cannot resolve undeclared "
-                    f"variable '{variable_name}' referenced by nodes.os."
-                ),
-            )
-        ]
-
+    variable_name = ".".join(constraint.parameter)
     finite_domain, domain_error = _validate_os_allowed_values(
         variable_name,
-        variable_spec or {},
+        constraint.allowed_values,
         address=node.address,
     )
     if domain_error is not None:
@@ -362,29 +313,15 @@ def _validate_node_os_family(
             ]
         return []
 
-    return [
-        _warning_diagnostic(
-            "provisioner.os-family-validation-deferred",
-            node.address,
-            (
-                "Provisioner OS-family validation is deferred until instantiation "
-                f"for {node.os_family!r}."
-                f"{_variable_default_suffix(variable_name, variable_spec)}"
-            ),
-        )
-    ]
+    return []
 
 
 def _validate_count_allowed_values(
     variable_name: str,
-    variable_spec: dict[str, object],
+    allowed_values: tuple[str | int | float | bool, ...],
     *,
     address: str,
 ) -> tuple[int | None, Diagnostic | None]:
-    allowed_values = variable_spec.get("allowed_values")
-    if not isinstance(allowed_values, list) or not allowed_values:
-        return None, None
-
     validated_values: list[int] = []
     for raw_value in allowed_values:
         try:
@@ -404,7 +341,11 @@ def _validate_count_allowed_values(
                 ),
             )
         if extract_variable_name(parsed) is not None:
-            return None, None
+            return None, _error_diagnostic(
+                "provisioner.count-variable-domain-invalid",
+                address,
+                f"Variable '{variable_name}' has a non-concrete infrastructure.count domain.",
+            )
         if isinstance(parsed, int):
             validated_values.append(parsed)
             continue
@@ -427,42 +368,30 @@ def _resource_count_upper_bound(
 ) -> tuple[int | None, Diagnostic | None]:
     count = resource.spec.get("infrastructure", {}).get("count", 1)
 
-    # Same provenance issue as `_validate_node_os_family`: `instantiate_scenario`
-    # has already resolved `${var}` references on infrastructure.count by the
-    # time the planner sees the model. The captured ref on
-    # `model.node_variable_refs[resource.address]["count"]` lets the capability
-    # check still reach the variable's `allowed_values` so that, e.g.,
-    # `max_total_nodes=2` rejects a variable whose domain includes `3` even
-    # when its default is `1`. Switch (network) and node (vm) resources share
-    # the same dict because the planner enforces `max_total_nodes` against
-    # both. Variables without `allowed_values` keep the documented "trust the
-    # instantiated default" contract and fall through to the integer-direct
-    # branch below.
-    variable_name, variable_spec, is_declared = None, None, False
-    captured_ref = model.node_variable_refs.get(resource.address, {}).get("count")
-    if captured_ref:
-        ref_name, ref_spec, ref_declared = _resolve_variable_ref(model, captured_ref)
-        if _has_allowed_values(ref_spec):
-            variable_name, variable_spec, is_declared = ref_name, ref_spec, ref_declared
-    if variable_name is None:
+    constraint = _capability_constraint(
+        model,
+        address=resource.address,
+        concern="infrastructure.count",
+    )
+    if constraint is None:
         if isinstance(count, int):
             return count, None
-        variable_name, variable_spec, is_declared = _variable_ref(model, count)
-    if variable_name is None:
-        return None, None
-    if not is_declared:
+        unresolved = extract_variable_name(count) if isinstance(count, str) else None
+        if unresolved is None:
+            return None, None
         return None, _error_diagnostic(
             "provisioner.count-variable-ref-unbound",
             resource.address,
             (
                 "Provisioner capability validation cannot resolve undeclared "
-                f"variable '{variable_name}' referenced by infrastructure.count."
+                f"variable '{unresolved}' referenced by infrastructure.count."
             ),
         )
 
+    variable_name = ".".join(constraint.parameter)
     finite_upper_bound, domain_error = _validate_count_allowed_values(
         variable_name,
-        variable_spec or {},
+        constraint.allowed_values,
         address=resource.address,
     )
     if domain_error is not None:
@@ -470,18 +399,7 @@ def _resource_count_upper_bound(
     if finite_upper_bound is not None:
         return finite_upper_bound, None
 
-    return (
-        None,
-        _warning_diagnostic(
-            "provisioner.max-total-nodes-validation-deferred",
-            resource.address,
-            (
-                "Provisioner max-total-nodes validation is deferred until "
-                f"instantiation for {count!r}."
-                f"{_variable_default_suffix(variable_name, variable_spec)}"
-            ),
-        ),
-    )
+    return None, None
 
 
 def _account_features(account_spec: dict[str, object]) -> set[str]:

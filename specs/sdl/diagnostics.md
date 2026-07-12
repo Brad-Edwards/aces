@@ -8,7 +8,9 @@ new diagnostic mechanism, and it does not reclassify any existing condition.
 
 ## 1. Diagnostic stages
 
-An SDL document is checked at three stages, in order. Each is **fail-closed**:
+An authored SDL document is checked at three transformation stages, in order.
+Portable instantiated artifacts also have an admission gate. Each is
+**fail-closed**:
 a problem at a stage stops the document from advancing past that stage.
 
 1. **Source / parse / structural.** `sdl-yaml/v1` decoding, operational bounds,
@@ -27,6 +29,13 @@ a problem at a stage stops the document from advancing past that stage.
    problem here is an instantiation error. Instantiation re-runs semantic
    validation on the concrete document, so semantic errors can also surface at
    this stage.
+4. **Instantiated-artifact admission.** A direct or deserialized
+   `instantiated-scenario-v1` payload is checked for its closed phase shape,
+   required and internally consistent provenance, absence of substitution
+   tokens, and ordinary semantic validity before compilation or canonical
+   snapshot creation. Structural/provenance failures use the instantiation
+   error surface; semantic failures use the validation error surface. Admission
+   never trusts a caller-set private validation flag.
 
 ## 2. Collect-all semantics
 
@@ -219,3 +228,23 @@ escapes control characters, and bounds each message to 512 characters before
 placing it in `sdl.model.invalid`. The JSON Pointer and source range remain the
 authoritative locator; a raw `ValidationError`, input object, traceback, or
 unbounded validator rendering is never exposed.
+
+## 8. Instantiation and artifact-admission disclosure
+
+Instantiation and instantiated-artifact admission diagnostics identify a
+bounded variable/field location and failure class. They **MUST NOT** render a
+supplied parameter value, an `allowed_values` domain, a complete parameter map,
+the concrete artifact, trust-policy contents, credentials, a raw Pydantic input
+dump, documentation URL, or traceback.
+
+When structural reconstruction fails, the public diagnostic renders an RFC 6901
+location plus a stable validation category. The reference implementation wraps
+this in `SDLInstantiationError`; a raw framework `ValidationError` is not the
+public artifact-admission contract. Semantic errors discovered after successful
+structural admission remain `SDLValidationError` and retain the collect-all
+semantics of the semantic pass.
+
+Resolved values necessarily occur in the concrete fields they populate and in
+the portable replay binding record. Authoring, MCP, compiler, and operation
+summary surfaces **MUST NOT** echo a second raw binding map. Count-only summaries
+are permitted.

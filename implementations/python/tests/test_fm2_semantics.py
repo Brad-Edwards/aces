@@ -10,7 +10,7 @@ from aces.backends.stubs import create_stub_manifest
 from aces.core.runtime.compiler import compile_runtime_model
 from aces.core.runtime.models import RuntimeDomain, RuntimeSnapshot, SnapshotEntry
 from aces.core.runtime.planner import plan
-from aces.core.sdl import SDLValidationError, parse_sdl
+from aces.core.sdl import SDLInstantiationError, SDLValidationError, parse_sdl
 
 
 def _scenario(yaml_str: str):
@@ -91,11 +91,9 @@ workflows:
         assert any("window event 'kickoff' is not included by the referenced scripts" in error for error in errors)
         assert any("window step 'other.finish' is not part of the referenced workflows" in error for error in errors)
 
-        model = compile_runtime_model(parse_sdl(raw, skip_semantic_validation=True))
-        codes = {diag.code for diag in model.diagnostics}
-        assert "evaluation.script-ref-outside-window-stories" in codes
-        assert "evaluation.event-ref-outside-window-scripts" in codes
-        assert "evaluation.workflow-step-ref-workflow-outside-window" in codes
+        with pytest.raises(SDLInstantiationError) as compiler_exc:
+            compile_runtime_model(parse_sdl(raw, skip_semantic_validation=True))
+        assert compiler_exc.value.errors == errors
 
     def test_compiler_and_planner_agree_on_window_refresh_semantics(self):
         raw = _scenario("""
@@ -178,10 +176,9 @@ objectives:
         )
         assert any("Objective 'base' depends on undefined objective 'missing-objective'" in e for e in errors)
 
-        model = compile_runtime_model(parse_sdl(raw, skip_semantic_validation=True))
-        codes = {diag.code for diag in model.diagnostics}
-        assert "evaluation.condition-ref-unbound" in codes
-        assert "evaluation.objective-ref-unbound" in codes
+        with pytest.raises(SDLInstantiationError) as compiler_exc:
+            compile_runtime_model(parse_sdl(raw, skip_semantic_validation=True))
+        assert compiler_exc.value.errors == errors
 
     def test_compiler_and_planner_agree_on_objective_dependency_ordering_and_refresh(self):
         raw = _scenario("""

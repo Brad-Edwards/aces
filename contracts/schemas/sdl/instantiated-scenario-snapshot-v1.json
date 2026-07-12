@@ -3964,6 +3964,425 @@
       "title": "Inject",
       "type": "object"
     },
+    "InstantiatedScenario": {
+      "additionalProperties": false,
+      "description": "Scenario with all ``${var}`` references resolved to concrete values.\n\nUnlike the authoring-input contract, an instantiated scenario MUST NOT\ncontain any unresolved ``${name}`` substitution token in any string value,\nwhether a whole-string placeholder (``\"${os}\"``) or embedded\n(``\"host-${index}\"``). The invariant is enforced both by the model\nvalidator below and by the published ``instantiated-scenario-v1`` JSON\nSchema, which forbids the token in every string field. The schema is\nIf a resolved variable value itself introduces a literal ``${name}``\nsequence, the single-pass substitution step does not interpret it as a\nsecond substitution request; final model admission still treats the result\nas non-concrete and rejects the public instantiation.",
+      "properties": {
+        "accounts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Account"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Accounts",
+          "type": "object"
+        },
+        "action_contracts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ParticipantActionContract"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Action Contracts",
+          "type": "object"
+        },
+        "agents": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Agent"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Agents",
+          "type": "object"
+        },
+        "behavior_specifications": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ParticipantBehaviorSpecification"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Behavior Specifications",
+          "type": "object"
+        },
+        "conditions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Condition"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Conditions",
+          "type": "object"
+        },
+        "content": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Content"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Content",
+          "type": "object"
+        },
+        "description": {
+          "default": "",
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Description",
+          "type": "string"
+        },
+        "entities": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Entity"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Entities",
+          "type": "object"
+        },
+        "events": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Event"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Events",
+          "type": "object"
+        },
+        "evidence_requirements": {
+          "additionalProperties": {
+            "$ref": "#/$defs/EvidenceRequirement"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Evidence Requirements",
+          "type": "object"
+        },
+        "features": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Feature"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Features",
+          "type": "object"
+        },
+        "forwarding_agents": {
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/RuntimeForwardingAgent"
+              },
+              {
+                "properties": {
+                  "forwarding_agent_id": {
+                    "allOf": [
+                      {
+                        "not": {
+                          "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+                        }
+                      }
+                    ],
+                    "maxLength": 2048,
+                    "minLength": 1,
+                    "not": {
+                      "pattern": "[^a-z0-9_.-]"
+                    },
+                    "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            ]
+          },
+          "title": "Forwarding Agents",
+          "type": "array"
+        },
+        "infrastructure": {
+          "additionalProperties": {
+            "$ref": "#/$defs/InfraNode"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Infrastructure",
+          "type": "object"
+        },
+        "injects": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Inject"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Injects",
+          "type": "object"
+        },
+        "instantiation_provenance": {
+          "$ref": "#/$defs/InstantiationProvenance",
+          "x-aces-realization-dimension": false
+        },
+        "name": {
+          "allOf": [
+            {
+              "not": {
+                "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+              }
+            }
+          ],
+          "maxLength": 64,
+          "minLength": 1,
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          },
+          "pattern": "^[a-z0-9]",
+          "title": "Name",
+          "type": "string"
+        },
+        "nodes": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Node"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,34}$",
+            "type": "string"
+          },
+          "title": "Nodes",
+          "type": "object"
+        },
+        "objectives": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Objective"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Objectives",
+          "type": "object"
+        },
+        "observation_boundaries": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ParticipantObservationBoundary"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Observation Boundaries",
+          "type": "object"
+        },
+        "outcome_interpretation_rules": {
+          "additionalProperties": {
+            "$ref": "#/$defs/OutcomeInterpretationRule"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Outcome Interpretation Rules",
+          "type": "object"
+        },
+        "relationships": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Relationship"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Relationships",
+          "type": "object"
+        },
+        "scripts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Script"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Scripts",
+          "type": "object"
+        },
+        "stories": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Story"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Stories",
+          "type": "object"
+        },
+        "version": {
+          "default": "*",
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Version",
+          "type": "string"
+        },
+        "vulnerabilities": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Vulnerability"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Vulnerabilities",
+          "type": "object"
+        },
+        "workflows": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Workflow"
+          },
+          "propertyNames": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Workflows",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "instantiation_provenance"
+      ],
+      "title": "SDL Instantiated Scenario v1",
+      "type": "object",
+      "x-aces-authored-identity-profile": "aces-sdl-semantic/v1",
+      "x-aces-document-phase": "instantiated-scenario"
+    },
     "InstantiationProvenance": {
       "additionalProperties": false,
       "description": "Complete portable derivation context for an instantiated scenario.",
@@ -22284,423 +22703,25 @@
       "type": "object"
     }
   },
-  "$id": "https://aces.dev/schemas/instantiated-scenario-v1.json",
+  "$id": "https://aces.dev/schemas/instantiated-scenario-snapshot-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Scenario with all ``${var}`` references resolved to concrete values.\n\nUnlike the authoring-input contract, an instantiated scenario MUST NOT\ncontain any unresolved ``${name}`` substitution token in any string value,\nwhether a whole-string placeholder (``\"${os}\"``) or embedded\n(``\"host-${index}\"``). The invariant is enforced both by the model\nvalidator below and by the published ``instantiated-scenario-v1`` JSON\nSchema, which forbids the token in every string field. The schema is\nIf a resolved variable value itself introduces a literal ``${name}``\nsequence, the single-pass substitution step does not interpret it as a\nsecond substitution request; final model admission still treats the result\nas non-concrete and rejects the public instantiation.",
+  "description": "Sealed canonical envelope for one portable instantiated artifact.",
   "properties": {
-    "accounts": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Account"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Accounts",
-      "type": "object"
-    },
-    "action_contracts": {
-      "additionalProperties": {
-        "$ref": "#/$defs/ParticipantActionContract"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Action Contracts",
-      "type": "object"
-    },
-    "agents": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Agent"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Agents",
-      "type": "object"
-    },
-    "behavior_specifications": {
-      "additionalProperties": {
-        "$ref": "#/$defs/ParticipantBehaviorSpecification"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Behavior Specifications",
-      "type": "object"
-    },
-    "conditions": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Condition"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Conditions",
-      "type": "object"
-    },
-    "content": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Content"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Content",
-      "type": "object"
-    },
-    "description": {
-      "default": "",
-      "not": {
-        "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-      },
-      "title": "Description",
+    "profile": {
+      "const": "aces-sdl-instantiated-snapshot/v1",
+      "title": "Profile",
       "type": "string"
     },
-    "entities": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Entity"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Entities",
-      "type": "object"
-    },
-    "events": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Event"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Events",
-      "type": "object"
-    },
-    "evidence_requirements": {
-      "additionalProperties": {
-        "$ref": "#/$defs/EvidenceRequirement"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Evidence Requirements",
-      "type": "object"
-    },
-    "features": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Feature"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Features",
-      "type": "object"
-    },
-    "forwarding_agents": {
-      "items": {
-        "allOf": [
-          {
-            "$ref": "#/$defs/RuntimeForwardingAgent"
-          },
-          {
-            "properties": {
-              "forwarding_agent_id": {
-                "allOf": [
-                  {
-                    "not": {
-                      "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-                    }
-                  }
-                ],
-                "maxLength": 2048,
-                "minLength": 1,
-                "not": {
-                  "pattern": "[^a-z0-9_.-]"
-                },
-                "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-                "type": "string"
-              }
-            },
-            "type": "object"
-          }
-        ]
-      },
-      "title": "Forwarding Agents",
-      "type": "array"
-    },
-    "infrastructure": {
-      "additionalProperties": {
-        "$ref": "#/$defs/InfraNode"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Infrastructure",
-      "type": "object"
-    },
-    "injects": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Inject"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Injects",
-      "type": "object"
-    },
-    "instantiation_provenance": {
-      "$ref": "#/$defs/InstantiationProvenance",
-      "x-aces-realization-dimension": false
-    },
-    "name": {
-      "allOf": [
-        {
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          }
-        }
-      ],
-      "maxLength": 64,
-      "minLength": 1,
-      "not": {
-        "pattern": "[^a-z0-9_-]"
-      },
-      "pattern": "^[a-z0-9]",
-      "title": "Name",
-      "type": "string"
-    },
-    "nodes": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Node"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,34}$",
-        "type": "string"
-      },
-      "title": "Nodes",
-      "type": "object"
-    },
-    "objectives": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Objective"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Objectives",
-      "type": "object"
-    },
-    "observation_boundaries": {
-      "additionalProperties": {
-        "$ref": "#/$defs/ParticipantObservationBoundary"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Observation Boundaries",
-      "type": "object"
-    },
-    "outcome_interpretation_rules": {
-      "additionalProperties": {
-        "$ref": "#/$defs/OutcomeInterpretationRule"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Outcome Interpretation Rules",
-      "type": "object"
-    },
-    "relationships": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Relationship"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Relationships",
-      "type": "object"
-    },
-    "scripts": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Script"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Scripts",
-      "type": "object"
-    },
-    "stories": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Story"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Stories",
-      "type": "object"
-    },
-    "version": {
-      "default": "*",
-      "not": {
-        "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-      },
-      "title": "Version",
-      "type": "string"
-    },
-    "vulnerabilities": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Vulnerability"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Vulnerabilities",
-      "type": "object"
-    },
-    "workflows": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Workflow"
-      },
-      "propertyNames": {
-        "maxLength": 2048,
-        "minLength": 1,
-        "not": {
-          "pattern": "[^a-z0-9_.-]"
-        },
-        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
-        "type": "string"
-      },
-      "title": "Workflows",
-      "type": "object"
+    "scenario": {
+      "$ref": "#/$defs/InstantiatedScenario"
     }
   },
   "required": [
-    "name",
-    "instantiation_provenance"
+    "profile",
+    "scenario"
   ],
-  "title": "SDL Instantiated Scenario v1",
+  "title": "SDL Instantiated Scenario Snapshot v1",
   "type": "object",
-  "x-aces-authored-identity-profile": "aces-sdl-semantic/v1",
-  "x-aces-document-phase": "instantiated-scenario"
+  "x-aces-document-phase": "canonical-instantiated-snapshot"
 }

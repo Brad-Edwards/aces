@@ -140,13 +140,12 @@ class TestRun300Lifecycle:
             "not a loose dict — typed contracts are how RUN-300 preserves "
             "meaning across stages."
         )
-        assert instantiated.instantiation_parameters == {
+        assert instantiated.instantiation_provenance.root_binding_values == {
             "os_kind": PARAM_OS_KIND,
             "cpu_count": PARAM_CPU_COUNT,
         }, (
-            "Instantiation parameters must be captured on the concrete "
-            "scenario so downstream stages can trace provenance back to "
-            "the authoring inputs."
+            "Instantiation parameters must be captured in portable provenance "
+            "so downstream stages can trace them to the authoring inputs."
         )
         instantiated_payload = instantiated.model_dump(mode="python", by_alias=True)
         assert _no_variable_tokens(instantiated_payload), (

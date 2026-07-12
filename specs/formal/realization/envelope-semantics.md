@@ -131,6 +131,16 @@ An envelope expression consists of:
 
 The shape above is semantic, not yet a published JSON schema.
 
+The relation operates on the **realization projection** of an admitted scenario,
+not on every member of its exchange artifact. The projection excludes fields
+annotated `x-aces-realization-dimension: false`. In
+`instantiated-scenario-v1`, `instantiation_provenance` is such artifact metadata:
+it remains mandatory for admission and participates in canonical snapshot
+identity, but a backend neither chooses nor realizes it. Closed-world envelope
+checks therefore MUST NOT treat that field as an unspecified realizable
+dimension. This projection does not weaken provenance validation or remove the
+field from the artifact.
+
 ## Required Semantics
 
 ### R1 - Envelopes denote sets
@@ -140,9 +150,9 @@ scenario instance `s` is a member of envelope `E` exactly when:
 
 1. `s` is structurally and semantically valid under the ordinary SDL rules;
 2. every effective binding in `E` is satisfied by the corresponding value or
-   child scope in `s`;
+   child scope in the realization projection of `s`;
 3. every closed-world scope in `E` has no unspecified realizable dimension in
-   `s`;
+   the realization projection of `s`;
 4. every governed reference in `E` resolves under the applicable concept or SDL
    authority.
 

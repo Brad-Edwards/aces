@@ -14,11 +14,11 @@ from .._runtime_service_families import (
 )
 from ..entities import flatten_entities
 from ..nodes import NodeType
-from ..scenario import Scenario
+from ..scenario import ScenarioContent
 
 
 class _ValidatorCore:
-    def __init__(self, scenario: Scenario) -> None:
+    def __init__(self, scenario: ScenarioContent) -> None:
         self._s = scenario
         self._errors: list[str] = []
         self._warnings: list[str] = []

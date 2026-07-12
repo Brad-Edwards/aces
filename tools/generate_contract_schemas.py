@@ -14,6 +14,7 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
     if name in {
         "sdl-authoring-input-v1",
         "instantiated-scenario-v1",
+        "instantiated-scenario-snapshot-v1",
         "scenario-instantiation-request-v1",
     }:
         return schemas_dir / "sdl" / f"{name}.json"

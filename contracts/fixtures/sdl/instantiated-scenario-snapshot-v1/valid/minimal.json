@@ -1,0 +1,13 @@
+{
+  "profile": "aces-sdl-instantiated-snapshot/v1",
+  "scenario": {
+    "name": "concrete-scenario",
+    "instantiation_provenance": {
+      "authored_digest": {
+        "profile": "aces-sdl-semantic/v1",
+        "algorithm": "sha256",
+        "value": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  }
+}

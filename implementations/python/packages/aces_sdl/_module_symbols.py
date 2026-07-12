@@ -10,7 +10,7 @@ from ._base import is_variable_ref
 from ._identifiers import QualifiedName
 from ._module_runtime_aliases import nested_node_runtime_aliases
 from .entities import flatten_entities
-from .scenario import ModuleDescriptor, Scenario
+from .scenario import ModuleDescriptor, ScenarioContent
 
 # Canonical list of scenario top-level sections that hold user-defined
 # hashmap keys. Re-exported as both the public ``HASHMAP_SECTIONS`` name
@@ -67,10 +67,12 @@ def rewrite_objective_window_ref(ref: str, workflow_names: Mapping[str, str]) ->
 
 
 def explicit_exports(
-    scenario: Scenario,
+    scenario: ScenarioContent,
     descriptor: ModuleDescriptor,
+    *,
+    restrict_to_descriptor: bool,
 ) -> dict[str, set[str]]:
-    if scenario.module is None:
+    if not restrict_to_descriptor:
         return {
             section: set(getattr(scenario, section).keys())
             for section in _HASHMAP_SECTIONS
@@ -99,7 +101,7 @@ def _qualified_section_aliases(section_name: str, rename_map: Mapping[str, str])
 
 
 def _nested_node_service_aliases(
-    scenario: Scenario,
+    scenario: ScenarioContent,
     node_rename_map: Mapping[str, str],
 ) -> dict[str, str]:
     """Qualified service refs ``nodes.<vm>.services.<svc>``.
@@ -122,7 +124,7 @@ def _nested_node_service_aliases(
 
 
 def _nested_content_item_aliases(
-    scenario: Scenario,
+    scenario: ScenarioContent,
     content_rename_map: Mapping[str, str],
 ) -> dict[str, str]:
     """Qualified content-item refs ``content.<section>.items.<item>``."""
@@ -141,13 +143,18 @@ def _nested_content_item_aliases(
 
 
 def symbol_index(
-    scenario: Scenario,
+    scenario: ScenarioContent,
     *,
     namespace: str,
     descriptor: ModuleDescriptor,
+    restrict_to_descriptor: bool = False,
 ) -> dict[str, dict[str, str] | set[str]]:
     entities = set(flatten_entities(scenario.entities))
-    exported = explicit_exports(scenario, descriptor)
+    exported = explicit_exports(
+        scenario,
+        descriptor,
+        restrict_to_descriptor=restrict_to_descriptor,
+    )
     named: dict[str, str] = {}
     section_maps: dict[str, dict[str, str]] = {}
     for section_name in _HASHMAP_SECTIONS:

@@ -201,11 +201,9 @@ infrastructure:
         assert ("provisioning.ordering-cycle", "provision.node.a") in diagnostics
         assert not execution_plan.is_valid
 
-    def test_cyclic_objective_dependencies_fail_closed(self):
-        execution_plan = plan(
-            compile_runtime_model(
-                parse_sdl(
-                    textwrap.dedent("""
+    def test_compiler_admission_rejects_cyclic_objective_dependencies(self):
+        scenario = parse_sdl(
+            textwrap.dedent("""
 name: objective-cycle
 nodes:
   vm:
@@ -228,16 +226,11 @@ objectives:
     success: {conditions: [health]}
     depends_on: [first]
 """),
-                    skip_semantic_validation=True,
-                )
-            ),
-            create_stub_manifest(),
+            skip_semantic_validation=True,
         )
 
-        diagnostics = {(diag.code, diag.address) for diag in execution_plan.diagnostics}
-
-        assert ("evaluation.ordering-cycle", "evaluation.objective.first") in diagnostics
-        assert not execution_plan.is_valid
+        with pytest.raises(SDLInstantiationError, match="Objective dependency graph contains a cycle"):
+            compile_runtime_model(scenario)
 
     def test_dependency_changes_propagate_through_evaluation_graph(self):
         old_model = compile_runtime_model(
@@ -346,7 +339,7 @@ events:
         assert kickoff.inject_addresses == ("orchestration.inject.mail",)
         assert execution_plan.is_valid
 
-    def test_unbound_condition_and_inject_refs_invalidate_plan(self):
+    def test_compiler_admission_rejects_unbound_inject_refs(self):
         scenario = _scenario("""
 name: unbound
 nodes:
@@ -369,16 +362,8 @@ events:
 """)
         scenario.injects = {}
 
-        execution_plan = plan(
-            compile_runtime_model(scenario),
-            create_stub_manifest(),
-        )
-
-        codes = {diag.code for diag in execution_plan.diagnostics}
-        assert "evaluation.condition-ref-unbound" in codes
-        assert "orchestration.condition-ref-unbound" in codes
-        assert "orchestration.inject-ref-unbound" in codes
-        assert not execution_plan.is_valid
+        with pytest.raises(SDLInstantiationError, match="references undefined inject 'mail'"):
+            compile_runtime_model(scenario)
 
     @pytest.mark.parametrize(
         ("orchestrator_kwargs", "scenario_yaml", "expected_code"),
@@ -1020,7 +1005,7 @@ nodes:
   vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """)
             )
-        assert "nodes.vm.os" in str(exc.value)
+        assert "/nodes/vm/os" in str(exc.value)
 
     def test_variable_backed_os_without_allowed_values_uses_instantiated_default(self):
         manifest = _limited_backend_manifest(
@@ -1199,7 +1184,7 @@ infrastructure:
   vm: ${node_count}
 """)
             )
-        assert "infrastructure.vm.count" in str(exc.value)
+        assert "/infrastructure/vm/count" in str(exc.value)
 
     def test_variable_backed_os_allowed_values_fail_when_pre_instantiated(self):
         # Manager-path coverage: when the caller instantiates upstream and
@@ -1228,7 +1213,6 @@ variables:
 nodes:
   vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """),
-            validate_semantics=False,
         )
         execution_plan = plan(compile_runtime_model(instantiated), manifest)
 
