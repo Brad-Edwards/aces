@@ -145,6 +145,7 @@ accounts:
 - [Academic Lineage](lineage.md) — Primary-source lineage for SDL semantics
 - [Scenario/Delivery Drift Audit](scenario-delivery-drift-audit.md) — Audit and remediation record for classification drift after ADR-033
 - [Limitations](limitations.md) — Current expressiveness and materialization gaps
+- [Scientific-Scenario Completeness](scientific-scenario-completeness.md) — REV1 intended-use profiles and current blocking concerns
 - [Testing](testing.md) — How to run unit tests, stress tests, and fuzz tests
 - [Complex Scenario Designs](complex-scenarios.md) — Up-front design briefs for large example exercises
 - [Runtime Architecture](runtime-architecture.md) — SDL-native compiler, composite plans, and runtime targets

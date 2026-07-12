@@ -118,6 +118,12 @@ assumptions required across authoring, exchange, processing, and execution
 phases.
 
 The initial profile lives at `contracts/profiles/semantic/reference-stack-v1.json`.
+
+The `scientific-completeness-taxonomy-v1` and
+`scientific-completeness-assessment-v1` schemas keep stable intended-use
+profiles separate from time-varying delivery evidence. Their normative
+artifacts live under `contracts/profiles/scientific-completeness/`; neither is
+an SDL validation-strength profile or a backend capability declaration.
 Its processing and execution phases also declare required concept bindings for
 the governed apparatus-manifest vocabulary surfaces introduced by GOV-918.
 

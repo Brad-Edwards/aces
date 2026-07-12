@@ -6,7 +6,8 @@ The goal of this bucket is organizational clarity:
 
 - `schemas/` contains published contract schemas
 - `fixtures/` contains valid and invalid payload corpora for those contracts
-- `profiles/` contains capability profile declarations
+- `profiles/` contains capability profiles and separately versioned
+  scientific-completeness taxonomy/assessment declarations
 - `realization-envelopes/` contains configuration-bound backend realization
   declarations whose identity is carried through manifests, plans, and snapshots
 
