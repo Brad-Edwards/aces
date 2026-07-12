@@ -202,3 +202,4 @@ adr-076-portable-sdl-identifiers-and-canonical-addresses
 | [074](adr-074-experiment-authoring-input-contract-boundary.md) | Experiment Authoring-Input Contract Boundary | accepted | 2026-07-08 |
 | [075](adr-075-ecosystem-versioning-deprecation-and-migration-governance.md) | Ecosystem Versioning, Deprecation, and Migration Governance | proposed | 2026-07-11 |
 | [076](adr-076-portable-sdl-identifiers-and-canonical-addresses.md) | Portable SDL Identifiers and Canonical Addresses | accepted | 2026-07-11 |
+| [077](adr-077-associated-artifact-manifest-boundary.md) | Associated Artifact Manifest Boundary | accepted | 2026-07-12 |

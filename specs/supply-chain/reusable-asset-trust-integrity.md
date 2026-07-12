@@ -35,11 +35,11 @@ Trust rests on three orthogonal axes; a policy MUST keep them distinct:
 
 | Evidence class | Meaning | Existing ACES mechanism |
 |---|---|---|
-| `integrity_digest` | Digest bound to canonical payload bytes | module `aces.lock.json` digest pins; scenario-snapshot binding; study-definition digest; controlled-vocabulary `source_digest`; manifest/config digests |
+| `integrity_digest` | Digest bound to canonical payload bytes | module `aces.lock.json` digest pins; scenario-snapshot binding; associated-artifact set digest; study-definition digest; controlled-vocabulary `source_digest`; manifest/config digests |
 | `authenticity_signature` | Signature by a trusted signer set | `RegistryTrustPolicy` signature verification (`_verify_signatures`) |
 | `provenance_lock_record` | Pinned inputs / derivation record | `LockRecord` / `resolve_lock_records`; experiment references pinned by digest; participant provenance |
 | `governance_source` | Authoritative origin for governed terms | `controlled-vocabularies-v1` `source` (authority + version + extension policy) |
-| `artifact_checksum` | Hard checksum over content-artifact bytes | `ExperimentChecksumModel` (evidence records, task/study artifacts) |
+| `artifact_checksum` | Hard checksum over content-artifact bytes | `ExperimentChecksumModel` (associated payloads, evidence records, task/study artifacts) |
 
 Each requirement declares an `enforcement` level: `required`, `recommended`, or
 `optional`.
@@ -53,7 +53,8 @@ surface external consumers validate against), and a negative conformance fixture
 that pins the rejection:
 
 1. **Complete family coverage.** The policy MUST declare exactly one entry for
-   every canonical reusable asset family: `reusable_scenario`, `sdl_module`,
+   every canonical reusable asset family: `reusable_scenario`,
+   `associated_artifact_set`, `sdl_module`,
    `experiment_task`, `experiment_study`, `behavior_vocabulary`,
    `participant_manifest`, `evidence_artifact`.
 2. **Integrity baseline.** Every family MUST declare at least one integrity
@@ -83,6 +84,11 @@ Its shape per family:
   provenance via composed-module lock records (required), authenticity via
   source-module signatures (recommended). Scenario *identity* stays distinct
   from scenario-snapshot *integrity*.
+- **associated_artifact_set** — integrity via the derived
+  `associated-artifact-set/v1` parent-plus-reference-set digest (required) and
+  concrete payload checksums (required); an optional downstream signature over
+  the derived set digest is independent authenticity evidence. Associated
+  payloads do not change parent integrity.
 - **sdl_module** — integrity via lockfile digest pin (required), provenance via
   lock record with drift checks (required), authenticity via
   `RegistryTrustPolicy` signatures (required).

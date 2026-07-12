@@ -9,6 +9,16 @@
       "content_hash": "e7b858c93b7ec763c361439b1d9c7cc3979a1d150ca64a7f41ebc12c050f5cff"
     },
     {
+      "contract_id": "associated-artifact-manifest-v1",
+      "schema_path": "contracts/schemas/associated-artifacts/associated-artifact-manifest-v1.json",
+      "stability": "draft",
+      "content_hash": "50cb495731d7274371dd01116acfe67dda3dd3261a1a911136cae02dab7f7927",
+      "last_change": {
+        "summary": "Initial publication of the ADR-077 scenario- and experiment-associated artifact manifest, canonical set identity, and required semantic byte-binding invariant.",
+        "content_hash": "50cb495731d7274371dd01116acfe67dda3dd3261a1a911136cae02dab7f7927"
+      }
+    },
+    {
       "contract_id": "atlas-tactics-source-v1",
       "schema_path": "contracts/schemas/concept-authority/atlas-tactics-source-v1.json",
       "stability": "draft",
@@ -90,80 +100,80 @@
       "contract_id": "experiment-apparatus-context-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-apparatus-context-v1.json",
       "stability": "draft",
-      "content_hash": "565558814655c9fc3cd790fb441633622e4846d416ffaba43812143024e33ae3",
+      "content_hash": "a2c8fcfc2fec00a20ee9e46af3160c88b9e7aeb8b2315afbaa3781b3e25c0f93",
       "last_change": {
-        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
-        "content_hash": "565558814655c9fc3cd790fb441633622e4846d416ffaba43812143024e33ae3"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "a2c8fcfc2fec00a20ee9e46af3160c88b9e7aeb8b2315afbaa3781b3e25c0f93"
       }
     },
     {
       "contract_id": "experiment-authoring-input-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "0373103adfa21acc45fb9db525f73603f79173660b372ea6b91de119771ea616",
+      "content_hash": "2f399830a126d155bbb3940ad1f0bbb2c41fe540ea261d12e37d74400393d976",
       "last_change": {
-        "summary": "Published the experiment authoring-input contract: a pre-run experiment design surface that references the archival experiment-core outputs (ADR-074, issue #675).",
-        "content_hash": "0373103adfa21acc45fb9db525f73603f79173660b372ea6b91de119771ea616"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "2f399830a126d155bbb3940ad1f0bbb2c41fe540ea261d12e37d74400393d976"
       }
     },
     {
       "contract_id": "experiment-capture-spec-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-capture-spec-v1.json",
       "stability": "draft",
-      "content_hash": "1c479291aed4c60aa7a28d93839d3633f8dee585ca3098b83bd4fbb03bea86ad",
+      "content_hash": "b262408eda4309d265a292ffd2fbcb1e34ba58c28205e4d99996f1b854a70876",
       "last_change": {
-        "summary": "Published the SEM-224 observability/evidence plane (authored_evidence_requirement) as a portable x-aces-plane annotation sourced from the carrier-oriented plane classifier.",
-        "content_hash": "1c479291aed4c60aa7a28d93839d3633f8dee585ca3098b83bd4fbb03bea86ad"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "b262408eda4309d265a292ffd2fbcb1e34ba58c28205e4d99996f1b854a70876"
       }
     },
     {
       "contract_id": "experiment-derived-measure-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-derived-measure-v1.json",
       "stability": "draft",
-      "content_hash": "162aeeb41906008b03ef211b20646f451101c59cdcabc1614427ca3fa7945afe",
+      "content_hash": "3619f07b4e075a47a99e026aed5395a6a9c06b663a81e62f67bba7fd196ccf34",
       "last_change": {
-        "summary": "Published the SEM-224 observability/evidence plane (derived_analysis) as a portable x-aces-plane annotation sourced from the carrier-oriented plane classifier.",
-        "content_hash": "162aeeb41906008b03ef211b20646f451101c59cdcabc1614427ca3fa7945afe"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "3619f07b4e075a47a99e026aed5395a6a9c06b663a81e62f67bba7fd196ccf34"
       }
     },
     {
       "contract_id": "experiment-evidence-record-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-evidence-record-v1.json",
       "stability": "draft",
-      "content_hash": "3483ac4ff2cb61278d64253257f70dc73d14eaff3bc5501eee20a86a55d7d707",
+      "content_hash": "b6b14039002d04329d760a30b26cb191d795de3b49e377edd084be4d10f9c32b",
       "last_change": {
-        "summary": "Published the SEM-224 observability/evidence plane (captured_evidence) as a portable x-aces-plane annotation sourced from the carrier-oriented plane classifier.",
-        "content_hash": "3483ac4ff2cb61278d64253257f70dc73d14eaff3bc5501eee20a86a55d7d707"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "b6b14039002d04329d760a30b26cb191d795de3b49e377edd084be4d10f9c32b"
       }
     },
     {
       "contract_id": "experiment-run-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
       "stability": "draft",
-      "content_hash": "e1e7ca5e74439140cd27340a7754d8b871266e518ce93c98bf6ff0dbaa8bd134",
+      "content_hash": "1503644443be7e61d5710a6aed9437a66c53a7871eb0ff1541fb2449b684742b",
       "last_change": {
-        "summary": "Added SEM-225 run-level augmentation disclosures for processor/backend augmentation classification, visibility, observer-effect, comparability, and evidence provenance.",
-        "content_hash": "e1e7ca5e74439140cd27340a7754d8b871266e518ce93c98bf6ff0dbaa8bd134"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "1503644443be7e61d5710a6aed9437a66c53a7871eb0ff1541fb2449b684742b"
       }
     },
     {
       "contract_id": "experiment-study-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
       "stability": "draft",
-      "content_hash": "b769512ccf43a3cae303d363da84cf1d4bbd97099d7f9085f065bbe4d801b4d3",
+      "content_hash": "d180220068358f42d6ae850eccb9991dc9284db4b244ef70960837ea68d9b098",
       "last_change": {
-        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
-        "content_hash": "b769512ccf43a3cae303d363da84cf1d4bbd97099d7f9085f065bbe4d801b4d3"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "d180220068358f42d6ae850eccb9991dc9284db4b244ef70960837ea68d9b098"
       }
     },
     {
       "contract_id": "experiment-task-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-task-v1.json",
       "stability": "draft",
-      "content_hash": "45fb2eb011d89b9be057d236b9d4e58c2ce01f8c1365f7d521afc8192d68a73a",
+      "content_hash": "b82f084841720563089206f9a8dc94b93fde10035da9b3a64662b7660b30d823",
       "last_change": {
-        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
-        "content_hash": "45fb2eb011d89b9be057d236b9d4e58c2ce01f8c1365f7d521afc8192d68a73a"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "b82f084841720563089206f9a8dc94b93fde10035da9b3a64662b7660b30d823"
       }
     },
     {
@@ -362,10 +372,10 @@
       "contract_id": "reusable-asset-trust-policy-v1",
       "schema_path": "contracts/schemas/asset-trust/reusable-asset-trust-policy-v1.json",
       "stability": "draft",
-      "content_hash": "68f18e107bddb0b037a316bd334258da7329fc60460ee38ef415c89ce58ad7e0",
+      "content_hash": "de371c60018cc27664915404443df13dd881a57264a1539028409a14af1823b5",
       "last_change": {
-        "summary": "Initial publication of the GOV-913 reusable-asset trust/authenticity/integrity policy contract: per-family evidence-class requirements (integrity/authenticity/provenance/governance) referencing existing ACES mechanisms.",
-        "content_hash": "68f18e107bddb0b037a316bd334258da7329fc60460ee38ef415c89ce58ad7e0"
+        "summary": "Added the associated_artifact_set family with required set-integrity and concrete payload-checksum evidence (ADR-077, issue #738).",
+        "content_hash": "de371c60018cc27664915404443df13dd881a57264a1539028409a14af1823b5"
       }
     },
     {
