@@ -33,6 +33,7 @@ from aces_processor.compiler import compile_runtime_model
 from aces_processor.models import NetworkRuntime, NodeRuntime, RuntimeModel
 from aces_sdl._declarations import build_declaration_index
 from aces_sdl._errors import SDLParseError, SDLValidationError
+from aces_sdl._model_diagnostics import _bounded_model_message
 from aces_sdl._source_profile import SDLParserLimits
 from aces_sdl.identifiers import (
     PORTABLE_IDENTIFIER_JSON_SCHEMA,
@@ -44,7 +45,7 @@ from aces_sdl.identifiers import (
 from aces_sdl.infrastructure import ACLRule
 from aces_sdl.instantiate import instantiate_scenario
 from aces_sdl.nodes import ServicePort
-from aces_sdl.parser import _bounded_model_message, parse_sdl
+from aces_sdl.parser import parse_sdl
 from aces_sdl.runtime_values import require_symbol
 from aces_sdl.scenario import ExpandedScenario, ImportDecl, ModuleDescriptor, Scenario
 from aces_sdl.validator import SemanticValidator

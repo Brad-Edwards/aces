@@ -11,11 +11,12 @@ from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp,
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
 
 from ._payload import NETWORK_RESOURCE_TYPE, NODE_RESOURCE_TYPE
-from .driver import DriverResult, LibvirtDriver
+from .driver import DomainSpec, DriverResult, LibvirtDriver, NetworkSpec
 from .envelopes import LibvirtDriverMode, load_libvirt_realization_envelope
 from .manifest import _provisioner_capabilities
 from .realization import Realization, interpret_provisioning_plan
-from .techvault_concerns import techvault_admission_diagnostics, techvault_observation_diagnostics
+from .techvault_concerns import techvault_observation_diagnostics
+from .techvault_plan_admission import techvault_admission_diagnostics
 
 _DOMAIN = "runtime"
 INVALID_PLAN_CODE = "libvirt-backend.invalid-plan"
@@ -134,56 +135,79 @@ class LibvirtProvisioner:
         delete_networks: list[str],
         delete_domains: list[str],
     ) -> list[Diagnostic]:
-        diagnostics: list[Diagnostic] = []
+        active = self._active_addresses(plan, realization)
+        networks = tuple(spec for spec in realization.networks if spec.address in active)
+        domains = tuple(spec for spec in realization.domains if spec.address in active)
+        diagnostics = self._realize_active(networks, domains)
+        diagnostics.extend(self._delete_targets(delete_networks, delete_domains))
+        return diagnostics
+
+    def _active_addresses(self, plan: ProvisioningPlan, realization: Realization) -> set[str]:
         active = {op.address for op in plan.operations if op.action in {ChangeAction.CREATE, ChangeAction.UPDATE}}
         # A changed placement must realize its target domain even when the node
         # itself is UNCHANGED: the domain's seed now carries different cloud-init.
         for placement_address, node_address in realization.placement_targets.items():
             if placement_address in active:
                 active.add(node_address)
-        networks = tuple(spec for spec in realization.networks if spec.address in active)
-        domains = tuple(spec for spec in realization.domains if spec.address in active)
-        if networks or domains:
-            result = self._driver.realize(networks=networks, domains=domains)
-            realization_diagnostics = [
-                *result.diagnostics,
-                *_unconfirmed_realization_diagnostics(
-                    result, requested=tuple(spec.address for spec in (*networks, *domains))
-                ),
-            ]
-            diagnostics.extend(realization_diagnostics)
-            observation_diagnostics: list[Diagnostic] = []
-            if self._mode is LibvirtDriverMode.TECHVAULT_APPLIANCE and not result.diagnostics:
-                observation_diagnostics = techvault_observation_diagnostics(
-                    networks=networks,
-                    domains=domains,
-                    result=result,
-                )
-                diagnostics.extend(observation_diagnostics)
-            if self._mode is LibvirtDriverMode.TECHVAULT_APPLIANCE and _has_error(
-                [*realization_diagnostics, *observation_diagnostics]
-            ):
-                cleanup = self._driver.destroy(
-                    networks=tuple(spec.address for spec in networks),
-                    domains=tuple(spec.address for spec in domains),
-                )
-                diagnostics.extend(cleanup.diagnostics)
-                diagnostics.extend(
-                    _unconfirmed_destroy_diagnostics(
-                        cleanup,
-                        requested=tuple(spec.address for spec in (*domains, *networks)),
-                    )
-                )
-        if delete_networks or delete_domains:
-            result = self._driver.destroy(networks=tuple(delete_networks), domains=tuple(delete_domains))
-            diagnostics.extend(result.diagnostics)
-            diagnostics.extend(
-                _unconfirmed_destroy_diagnostics(
-                    result,
-                    requested=(*delete_networks, *delete_domains),
-                )
+        return active
+
+    def _realize_active(
+        self,
+        networks: tuple[NetworkSpec, ...],
+        domains: tuple[DomainSpec, ...],
+    ) -> list[Diagnostic]:
+        if not (networks or domains):
+            return []
+        result = self._driver.realize(networks=networks, domains=domains)
+        realization_diagnostics = [
+            *result.diagnostics,
+            *_unconfirmed_realization_diagnostics(
+                result, requested=tuple(spec.address for spec in (*networks, *domains))
+            ),
+        ]
+        diagnostics = list(realization_diagnostics)
+        observation_diagnostics: list[Diagnostic] = []
+        if self._mode is LibvirtDriverMode.TECHVAULT_APPLIANCE and not result.diagnostics:
+            observation_diagnostics = techvault_observation_diagnostics(
+                networks=networks,
+                domains=domains,
+                result=result,
             )
+            diagnostics.extend(observation_diagnostics)
+        if self._mode is LibvirtDriverMode.TECHVAULT_APPLIANCE and _has_error(
+            [*realization_diagnostics, *observation_diagnostics]
+        ):
+            diagnostics.extend(self._rollback_realization(networks, domains))
         return diagnostics
+
+    def _rollback_realization(
+        self,
+        networks: tuple[NetworkSpec, ...],
+        domains: tuple[DomainSpec, ...],
+    ) -> list[Diagnostic]:
+        cleanup = self._driver.destroy(
+            networks=tuple(spec.address for spec in networks),
+            domains=tuple(spec.address for spec in domains),
+        )
+        return [
+            *cleanup.diagnostics,
+            *_unconfirmed_destroy_diagnostics(
+                cleanup,
+                requested=tuple(spec.address for spec in (*domains, *networks)),
+            ),
+        ]
+
+    def _delete_targets(self, delete_networks: list[str], delete_domains: list[str]) -> list[Diagnostic]:
+        if not (delete_networks or delete_domains):
+            return []
+        result = self._driver.destroy(networks=tuple(delete_networks), domains=tuple(delete_domains))
+        return [
+            *result.diagnostics,
+            *_unconfirmed_destroy_diagnostics(
+                result,
+                requested=(*delete_networks, *delete_domains),
+            ),
+        ]
 
     def _identity_diagnostics(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> list[Diagnostic]:
         diagnostics: list[Diagnostic] = []
