@@ -423,6 +423,26 @@
       }
     },
     {
+      "contract_id": "scientific-completeness-assessment-v1",
+      "schema_path": "contracts/schemas/profiles/scientific-completeness-assessment-v1.json",
+      "stability": "draft",
+      "content_hash": "f70a3b3769982ec179fd0d231829ebef4f2cd4c003d62ad26f813848330eee2d",
+      "last_change": {
+        "summary": "Initial publication of the separately revisioned REV1 concern-delivery assessment, evidence, limitation, satisfiability-witness, and external-binding contract for GOV-942.",
+        "content_hash": "f70a3b3769982ec179fd0d231829ebef4f2cd4c003d62ad26f813848330eee2d"
+      }
+    },
+    {
+      "contract_id": "scientific-completeness-taxonomy-v1",
+      "schema_path": "contracts/schemas/profiles/scientific-completeness-taxonomy-v1.json",
+      "stability": "draft",
+      "content_hash": "87eabab61eb27b6d66288ebce40b628e7405ba3c66ad116fd98b493c4b9bff21",
+      "last_change": {
+        "summary": "Initial publication of the REV1 scientific-scenario completeness taxonomy, atomic concern, intended-use disposition, and explicit non-claim contract for GOV-942.",
+        "content_hash": "87eabab61eb27b6d66288ebce40b628e7405ba3c66ad116fd98b493c4b9bff21"
+      }
+    },
+    {
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",

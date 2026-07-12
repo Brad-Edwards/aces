@@ -25,6 +25,8 @@ With the guidance profile, users get:
 - source references back to the docs, ADRs, policy files, and code that ground
   each rule
 - an audience filter for contributor-focused and operator-focused guidance
+- an explicit rule that valid SDL is only the valid-fragment completeness
+  profile, not evidence of deployability or scientific adequacy
 
 The profile is not a permission system and does not execute SDL. It is a
 read-only guidance surface.

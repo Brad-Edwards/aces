@@ -1,0 +1,238 @@
+{
+  "$defs": {
+    "CompletenessEvidenceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "claim": {
+          "minLength": 1,
+          "title": "Claim",
+          "type": "string"
+        },
+        "contract_id": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9][a-z0-9-]*-v[1-9][0-9]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contract Id"
+        },
+        "kind": {
+          "$ref": "#/$defs/EvidenceKind"
+        },
+        "path": {
+          "pattern": "^[^/\\s][^\\s]*$",
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "path",
+        "claim"
+      ],
+      "title": "CompletenessEvidenceModel",
+      "type": "object"
+    },
+    "ConcernDeliveryAssessmentModel": {
+      "additionalProperties": false,
+      "properties": {
+        "binding_obligation": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Binding Obligation"
+        },
+        "concern_id": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Concern Id",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/CompletenessEvidenceModel"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "exclusion_rationale": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exclusion Rationale"
+        },
+        "external_contract_refs": {
+          "items": {
+            "pattern": "^[a-z0-9][a-z0-9-]*-v[1-9][0-9]*$",
+            "type": "string"
+          },
+          "title": "External Contract Refs",
+          "type": "array"
+        },
+        "issue_refs": {
+          "items": {
+            "pattern": "^#[1-9][0-9]*$",
+            "type": "string"
+          },
+          "title": "Issue Refs",
+          "type": "array"
+        },
+        "limitation": {
+          "minLength": 1,
+          "title": "Limitation",
+          "type": "string"
+        },
+        "satisfiability_witness_refs": {
+          "patternProperties": {
+            "^[a-z0-9][a-z0-9-]*-v[1-9][0-9]*$": {
+              "pattern": "^[^/\\s][^\\s]*$",
+              "type": "string"
+            }
+          },
+          "title": "Satisfiability Witness Refs",
+          "type": "object"
+        },
+        "status": {
+          "$ref": "#/$defs/DeliveryStatus"
+        }
+      },
+      "required": [
+        "concern_id",
+        "status",
+        "limitation"
+      ],
+      "title": "ConcernDeliveryAssessmentModel",
+      "type": "object"
+    },
+    "DeliveryStatus": {
+      "enum": [
+        "implemented",
+        "partial",
+        "external-contract",
+        "deliberately-excluded",
+        "missing"
+      ],
+      "title": "DeliveryStatus",
+      "type": "string"
+    },
+    "EvidenceKind": {
+      "enum": [
+        "normative-spec",
+        "published-schema",
+        "contract",
+        "implementation",
+        "test",
+        "conformance",
+        "example",
+        "documentation"
+      ],
+      "title": "EvidenceKind",
+      "type": "string"
+    }
+  },
+  "$id": "https://aces.dev/schemas/scientific-completeness-assessment-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "assessed_on": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "title": "Assessed On",
+      "type": "string"
+    },
+    "assessment_revision": {
+      "pattern": "^[a-z0-9][a-z0-9.-]*$",
+      "title": "Assessment Revision",
+      "type": "string"
+    },
+    "concerns": {
+      "items": {
+        "$ref": "#/$defs/ConcernDeliveryAssessmentModel"
+      },
+      "minItems": 1,
+      "title": "Concerns",
+      "type": "array"
+    },
+    "profile_family": {
+      "const": "scientific-scenario-completeness",
+      "default": "scientific-scenario-completeness",
+      "title": "Profile Family",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "scientific-completeness-assessment/v1",
+      "default": "scientific-completeness-assessment/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "taxonomy_revision": {
+      "pattern": "^[a-z0-9][a-z0-9.-]*$",
+      "title": "Taxonomy Revision",
+      "type": "string"
+    }
+  },
+  "required": [
+    "taxonomy_revision",
+    "assessment_revision",
+    "assessed_on",
+    "concerns"
+  ],
+  "title": "ScientificCompletenessAssessmentModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Concern ids must be unique and each delivery status must carry its required executable evidence, external binding, issue refs, or exclusion rationale.",
+      "id": "scientific-completeness-assessment-status-evidence",
+      "inputs": [
+        {
+          "contract_id": "scientific-completeness-assessment-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.scientific_completeness.ScientificCompletenessAssessmentModel"
+    },
+    {
+      "description": "Assessment family, taxonomy revision, and concern ids must exactly match the joined taxonomy before completeness is computed.",
+      "id": "scientific-completeness-taxonomy-assessment-join",
+      "inputs": [
+        {
+          "contract_id": "scientific-completeness-taxonomy-v1",
+          "instance_path": "#"
+        },
+        {
+          "contract_id": "scientific-completeness-assessment-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.scientific_completeness.evaluate_profile_completeness"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "scientific-completeness-assessment-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

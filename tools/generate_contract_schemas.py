@@ -48,6 +48,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("backend-profile-v"):
         return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("scientific-completeness-"):
+        return schemas_dir / "profiles" / f"{name}.json"
     if name in {
         "participant-lifecycle-event-v1",
         "participant-observation-envelope-v1",

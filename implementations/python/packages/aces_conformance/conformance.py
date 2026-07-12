@@ -28,10 +28,13 @@ from aces_contracts.contracts import (
     EvaluationHistoryEventModel,
     EvaluationPlanModel,
     EvaluationResultStateModel,
+    ExperimentApparatusContextModel,
     ExperimentCaptureSpecModel,
     ExperimentDerivedMeasureModel,
     ExperimentEvidenceRecordModel,
     ExperimentRunModel,
+    ExperimentSpecModel,
+    ExperimentStudyModel,
     OperationReceiptModel,
     OperationStatusModel,
     OrchestrationPlanModel,
@@ -61,7 +64,12 @@ from aces_contracts.participant_episode import (
 )
 from aces_contracts.participant_shared_state import iter_participant_shared_state_snapshot_violations
 from aces_contracts.planning import ProvisioningPlan, RuntimeDomain
+from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel
 from aces_contracts.runtime_state import RuntimeSnapshot, RuntimeSnapshotEnvelope, SnapshotEntry
+from aces_contracts.scientific_completeness import (
+    ScientificCompletenessAssessmentModel,
+    ScientificCompletenessTaxonomyModel,
+)
 from aces_contracts.workflow import WorkflowExecutionState
 from aces_processor.models import (
     ParticipantActionContractRuntime,
@@ -254,6 +262,12 @@ _MODEL_VALIDATORS = {
 
 _STRUCTURAL_ONLY_VALIDATORS = {
     "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_validate,
+    "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_validate,
+    "experiment-authoring-input-v1": ExperimentSpecModel.model_validate,
+    "experiment-study-v1": ExperimentStudyModel.model_validate,
+    "realization-envelope-v1": BackendRealizationEnvelopeModel.model_validate,
+    "scientific-completeness-assessment-v1": ScientificCompletenessAssessmentModel.model_validate,
+    "scientific-completeness-taxonomy-v1": ScientificCompletenessTaxonomyModel.model_validate,
 }
 _SEMANTIC_CONTEXT_REQUIRED_CONTRACTS = frozenset({"associated-artifact-manifest-v1"})
 
@@ -1003,6 +1017,12 @@ def _semantic_diagnostics(contract_name: str, payload: Any) -> list[Diagnostic]:
     if contract_name != "runtime-snapshot-v1":
         return []
     return _runtime_snapshot_semantic_diagnostics(payload)
+
+
+def validate_contract_payload(contract_name: str, payload: object) -> tuple[Diagnostic, ...]:
+    """Validate one payload through the registered structural contract boundary."""
+
+    return tuple(_validate_payload(contract_name, payload))
 
 
 def _fixture_case_diagnostics(contract_name: str, payload: object) -> list[Diagnostic]:

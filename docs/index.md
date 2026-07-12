@@ -78,6 +78,7 @@ explain/sdl/validation
 explain/sdl/precedents
 explain/sdl/lineage
 explain/sdl/related-work-comparison
+explain/sdl/scientific-scenario-completeness
 explain/sdl/scenario-delivery-drift-audit
 explain/sdl/complex-scenarios
 explain/sdl/limitations

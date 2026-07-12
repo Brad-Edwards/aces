@@ -57,7 +57,7 @@ authority_roots:
 
   - id: normative_profiles
     root: contracts/profiles/
-    authority: capability profile declarations
+    authority: capability and intended-use profile declarations
     family: profiles
 
   - id: normative_realization_envelopes

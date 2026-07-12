@@ -7905,6 +7905,10 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
     from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel
 
     from .provenance import SDLLineageLedgerModel
+    from .scientific_completeness import (
+        ScientificCompletenessAssessmentModel,
+        ScientificCompletenessTaxonomyModel,
+    )
 
     bundle = {
         "aces-semantic-invariants-v1": _aces_semantic_invariant_profile_schema_for_bundle(),
@@ -7946,6 +7950,8 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "evaluation-result-envelope-v1": EvaluationResultStateModel.model_json_schema(),
         "proposition-truth-result-v1": PropositionTruthResultModel.model_json_schema(),
         "sdl-lineage-ledger-v1": SDLLineageLedgerModel.model_json_schema(),
+        "scientific-completeness-taxonomy-v1": ScientificCompletenessTaxonomyModel.model_json_schema(),
+        "scientific-completeness-assessment-v1": ScientificCompletenessAssessmentModel.model_json_schema(),
         "evaluation-history-event-stream-v1": _event_stream_schema(
             "EvaluationHistoryEventStream",
             EvaluationHistoryEventModel.model_json_schema(),
@@ -7973,6 +7979,30 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_json_schema(),
         "reusable-asset-trust-policy-v1": ReusableAssetTrustPolicyModel.model_json_schema(),
     }
+    _add_aces_invariant(
+        bundle["scientific-completeness-taxonomy-v1"],
+        "scientific-completeness-taxonomy-rectangular",
+        "Concern and profile ids must be unique, and every profile disposition map must exactly cover the taxonomy concern set.",
+        validator="aces_contracts.scientific_completeness.ScientificCompletenessTaxonomyModel",
+        inputs=[{"contract_id": "scientific-completeness-taxonomy-v1", "instance_path": "#"}],
+    )
+    _add_aces_invariant(
+        bundle["scientific-completeness-assessment-v1"],
+        "scientific-completeness-assessment-status-evidence",
+        "Concern ids must be unique and each delivery status must carry its required executable evidence, external binding, issue refs, or exclusion rationale.",
+        validator="aces_contracts.scientific_completeness.ScientificCompletenessAssessmentModel",
+        inputs=[{"contract_id": "scientific-completeness-assessment-v1", "instance_path": "#"}],
+    )
+    _add_aces_invariant(
+        bundle["scientific-completeness-assessment-v1"],
+        "scientific-completeness-taxonomy-assessment-join",
+        "Assessment family, taxonomy revision, and concern ids must exactly match the joined taxonomy before completeness is computed.",
+        validator="aces_contracts.scientific_completeness.evaluate_profile_completeness",
+        inputs=[
+            {"contract_id": "scientific-completeness-taxonomy-v1", "instance_path": "#"},
+            {"contract_id": "scientific-completeness-assessment-v1", "instance_path": "#"},
+        ],
+    )
     for contract_id, json_schema in bundle.items():
         _attach_sdl_identifier_constraints(contract_id, json_schema)
         _attach_instantiation_invariants(contract_id, json_schema)

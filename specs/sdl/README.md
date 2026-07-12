@@ -72,6 +72,7 @@ tests, rather than a prose rewrite. The catalogs are:
 | [`variables-and-instantiation.md`](variables-and-instantiation.md) | **3. Variable / instantiation catalog** | Variable types, defaults, `allowed_values`, `${…}` substitution, the instantiation algorithm, and post-instantiation exclusions. |
 | [`runtime-inventory.md`](runtime-inventory.md) | **4. Runtime-family index** | The node-scoped runtime-inventory index — family key, collection name, primary `<noun>_id`, child-ref collections, owning ADR — and the shared invariants stated once, delegating per-field semantics to the family ADRs. |
 | [`observability-and-evidence.md`](observability-and-evidence.md) | **5. Observability and evidence planes** | Scenario-native observability, authored evidence requirements, processor/backend operational observability, captured evidence, derived analysis, and augmentation classification rules. |
+| [`scientific-scenario-completeness.md`](scientific-scenario-completeness.md) | — | REV1 intended-use profiles, atomic concern dispositions, separately revisioned delivery assessment, computed completeness, and explicit scientific non-claims. |
 | [`diagnostics.md`](diagnostics.md) | — | The parse / semantic-validation / instantiation stages, direct-artifact admission, and the normative error-vs-advisory classification criterion. |
 
 ## Acceptance-question map
@@ -98,6 +99,9 @@ An implementer can answer each structural question from the named file alone:
   [`observability-and-evidence.md`](observability-and-evidence.md).
 - *When is a problem an error versus an advisory?* →
   [`diagnostics.md`](diagnostics.md).
+- *When is valid SDL sufficient for deployment, participant evaluation,
+  controlled experimentation, or a reproducible benchmark claim?* →
+  [`scientific-scenario-completeness.md`](scientific-scenario-completeness.md).
 
 ## Scope
 
