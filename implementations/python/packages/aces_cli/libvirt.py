@@ -21,6 +21,13 @@ This will create native libvirt/QEMU resources for the selected TechVault
 scenario and write a live-gate archive under the output directory.
 """
 
+_GUEST_WARNING = """\
+This will boot a guest-observing libvirt/QEMU appliance for the selected
+scenario through the production apply path, read realization facts back from
+inside the guest, and write a machine-readable scenario-evidence artifact under
+the output directory. Native resources are created and then torn down.
+"""
+
 
 def _noncredential_connection_uri(value: str) -> str:
     parsed = urlsplit(value)
@@ -73,6 +80,50 @@ def validate_live(
         project_dir=project_dir.resolve(),
         run_id=resolved_run_id,
         config=TechVaultLiveConfig(
+            connection_uri=connection_uri,
+        ),
+    )
+    typer.echo(report.render())
+    if not report.passed:
+        raise typer.Exit(code=1)
+
+
+@techvault_app.command("guest-certify")
+def guest_certify(
+    scenario: Path = typer.Option(
+        Path("examples/scenarios/techvault-guest-certified.sdl.yaml"),
+        "--scenario",
+        help="ACES SDL scenario to boot and certify from inside the guest.",
+    ),
+    project_dir: Path = typer.Option(
+        Path("."),
+        "--project-dir",
+        "--output-dir",
+        help="Output directory for the guest-certified scenario-evidence artifact.",
+    ),
+    run_id: str | None = typer.Option(None, "--run-id", help="Run id for the evidence artifact."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip the native libvirt resource confirmation prompt."),
+    connection_uri: str = typer.Option(
+        "qemu:///system",
+        "--connection-uri",
+        callback=_noncredential_connection_uri,
+        help="libvirt connection URI.",
+    ),
+) -> None:
+    """Boot a guest-observing appliance and emit the guest-certified evidence artifact."""
+
+    if not yes:
+        typer.echo(_GUEST_WARNING)
+        if not typer.confirm("Continue?", default=False):
+            typer.echo("Aborted.")
+            raise typer.Exit(code=0)
+    resolved_run_id = run_id or datetime.now(UTC).strftime("aces_libvirt_guest_%Y%m%dT%H%M%SZ")
+    report = run_libvirt_evidence_run(
+        scenario_path=scenario.resolve(),
+        project_dir=project_dir.resolve(),
+        run_id=resolved_run_id,
+        config=LibvirtEvidenceRunConfig(
+            evidence_source_mode="guest-certified",
             connection_uri=connection_uri,
         ),
     )

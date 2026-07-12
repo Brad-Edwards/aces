@@ -1,0 +1,118 @@
+{
+  "schema_version": "realization-envelope/v1",
+  "contract_id": "realization-envelope-v1",
+  "id": "libvirt-qemu.guest-certified-appliance.v1",
+  "expression": {
+    "schema_version": "realization-envelope/v1",
+    "id": "libvirt-qemu.guest-certified-appliance.expression.v1",
+    "scope": "scenario",
+    "domains": {},
+    "bindings": [],
+    "closure": []
+  },
+  "configuration": {
+    "mode": "guest-certified-appliance",
+    "architecture": "x86_64",
+    "image_policy": "guest-certified-appliance/serial-fact-channel/v1",
+    "network_policy": "generated-appliance-network",
+    "supported_node_types": [
+      "switch",
+      "vm"
+    ],
+    "supported_os_families": [
+      "linux"
+    ],
+    "supported_content_types": [
+      "file"
+    ],
+    "supported_account_features": [
+      "disabled",
+      "groups",
+      "home",
+      "shell"
+    ],
+    "supports_acls": false,
+    "memory_mib": {
+      "minimum": 64,
+      "maximum": 256
+    },
+    "vcpus": {
+      "minimum": 1,
+      "maximum": 2
+    },
+    "configuration_digest": "sha256:b33ad469eaf1a47963e49da8adc7376fc22880ac3e6126b427239daa00dc6d99"
+  },
+  "concerns": [
+    {
+      "concern": "topology",
+      "disposition": "realized",
+      "observation_strength": "daemon-observed",
+      "mechanism": "libvirt-domain-network-readback",
+      "transformations": []
+    },
+    {
+      "concern": "architecture",
+      "disposition": "realized",
+      "observation_strength": "guest-observed",
+      "mechanism": "guest-uname-readback",
+      "transformations": []
+    },
+    {
+      "concern": "image",
+      "disposition": "realized",
+      "observation_strength": "daemon-observed",
+      "mechanism": "generated-appliance-attachment-readback",
+      "transformations": []
+    },
+    {
+      "concern": "resource-allocation",
+      "disposition": "realized",
+      "observation_strength": "guest-observed",
+      "mechanism": "guest-proc-resource-readback",
+      "transformations": []
+    },
+    {
+      "concern": "network",
+      "disposition": "realized",
+      "observation_strength": "guest-observed",
+      "mechanism": "guest-link-address-readback",
+      "transformations": []
+    },
+    {
+      "concern": "content-placement",
+      "disposition": "realized",
+      "observation_strength": "guest-observed",
+      "mechanism": "guest-file-content-readback",
+      "transformations": []
+    },
+    {
+      "concern": "account-placement",
+      "disposition": "realized",
+      "observation_strength": "guest-observed",
+      "mechanism": "guest-account-posture-readback",
+      "transformations": []
+    },
+    {
+      "concern": "feature-binding",
+      "disposition": "unsupported",
+      "observation_strength": "none",
+      "mechanism": null,
+      "transformations": []
+    },
+    {
+      "concern": "service",
+      "disposition": "realized",
+      "observation_strength": "guest-observed",
+      "mechanism": "guest-service-state-readback",
+      "transformations": []
+    },
+    {
+      "concern": "acl",
+      "disposition": "unsupported",
+      "observation_strength": "none",
+      "mechanism": null,
+      "transformations": []
+    }
+  ],
+  "digest": "sha256:8416a600a6f1864e1b80e49fa60eef5f423f9249f2ea7dc56e14d8a669e33e2e"
+}

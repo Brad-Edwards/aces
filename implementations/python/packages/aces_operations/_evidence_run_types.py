@@ -116,3 +116,4 @@ class EvidenceArtifactInputs:
     native_snapshot: Mapping[str, Any] | None
     native_cleanup_verified: bool | None
     unrealized_capabilities: tuple[str, ...] = ()
+    guest_observed: Mapping[str, Any] | None = None

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from aces_cli.main import app
+from aces_operations.libvirt_evidence_run import LibvirtEvidenceRunConfig
 from aces_operations.techvault_live import TechVaultLiveConfig
 from typer.testing import CliRunner
 
@@ -115,6 +116,89 @@ def test_libvirt_techvault_cli_has_no_unbound_memory_override(monkeypatch, tmp_p
             "--yes",
             "--appliance-memory-mib",
             "96",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert calls == []
+
+
+def test_libvirt_techvault_guest_certify_cli_invokes_evidence_run(monkeypatch, tmp_path):
+    calls: list[dict[str, object]] = []
+
+    def _run(**kwargs):
+        calls.append(kwargs)
+        return _Report()
+
+    monkeypatch.setattr("aces_cli.libvirt.run_libvirt_evidence_run", _run)
+    scenario = tmp_path / "scenario.sdl.yaml"
+    scenario.write_text("name: cli\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "libvirt",
+            "techvault",
+            "guest-certify",
+            "--scenario",
+            str(scenario),
+            "--project-dir",
+            str(tmp_path),
+            "--run-id",
+            "gc-cli",
+            "--yes",
+            "--connection-uri",
+            "qemu:///system",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls == [
+        {
+            "scenario_path": scenario.resolve(),
+            "project_dir": tmp_path.resolve(),
+            "run_id": "gc-cli",
+            "config": LibvirtEvidenceRunConfig(
+                evidence_source_mode="guest-certified",
+                connection_uri="qemu:///system",
+            ),
+        }
+    ]
+
+
+def test_libvirt_techvault_guest_certify_cli_returns_failure_exit(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "aces_cli.libvirt.run_libvirt_evidence_run",
+        lambda **_kwargs: _Report(passed=False),
+    )
+    scenario = tmp_path / "scenario.sdl.yaml"
+    scenario.write_text("name: cli\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        app,
+        ["libvirt", "techvault", "guest-certify", "--scenario", str(scenario), "--project-dir", str(tmp_path), "--yes"],
+    )
+
+    assert result.exit_code == 1
+
+
+def test_libvirt_techvault_guest_certify_cli_rejects_credentials(monkeypatch, tmp_path):
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr("aces_cli.libvirt.run_libvirt_evidence_run", lambda **kwargs: calls.append(kwargs))
+    scenario = tmp_path / "scenario.sdl.yaml"
+    scenario.write_text("name: cli\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "libvirt",
+            "techvault",
+            "guest-certify",
+            "--scenario",
+            str(scenario),
+            "--yes",
+            "--connection-uri",
+            "qemu+ssh://operator:credential@example/system",
         ],
     )
 

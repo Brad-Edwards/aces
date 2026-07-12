@@ -12,11 +12,13 @@ from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel,
 class LibvirtDriverMode(str, Enum):
     GENERIC = "generic"
     TECHVAULT_APPLIANCE = "techvault-appliance"
+    GUEST_CERTIFIED_APPLIANCE = "guest-certified-appliance"
 
 
 _ARTIFACTS = {
     LibvirtDriverMode.GENERIC: "generic-v1.json",
     LibvirtDriverMode.TECHVAULT_APPLIANCE: "techvault-appliance-v1.json",
+    LibvirtDriverMode.GUEST_CERTIFIED_APPLIANCE: "guest-certified-appliance-v1.json",
 }
 
 
