@@ -338,7 +338,7 @@
       "stability": "draft",
       "content_hash": "e3d9a1357af4e49b78d591cca10547a4d0113aee794686e0f8d96e32bb940e49",
       "last_change": {
-        "summary": "Added immutable realization-envelope identity carriage for ASR-519 and constrained operations to the provisioning address and resource-type domain for DSL-101/DSL-102/SEM-205.",
+        "summary": "Added immutable realization-envelope identity carriage and constrained provisioning operations to canonical provision addresses and resource types.",
         "content_hash": "e3d9a1357af4e49b78d591cca10547a4d0113aee794686e0f8d96e32bb940e49"
       }
     },
@@ -346,10 +346,10 @@
       "contract_id": "realization-envelope-v1",
       "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
       "stability": "draft",
-      "content_hash": "269a17d2ff15c12dfccd536cf8502a1e6b929883eb41e22f898abe75f6532720",
+      "content_hash": "a5992e81fbc935a7ee6eab3b173a89d6e664274f0f143475e303a54d01a27374",
       "last_change": {
-        "summary": "Initial publication of the ASR-519 configuration-bound realization envelope, concern disclosure, observation strength, and canonical identity contract.",
-        "content_hash": "269a17d2ff15c12dfccd536cf8502a1e6b929883eb41e22f898abe75f6532720"
+        "summary": "Added explicit service-concern disclosure so backend envelopes cannot hide declared guest services inside another concern.",
+        "content_hash": "a5992e81fbc935a7ee6eab3b173a89d6e664274f0f143475e303a54d01a27374"
       }
     },
     {
@@ -374,7 +374,7 @@
       "stability": "draft",
       "content_hash": "e3fa3702a06d7c025d34b90a8830b9099034fbea663cbe23c75368fabe72530d",
       "last_change": {
-        "summary": "Added typed realization-envelope identity persistence for ASR-519 and closed snapshot entries to canonical compiled-address keys for DSL-101/DSL-102/SEM-205.",
+        "summary": "Added typed realization-envelope identity persistence and closed snapshot entries to canonical compiled-address keys.",
         "content_hash": "e3fa3702a06d7c025d34b90a8830b9099034fbea663cbe23c75368fabe72530d"
       }
     },

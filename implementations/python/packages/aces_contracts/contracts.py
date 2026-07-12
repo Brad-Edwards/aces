@@ -40,13 +40,7 @@ from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler, StrictI
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
-from .addressing import (
-    COMPILED_ADDRESS_JSON_SCHEMA,
-    PLAN_ADDRESS_ROOT_BY_DOMAIN,
-    PLAN_RESOURCE_TYPES_BY_DOMAIN,
-    CompiledAddress,
-    require_plan_operation_identity,
-)
+from .addressing import COMPILED_ADDRESS_JSON_SCHEMA, CompiledAddress
 from .corpus import CONCEPT_AUTHORITY, corpus_family_root
 from .manifest_authority import (
     BACKEND_SUPPORTED_CONTRACT_IDS,
@@ -67,6 +61,12 @@ from .participant_behavior import (
     ParticipantPhaseRealization,
     ParticipantRuntimeLifecyclePhase,
     participant_lifecycle_field_violation_messages,
+)
+from .planning import (
+    PLAN_ADDRESS_ROOT_BY_DOMAIN,
+    PLAN_RESOURCE_TYPES_BY_DOMAIN,
+    RuntimeDomain,
+    require_plan_operation_identity,
 )
 from .versions import (
     ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
@@ -663,9 +663,9 @@ def _attach_compiled_address_map_constraints(contract_id: str, json_schema: dict
 
 
 _PLAN_CONTRACT_DOMAIN = {
-    "provisioning-plan-v1": "provisioning",
-    "orchestration-plan-v1": "orchestration",
-    "evaluation-plan-v1": "evaluation",
+    "provisioning-plan-v1": RuntimeDomain.PROVISIONING,
+    "orchestration-plan-v1": RuntimeDomain.ORCHESTRATION,
+    "evaluation-plan-v1": RuntimeDomain.EVALUATION,
 }
 
 
@@ -2129,7 +2129,7 @@ def _require_unique_operation_addresses(operations: list[PlanOperationModel]) ->
         raise ValueError("Plan operation addresses must be unique")
 
 
-def _require_operation_identities(operations: list[PlanOperationModel], domain: str) -> None:
+def _require_operation_identities(operations: list[PlanOperationModel], domain: RuntimeDomain) -> None:
     for operation in operations:
         require_plan_operation_identity(domain, operation.address, operation.resource_type)
 
@@ -2164,7 +2164,7 @@ class ProvisioningPlanModel(ContractModel):
     @model_validator(mode="after")
     def _validate_operation_addresses(self) -> ProvisioningPlanModel:
         _require_unique_operation_addresses(self.operations)
-        _require_operation_identities(self.operations, "provisioning")
+        _require_operation_identities(self.operations, RuntimeDomain.PROVISIONING)
         return self
 
 
@@ -2176,7 +2176,7 @@ class OrchestrationPlanModel(ContractModel):
     @model_validator(mode="after")
     def _validate_operation_addresses(self) -> OrchestrationPlanModel:
         _require_unique_operation_addresses(self.operations)
-        _require_operation_identities(self.operations, "orchestration")
+        _require_operation_identities(self.operations, RuntimeDomain.ORCHESTRATION)
         _require_startup_order_addresses(self.operations, self.startup_order)
         return self
 
@@ -2189,7 +2189,7 @@ class EvaluationPlanModel(ContractModel):
     @model_validator(mode="after")
     def _validate_operation_addresses(self) -> EvaluationPlanModel:
         _require_unique_operation_addresses(self.operations)
-        _require_operation_identities(self.operations, "evaluation")
+        _require_operation_identities(self.operations, RuntimeDomain.EVALUATION)
         _require_startup_order_addresses(self.operations, self.startup_order)
         return self
 

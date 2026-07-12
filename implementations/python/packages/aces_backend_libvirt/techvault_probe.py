@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import socket
 import subprocess
-import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
@@ -24,33 +23,36 @@ class NativeLibvirtProbe:
     timeout_seconds: float = 1.5
 
     def ping(self, ip: str) -> ProbeResult:
-        proc = subprocess.run(
-            ["ping", "-c", "1", "-W", str(max(1, int(self.timeout_seconds))), ip],
-            text=True,
-            capture_output=True,
-            timeout=max(2, int(self.timeout_seconds) + 1),
-            check=False,
-        )
-        return ProbeResult(proc.returncode == 0, _short_process_output(proc))
+        try:
+            proc = subprocess.run(
+                ["ping", "-c", "1", "-W", str(max(1, int(self.timeout_seconds))), ip],
+                text=True,
+                capture_output=True,
+                timeout=max(2, int(self.timeout_seconds) + 1),
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return ProbeResult(False, "probe failed")
+        return ProbeResult(proc.returncode == 0, "" if proc.returncode == 0 else "probe failed")
 
     def tcp(self, ip: str, port: int) -> ProbeResult:
         try:
             with socket.create_connection((ip, port), timeout=self.timeout_seconds):
                 return ProbeResult(True)
-        except OSError as exc:
-            return ProbeResult(False, str(exc))
+        except OSError:
+            return ProbeResult(False, "connection failed")
 
 
 def expected_surface(snapshot: Mapping[str, object]) -> dict[str, object]:
-    """Return the model-derived runtime surface recorded by the native driver."""
+    """Return bounded native names from the driver's daemon-observed report."""
 
     domains = [domain for domain in _as_sequence(snapshot.get("domains")) if isinstance(domain, Mapping)]
     networks = [network for network in _as_sequence(snapshot.get("networks")) if isinstance(network, Mapping)]
     return {
+        "source": snapshot.get("source"),
         "substrate": snapshot.get("substrate"),
         "domains": tuple(sorted(str(domain.get("name", "")) for domain in domains if domain.get("name"))),
         "networks": tuple(sorted(str(network.get("name", "")) for network in networks if network.get("name"))),
-        "service_count": sum(len(_as_sequence(domain.get("services"))) for domain in domains),
     }
 
 
@@ -61,115 +63,22 @@ def check_native_readiness(
     timeout_seconds: int = 180,
     poll_seconds: int = 5,
 ) -> tuple[bool, list[str]]:
-    """Probe domain reachability and declared TCP service listeners."""
+    """Decline guest-readiness inference from the daemon-observed substrate."""
 
-    deadline = time.monotonic() + max(1, timeout_seconds)
-    diagnostics: list[str] = []
-    while time.monotonic() < deadline:
-        diagnostics = _readiness_diagnostics(snapshot, probe)
-        if not diagnostics:
-            return True, []
-        time.sleep(max(1, poll_seconds))
-    return False, diagnostics
+    del snapshot, probe, timeout_seconds, poll_seconds
+    return False, ["guest readiness requires concern-specific guest observation"]
 
 
 def native_soc_readback(snapshot: Mapping[str, object]) -> dict[str, object]:
-    """Return SOC readback derived from the native scenario surface."""
+    """Disclose that daemon substrate state is not guest SOC observation."""
 
-    names = {
-        str(domain.get("name", "")) for domain in _as_sequence(snapshot.get("domains")) if isinstance(domain, Mapping)
-    }
-    active_agents = tuple(sorted(name for name in names if name in _wazuh_agent_names(names)))
+    del snapshot
     return {
-        "wazuh_active_agents": active_agents,
-        "suricata": {
-            "present": "suricata" in names,
-            "rules_loaded": 49954 if "suricata" in names else 0,
-            "rules_failed": 0,
-            "kernel_drops": 0,
-        },
-        "case_management": {
-            "thehive": "thehive" in names,
-            "misp": "misp" in names,
-            "cortex": "cortex" in names,
-            "shuffle": any(name.startswith("shuffle-") for name in names),
-        },
+        "status": "not-observed",
+        "observation_source": "none",
+        "reason": "guest SOC state requires concern-specific guest observation",
     }
-
-
-def _readiness_diagnostics(snapshot: Mapping[str, object], probe: NativeLibvirtProbe) -> list[str]:
-    diagnostics: list[str] = []
-    for domain in _as_sequence(snapshot.get("domains")):
-        if isinstance(domain, Mapping):
-            diagnostics.extend(_domain_readiness_diagnostics(domain, probe))
-    return diagnostics
-
-
-def _domain_readiness_diagnostics(domain: Mapping[str, object], probe: NativeLibvirtProbe) -> list[str]:
-    addresses = _domain_ips(domain)
-    if not addresses:
-        return []
-    first_ip = addresses[0]
-    ping = probe.ping(first_ip)
-    if not ping.ok:
-        return [f"{domain.get('name')} is not reachable at {first_ip}: {ping.detail}"]
-    return _service_readiness_diagnostics(domain, first_ip, probe)
-
-
-def _service_readiness_diagnostics(
-    domain: Mapping[str, object],
-    ip_address: str,
-    probe: NativeLibvirtProbe,
-) -> list[str]:
-    diagnostics: list[str] = []
-    for service in _as_sequence(domain.get("services")):
-        if isinstance(service, Mapping) and _is_tcp_service(service):
-            port = _int(service.get("port"))
-            result = probe.tcp(ip_address, port)
-            if not result.ok:
-                diagnostics.append(
-                    f"{domain.get('name')} service {service.get('name')}:{port}/tcp not reachable: {result.detail}"
-                )
-    return diagnostics
-
-
-def _is_tcp_service(service: Mapping[str, object]) -> bool:
-    protocol = str(service.get("protocol", "tcp")).lower()
-    port = _int(service.get("port"))
-    return protocol == "tcp" and port > 0
-
-
-def _domain_ips(domain: Mapping[str, object]) -> list[str]:
-    ips: list[str] = []
-    for interface in _as_sequence(domain.get("interfaces")):
-        if isinstance(interface, Mapping) and interface.get("ip"):
-            ips.append(str(interface["ip"]))
-    return ips
-
-
-def _wazuh_agent_names(names: set[str]) -> set[str]:
-    agents = {
-        "wazuh-manager",
-        "dns",
-        "fileshare",
-        "ad",
-        "webapp",
-        "suricata",
-        "db",
-        "victim",
-        "workstation",
-    }
-    return agents & names
 
 
 def _as_sequence(value: object) -> Sequence[object]:
     return value if isinstance(value, list | tuple) else ()
-
-
-def _int(value: object) -> int:
-    return value if isinstance(value, int) else 0
-
-
-def _short_process_output(proc: subprocess.CompletedProcess[str]) -> str:
-    text = (proc.stderr or proc.stdout or "").strip().replace("\n", " ")
-    return text[:200]

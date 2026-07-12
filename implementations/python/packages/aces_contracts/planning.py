@@ -1,17 +1,16 @@
 """Shared runtime planning contracts."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from aces_contracts.addressing import (
-    PLAN_ADDRESS_ROOT_BY_DOMAIN,
-    PLAN_RESOURCE_TYPES_BY_DOMAIN,
-    require_compiled_address,
-    require_plan_operation_identity,
-)
-from aces_contracts.contracts import RealizationEnvelopeIdentityModel
+from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic
+
+if TYPE_CHECKING:
+    from aces_contracts.contracts import RealizationEnvelopeIdentityModel
 
 
 class RuntimeDomain(str, Enum):
@@ -21,6 +20,32 @@ class RuntimeDomain(str, Enum):
     ORCHESTRATION = "orchestration"
     EVALUATION = "evaluation"
     PARTICIPANT = "participant"
+
+
+PLAN_ADDRESS_ROOT_BY_DOMAIN = {
+    RuntimeDomain.PROVISIONING: "provision",
+    RuntimeDomain.ORCHESTRATION: "orchestration",
+    RuntimeDomain.EVALUATION: "evaluation",
+}
+PLAN_RESOURCE_TYPES_BY_DOMAIN = {
+    RuntimeDomain.PROVISIONING: frozenset(
+        {"network", "node", "feature-binding", "content-placement", "account-placement"}
+    ),
+    RuntimeDomain.ORCHESTRATION: frozenset({"inject-binding", "inject", "event", "script", "story", "workflow"}),
+    RuntimeDomain.EVALUATION: frozenset({"condition-binding", "objective"}),
+}
+
+
+def require_plan_operation_identity(domain: RuntimeDomain, address: object, resource_type: object) -> None:
+    """Reject operations outside a plan endpoint's closed identity domain."""
+
+    canonical = require_compiled_address(address)
+    root = PLAN_ADDRESS_ROOT_BY_DOMAIN.get(domain)
+    resource_types = PLAN_RESOURCE_TYPES_BY_DOMAIN.get(domain)
+    if root is None or not canonical.startswith(f"{root}."):
+        raise ValueError("Plan operation address must belong to its runtime domain")
+    if not isinstance(resource_type, str) or resource_types is None or resource_type not in resource_types:
+        raise ValueError("Plan operation resource_type must belong to its runtime domain")
 
 
 class ChangeAction(str, Enum):

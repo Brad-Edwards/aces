@@ -40,19 +40,6 @@ def require_compiled_address(value: object, *, field_name: str = "address") -> s
     return value
 
 
-def require_plan_operation_identity(domain: object, address: object, resource_type: object) -> None:
-    """Reject operations outside a plan endpoint's closed identity domain."""
-
-    canonical = require_compiled_address(address)
-    domain_value = getattr(domain, "value", domain)
-    root = PLAN_ADDRESS_ROOT_BY_DOMAIN.get(domain_value)
-    resource_types = PLAN_RESOURCE_TYPES_BY_DOMAIN.get(domain_value)
-    if root is None or not canonical.startswith(f"{root}."):
-        raise ValueError("Plan operation address must belong to its runtime domain")
-    if not isinstance(resource_type, str) or resource_types is None or resource_type not in resource_types:
-        raise ValueError("Plan operation resource_type must belong to its runtime domain")
-
-
 def _validate_compiled_address(value: str) -> str:
     return require_compiled_address(value)
 
@@ -73,9 +60,6 @@ __all__ = [
     "COMPILED_ADDRESS_JSON_SCHEMA",
     "COMPILED_ADDRESS_MAX_LENGTH",
     "CompiledAddress",
-    "PLAN_ADDRESS_ROOT_BY_DOMAIN",
-    "PLAN_RESOURCE_TYPES_BY_DOMAIN",
     "render_compiled_address",
     "require_compiled_address",
-    "require_plan_operation_identity",
 ]

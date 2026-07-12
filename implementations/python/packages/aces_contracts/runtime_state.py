@@ -5,15 +5,17 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 from aces_contracts.addressing import require_compiled_address
-from aces_contracts.contracts import RealizationEnvelopeIdentityModel
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import RuntimeDomain
 from aces_contracts.versions import OPERATION_SCHEMA_VERSION, RUNTIME_SNAPSHOT_SCHEMA_VERSION
+
+if TYPE_CHECKING:
+    from aces_contracts.contracts import RealizationEnvelopeIdentityModel
 
 
 class OperationState(str, Enum):
@@ -237,6 +239,8 @@ def _identity_update(
     key: str,
     current: RealizationEnvelopeIdentityModel | None,
 ) -> RealizationEnvelopeIdentityModel | None:
+    from aces_contracts.contracts import RealizationEnvelopeIdentityModel
+
     raw = updates.get(key)
     if raw is None:
         return current

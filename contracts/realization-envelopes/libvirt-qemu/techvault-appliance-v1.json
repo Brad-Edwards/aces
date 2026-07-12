@@ -25,15 +25,16 @@
     "vcpus": {"minimum": 1, "maximum": 2}
   },
   "concerns": [
-    {"concern": "topology", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "libvirt-domain-network", "transformations": []},
-    {"concern": "architecture", "disposition": "transformed", "observation_strength": "driver-reported", "mechanism": "generated-x86_64-appliance", "transformations": ["image-substitution"]},
-    {"concern": "image", "disposition": "transformed", "observation_strength": "driver-reported", "mechanism": "generated-initramfs-appliance", "transformations": ["image-substitution"]},
-    {"concern": "resource-allocation", "disposition": "transformed", "observation_strength": "driver-reported", "mechanism": "bounded-appliance-domain", "transformations": ["bounded-normalization"]},
-    {"concern": "network", "disposition": "transformed", "observation_strength": "driver-reported", "mechanism": "generated-appliance-network", "transformations": ["default-substitution"]},
+    {"concern": "topology", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "libvirt-domain-network-readback", "transformations": []},
+    {"concern": "architecture", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "libvirt-domain-xml-readback", "transformations": []},
+    {"concern": "image", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "generated-initramfs-attachment-readback", "transformations": []},
+    {"concern": "resource-allocation", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "libvirt-domain-xml-readback", "transformations": []},
+    {"concern": "network", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "libvirt-network-domain-xml-readback", "transformations": []},
     {"concern": "content-placement", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
     {"concern": "account-placement", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
     {"concern": "feature-binding", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
+    {"concern": "service", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
     {"concern": "acl", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []}
   ],
-  "digest": "sha256:37bddd6be24bcdef44241d8d77fc619113fe9d4048a61fd603977f7748593a3f"
+  "digest": "sha256:b0cdf9c60cf42a50782f0d417cd931462c4d630e35e7546734710219477622ed"
 }
