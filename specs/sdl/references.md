@@ -153,7 +153,7 @@ probe implementations; propositions and assertions carry portable truth.
 | `objectives` | actor | `agents` or flattened `entities` |
 | `objectives` | action | the bound agent's `action_contracts` |
 | `objectives` | target | targetable elements (excl. `variables`/`objectives`/`workflows`) |
-| `objectives` | success criteria | `assertions` (invariants/postconditions, [ADR-078](../../docs/decisions/adrs/adr-078-backend-neutral-proposition-and-truth-semantics.md)) |
+| `objectives` | success criteria | `assertions` (invariants/postconditions, [ADR-079](../../docs/decisions/adrs/adr-079-backend-neutral-proposition-and-truth-semantics.md)) |
 | `objectives` | window | `stories`/`scripts`/`events`/`workflows` (with closure rules) |
 | `objectives` | depends_on | `objectives` (acyclic) |
 | `outcome_interpretation_rules` | source | `action_contracts`/`objectives`/`workflows` |

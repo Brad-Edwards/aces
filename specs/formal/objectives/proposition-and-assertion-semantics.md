@@ -2,7 +2,7 @@
 
 ## Authority and claim level
 
-This FM2 specification realizes [ADR-078](../../../docs/decisions/adrs/adr-078-backend-neutral-proposition-and-truth-semantics.md).
+This FM2 specification realizes [ADR-079](../../../docs/decisions/adrs/adr-079-backend-neutral-proposition-and-truth-semantics.md).
 The published JSON Schemas govern serialized shapes. The equations below govern
 the reference truth algebra. Runtime tests and fixtures provide bounded
 assurance; ACES does not claim a mechanized proof.

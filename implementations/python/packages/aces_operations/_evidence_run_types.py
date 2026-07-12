@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from aces_backend_protocols.capabilities import BackendManifest
 
@@ -26,13 +26,41 @@ __all__ = [
     "BackendManifest",
     "CompiledModel",
     "EvidenceArtifactInputs",
+    "EvidenceCheck",
+    "EvidenceSourceMode",
     "ExecutionPlan",
+    "LibvirtEvidenceRunConfig",
     "NodeDeployment",
     "ObservationBoundary",
     "ParticipantBehavior",
     "RealizedNetwork",
     "TerminalSnapshot",
 ]
+
+EvidenceSourceMode = Literal["deterministic", "native-live", "guest-certified"]
+
+
+@dataclass(frozen=True)
+class EvidenceCheck:
+    """One named check over the scenario-evidence production run.
+
+    Every check is gating: it contributes to ``LibvirtEvidenceRunReport.passed``.
+    There is deliberately no non-gating escape hatch — in particular, a native-live
+    run that fails to realize the libvirt substrate must report ``passed=False`` so
+    the mode can never claim success without actually realizing.
+    """
+
+    name: str
+    passed: bool
+    diagnostics: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class LibvirtEvidenceRunConfig:
+    """Runtime controls for the libvirt scenario-evidence producer."""
+
+    evidence_source_mode: EvidenceSourceMode = "deterministic"
+    connection_uri: str = "qemu:///system"
 
 
 class ActionContract(Protocol):

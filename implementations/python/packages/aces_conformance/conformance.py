@@ -23,6 +23,7 @@ from aces_contracts.backend_profiles import (
     load_backend_profile_from_path,
 )
 from aces_contracts.contracts import (
+    AssociatedArtifactManifestModel,
     BackendManifestV2Model,
     EvaluationHistoryEventModel,
     EvaluationPlanModel,
@@ -251,6 +252,11 @@ _MODEL_VALIDATORS = {
     "experiment-run-v1": ExperimentRunModel.model_validate,
 }
 
+_STRUCTURAL_ONLY_VALIDATORS = {
+    "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_validate,
+}
+_SEMANTIC_CONTEXT_REQUIRED_CONTRACTS = frozenset({"associated-artifact-manifest-v1"})
+
 
 _EVENT_STREAM_VALIDATORS: dict[str, tuple[type, str]] = {
     "workflow-history-event-stream-v1": (WorkflowHistoryEventModel, "workflow"),
@@ -446,7 +452,7 @@ def _validate_event_stream(
 
 def _validate_payload(contract_name: str, payload: Any) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
-    validator = _MODEL_VALIDATORS.get(contract_name)
+    validator = _MODEL_VALIDATORS.get(contract_name) or _STRUCTURAL_ONLY_VALIDATORS.get(contract_name)
     if validator is not None:
         try:
             validator(payload)
@@ -1011,6 +1017,19 @@ def _fixture_case_diagnostics(contract_name: str, payload: object) -> list[Diagn
     schema_diagnostics = _validate_payload(contract_name, payload)
     if schema_diagnostics:
         return schema_diagnostics
+    if contract_name in _SEMANTIC_CONTEXT_REQUIRED_CONTRACTS:
+        return [
+            Diagnostic(
+                code="conformance.semantic-context-required",
+                domain="conformance",
+                address="#",
+                message=(
+                    "full associated-artifact conformance requires a concrete parent and bounded byte readers; "
+                    "the generic fixture runner establishes structural validity only"
+                ),
+                severity=Severity.ERROR,
+            )
+        ]
     return _semantic_diagnostics(contract_name, payload)
 
 

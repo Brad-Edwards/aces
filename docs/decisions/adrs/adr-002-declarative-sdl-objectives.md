@@ -43,7 +43,7 @@ Each objective may declare:
 - optional `actions`
 - optional `targets`
 - required `success` criteria composing declared invariant or postcondition
-  assertions over backend-neutral propositions (ADR-078)
+  assertions over backend-neutral propositions (ADR-079)
 - optional `window` constraints over `stories`, `scripts`, and `events`
 - optional `depends_on` links forming an acyclic ordering relation between objectives
 
@@ -98,4 +98,4 @@ This ADR refines ADR-001's SDL boundary by making declarative objectives part of
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-07-05 | #682 | Per [ADR-073](adr-073-scoring-reward-language-scope.md), narrowed the objective-success clause: `objectives.success` references observable state (`conditions`) only. The OCR scoring pipeline (`metrics` / `evaluations` / `tlos` / `goals`) this ADR preserved was removed from the SDL; graded scoring and reward now live in the experiment/evaluator plane (ADR-055/064/069). |
-| 2026-07-12 | #725 | Per [ADR-078](adr-078-backend-neutral-proposition-and-truth-semantics.md), corrected the condition/proposition conflation: objective success now composes invariant or postcondition assertions over typed propositions; executable conditions are probe realizations only. |
+| 2026-07-12 | #725 | Per [ADR-079](adr-079-backend-neutral-proposition-and-truth-semantics.md), corrected the condition/proposition conflation: objective success now composes invariant or postcondition assertions over typed propositions; executable conditions are probe realizations only. |

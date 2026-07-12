@@ -447,7 +447,7 @@ entries:
       - kind: property_based_or_differential_tests
         path: implementations/python/tests/test_sdl_identifiers.py
     waived_artifacts: []
-  - adr: ADR-077
+  - adr: ADR-078
     surface: Closed SDL phase contracts and portable derivation evidence
     fm_level: FM2
     delivered_artifacts:
