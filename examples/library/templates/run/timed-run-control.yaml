@@ -29,8 +29,8 @@ body:
       injects: [start-run]
   scripts:
     run-script:
-      start-time: 0
-      end-time: 15 min
+      start_time: 0
+      end_time: 15 min
       speed: 1.0
       events:
         run-start: 1 min
@@ -61,6 +61,6 @@ body:
         observe:
           type: objective
           objective: observe-run-telemetry
-          on-success: done
+          on_success: done
         done:
           type: end

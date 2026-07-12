@@ -2541,7 +2541,7 @@ class TestWorkflow:
         step = WorkflowStep(
             type="objective",
             objective="verify-release",
-            **{"on-success": "done"},
+            **{"on_success": "done"},
         )
         assert step.type == WorkflowStepType.OBJECTIVE
         assert step.objective == "verify-release"
@@ -2564,7 +2564,7 @@ class TestWorkflow:
                 "validate": {
                     "type": "objective",
                     "objective": "verify-release",
-                    "on-success": "done",
+                    "on_success": "done",
                 },
                 "done": {"type": "end"},
             },
@@ -2576,7 +2576,7 @@ class TestWorkflow:
         step = WorkflowStep(
             type="retry",
             objective="verify-release",
-            **{"on-success": "done", "max-attempts": 5},
+            **{"on_success": "done", "max_attempts": 5},
         )
         assert step.type == WorkflowStepType.RETRY
         assert step.objective == "verify-release"
@@ -2609,7 +2609,7 @@ class TestWorkflow:
         step = WorkflowStep(
             type="call",
             workflow="child",
-            **{"on-success": "done"},
+            **{"on_success": "done"},
         )
         assert step.type == WorkflowStepType.CALL
         assert step.workflow == "child"
@@ -2622,7 +2622,7 @@ class TestWorkflow:
                 "validate": {
                     "type": "objective",
                     "objective": "verify-release",
-                    "on-success": "done",
+                    "on_success": "done",
                 },
                 "done": {"type": "end"},
             },
@@ -2639,8 +2639,8 @@ class TestWorkflow:
                 type="retry",
                 objective="verify-release",
                 **{
-                    "on-success": "done",
-                    "max-attempts": 3,
+                    "on_success": "done",
+                    "max_attempts": 3,
                     "then": "a",
                     "else": "b",
                 },
@@ -2651,14 +2651,14 @@ class TestWorkflow:
             WorkflowStep(
                 type="retry",
                 objective="verify-release",
-                **{"on-success": "done", "max-attempts": 0},
+                **{"on_success": "done", "max_attempts": 0},
             )
 
     def test_retry_max_attempts_accepts_variable(self):
         step = WorkflowStep(
             type="retry",
             objective="verify-release",
-            **{"on-success": "done", "max-attempts": "${max_retries}"},
+            **{"on_success": "done", "max_attempts": "${max_retries}"},
         )
         assert step.max_attempts == "${max_retries}"
 
@@ -2666,7 +2666,7 @@ class TestWorkflow:
         step = WorkflowStep(
             type="objective",
             objective="verify-release",
-            **{"on-success": "done", "on-failure": "recover"},
+            **{"on_success": "done", "on_failure": "recover"},
         )
         assert step.on_failure == "recover"
 
@@ -2675,7 +2675,7 @@ class TestWorkflow:
             type="parallel",
             branches=["a", "b"],
             join="done",
-            **{"on-failure": "recover"},
+            **{"on_failure": "recover"},
         )
         assert step.on_failure == "recover"
 
@@ -2684,9 +2684,9 @@ class TestWorkflow:
             type="retry",
             objective="verify-release",
             **{
-                "on-success": "done",
-                "max-attempts": 3,
-                "on-exhausted": "${recovery_step}",
+                "on_success": "done",
+                "max_attempts": 3,
+                "on_exhausted": "${recovery_step}",
             },
         )
         assert step.on_exhausted == "${recovery_step}"
@@ -2699,7 +2699,7 @@ class TestWorkflow:
             WorkflowStep(
                 type="decision",
                 when={"conditions": ["c1"]},
-                **{"then": "a", "else": "b", "on-failure": "recover"},
+                **{"then": "a", "else": "b", "on_failure": "recover"},
             )
 
     def test_join_step_requires_next(self):
@@ -2707,7 +2707,7 @@ class TestWorkflow:
             WorkflowStep(type="join")
 
     def test_step_state_predicate(self):
-        pred = WorkflowPredicate(steps=[{"step": "step-a", "outcomes": ["failed"], "min-attempts": 2}])
+        pred = WorkflowPredicate(steps=[{"step": "step-a", "outcomes": ["failed"], "min_attempts": 2}])
         assert pred.steps[0].step == "step-a"
         assert pred.steps[0].outcomes == [WorkflowStepOutcome.FAILED]
         assert pred.steps[0].min_attempts == 2

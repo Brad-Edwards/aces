@@ -219,92 +219,92 @@ conditions:
       reachability checks from the participant host were retained as negative
       evaluator evidence where supported.
 
-action-contracts:
+action_contracts:
   probe-customer-portal-login:
-    semantic-version: 1.0.0
-    lifecycle-state: active
-    behavioral-granularity: atomic
-    procedure-basis: bounded HTTP login probe through participant runtime
-    realization-profile: backend-declared
-    fidelity-claim: >
+    semantic_version: 1.0.0
+    lifecycle_state: active
+    behavioral_granularity: atomic
+    procedure_basis: bounded HTTP login probe through participant runtime
+    realization_profile: backend-declared
+    fidelity_claim: >
       Captures participant intent, terminal observation, Wazuh evaluator
       evidence, policy provenance, and boundary evidence refs while leaving
       concrete runner commands to downstream runtime bindings.
     preconditions:
-      - precondition-id: participant-authorized
-        precondition-class: authority
+      - precondition_id: participant-authorized
+        precondition_class: authority
         description: The participant is authorized to probe the customer portal login endpoint.
-        support-refs: [agents.participant-agent, nodes.customer-portal.services.http]
-      - precondition-id: portal-present
-        precondition-class: target
+        support_refs: [agents.participant-agent, nodes.customer-portal.services.http]
+      - precondition_id: portal-present
+        precondition_class: target
         description: The DMZ customer portal exists inside the enterprise slice.
-        support-refs: [nodes.customer-portal.services.http]
-      - precondition-id: runtime-binding-available
-        precondition-class: realization
+        support_refs: [nodes.customer-portal.services.http]
+      - precondition_id: runtime-binding-available
+        precondition_class: realization
         description: >
           A downstream participant implementation/runtime binding can perform
           the declared probe without changing SDL semantics.
-        support-refs: [participant-implementation-manifest:participant-agent]
-      - precondition-id: wazuh-evidence-surface-available
-        precondition-class: capability
+        support_refs: [participant-implementation-manifest:participant-agent]
+      - precondition_id: wazuh-evidence-surface-available
+        precondition_class: capability
         description: >
           Wazuh can retain evaluator evidence for the bounded portal probe.
-        support-refs: [nodes.wazuh-manager.services.wazuh-api, content.wazuh-evidence]
-      - precondition-id: policy-provenance-surface-available
-        precondition-class: realization
+        support_refs: [nodes.wazuh-manager.services.wazuh-api, content.wazuh-evidence]
+      - precondition_id: policy-provenance-surface-available
+        precondition_class: realization
         description: >
           A participant policy gate can retain tool-use authorization provenance
           without making the action a model-defense robustness evaluation.
-        support-refs: [nodes.participant-policy-gate.services.policy-gate-api, content.policy-decision-log]
+        support_refs: [nodes.participant-policy-gate.services.policy-gate-api, content.policy-decision-log]
     effects:
-      - effect-id: portal-reachability-observed
-        effect-class: intended_effect
+      - effect_id: portal-reachability-observed
+        effect_class: intended_effect
         description: The participant obtains a bounded reachability observation.
-        target-refs: [nodes.customer-portal.services.http]
-      - effect-id: participant-view-updated
-        effect-class: visibility_effect
+        target_refs: [nodes.customer-portal.services.http]
+      - effect_id: participant-view-updated
+        effect_class: visibility_effect
         description: The customer portal service becomes discovered in the participant view.
-        target-refs: [nodes.customer-portal.services.http]
-      - effect-id: terminal-observation-emitted
-        effect-class: observation_effect
+        target_refs: [nodes.customer-portal.services.http]
+      - effect_id: terminal-observation-emitted
+        effect_class: observation_effect
         description: Runtime emits a terminal participant observation envelope.
-        evidence-refs: [content.participant-observation]
-      - effect-id: wazuh-evidence-retained
-        effect-class: detection_effect
+        evidence_refs: [content.participant-observation]
+      - effect_id: wazuh-evidence-retained
+        effect_class: detection_effect
         description: Wazuh retains bounded evaluator evidence for the portal probe.
-        target-refs: [nodes.wazuh-manager]
-        evidence-refs: [content.wazuh-evidence]
-      - effect-id: policy-decision-retained
-        effect-class: evidence_effect
+        target_refs: [nodes.wazuh-manager]
+        evidence_refs: [content.wazuh-evidence]
+      - effect_id: policy-decision-retained
+        effect_class: evidence_effect
         description: The optional policy gate retains tool-use decision provenance.
-        target-refs: [nodes.participant-policy-gate]
-        evidence-refs: [content.policy-decision-log]
-      - effect-id: boundary-checks-retained
-        effect-class: evidence_effect
+        target_refs: [nodes.participant-policy-gate]
+        evidence_refs: [content.policy-decision-log]
+      - effect_id: boundary-checks-retained
+        effect_class: evidence_effect
         description: >
           Supported live backends retain negative evidence for direct DB and
           Wazuh API reachability from the participant host.
-        evidence-refs: [content.boundary-check-evidence]
-      - effect-id: internal-db-not-disclosed
-        effect-class: no_effect
+        evidence_refs: [content.boundary-check-evidence]
+      - effect_id: internal-db-not-disclosed
+        effect_class: no_effect
         description: The action does not disclose the internal database dependency.
-      - effect-id: wazuh-internals-not-disclosed
-        effect-class: no_effect
+      - effect_id: wazuh-internals-not-disclosed
+        effect_class: no_effect
         description: The action does not disclose Wazuh internals or API data to the participant.
-      - effect-id: policy-internals-not-disclosed
-        effect-class: no_effect
+      - effect_id: policy-internals-not-disclosed
+        effect_class: no_effect
         description: The action does not disclose policy-gate internals to the participant.
-      - effect-id: evaluator-notes-not-disclosed
-        effect-class: no_effect
+      - effect_id: evaluator-notes-not-disclosed
+        effect_class: no_effect
         description: The action does not disclose adjudication-only evaluator notes.
-    state-transition-effects: [participant customer-portal knowledge expands]
-    observation-expectations: [terminal customer portal observation]
-    evidence-expectations:
+    state_transition_effects: [participant customer-portal knowledge expands]
+    observation_expectations: [terminal customer portal observation]
+    evidence_expectations:
       - participant runtime observation envelope
       - Wazuh evaluator evidence
       - policy decision provenance
       - negative participant-boundary evidence
-    failure-classes:
+    failure_classes:
       - precondition_unsatisfied
       - target_unavailable
       - unsupported_action
@@ -313,172 +313,172 @@ action-contracts:
       - partial_success
       - backend_error
       - unknown
-    backend-failure-mappings:
-      - backend-error-code: scenario.portal-unreachable
-        failure-class: target_unavailable
+    backend_failure_mappings:
+      - backend_error_code: scenario.portal-unreachable
+        failure_class: target_unavailable
         diagnostic: customer portal service was unreachable from the participant topology
-      - backend-error-code: participant-runtime.unsupported-action
-        failure-class: unsupported_action
+      - backend_error_code: participant-runtime.unsupported-action
+        failure_class: unsupported_action
         diagnostic: participant runtime did not support the declared action contract
-      - backend-error-code: policy-gate.withheld
-        failure-class: unsafe_withheld
+      - backend_error_code: policy-gate.withheld
+        failure_class: unsafe_withheld
         diagnostic: policy gate withheld the requested bounded tool use
-      - backend-error-code: wazuh.telemetry-missing
-        failure-class: partial_success
+      - backend_error_code: wazuh.telemetry-missing
+        failure_class: partial_success
         diagnostic: participant observation exists but Wazuh evidence was not retained
-      - backend-error-code: boundary.direct-db-reachable
-        failure-class: backend_error
+      - backend_error_code: boundary.direct-db-reachable
+        failure_class: backend_error
         diagnostic: participant host unexpectedly reached the internal database directly
-      - backend-error-code: boundary.direct-wazuh-api-reachable
-        failure-class: backend_error
+      - backend_error_code: boundary.direct-wazuh-api-reachable
+        failure_class: backend_error
         diagnostic: participant host unexpectedly reached the Wazuh API directly
     interactions:
-      - interaction-class: shared_state_change
+      - interaction_class: shared_state_change
         target: nodes.customer-portal.services.http
         rationale: >
           Portal probing changes participant-local knowledge about the DMZ
           service while preserving the authored enterprise topology.
-        shared-state-refs: [nodes.customer-portal.services.http]
+        shared_state_refs: [nodes.customer-portal.services.http]
 
-observation-boundaries:
+observation_boundaries:
   participant-view:
-    projection-basis: >
+    projection_basis: >
       Participant-local projection over the task brief, DMZ portal visibility,
       bounded terminal evidence, evaluator-only Wazuh evidence, evaluator-only
       policy provenance, and negative boundary checks.
-    observable-refs:
+    observable_refs:
       - content.task-brief
-    hidden-refs:
+    hidden_refs:
       - nodes.customer-portal.services.http
       - nodes.customer-db.services.postgres
       - nodes.wazuh-manager
       - nodes.wazuh-indexer
       - nodes.participant-policy-gate
       - content.evaluator-notes
-    evidence-refs:
+    evidence_refs:
       - content.participant-observation
       - content.wazuh-evidence
       - content.policy-decision-log
       - content.boundary-check-evidence
-    redaction-policy: >
+    redaction_policy: >
       Internal database details, Wazuh internals, policy-gate internals,
       evaluator notes, backend-private runner details, and raw negative-check
       internals never project into the participant view.
-    latency-profile: terminal observation emitted after action completion
-    observer-effects: [portal probe may update participant-local knowledge]
-    realized-view-disclosure: >
+    latency_profile: terminal observation emitted after action completion
+    observer_effects: [portal probe may update participant-local knowledge]
+    realized_view_disclosure: >
       Backend reports only the task brief, terminal portal observation, and
       evidence references required for replay and adjudication.
-    view-rules:
-      - information-ref: content.task-brief
-        boundary-class: public_task_statement
+    view_rules:
+      - information_ref: content.task-brief
+        boundary_class: public_task_statement
         disposition: observable
-        visibility-basis: The public task statement is visible before the action.
-      - information-ref: nodes.customer-portal.services.http
-        boundary-class: observable_resource
+        visibility_basis: The public task statement is visible before the action.
+      - information_ref: nodes.customer-portal.services.http
+        boundary_class: observable_resource
         disposition: hidden
-        visibility-basis: The DMZ portal service is not participant-visible until the probe completes.
-        latency-profile: terminal observation latency
-      - information-ref: nodes.customer-db.services.postgres
-        boundary-class: hidden_truth
+        visibility_basis: The DMZ portal service is not participant-visible until the probe completes.
+        latency_profile: terminal observation latency
+      - information_ref: nodes.customer-db.services.postgres
+        boundary_class: hidden_truth
         disposition: hidden
-        visibility-basis: The database is physically on internal-net and outside the declared participant action.
-      - information-ref: nodes.wazuh-manager
-        boundary-class: telemetry_stream
+        visibility_basis: The database is physically on internal-net and outside the declared participant action.
+      - information_ref: nodes.wazuh-manager
+        boundary_class: telemetry_stream
         disposition: hidden
-        visibility-basis: Wazuh manager internals do not project into the participant view.
-      - information-ref: nodes.wazuh-indexer
-        boundary-class: telemetry_stream
+        visibility_basis: Wazuh manager internals do not project into the participant view.
+      - information_ref: nodes.wazuh-indexer
+        boundary_class: telemetry_stream
         disposition: hidden
-        visibility-basis: Wazuh indexer internals do not project into the participant view.
-      - information-ref: nodes.participant-policy-gate
-        boundary-class: tool_output
+        visibility_basis: Wazuh indexer internals do not project into the participant view.
+      - information_ref: nodes.participant-policy-gate
+        boundary_class: tool_output
         disposition: hidden
-        visibility-basis: The participant does not receive policy-gate internals.
-      - information-ref: content.participant-observation
-        boundary-class: archival_evidence
+        visibility_basis: The participant does not receive policy-gate internals.
+      - information_ref: content.participant-observation
+        boundary_class: archival_evidence
         disposition: evidence_only
-        visibility-basis: Participant runtime evidence is retained for replay.
-        evidence-refs: [content.participant-observation]
-      - information-ref: content.wazuh-evidence
-        boundary-class: telemetry_stream
+        visibility_basis: Participant runtime evidence is retained for replay.
+        evidence_refs: [content.participant-observation]
+      - information_ref: content.wazuh-evidence
+        boundary_class: telemetry_stream
         disposition: evidence_only
-        visibility-basis: Wazuh evidence is retained for evaluator adjudication, not shown as task context.
-        evidence-refs: [content.wazuh-evidence]
-      - information-ref: content.policy-decision-log
-        boundary-class: tool_output
+        visibility_basis: Wazuh evidence is retained for evaluator adjudication, not shown as task context.
+        evidence_refs: [content.wazuh-evidence]
+      - information_ref: content.policy-decision-log
+        boundary_class: tool_output
         disposition: evidence_only
-        visibility-basis: Model-defense or tool-use decision provenance is retained for audit.
-        evidence-refs: [content.policy-decision-log]
-      - information-ref: content.boundary-check-evidence
-        boundary-class: archival_evidence
+        visibility_basis: Model-defense or tool-use decision provenance is retained for audit.
+        evidence_refs: [content.policy-decision-log]
+      - information_ref: content.boundary-check-evidence
+        boundary_class: archival_evidence
         disposition: evidence_only
-        visibility-basis: Negative boundary checks are evaluator evidence, not participant observations.
-        evidence-refs: [content.boundary-check-evidence]
-      - information-ref: content.evaluator-notes
-        boundary-class: adjudication_material
+        visibility_basis: Negative boundary checks are evaluator evidence, not participant observations.
+        evidence_refs: [content.boundary-check-evidence]
+      - information_ref: content.evaluator-notes
+        boundary_class: adjudication_material
         disposition: hidden
-        visibility-basis: Evaluator notes are never participant-visible.
-    view-transitions:
-      - transition-id: discover-customer-portal
-        transition-kind: discovery
-        information-ref: nodes.customer-portal.services.http
+        visibility_basis: Evaluator notes are never participant-visible.
+    view_transitions:
+      - transition_id: discover-customer-portal
+        transition_kind: discovery
+        information_ref: nodes.customer-portal.services.http
         trigger: probe-customer-portal-login terminal observation
-        effective-from: episode-step:probe-0001:terminal-observation
-        effective-order: 10
-        history-event-type: observation_emitted
-        action-instance-id: probe-0001
-        from-disposition: hidden
-        to-disposition: discovered
-        evidence-refs: [content.participant-observation]
+        effective_from: episode-step:probe-0001:terminal-observation
+        effective_order: 10
+        history_event_type: observation_emitted
+        action_instance_id: probe-0001
+        from_disposition: hidden
+        to_disposition: discovered
+        evidence_refs: [content.participant-observation]
         certainty: high
-        latency-profile: terminal observation latency
+        latency_profile: terminal observation latency
 
-outcome-interpretation-rules:
+outcome_interpretation_rules:
   probe-customer-portal-login-outcome:
-    semantic-version: 1.0.0
-    participant-scope: participant_local
-    observation-point-basis: probe-customer-portal-login terminal observation
-    interpretation-basis: >
+    semantic_version: 1.0.0
+    participant_scope: participant_local
+    observation_point_basis: probe-customer-portal-login terminal observation
+    interpretation_basis: >
       A participant-local terminal observation supports the scenario objective only
       when paired with retained participant evidence, Wazuh evaluator evidence,
       policy provenance, negative boundary evidence, and evaluation success.
-    source-bindings:
-      - source-id: action-outcome
-        source-layer: participant_action_outcome
+    source_bindings:
+      - source_id: action-outcome
+        source_layer: participant_action_outcome
         ref: probe-customer-portal-login
-        interpretation-role: local action result
-        evidence-refs: [content.participant-observation]
-      - source-id: wazuh-evidence
-        source-layer: evidence_claim
+        interpretation_role: local action result
+        evidence_refs: [content.participant-observation]
+      - source_id: wazuh-evidence
+        source_layer: evidence_claim
         ref: content.wazuh-evidence
-        interpretation-role: defensive evaluator evidence
-        evidence-refs: [content.wazuh-evidence]
-      - source-id: policy-provenance
-        source-layer: evidence_claim
+        interpretation_role: defensive evaluator evidence
+        evidence_refs: [content.wazuh-evidence]
+      - source_id: policy-provenance
+        source_layer: evidence_claim
         ref: content.policy-decision-log
-        interpretation-role: model-defense or tool-use authorization provenance
-        evidence-refs: [content.policy-decision-log]
-      - source-id: boundary-evidence
-        source-layer: evidence_claim
+        interpretation_role: model-defense or tool-use authorization provenance
+        evidence_refs: [content.policy-decision-log]
+      - source_id: boundary-evidence
+        source_layer: evidence_claim
         ref: content.boundary-check-evidence
-        interpretation-role: physical participant-boundary evidence
-        evidence-refs: [content.boundary-check-evidence]
-      - source-id: objective-result
-        source-layer: objective_result
+        interpretation_role: physical participant-boundary evidence
+        evidence_refs: [content.boundary-check-evidence]
+      - source_id: objective-result
+        source_layer: objective_result
         ref: demonstrate-handoff
-        interpretation-role: scenario objective result
-        evidence-refs:
+        interpretation_role: scenario objective result
+        evidence_refs:
           - content.participant-observation
           - content.wazuh-evidence
           - content.policy-decision-log
           - content.boundary-check-evidence
-    target-bindings:
-      - target-id: objective-supported
-        target-layer: objective_result
+    target_bindings:
+      - target_id: objective-supported
+        target_layer: objective_result
         ref: demonstrate-handoff
         relation: supports objective success when all bounded evidence records exist
-        evidence-refs:
+        evidence_refs:
           - content.participant-observation
           - content.wazuh-evidence
           - content.policy-decision-log
@@ -488,14 +488,14 @@ outcome-interpretation-rules:
           - Does not evaluate Wazuh detection quality.
           - Does not evaluate model-defense robustness.
           - Does not close the downstream APTL realization issue.
-      - target-id: scenario-meaning-supported
-        target-layer: scenario_meaning
+      - target_id: scenario-meaning-supported
+        target_layer: scenario_meaning
         ref: reference-demonstration
         relation: >
           Shows that ACES can represent participant, target, internal
           dependency, OSS defender evidence, policy provenance, evaluator
           evidence, and observation boundaries in one focused enterprise slice.
-        evidence-refs:
+        evidence_refs:
           - content.participant-observation
           - content.wazuh-evidence
           - content.policy-decision-log
@@ -503,7 +503,7 @@ outcome-interpretation-rules:
         limitations:
           - The defensive and model-defense surfaces are teasers for later work.
           - The claim remains the authored runtime handoff.
-    evidence-refs:
+    evidence_refs:
       - content.participant-observation
       - content.wazuh-evidence
       - content.policy-decision-log
@@ -534,29 +534,29 @@ agents:
       - content.task-brief
     observation_boundaries: [participant-view]
 
-behavior-specifications:
+behavior_specifications:
   participant-behavior:
-    semantic-version: 1.0.0
-    lifecycle-state: active
-    participant-refs: [participant-agent]
-    participant-role-refs: [red]
-    action-contract-refs: [probe-customer-portal-login]
-    observation-boundary-refs: [participant-view]
-    outcome-interpretation-rule-refs: [probe-customer-portal-login-outcome]
-    authority-scope-refs:
+    semantic_version: 1.0.0
+    lifecycle_state: active
+    participant_refs: [participant-agent]
+    participant_role_refs: [red]
+    action_contract_refs: [probe-customer-portal-login]
+    observation_boundary_refs: [participant-view]
+    outcome_interpretation_rule_refs: [probe-customer-portal-login-outcome]
+    authority_scope_refs:
       - nodes.customer-portal.services.http
       - content.task-brief
-    behavior-mode: policy-directed
-    realization-profile-ref: participant-implementation-manifest:participant-agent
-    backend-feature-support-refs:
+    behavior_mode: policy-directed
+    realization_profile_ref: participant-implementation-manifest:participant-agent
+    backend_feature_support_refs:
       - action_contracts
       - observation_boundaries
       - behavior_history
       - x-scenario:wazuh-evidence
       - x-scenario:policy-provenance
       - x-scenario:boundary-negative-evidence
-    evidence-contract-refs: [participant-behavior-history-event-stream-v1]
-    extension-policy: governed-extension
+    evidence_contract_refs: [participant-behavior-history-event-stream-v1]
+    extension_policy: governed-extension
 
 objectives:
   # Graded scoring/interpretation of this evidence loop now lives in the
@@ -594,6 +594,6 @@ workflows:
       probe:
         type: objective
         objective: demonstrate-handoff
-        on-success: finish
+        on_success: finish
       finish:
         type: end

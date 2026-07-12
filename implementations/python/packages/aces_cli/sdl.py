@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import typer
+from aces_sdl import SDLParseError, format_sdl_source
 from aces_sdl.module_registry import (
     LOCKFILE_NAME,
     load_lockfile,
@@ -15,6 +16,42 @@ from aces_sdl.module_registry import (
 from aces_sdl.parser import parse_sdl_file
 
 app = typer.Typer(help="SDL composition and packaging.")
+
+
+@app.command("format")
+def format_source(
+    path: Path = typer.Argument(..., exists=True, readable=True),
+    write: bool = typer.Option(False, "--write", help="Replace the source file with canonical SDL YAML."),
+    check: bool = typer.Option(False, "--check", help="Fail when the source is not already canonical."),
+) -> None:
+    """Migrate recognized legacy syntax and emit canonical sdl-yaml/v1."""
+    if write and check:
+        raise typer.BadParameter("--write and --check are mutually exclusive")
+    try:
+        original = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise typer.BadParameter("SDL source must be valid UTF-8") from exc
+    try:
+        result = format_sdl_source(original, path=path)
+    except SDLParseError as exc:
+        raise typer.BadParameter(exc.details) from exc
+
+    for diagnostic in result.diagnostics:
+        start = diagnostic.primary_range.start
+        typer.echo(
+            f"{path}:{start.line}:{start.column}: {diagnostic.severity} [{diagnostic.code}] {diagnostic.message}",
+            err=True,
+        )
+    if check:
+        if result.content != original:
+            typer.echo(f"{path}: not canonical", err=True)
+            raise typer.Exit(code=1)
+        return
+    if write:
+        path.write_text(result.content, encoding="utf-8")
+        typer.echo(str(path))
+        return
+    typer.echo(result.content, nl=False)
 
 
 @app.command("resolve")

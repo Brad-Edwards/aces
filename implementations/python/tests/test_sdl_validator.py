@@ -1518,7 +1518,7 @@ class TestVerifyObjectives:
                         "validate": {
                             "type": "objective",
                             "objective": "obj-1",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1529,7 +1529,7 @@ class TestVerifyObjectives:
                         "validate": {
                             "type": "objective",
                             "objective": "obj-1",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1594,7 +1594,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "missing-objective",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1629,7 +1629,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "parallel",
@@ -1639,7 +1639,7 @@ class TestVerifyWorkflows:
                         "recover": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "join", "next": "validate"},
                     },
@@ -1659,7 +1659,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                         "orphan": {"type": "end"},
@@ -1685,7 +1685,7 @@ class TestVerifyWorkflows:
                         "rollback-edge": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "finish"},
                         "finish": {"type": "end"},
@@ -1706,7 +1706,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -1722,12 +1722,12 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "finish"},
                         "finish": {"type": "end"},
@@ -1748,14 +1748,14 @@ class TestVerifyWorkflows:
                         "loop": {
                             "type": "retry",
                             "objective": "validate-release",
-                            "on-success": "finish",
-                            "max-attempts": 5,
-                            "on-exhausted": "recover",
+                            "on_success": "finish",
+                            "max_attempts": 5,
+                            "on_exhausted": "recover",
                         },
                         "recover": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1775,7 +1775,7 @@ class TestVerifyWorkflows:
                         "run": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1796,7 +1796,7 @@ class TestVerifyWorkflows:
                         "delegate": {
                             "type": "call",
                             "workflow": "child",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1816,7 +1816,7 @@ class TestVerifyWorkflows:
                         "delegate": {
                             "type": "call",
                             "workflow": "b",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1827,7 +1827,7 @@ class TestVerifyWorkflows:
                         "delegate": {
                             "type": "call",
                             "workflow": "a",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1847,9 +1847,9 @@ class TestVerifyWorkflows:
                         "loop": {
                             "type": "retry",
                             "objective": "validate-release",
-                            "on-success": "finish",
-                            "max-attempts": 3,
-                            "on-exhausted": "nonexistent",
+                            "on_success": "finish",
+                            "max_attempts": 3,
+                            "on_exhausted": "nonexistent",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1869,7 +1869,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -1895,7 +1895,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -1921,7 +1921,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -1932,7 +1932,7 @@ class TestVerifyWorkflows:
                         "confirm": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1973,7 +1973,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -1999,7 +1999,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -2031,7 +2031,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -2068,12 +2068,12 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "finish"},
                         "finish": {"type": "end"},
@@ -2099,12 +2099,12 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -2129,12 +2129,12 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "joined": {"type": "join", "next": "finish"},
                         "finish": {"type": "end"},
@@ -2155,7 +2155,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "orphan-join": {"type": "join", "next": "finish"},
                         "finish": {"type": "end"},
@@ -2181,12 +2181,12 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "branch"},
                         "branch": {
@@ -2218,13 +2218,13 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "retry",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
-                            "max-attempts": 3,
+                            "on_success": "joined",
+                            "max_attempts": 3,
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "branch"},
                         "branch": {
@@ -2234,7 +2234,7 @@ class TestVerifyWorkflows:
                                     {
                                         "step": "rollback",
                                         "outcomes": ["succeeded"],
-                                        "min-attempts": 2,
+                                        "min_attempts": 2,
                                     }
                                 ]
                             },
@@ -2264,7 +2264,7 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "branch-in-branch",
+                            "on_success": "branch-in-branch",
                         },
                         "branch-in-branch": {
                             "type": "decision",
@@ -2275,7 +2275,7 @@ class TestVerifyWorkflows:
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "finish"},
                         "finish": {"type": "end"},
@@ -2307,12 +2307,12 @@ class TestVerifyWorkflows:
                         "rollback-success": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "branch"},
                         "branch": {
@@ -2347,17 +2347,17 @@ class TestVerifyWorkflows:
                             "type": "parallel",
                             "branches": ["rollback", "confirm"],
                             "join": "joined",
-                            "on-failure": "recover",
+                            "on_failure": "recover",
                         },
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "finish"},
                         "recover": {
@@ -2387,8 +2387,8 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "finish",
-                            "on-failure": "${recovery_step}",
+                            "on_success": "finish",
+                            "on_failure": "${recovery_step}",
                         },
                         "finish": {"type": "end"},
                     },
@@ -2411,7 +2411,7 @@ class TestVerifyWorkflows:
                                 "when": {"conditions": ["check"]},
                                 "then": "finish",
                                 "else": "finish",
-                                "compensate-with": "rollback",
+                                "compensate_with": "rollback",
                             },
                             "finish": {"type": "end"},
                         },
@@ -2434,8 +2434,8 @@ class TestVerifyWorkflows:
                         "run": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "compensate-with": "rollback",
-                            "on-success": "finish",
+                            "compensate_with": "rollback",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -2446,8 +2446,8 @@ class TestVerifyWorkflows:
                         "undo": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "compensate-with": "response",
-                            "on-success": "finish",
+                            "compensate_with": "response",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -2468,8 +2468,8 @@ class TestVerifyWorkflows:
                         "run": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "compensate-with": "rollback",
-                            "on-success": "finish",
+                            "compensate_with": "rollback",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -2480,8 +2480,8 @@ class TestVerifyWorkflows:
                         "undo": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "compensate-with": "cleanup",
-                            "on-success": "finish",
+                            "compensate_with": "cleanup",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },

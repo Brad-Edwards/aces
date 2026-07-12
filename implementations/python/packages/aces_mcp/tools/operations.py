@@ -143,23 +143,26 @@ def register(mcp: FastMCP) -> None:
             "Parse SDL YAML and return a machine-readable JSON summary of the "
             "normalized scenario shape, populated sections, advisories, and "
             "optional semantic-validation status. This is useful before editing "
-            "or deeper validation."
+            "or deeper validation. Canonical syntax is required unless "
+            "`accept_migration_syntax=true` is explicitly selected."
         ),
     )
     def sdl_parse(
         sdl_content: str,
         semantic_validation: bool = False,
+        accept_migration_syntax: bool = False,
     ) -> str:
         size_error = size_error_payload(sdl_content)
         if size_error is not None:
             return size_error
 
-        from aces_sdl import SDLParseError, SDLValidationError, parse_sdl
+        from aces_sdl import SDLMigrationPolicy, SDLParseError, SDLValidationError, parse_sdl
 
         try:
             scenario = parse_sdl(
                 sdl_content,
                 skip_semantic_validation=not semantic_validation,
+                migration_policy=(SDLMigrationPolicy.ACCEPT if accept_migration_syntax else SDLMigrationPolicy.REJECT),
             )
         except SDLParseError as exc:
             return json_response(stage_error("parse", exc))
@@ -186,6 +189,7 @@ def register(mcp: FastMCP) -> None:
                     "version": scenario.version,
                     "populated_sections": section_counts(scenario),
                     "advisories": list(scenario.advisories),
+                    "source_diagnostics": [item.as_dict() for item in scenario.source_diagnostics],
                 },
             }
         )
@@ -195,14 +199,20 @@ def register(mcp: FastMCP) -> None:
         description=(
             "Parse, semantically validate, instantiate, and compile SDL YAML "
             "into the ACES runtime model. Returns JSON with domain counts, "
-            "participant-contract counts, and structured compiler diagnostics."
+            "participant-contract counts, source migration advisories, and "
+            "structured compiler diagnostics."
         ),
     )
     def sdl_compile(
         sdl_content: str,
         parameters_json: str = "{}",
+        accept_migration_syntax: bool = False,
     ) -> str:
-        pipeline = compile_pipeline(sdl_content, parameters_json)
+        pipeline = compile_pipeline(
+            sdl_content,
+            parameters_json,
+            accept_migration_syntax=accept_migration_syntax,
+        )
         if pipeline["error"] is not None:
             return json_response(pipeline["error"])
 
@@ -217,6 +227,7 @@ def register(mcp: FastMCP) -> None:
                 },
                 "runtime_model": runtime_model_summary(model),
                 "diagnostics": diagnostics(model.diagnostics, stage="compilation"),
+                "source_diagnostics": pipeline["source_diagnostics"],
             }
         )
 

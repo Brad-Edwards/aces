@@ -20998,12 +20998,12 @@
           "title": "Cases",
           "type": "array"
         },
-        "compensate-with": {
+        "compensate_with": {
           "default": "",
           "not": {
             "pattern": "\\$\\{([A-Za-z_][A-Za-z0-9_-]*)\\}"
           },
-          "title": "Compensate-With",
+          "title": "Compensate With",
           "type": "string"
         },
         "default": {
@@ -21038,7 +21038,7 @@
           "title": "Join",
           "type": "string"
         },
-        "max-attempts": {
+        "max_attempts": {
           "anyOf": [
             {
               "type": "integer"
@@ -21054,7 +21054,7 @@
             }
           ],
           "default": null,
-          "title": "Max-Attempts"
+          "title": "Max Attempts"
         },
         "next": {
           "default": "",
@@ -21072,28 +21072,28 @@
           "title": "Objective",
           "type": "string"
         },
-        "on-exhausted": {
+        "on_exhausted": {
           "default": "",
           "not": {
             "pattern": "\\$\\{([A-Za-z_][A-Za-z0-9_-]*)\\}"
           },
-          "title": "On-Exhausted",
+          "title": "On Exhausted",
           "type": "string"
         },
-        "on-failure": {
+        "on_failure": {
           "default": "",
           "not": {
             "pattern": "\\$\\{([A-Za-z_][A-Za-z0-9_-]*)\\}"
           },
-          "title": "On-Failure",
+          "title": "On Failure",
           "type": "string"
         },
-        "on-success": {
+        "on_success": {
           "default": "",
           "not": {
             "pattern": "\\$\\{([A-Za-z_][A-Za-z0-9_-]*)\\}"
           },
-          "title": "On-Success",
+          "title": "On Success",
           "type": "string"
         },
         "then": {
@@ -21147,7 +21147,7 @@
       "additionalProperties": false,
       "description": "Predicate reference to previously observed workflow step state.",
       "properties": {
-        "min-attempts": {
+        "min_attempts": {
           "anyOf": [
             {
               "type": "integer"
@@ -21163,7 +21163,7 @@
             }
           ],
           "default": null,
-          "title": "Min-Attempts"
+          "title": "Min Attempts"
         },
         "outcomes": {
           "items": {
@@ -21473,6 +21473,8 @@
   "required": [
     "name"
   ],
-  "title": "InstantiatedScenario",
-  "type": "object"
+  "title": "SDL Instantiated Scenario v1",
+  "type": "object",
+  "x-aces-document-phase": "instantiated-scenario",
+  "x-aces-source-profile": "sdl-yaml/v1"
 }

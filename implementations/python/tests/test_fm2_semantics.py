@@ -58,8 +58,8 @@ events:
   kickoff: {conditions: [health]}
   cleanup: {conditions: [health]}
 scripts:
-  timeline: {start-time: 0, end-time: 60, speed: 1, events: {kickoff: 10}}
-  side: {start-time: 0, end-time: 60, speed: 1, events: {cleanup: 20}}
+  timeline: {start_time: 0, end_time: 60, speed: 1, events: {kickoff: 10}}
+  side: {start_time: 0, end_time: 60, speed: 1, events: {cleanup: 20}}
 stories:
   main: {scripts: [timeline]}
 objectives:

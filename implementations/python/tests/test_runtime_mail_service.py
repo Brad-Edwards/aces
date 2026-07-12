@@ -159,7 +159,7 @@ def test_vm_runtime_mail_service_surface() -> None:
     assert service.settings[0].provenance == RuntimeMailSettingProvenance.CONFIGURATION_FILE
 
 
-def test_parser_accepts_kebab_case_runtime_mail_services() -> None:
+def test_parser_accepts_canonical_runtime_mail_services() -> None:
     scenario = parse_sdl(
         """
         name: mail-parser
@@ -170,21 +170,21 @@ def test_parser_accepts_kebab_case_runtime_mail_services() -> None:
             services:
               - {port: 25, name: smtp}
             runtime:
-              mail-services:
-                - mail-service-id: techvault-mail
+              mail_services:
+                - mail_service_id: techvault-mail
                   service: smtp
                   listeners:
-                    - listener-id: smtp-listener
+                    - listener_id: smtp-listener
                       service: smtp
                       protocol: smtp
-                      tls-mode: starttls-available
+                      tls_mode: starttls-available
                   domains:
-                    - domain-id: techvault-domain
+                    - domain_id: techvault-domain
                       name: techvault.local
                   mailboxes:
-                    - mailbox-id: admin-mailbox
+                    - mailbox_id: admin-mailbox
                       address: admin@techvault.local
-                      domain-ref: techvault-domain
+                      domain_ref: techvault-domain
         """
     )
 

@@ -627,11 +627,11 @@ nodes:
     services:
       - {port: 22, name: ssh}
     runtime:
-      ssh-servers:
-        - ssh-server-id: sshd-default
+      ssh_servers:
+        - ssh_server_id: sshd-default
           service: ssh
-          match-rules:
-            - match-id: m-kali
+          match_rules:
+            - match_id: m-kali
               criteria:
                 - {kind: user, pattern: kali}
 relationships:

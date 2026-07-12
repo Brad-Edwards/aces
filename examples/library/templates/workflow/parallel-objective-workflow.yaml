@@ -51,11 +51,11 @@ body:
         patch-step:
           type: objective
           objective: apply-patch
-          on-success: converge
+          on_success: converge
         verify-step:
           type: objective
           objective: verify-service
-          on-success: converge
+          on_success: converge
         converge:
           type: join
           next: done

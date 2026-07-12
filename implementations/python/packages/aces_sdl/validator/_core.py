@@ -7,6 +7,7 @@ from collections import defaultdict
 
 from .._base import is_variable_ref
 from .._errors import SDLValidationError
+from .._reference_targetability import is_targetable_reference
 from .._runtime_service_families import collect_qualified_runtime_family_refs
 from ..entities import flatten_entities
 from ..nodes import NodeType
@@ -128,13 +129,6 @@ class _ValidatorCore:
         ("stories", True),
     )
 
-    _TARGETABLE_DISALLOWED_PREFIXES = (
-        "variables.",
-        "evidence_requirements.",
-        "objectives.",
-        "workflows.",
-    )
-
     def _populate_named_ref_index(self, index: dict[str, set[str]]) -> None:
         self._add_top_level_section_aliases(index)
         self._add_entity_aliases(index)
@@ -176,9 +170,7 @@ class _ValidatorCore:
     def _filter_targetable_aliases(self, index: dict[str, set[str]]) -> dict[str, set[str]]:
         filtered: dict[str, set[str]] = {}
         for alias, candidates in index.items():
-            keep = {
-                candidate for candidate in candidates if not candidate.startswith(self._TARGETABLE_DISALLOWED_PREFIXES)
-            }
+            keep = {candidate for candidate in candidates if is_targetable_reference(candidate)}
             if keep:
                 filtered[alias] = keep
         return filtered

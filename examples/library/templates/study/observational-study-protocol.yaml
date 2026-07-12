@@ -39,6 +39,6 @@ body:
         complete-task:
           type: objective
           objective: complete-study-task
-          on-success: done
+          on_success: done
         done:
           type: end

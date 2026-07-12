@@ -30,7 +30,9 @@ uv run --extra dev pytest tests/test_sdl_models.py tests/test_sdl_validator.py \
   tests/test_sdl_parser.py -v
 ```
 
-Tests structural validation (Pydantic models), semantic validation (cross-reference checks), and parser behavior (normalization, shorthands, SDL-only format boundary).
+Tests `sdl-yaml/v1` decoding and migration diagnostics, structural validation
+(Pydantic models), semantic validation (cross-reference checks), shorthand
+expansion, and the SDL-only format boundary.
 The unit suites also cover OCR-derived duration grammar, workflow graphs, direct service/ACL target refs, and `${var}` placeholder handling across supported scalar/reference fields including selected leaf enums.
 
 ### Stress Tests (standard run)
@@ -107,6 +109,13 @@ so they stay valid as real SDL artifacts:
 - `hospital-ransomware-surgery-day.sdl.yaml`
 - `satcom-release-poisoning.sdl.yaml`
 - `port-authority-surge-response.sdl.yaml`
+
+`test_example_schema_conformance.py` proves each shipped SDL example through
+two independent legs: strict `sdl-yaml/v1` decoding followed by direct
+validation of the decoded longhand object against the checked-in normalized
+authoring schema, and reference-parser model serialization against that same
+schema. The valid/invalid/migration source-profile corpus lives under
+`contracts/fixtures/sdl/sdl-yaml-v1/`.
 
 The up-front design briefs for the complex examples live in
 [`docs/explain/sdl/complex-scenarios.md`](complex-scenarios.md).

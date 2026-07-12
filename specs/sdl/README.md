@@ -30,7 +30,9 @@ Three artifact classes describe the SDL, with distinct authority:
    either to override the other. Where this prose states a structural fact
    (a section's presence, requiredness, or value shape), the published
    `sdl-authoring-input-v1.json` schema is the authoritative enumeration the
-   prose is written to match.
+   prose is written to match. That schema validates the normalized authoring
+   object, not raw YAML presentation; `document-model.md` §1 and the
+   `contracts/fixtures/sdl/sdl-yaml-v1/` corpus define the raw source profile.
 3. **Reference implementations (`implementations/`)** consume both. No Python
    model, validator function, or generator defines ecosystem meaning; it is
    evidence of one conforming realisation. This specification names
@@ -76,10 +78,15 @@ An implementer can answer each structural question from the named file alone:
 
 - *Which sections exist, which are required, and what shape is each?* →
   [`document-model.md`](document-model.md) and [`sections.md`](sections.md).
+  The nox contracts gate runs `tools/check_sdl_catalog_parity.py` to prove the
+  catalog, published schema, and reference registries remain reconciled.
+- *Which raw YAML documents are canonical SDL, and what receives a stable
+  semantic digest?* → [`document-model.md`](document-model.md) §§1, 5, 7-8.
 - *What is a valid identifier for a user-defined key?* →
   [`document-model.md`](document-model.md).
 - *How does a reference resolve, and what happens when it is dangling or
-  ambiguous?* → [`references.md`](references.md).
+  ambiguous?* → [`references.md`](references.md), including its checked
+  editor-visible edge index and distinct candidate-domain classifications.
 - *What is legal to instantiate, and what does instantiation reject?* →
   [`variables-and-instantiation.md`](variables-and-instantiation.md).
 - *What is the runtime-inventory surface and which ADR owns each family?* →

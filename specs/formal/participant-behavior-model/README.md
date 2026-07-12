@@ -31,7 +31,7 @@ Existing coverage:
 - `controlled-vocabularies-v1` already defines
   `participant-decision-surface-modes` and
   `participant-offensive-behavior-activities`.
-- Issue #206 adds SDL `behavior-specifications` authoring, semantic
+- Issue #206 adds SDL `behavior_specifications` authoring, semantic
   validation, generated schema coverage, and compiled
   `participant.behavior-specification.*` runtime records for ACT-606.
 
@@ -268,7 +268,7 @@ Rules:
 
 Implementation issue #206 adds the executable SDL authoring and validation
 surface for this aggregate. The Python reference implementation parses
-`behavior-specifications`, validates participant, role, action, observation,
+`behavior_specifications`, validates participant, role, action, observation,
 outcome, authority, extension, and governed-mode refs, includes the surface in
 generated SDL schemas, and compiles stable
 `participant.behavior-specification.<name>` runtime records without creating a

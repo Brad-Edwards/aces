@@ -67,7 +67,7 @@ conditions:
 events:
   kickoff: {conditions: [health]}
 scripts:
-  timeline: {start-time: 0, end-time: 60, speed: 1, events: {kickoff: 10}}
+  timeline: {start_time: 0, end_time: 60, speed: 1, events: {kickoff: 10}}
 stories:
   main: {scripts: [timeline]}
 """)
@@ -109,7 +109,7 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
 
@@ -139,7 +139,7 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
   parent:
     start: delegate
@@ -147,7 +147,7 @@ workflows:
       delegate:
         type: call
         workflow: child
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
 

@@ -13,6 +13,10 @@ adrs:
   - id: ADR-001
     path: docs/decisions/adrs/adr-001-scenario-description-language.md
     pin: 29d53078da3314320bca34148440e8ad80a0deb6fc0471177197d2ab90043389
+    amendments:
+      - date: 2026-07-11
+        ref: "#721"
+        summary: "Replaced implicit case-insensitive field parsing with strict sdl-yaml/v1, explicit diagnosed migration, an honest normalized-authoring-object schema boundary, and RFC 8785 semantic identity."
   - id: ADR-002
     path: docs/decisions/adrs/adr-002-declarative-sdl-objectives.md
     pin: 7550c868306aa4f6ff7a1522796b71ae8797aa0015d7faec37c8f7011e60c536

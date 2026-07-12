@@ -10,6 +10,7 @@ from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 from ._errors import SDLParseError
 from ._language_diagnostics import parse_error as _parse_error
 from ._language_metadata import REFERENCE_COMPLETION_TARGETS
+from ._reference_targetability import is_targetable_section
 from ._yaml_loader import compose_sdl_yaml
 
 _SUCCESS_REFERENCE_TARGETS = frozenset({"conditions"})
@@ -289,7 +290,9 @@ def _include_occurrence(
     if qualified_section is None:
         return True
     target = _reference_target_for_path(path, mapping_key=mapping_key)
-    return target in {qualified_section, "any"}
+    if target in {qualified_section, "any"}:
+        return True
+    return target == "targetable" and is_targetable_section(qualified_section)
 
 
 def _reference_target_for_path(path: list[str], *, mapping_key: bool) -> str | None:

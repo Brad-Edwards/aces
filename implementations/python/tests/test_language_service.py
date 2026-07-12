@@ -83,6 +83,70 @@ workflows:
     assert workflow_refs["items"][0]["detail"] == "workflows.flow.steps.start-here"
 
 
+def test_targetable_completions_exclude_non_targetable_sections() -> None:
+    sdl = """\
+name: targetable-completions
+nodes:
+  web: {type: VM, os: linux, resources: {ram: 1 GiB, cpu: 1}}
+variables:
+  count: {type: integer, default: 1}
+evidence_requirements:
+  capture: {source_refs: [web], source_class: node}
+objectives:
+  inspect: {targets: [web], success: {conditions: []}}
+workflows:
+  flow: {start: done, steps: {done: {type: end}}}
+"""
+
+    result = language_completions(sdl, cursor_path="/objectives/inspect/targets")
+
+    assert result["context"] == "reference:targetable"
+    details = {item["detail"] for item in result["items"]}
+    assert "nodes.web" in details
+    assert not details & {
+        "variables.count",
+        "evidence_requirements.capture",
+        "objectives.inspect",
+        "workflows.flow",
+    }
+
+
+def test_qualified_targetable_reference_reports_occurrence() -> None:
+    sdl = """\
+name: targetable-reference
+nodes:
+  web: {type: VM, os: linux, resources: {ram: 1 GiB, cpu: 1}}
+behavior_specifications:
+  baseline:
+    semantic_version: 1.0.0
+    lifecycle_state: active
+    participant_refs: []
+    authority_scope_refs: [nodes.web]
+    behavior_mode: baseline
+"""
+
+    result = language_references(sdl, "nodes.web")
+
+    assert any(
+        item["path"] == "/behavior_specifications/baseline/authority_scope_refs/0" for item in result["occurrences"]
+    )
+
+
+def test_qualified_targetable_reference_excludes_non_targetable_occurrence() -> None:
+    sdl = """\
+name: targetable-reference
+nodes:
+  web: {type: VM, os: linux, resources: {ram: 1 GiB, cpu: 1}}
+objectives:
+  inspect: {targets: [objectives.inspect], success: {conditions: []}}
+"""
+
+    result = language_references(sdl, "objectives.inspect")
+
+    assert result["definitions"][0]["qualified_name"] == "objectives.inspect"
+    assert not any(item["path"] == "/objectives/inspect/targets/0" for item in result["occurrences"])
+
+
 def test_language_completions_report_parse_and_size_errors() -> None:
     parse_error = language_completions("name: [\n", cursor_path="/")
     assert parse_error["status"] == "invalid"
@@ -157,9 +221,14 @@ Nodes:
 """
     )
 
-    assert payload["status"] == "formatted"
+    assert payload["status"] == "formatted_with_diagnostics"
     assert payload["content"].startswith("name: formatting-test\nnodes:\n")
-    assert "type: Switch" in payload["content"]
+    assert "type: switch" in payload["content"]
+    assert [item["code"] for item in payload["diagnostics"]] == [
+        "sdl.noncanonical_field",
+        "sdl.noncanonical_field",
+        "sdl.noncanonical_field",
+    ]
 
 
 def test_language_format_reports_parse_error() -> None:

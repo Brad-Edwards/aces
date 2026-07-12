@@ -38,7 +38,7 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """
 

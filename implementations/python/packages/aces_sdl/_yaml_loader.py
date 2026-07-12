@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import textwrap
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -18,38 +17,32 @@ from ._errors import (
     SDLSourceRange,
 )
 from ._mapping_scopes import MappingScope, is_literal_map_field, normalize_field_key
+from ._source_profile import (
+    DEFAULT_SOURCE_PARSE_OPTIONS,
+    SDLMigrationPolicy,
+    SDLSourceParseOptions,
+    install_yaml_12_core_resolvers,
+)
+from ._source_validation import (
+    EMPTY_CONTENT_MESSAGE,
+    coerce_migration_policy,
+    prepare_content,
+    validate_constructed_domain,
+    validate_source_format,
+    validate_source_graph,
+    validate_source_tokens,
+    yaml_parse_error,
+)
 
-_BOOL_TAG = "tag:yaml.org,2002:bool"
-_EMPTY_CONTENT_MESSAGE = "SDL content is empty"
 _MERGE_TAG = "tag:yaml.org,2002:merge"
 _STRING_TAG = "tag:yaml.org,2002:str"
 
 
 class _SDLSafeLoader(yaml.SafeLoader):
-    """SafeLoader that preserves implicit YAML 1.1 boolean-like map keys."""
+    """SafeLoader with an isolated YAML 1.2 Core implicit resolver table."""
 
-    def __init__(self, stream: str) -> None:
-        super().__init__(stream)
-        self._sdl_mapping_key_context: list[bool] = []
 
-    def compose_node(self, parent: Node | None, index: Node | None) -> Node:
-        is_mapping_key = isinstance(parent, MappingNode) and index is None
-        self._sdl_mapping_key_context.append(is_mapping_key)
-        try:
-            return super().compose_node(parent, index)
-        finally:
-            self._sdl_mapping_key_context.pop()
-
-    def resolve(self, kind: type[Node], value: str | None, implicit: Any) -> str:
-        tag = super().resolve(kind, value, implicit)
-        if (
-            kind is ScalarNode
-            and self._sdl_mapping_key_context
-            and self._sdl_mapping_key_context[-1]
-            and tag == _BOOL_TAG
-        ):
-            return _STRING_TAG
-        return tag
+install_yaml_12_core_resolvers(_SDLSafeLoader)
 
 
 @dataclass(frozen=True)
@@ -84,8 +77,10 @@ class _EffectiveAccumulator:
 
 
 class _MappingAnalyzer:
-    def __init__(self) -> None:
+    def __init__(self, *, migration_policy: SDLMigrationPolicy, path: Path | None) -> None:
         self.diagnostics: list[SDLParseDiagnostic] = []
+        self._migration_policy = migration_policy
+        self._source = str(path) if path is not None else None
         self._effective_cache: dict[tuple[int, MappingScope], _EffectiveMapping] = {}
         self._diagnostic_keys: set[tuple[Any, ...]] = set()
         self._walked: set[tuple[int, MappingScope]] = set()
@@ -141,6 +136,7 @@ class _MappingAnalyzer:
                 message="Cyclic YAML aliases are not valid SDL authoring input.",
                 pointer=_encode_pointer(tokens),
                 primary_range=_range_from_node(node),
+                source=self._source,
             )
         )
 
@@ -164,10 +160,18 @@ class _MappingAnalyzer:
         active: set[int],
     ) -> None:
         effective = self._effective_mapping(node, scope=scope, active=set())
+        conflicted_key_nodes = {id(entry.key_node) for pair in effective.conflicts for entry in pair}
         for first, conflicting in effective.conflicts:
             self._add_conflict(first, conflicting, tokens)
         for key_node, value_node in node.value:
-            self._walk_mapping_entry(key_node, value_node, scope=scope, tokens=tokens, active=active)
+            self._walk_mapping_entry(
+                key_node,
+                value_node,
+                scope=scope,
+                tokens=tokens,
+                active=active,
+                suppress_field_migration=id(key_node) in conflicted_key_nodes,
+            )
 
     def _add_conflict(self, first: _Entry, conflicting: _Entry, tokens: list[str]) -> None:
         self._add(
@@ -179,6 +183,7 @@ class _MappingAnalyzer:
                 primary_range=_range_from_node(conflicting.key_node),
                 related_range=_range_from_node(first.key_node),
                 related_message=f"First authored key '{first.authored}'.",
+                source=self._source,
             )
         )
 
@@ -190,8 +195,16 @@ class _MappingAnalyzer:
         scope: MappingScope,
         tokens: list[str],
         active: set[int],
+        suppress_field_migration: bool,
     ) -> None:
         if _is_merge_key(key_node):
+            self._add_migration_diagnostic(
+                key_node,
+                code="sdl.noncanonical_merge",
+                message="YAML merge keys are migration syntax, not canonical sdl-yaml/v1.",
+                pointer=_encode_pointer(tokens),
+                authored_keys=("<<", "<<"),
+            )
             self._walk_merge_value(value_node, scope=scope, tokens=tokens, active=active)
             return
         authored = _authored_key(key_node)
@@ -199,6 +212,14 @@ class _MappingAnalyzer:
             self._add_key_type_diagnostic(key_node, authored, tokens)
             return
         canonical = normalize_field_key(authored) if scope is MappingScope.STRUCTURAL else authored
+        if scope is MappingScope.STRUCTURAL and canonical != authored and not suppress_field_migration:
+            self._add_migration_diagnostic(
+                key_node,
+                code="sdl.noncanonical_field",
+                message=f"Structural field '{authored}' must use canonical spelling '{canonical}'.",
+                pointer=_encode_pointer([*tokens, canonical]),
+                authored_keys=(authored, canonical),
+            )
         child_scope = _child_scope(scope, canonical, value_node)
         self._walk(value_node, scope=child_scope, tokens=[*tokens, canonical], active=active)
 
@@ -214,6 +235,28 @@ class _MappingAnalyzer:
                 message=message,
                 pointer=_encode_pointer([*tokens, authored]),
                 primary_range=_range_from_node(key_node),
+                source=self._source,
+            )
+        )
+
+    def _add_migration_diagnostic(
+        self,
+        key_node: Node,
+        *,
+        code: str,
+        message: str,
+        pointer: str,
+        authored_keys: tuple[str, str],
+    ) -> None:
+        self._add(
+            SDLParseDiagnostic(
+                code=code,
+                message=message,
+                pointer=pointer,
+                primary_range=_range_from_node(key_node),
+                authored_keys=authored_keys,
+                severity="warning" if self._migration_policy is SDLMigrationPolicy.ACCEPT else "error",
+                source=self._source,
             )
         )
 
@@ -327,21 +370,36 @@ def load_sdl_yaml(
     path: Path | None = None,
     scope: MappingScope = MappingScope.STRUCTURAL,
     base_pointer: str = "",
+    source_options: SDLSourceParseOptions = DEFAULT_SOURCE_PARSE_OPTIONS,
+    source_diagnostics: list[SDLParseDiagnostic] | None = None,
 ) -> object:
     """Validate and safely construct one SDL YAML document or fragment."""
-    prepared = _prepare_content(content, path=path)
+    prepared = prepare_content(content, path=path)
+    policy = coerce_migration_policy(source_options.migration_policy, path=path)
+    validate_source_format(source_options.source_format, path=path)
+    validate_source_tokens(prepared, path=path, limits=source_options.limits)
     loader: _SDLSafeLoader | None = None
     try:
         loader = _SDLSafeLoader(prepared)
         root = loader.get_single_node()
         if root is None:
-            raise SDLParseError(_EMPTY_CONTENT_MESSAGE, path=path)
-        _validate_mapping_keys(root, path=path, scope=scope, base_pointer=base_pointer)
-        return loader.construct_document(root)
+            raise SDLParseError(EMPTY_CONTENT_MESSAGE, path=path)
+        validate_source_graph(root, path=path, limits=source_options.limits)
+        _validate_mapping_keys(
+            root,
+            path=path,
+            scope=scope,
+            base_pointer=base_pointer,
+            migration_policy=policy,
+            source_diagnostics=source_diagnostics,
+        )
+        constructed = loader.construct_document(root)
+        validate_constructed_domain(constructed, path=path)
+        return constructed
     except SDLParseError:
         raise
     except yaml.YAMLError as exc:
-        raise _yaml_parse_error(exc, path=path) from exc
+        raise yaml_parse_error(exc, path=path) from exc
     finally:
         if loader is not None:
             loader.dispose()
@@ -353,21 +411,34 @@ def compose_sdl_yaml(
     path: Path | None = None,
     scope: MappingScope = MappingScope.STRUCTURAL,
     base_pointer: str = "",
+    source_options: SDLSourceParseOptions = DEFAULT_SOURCE_PARSE_OPTIONS,
+    source_diagnostics: list[SDLParseDiagnostic] | None = None,
 ) -> Node:
     """Compose and key-validate SDL YAML while retaining source nodes."""
-    prepared = _prepare_content(content, path=path)
+    prepared = prepare_content(content, path=path)
+    policy = coerce_migration_policy(source_options.migration_policy, path=path)
+    validate_source_format(source_options.source_format, path=path)
+    validate_source_tokens(prepared, path=path, limits=source_options.limits)
     loader: _SDLSafeLoader | None = None
     try:
         loader = _SDLSafeLoader(prepared)
         root = loader.get_single_node()
         if root is None:
-            raise SDLParseError(_EMPTY_CONTENT_MESSAGE, path=path)
-        _validate_mapping_keys(root, path=path, scope=scope, base_pointer=base_pointer)
+            raise SDLParseError(EMPTY_CONTENT_MESSAGE, path=path)
+        validate_source_graph(root, path=path, limits=source_options.limits)
+        _validate_mapping_keys(
+            root,
+            path=path,
+            scope=scope,
+            base_pointer=base_pointer,
+            migration_policy=policy,
+            source_diagnostics=source_diagnostics,
+        )
         return root
     except SDLParseError:
         raise
     except yaml.YAMLError as exc:
-        raise _yaml_parse_error(exc, path=path) from exc
+        raise yaml_parse_error(exc, path=path) from exc
     finally:
         if loader is not None:
             loader.dispose()
@@ -379,12 +450,22 @@ def _validate_mapping_keys(
     path: Path | None,
     scope: MappingScope,
     base_pointer: str,
+    migration_policy: SDLMigrationPolicy,
+    source_diagnostics: list[SDLParseDiagnostic] | None,
 ) -> None:
-    diagnostics = _MappingAnalyzer().analyze(root, scope=scope, base_tokens=_decode_pointer(base_pointer))
-    if not diagnostics:
+    diagnostics = _MappingAnalyzer(migration_policy=migration_policy, path=path).analyze(
+        root,
+        scope=scope,
+        base_tokens=_decode_pointer(base_pointer),
+    )
+    warnings = tuple(item for item in diagnostics if item.severity == "warning")
+    errors = tuple(item for item in diagnostics if item.severity != "warning")
+    if source_diagnostics is not None:
+        source_diagnostics.extend(warnings)
+    if not errors:
         return
     rendered: list[str] = []
-    for item in diagnostics:
+    for item in errors:
         location = item.primary_range.start
         detail = (
             f"[{item.code}] {item.pointer or '/'} at line {location.line}, column {location.column}: {item.message}"
@@ -394,29 +475,7 @@ def _validate_mapping_keys(
             detail += f" First declaration at line {related.line}, column {related.column}."
         rendered.append(detail)
     details = "SDL mapping-key validation failed:\n  " + "\n  ".join(rendered)
-    raise SDLParseError(details, path=path, diagnostics=diagnostics)
-
-
-def _prepare_content(content: str, *, path: Path | None) -> str:
-    prepared = textwrap.dedent(content)
-    if not prepared.strip():
-        raise SDLParseError(_EMPTY_CONTENT_MESSAGE, path=path)
-    return prepared
-
-
-def _yaml_parse_error(error: yaml.YAMLError, *, path: Path | None) -> SDLParseError:
-    mark = getattr(error, "problem_mark", None)
-    problem = getattr(error, "problem", None)
-    if mark is None:
-        return SDLParseError(f"Invalid YAML: {error}", path=path)
-    position = SDLSourcePosition(mark.line + 1, mark.column + 1)
-    diagnostic = SDLParseDiagnostic(
-        code="sdl.parse",
-        message=str(problem or error),
-        pointer="",
-        primary_range=SDLSourceRange(start=position, end=position),
-    )
-    return SDLParseError(f"Invalid YAML: {error}", path=path, diagnostics=(diagnostic,))
+    raise SDLParseError(details, path=path, diagnostics=errors)
 
 
 def _is_merge_key(node: Node) -> bool:

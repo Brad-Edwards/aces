@@ -8,14 +8,23 @@ relationships, agents, objectives, workflows, and variables.
 from importlib import import_module
 
 __all__ = [
+    "canonical_sdl_bytes",
+    "canonical_sdl_digest",
     "instantiate_scenario",
     "InstantiatedScenario",
+    "SDLCanonicalDigest",
+    "SDL_CANONICAL_PROFILE",
+    "SDLFormatResult",
+    "format_sdl_source",
     "load_sdl_fragment",
     "parse_sdl",
     "parse_sdl_file",
     "Scenario",
     "SDLError",
     "SDLInstantiationError",
+    "SDLMigrationPolicy",
+    "SDLParserLimits",
+    "SDL_SOURCE_FORMAT",
     "SDLParseDiagnostic",
     "SDLParseError",
     "SDLSourcePosition",
@@ -36,6 +45,17 @@ def __getattr__(name: str):
         "SDLValidationError",
     }:
         module = import_module("aces_sdl._errors")
+    elif name in {"canonical_sdl_bytes", "canonical_sdl_digest", "SDLCanonicalDigest"}:
+        module = import_module("aces_sdl.canonical")
+    elif name in {"format_sdl_source", "SDLFormatResult"}:
+        module = import_module("aces_sdl.formatting")
+    elif name in {
+        "SDL_CANONICAL_PROFILE",
+        "SDLMigrationPolicy",
+        "SDLParserLimits",
+        "SDL_SOURCE_FORMAT",
+    }:
+        module = import_module("aces_sdl._source_profile")
     elif name == "VARIABLE_TOKEN_PATTERN":
         module = import_module("aces_sdl._base")
     elif name == "instantiate_scenario":

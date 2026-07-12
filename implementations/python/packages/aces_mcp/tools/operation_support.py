@@ -32,7 +32,12 @@ _SECTION_FIELDS = [
 ]
 
 
-def compile_pipeline(sdl_content: str, parameters_json: str) -> dict[str, Any]:
+def compile_pipeline(
+    sdl_content: str,
+    parameters_json: str,
+    *,
+    accept_migration_syntax: bool = False,
+) -> dict[str, Any]:
     size_error = size_error_payload(sdl_content, parameters_json)
     if size_error is not None:
         return {"error": json.loads(size_error), "stages": [], "scenario": None, "model": None}
@@ -40,6 +45,7 @@ def compile_pipeline(sdl_content: str, parameters_json: str) -> dict[str, Any]:
     from aces_processor.compiler import compile_runtime_model
     from aces_sdl import (
         SDLInstantiationError,
+        SDLMigrationPolicy,
         SDLParseError,
         SDLValidationError,
         instantiate_scenario,
@@ -52,7 +58,10 @@ def compile_pipeline(sdl_content: str, parameters_json: str) -> dict[str, Any]:
 
     stages: list[dict[str, str]] = []
     try:
-        scenario = parse_sdl(sdl_content)
+        scenario = parse_sdl(
+            sdl_content,
+            migration_policy=(SDLMigrationPolicy.ACCEPT if accept_migration_syntax else SDLMigrationPolicy.REJECT),
+        )
     except SDLParseError as exc:
         return {"error": stage_error("parse", exc), "stages": stages, "scenario": None, "model": None}
     except SDLValidationError as exc:
@@ -90,6 +99,7 @@ def compile_pipeline(sdl_content: str, parameters_json: str) -> dict[str, Any]:
         "stages": stages,
         "scenario": concrete,
         "model": model,
+        "source_diagnostics": [item.as_dict() for item in scenario.source_diagnostics],
         "instantiation_parameters": concrete.instantiation_parameters,
     }
 

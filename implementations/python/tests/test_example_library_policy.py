@@ -48,7 +48,7 @@ _VALID_BODY = {
                 "verify": {
                     "type": "objective",
                     "objective": "verify-app-health",
-                    "on-success": "done",
+                    "on_success": "done",
                 },
                 "done": {"type": "end"},
             },

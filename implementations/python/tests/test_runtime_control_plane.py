@@ -51,35 +51,35 @@ nodes:
 entities:
   red-team:
     role: red
-action-contracts:
+action_contracts:
   scan:
-    semantic-version: 1.0.0
-    lifecycle-state: active
-    behavioral-granularity: atomic
-    procedure-basis: governed service discovery
-    realization-profile: backend-declared
-    fidelity-claim: records participant discovery intent and terminal observation
+    semantic_version: 1.0.0
+    lifecycle_state: active
+    behavioral_granularity: atomic
+    procedure_basis: governed service discovery
+    realization_profile: backend-declared
+    fidelity_claim: records participant discovery intent and terminal observation
     preconditions:
-      - precondition-id: authority-in-scope
-        precondition-class: authority
+      - precondition_id: authority-in-scope
+        precondition_class: authority
         description: red participant is authorized to scan the web service
     effects:
-      - effect-id: terminal-scan-observation
-        effect-class: observation_effect
+      - effect_id: terminal-scan-observation
+        effect_class: observation_effect
         description: terminal scan observation
-        evidence-refs: [evidence.scan-output]
-    failure-classes: [backend_error, unknown]
-observation-boundaries:
+        evidence_refs: [evidence.scan-output]
+    failure_classes: [backend_error, unknown]
+observation_boundaries:
   red-view:
-    projection-basis: participant-local projection over observed services
-    evidence-refs: [evidence.scan-output]
-    redaction-policy: hidden refs never project without explicit disclosure
-    latency-profile: terminal observation emitted after state transition commit
+    projection_basis: participant-local projection over observed services
+    evidence_refs: [evidence.scan-output]
+    redaction_policy: hidden refs never project without explicit disclosure
+    latency_profile: terminal observation emitted after state transition commit
 agents:
   red-agent:
     entity: red-team
     actions: [scan]
-    observation-boundaries: [red-view]
+    observation_boundaries: [red-view]
 """
 
 
@@ -306,7 +306,7 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
     target = create_stub_target()

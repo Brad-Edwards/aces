@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from ._base import is_variable_ref
-from ._errors import SDLInstantiationError, SDLParseError
+from ._errors import SDLInstantiationError, SDLParseDiagnostic, SDLParseError
 from ._module_provenance import (
     add_unique_provenance as _add_unique_provenance,
 )
@@ -22,6 +22,13 @@ from ._module_symbols import (
 )
 from ._module_symbols import (
     symbol_index as _symbol_index,
+)
+from ._source_profile import (
+    DEFAULT_PARSER_LIMITS,
+    SDL_SOURCE_FORMAT,
+    SDLMigrationPolicy,
+    SDLParserLimits,
+    SDLSourceParseOptions,
 )
 from .entities import flatten_entities
 from .instantiate import instantiate_scenario
@@ -338,6 +345,10 @@ def expand_sdl_modules(
     *,
     path: Path,
     seen: set[Path] | None = None,
+    source_format: str = SDL_SOURCE_FORMAT,
+    migration_policy: SDLMigrationPolicy | str = SDLMigrationPolicy.REJECT,
+    limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
+    source_diagnostics: list[SDLParseDiagnostic] | None = None,
 ) -> tuple[
     dict[str, Any],
     dict[str, str],
@@ -383,11 +394,21 @@ def expand_sdl_modules(
             base_dir=resolved_path.parent,
             lockfile=lockfile,
             trust_policy=trust_policy,
+            source_options=SDLSourceParseOptions(
+                source_format=source_format,
+                migration_policy=migration_policy,
+                limits=limits,
+            ),
+            source_diagnostics=source_diagnostics,
         )
         import_path = resolved_import.root_file
         imported_raw = _load_normalized_data(
             import_path.read_text(encoding="utf-8"),
             path=import_path,
+            source_format=source_format,
+            migration_policy=migration_policy,
+            limits=limits,
+            source_diagnostics=source_diagnostics,
         )
         (
             imported_expanded,
@@ -398,6 +419,10 @@ def expand_sdl_modules(
             imported_raw,
             path=import_path,
             seen=seen,
+            source_format=source_format,
+            migration_policy=migration_policy,
+            limits=limits,
+            source_diagnostics=source_diagnostics,
         )
         try:
             imported_scenario = Scenario.model_validate(imported_expanded)

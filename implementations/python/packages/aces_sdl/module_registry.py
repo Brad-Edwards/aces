@@ -27,7 +27,8 @@ from packaging.version import InvalidVersion, Version
 from pydantic import Field, ValidationError
 
 from ._base import SDLModel
-from ._errors import SDLParseError
+from ._errors import SDLParseDiagnostic, SDLParseError
+from ._source_profile import DEFAULT_SOURCE_PARSE_OPTIONS, SDLSourceParseOptions
 from .scenario import ImportDecl, ModuleDescriptor, Scenario
 
 LOCKFILE_NAME = "aces.lock.json"
@@ -550,6 +551,8 @@ def resolve_import(
     base_dir: Path,
     lockfile: Lockfile | None = None,
     trust_policy: TrustPolicy | None = None,
+    source_options: SDLSourceParseOptions = DEFAULT_SOURCE_PARSE_OPTIONS,
+    source_diagnostics: list[SDLParseDiagnostic] | None = None,
 ) -> ResolvedModule:
     trust_policy = trust_policy or TrustPolicy()
     source = import_decl.normalized_source
@@ -579,6 +582,8 @@ def resolve_import(
             base_dir=base_dir,
             lockfile=lockfile,
             trust_policy=trust_policy,
+            source_options=source_options,
+            source_diagnostics=source_diagnostics,
         )
     if source.startswith("local:"):
         relative = source.removeprefix("local:")
@@ -592,6 +597,10 @@ def resolve_import(
         imported_raw = _load_normalized_data(
             import_path.read_text(encoding="utf-8"),
             path=import_path,
+            source_format=source_options.source_format,
+            migration_policy=source_options.migration_policy,
+            limits=source_options.limits,
+            source_diagnostics=source_diagnostics,
         )
         imported_scenario = Scenario.model_validate(imported_raw)
         descriptor = _scenario_module_descriptor(

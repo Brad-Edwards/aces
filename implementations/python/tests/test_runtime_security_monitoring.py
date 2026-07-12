@@ -292,7 +292,7 @@ def test_detection_definition_model_preserves_wazuh_semantics() -> None:
     assert definition.mitre_attack_ids == ["T1558.003"]
 
 
-def test_parser_accepts_kebab_case_runtime_security_monitoring_managers() -> None:
+def test_parser_accepts_canonical_runtime_security_monitoring_managers() -> None:
     scenario = parse_sdl(
         """
         name: security-monitoring-parser
@@ -303,40 +303,40 @@ def test_parser_accepts_kebab_case_runtime_security_monitoring_managers() -> Non
             services:
               - {port: 55000, name: wazuh-api}
             runtime:
-              security-monitoring-managers:
-                - security-monitoring-manager-id: techvault-wazuh
+              security_monitoring_managers:
+                - security_monitoring_manager_id: techvault-wazuh
                   service: wazuh-api
                   implementation: WAZUH
-                  manager-kind: siem
+                  manager_kind: siem
                   listeners:
-                    - listener-id: manager-api
+                    - listener_id: manager-api
                       service: wazuh-api
                       role: api
-                      auth-required: true
-                  content-sets:
-                    - content-id: wazuh-ruleset
+                      auth_required: true
+                  content_sets:
+                    - content_id: wazuh-ruleset
                       kind: rule-corpus
                       format: wazuh-rule-xml
-                      file-count: 173
-                  detection-definitions:
-                    - definition-id: rule-301010
+                      file_count: 173
+                  detection_definitions:
+                    - definition_id: rule-301010
                       engine: WAZUH
-                      definition-kind: correlation-rule
-                      native-id: "301010"
-                      content-set-ref: wazuh-ruleset
-                      source-file-ref: /var/ossec/etc/rules/ad_rules.xml
-                      source-start-line: 12
-                      source-end-line: 35
-                      digest-algorithm: sha256
-                      canonical-digest: "1111111111111111111111111111111111111111111111111111111111111111"
+                      definition_kind: correlation-rule
+                      native_id: "301010"
+                      content_set_ref: wazuh-ruleset
+                      source_file_ref: /var/ossec/etc/rules/ad_rules.xml
+                      source_start_line: 12
+                      source_end_line: 35
+                      digest_algorithm: sha256
+                      canonical_digest: "1111111111111111111111111111111111111111111111111111111111111111"
                       loaded: true
-                      parser-accepted: true
+                      parser_accepted: true
                       level: 10
-                      field-predicates:
+                      field_predicates:
                         - field: win.system.eventID
                           operator: equals
                           value: "4769"
-                      mitre-attack-ids: [T1558.003]
+                      mitre_attack_ids: [T1558.003]
         """
     )
 

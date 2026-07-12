@@ -107,8 +107,8 @@ events:
 
 scripts:
   timeline:
-    start-time: 0
-    end-time: 2 hour
+    start_time: 0
+    end_time: 2 hour
     speed: "${speed}"
     events:
       attack: 30 min
@@ -148,7 +148,7 @@ workflows:
   flow:
     start: do-it
     steps:
-      do-it: {type: objective, objective: red-access, on-success: done}
+      do-it: {type: objective, objective: red-access, on_success: done}
       done: {type: end}
 """
 
@@ -172,11 +172,25 @@ class TestReferenceTools:
     def test_sdl_overview_returns_content(self, server):
         text = _call(server, "sdl_overview")
         assert "SDL" in text
-        # Both pieces of evidence must be present; an OR disjunction over
-        # "17" / "sections" would let either drift go undetected.
-        assert "17" in text
-        assert "sections" in text.lower()
+        assert "authoring sections" in text.lower()
+        assert "17 sections" not in text.lower()
         assert "nodes" in text
+
+    @pytest.mark.parametrize(
+        "section",
+        [
+            "forwarding_agents",
+            "action_contracts",
+            "observation_boundaries",
+            "outcome_interpretation_rules",
+            "behavior_specifications",
+            "evidence_requirements",
+        ],
+    )
+    def test_sdl_section_reference_covers_live_sections(self, server, section):
+        text = _call(server, "sdl_section_reference", {"section": section})
+        assert "Unknown section" not in text
+        assert "not found" not in text
 
     def test_sdl_section_reference_valid(self, server):
         text = _call(server, "sdl_section_reference", {"section": "nodes"})
@@ -252,6 +266,19 @@ class TestAuthoringTools:
         assert text.startswith("VALID")
         assert "semantic validation was skipped" in text
         assert "ghost-feature" not in text
+
+    def test_validate_requires_explicit_migration_policy(self, server):
+        strict = _call(server, "sdl_validate", {"sdl_content": "Name: migrated\n"})
+        assert "sdl.noncanonical_field" in strict
+
+        migrated = _call(
+            server,
+            "sdl_validate",
+            {"sdl_content": "Name: migrated\n", "accept_migration_syntax": True},
+        )
+        assert migrated.startswith("VALID")
+        assert "Source migration advisories (1)" in migrated
+        assert "sdl.noncanonical_field" in migrated
 
     def test_validate_section_valid(self, server):
         text = _call(
@@ -378,8 +405,13 @@ class TestLanguageServiceTools:
             {"sdl_content": "Name: x\nNodes:\n  sw: {Type: Switch}\n"},
         )
 
-        assert payload["status"] == "formatted"
+        assert payload["status"] == "formatted_with_diagnostics"
         assert payload["content"].startswith("name: x\nnodes:\n")
+        assert [item["code"] for item in payload["diagnostics"]] == [
+            "sdl.noncanonical_field",
+            "sdl.noncanonical_field",
+            "sdl.noncanonical_field",
+        ]
 
     def test_diagnostics_return_structured_errors(self, server):
         payload = _json_call(
@@ -645,6 +677,21 @@ class TestOperationTools:
         assert payload["status"] == "invalid"
         assert payload["stage"] == "semantic_validation"
         assert "ghost-feature" in payload["diagnostics"][0]["message"]
+
+    @pytest.mark.parametrize("tool", ["sdl_parse", "sdl_compile"])
+    def test_operation_tools_require_explicit_migration_policy(self, server, tool):
+        strict = _json_call(server, tool, {"sdl_content": "Name: migrated\n"})
+        assert strict["status"] == "invalid"
+        assert strict["diagnostics"][0]["code"] == "sdl.noncanonical_field"
+
+        migrated = _json_call(
+            server,
+            tool,
+            {"sdl_content": "Name: migrated\n", "accept_migration_syntax": True},
+        )
+        assert migrated["status"] in {"parsed", "compiled"}
+        diagnostics = migrated.get("source_diagnostics", migrated["scenario"].get("source_diagnostics", []))
+        assert diagnostics[0]["code"] == "sdl.noncanonical_field"
 
     @pytest.mark.parametrize("tool", ["sdl_parse", "sdl_compile"])
     def test_operation_tools_preserve_mapping_conflict_diagnostics(self, server, tool):

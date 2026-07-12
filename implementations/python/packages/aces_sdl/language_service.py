@@ -19,12 +19,15 @@ from ._language_diagnostics import parse_error as _parse_error
 from ._language_edit import apply_edit
 from ._language_metadata import REFERENCE_COMPLETION_TARGETS, SECTION_FIELD_COMPLETIONS
 from ._language_references import find_references
+from ._reference_targetability import is_targetable_section
+from .formatting import format_sdl_source
 from .parser import _load_normalized_data, parse_sdl
 from .scenario import Scenario
 
 _MAX_INPUT_BYTES = 64 * 1024
 _SCENARIO_METADATA_FIELDS = frozenset({"name", "version", "description", "module", "imports"})
 _SECTION_FIELDS = tuple(field for field in Scenario.model_fields if field not in _SCENARIO_METADATA_FIELDS)
+_TARGETABLE_SECTION_FIELDS = tuple(field for field in _SECTION_FIELDS if is_targetable_section(field))
 _TOP_LEVEL_KEYS = tuple(Scenario.model_fields)
 
 
@@ -89,23 +92,19 @@ def language_references(sdl_content: str, symbol: str) -> dict[str, Any]:
 
 
 def language_format(sdl_content: str) -> dict[str, Any]:
-    """Return normalized, consistently formatted SDL YAML."""
+    """Migrate recognized legacy spellings and return canonical SDL YAML."""
     size_error = _size_error(sdl_content)
     if size_error is not None:
         return size_error
 
     try:
-        data = _load_normalized_data(sdl_content)
+        result = format_sdl_source(sdl_content)
     except SDLParseError as exc:
         return _parse_error(exc)
 
-    formatted = yaml.safe_dump(
-        data,
-        allow_unicode=False,
-        default_flow_style=False,
-        sort_keys=False,
-    )
-    diagnostics = language_diagnostics(formatted)["diagnostics"]
+    formatted = result.content
+    diagnostics = [item.as_dict() for item in result.diagnostics]
+    diagnostics.extend(language_diagnostics(formatted)["diagnostics"])
     status = "formatted" if not diagnostics else "formatted_with_diagnostics"
     return {"status": status, "content": formatted, "diagnostics": diagnostics}
 
@@ -206,6 +205,8 @@ def _completion_target_section(pointer: list[str]) -> str | None:
 def _reference_completion_items(data: dict[str, Any], target_section: str) -> list[dict[str, str]]:
     if target_section == "any":
         sections = _SECTION_FIELDS
+    elif target_section == "targetable":
+        sections = _TARGETABLE_SECTION_FIELDS
     elif target_section == "workflow_steps":
         return _workflow_step_completion_items(data)
     else:

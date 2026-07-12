@@ -167,7 +167,7 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
     target = create_stub_target()
@@ -241,7 +241,7 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
     target = create_stub_target()
@@ -535,7 +535,7 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
     target = create_stub_target()
@@ -609,7 +609,7 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
     target = create_stub_target()
@@ -699,9 +699,9 @@ workflows:
       run:
         type: objective
         objective: validate
-        compensate-with: rollback
-        on-success: finish
-        on-failure: finish
+        compensate_with: rollback
+        on_success: finish
+        on_failure: finish
       finish: {type: end}
 """)
     target = create_stub_target()
@@ -817,9 +817,9 @@ workflows:
       run:
         type: objective
         objective: validate
-        compensate-with: rollback
-        on-success: finish
-        on-failure: finish
+        compensate_with: rollback
+        on_success: finish
+        on_failure: finish
       finish: {type: end}
 """)
     target = create_stub_target()

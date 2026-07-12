@@ -81,7 +81,13 @@ _SECTION_NAMES: dict[str, str] = {
     "content": "Content",
     "accounts": "Accounts",
     "relationships": "Relationships",
+    "forwarding_agents": "Forwarding Agents",
     "agents": "Agents",
+    "action_contracts": "Action Contracts",
+    "observation_boundaries": "Observation Boundaries",
+    "outcome_interpretation_rules": "Outcome Interpretation Rules",
+    "behavior_specifications": "Behavior Specifications",
+    "evidence_requirements": "Evidence Requirements",
     "objectives": "Objectives",
     "workflows": "Workflows",
     "variables": "Variables",
@@ -113,7 +119,7 @@ def register(mcp: FastMCP) -> None:
         name="sdl_overview",
         description=(
             "Get a comprehensive overview of the ACES Scenario Description "
-            "Language (SDL). Returns what the SDL is, its 17 sections, how "
+            "Language (SDL). Returns what the SDL is, its authoring sections, how "
             "parsing/validation works, the variable system, and a complete "
             "minimal example. Start here if you have never seen the SDL before."
         ),
@@ -129,7 +135,10 @@ def register(mcp: FastMCP) -> None:
             "rules.  Valid section names: nodes, infrastructure, features, "
             "conditions, vulnerabilities, entities, orchestration "
             "(injects+events+scripts+stories), content, accounts, "
-            "relationships, agents, objectives, workflows, variables.  You can "
+            "relationships, forwarding_agents, agents, action_contracts, "
+            "observation_boundaries, outcome_interpretation_rules, "
+            "behavior_specifications, evidence_requirements, objectives, "
+            "workflows, variables. You can "
             "also pass the individual section name like 'conditions' or "
             "'events'."
         ),
@@ -161,7 +170,7 @@ def register(mcp: FastMCP) -> None:
         description=(
             "Get a complete, real-world annotated SDL scenario example. "
             "Available examples: 'hospital' (hospital ransomware exercise, "
-            "~750 lines, uses all 17 sections), 'satcom' (satellite supply-chain "
+            "~750 lines, broad language coverage), 'satcom' (satellite supply-chain "
             "exercise, ~750 lines), 'port' (port authority OT exercise, ~680 lines), "
             "'minimal' (a small annotated pentest-lab example to learn the basics). "
             "Use 'hospital' for a comprehensive reference of all SDL features."
@@ -196,7 +205,7 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(
         name="sdl_validation_reference",
         description=(
-            "Get documentation about SDL semantic validation: all 22 named "
+            "Get documentation about SDL semantic validation: the aggregated "
             "validation passes, cross-reference resolution rules, error "
             "reporting, advisories, and how ambiguous references are handled."
         ),
@@ -323,15 +332,17 @@ describing cyber range scenarios and experiments. It defines *what a scenario \
 means* — not how to deploy it. Backend implementations realize SDL \
 specifications through runtime contracts.
 
-It descends from the Open Cyber Range (OCR) SDL and extends it with 7 \
-additional sections for richer experiment semantics.
+Its topology and exercise-narrative core descends from the Open Cyber Range
+(OCR) SDL. ACES adds composition, participant, evidence, objective, workflow,
+and runtime-inventory semantics; the exact live surface is governed by the
+normative section catalog rather than a historical count.
 
-## The 17 Sections
+## Authoring Sections
 
-A scenario is a YAML document with a required `name` and up to 17 optional \
-sections, organized into four concerns:
+A scenario is a YAML document with a required `name`, optional metadata and
+composition fields, and optional authoring sections organized by concern.
 
-### Topology & Software (5 sections)
+### Topology and Software
 | Section | Purpose |
 |---------|---------|
 | `nodes` | VMs and network switches — the compute/network topology |
@@ -345,7 +356,7 @@ Per ADR-073 the OCR scoring pipeline (`metrics` / `evaluations` / `tlos` / \
 success references observable state (`conditions`); graded scoring, reward, and \
 evaluation outputs live in the experiment/evaluator plane (ADR-055/064/069).
 
-### Exercise Orchestration (4 sections)
+### Exercise Orchestration
 | Section | Purpose |
 |---------|---------|
 | `entities` | Teams, organizations, people (recursive hierarchy) |
@@ -354,13 +365,19 @@ evaluation outputs live in the experiment/evaluator plane (ADR-055/064/069).
 | `scripts` | Timed event sequences with human-readable durations |
 | `stories` | Top-level orchestration grouping scripts |
 
-### Extended Experiment Semantics (7 sections)
+### Extended Scenario and Experiment Semantics
 | Section | Purpose |
 |---------|---------|
 | `content` | Data placed into systems (files, datasets, emails) |
 | `accounts` | User accounts on nodes |
 | `relationships` | Typed directed edges (auth, trust, federation, etc.) |
+| `forwarding_agents` | Scenario-level logical forwarding and shipping agents |
 | `agents` | Autonomous participants with actions/knowledge/scope |
+| `action_contracts` | Participant action applicability, effects, failures, and interactions |
+| `observation_boundaries` | Participant information projections and visibility changes |
+| `outcome_interpretation_rules` | Interpretation of action observations and local outcomes |
+| `behavior_specifications` | Versioned bindings across participant behavior surfaces |
+| `evidence_requirements` | Authored capture obligations, distinct from captured evidence |
 | `objectives` | Declarative tasks: actor + targets + success + window |
 | `workflows` | Branching/parallel control graphs over objectives |
 | `variables` | Parameterization via `${var_name}` syntax |
@@ -383,11 +400,11 @@ The parser auto-expands common patterns:
 - `source: "pkg"` → `{name: "pkg", version: "*"}`
 - `infrastructure: {node: 3}` → `{node: {count: 3}}`
 - `roles: {admin: "user"}` → `{admin: {username: "user"}}`
-- `min-score: 50` → `{percentage: 50}`
 - `features: [nginx, php]` → `{nginx: "", php: ""}`
 
 ### Key Normalization
-- Field keys are case-insensitive: `Name` → `name`, `Min-Score` → `min_score`
+- Recognized legacy field spellings are migrated to canonical lowercase
+  `snake_case` with source diagnostics; canonical authoring uses those names
 - User-defined names (node names, feature names, etc.) are preserved as-is
 
 ### Cross-Reference System
@@ -398,11 +415,11 @@ The parser auto-expands common patterns:
 - Named ACLs: `infrastructure.<infra>.acls.<acl_name>`
 
 ### Validation Pipeline
-1. YAML parsing (`yaml.safe_load()`)
-2. Key normalization
+1. Bounded YAML parsing with duplicate-key checks
+2. Explicit migration to canonical field spelling
 3. Shorthand expansion
 4. Pydantic structural validation
-5. 22-pass semantic validation (cross-references, cycles, IP/CIDR, etc.)
+5. Aggregated semantic validation (cross-references, cycles, IP/CIDR, etc.)
 All errors collected before reporting — authors see every issue at once.
 
 ### Duration Grammar

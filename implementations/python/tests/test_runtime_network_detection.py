@@ -186,7 +186,7 @@ def test_vm_runtime_network_detection_engine_inventory() -> None:
     assert engine.control_channels[0].kind == RuntimeNetworkDetectionControlChannelKind.UNIX_SOCKET
 
 
-def test_parser_accepts_kebab_case_runtime_network_detection_engines() -> None:
+def test_parser_accepts_canonical_runtime_network_detection_engines() -> None:
     scenario = parse_sdl(
         """
         name: detection-engine-parser
@@ -196,36 +196,36 @@ def test_parser_accepts_kebab_case_runtime_network_detection_engines() -> None:
             type: vm
             resources: {ram: 2 gib, cpu: 2}
             runtime:
-              network-sensors:
-                - network-sensor-id: suricata-sensor
+              network_sensors:
+                - network_sensor_id: suricata-sensor
                   implementation: SURICATA
-                  sensor-kind: ids
-                  monitoring-posture: passive
-                  capture-mode: pcap
-                  monitored-network-refs: [dmz-net]
-              network-detection-engines:
-                - network-detection-engine-id: suricata-engine
+                  sensor_kind: ids
+                  monitoring_posture: passive
+                  capture_mode: pcap
+                  monitored_network_refs: [dmz-net]
+              network_detection_engines:
+                - network_detection_engine_id: suricata-engine
                   implementation: SURICATA
-                  engine-kind: ids
-                  sensor-ref: suricata-sensor
-                  app-layer-protocols: [http, tls, dns]
-                  rule-sources:
-                    - source-id: local-rules
+                  engine_kind: ids
+                  sensor_ref: suricata-sensor
+                  app_layer_protocols: [http, tls, dns]
+                  rule_sources:
+                    - source_id: local-rules
                       kind: local
                       format: suricata-rule
-                      rule-count: "46"
-                  network-sets:
-                    - set-id: home-net
+                      rule_count: "46"
+                  network_sets:
+                    - set_id: home-net
                       kind: home-net
                       name: HOME_NET
-                      network-refs: [dmz-net]
-                  output-streams:
-                    - stream-id: eve-json
+                      network_refs: [dmz-net]
+                  output_streams:
+                    - stream_id: eve-json
                       format: eve-json
-                      event-types: [alert, dns]
+                      event_types: [alert, dns]
                       enabled: true
-                  control-channels:
-                    - channel-id: command-socket
+                  control_channels:
+                    - channel_id: command-socket
                       kind: unix-socket
                       path: /var/run/suricata-command.socket
                       capabilities: rule-reload

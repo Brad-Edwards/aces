@@ -19,114 +19,114 @@ body:
   entities:
     red-team:
       role: red
-  action-contracts:
+  action_contracts:
     scan:
-      semantic-version: 1.0.0
-      lifecycle-state: active
-      behavioral-granularity: atomic
-      procedure-basis: nmap service discovery
-      realization-profile: backend-declared
-      fidelity-claim: records participant discovery intent and terminal observation
+      semantic_version: 1.0.0
+      lifecycle_state: active
+      behavioral_granularity: atomic
+      procedure_basis: nmap service discovery
+      realization_profile: backend-declared
+      fidelity_claim: records participant discovery intent and terminal observation
       preconditions:
-        - precondition-id: authority-in-scope
-          precondition-class: authority
+        - precondition_id: authority-in-scope
+          precondition_class: authority
           description: red participant is authorized to scan the web service
-          support-refs: [agents.red-agent, nodes.web.services.http]
-        - precondition-id: target-service-present
-          precondition-class: target
+          support_refs: [agents.red-agent, nodes.web.services.http]
+        - precondition_id: target-service-present
+          precondition_class: target
           description: target service exists in the participant action scope
-          support-refs: [nodes.web.services.http]
-        - precondition-id: backend-can-realize-scan
-          precondition-class: realization
+          support_refs: [nodes.web.services.http]
+        - precondition_id: backend-can-realize-scan
+          precondition_class: realization
           description: backend can realize the scan action contract
-          support-refs: [backend.participant-runtime]
+          support_refs: [backend.participant-runtime]
       effects:
-        - effect-id: discover-network-services
-          effect-class: intended_effect
+        - effect_id: discover-network-services
+          effect_class: intended_effect
           description: discover network services
-          target-refs: [nodes.web.services.http]
-        - effect-id: participant-service-knowledge-update
-          effect-class: side_effect
+          target_refs: [nodes.web.services.http]
+        - effect_id: participant-service-knowledge-update
+          effect_class: side_effect
           description: participant-local service knowledge changes
-          target-refs: [nodes.web.services.http]
-        - effect-id: terminal-scan-observation
-          effect-class: observation_effect
+          target_refs: [nodes.web.services.http]
+        - effect_id: terminal-scan-observation
+          effect_class: observation_effect
           description: terminal scan observation
-          evidence-refs: [evidence.scan-output]
-        - effect-id: participant-view-discovers-node
-          effect-class: visibility_effect
+          evidence_refs: [evidence.scan-output]
+        - effect_id: participant-view-discovers-node
+          effect_class: visibility_effect
           description: participant view marks the web node discovered
-          target-refs: [nodes.web]
-        - effect-id: scan-output-evidence
-          effect-class: evidence_effect
+          target_refs: [nodes.web]
+        - effect_id: scan-output-evidence
+          effect_class: evidence_effect
           description: scan output is retained as evidence
-          evidence-refs: [evidence.scan-output]
-        - effect-id: no-hidden-truth-effect
-          effect-class: no_effect
+          evidence_refs: [evidence.scan-output]
+        - effect_id: no-hidden-truth-effect
+          effect_class: no_effect
           description: scan does not disclose hidden adjudication material
-      state-transition-effects: [participant knowledge expands]
-      observation-expectations: [terminal scan result]
-      evidence-expectations: [tool output]
-      failure-classes: [target_unavailable, precondition_unsatisfied, backend_error, unknown]
-      backend-failure-mappings:
-        - backend-error-code: backend.target-unreachable
-          failure-class: target_unavailable
+      state_transition_effects: [participant knowledge expands]
+      observation_expectations: [terminal scan result]
+      evidence_expectations: [tool output]
+      failure_classes: [target_unavailable, precondition_unsatisfied, backend_error, unknown]
+      backend_failure_mappings:
+        - backend_error_code: backend.target-unreachable
+          failure_class: target_unavailable
           diagnostic: backend target unreachable
-  observation-boundaries:
+  observation_boundaries:
     red-view:
-      projection-basis: participant-local projection over observed services
-      observable-refs: []
-      hidden-refs: [nodes.web, content.private-answer-key]
-      evidence-refs: [evidence.scan-output]
-      redaction-policy: hidden refs never project without explicit disclosure
-      latency-profile: terminal observation emitted after state transition commit
-      observer-effects: [tool execution may affect telemetry]
-      realized-view-disclosure: backend reports terminal scan output only
-      view-rules:
-        - information-ref: nodes.web
-          boundary-class: observable_resource
+      projection_basis: participant-local projection over observed services
+      observable_refs: []
+      hidden_refs: [nodes.web, content.private-answer-key]
+      evidence_refs: [evidence.scan-output]
+      redaction_policy: hidden refs never project without explicit disclosure
+      latency_profile: terminal observation emitted after state transition commit
+      observer_effects: [tool execution may affect telemetry]
+      realized_view_disclosure: backend reports terminal scan output only
+      view_rules:
+        - information_ref: nodes.web
+          boundary_class: observable_resource
           disposition: hidden
-          visibility-basis: service is not known before terminal scan output
-          latency-profile: terminal observation latency
-        - information-ref: content.private-answer-key
-          boundary-class: private_answer_key
+          visibility_basis: service is not known before terminal scan output
+          latency_profile: terminal observation latency
+        - information_ref: content.private-answer-key
+          boundary_class: private_answer_key
           disposition: hidden
-          visibility-basis: adjudication-only hidden truth
-        - information-ref: evidence.scan-output
-          boundary-class: archival_evidence
+          visibility_basis: adjudication-only hidden truth
+        - information_ref: evidence.scan-output
+          boundary_class: archival_evidence
           disposition: evidence_only
-          visibility-basis: archival run evidence reference
-          evidence-refs: [evidence.scan-output]
-      view-transitions:
-        - transition-id: discover-web-service
-          transition-kind: discovery
-          information-ref: nodes.web
+          visibility_basis: archival run evidence reference
+          evidence_refs: [evidence.scan-output]
+      view_transitions:
+        - transition_id: discover-web-service
+          transition_kind: discovery
+          information_ref: nodes.web
           trigger: scan terminal observation
-          effective-from: episode-step:scan-0001:terminal-observation
-          effective-order: 30
-          history-event-type: observation_emitted
-          action-instance-id: scan-0001
-          from-disposition: hidden
-          to-disposition: discovered
-          evidence-refs: [evidence.scan-output]
+          effective_from: episode-step:scan-0001:terminal-observation
+          effective_order: 30
+          history_event_type: observation_emitted
+          action_instance_id: scan-0001
+          from_disposition: hidden
+          to_disposition: discovered
+          evidence_refs: [evidence.scan-output]
           certainty: high
-          latency-profile: terminal observation latency
+          latency_profile: terminal observation latency
   agents:
     red-agent:
       entity: red-team
       actions: [scan]
-      observation-boundaries: [red-view]
-  behavior-specifications:
+      observation_boundaries: [red-view]
+  behavior_specifications:
     red-scan-behavior:
-      semantic-version: 1.0.0
-      lifecycle-state: active
-      participant-refs: [red-agent]
-      participant-role-refs: [red]
-      action-contract-refs: [scan]
-      observation-boundary-refs: [red-view]
-      authority-scope-refs: [nodes.web.services.http]
-      behavior-mode: policy-directed
-      realization-profile-ref: participant-implementation-manifest:red-agent
-      backend-feature-support-refs: [behavior_history]
-      evidence-contract-refs: [participant-behavior-history-event-stream-v1]
-      extension-policy: governed-extension
+      semantic_version: 1.0.0
+      lifecycle_state: active
+      participant_refs: [red-agent]
+      participant_role_refs: [red]
+      action_contract_refs: [scan]
+      observation_boundary_refs: [red-view]
+      authority_scope_refs: [nodes.web.services.http]
+      behavior_mode: policy-directed
+      realization_profile_ref: participant-implementation-manifest:red-agent
+      backend_feature_support_refs: [behavior_history]
+      evidence_contract_refs: [participant-behavior-history-event-stream-v1]
+      extension_policy: governed-extension

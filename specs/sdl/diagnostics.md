@@ -11,11 +11,11 @@ new diagnostic mechanism, and it does not reclassify any existing condition.
 An SDL document is checked at three stages, in order. Each is **fail-closed**:
 a problem at a stage stops the document from advancing past that stage.
 
-1. **Parse / structural.** YAML loading and structural shape: the root is a
-   mapping, keys are strings, mapping entries remain unique before and after
-   field-key normalisation, values have the right shapes, and **no unknown key is
-   present** ([document-model.md §4](document-model.md)). A structural problem is
-   a parse error.
+1. **Source / parse / structural.** `sdl-yaml/v1` decoding, operational bounds,
+   structural shape, and typed construction: the root is a mapping, keys are
+   strings, mapping entries remain unique, canonical structural fields are
+   exact, values have the right shapes, and **no unknown key is present**
+   ([document-model.md §§1, 4-5](document-model.md)). A problem is a parse error.
 2. **Semantic validation.** Cross-section reference resolution
    ([references.md](references.md)), uniqueness, acyclicity, control-flow
    closure, and the runtime-family invariants
@@ -35,8 +35,9 @@ and report them together, rather than failing at the first problem. An author
 fixing a document sees the full set of errors a stage found, not one error at a
 time. Parsing may stop at the first structural fault that prevents composition
 of a YAML node graph. Once that graph is available, the mapping-key preflight
-collects all exact duplicates, merge conflicts, and field-key normalisation
-collisions before construction; none is hidden by a last-write-wins mapping.
+collects all exact duplicates, migration-merge conflicts, canonical-field
+violations, and field-alias collisions before construction; none is hidden by
+a last-write-wins mapping.
 
 ## 3. Errors are fatal
 
@@ -64,6 +65,12 @@ The boundary rule is symmetric and **MUST** be honoured:
    pass.
 
 Existing advisory conditions, documented here by reference (not redefined):
+
+- **Explicit source migration.** A migration operation may accept a recognized
+  legacy field spelling or disjoint `<<` merge and emit a source-ranged warning.
+  This does not reclassify the construct as valid canonical source: strict
+  `sdl-yaml/v1` decoding still rejects it, and the migrated output must pass
+  strict decoding. Ambiguity and unknown fields remain fatal in migration mode.
 
 - **VM without resources.** A virtual-machine node declared without a
   `resources` block is **valid** SDL; it is flagged as an advisory because it may
@@ -164,3 +171,34 @@ adapters (including language-service and MCP responses) preserve the code,
 stage, canonical path, and both ranges. Plain-text CLI/library rendering may
 format the same fields as prose but must not replace them with raw YAML values or
 silently downgrade the error to a generic model-validation failure.
+
+## 7. Source-profile and migration diagnostics
+
+Source diagnostics use the same structured envelope as mapping-key diagnostics.
+Each carries a stable code, `parse` stage, severity, message, RFC 6901 path,
+one-based half-open source range, and source identity when file-backed. A
+diagnostic never includes the mapped value, whole source document, parameter
+map, secret, or traceback.
+
+| Code | Meaning | Strict severity | Migration severity |
+|------|---------|-----------------|--------------------|
+| `sdl.utf8` | Input cannot be represented as valid UTF-8 | error | error |
+| `sdl.source_format` | Unsupported source-profile identifier | error | error |
+| `sdl.migration_policy` | Unknown migration-policy identifier | error | error |
+| `sdl.parse` | YAML syntax, stream, or composition failure | error | error |
+| `sdl.directive` | YAML directive is present | error | error |
+| `sdl.explicit_tag` | Explicit YAML tag is present | error | error |
+| `sdl.source_limit` | A `sdl-yaml/v1` resource bound is exceeded | error | error |
+| `sdl.non_json_value` | Constructed value is outside the SDL JSON domain | error | error |
+| `sdl.mapping_key_type` | Mapping key does not construct as a string | error | error |
+| `sdl.mapping_key_conflict` | Duplicate or canonicalized collision | error | error |
+| `sdl.alias_cycle` | Alias graph is cyclic | error | error |
+| `sdl.noncanonical_field` | Recognized legacy structural-field spelling | error | warning |
+| `sdl.noncanonical_merge` | YAML 1.1 `<<` migration syntax | error | warning |
+
+For `sdl.noncanonical_field`, `authored_keys` contains the authored and
+canonical spellings, and the path points to the canonical field. For
+`sdl.noncanonical_merge`, the path points to the effective mapping. Warnings
+are retained on the successfully migrated scenario and by formatting, MCP, and
+CLI adapters. Strict validation is the default at every ordinary parse ingress;
+migration acceptance requires an explicit caller choice.
