@@ -86,9 +86,6 @@ non_normative_roots:
   - id: tooling
     root: tools/
     note: tooling
-  - id: changelog_fragments
-    root: changelog.d/
-    note: towncrier fragments
 legacy_top_level_dirs:
   - schemas
   - conformance
@@ -165,7 +162,6 @@ _GOOD_NON_NORMATIVE_ROOTS: tuple[str, ...] = (
     "research",
     "notes",
     "tools",
-    "changelog.d",
 )
 
 

@@ -67,6 +67,28 @@ the identifier syntax, authority, compatibility relation, lifecycle evidence,
 and migration evidence for each class. This is a documentation seam, not a new
 runtime registry or universal `Version` model.
 
+## GOV-901 Requirement-Surface Map
+
+The six surface names in GOV-901 are requirement taxonomy, not six new runtime
+types. Their repository authorities and compatibility evidence are:
+
+| GOV-901 surface | Existing authority and validation boundary | Compatibility guardrail |
+|---|---|---|
+| Language | `specs/sdl/`, `contracts/schemas/sdl/`, the SDL catalog parity gate, `SDLModel`, parser, instantiator, and `SemanticValidator` | Distinguish raw `sdl-yaml/v1`, normalized authoring contracts, derived phase contracts, and author-assigned `Scenario.version`. Schema acceptance alone does not establish semantic preservation across phases. |
+| Semantic | ADR-016, `docs/explain/reference/shared-semantic-integrity.md`, `specs/concept-authority/semantic-profiles.md`, semantic profiles, concept catalogs, semantic helpers, and cross-stage agreement tests | Compatibility is phase- and construct-family-specific. `profile_id`, `concept_catalog_version`, behavior-assumption ids, and domain `semantic_version` values are separate identifiers; none is a package or SDL schema version. |
+| Processing | ADR-008, ADR-036, processor manifests, `aces_contracts.manifest_authority`, compiler/planner contracts, conformance profiles, and owning `aces_processor` tests | `supported_sdl_versions` and `supported_contract_versions` are exact governed contract ids. Processing compatibility requires declared capabilities plus validation, compilation/planning, and conformance evidence; apparatus identity versions do not create range negotiation. |
+| Contract | ADR-061, `contracts/schema-publication-manifest.json`, published schemas, closed `ContractModel` DTOs, exact wire discriminators, fixtures, and schema/conformance gates | Keep lineage identity, schema stability, structural compatibility, reader compatibility, and lifecycle state distinct. The manifest checker is a conservative structural floor, not proof of semantic or operational compatibility. |
+| Module | ADR-053, `Scenario.module`, `ImportDecl`, `ModuleDescriptor`, `aces_sdl.module_registry`, lockfiles, and trust policy | A constraint match is only version selection. Registry allowlisting, archive safety, signature, digest, export-hash, namespace rewriting, and whole-scenario semantic validation remain independent mandatory gates. |
+| Experiment | ADR-055, ADR-064, ADR-065, ADR-068, ADR-074, experiment-core schemas/models, semantic invariants, fixtures, replay/evidence checks, and conformance evidence | Contract `schema_version` and task/run/study/capture/measure domain versions have different roles. Do not infer scientific replay, evidence, or apparatus compatibility from common `v1` lineage suffixes or the package release. |
+
+The normative surface-class matrix may keep rows at the smallest authority that
+has one identifier and comparison rule; it does not need one row merely because
+the requirement uses one noun. It must, however, make every row above
+traceable without inference. If a future change splits a surface into an
+independently released family, that family gets its own matrix row and extends
+its owning checker or conformance evidence rather than creating a parallel
+ecosystem registry.
+
 ## Architecture Decisions And Guardrails
 
 - Use one umbrella ADR for the cross-surface decisions and one normative

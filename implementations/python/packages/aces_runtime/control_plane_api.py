@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as distribution_version
 from typing import Annotated
 
 from aces_contracts.contracts import (
@@ -145,6 +147,22 @@ _MutatingIdentity = Annotated[ControlPlaneIdentity, Depends(_mutating_identity_d
 _ReadIdentity = Annotated[ControlPlaneIdentity, Depends(_read_identity_dependency)]
 
 
+def _control_plane_api_version() -> str:
+    """OpenAPI description version for the control-plane adapter.
+
+    Classified (GOV-901; specs/evolution/versioning-deprecation-and-migration.md)
+    as the API-description version of the same bundled ``aces-sdl`` distribution.
+    It derives from installed distribution metadata rather than a hard-coded
+    literal, with the honest PEP 440 ``0.0.0+unknown`` sentinel when the
+    distribution is not installed.
+    """
+
+    try:
+        return distribution_version("aces-sdl")
+    except PackageNotFoundError:
+        return "0.0.0+unknown"
+
+
 def create_control_plane_app(
     control_plane: RuntimeControlPlane,
     *,
@@ -155,7 +173,7 @@ def create_control_plane_app(
     security = security or ControlPlaneSecurityConfig.strict_defaults()
     app = FastAPI(
         title="ACES Runtime Control Plane",
-        version="0.1.0",
+        version=_control_plane_api_version(),
         description="Reference HTTP/JSON adapter over the repo-owned runtime control plane.",
     )
     app.state.control_plane_api_auth = _ControlPlaneApiAuth(control_plane, security)

@@ -78,12 +78,15 @@ adrs:
     pin: 168195279ea2e3dafb12d3d308f750af2804bc09700efa3dc258a31cb05e8d2f
   - id: ADR-019
     path: docs/decisions/adrs/adr-019-normative-authority-boundary-manifest.md
-    pin: 2fe5373440403ec5cbc4221eb417827bea28a7d1ea0b1c7fb142cdeeecc6883d
+    pin: 872985c045405d0333c80b8b8df718bdc243c0ea778e6c8fdc6d6b0d49a15d75
     amendments:
       - ref: "#100"
       - date: 2026-07-12
         ref: "issue #726"
         summary: "Registered contracts/provenance as the normative authority for revision-pinned SDL lineage, derivation, citation identity, and notice dispositions."
+      - date: 2026-07-12
+        ref: "issue #240"
+        summary: "Removed changelog.d/ from the non-normative roots after release-please replaced the towncrier workflow (GOV-901)."
   - id: ADR-020
     path: docs/decisions/adrs/adr-020-declarative-participant-framing-boundaries.md
     pin: 4a5d146fc0ffd6da97af94e9f2d257a893de0ab7f63c709339d27f33178609d0
