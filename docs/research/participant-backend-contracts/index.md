@@ -27,6 +27,13 @@ issue #76: how the established semantics should be carried as portable
 plain-data contracts, what the prior art does for the same problem, and what
 design criteria follow.
 
+```{toctree}
+:hidden:
+
+prior-art-and-design-criteria
+preflight-guardrails
+```
+
 ## Contents
 
 - [Prior art and design criteria](prior-art-and-design-criteria.md) — how
