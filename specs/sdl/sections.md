@@ -42,7 +42,9 @@ instructions do not survive as executable scenario meaning. "References" is
 | `nodes` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [nodes and runtime inventory](runtime-inventory.md) |
 | `infrastructure` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
 | `features` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
-| `conditions` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | none | [document model](document-model.md) |
+| `conditions` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [proposition semantics](../../specs/formal/objectives/proposition-and-assertion-semantics.md) |
+| `propositions` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [proposition semantics](../../specs/formal/objectives/proposition-and-assertion-semantics.md) |
+| `assertions` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [proposition semantics](../../specs/formal/objectives/proposition-and-assertion-semantics.md) |
 | `vulnerabilities` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | none | [document model](document-model.md) |
 | `entities` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
 | `injects` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [reference catalog](references.md) |
@@ -63,7 +65,7 @@ instructions do not survive as executable scenario meaning. "References" is
 | `workflows` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [workflow semantics](workflow-semantics.md) |
 | `variables` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | none | [variables and instantiation](variables-and-instantiation.md) |
 
-<!-- sdl-catalog-summary top-level=28 metadata-composition=5 sections=23 maps=22 lists=1 -->
+<!-- sdl-catalog-summary top-level=30 metadata-composition=5 sections=25 maps=24 lists=1 -->
 
 The section set therefore has two authoring shapes: maps keyed by stable
 user-defined identifiers and the scenario-level `forwarding_agents` list, whose
@@ -83,11 +85,15 @@ ordering is normative (resolution and failure semantics in
 [`references.md`](references.md)):
 
 - **Narrative chain:** `injects` → `events` → `scripts` → `stories`, with
-  `injects` naming `entities` and `events` naming `conditions`. Objective
+  `injects` naming `entities` and `events` naming precondition assertions. Objective
   windows bind `stories`/`scripts`/`events`/`workflows`.
 
-`conditions` are observable state: an objective's success is expressed against
-`conditions`, and workflow predicates reference `conditions`. The SDL carries no
+`propositions` state typed claims; `assertions` use them as preconditions,
+invariants, or postconditions. Objective success composes invariant or
+postcondition assertions, while events and workflow predicates reference
+precondition assertions. `conditions` are executable probe declarations and
+must explicitly identify the proposition they realize; they are not observable
+facts. The SDL carries no
 graded scoring pipeline — the OCR-inherited `metrics`, `evaluations`, `tlos`
 (Training Learning Objectives), and `goals` sections were removed with
 [ADR-073](../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md).

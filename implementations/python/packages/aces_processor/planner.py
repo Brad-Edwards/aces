@@ -139,6 +139,20 @@ def _collect_resources(model: RuntimeModel) -> dict[str, PlannedResource]:
             "condition-binding",
             resource,
         )
+    for address, resource in model.propositions.items():
+        resources[address] = _planned_resource(
+            address,
+            RuntimeDomain.EVALUATION,
+            "proposition",
+            resource,
+        )
+    for address, resource in model.assertions.items():
+        resources[address] = _planned_resource(
+            address,
+            RuntimeDomain.EVALUATION,
+            "assertion",
+            resource,
+        )
     for address, resource in model.objectives.items():
         resources[address] = _planned_resource(
             address,
@@ -561,20 +575,20 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
                         message=(f"Orchestrator does not support workflow feature '{feature.value}'."),
                     )
                 )
-            orchestration_uses_condition_refs = any(
-                event.condition_addresses for event in model.events.values()
+            orchestration_uses_assertion_refs = any(
+                event.assertion_addresses for event in model.events.values()
             ) or any(
                 addresses
                 for workflow in model.workflows.values()
-                for addresses in workflow.step_condition_addresses.values()
+                for addresses in workflow.step_assertion_addresses.values()
             )
-            if orchestration_uses_condition_refs and not manifest.orchestrator.supports_condition_refs:
+            if orchestration_uses_assertion_refs and not manifest.orchestrator.supports_assertion_refs:
                 diagnostics.append(
                     Diagnostic(
-                        code="orchestrator.condition-refs-unsupported",
+                        code="orchestrator.assertion-refs-unsupported",
                         domain="orchestration",
-                        address="orchestration.condition-refs",
-                        message=("Orchestrator does not support condition-gated events or workflow predicates."),
+                        address="orchestration.assertion-refs",
+                        message=("Orchestrator does not support assertion-gated events or workflow predicates."),
                     )
                 )
             required_state_predicate_features = sorted(
@@ -608,6 +622,8 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
 
     evaluation_sections = {
         "conditions": bool(model.condition_bindings),
+        "propositions": bool(model.propositions),
+        "assertions": bool(model.assertions),
         "objectives": bool(model.objectives),
     }
     if any(evaluation_sections.values()):

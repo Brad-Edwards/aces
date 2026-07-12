@@ -98,7 +98,7 @@
           "finish": []
         },
         "join_owners": {},
-        "step_condition_addresses": {},
+        "step_assertion_addresses": {},
         "step_predicate_addresses": {},
         "required_features": [],
         "required_state_predicate_features": [],
@@ -161,18 +161,15 @@
           "targets": [],
           "success": {
             "mode": "all_of",
-            "conditions": ["health"],
-            "metrics": [],
-            "evaluations": [],
-            "tlos": [],
-            "goals": []
+            "assertions": ["health"],
+            "threshold": null
           },
           "window": null,
           "depends_on": []
         },
         "actor_type": "entity",
         "actor_name": "blue",
-        "success_addresses": ["evaluation.condition.vm.health"],
+        "success_addresses": ["evaluation.assertion.health"],
         "objective_dependencies": [],
         "window_story_addresses": [],
         "window_script_addresses": [],
@@ -196,9 +193,58 @@
           "requires_start_event": true
         }
       },
-      "ordering_dependencies": ["evaluation.condition.vm.health"],
-      "refresh_dependencies": ["evaluation.condition.vm.health"],
+      "ordering_dependencies": ["evaluation.assertion.health"],
+      "refresh_dependencies": ["evaluation.assertion.health"],
       "status": "scheduled"
+    },
+    "evaluation.proposition.health": {
+      "address": "evaluation.proposition.health",
+      "domain": "evaluation",
+      "resource_type": "proposition",
+      "payload": {
+        "name": "health",
+        "spec": {
+          "description": "The governed VM has declared runtime state.",
+          "subjects": ["nodes.vm"],
+          "basis": "declared_state",
+          "predicate": {
+            "kind": "presence",
+            "property": "runtime",
+            "semantic_ref": "urn:aces:declared-property:runtime",
+            "operator": "exists"
+          },
+          "quantifier": "all",
+          "threshold": null,
+          "evidence_requirements": []
+        },
+        "subject_addresses": ["provision.node.vm"],
+        "predicate_kind": "presence",
+        "evaluation_basis": "declared_state",
+        "evidence_requirement_refs": []
+      },
+      "ordering_dependencies": [],
+      "refresh_dependencies": [],
+      "status": "admitted"
+    },
+    "evaluation.assertion.health": {
+      "address": "evaluation.assertion.health",
+      "domain": "evaluation",
+      "resource_type": "assertion",
+      "payload": {
+        "name": "health",
+        "spec": {
+          "description": "",
+          "proposition": "health",
+          "role": "postcondition",
+          "polarity": "positive"
+        },
+        "proposition_address": "evaluation.proposition.health",
+        "role": "postcondition",
+        "polarity": "positive"
+      },
+      "ordering_dependencies": ["evaluation.proposition.health"],
+      "refresh_dependencies": ["evaluation.proposition.health"],
+      "status": "admitted"
     }
   },
   "orchestration_results": {
@@ -276,5 +322,6 @@
       }
     ]
   },
+  "proposition_truth_results": {},
   "metadata": {}
 }

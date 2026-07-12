@@ -132,7 +132,7 @@ def _capabilities() -> BackendCapabilitySet:
             name="reference-emulation-orchestrator",
             supported_sections=frozenset({"injects", "events", "scripts", "stories", "workflows"}),
             supports_workflows=True,
-            supports_condition_refs=True,
+            supports_assertion_refs=True,
             supports_inject_bindings=True,
             supported_workflow_features=frozenset(
                 {
@@ -156,9 +156,15 @@ def _capabilities() -> BackendCapabilitySet:
         ),
         evaluator=EvaluatorCapabilities(
             name="reference-emulation-evaluator",
-            supported_sections=frozenset({"conditions", "objectives"}),
+            supported_sections=frozenset({"conditions", "propositions", "assertions", "objectives"}),
             supports_scoring=True,
             supports_objectives=True,
+            supported_predicate_families=frozenset({"presence", "boolean", "string", "number"}),
+            supported_quantifiers=frozenset({"all", "any", "at_least"}),
+            supported_truth_outcomes=frozenset({"true", "false", "unknown", "unsupported"}),
+            supported_evidence_channels=frozenset({"log", "api_response", "file_artifact"}),
+            supported_time_domains=frozenset({"scenario_time"}),
+            preserves_binding_provenance=True,
         ),
         participant_runtime=ParticipantRuntimeCapabilities(
             name="reference-emulation-participant-runtime",

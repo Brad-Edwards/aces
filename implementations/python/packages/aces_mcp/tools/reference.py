@@ -71,6 +71,8 @@ _SECTION_NAMES: dict[str, str] = {
     "infrastructure": "Infrastructure",
     "features": "Features",
     "conditions": "Conditions",
+    "propositions": "Propositions",
+    "assertions": "Assertions",
     "vulnerabilities": "Vulnerabilities",
     "entities": "Entities",
     "injects": "Orchestration: Injects, Events, Scripts, Stories",
@@ -293,8 +295,25 @@ accounts:
 # --- Health checks ---
 conditions:
   web-alive:
+    proposition: web-available
     command: "curl -sf http://localhost:8080/ || exit 1"
     interval: 15
+
+propositions:
+  web-available:
+    description: The web service reports its availability as healthy.
+    subjects: [nodes.web.services.http]
+    basis: declared_state
+    predicate:
+      kind: presence
+      property: service
+      semantic_ref: urn:aces:declared-property:service
+      operator: exists
+
+assertions:
+  web-alive:
+    proposition: web-available
+    role: postcondition
 
 # --- Teams / people ---
 entities:
@@ -305,14 +324,14 @@ entities:
     name: Red Team
     role: Red
 
-# Objective success references observable state (conditions) per ADR-073.
+# Objective success references assertions over typed propositions per ADR-078.
 # Graded scoring/reward lives in the experiment/evaluator plane, not the SDL.
 objectives:
   keep-web-alive:
     description: Keep the web application available
     entity: blue-team
     success:
-      conditions: [web-alive]
+      assertions: [web-alive]
 
 # --- Parameterization (${var} syntax, resolved at instantiation, not parse time) ---
 variables:

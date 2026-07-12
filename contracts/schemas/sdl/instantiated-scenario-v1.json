@@ -230,7 +230,7 @@
     },
     "Agent": {
       "additionalProperties": false,
-      "description": "An autonomous participant in the scenario.\n\nAgents reference existing scenario elements:\n\n- ``entity`` links to the entities section (team/role) and supplies\n  identity and role per ADR-020\n- ``starting_accounts`` links to the accounts section\n- ``allowed_subnets`` links to infrastructure entries\n- ``initial_knowledge`` references nodes and infrastructure\n- ``starting_conditions`` links to the conditions section, giving the\n  authoring surface a declarative hook for participant-relevant\n  precondition checks (ACT-601)\n- ``authority_anchors`` links to declared SDL elements (entities,\n  relationships, content, etc.) that anchor what the participant is\n  allowed or expected to do in scenario meaning (ACT-601, ADR-020)\n- ``operating_scope`` links to targetable named scenario elements\n  (subnets, hosts, services, content) defining where the participant\n  may act or observe (ACT-601, ADR-020)\n- ``observation_boundaries`` links to declared participant observation\n  boundaries that define participant-specific projections of world and\n  evidence state (SEM-208)\n\nPer ADR-073 the CybORG-inherited ``reward_calculator`` label was removed;\nit was an unbound, unvalidated string and graded reward lives in the\nexperiment/evaluator plane (ADR-055/064/069).",
+      "description": "An autonomous participant in the scenario.\n\nAgents reference existing scenario elements:\n\n- ``entity`` links to the entities section (team/role) and supplies\n  identity and role per ADR-020\n- ``starting_accounts`` links to the accounts section\n- ``allowed_subnets`` links to infrastructure entries\n- ``initial_knowledge`` references nodes and infrastructure\n- ``starting_assertions`` links to precondition assertions, giving the\n  authoring surface a declarative hook for participant-relevant starting\n  state without equating a probe implementation with truth (ACT-601)\n- ``authority_anchors`` links to declared SDL elements (entities,\n  relationships, content, etc.) that anchor what the participant is\n  allowed or expected to do in scenario meaning (ACT-601, ADR-020)\n- ``operating_scope`` links to targetable named scenario elements\n  (subnets, hosts, services, content) defining where the participant\n  may act or observe (ACT-601, ADR-020)\n- ``observation_boundaries`` links to declared participant observation\n  boundaries that define participant-specific projections of world and\n  evidence state (SEM-208)\n\nPer ADR-073 the CybORG-inherited ``reward_calculator`` label was removed;\nit was an unbound, unvalidated string and graded reward lives in the\nexperiment/evaluator plane (ADR-055/064/069).",
       "properties": {
         "actions": {
           "items": {
@@ -319,19 +319,72 @@
           "title": "Starting Accounts",
           "type": "array"
         },
-        "starting_conditions": {
+        "starting_assertions": {
           "items": {
             "not": {
               "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
             },
             "type": "string"
           },
-          "title": "Starting Conditions",
+          "title": "Starting Assertions",
           "type": "array"
         }
       },
       "title": "Agent",
       "type": "object"
+    },
+    "Assertion": {
+      "additionalProperties": false,
+      "description": "A typed use of one proposition at a governed semantic boundary.",
+      "properties": {
+        "description": {
+          "default": "",
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Description",
+          "type": "string"
+        },
+        "polarity": {
+          "$ref": "#/$defs/AssertionPolarity",
+          "default": "positive"
+        },
+        "proposition": {
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Proposition",
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/$defs/AssertionRole"
+        }
+      },
+      "required": [
+        "proposition",
+        "role"
+      ],
+      "title": "Assertion",
+      "type": "object"
+    },
+    "AssertionPolarity": {
+      "description": "Expected polarity of the referenced proposition.",
+      "enum": [
+        "positive",
+        "negative"
+      ],
+      "title": "AssertionPolarity",
+      "type": "string"
+    },
+    "AssertionRole": {
+      "description": "Boundary at which an assertion constrains its owning construct.",
+      "enum": [
+        "precondition",
+        "invariant",
+        "postcondition"
+      ],
+      "title": "AssertionRole",
+      "type": "string"
     },
     "AssetValue": {
       "additionalProperties": false,
@@ -441,6 +494,58 @@
       "title": "BindingOrigin",
       "type": "string"
     },
+    "BooleanPredicate": {
+      "additionalProperties": false,
+      "description": "Compare a governed Boolean property with an expected Boolean.",
+      "properties": {
+        "expected": {
+          "title": "Expected",
+          "type": "boolean"
+        },
+        "kind": {
+          "const": "boolean",
+          "default": "boolean",
+          "title": "Kind",
+          "type": "string"
+        },
+        "operator": {
+          "default": "equals",
+          "enum": [
+            "equals",
+            "not_equals"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "property": {
+          "maxLength": 512,
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}(?:\\.[a-z0-9][a-z0-9_-]{0,63})*$",
+          "title": "Property",
+          "type": "string"
+        },
+        "semantic_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "pattern": "^(?:https://[^\\s]+|urn:[A-Za-z0-9][A-Za-z0-9:._~-]*)$",
+          "title": "Semantic Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "property",
+        "semantic_ref",
+        "expected"
+      ],
+      "title": "BooleanPredicate",
+      "type": "object"
+    },
     "CapabilityConstraint": {
       "additionalProperties": false,
       "description": "Pre-instantiation constraint retained for one concrete field.",
@@ -517,7 +622,7 @@
     },
     "Condition": {
       "additionalProperties": false,
-      "description": "A monitoring check deployed to a VM.\n\nEither ``command`` + ``interval`` or ``source`` must be set, not both.",
+      "description": "A probe implementation deployed to a VM.\n\nEither ``command`` + ``interval`` or ``source`` must be set, not both.",
       "properties": {
         "command": {
           "anyOf": [
@@ -576,6 +681,14 @@
             "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
           },
           "title": "Name",
+          "type": "string"
+        },
+        "proposition": {
+          "default": "",
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Proposition",
           "type": "string"
         },
         "retries": {
@@ -2721,16 +2834,16 @@
     },
     "Event": {
       "additionalProperties": false,
-      "description": "A triggered action combining conditions and injects.",
+      "description": "A triggered action combining assertion preconditions and injects.",
       "properties": {
-        "conditions": {
+        "assertions": {
           "items": {
             "not": {
               "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
             },
             "type": "string"
           },
-          "title": "Conditions",
+          "title": "Assertions",
           "type": "array"
         },
         "description": {
@@ -4190,6 +4303,91 @@
       "title": "NodeType",
       "type": "string"
     },
+    "NumericPredicate": {
+      "additionalProperties": false,
+      "description": "Compare a governed numeric property using an explicit unit.",
+      "properties": {
+        "expected": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Expected"
+        },
+        "kind": {
+          "const": "number",
+          "default": "number",
+          "title": "Kind",
+          "type": "string"
+        },
+        "operator": {
+          "default": "equals",
+          "enum": [
+            "equals",
+            "not_equals",
+            "less_than",
+            "less_than_or_equal",
+            "greater_than",
+            "greater_than_or_equal"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "property": {
+          "maxLength": 512,
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}(?:\\.[a-z0-9][a-z0-9_-]{0,63})*$",
+          "title": "Property",
+          "type": "string"
+        },
+        "semantic_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "pattern": "^(?:https://[^\\s]+|urn:[A-Za-z0-9][A-Za-z0-9:._~-]*)$",
+          "title": "Semantic Ref",
+          "type": "string"
+        },
+        "unit": {
+          "maxLength": 512,
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}(?:\\.[a-z0-9][a-z0-9_-]{0,63})*$",
+          "title": "Unit",
+          "type": "string"
+        },
+        "unit_semantic_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "pattern": "^(?:https://[^\\s]+|urn:[A-Za-z0-9][A-Za-z0-9:._~-]*)$",
+          "title": "Unit Semantic Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "property",
+        "semantic_ref",
+        "expected",
+        "unit",
+        "unit_semantic_ref"
+      ],
+      "title": "NumericPredicate",
+      "type": "object"
+    },
     "OSFamily": {
       "description": "Operating system family. Vocabulary from OCSF Device.os.",
       "enum": [
@@ -4291,22 +4489,22 @@
     },
     "ObjectiveSuccess": {
       "additionalProperties": false,
-      "description": "Declarative success criteria for an objective.\n\nPer ADR-073, objective success references observable state (``conditions``)\nonly. The OCR-inherited scoring pipeline (``metrics`` / ``evaluations`` /\n``tlos`` / ``goals``) was removed from the SDL; graded scoring and reward\nlive in the experiment/evaluator plane (ADR-055/064/069).",
+      "description": "Declarative success criteria for an objective.\n\nSuccess composes backend-neutral invariant or postcondition assertions.\nProbe implementations, graded scoring, and reward remain outside this\nconstruct.",
       "properties": {
-        "conditions": {
+        "assertions": {
           "items": {
             "not": {
               "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
             },
             "type": "string"
           },
-          "title": "Conditions",
+          "title": "Assertions",
           "type": "array"
         },
         "mode": {
           "anyOf": [
             {
-              "$ref": "#/$defs/SuccessMode"
+              "$ref": "#/$defs/TruthCompositionMode"
             },
             {
               "not": {
@@ -4317,6 +4515,19 @@
           ],
           "default": "all_of",
           "title": "Mode"
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Threshold"
         }
       },
       "title": "ObjectiveSuccess",
@@ -5988,6 +6199,148 @@
         "none"
       ],
       "title": "PasswordStrength",
+      "type": "string"
+    },
+    "PresencePredicate": {
+      "additionalProperties": false,
+      "description": "Test whether a governed property is present on a subject.",
+      "properties": {
+        "kind": {
+          "const": "presence",
+          "default": "presence",
+          "title": "Kind",
+          "type": "string"
+        },
+        "operator": {
+          "const": "exists",
+          "default": "exists",
+          "title": "Operator",
+          "type": "string"
+        },
+        "property": {
+          "maxLength": 512,
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}(?:\\.[a-z0-9][a-z0-9_-]{0,63})*$",
+          "title": "Property",
+          "type": "string"
+        },
+        "semantic_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "pattern": "^(?:https://[^\\s]+|urn:[A-Za-z0-9][A-Za-z0-9:._~-]*)$",
+          "title": "Semantic Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "property",
+        "semantic_ref"
+      ],
+      "title": "PresencePredicate",
+      "type": "object"
+    },
+    "Proposition": {
+      "additionalProperties": false,
+      "description": "A side-effect-free claim over a finite set of stable SDL subjects.",
+      "properties": {
+        "basis": {
+          "$ref": "#/$defs/PropositionBasis"
+        },
+        "description": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence_requirements": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "title": "Evidence Requirements",
+          "type": "array"
+        },
+        "predicate": {
+          "discriminator": {
+            "mapping": {
+              "boolean": "#/$defs/BooleanPredicate",
+              "number": "#/$defs/NumericPredicate",
+              "presence": "#/$defs/PresencePredicate",
+              "string": "#/$defs/StringPredicate"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PresencePredicate"
+            },
+            {
+              "$ref": "#/$defs/BooleanPredicate"
+            },
+            {
+              "$ref": "#/$defs/StringPredicate"
+            },
+            {
+              "$ref": "#/$defs/NumericPredicate"
+            }
+          ],
+          "title": "Predicate"
+        },
+        "quantifier": {
+          "$ref": "#/$defs/SubjectQuantifier",
+          "default": "all"
+        },
+        "subjects": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Subjects",
+          "type": "array"
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Threshold"
+        }
+      },
+      "required": [
+        "description",
+        "subjects",
+        "basis",
+        "predicate"
+      ],
+      "title": "Proposition",
+      "type": "object"
+    },
+    "PropositionBasis": {
+      "description": "Source of facts that may decide a proposition.",
+      "enum": [
+        "declared_state",
+        "observed_state"
+      ],
+      "title": "PropositionBasis",
       "type": "string"
     },
     "Relationship": {
@@ -20809,7 +21162,7 @@
     },
     "Script": {
       "additionalProperties": false,
-      "description": "A timed sequence of events.\n\nTime values are human-readable duration strings parsed to seconds.",
+      "description": "A timed sequence of human-readable durations parsed to seconds.",
       "properties": {
         "description": {
           "default": "",
@@ -21784,13 +22137,94 @@
       "title": "Story",
       "type": "object"
     },
-    "SuccessMode": {
-      "description": "How referenced success criteria combine.",
+    "StringPredicate": {
+      "additionalProperties": false,
+      "description": "Compare a governed string property with typed string operands.",
+      "properties": {
+        "expected": {
+          "anyOf": [
+            {
+              "not": {
+                "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+              },
+              "type": "string"
+            },
+            {
+              "items": {
+                "not": {
+                  "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+                },
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Expected"
+        },
+        "kind": {
+          "const": "string",
+          "default": "string",
+          "title": "Kind",
+          "type": "string"
+        },
+        "operator": {
+          "default": "equals",
+          "enum": [
+            "equals",
+            "not_equals",
+            "in",
+            "not_in"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "property": {
+          "maxLength": 512,
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}(?:\\.[a-z0-9][a-z0-9_-]{0,63})*$",
+          "title": "Property",
+          "type": "string"
+        },
+        "semantic_ref": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "pattern": "^(?:https://[^\\s]+|urn:[A-Za-z0-9][A-Za-z0-9:._~-]*)$",
+          "title": "Semantic Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "property",
+        "semantic_ref",
+        "expected"
+      ],
+      "title": "StringPredicate",
+      "type": "object"
+    },
+    "SubjectQuantifier": {
+      "description": "Quantification over a proposition's finite, resolved subject set.",
+      "enum": [
+        "all",
+        "any",
+        "at_least"
+      ],
+      "title": "SubjectQuantifier",
+      "type": "string"
+    },
+    "TruthCompositionMode": {
+      "description": "Portable composition over assertion outcomes.",
       "enum": [
         "all_of",
-        "any_of"
+        "any_of",
+        "at_least"
       ],
-      "title": "SuccessMode",
+      "title": "TruthCompositionMode",
       "type": "string"
     },
     "Vulnerability": {
@@ -21969,16 +22403,16 @@
     },
     "WorkflowPredicate": {
       "additionalProperties": false,
-      "description": "Branch predicate over observable state, objectives, and prior step state.\n\nPer ADR-073 the OCR scoring references (``metrics`` / ``evaluations`` /\n``tlos`` / ``goals``) were removed; a predicate branches on observable\n``conditions``, declared ``objectives``, and prior workflow ``steps``.",
+      "description": "Typed branch predicate over assertions, objectives, and prior step state.",
       "properties": {
-        "conditions": {
+        "assertions": {
           "items": {
             "not": {
               "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
             },
             "type": "string"
           },
-          "title": "Conditions",
+          "title": "Assertions",
           "type": "array"
         },
         "objectives": {
@@ -22337,6 +22771,22 @@
       "title": "Agents",
       "type": "object"
     },
+    "assertions": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Assertion"
+      },
+      "propertyNames": {
+        "maxLength": 2048,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_.-]"
+        },
+        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+        "type": "string"
+      },
+      "title": "Assertions",
+      "type": "object"
+    },
     "behavior_specifications": {
       "additionalProperties": {
         "$ref": "#/$defs/ParticipantBehaviorSpecification"
@@ -22604,6 +23054,22 @@
         "type": "string"
       },
       "title": "Outcome Interpretation Rules",
+      "type": "object"
+    },
+    "propositions": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Proposition"
+      },
+      "propertyNames": {
+        "maxLength": 2048,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_.-]"
+        },
+        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+        "type": "string"
+      },
+      "title": "Propositions",
       "type": "object"
     },
     "relationships": {

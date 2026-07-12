@@ -18,6 +18,7 @@ from .participant_result_contracts import (
     participant_runtime_history_transition_diagnostics,
     participant_runtime_state_contract_diagnostics,
 )
+from .proposition_truth_contracts import proposition_truth_contract_diagnostics
 from .workflow_result_contracts import workflow_result_contract_diagnostics
 
 _BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
@@ -224,6 +225,9 @@ def _snapshot_contract_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic
     diagnostics = evaluation_result_contract_diagnostics(snapshot)
     if diagnostics:
         return diagnostics
+    diagnostics = proposition_truth_contract_diagnostics(snapshot)
+    if diagnostics:
+        return diagnostics
     return participant_runtime_state_contract_diagnostics(snapshot)
 
 
@@ -271,6 +275,7 @@ def _snapshot_carrier_addresses(snapshot: RuntimeSnapshot) -> set[str]:
         snapshot.orchestration_history,
         snapshot.evaluation_results,
         snapshot.evaluation_history,
+        snapshot.proposition_truth_results,
         snapshot.participant_episode_results,
         snapshot.participant_episode_history,
         snapshot.participant_behavior_history,

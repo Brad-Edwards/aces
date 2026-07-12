@@ -18,6 +18,7 @@ body:
         - {port: 443, name: https}
   conditions:
     app-healthy:
+      proposition: app-healthy
       command: curl -fsS https://app/health
       interval: 30
   entities:
@@ -26,12 +27,45 @@ body:
   agents:
     operator:
       entity: blue-team
+  propositions:
+    app-healthy:
+      description: The governed app-healthy observation is true for the addressed scenario subject.
+      subjects:
+      - nodes.app.services.https
+      basis: observed_state
+      predicate:
+        kind: boolean
+        property: app-healthy
+        semantic_ref: urn:aces:observable:app-healthy
+        operator: equals
+        expected: true
+      evidence_requirements: [objective-truth-evidence]
+  assertions:
+    app-healthy:
+      proposition: app-healthy
+      role: postcondition
+      polarity: positive
+  evidence_requirements:
+    objective-truth-evidence:
+      description: Capture evidence used to decide authored proposition assertions.
+      source_refs:
+      - nodes.app.services.https
+      scope: authored assertion evaluation
+      boundary_kind: assertion_evaluation
+      channel: log
+      artifact_role: proposition_truth_evidence
+      media_types: [application/json]
+      sensitivity: plain
+      redaction: redact_secrets
+      integrity: checksum
+      retention: study_lifetime
+      loss_disclosure: required
   objectives:
     verify-app-health:
       agent: operator
       targets: [nodes.app.services.https]
       success:
-        conditions: [app-healthy]
+        assertions: [app-healthy]
   workflows:
     baseline-check:
       start: verify

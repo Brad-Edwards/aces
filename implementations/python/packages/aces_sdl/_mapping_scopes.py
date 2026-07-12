@@ -18,6 +18,8 @@ HASHMAP_SECTIONS = frozenset(
         "infrastructure",
         "features",
         "conditions",
+        "propositions",
+        "assertions",
         "vulnerabilities",
         "entities",
         "injects",

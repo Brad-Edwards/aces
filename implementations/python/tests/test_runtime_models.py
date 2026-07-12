@@ -526,10 +526,19 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 objectives:
   initial:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
     window:
       stories: [main]
       scripts: [timeline]
@@ -539,7 +548,7 @@ objectives:
 entities:
   blue: {role: blue}
 events:
-  kickoff: {conditions: [health]}
+  kickoff: {assertions: [pre-health]}
 scripts:
   timeline: {start_time: 0, end_time: 60, speed: 1, events: {kickoff: 10}}
 stories:
@@ -551,7 +560,7 @@ workflows:
       start: {type: objective, objective: initial, on_success: branch}
       branch:
         type: decision
-        when: {conditions: [health]}
+        when: {assertions: [pre-health]}
         then: end
         else: end
       end: {type: end}
@@ -561,7 +570,7 @@ workflows:
         objective = model.objectives["evaluation.objective.initial"]
         workflow = model.workflows["orchestration.workflow.flow"]
 
-        assert "evaluation.condition.vm.health" in objective.success_addresses
+        assert "evaluation.assertion.health" in objective.success_addresses
         assert objective.window_story_addresses == ("orchestration.story.main",)
         assert objective.window_script_addresses == ("orchestration.script.timeline",)
         assert objective.window_event_addresses == ("orchestration.event.kickoff",)
@@ -577,7 +586,7 @@ workflows:
         ]
         assert objective.window_references[-1].workflow_name == "flow"
         assert objective.window_references[-1].step_name == "branch"
-        assert "evaluation.condition.vm.health" in objective.ordering_dependencies
+        assert "evaluation.assertion.health" in objective.ordering_dependencies
         assert "orchestration.workflow.flow" in objective.refresh_dependencies
         assert workflow.referenced_objective_addresses == ("evaluation.objective.initial",)
         assert workflow.start_step == "start"
@@ -594,8 +603,8 @@ workflows:
         assert not workflow.control_steps["branch"].state_contract.state_observable
         assert workflow.control_edges["start"] == ("branch",)
         assert workflow.control_edges["branch"] == ("end",)
-        assert workflow.step_condition_addresses["branch"] == ("evaluation.condition.vm.health",)
-        assert "evaluation.condition.vm.health" in workflow.step_predicate_addresses["branch"]
+        assert workflow.step_assertion_addresses["branch"] == ("evaluation.assertion.pre-health",)
+        assert "evaluation.assertion.pre-health" in workflow.step_predicate_addresses["branch"]
         assert workflow.ordering_dependencies == ()
         assert "evaluation.objective.initial" in workflow.refresh_dependencies
         assert model.objectives["evaluation.objective.initial"].result_contract.supports_passed is True
@@ -614,12 +623,20 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   initial:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
     window:
       workflows: [flow]
       steps: [other.finish]
@@ -685,7 +702,7 @@ objectives:
   initial:
     entity: blue
     success:
-      conditions: [missing-condition]
+      assertions: [missing-assertion]
     window:
       workflows: [missing-workflow]
       steps: [missing-workflow.branch, badstep]
@@ -701,7 +718,7 @@ workflows:
     steps:
       branch:
         type: decision
-        when: {conditions: [missing-condition], objectives: [missing-objective]}
+        when: {assertions: [missing-assertion], objectives: [missing-objective]}
         then: finish
         else: finish
       finish: {type: end}
@@ -715,7 +732,7 @@ workflows:
         assert any("Script 'timeline' references undefined event 'missing-event'" in error for error in errors)
         assert any("Story 'main' references undefined script 'missing-script'" in error for error in errors)
         assert any(
-            "Objective 'initial' references undefined condition 'missing-condition'" in error for error in errors
+            "Objective 'initial' references undefined assertion 'missing-assertion'" in error for error in errors
         )
         assert any("Objective 'initial' references undefined workflow 'missing-workflow'" in error for error in errors)
         assert any("window step 'missing-workflow.branch' references undefined workflow" in error for error in errors)
@@ -738,15 +755,24 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   attempt:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
   recover:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   retry:
     start: attempt-loop
@@ -760,7 +786,7 @@ workflows:
       branch:
         type: decision
         when:
-          conditions: [health]
+          assertions: [pre-health]
           steps:
             - step: attempt-loop
               outcomes: [succeeded]
@@ -793,7 +819,7 @@ workflows:
             "evaluation.objective.attempt",
             "evaluation.objective.recover",
         )
-        assert "evaluation.condition.vm.health" in workflow.step_predicate_addresses["branch"]
+        assert "evaluation.assertion.pre-health" in workflow.step_predicate_addresses["branch"]
         assert not model.diagnostics
 
     def test_parallel_join_compiles_as_barrier_with_typed_predicate(self):
@@ -809,18 +835,26 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   left:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
   right:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
   recover:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   flow:
     start: fanout
@@ -902,6 +936,8 @@ module:
   exports:
     nodes: [vm]
     conditions: [health]
+    propositions: [health]
+    assertions: [health]
     entities: [blue]
     objectives: [validate]
     workflows: [response]
@@ -916,6 +952,14 @@ conditions:
   health:
     command: /bin/true
     interval: 15
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
 entities:
   blue:
     role: blue
@@ -923,7 +967,7 @@ objectives:
   validate:
     entity: blue
     success:
-      conditions: [health]
+      assertions: [health]
 workflows:
   response:
     start: run
@@ -972,12 +1016,21 @@ imports:
                         roles: {ops: operator}
                     conditions:
                       health: {command: /bin/true, interval: 15}
+                    propositions:
+                      health:
+                        description: The governed VM has declared runtime state.
+                        subjects: [nodes.vm]
+                        basis: declared_state
+                        predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+                    assertions:
+                      health: {proposition: health, role: postcondition, polarity: positive}
+                      pre-health: {proposition: health, role: precondition, polarity: positive}
                     entities:
                       blue: {role: blue}
                     objectives:
                       validate:
                         entity: blue
-                        success: {conditions: [health]}
+                        success: {assertions: [health]}
                     workflows:
                       child:
                         start: run
@@ -994,7 +1047,7 @@ imports:
                           route:
                             type: switch
                             cases:
-                              - when: {conditions: [health]}
+                              - when: {assertions: [pre-health]}
                                 next: delegate
                             default: finish
                           delegate:
@@ -1037,12 +1090,20 @@ imports:
                         roles: {ops: operator}
                     conditions:
                       health: {command: /bin/true, interval: 15}
+                    propositions:
+                      health:
+                        description: The governed VM has declared runtime state.
+                        subjects: [nodes.vm]
+                        basis: declared_state
+                        predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+                    assertions:
+                      health: {proposition: health, role: postcondition, polarity: positive}
                     entities:
                       blue: {role: blue}
                     objectives:
                       validate:
                         entity: blue
-                        success: {conditions: [health]}
+                        success: {assertions: [health]}
                     workflows:
                       rollback:
                         start: finish

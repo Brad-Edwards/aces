@@ -45,7 +45,7 @@ longest-match rule.
    referencing field accepts.
 2. A field defines its **candidate set** — the section or sections a value may
    name. Some fields accept a single section (e.g. an objective's `success` →
-   `conditions`); others accept a set of targetable sections (e.g. an
+   `assertions`); others accept a set of targetable sections (e.g. an
    objective's `target`, a relationship's `source`/`target`). The candidate set
    is part of each field's definition and is reflected in the edge catalog (§5).
 3. A **bare** reference resolves against the candidate set. A **qualified**
@@ -112,15 +112,15 @@ The SDL carries no graded scoring pipeline: the OCR-inherited `metrics`,
 `evaluations`, `tlos`, and `goals` sections were removed with
 [ADR-073](../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md), so
 no reference edge targets them. Graded scoring, reward, and evaluation outputs
-live in the experiment/evaluator plane (ADR-055/064/069). `conditions` remain the
-observable-state target for objective success and workflow predicates.
+live in the experiment/evaluator plane (ADR-055/064/069). `conditions` remain
+probe implementations; propositions and assertions carry portable truth.
 
 ### Narrative chain
 
 | Source | Field | Target |
 |--------|-------|--------|
 | `injects` | from/to entity | `entities` |
-| `events` | condition refs | `conditions` |
+| `events` | precondition assertion refs | `assertions` |
 | `events` | inject refs | `injects` |
 | `scripts` | event refs | `events` |
 | `stories` | script refs | `scripts` |
@@ -146,14 +146,14 @@ observable-state target for objective success and workflow predicates.
 | `agents` | subnets / initial-knowledge subnets | switch-backed `infrastructure` |
 | `agents` | initial-knowledge hosts | `nodes` (VM) |
 | `agents` | initial-knowledge services | declared services on nodes |
-| `agents` | starting conditions | `conditions` |
+| `agents` | starting assertions | `assertions` (preconditions) |
 | `agents` | actions / observation boundaries | `action_contracts` / `observation_boundaries` |
 | `action_contracts` | interaction related-action | `action_contracts` |
 | `observation_boundaries` | view-rule information refs | own observable/hidden/evidence refs |
 | `objectives` | actor | `agents` or flattened `entities` |
 | `objectives` | action | the bound agent's `action_contracts` |
 | `objectives` | target | targetable elements (excl. `variables`/`objectives`/`workflows`) |
-| `objectives` | success criteria | `conditions` (observable state only, [ADR-073](../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md)) |
+| `objectives` | success criteria | `assertions` (invariants/postconditions, [ADR-078](../../docs/decisions/adrs/adr-078-backend-neutral-proposition-and-truth-semantics.md)) |
 | `objectives` | window | `stories`/`scripts`/`events`/`workflows` (with closure rules) |
 | `objectives` | depends_on | `objectives` (acyclic) |
 | `outcome_interpretation_rules` | source | `action_contracts`/`objectives`/`workflows` |
@@ -181,7 +181,7 @@ element is the source or channel.
 | `workflows` | start | own steps |
 | `workflows` | step successors (`on_success`/`on_failure`) | own steps |
 | `workflows` | compensation | other `workflows` |
-| `workflows` | predicate condition refs | `conditions` (observable state) |
+| `workflows` | predicate assertion refs | `assertions` (preconditions) |
 | `workflows` | predicate step refs | own steps (executable) |
 
 Parallel/join control flow MUST be closed: every branch reaches its join and no
@@ -224,6 +224,10 @@ generic symbol lookup.
 | --- | --- | --- | --- | --- |
 | `nodes.*.features[]` | `features` | semantic validation | fatal dangling or ambiguous | [node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
 | `nodes.*.conditions[]` | `conditions` | semantic validation | fatal dangling or ambiguous | [node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
+| `conditions.*.proposition` | `propositions` | semantic validation | fatal dangling or ambiguous when present | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |
+| `propositions.*.subjects[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |
+| `propositions.*.evidence_requirements[]` | `evidence_requirements` | semantic validation | fatal dangling or ambiguous | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |
+| `assertions.*.proposition` | `propositions` | semantic validation | fatal dangling or ambiguous | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |
 | `nodes.*.injects[]` | `injects` | semantic validation | fatal dangling or ambiguous | [node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
 | `nodes.*.vulnerabilities[]` | `vulnerabilities` | semantic validation | fatal dangling or ambiguous | [node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
 | `infrastructure.*.links[]` | `infrastructure` | semantic validation | fatal dangling or ambiguous | [infrastructure validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
@@ -232,7 +236,7 @@ generic symbol lookup.
 | `entities.*.vulnerabilities[]` | `vulnerabilities` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
 | `injects.*.from_entity` | `entities` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
 | `injects.*.to_entities[]` | `entities` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
-| `events.*.conditions[]` | `conditions` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `events.*.assertions[]` | `assertions` | semantic validation | fatal dangling, ambiguous, or non-precondition role | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |
 | `events.*.injects[]` | `injects` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
 | `scripts.*.events[]` | `events` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
 | `stories.*.scripts[]` | `scripts` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
@@ -242,6 +246,7 @@ generic symbol lookup.
 | `relationships.*.target` | `targetable` | semantic validation | fatal dangling or ambiguous; subtype may narrow domain | [relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships.py) |
 | `agents.*.entity` | `entities` | semantic validation | fatal dangling or ambiguous | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
 | `agents.*.starting_accounts[]` | `accounts` | semantic validation | fatal dangling or ambiguous | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `agents.*.starting_assertions[]` | `assertions` | semantic validation | fatal dangling, ambiguous, or non-precondition role | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |
 | `action_contracts.*.interactions.*.related_action_ref` | `action_contracts` | semantic validation | fatal dangling or ambiguous | [participant semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
 | `observation_boundaries.*.view_rules.*.information_refs[]` | `derived:boundary_information` | semantic validation | fatal outside declared boundary information | [participant semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
 | `outcome_interpretation_rules.*.source_ref` | `action_contracts,objectives,workflows` | semantic validation | fatal dangling or ambiguous | [outcome semantics](../../implementations/python/packages/aces_sdl/semantics/participant_outcome.py) |
@@ -265,8 +270,10 @@ generic symbol lookup.
 | `objectives.*.agent` | `agents` | semantic validation | fatal dangling or ambiguous | [objective semantics](objective-semantics.md) |
 | `objectives.*.entity` | `entities` | semantic validation | fatal dangling or ambiguous | [objective semantics](objective-semantics.md) |
 | `objectives.*.targets[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [objective semantics](objective-semantics.md) |
+| `objectives.*.success.assertions[]` | `assertions` | semantic validation | fatal dangling, ambiguous, or precondition role | [objective semantics](objective-semantics.md) |
 | `objectives.*.depends_on[]` | `objectives` | semantic validation | fatal dangling, ambiguous, or cyclic | [objective semantics](objective-semantics.md) |
 | `workflows.*.start` | `workflow_steps` | semantic validation | fatal dangling step | [workflow semantics](workflow-semantics.md) |
+| `workflows.*.steps.*.when.assertions[]` | `assertions` | semantic validation | fatal dangling, ambiguous, or non-precondition role | [workflow semantics](workflow-semantics.md) |
 
 The index is checked against language-service completion metadata and against a
 required behavior-edge set. Adding a completion-aware field or behavior

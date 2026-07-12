@@ -77,6 +77,7 @@ class RuntimeSnapshot:
     orchestration_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     evaluation_results: dict[str, dict[str, Any]] = field(default_factory=dict)
     evaluation_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    proposition_truth_results: dict[str, dict[str, Any]] = field(default_factory=dict)
     participant_episode_results: dict[str, dict[str, Any]] = field(default_factory=dict)
     participant_episode_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     participant_behavior_history: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
@@ -122,6 +123,11 @@ class RuntimeSnapshot:
             ),
             evaluation_results=_mapping_update(updates, "evaluation_results", self.evaluation_results),
             evaluation_history=_history_update(updates, "evaluation_history", self.evaluation_history),
+            proposition_truth_results=_mapping_update(
+                updates,
+                "proposition_truth_results",
+                self.proposition_truth_results,
+            ),
             participant_episode_results=_mapping_update(
                 updates,
                 "participant_episode_results",
@@ -176,6 +182,7 @@ _SNAPSHOT_UPDATE_KEYS = {
     "orchestration_history",
     "evaluation_results",
     "evaluation_history",
+    "proposition_truth_results",
     "participant_episode_results",
     "participant_episode_history",
     "participant_behavior_history",

@@ -15,7 +15,7 @@ from ._language_metadata import REFERENCE_COMPLETION_TARGETS
 from ._reference_targetability import is_targetable_section
 from ._yaml_loader import compose_sdl_yaml
 
-_SUCCESS_REFERENCE_TARGETS = frozenset({"conditions"})
+_SUCCESS_REFERENCE_TARGETS = frozenset({"assertions"})
 
 
 def find_references(

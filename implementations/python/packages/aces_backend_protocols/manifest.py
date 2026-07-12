@@ -72,7 +72,7 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                     "name": manifest.orchestrator.name,
                     "supported_sections": sorted(manifest.orchestrator.supported_sections),
                     "supports_workflows": manifest.orchestrator.supports_workflows,
-                    "supports_condition_refs": manifest.orchestrator.supports_condition_refs,
+                    "supports_assertion_refs": manifest.orchestrator.supports_assertion_refs,
                     "supports_inject_bindings": manifest.orchestrator.supports_inject_bindings,
                     "supported_workflow_features": sorted(
                         feature for feature in manifest.orchestrator.supported_workflow_features
@@ -91,6 +91,18 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                     "supported_sections": sorted(manifest.evaluator.supported_sections),
                     "supports_scoring": manifest.evaluator.supports_scoring,
                     "supports_objectives": manifest.evaluator.supports_objectives,
+                    **(
+                        {
+                            "supported_predicate_families": sorted(manifest.evaluator.supported_predicate_families),
+                            "supported_quantifiers": sorted(manifest.evaluator.supported_quantifiers),
+                            "supported_truth_outcomes": sorted(manifest.evaluator.supported_truth_outcomes),
+                            "supported_evidence_channels": sorted(manifest.evaluator.supported_evidence_channels),
+                            "supported_time_domains": sorted(manifest.evaluator.supported_time_domains),
+                            "preserves_binding_provenance": manifest.evaluator.preserves_binding_provenance,
+                        }
+                        if {"propositions", "assertions"}.issubset(manifest.evaluator.supported_sections)
+                        else {}
+                    ),
                     "constraints": dict(manifest.evaluator.constraints),
                 }
                 if manifest.evaluator is not None

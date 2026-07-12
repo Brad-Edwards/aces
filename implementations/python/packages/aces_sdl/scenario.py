@@ -50,6 +50,7 @@ from .phase_contracts import (
     InstantiationProvenance,
     _json_value_equal,
 )
+from .propositions import Assertion, Proposition
 from .relationships import Relationship
 from .runtime_forwarding_agent import RuntimeForwardingAgent
 from .variables import Variable
@@ -258,6 +259,8 @@ class ScenarioContent(SDLModel):
     infrastructure: dict[str, InfraNode] = Field(default_factory=dict)
     features: dict[str, Feature] = Field(default_factory=dict)
     conditions: dict[str, Condition] = Field(default_factory=dict)
+    propositions: dict[str, Proposition] = Field(default_factory=dict)
+    assertions: dict[str, Assertion] = Field(default_factory=dict)
     vulnerabilities: dict[str, Vulnerability] = Field(default_factory=dict)
     entities: dict[str, Entity] = Field(default_factory=dict)
     injects: dict[str, Inject] = Field(default_factory=dict)

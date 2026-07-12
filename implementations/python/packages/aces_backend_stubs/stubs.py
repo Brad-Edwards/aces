@@ -165,7 +165,7 @@ def create_stub_manifest(
                 name="stub-orchestrator",
                 supported_sections=frozenset({"injects", "events", "scripts", "stories", "workflows"}),
                 supports_workflows=True,
-                supports_condition_refs=True,
+                supports_assertion_refs=True,
                 supports_inject_bindings=True,
                 supported_workflow_features=frozenset(
                     {
@@ -189,9 +189,15 @@ def create_stub_manifest(
             ),
             evaluator=EvaluatorCapabilities(
                 name="stub-evaluator",
-                supported_sections=frozenset({"conditions", "objectives"}),
+                supported_sections=frozenset({"conditions", "propositions", "assertions", "objectives"}),
                 supports_scoring=True,
                 supports_objectives=True,
+                supported_predicate_families=frozenset({"presence", "boolean", "string", "number"}),
+                supported_quantifiers=frozenset({"all", "any", "at_least"}),
+                supported_truth_outcomes=frozenset({"true", "false", "unknown", "unsupported"}),
+                supported_evidence_channels=frozenset({"log", "api_response", "file_artifact"}),
+                supported_time_domains=frozenset({"scenario_time"}),
+                preserves_binding_provenance=True,
             ),
             participant_runtime=(
                 ParticipantRuntimeCapabilities(
@@ -437,8 +443,12 @@ class StubEvaluator:
                 payload=op.payload,
                 ordering_dependencies=op.ordering_dependencies,
                 refresh_dependencies=op.refresh_dependencies,
-                status="evaluating",
+                status="admitted" if op.resource_type in {"proposition", "assertion"} else "evaluating",
             )
+            if op.resource_type in {"proposition", "assertion"}:
+                if op.action != ChangeAction.UNCHANGED:
+                    changed_addresses.append(op.address)
+                continue
             result_contract = op.payload.get("result_contract", {})
             resource_type = str(result_contract.get("resource_type", op.resource_type))
             result_payload: dict[str, object] = {

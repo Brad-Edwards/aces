@@ -300,13 +300,12 @@ def design_notes(scenario: Any, model: Any, execution_plan: Any) -> list[dict[st
                 "No objectives are authored; range intent and success criteria may be hard to assess.",
             )
         )
-    if scenario.objectives and not any(objective.success.conditions for objective in scenario.objectives.values()):
+    if scenario.objectives and not any(objective.success.assertions for objective in scenario.objectives.values()):
         notes.append(
             note(
                 "assessment",
                 "warning",
-                "Objectives exist without any observable-state (conditions) success criteria; "
-                "objective success may be under-specified.",
+                "Objectives exist without any backend-neutral success assertions; objective truth is under-specified.",
             )
         )
     if scenario.agents and not scenario.action_contracts:

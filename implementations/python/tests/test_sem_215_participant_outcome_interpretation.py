@@ -58,15 +58,38 @@ def _scenario_yaml() -> str:
             role: red
         conditions:
           exfil-detected:
+            proposition: exfil-detected
             command: "test -f /tmp/alert"
             interval: 10
+        evidence_requirements:
+          exfil-detection-evidence:
+            description: Capture evidence used to decide the exfiltration detection proposition.
+            source_class: participant_action
+            scope_refs: [nodes.web.services.http]
+            boundary_kind: assertion_evaluation
+            channel: log
+            artifact_role: proposition_truth_evidence
+            sensitivity: plain
+            redaction: redact_secrets
+            integrity: checksum
+            retention: study_lifetime
+            loss_disclosure: required
+        propositions:
+          exfil-detected:
+            description: Exfiltration was detected for the governed web service.
+            subjects: [nodes.web.services.http]
+            basis: observed_state
+            predicate: {kind: boolean, property: exfil-detected, semantic_ref: urn:aces:observable:exfil-detected, operator: equals, expected: true}
+            evidence_requirements: [exfil-detection-evidence]
+        assertions:
+          exfil-detected: {proposition: exfil-detected, role: postcondition, polarity: positive}
         objectives:
           exfil-objective:
             agent: red-agent
             actions: [scan]
             targets: [nodes.web.services.http]
             success:
-              conditions: [exfil-detected]
+              assertions: [exfil-detected]
         workflows:
           response-flow:
             start: verify

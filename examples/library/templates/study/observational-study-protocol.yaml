@@ -18,6 +18,7 @@ body:
         - {port: 443, name: https}
   conditions:
     study-task-success:
+      proposition: study-task-success
       command: test -f /var/lib/aces/study-task-success
       interval: 30
   entities:
@@ -26,12 +27,45 @@ body:
   agents:
     study-participant:
       entity: participant-team
+  propositions:
+    study-task-success:
+      description: The governed study-task-success observation is true for the addressed scenario subject.
+      subjects:
+      - nodes.study-target.services.https
+      basis: observed_state
+      predicate:
+        kind: boolean
+        property: study-task-success
+        semantic_ref: urn:aces:observable:study-task-success
+        operator: equals
+        expected: true
+      evidence_requirements: [objective-truth-evidence]
+  assertions:
+    study-task-success:
+      proposition: study-task-success
+      role: postcondition
+      polarity: positive
+  evidence_requirements:
+    objective-truth-evidence:
+      description: Capture evidence used to decide authored proposition assertions.
+      source_refs:
+      - nodes.study-target.services.https
+      scope: authored assertion evaluation
+      boundary_kind: assertion_evaluation
+      channel: log
+      artifact_role: proposition_truth_evidence
+      media_types: [application/json]
+      sensitivity: plain
+      redaction: redact_secrets
+      integrity: checksum
+      retention: study_lifetime
+      loss_disclosure: required
   objectives:
     complete-study-task:
       agent: study-participant
       targets: [nodes.study-target.services.https]
       success:
-        conditions: [study-task-success]
+        assertions: [study-task-success]
   workflows:
     study-protocol:
       start: complete-task

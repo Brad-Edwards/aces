@@ -261,14 +261,14 @@ Validation is semantic, not section-only. Current checks include:
 - account features
 - orchestration/workflow usage
 - fine-grained workflow feature usage (`decision`, `retry`, `parallel` barriers, failure transitions)
-- workflow predicate condition refs
+- workflow predicate assertion refs
 - workflow predicate prior-step state refs and state-predicate subfeatures (`outcome-matching`, `attempt-counts`)
 - objective usage
 
 `OrchestratorCapabilities` expose both coarse workflow support and fine-grained workflow semantics:
 
 - `supports_workflows`
-- `supports_condition_refs`
+- `supports_assertion_refs`
 - `supported_workflow_features`
 - `supported_workflow_state_predicates`
 

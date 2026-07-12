@@ -140,7 +140,7 @@ objectives:
   ${objective_name}:
     agent: red-agent
     success:
-      conditions: [initial-access]
+      assertions: [initial-access]
 """,
                 "objectives.${objective_name}",
             ),
@@ -189,11 +189,11 @@ objectives:
     actions: [Scan]
     targets: [red-agent]
     success:
-      conditions: [initial-access]
+      assertions: [initial-access]
 """
         s = parse_sdl(sdl, skip_semantic_validation=True)
         assert s.objectives["initial-access"].agent == "red-agent"
-        assert s.objectives["initial-access"].success.conditions == ["initial-access"]
+        assert s.objectives["initial-access"].success.assertions == ["initial-access"]
         assert s.advisories == []
 
     def test_workflows_section_parses(self):
@@ -206,11 +206,19 @@ conditions:
   release-ready:
     command: /bin/check
     interval: 30
+propositions:
+  release-ready:
+    description: The governed release target has declared readiness state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: boolean, property: release-ready, semantic_ref: urn:aces:declared-property:release-ready, operator: equals, expected: true}
+assertions:
+  release-ready: {proposition: release-ready, role: postcondition, polarity: positive}
 objectives:
   validate-release:
     entity: blue-team
     success:
-      conditions: [release-ready]
+      assertions: [release-ready]
 workflows:
   release-response:
     start: validate
@@ -956,12 +964,20 @@ conditions:
   release-ready:
     command: /bin/check
     interval: 30
+propositions:
+  release-ready:
+    description: The governed release target has declared readiness state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: boolean, property: release-ready, semantic_ref: urn:aces:declared-property:release-ready, operator: equals, expected: true}
+assertions:
+  release-ready: {proposition: release-ready, role: postcondition, polarity: positive}
 objectives:
   review:
     entity: blue-team
     success:
       mode: ${success_mode}
-      conditions: [release-ready]
+      assertions: [release-ready]
 """
         s = parse_sdl(sdl)
         assert s.nodes["vm"].os == "${host_os}"
@@ -1141,7 +1157,7 @@ class TestSkipSemanticValidation:
         s = parse_sdl(
             "name: test\nentities:\n  blue:\n    role: blue\n"
             "objectives:\n  obj:\n    entity: blue\n    success:\n"
-            "      conditions:\n        - missing-condition",
+            "      assertions:\n        - missing-assertion",
             skip_semantic_validation=True,
         )
         assert "obj" in s.objectives
@@ -1171,6 +1187,8 @@ module:
   exports:
     nodes: [vm]
     conditions: [health]
+    propositions: [health]
+    assertions: [health]
     entities: [blue]
     objectives: [validate]
     workflows: [response]
@@ -1187,6 +1205,14 @@ conditions:
   health:
     command: /bin/true
     interval: 15
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
 entities:
   blue:
     role: blue
@@ -1194,7 +1220,7 @@ objectives:
   validate:
     entity: blue
     success:
-      conditions: [health]
+      assertions: [health]
 workflows:
   response:
     start: run
@@ -1249,6 +1275,8 @@ module:
     infrastructure: [vm, net]
     entities: [blue]
     conditions: [health]
+    propositions: [health]
+    assertions: [health]
     content: [docs]
     relationships: [blue-controls-vm]
     agents: [blue-agent]
@@ -1281,6 +1309,14 @@ conditions:
   health:
     command: /bin/true
     interval: 15
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: precondition, polarity: positive}
 content:
   docs:
     type: dataset
@@ -1295,7 +1331,7 @@ relationships:
 agents:
   blue-agent:
     entity: blue
-    starting_conditions: [conditions.health, health]
+    starting_assertions: [health]
     authority_anchors: [entities.blue, content.docs.items.playbook]
     allowed_subnets: [net]
     operating_scope: [nodes.vm, infrastructure.net, nodes.vm.services.ssh]
@@ -1317,10 +1353,7 @@ imports:
         scenario = parse_sdl_file(root)
 
         agent = scenario.agents["shared.blue-agent"]
-        # ADR-020 §6 accepts both bare (`health`) and qualified
-        # (`conditions.health`) references in starting_conditions; both
-        # must survive composition with the namespace baked in.
-        assert agent.starting_conditions == ["conditions.shared.health", "shared.health"]
+        assert agent.starting_assertions == ["shared.health"]
         assert agent.authority_anchors == ["entities.shared.blue", "content.shared.docs.items.playbook"]
         assert agent.operating_scope == [
             "nodes.shared.vm",
@@ -1332,10 +1365,10 @@ imports:
         assert rel.target == "nodes.shared.vm"
 
     def test_parse_sdl_file_namespaces_agent_participant_framing_fields(self, tmp_path: Path):
-        # ACT-601 / ADR-020: Agent.starting_conditions, .authority_anchors, and
+        # ACT-601 / ADR-020: Agent.starting_assertions, .authority_anchors, and
         # .operating_scope are semantic references and must be rewritten by the
         # module composition pass when their imported targets are namespaced;
-        # otherwise an `agent.starting_conditions: [health]` from a root
+        # otherwise an `agent.starting_assertions: [health]` from a root
         # scenario silently breaks (or, worse, accidentally binds to a same-
         # named root element) once the imported `conditions: health` becomes
         # `shared.health`.
@@ -1352,6 +1385,8 @@ module:
     infrastructure: [vm, net]
     entities: [blue]
     conditions: [health]
+    propositions: [health]
+    assertions: [health]
     relationships: [blue-controls-vm]
     agents: [blue-agent]
 nodes:
@@ -1380,6 +1415,14 @@ conditions:
   health:
     command: /bin/true
     interval: 15
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: precondition, polarity: positive}
 relationships:
   blue-controls-vm:
     type: manages
@@ -1388,7 +1431,7 @@ relationships:
 agents:
   blue-agent:
     entity: blue
-    starting_conditions: [health]
+    starting_assertions: [health]
     authority_anchors: [blue, blue-controls-vm]
     allowed_subnets: [net]
     operating_scope: [vm, net]
@@ -1410,7 +1453,7 @@ imports:
         scenario = parse_sdl_file(root)
 
         agent = scenario.agents["shared.blue-agent"]
-        assert agent.starting_conditions == ["shared.health"]
+        assert agent.starting_assertions == ["shared.health"]
         assert agent.authority_anchors == ["shared.blue", "shared.blue-controls-vm"]
         assert agent.operating_scope == ["shared.vm", "shared.net"]
         # Semantic validation has already run as part of parse_sdl_file; if the
@@ -2305,8 +2348,8 @@ class TestADR073ScoringRemoval:
         with pytest.raises(SDLParseError, match="were removed from the language by ADR-073"):
             parse_sdl(sdl)
 
-    def test_migration_message_points_to_success_conditions(self):
-        with pytest.raises(SDLParseError, match="objectives.\\*.success.conditions"):
+    def test_migration_message_points_to_success_assertions(self):
+        with pytest.raises(SDLParseError, match="objectives.\\*.success.assertions"):
             parse_sdl("name: test\ngoals:\n  g1:\n    tlos: [t1]\n")
 
     def test_agent_reward_calculator_rejected(self):
@@ -2350,7 +2393,7 @@ objectives:
         with pytest.raises(SDLParseError):
             parse_sdl(sdl)
 
-    def test_objective_success_accepts_conditions_only(self):
+    def test_objective_success_accepts_assertions_only(self):
         sdl = """
 name: test
 entities:
@@ -2360,11 +2403,19 @@ conditions:
   release-ready:
     command: /bin/check
     interval: 30
+propositions:
+  release-ready:
+    description: The governed team has declared release readiness.
+    subjects: [entities.blue-team]
+    basis: declared_state
+    predicate: {kind: boolean, property: release-ready, semantic_ref: urn:aces:declared-property:release-ready, operator: equals, expected: true}
+assertions:
+  release-ready: {proposition: release-ready, role: postcondition, polarity: positive}
 objectives:
   obj:
     entity: blue-team
     success:
-      conditions: [release-ready]
+      assertions: [release-ready]
 """
         s = parse_sdl(sdl)
-        assert s.objectives["obj"].success.conditions == ["release-ready"]
+        assert s.objectives["obj"].success.assertions == ["release-ready"]

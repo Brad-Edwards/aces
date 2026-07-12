@@ -18,6 +18,7 @@ body:
         - {port: 22, name: ssh}
   conditions:
     task-complete:
+      proposition: task-complete
       command: test -f /tmp/aces-task-complete
       interval: 15
   entities:
@@ -26,12 +27,45 @@ body:
   agents:
     task-agent:
       entity: participant
+  propositions:
+    task-complete:
+      description: The governed task-complete observation is true for the addressed scenario subject.
+      subjects:
+      - nodes.target.services.ssh
+      basis: observed_state
+      predicate:
+        kind: boolean
+        property: task-complete
+        semantic_ref: urn:aces:observable:task-complete
+        operator: equals
+        expected: true
+      evidence_requirements: [objective-truth-evidence]
+  assertions:
+    task-complete:
+      proposition: task-complete
+      role: postcondition
+      polarity: positive
+  evidence_requirements:
+    objective-truth-evidence:
+      description: Capture evidence used to decide authored proposition assertions.
+      source_refs:
+      - nodes.target.services.ssh
+      scope: authored assertion evaluation
+      boundary_kind: assertion_evaluation
+      channel: log
+      artifact_role: proposition_truth_evidence
+      media_types: [application/json]
+      sensitivity: plain
+      redaction: redact_secrets
+      integrity: checksum
+      retention: study_lifetime
+      loss_disclosure: required
   objectives:
     complete-service-check-task:
       agent: task-agent
       targets: [nodes.target.services.ssh]
       success:
-        conditions: [task-complete]
+        assertions: [task-complete]
   workflows:
     task-flow:
       start: perform-task

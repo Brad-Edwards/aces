@@ -28,8 +28,48 @@ _VALID_BODY = {
     },
     "conditions": {
         "app-healthy": {
+            "proposition": "app-healthy",
             "command": "curl -fsS https://app/health",
             "interval": 30,
+        }
+    },
+    "evidence_requirements": {
+        "app-health-evidence": {
+            "description": "Capture the governed application health observation.",
+            "source_refs": ["nodes.app.services.https"],
+            "scope_refs": ["nodes.app"],
+            "trigger_ref": "conditions.app-healthy",
+            "channel": "api_response",
+            "artifact_role": "proposition_truth_evidence",
+            "media_types": ["application/json"],
+            "sensitivity": "plain",
+            "redaction": "redact_secrets",
+            "integrity": "checksum",
+            "retention": "study_lifetime",
+            "loss_disclosure": "required",
+        }
+    },
+    "propositions": {
+        "app-healthy": {
+            "description": "The governed application service responds successfully.",
+            "subjects": ["nodes.app.services.https"],
+            "basis": "observed_state",
+            "predicate": {
+                "kind": "boolean",
+                "property": "service-healthy",
+                "semantic_ref": "urn:aces:observable:service-healthy",
+                "operator": "equals",
+                "expected": True,
+            },
+            "evidence_requirements": ["app-health-evidence"],
+        }
+    },
+    "assertions": {
+        "app-healthy": {
+            "description": "Application health must hold at the objective boundary.",
+            "proposition": "app-healthy",
+            "role": "postcondition",
+            "polarity": "positive",
         }
     },
     "entities": {"blue-team": {"role": "blue"}},
@@ -38,7 +78,7 @@ _VALID_BODY = {
         "verify-app-health": {
             "agent": "operator",
             "targets": ["nodes.app.services.https"],
-            "success": {"conditions": ["app-healthy"]},
+            "success": {"assertions": ["app-healthy"]},
         }
     },
     "workflows": {

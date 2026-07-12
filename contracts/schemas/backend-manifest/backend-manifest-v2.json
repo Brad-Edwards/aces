@@ -164,6 +164,35 @@
           "title": "Name",
           "type": "string"
         },
+        "preserves_binding_provenance": {
+          "default": false,
+          "title": "Preserves Binding Provenance",
+          "type": "boolean"
+        },
+        "supported_evidence_channels": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Evidence Channels",
+          "type": "array"
+        },
+        "supported_predicate_families": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Predicate Families",
+          "type": "array"
+        },
+        "supported_quantifiers": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Quantifiers",
+          "type": "array"
+        },
         "supported_sections": {
           "items": {
             "minLength": 1,
@@ -171,6 +200,22 @@
           },
           "minItems": 1,
           "title": "Supported Sections",
+          "type": "array"
+        },
+        "supported_time_domains": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Time Domains",
+          "type": "array"
+        },
+        "supported_truth_outcomes": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Truth Outcomes",
           "type": "array"
         },
         "supports_objectives": {
@@ -381,9 +426,9 @@
           "title": "Supported Workflow State Predicates",
           "type": "array"
         },
-        "supports_condition_refs": {
+        "supports_assertion_refs": {
           "default": true,
-          "title": "Supports Condition Refs",
+          "title": "Supports Assertion Refs",
           "type": "boolean"
         },
         "supports_inject_bindings": {
@@ -963,6 +1008,7 @@
           "workflow-result-envelope-v1",
           "workflow-history-event-stream-v1",
           "evaluation-result-envelope-v1",
+          "proposition-truth-result-v1",
           "evaluation-history-event-stream-v1",
           "participant-episode-state-envelope-v1",
           "participant-episode-history-event-stream-v1",

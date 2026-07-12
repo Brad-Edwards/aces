@@ -72,7 +72,8 @@ module:
   id: aces/window
   version: 1.0.0
   exports:
-    conditions: [health]
+    propositions: [health-state]
+    assertions: [health]
     entities: [blue]
     stories: [intro]
     scripts: [timeline]
@@ -85,13 +86,23 @@ module:
 name: {namespace or "window"}
 version: 1.0.0
 {module_descriptor}
-conditions:
-  {prefix}health:
-    command: /bin/true
-    interval: 15
 entities:
   {prefix}blue:
     role: blue
+propositions:
+  {prefix}health-state:
+    description: The blue entity is declared for the objective-window fixture.
+    subjects: [entities.{prefix}blue]
+    basis: declared_state
+    predicate:
+      kind: presence
+      property: role
+      semantic_ref: urn:aces:declared-property:entity-role
+      operator: exists
+assertions:
+  {prefix}health:
+    proposition: {prefix}health-state
+    role: postcondition
 stories:
   {prefix}intro:
     scripts: [{prefix}timeline]
@@ -108,7 +119,7 @@ objectives:
   {prefix}observe:
     entity: {prefix}blue
     success:
-      conditions: [{prefix}health]
+      assertions: [{prefix}health]
     window:
       stories: [{prefix}intro]
       scripts: [{prefix}timeline]
@@ -298,7 +309,7 @@ class TestObjectiveWindowSemantics:
         analysis = _analyze(
             scenario.objectives,
             entity_names=set(scenario.entities),
-            conditions_by_name=scenario.conditions,
+            assertions_by_name=scenario.assertions,
             stories_by_name=scenario.stories,
             scripts_by_name=scenario.scripts,
             events_by_name=scenario.events,
@@ -386,9 +397,9 @@ class TestObjectiveWindowSemantics:
         assert analysis.workflow_step_refs == tuple(dict.fromkeys(step_refs))
 
 
-def _success(*, conditions=None, mode="all_of"):
+def _success(*, assertions=None, mode="all_of"):
     return SimpleNamespace(
-        conditions=list(conditions or []),
+        assertions=list(assertions or []),
         mode=mode,
     )
 
@@ -409,7 +420,7 @@ def _objective(*, agent="", entity="", actions=None, targets=None, success=None,
         entity=entity,
         actions=list(actions or []),
         targets=list(targets or []),
-        success=success if success is not None else _success(conditions=["health"]),
+        success=success if success is not None else _success(assertions=["health"]),
         window=window,
         depends_on=list(depends_on or []),
     )
@@ -428,11 +439,11 @@ def _analyze(objectives, **overrides):
 
     Resource maps are bundled into ``AssessmentResourceCatalog`` /
     ``WindowResourceCatalog`` for the analyzer; tests still pass the per-section
-    overrides (``conditions_by_name``, ``stories_by_name``, …) for readability.
+    overrides (``assertions_by_name``, ``stories_by_name``, …) for readability.
     """
 
     section_defaults = {
-        "conditions_by_name": {},
+        "assertions_by_name": {},
         "stories_by_name": {},
         "scripts_by_name": {},
         "events_by_name": {},
@@ -444,7 +455,7 @@ def _analyze(objectives, **overrides):
         "agents_by_name": {},
         "entity_names": set(),
         "assessment_resources": AssessmentResourceCatalog(
-            conditions=sections["conditions_by_name"],
+            assertions=sections["assertions_by_name"],
         ),
         "window_resources": WindowResourceCatalog(
             stories=sections["stories_by_name"],
@@ -462,19 +473,19 @@ class TestObjectiveSemantics:
     def test_well_formed_objectives_normalize_references_and_dependencies(self) -> None:
         analysis = _analyze(
             {
-                "base": _objective(entity="blue", success=_success(conditions=["c1"])),
+                "base": _objective(entity="blue", success=_success(assertions=["c1"])),
                 "follow": _objective(
                     agent="red",
                     actions=["Scan"],
                     targets=["nodes.web"],
-                    success=_success(conditions=["c2"]),
+                    success=_success(assertions=["c2"]),
                     window=_window(workflows=["flow"], steps=["flow.branch"]),
                     depends_on=["base"],
                 ),
             },
             agents_by_name={"red": _agent("Scan", "Exploit")},
             entity_names={"blue"},
-            conditions_by_name={"c1": object(), "c2": object()},
+            assertions_by_name={"c1": object(), "c2": object()},
             workflows_by_name={"flow": _workflow("start", "branch")},
             targetable_name_index={"nodes.web": {"nodes.web"}},
         )
@@ -487,15 +498,15 @@ class TestObjectiveSemantics:
             "nodes.web"
         }
         assert {ref.canonical_name for ref in analysis.references_of_kind(ObjectiveReferenceKind.SUCCESS)} == {
-            "condition.c1",
-            "condition.c2",
+            "assertion.c1",
+            "assertion.c2",
         }
         success_kinds = {
             ref.canonical_name: ref.success_resource_kind
             for ref in analysis.references_of_kind(ObjectiveReferenceKind.SUCCESS)
         }
-        assert success_kinds["condition.c1"] == AssessmentResourceKind.CONDITION
-        assert success_kinds["condition.c2"] == AssessmentResourceKind.CONDITION
+        assert success_kinds["assertion.c1"] == AssessmentResourceKind.ASSERTION
+        assert success_kinds["assertion.c2"] == AssessmentResourceKind.ASSERTION
         assert {ref.canonical_name for ref in analysis.references_of_kind(ObjectiveReferenceKind.WINDOW)} == {
             "flow",
             "flow.branch",
@@ -515,10 +526,10 @@ class TestObjectiveSemantics:
             for ref in analysis.references_of_kind(kind):
                 assert ref.dependency_roles == ()
 
-        assert analysis.dependencies_for("base").ordering_names == ("condition.c1",)
-        assert analysis.dependencies_for("base").refresh_names == ("condition.c1",)
-        assert analysis.dependencies_for("follow").ordering_names == ("condition.c2", "objective.base")
-        assert analysis.dependencies_for("follow").refresh_names == ("condition.c2", "objective.base", "workflow.flow")
+        assert analysis.dependencies_for("base").ordering_names == ("assertion.c1",)
+        assert analysis.dependencies_for("base").refresh_names == ("assertion.c1",)
+        assert analysis.dependencies_for("follow").ordering_names == ("assertion.c2", "objective.base")
+        assert analysis.dependencies_for("follow").refresh_names == ("assertion.c2", "objective.base", "workflow.flow")
         assert "follow" in analysis.window_analyses
 
     def test_undeclared_actor_references_are_reported(self) -> None:
@@ -529,7 +540,7 @@ class TestObjectiveSemantics:
             },
             agents_by_name={"red": _agent()},
             entity_names={"blue"},
-            conditions_by_name={"health": object()},
+            assertions_by_name={"health": object()},
         )
         codes = {issue.code for issue in analysis.issues}
         assert "objective.actor-agent-undeclared" in codes
@@ -539,7 +550,7 @@ class TestObjectiveSemantics:
         analysis = _analyze(
             {"a": _objective(agent="red", actions=["Persist"])},
             agents_by_name={"red": _agent("Scan")},
-            conditions_by_name={"health": object()},
+            assertions_by_name={"health": object()},
         )
         issue = analysis.issues_of_code("objective.action-not-declared")[0]
         assert issue.ref == "Persist"
@@ -549,7 +560,7 @@ class TestObjectiveSemantics:
         analysis = _analyze(
             {"a": _objective(entity="blue", targets=["ghost"])},
             entity_names={"blue"},
-            conditions_by_name={"health": object()},
+            assertions_by_name={"health": object()},
         )
         assert analysis.issues_of_code("objective.target-unresolvable")[0].ref == "ghost"
 
@@ -557,37 +568,37 @@ class TestObjectiveSemantics:
         analysis = _analyze(
             {"a": _objective(entity="blue", targets=["web"])},
             entity_names={"blue"},
-            conditions_by_name={"health": object()},
+            assertions_by_name={"health": object()},
             targetable_name_index={"web": {"nodes.web", "features.web"}},
         )
         issue = analysis.issues_of_code("objective.target-ambiguous")[0]
         assert issue.ref == "web"
         assert issue.candidates == ("features.web", "nodes.web")
 
-    def test_undeclared_success_condition_is_reported(self) -> None:
+    def test_undeclared_success_assertion_is_reported(self) -> None:
         analysis = _analyze(
             {
                 "a": _objective(
                     entity="blue",
-                    success=_success(conditions=["c?"]),
+                    success=_success(assertions=["c?"]),
                 )
             },
             entity_names={"blue"},
         )
         codes = {issue.code for issue in analysis.issues}
-        assert "objective.success-condition-undeclared" in codes
+        assert "objective.success-assertion-undeclared" in codes
 
     def test_window_issues_are_resurfaced_under_objective_codes(self) -> None:
         analysis = _analyze(
             {
                 "a": _objective(
                     entity="blue",
-                    success=_success(conditions=["health"]),
+                    success=_success(assertions=["health"]),
                     window=_window(scripts=["s1"], events=["evt"]),
                 )
             },
             entity_names={"blue"},
-            conditions_by_name={"health": object()},
+            assertions_by_name={"health": object()},
             scripts_by_name={"s1": SimpleNamespace(events={"kickoff": 1})},
             events_by_name={"evt": SimpleNamespace()},
         )
@@ -597,7 +608,7 @@ class TestObjectiveSemantics:
         analysis = _analyze(
             {"a": _objective(entity="blue", depends_on=["ghost"])},
             entity_names={"blue"},
-            conditions_by_name={"health": object()},
+            assertions_by_name={"health": object()},
         )
         assert analysis.issues_of_code("objective.dependency-undeclared")[0].ref == "ghost"
 
@@ -608,7 +619,7 @@ class TestObjectiveSemantics:
                 "b": _objective(entity="blue", depends_on=["a"]),
             },
             entity_names={"blue"},
-            conditions_by_name={"health": object()},
+            assertions_by_name={"health": object()},
         )
         cycle_issues = analysis.issues_of_code("objective.dependency-cycle")
         assert len(cycle_issues) == 1
@@ -621,7 +632,7 @@ class TestObjectiveSemantics:
                     agent="${actor}",
                     actions=["${act}"],
                     targets=["${tgt}"],
-                    success=_success(conditions=["${m}"]),
+                    success=_success(assertions=["${m}"]),
                     window=_window(stories=["${story}"]),
                     depends_on=["${dep}"],
                 )

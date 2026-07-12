@@ -122,6 +122,7 @@ adr-074-experiment-authoring-input-contract-boundary
 adr-075-ecosystem-versioning-deprecation-and-migration-governance
 adr-076-portable-sdl-identifiers-and-canonical-addresses
 adr-077-closed-sdl-phase-contracts-and-portable-derivation-evidence
+adr-078-backend-neutral-proposition-and-truth-semantics
 ```
 
 | ADR | Title | Status | Date |
@@ -204,3 +205,4 @@ adr-077-closed-sdl-phase-contracts-and-portable-derivation-evidence
 | [075](adr-075-ecosystem-versioning-deprecation-and-migration-governance.md) | Ecosystem Versioning, Deprecation, and Migration Governance | proposed | 2026-07-11 |
 | [076](adr-076-portable-sdl-identifiers-and-canonical-addresses.md) | Portable SDL Identifiers and Canonical Addresses | accepted | 2026-07-11 |
 | [077](adr-077-closed-sdl-phase-contracts-and-portable-derivation-evidence.md) | Closed SDL Phase Contracts and Portable Derivation Evidence | accepted | 2026-07-12 |
+| [078](adr-078-backend-neutral-proposition-and-truth-semantics.md) | Backend-Neutral Proposition and Truth Semantics | accepted | 2026-07-12 |

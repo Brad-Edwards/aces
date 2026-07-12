@@ -194,24 +194,28 @@ content:
 
 conditions:
   participant-observation-recorded:
+    proposition: participant-observation-recorded
     command: /usr/local/bin/check-participant-observation
     interval: 30
     description: >
       Reference backend condition that reports whether the participant runtime
       recorded a terminal customer portal observation.
   wazuh-evidence-recorded:
+    proposition: wazuh-evidence-recorded
     command: /usr/local/bin/check-wazuh-evidence
     interval: 30
     description: >
       Reference backend condition that reports whether Wazuh retained bounded
       evaluator evidence for the participant probe.
   policy-decision-recorded:
+    proposition: policy-decision-recorded
     command: /usr/local/bin/check-policy-decision
     interval: 30
     description: >
       Reference backend condition that reports whether the optional policy gate
       retained an allow, deny, or bounded-tool-use decision record.
   boundary-checks-recorded:
+    proposition: boundary-checks-recorded
     command: /usr/local/bin/check-participant-boundary
     interval: 30
     description: >
@@ -558,6 +562,95 @@ behavior_specifications:
     evidence_contract_refs: [participant-behavior-history-event-stream-v1]
     extension_policy: governed-extension
 
+propositions:
+  boundary-checks-recorded:
+    description: The governed boundary-checks-recorded observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.redteam-net
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: boundary-checks-recorded
+      semantic_ref: urn:aces:observable:boundary-checks-recorded
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  participant-observation-recorded:
+    description: The governed participant-observation-recorded observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.redteam-net
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: participant-observation-recorded
+      semantic_ref: urn:aces:observable:participant-observation-recorded
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  policy-decision-recorded:
+    description: The governed policy-decision-recorded observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.redteam-net
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: policy-decision-recorded
+      semantic_ref: urn:aces:observable:policy-decision-recorded
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+  wazuh-evidence-recorded:
+    description: The governed wazuh-evidence-recorded observation is true for the addressed scenario subject.
+    subjects:
+    - nodes.redteam-net
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: wazuh-evidence-recorded
+      semantic_ref: urn:aces:observable:wazuh-evidence-recorded
+      operator: equals
+      expected: true
+    quantifier: all
+    evidence_requirements:
+    - objective-truth-evidence
+assertions:
+  boundary-checks-recorded:
+    proposition: boundary-checks-recorded
+    role: postcondition
+    polarity: positive
+  participant-observation-recorded:
+    proposition: participant-observation-recorded
+    role: postcondition
+    polarity: positive
+  policy-decision-recorded:
+    proposition: policy-decision-recorded
+    role: postcondition
+    polarity: positive
+  wazuh-evidence-recorded:
+    proposition: wazuh-evidence-recorded
+    role: postcondition
+    polarity: positive
+evidence_requirements:
+  objective-truth-evidence:
+    description: Capture evidence used to decide authored proposition assertions.
+    source_refs:
+    - nodes.redteam-net
+    scope: authored objective assertion evaluation
+    boundary_kind: assertion_evaluation
+    channel: log
+    artifact_role: proposition_truth_evidence
+    media_types: [application/json]
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: study_lifetime
+    loss_disclosure: required
 objectives:
   # Graded scoring/interpretation of this evidence loop now lives in the
   # experiment/evaluator plane (experiment-* contracts) per ADR-073. The SDL
@@ -572,7 +665,7 @@ objectives:
       - content.policy-decision-log
       - content.boundary-check-evidence
     success:
-      conditions:
+      assertions:
         - participant-observation-recorded
         - wazuh-evidence-recorded
         - policy-decision-recorded

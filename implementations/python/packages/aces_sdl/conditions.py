@@ -1,8 +1,8 @@
-"""Condition models — monitoring checks run on VMs.
+"""Legacy probe implementation declarations run on VMs.
 
-A condition is either command-based (command + interval) or
-source-based (a library package). The two forms are mutually
-exclusive, enforced by a model validator.
+A condition is either command-based (command + interval) or source-based (a
+library package). It may explicitly bind the proposition it realizes, but its
+command/source fields never define that proposition's meaning.
 """
 
 from pydantic import Field, model_validator
@@ -12,12 +12,13 @@ from ._source import Source
 
 
 class Condition(SDLModel):
-    """A monitoring check deployed to a VM.
+    """A probe implementation deployed to a VM.
 
     Either ``command`` + ``interval`` or ``source`` must be set, not both.
     """
 
     name: str = ""
+    proposition: str = ""
     command: str | None = None
     interval: int | str | None = None
     timeout: int | str | None = None

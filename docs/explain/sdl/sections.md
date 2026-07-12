@@ -1357,13 +1357,16 @@ silently ignoring the missing prerequisite.
 
 ---
 
-## Conditions
+## Conditions, Propositions, and Assertions
 
-Health checks with optional timeout/retries/start_period.
+`conditions` describe executable probe implementations. They do not define
+portable truth by themselves. A condition may bind to a proposition that says
+what the probe observes.
 
 ```yaml
 conditions:
   web-alive:
+    proposition: web-alive
     command: "curl -sf http://localhost/ || exit 1"
     interval: 15
     timeout: 5
@@ -1374,6 +1377,41 @@ conditions:
 ```
 
 Must have either `command` + `interval` or `source`, not both.
+
+`propositions` are backend-neutral statements about finite subjects and typed,
+semantically grounded properties. Observed-state propositions name the authored
+evidence requirements needed to decide them. `assertions` apply a role and
+polarity to a proposition without redefining it.
+
+```yaml
+propositions:
+  web-alive:
+    description: The governed web service responds successfully.
+    subjects: [nodes.web.services.https]
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: service-alive
+      semantic_ref: urn:aces:observable:service-alive
+      operator: equals
+      expected: true
+    evidence_requirements: [web-health-evidence]
+
+assertions:
+  web-alive-at-completion:
+    proposition: web-alive
+    role: postcondition
+    polarity: positive
+  web-alive-before-action:
+    proposition: web-alive
+    role: precondition
+    polarity: positive
+```
+
+Portable truth outcomes are `true`, `false`, `unknown`, and `unsupported`.
+`unsupported` reports an admitted capability limit; it is not a logical truth
+value. Structural validity, evidence provenance, digest identity, and
+behavioral equivalence remain separate claims.
 
 ---
 
@@ -1401,9 +1439,9 @@ The OCR-inherited SDL scoring pipeline
 `metrics`, `evaluations`, `tlos` (Training Learning Objectives), and `goals`
 sections are no longer SDL surfaces.
 
-`conditions` remain first-class **observable state**: an objective's `success`
-is expressed against `conditions` (see [Objectives](#objectives)), and workflow
-predicates reference `conditions`. When a scenario genuinely needs a graded
+`conditions` remain first-class probe definitions, but backend-neutral truth is
+expressed through `propositions` and role-constrained `assertions` (see
+[Objectives](#objectives)). When a scenario genuinely needs a graded
 score, cumulative reward, pass/fail evaluation, or a leaderboard value, that
 concern lives in the experiment/evaluator plane — experiment-core contracts
 (`experiment-task-v1` metric definitions, `experiment-study-v1` analysis plans;
@@ -1454,7 +1492,7 @@ injects:
 
 events:
   attack-wave:
-    conditions: [scanner]
+    assertions: [scanner-ready]        # precondition assertion
     injects: [phishing-email]
 
 scripts:
@@ -1620,7 +1658,7 @@ agents:
     entity: red-team                    # identity + role (via entities.role)
     actions: [Scan, Exploit, Escalate]
     starting_accounts: [phished-user]   # references accounts section
-    starting_conditions: [beacon-online]  # references conditions section
+    starting_assertions: [beacon-online-before-start]  # precondition assertion
     initial_knowledge:
       hosts: [user0]                    # known at scenario start
       subnets: [user-net]
@@ -1649,9 +1687,9 @@ names declared in `nodes.*.services`, and `accounts` references entries in the
 `accounts` section. `allowed_subnets` follows the same switch-backed
 infrastructure rule.
 
-`starting_conditions` lists names from the `conditions` section, giving the
-authoring surface a declarative hook for participant-relevant precondition
-checks without embedding executable setup commands. `authority_anchors`
+`starting_assertions` lists precondition assertions, giving the authoring
+surface a declarative hook for participant-relevant starting state without
+equating a probe command with truth. `authority_anchors`
 references any declared scenario element (entities, relationships, content,
 nodes, …) that anchors what the participant is allowed or expected to do in
 scenario meaning — these are SDL-level anchors, not control-plane
@@ -1661,7 +1699,7 @@ define the boundary of where the participant may act or observe; it
 generalises `allowed_subnets`, which remains restricted to switch-backed
 infrastructure.
 
-Each of `starting_conditions`, `authority_anchors`, and `operating_scope`
+Each of `starting_assertions`, `authority_anchors`, and `operating_scope`
 accepts `${var}` placeholders that resolve through the declared `variables`
 section. Symbol-defining keys (agent names) remain stable identifiers and
 must not be variables.
@@ -1838,7 +1876,10 @@ from the authored requirement.
 
 ## Objectives
 
-Declarative experiment semantics that bind actors, targets, timing, and success criteria in the same SDL. Inspired by CACAO's separation of agent, target, and workflow context; objective success is expressed against observable `conditions` ([ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md)).
+Declarative experiment semantics that bind actors, targets, timing, and success
+criteria in the same SDL. Objective success composes invariant or postcondition
+assertions over backend-neutral propositions
+([ADR-078](../../decisions/adrs/adr-078-backend-neutral-proposition-and-truth-semantics.md)).
 
 ```yaml
 objectives:
@@ -1852,7 +1893,7 @@ objectives:
       - infrastructure.dmz-switch.acls.allow-dmz-https
     success:
       mode: all_of                     # all_of, any_of
-      conditions: [beacon-online]      # observable state only
+      assertions: [beacon-online-achieved]
     window:
       stories: [exercise]
       scripts: [main-timeline]
@@ -1863,11 +1904,18 @@ objectives:
   blue-reporting:
     entity: blue-team
     success:
-      conditions: [web-alive]          # observable state only
+      assertions: [web-alive-at-completion]
     depends_on: [red-initial-access]
 ```
 
-Every objective must declare exactly one actor: either `agent` or `entity`. `success` is required and must reference at least one declared `condition` (observable state; the OCR scoring surfaces `metrics`/`evaluations`/`tlos`/`goals` were removed by [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md)). `targets` are optional, but when present they must resolve to named scenario elements. Bare target refs work when unambiguous; otherwise use a qualified ref such as `nodes.web-server`, `features.app-to-db`, or `content.mailbox.items.invoice.eml`. `window` is optional; when supplied, referenced stories/scripts/events/workflows must exist and remain internally consistent. Workflow steps use qualified refs of the form `<workflow>.<step>`.
+Every objective must declare exactly one actor: either `agent` or `entity`.
+`success` is required and must reference at least one declared invariant or
+postcondition assertion. `targets` are optional, but when present they must
+resolve to named scenario elements. Bare target refs work when unambiguous;
+otherwise use a qualified ref such as `nodes.web-server`, `features.app-to-db`,
+or `content.mailbox.items.invoice.eml`. `window` is optional; when supplied,
+referenced stories/scripts/events/workflows must exist and remain internally
+consistent. Workflow steps use qualified refs of the form `<workflow>.<step>`.
 
 `depends_on` is an ordering relation, not just commentary. It defines a partial order over objectives: downstream objectives are not considered ready until their predecessors have been satisfied. Objective dependency cycles are rejected.
 
@@ -1891,7 +1939,7 @@ workflows:
       branch-on-promotion:
         type: decision
         when:
-          conditions: [rogue-release-promoted]
+          assertions: [rogue-release-promoted-before-branch]
         then: rollback-fanout
         else: finish
       rollback-fanout:

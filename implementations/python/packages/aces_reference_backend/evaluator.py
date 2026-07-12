@@ -42,8 +42,12 @@ class ReferenceEvaluator:
                 payload=op.payload,
                 ordering_dependencies=op.ordering_dependencies,
                 refresh_dependencies=op.refresh_dependencies,
-                status="evaluating",
+                status="admitted" if op.resource_type in {"proposition", "assertion"} else "evaluating",
             )
+            if op.resource_type in {"proposition", "assertion"}:
+                if op.action != ChangeAction.UNCHANGED:
+                    changed_addresses.append(op.address)
+                continue
             result_payload = self._result_payload(op, now)
             results[op.address] = result_payload
             history[op.address] = self._history_events(result_payload, now)

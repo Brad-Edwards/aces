@@ -11,31 +11,35 @@ The SDL carries experiment semantics; concrete evaluation mechanics live
 in runtime adapters.
 """
 
-from enum import Enum
-
 from pydantic import Field, field_validator, model_validator
 
 from ._base import SDLModel, parse_enum_or_var
+from .propositions import TruthCompositionMode
 
-
-class SuccessMode(str, Enum):
-    """How referenced success criteria combine."""
-
-    ALL_OF = "all_of"
-    ANY_OF = "any_of"
+SuccessMode = TruthCompositionMode
 
 
 class ObjectiveSuccess(SDLModel):
     """Declarative success criteria for an objective.
 
-    Per ADR-073, objective success references observable state (``conditions``)
-    only. The OCR-inherited scoring pipeline (``metrics`` / ``evaluations`` /
-    ``tlos`` / ``goals``) was removed from the SDL; graded scoring and reward
-    live in the experiment/evaluator plane (ADR-055/064/069).
+    Success composes backend-neutral invariant or postcondition assertions.
+    Probe implementations, graded scoring, and reward remain outside this
+    construct.
     """
 
     mode: SuccessMode | str = SuccessMode.ALL_OF
-    conditions: list[str] = Field(default_factory=list)
+    assertions: list[str] = Field(default_factory=list)
+    threshold: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_legacy_conditions(cls, value: object) -> object:
+        if isinstance(value, dict) and "conditions" in value:
+            raise ValueError(
+                "objective success.conditions cannot state backend-neutral truth; "
+                "declare propositions and assertions, then reference success.assertions"
+            )
+        return value
 
     @field_validator("mode", mode="before")
     @classmethod
@@ -44,9 +48,16 @@ class ObjectiveSuccess(SDLModel):
 
     @model_validator(mode="after")
     def validate_non_empty(self) -> "ObjectiveSuccess":
-        if self.conditions:
-            return self
-        raise ValueError("Objective success must reference at least one condition")
+        if not self.assertions:
+            raise ValueError("Objective success must reference at least one assertion")
+        if self.mode == SuccessMode.AT_LEAST:
+            if self.threshold is None:
+                raise ValueError("at_least objective success requires threshold")
+            if self.threshold > len(self.assertions):
+                raise ValueError("objective success threshold cannot exceed assertion count")
+        elif self.threshold is not None:
+            raise ValueError("objective success threshold is valid only for at_least mode")
+        return self
 
 
 class ObjectiveWindow(SDLModel):

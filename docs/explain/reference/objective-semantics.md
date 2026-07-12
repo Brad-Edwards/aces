@@ -15,10 +15,12 @@ A declarative *objective* binds, in one place:
 - zero or more **targets**, resolved through the targetable named-reference
   index (bare or section-qualified; objectives, workflows, and variables are not
   targetable);
-- a **success** interpretation — `mode` (`all_of` / `any_of`) over referenced
-  observable `conditions` only (the OCR scoring surfaces `metrics`,
-  `evaluations`, `tlos`, and `goals` were removed by
-  [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md));
+- a **success** interpretation — `mode` (`all_of` / `any_of` / `at_least`) over
+  referenced invariant or postcondition assertions. Assertions use typed,
+  backend-neutral propositions; executable `conditions` only bind probes. The
+  OCR scoring surfaces `metrics`, `evaluations`, `tlos`, and `goals` were
+  removed by
+  [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md);
 - an optional **window** that constrains when the objective matters (the
   story/script/event/workflow/workflow-step reachability and consistency rules
   live with the window helper — see
@@ -51,9 +53,10 @@ returns an `ObjectiveSemanticAnalysis`:
 - `window_analyses` — the per-objective `ObjectiveWindowAnalysis`, so callers
   reuse the window resolution rather than re-running it.
 
-Whether a declared success `condition` is actually *bound* to a node is a
-compilation-phase concern (the compiler emits `evaluation.condition-ref`
-diagnostics against the resolved addresses); this analyzer deals only with the
+Whether a proposition has a realizable probe binding is a compilation and
+backend-admission concern. The compiler emits distinct
+`evaluation.proposition.*`, `evaluation.assertion.*`, and bound-condition
+diagnostics against the resolved addresses; this analyzer deals only with the
 name-level reference graph that is meaningful before binding resolution.
 
 ## Dependency roles
@@ -77,7 +80,7 @@ That single fact lives in `partition_objective_dependencies` plus the
 own constant so a role change to one category lands in exactly one
 place. The validator, the compiler's `ObjectiveRuntime` ordering/refresh
 tuples, and the planner's generic reconciliation all derive their behavior from
-those constants, so a change to a success condition (or to a depended-on
+those constants, so a change to a success assertion (or to a depended-on
 objective) propagates as a refresh through `objective -> depends_on -> objective`.
 
 In the analyzer's name-level IR the derived `ordering_names` / `refresh_names`

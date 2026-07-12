@@ -18,9 +18,11 @@ body:
         - {port: 443, name: https}
   conditions:
     patch-applied:
+      proposition: patch-applied
       command: test -f /var/lib/aces/patch-applied
       interval: 30
     service-verified:
+      proposition: service-verified
       command: curl -fsS https://service/health
       interval: 30
   entities:
@@ -29,17 +31,67 @@ body:
   agents:
     operator:
       entity: blue-team
+  propositions:
+    patch-applied:
+      description: The governed patch-applied observation is true for the addressed scenario subject.
+      subjects:
+      - nodes.service
+      basis: observed_state
+      predicate:
+        kind: boolean
+        property: patch-applied
+        semantic_ref: urn:aces:observable:patch-applied
+        operator: equals
+        expected: true
+      evidence_requirements: [objective-truth-evidence]
+    service-verified:
+      description: The governed service-verified observation is true for the addressed scenario subject.
+      subjects:
+      - nodes.service.services.https
+      basis: observed_state
+      predicate:
+        kind: boolean
+        property: service-verified
+        semantic_ref: urn:aces:observable:service-verified
+        operator: equals
+        expected: true
+      evidence_requirements: [objective-truth-evidence]
+  assertions:
+    patch-applied:
+      proposition: patch-applied
+      role: postcondition
+      polarity: positive
+    service-verified:
+      proposition: service-verified
+      role: postcondition
+      polarity: positive
+  evidence_requirements:
+    objective-truth-evidence:
+      description: Capture evidence used to decide authored proposition assertions.
+      source_refs:
+      - nodes.service.services.https
+      - nodes.service
+      scope: authored assertion evaluation
+      boundary_kind: assertion_evaluation
+      channel: log
+      artifact_role: proposition_truth_evidence
+      media_types: [application/json]
+      sensitivity: plain
+      redaction: redact_secrets
+      integrity: checksum
+      retention: study_lifetime
+      loss_disclosure: required
   objectives:
     apply-patch:
       agent: operator
       targets: [nodes.service]
       success:
-        conditions: [patch-applied]
+        assertions: [patch-applied]
     verify-service:
       agent: operator
       targets: [nodes.service.services.https]
       success:
-        conditions: [service-verified]
+        assertions: [service-verified]
   workflows:
     parallel-remediation:
       start: fan-out

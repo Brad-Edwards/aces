@@ -32,6 +32,7 @@ from aces_sdl.semantics.workflow import (
 
 from .models import (
     AccountPlacement,
+    AssertionRuntime,
     CompiledCapabilityConstraint,
     ConditionBinding,
     ContentPlacement,
@@ -51,6 +52,7 @@ from .models import (
     ParticipantBehaviorSpecificationRuntime,
     ParticipantObservationBoundaryRuntime,
     ParticipantOutcomeInterpretationRuleRuntime,
+    PropositionRuntime,
     RuntimeModel,
     RuntimeTemplate,
     ScriptRuntime,
@@ -262,6 +264,14 @@ def _behavior_specification_address(name: str) -> str:
 
 def _condition_binding_address(node_name: str, condition_name: str) -> str:
     return _address("evaluation", "condition", node_name, condition_name)
+
+
+def _proposition_address(name: str) -> str:
+    return _address("evaluation", "proposition", name)
+
+
+def _assertion_address(name: str) -> str:
+    return _address("evaluation", "assertion", name)
 
 
 def _inject_address(name: str) -> str:
@@ -745,7 +755,7 @@ class _ObjectiveWindowCompilation:
 @dataclass(frozen=True)
 class _WorkflowPredicateCompilation:
     predicate: WorkflowPredicateRuntime
-    condition_addresses: tuple[str, ...]
+    assertion_addresses: tuple[str, ...]
     predicate_addresses: tuple[str, ...]
     objective_addresses: tuple[str, ...]
     step_state_predicates: tuple[WorkflowStepStatePredicateRuntime, ...]
@@ -757,7 +767,7 @@ class _WorkflowCompilationState:
     control_steps: dict[str, WorkflowStepRuntime] = field(default_factory=dict)
     control_edges: dict[str, tuple[str, ...]] = field(default_factory=dict)
     referenced_objectives: list[str] = field(default_factory=list)
-    step_condition_addresses: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    step_assertion_addresses: dict[str, tuple[str, ...]] = field(default_factory=dict)
     step_predicate_addresses: dict[str, tuple[str, ...]] = field(default_factory=dict)
     required_features: list[WorkflowFeature] = field(default_factory=list)
     required_state_predicate_features: list[WorkflowStatePredicateFeature] = field(default_factory=list)
@@ -1052,9 +1062,49 @@ def _compile_feature_bindings(
     return feature_bindings
 
 
+def _compile_propositions(
+    scenario: InstantiatedScenario,
+) -> dict[str, PropositionRuntime]:
+    address_index = _runtime_addressable_ref_index(scenario)
+    return {
+        _proposition_address(name): PropositionRuntime(
+            address=_proposition_address(name),
+            name=name,
+            spec=_dump(proposition),
+            subject_addresses=_runtime_addresses_for_refs(
+                list(proposition.subjects),
+                addressable_ref_index=address_index,
+            ),
+            predicate_kind=proposition.predicate.kind,
+            evaluation_basis=proposition.basis.value,
+            evidence_requirement_refs=tuple(proposition.evidence_requirements),
+        )
+        for name, proposition in scenario.propositions.items()
+    }
+
+
+def _compile_assertions(
+    scenario: InstantiatedScenario,
+) -> dict[str, AssertionRuntime]:
+    return {
+        _assertion_address(name): AssertionRuntime(
+            address=_assertion_address(name),
+            name=name,
+            spec=_dump(assertion),
+            proposition_address=_proposition_address(assertion.proposition),
+            role=assertion.role.value,
+            polarity=assertion.polarity.value,
+            ordering_dependencies=(_proposition_address(assertion.proposition),),
+            refresh_dependencies=(_proposition_address(assertion.proposition),),
+        )
+        for name, assertion in scenario.assertions.items()
+    }
+
+
 def _compile_condition_bindings(
     scenario: InstantiatedScenario,
     condition_templates: dict[str, RuntimeTemplate],
+    propositions: dict[str, PropositionRuntime],
     diagnostics: list[Diagnostic],
 ) -> dict[str, ConditionBinding]:
     condition_bindings: dict[str, ConditionBinding] = {}
@@ -1078,6 +1128,10 @@ def _compile_condition_bindings(
                 )
                 continue
             address = _condition_binding_address(node_name, condition_name)
+            proposition_address = (
+                _proposition_address(template.spec["proposition"]) if template.spec.get("proposition") else ""
+            )
+            proposition_dependencies = (proposition_address,) if proposition_address in propositions else ()
             result_contract, execution_contract = _evaluation_contracts("condition-binding")
             condition_bindings[address] = ConditionBinding(
                 address=address,
@@ -1087,7 +1141,9 @@ def _compile_condition_bindings(
                 condition_name=condition_name,
                 template_address=template.address,
                 role_name=role_name,
-                refresh_dependencies=(node_addr,),
+                proposition_address=proposition_address,
+                ordering_dependencies=proposition_dependencies,
+                refresh_dependencies=_dedupe([node_addr, *proposition_dependencies]),
                 spec={"binding": {"node": node_name, "role": role_name}, "template": template.spec},
                 result_contract=result_contract,
                 execution_contract=execution_contract,
@@ -1495,8 +1551,8 @@ def _compile_participant_behaviors(
             scenario,
             agent.initial_knowledge,
         )
-        starting_condition_refs = tuple(agent.starting_conditions)
-        starting_condition_addresses = _condition_addresses_for_refs(scenario, list(agent.starting_conditions))
+        starting_assertion_refs = tuple(agent.starting_assertions)
+        starting_assertion_addresses = tuple(_assertion_address(ref) for ref in agent.starting_assertions)
         authority_anchor_refs = tuple(agent.authority_anchors)
         authority_anchor_addresses = _runtime_addresses_for_refs(
             list(agent.authority_anchors),
@@ -1513,7 +1569,7 @@ def _compile_participant_behaviors(
                 *observation_addresses,
                 *starting_account_addresses,
                 *initial_knowledge_addresses,
-                *starting_condition_addresses,
+                *starting_assertion_addresses,
                 *authority_anchor_addresses,
                 *operating_scope_addresses,
             ]
@@ -1526,8 +1582,8 @@ def _compile_participant_behaviors(
             starting_account_refs=starting_account_refs,
             starting_account_addresses=starting_account_addresses,
             initial_knowledge_addresses=initial_knowledge_addresses,
-            starting_condition_refs=starting_condition_refs,
-            starting_condition_addresses=starting_condition_addresses,
+            starting_assertion_refs=starting_assertion_refs,
+            starting_assertion_addresses=starting_assertion_addresses,
             authority_anchor_refs=authority_anchor_refs,
             authority_anchor_addresses=authority_anchor_addresses,
             operating_scope_refs=operating_scope_refs,
@@ -1654,7 +1710,7 @@ def _compile_behavior_specifications(
 
 def _compile_events(
     scenario: InstantiatedScenario,
-    condition_bindings: dict[str, ConditionBinding],
+    assertions: dict[str, AssertionRuntime],
     injects: dict[str, InjectRuntime],
     inject_bindings: dict[str, InjectBinding],
     diagnostics: list[Diagnostic],
@@ -1662,16 +1718,16 @@ def _compile_events(
     events: dict[str, EventRuntime] = {}
     for name, event in scenario.events.items():
         event_address = _event_address(name)
-        condition_names = list(event.conditions)
+        assertion_names = list(event.assertions)
         inject_names = list(event.injects)
-        condition_addresses, condition_diagnostics = _resolve_binding_refs(
-            condition_bindings,
-            ref_names=condition_names,
+        assertion_addresses, assertion_diagnostics = _resolve_named_refs(
+            ref_names=assertion_names,
+            available_names={assertion.name for assertion in assertions.values()},
+            address_builder=_assertion_address,
             owner_address=event_address,
             domain="orchestration",
-            code_prefix="orchestration.condition-ref",
-            binding_attr="condition_name",
-            binding_label="condition",
+            code_prefix="orchestration.assertion-ref",
+            resource_label="assertion",
         )
         inject_addresses, inject_diagnostics = _resolve_resource_refs(
             injects,
@@ -1681,7 +1737,7 @@ def _compile_events(
             code_prefix="orchestration.inject-ref",
             resource_label="inject",
         )
-        diagnostics.extend(condition_diagnostics)
+        diagnostics.extend(assertion_diagnostics)
         diagnostics.extend(inject_diagnostics)
         inject_binding_ordering_dependencies = [
             address for address, binding in inject_bindings.items() if binding.inject_name in inject_names
@@ -1689,13 +1745,13 @@ def _compile_events(
         events[event_address] = EventRuntime(
             address=event_address,
             name=name,
-            condition_names=tuple(condition_names),
-            condition_addresses=condition_addresses,
+            assertion_names=tuple(assertion_names),
+            assertion_addresses=assertion_addresses,
             inject_names=tuple(inject_names),
             inject_addresses=inject_addresses,
             ordering_dependencies=_dedupe([*inject_addresses, *inject_binding_ordering_dependencies]),
             refresh_dependencies=_dedupe(
-                [*condition_addresses, *inject_addresses, *inject_binding_ordering_dependencies]
+                [*assertion_addresses, *inject_addresses, *inject_binding_ordering_dependencies]
             ),
             spec=_dump(event),
         )
@@ -1759,23 +1815,22 @@ def _compile_stories(
 
 
 def _objective_success_addresses(
-    condition_bindings: dict[str, ConditionBinding],
+    assertions: dict[str, AssertionRuntime],
     objective: Any,
     objective_address: str,
     diagnostics: list[Diagnostic],
 ) -> list[str]:
-    # Per ADR-073 objective success references observable ``conditions`` only.
-    condition_addresses, condition_diagnostics = _resolve_binding_refs(
-        condition_bindings,
-        ref_names=list(objective.success.conditions),
+    assertion_addresses, assertion_diagnostics = _resolve_named_refs(
+        ref_names=list(objective.success.assertions),
+        available_names={assertion.name for assertion in assertions.values()},
+        address_builder=_assertion_address,
         owner_address=objective_address,
         domain="evaluation",
-        code_prefix="evaluation.condition-ref",
-        binding_attr="condition_name",
-        binding_label="condition",
+        code_prefix="evaluation.assertion-ref",
+        resource_label="assertion",
     )
-    diagnostics.extend(condition_diagnostics)
-    return list(condition_addresses)
+    diagnostics.extend(assertion_diagnostics)
+    return list(assertion_addresses)
 
 
 def _objective_dependency_addresses(
@@ -1860,14 +1915,14 @@ def _compile_objective_window(
 
 def _compile_objectives(
     scenario: InstantiatedScenario,
-    condition_bindings: dict[str, ConditionBinding],
+    assertions: dict[str, AssertionRuntime],
     diagnostics: list[Diagnostic],
 ) -> dict[str, ObjectiveRuntime]:
     objectives: dict[str, ObjectiveRuntime] = {}
     for name, objective in scenario.objectives.items():
         objective_address = _objective_address(name)
         success_addresses = _objective_success_addresses(
-            condition_bindings,
+            assertions,
             objective,
             objective_address,
             diagnostics,
@@ -1913,18 +1968,18 @@ def _compile_workflow_predicate(
     predicate_source: Any,
     *,
     scenario: InstantiatedScenario,
-    condition_bindings: dict[str, ConditionBinding],
+    assertions: dict[str, AssertionRuntime],
     predicate_address: str,
     diagnostics: list[Diagnostic],
 ) -> _WorkflowPredicateCompilation:
-    condition_addresses, workflow_diagnostics = _resolve_binding_refs(
-        condition_bindings,
-        ref_names=list(predicate_source.conditions),
+    assertion_addresses, workflow_diagnostics = _resolve_named_refs(
+        ref_names=list(predicate_source.assertions),
+        available_names={assertion.name for assertion in assertions.values()},
+        address_builder=_assertion_address,
         owner_address=predicate_address,
         domain="orchestration",
-        code_prefix="orchestration.condition-ref",
-        binding_attr="condition_name",
-        binding_label="condition",
+        code_prefix="orchestration.assertion-ref",
+        resource_label="assertion",
     )
     objective_addresses, objective_diagnostics = _resolve_named_refs(
         ref_names=list(predicate_source.objectives),
@@ -1952,17 +2007,17 @@ def _compile_workflow_predicate(
     )
     predicate_addresses = _dedupe(
         [
-            *condition_addresses,
+            *assertion_addresses,
             *objective_addresses,
         ]
     )
     return _WorkflowPredicateCompilation(
         predicate=WorkflowPredicateRuntime(
-            condition_addresses=condition_addresses,
+            assertion_addresses=assertion_addresses,
             objective_addresses=tuple(objective_addresses),
             step_state_predicates=step_state_predicates,
         ),
-        condition_addresses=condition_addresses,
+        assertion_addresses=assertion_addresses,
         predicate_addresses=predicate_addresses,
         objective_addresses=tuple(objective_addresses),
         step_state_predicates=step_state_predicates,
@@ -2066,7 +2121,7 @@ def _apply_workflow_predicate_compilation(
     compilation: _WorkflowPredicateCompilation,
 ) -> None:
     state.referenced_objectives.extend(compilation.objective_addresses)
-    state.step_condition_addresses[step_name] = compilation.condition_addresses
+    state.step_assertion_addresses[step_name] = compilation.assertion_addresses
     state.step_predicate_addresses[step_name] = compilation.predicate_addresses
     _apply_step_state_predicate_features(state, compilation.step_state_predicates)
 
@@ -2088,29 +2143,29 @@ def _compile_switch_cases(
     step_name: str,
     step: Any,
     state: _WorkflowCompilationState,
-    condition_bindings: dict[str, ConditionBinding],
+    assertions: dict[str, AssertionRuntime],
     diagnostics: list[Diagnostic],
 ) -> tuple[WorkflowSwitchCaseRuntime, ...]:
     compiled_cases: list[WorkflowSwitchCaseRuntime] = []
-    switch_condition_addresses: list[str] = []
+    switch_assertion_addresses: list[str] = []
     switch_predicate_addresses: list[str] = []
     for case_index, case in enumerate(step.cases):
         compilation = _compile_workflow_predicate(
             case.when,
             scenario=scenario,
-            condition_bindings=condition_bindings,
+            assertions=assertions,
             predicate_address=_address(workflow_address, "step", step_name, "case", str(case_index)),
             diagnostics=diagnostics,
         )
         state.referenced_objectives.extend(compilation.objective_addresses)
-        switch_condition_addresses.extend(compilation.condition_addresses)
+        switch_assertion_addresses.extend(compilation.assertion_addresses)
         switch_predicate_addresses.extend(compilation.predicate_addresses)
         _apply_step_state_predicate_features(state, compilation.step_state_predicates)
         compiled_cases.append(
             WorkflowSwitchCaseRuntime(case_index=case_index, predicate=compilation.predicate, next_step=case.next_step)
         )
-    if switch_condition_addresses:
-        state.step_condition_addresses[step_name] = _dedupe(switch_condition_addresses)
+    if switch_assertion_addresses:
+        state.step_assertion_addresses[step_name] = _dedupe(switch_assertion_addresses)
     if switch_predicate_addresses:
         state.step_predicate_addresses[step_name] = _dedupe(switch_predicate_addresses)
     return tuple(compiled_cases)
@@ -2123,14 +2178,14 @@ def _compile_workflow_step_predicates(
     step_name: str,
     step: Any,
     state: _WorkflowCompilationState,
-    condition_bindings: dict[str, ConditionBinding],
+    assertions: dict[str, AssertionRuntime],
     diagnostics: list[Diagnostic],
 ) -> tuple[WorkflowPredicateRuntime | None, tuple[WorkflowSwitchCaseRuntime, ...]]:
     if step.when is not None:
         compilation = _compile_workflow_predicate(
             step.when,
             scenario=scenario,
-            condition_bindings=condition_bindings,
+            assertions=assertions,
             predicate_address=_address(workflow_address, "step", step_name),
             diagnostics=diagnostics,
         )
@@ -2144,7 +2199,7 @@ def _compile_workflow_step_predicates(
         step_name=step_name,
         step=step,
         state=state,
-        condition_bindings=condition_bindings,
+        assertions=assertions,
         diagnostics=diagnostics,
     )
 
@@ -2157,7 +2212,7 @@ def _compile_workflow_step(
     step_name: str,
     step: Any,
     state: _WorkflowCompilationState,
-    condition_bindings: dict[str, ConditionBinding],
+    assertions: dict[str, AssertionRuntime],
     diagnostics: list[Diagnostic],
 ) -> None:
     edges, type_features = _workflow_step_edges_and_features(step)
@@ -2184,7 +2239,7 @@ def _compile_workflow_step(
         step_name=step_name,
         step=step,
         state=state,
-        condition_bindings=condition_bindings,
+        assertions=assertions,
         diagnostics=diagnostics,
     )
     state.required_features.extend(_workflow_cross_cutting_features(step, workflow))
@@ -2289,7 +2344,7 @@ def _compile_workflow_runtime(
     *,
     name: str,
     workflow: Any,
-    condition_bindings: dict[str, ConditionBinding],
+    assertions: dict[str, AssertionRuntime],
     diagnostics: list[Diagnostic],
 ) -> WorkflowRuntime:
     workflow_address = _workflow_address(name)
@@ -2302,7 +2357,7 @@ def _compile_workflow_runtime(
             step_name=step_name,
             step=step,
             state=state,
-            condition_bindings=condition_bindings,
+            assertions=assertions,
             diagnostics=diagnostics,
         )
     objective_addresses = _dedupe(state.referenced_objectives)
@@ -2316,7 +2371,7 @@ def _compile_workflow_runtime(
         control_steps=state.control_steps,
         control_edges=state.control_edges,
         join_owners=state.join_owners,
-        step_condition_addresses=state.step_condition_addresses,
+        step_assertion_addresses=state.step_assertion_addresses,
         step_predicate_addresses=state.step_predicate_addresses,
         required_features=_dedupe_by_value(state.required_features),
         required_state_predicate_features=_dedupe_by_value(state.required_state_predicate_features),
@@ -2332,7 +2387,7 @@ def _compile_workflow_runtime(
 
 def _compile_workflows(
     scenario: InstantiatedScenario,
-    condition_bindings: dict[str, ConditionBinding],
+    assertions: dict[str, AssertionRuntime],
     diagnostics: list[Diagnostic],
 ) -> dict[str, WorkflowRuntime]:
     return {
@@ -2340,7 +2395,7 @@ def _compile_workflows(
             scenario,
             name=name,
             workflow=workflow,
-            condition_bindings=condition_bindings,
+            assertions=assertions,
             diagnostics=diagnostics,
         )
         for name, workflow in scenario.workflows.items()
@@ -2428,7 +2483,14 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
 
     networks, node_deployments = _compile_node_runtimes(scenario, diagnostics)
     feature_bindings = _compile_feature_bindings(scenario, feature_templates, diagnostics)
-    condition_bindings = _compile_condition_bindings(scenario, condition_templates, diagnostics)
+    propositions = _compile_propositions(scenario)
+    assertions = _compile_assertions(scenario)
+    condition_bindings = _compile_condition_bindings(
+        scenario,
+        condition_templates,
+        propositions,
+        diagnostics,
+    )
     injects = _compile_inject_runtimes(inject_templates)
     inject_bindings = _compile_inject_bindings(scenario, inject_templates, diagnostics)
     content_placements = _compile_content_placements(scenario, diagnostics)
@@ -2438,11 +2500,11 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
     outcome_interpretation_rules = _compile_outcome_interpretation_rules(scenario)
     participant_behaviors = _compile_participant_behaviors(scenario, diagnostics)
     behavior_specifications = _compile_behavior_specifications(scenario, diagnostics)
-    events = _compile_events(scenario, condition_bindings, injects, inject_bindings, diagnostics)
+    events = _compile_events(scenario, assertions, injects, inject_bindings, diagnostics)
     scripts = _compile_scripts(scenario, diagnostics)
     stories = _compile_stories(scenario, diagnostics)
-    objectives = _compile_objectives(scenario, condition_bindings, diagnostics)
-    workflows = _compile_workflows(scenario, condition_bindings, diagnostics)
+    objectives = _compile_objectives(scenario, assertions, diagnostics)
+    workflows = _compile_workflows(scenario, assertions, diagnostics)
 
     return RuntimeModel(
         scenario_name=scenario.name,
@@ -2457,6 +2519,8 @@ def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedSc
         networks=networks,
         node_deployments=node_deployments,
         feature_bindings=feature_bindings,
+        propositions=propositions,
+        assertions=assertions,
         condition_bindings=condition_bindings,
         injects=injects,
         inject_bindings=inject_bindings,

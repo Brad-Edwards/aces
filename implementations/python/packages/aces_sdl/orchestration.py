@@ -1,11 +1,4 @@
-"""Orchestration models — Injects, Events, Scripts, Stories.
-
-Implements the OCR SDL exercise orchestration pipeline:
-  Stories -> Scripts -> Events -> { Conditions, Injects }
-
-Scripts use OCR-compatible human-readable duration strings
-(e.g., ``"10min 2 sec"``, ``"1 mon"``, ``"1 us"``).
-"""
+"""SDL orchestration and workflow models."""
 
 import math
 import re
@@ -71,12 +64,7 @@ _DURATION_NUMBER = re.compile(r"\d+(?:\.\d+)?")
 
 
 def parse_duration(value: str | int | float) -> int | str:
-    """Parse a human-readable duration string to seconds.
-
-    Accepts integers/floats (treated as seconds) or strings like
-    ``"10min 2 sec"``, ``"1 week 1day 1h"``, ``"1 mon"``, ``"1 us"``,
-    ``"1m+30"``, ``"0"``.
-    """
+    """Parse an OCR-compatible human-readable duration into seconds."""
     if is_variable_ref(value):
         return value
     if isinstance(value, bool):
@@ -155,20 +143,24 @@ class Inject(SDLModel):
 
 
 class Event(SDLModel):
-    """A triggered action combining conditions and injects."""
+    """A triggered action combining assertion preconditions and injects."""
 
     name: str = ""
     source: Source | None = None
-    conditions: list[str] = Field(default_factory=list)
+    assertions: list[str] = Field(default_factory=list)
     injects: list[str] = Field(default_factory=list)
     description: str = ""
 
+    @model_validator(mode="before")
+    @classmethod
+    def reject_legacy_conditions(cls, value: object) -> object:
+        if isinstance(value, dict) and "conditions" in value:
+            raise ValueError("event conditions cannot state backend-neutral truth; reference precondition assertions")
+        return value
+
 
 class Script(SDLModel):
-    """A timed sequence of events.
-
-    Time values are human-readable duration strings parsed to seconds.
-    """
+    """A timed sequence of human-readable durations parsed to seconds."""
 
     name: str = ""
     start_time: int | str
@@ -271,28 +263,32 @@ class WorkflowStepStateRef(SDLModel):
 
 
 class WorkflowPredicate(SDLModel):
-    """Branch predicate over observable state, objectives, and prior step state.
+    """Typed branch predicate over assertions, objectives, and prior step state."""
 
-    Per ADR-073 the OCR scoring references (``metrics`` / ``evaluations`` /
-    ``tlos`` / ``goals``) were removed; a predicate branches on observable
-    ``conditions``, declared ``objectives``, and prior workflow ``steps``.
-    """
-
-    conditions: list[str] = Field(default_factory=list)
+    assertions: list[str] = Field(default_factory=list)
     objectives: list[str] = Field(default_factory=list)
     steps: list[WorkflowStepStateRef] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_legacy_conditions(cls, value: object) -> object:
+        if isinstance(value, dict) and "conditions" in value:
+            raise ValueError(
+                "workflow predicate conditions cannot state backend-neutral truth; reference precondition assertions"
+            )
+        return value
 
     @model_validator(mode="after")
     def validate_non_empty(self) -> "WorkflowPredicate":
         if any(
             (
-                self.conditions,
+                self.assertions,
                 self.objectives,
                 self.steps,
             )
         ):
             return self
-        raise ValueError("Workflow predicate must reference at least one condition, objective, or step state")
+        raise ValueError("Workflow predicate must reference at least one assertion, objective, or step state")
 
 
 class WorkflowSwitchCase(SDLModel):
