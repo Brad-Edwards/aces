@@ -1247,7 +1247,7 @@ def run_target_conformance(
     participant_claim_gaps = participant_runtime_capability_contract_gaps(target.manifest)
     observation_claim_gaps = observation_capability_contract_gaps(target.manifest)
     claim_gaps = (*participant_claim_gaps, *observation_claim_gaps)
-    capability_gaps = tuple((*surface_gaps, *claim_gaps))
+    capability_gaps = (*surface_gaps, *claim_gaps)
     passed = fixture_report.passed and not contract_gaps and not capability_gaps
     diagnostics = list(fixture_report.diagnostics)
     if contract_gaps:
@@ -1276,7 +1276,7 @@ def run_target_conformance(
             )
         )
     target_cases = _target_adapter_cases(target, effective_profile, reference_scenario=reference_scenario)
-    cases = tuple((*fixture_report.cases, *target_cases))
+    cases = (*fixture_report.cases, *target_cases)
     passed = passed and all(case.passed for case in target_cases)
     return BackendConformanceReport(
         profile=_to_profile_id(effective_profile),
