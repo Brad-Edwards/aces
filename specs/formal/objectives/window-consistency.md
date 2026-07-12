@@ -72,7 +72,7 @@ shape before compiler/planner semantics run. Each resolved reference carries:
 - validator checks: `implementations/python/packages/aces_sdl/validator/`
 - compiled runtime references and refresh derivation:
   - `implementations/python/packages/aces_processor/compiler.py`
-  - `implementations/python/packages/aces_processor/models.py`
+  - `implementations/python/packages/aces_processor/models/`
 - differential and property tests:
   - `implementations/python/tests/test_semantics_objectives.py`
     (`test_window_invariant_story_refs_must_resolve`,

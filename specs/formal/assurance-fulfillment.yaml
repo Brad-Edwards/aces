@@ -251,7 +251,7 @@ entries:
       - kind: unit_tests
         path: implementations/python/tests/test_runtime_conformance.py
       - kind: typed_ir_or_contract_coverage
-        path: implementations/python/packages/aces_processor/models.py
+        path: implementations/python/packages/aces_processor/models/history_event.py
     waived_artifacts:
       - kind: unit_tests
         date: 2026-06-23
