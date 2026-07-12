@@ -130,15 +130,27 @@ def _read_and_validate(
     if failure is not None:
         return None, _diagnostic(_FAILURE_CODES.get(failure, _CODE_TRANSPORT_UNAVAILABLE), address)
     parsed = parse_guest_facts(text or "")
-    if parsed is None:
-        return None, _diagnostic(_CODE_OBSERVATION_MALFORMED, address)
-    if parsed.get("duplicate"):
-        return None, _diagnostic(_CODE_OBSERVATION_DUPLICATE, address)
-    if not parsed.get("init_complete"):
-        return None, _diagnostic(_CODE_INIT_INCOMPLETE, address)
-    if parsed.get("challenge") != challenge:
-        return None, _diagnostic(_CODE_CHALLENGE_MISMATCH, address)
+    code = _staging_failure_code(parsed, challenge)
+    if code is not None:
+        return None, _diagnostic(code, address)
     return parsed, None
+
+
+def _staging_failure_code(parsed: Mapping[str, object] | None, challenge: str) -> str | None:
+    """Return the first staged-observation failure code, or None when the report is trusted.
+
+    Boot readiness, initialization, and freshness are ordered gates; a later gate never
+    repairs an earlier one, so the first failing check wins.
+    """
+
+    if parsed is None:
+        return _CODE_OBSERVATION_MALFORMED
+    staged = (
+        (bool(parsed.get("duplicate")), _CODE_OBSERVATION_DUPLICATE),
+        (not parsed.get("init_complete"), _CODE_INIT_INCOMPLETE),
+        (parsed.get("challenge") != challenge, _CODE_CHALLENGE_MISMATCH),
+    )
+    return next((code for failed, code in staged if failed), None)
 
 
 def _domain_observations(
@@ -263,13 +275,12 @@ def _expected_network(domain: Mapping[str, object]) -> tuple[str, ...]:
 
 
 def _expected_content(domain: Mapping[str, object]) -> tuple[str, ...]:
-    return tuple(
-        sorted(
-            f"{item.get('path')}|{_content_digest(str(item.get('content', '')))}|{_norm_mode(str(item.get('mode', '')))}"
-            for item in as_sequence(domain.get("content"))
-            if isinstance(item, Mapping)
-        )
-    )
+    def token(item: Mapping[str, object]) -> str:
+        digest = _content_digest(str(item.get("content", "")))
+        mode = _norm_mode(str(item.get("mode", "")))
+        return f"{item.get('path')}|{digest}|{mode}"
+
+    return tuple(sorted(token(item) for item in as_sequence(domain.get("content")) if isinstance(item, Mapping)))
 
 
 def _expected_accounts(domain: Mapping[str, object]) -> tuple[str, ...]:

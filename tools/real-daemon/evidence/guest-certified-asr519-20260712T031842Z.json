@@ -190,7 +190,7 @@
     "processor": "aces-reference-processor"
   },
   "defensive_evidence": {
-    "captured_at": "2026-07-12T02:36:12.707249+00:00",
+    "captured_at": "2026-07-12T03:20:52.516205+00:00",
     "evaluator_evidence_channels": [],
     "evidence_kind": "telemetry",
     "evidence_source": "structural-evaluator-channel",
@@ -213,7 +213,7 @@
         "passed": true,
         "score": null,
         "status": "ready",
-        "timestamp": "2026-07-12T02:36:12.707249+00:00"
+        "timestamp": "2026-07-12T03:20:52.516205+00:00"
       }
     ],
     "limitations": [
@@ -226,14 +226,14 @@
         "negative_boundary_checks"
       ],
       "max_score": null,
-      "observed_at": "2026-07-12T02:36:12.707249+00:00",
+      "observed_at": "2026-07-12T03:20:52.516205+00:00",
       "passed": true,
       "resource_type": "participant-loop-evaluation",
       "run_id": "scenario-evidence",
       "score": null,
       "state_schema_version": "evaluation-result-state/v1",
       "status": "ready",
-      "updated_at": "2026-07-12T02:36:12.707249+00:00"
+      "updated_at": "2026-07-12T03:20:52.516205+00:00"
     }
   },
   "evidence_source_mode": "guest-certified",
@@ -287,13 +287,13 @@
     },
     "binding": {
       "boot_artifact_digests": {
-        "initramfs": "sha256:5422c9311818db1935e9621a8e96e8e27b26ae014f4cc1b1e0ec47524f6e38cb",
+        "initramfs": "sha256:303be8a7ce5a5b9b32c68a9b6469e24034483ef6d978bbcdd2e29ca577a29efd",
         "kernel": "sha256:bb4b6f0a792f26999ca7d881a183ec5ab94239073448ddd12cd28e579860face"
       },
       "configuration_digest": "sha256:b33ad469eaf1a47963e49da8adc7376fc22880ac3e6126b427239daa00dc6d99",
       "connection_uri_digest": "sha256:9bea68fb783f6b3b82c458cf8ce5e62508864d50076287b24ca436af2d110eeb",
       "driver": "guest-certified-appliance",
-      "driver_configuration_digest": "sha256:fd2ec007ef507306ae713c66031111c06f55113181a937401dfbd94abc7bfdb4",
+      "driver_configuration_digest": "sha256:0a314d970cd037fd46ebde0576ca601401e146181dd1549e525bab208a2c9e78",
       "name_prefix_digest": "sha256:5ee63117aa996ced3460eb178f900164350fc8a3b17af78970decb6eed534b93",
       "realization_envelope_digest": "sha256:8416a600a6f1864e1b80e49fa60eef5f423f9249f2ea7dc56e14d8a669e33e2e"
     },
@@ -338,7 +338,7 @@
     },
     "guest_observed": {
       "certifying": true,
-      "challenge": "1c35d3b17f2c8a3bb3620a9509c15f79",
+      "challenge": "fe994cd2e7866dd60b98e74e64a88cfb",
       "domains": [
         {
           "accounts": [],
@@ -358,8 +358,8 @@
           "vcpus": 1
         }
       ],
-      "observed_at": "2026-07-12T02:36:12.288648+00:00",
-      "operation_ref": "sha256:d2ca251d7720b4ac56f091066a2d7488bbddd906c33a7bf770468e394c0cdbab",
+      "observed_at": "2026-07-12T03:20:52.159020+00:00",
+      "operation_ref": "sha256:c18ba445c2cd1183774347891759b768d4863493c8e39626ed8885977031630c",
       "probe_policy": "serial-fact-channel/v1",
       "source": "guest-observed"
     },
@@ -457,7 +457,7 @@
       }
     ]
   },
-  "recorded_at": "2026-07-12T02:36:12.707249+00:00",
+  "recorded_at": "2026-07-12T03:20:52.516205+00:00",
   "redaction_provenance": {
     "policy": "Only allowlisted, bounded fields are copied into the artifact. Raw libvirt XML, domain UUIDs, QEMU command lines, host paths, connection URIs, credentials, private keys, and backend-private inspect payloads are never written.",
     "provenance_refs": [
@@ -475,7 +475,7 @@
       "backend-private-inspect-payload"
     ]
   },
-  "run_id": "asr519-20260712T023403Z",
+  "run_id": "asr519-20260712T031842Z",
   "scenario": {
     "content_sha256": "sha256:54cfbf2301510771eff148748e60dc0917efbbf695270d9a5b837ee80bcbb454",
     "name": "techvault-guest-certified",

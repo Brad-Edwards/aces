@@ -145,31 +145,41 @@ def _validate_guest_observations(facts: Mapping[str, Any]) -> list[str]:
     guest = facts.get("guest_observed")
     if not isinstance(guest, Mapping) or guest.get("status") == "not-observed":
         return []
+    problems = _validate_guest_metadata(guest)
+    domains = guest.get("domains")
+    if not isinstance(domains, list | tuple) or not domains:
+        return [*problems, "guest observation requires at least one observed domain"]
+    daemon_addresses = _daemon_domain_addresses(facts)
+    for item in domains:
+        problems.extend(_validate_guest_domain(item, daemon_addresses))
+    return problems
+
+
+_GUEST_METADATA_FIELDS = (
+    ("observation timestamp", "observed_at"),
+    ("probe policy", "probe_policy"),
+    ("fresh challenge", "challenge"),
+)
+
+
+def _validate_guest_metadata(guest: Mapping[str, Any]) -> list[str]:
     problems: list[str] = []
     if not _is_canonical_sha256(guest.get("operation_ref")):
         problems.append("guest observation requires a canonical operation reference")
     if not isinstance(guest.get("certifying"), bool):
         problems.append("guest observation requires an explicit certifying flag")
-    for label, field_name in (
-        ("observation timestamp", "observed_at"),
-        ("probe policy", "probe_policy"),
-        ("fresh challenge", "challenge"),
-    ):
-        if not _nonempty_string(guest.get(field_name)):
-            problems.append(f"guest observation requires a {label}")
-    domains = guest.get("domains")
-    if not isinstance(domains, list | tuple) or not domains:
-        problems.append("guest observation requires at least one observed domain")
-        return problems
-    daemon = facts.get("daemon_observed", {})
-    daemon_addresses = {
-        item.get("address")
-        for item in (daemon.get("domains", ()) if isinstance(daemon, Mapping) else ())
-        if isinstance(item, Mapping)
-    }
-    for item in domains:
-        problems.extend(_validate_guest_domain(item, daemon_addresses))
+    problems.extend(
+        f"guest observation requires a {label}"
+        for label, field_name in _GUEST_METADATA_FIELDS
+        if not _nonempty_string(guest.get(field_name))
+    )
     return problems
+
+
+def _daemon_domain_addresses(facts: Mapping[str, Any]) -> set[object]:
+    daemon = facts.get("daemon_observed", {})
+    domains = daemon.get("domains", ()) if isinstance(daemon, Mapping) else ()
+    return {item.get("address") for item in domains if isinstance(item, Mapping)}
 
 
 _GUEST_DOMAIN_FIELDS = ("architecture", "vcpus", "memory_mib", "network", "content", "accounts", "services")

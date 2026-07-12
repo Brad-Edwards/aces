@@ -174,29 +174,9 @@ def run_libvirt_evidence_run(
     unrealized_capabilities: tuple[str, ...] = ()
     guest_observed: Mapping[str, Any] | None = None
     if mode in _NATIVE_MODES and native_driver is not None:
-        try:
-            native_snapshot, realize_check, unrealized_capabilities, operation_id = _realize_native_substrate(
-                execution_plan, control_plane, native_driver
-            )
-            checks.append(realize_check)
-            if native_snapshot is not None and mode == "guest-certified":
-                # Native-proof boundary: only the default production driver/transport
-                # (no injected factory) yields a certifying artifact. Injected fakes
-                # may exercise orchestration but are marked non-certifying so their
-                # evidence can never be published as a real guest certification.
-                guest_observed = _guest_observed_report(native_driver, operation_id, certifying=driver_factory is None)
-        finally:
-            # Cleanup runs after every attempt. A realized substrate is torn down and
-            # its verification recorded; a failed/unrealized attempt (the driver has
-            # already rolled back) is only reported when residue actually remains, so
-            # an honestly-unrealized run keeps cleanup not-applicable.
-            if native_snapshot is not None:
-                native_cleanup_verified, cleanup_diagnostics = _verify_native_cleanup(native_driver, native_snapshot)
-                checks.append(EvidenceCheck("native_substrate_cleanup", native_cleanup_verified, cleanup_diagnostics))
-            else:
-                residue_ok, residue_diagnostics = _sweep_residue(native_driver)
-                if not residue_ok:
-                    checks.append(EvidenceCheck("native_substrate_residue", False, residue_diagnostics))
+        native_snapshot, native_cleanup_verified, unrealized_capabilities, guest_observed = _run_native_mode(
+            mode, execution_plan, control_plane, native_driver, driver_factory, checks
+        )
 
     inputs = EvidenceArtifactInputs(
         scenario_path=scenario_path,
@@ -215,6 +195,49 @@ def run_libvirt_evidence_run(
     return LibvirtEvidenceRunReport(
         scenario_path.name, run_id, str(project_dir), mode, tuple(checks), artifact, artifact_path
     )
+
+
+def _run_native_mode(
+    mode: str,
+    execution_plan: ExecutionPlan,
+    control_plane: RuntimeControlPlane,
+    native_driver: TechVaultNativeLibvirtDriver,
+    driver_factory: Callable[[], TechVaultNativeLibvirtDriver] | None,
+    checks: list[EvidenceCheck],
+) -> tuple[Mapping[str, Any] | None, bool | None, tuple[str, ...], Mapping[str, Any] | None]:
+    """Realize the native substrate, capture any guest report, and clean up in a finally-path.
+
+    Native-proof boundary: only the default production driver/transport (no injected
+    factory) yields a certifying guest artifact; injected fakes are marked
+    non-certifying so their evidence can never be published as a real certification.
+    """
+    native_snapshot: Mapping[str, Any] | None = None
+    guest_observed: Mapping[str, Any] | None = None
+    unrealized: tuple[str, ...] = ()
+    try:
+        native_snapshot, realize_check, unrealized, operation_id = _realize_native_substrate(
+            execution_plan, control_plane, native_driver
+        )
+        checks.append(realize_check)
+        if native_snapshot is not None and mode == "guest-certified":
+            guest_observed = _guest_observed_report(native_driver, operation_id, certifying=driver_factory is None)
+    finally:
+        native_cleanup_verified = _append_cleanup_check(native_driver, native_snapshot, checks)
+    return native_snapshot, native_cleanup_verified, unrealized, guest_observed
+
+
+def _append_cleanup_check(
+    native_driver: TechVaultNativeLibvirtDriver, native_snapshot: Mapping[str, Any] | None, checks: list[EvidenceCheck]
+) -> bool | None:
+    """Cleanup runs after every attempt; residue on a failed/unrealized run is reported."""
+    if native_snapshot is not None:
+        verified, diagnostics = _verify_native_cleanup(native_driver, native_snapshot)
+        checks.append(EvidenceCheck("native_substrate_cleanup", verified, diagnostics))
+        return verified
+    residue_ok, residue_diagnostics = _sweep_residue(native_driver)
+    if not residue_ok:
+        checks.append(EvidenceCheck("native_substrate_residue", False, residue_diagnostics))
+    return None
 
 
 def _finalize_artifact(

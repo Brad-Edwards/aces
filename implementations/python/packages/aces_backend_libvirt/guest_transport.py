@@ -13,10 +13,12 @@ concern taxonomy, or the evidence schema.
 from __future__ import annotations
 
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
+
+_Handler = Callable[[dict[str, object], list[str]], None]
 
 FACT_HEADER = "ACES-GUEST-FACTS v1"
 INIT_COMPLETE_MARKER = "init complete"
@@ -138,21 +140,19 @@ def _consume_line(facts: dict[str, object], line: str, seen: set[str]) -> None:
     handler(facts, fields)
 
 
-def _set_scalar(name: str, cast: object):
+def _set_scalar(name: str, cast: Callable[[str], object]) -> _Handler:
     def _apply(facts: dict[str, object], fields: list[str]) -> None:
         if fields:
-            facts[name] = cast(fields[0]) if cast is not str else fields[0]  # type: ignore[operator]
+            facts[name] = cast(fields[0])
 
     return _apply
 
 
-def _append(name: str, arity: int, build):
+def _append(name: str, arity: int, build: Callable[[list[str]], dict[str, object]]) -> _Handler:
     def _apply(facts: dict[str, object], fields: list[str]) -> None:
         bucket = facts[name]
         if isinstance(bucket, list) and len(bucket) < _MAX_ENTRIES and len(fields) >= arity:
-            entry = build(fields)
-            if entry is not None:
-                bucket.append(entry)
+            bucket.append(build(fields))
 
     return _apply
 

@@ -10,6 +10,8 @@ import typer
 from aces_operations.libvirt_evidence_run import LibvirtEvidenceRunConfig, run_libvirt_evidence_run
 from aces_operations.techvault_live import TechVaultLiveConfig, validate_techvault_live
 
+_DEFAULT_CONNECTION_URI = "qemu:///system"
+
 app = typer.Typer(help="Libvirt backend operations.")
 techvault_app = typer.Typer(help="TechVault operational scenario checks.")
 app.add_typer(techvault_app, name="techvault")
@@ -61,7 +63,7 @@ def validate_live(
         help="Skip the native libvirt resource confirmation prompt.",
     ),
     connection_uri: str = typer.Option(
-        "qemu:///system",
+        _DEFAULT_CONNECTION_URI,
         "--connection-uri",
         callback=_noncredential_connection_uri,
         help="libvirt connection URI.",
@@ -104,7 +106,7 @@ def guest_certify(
     run_id: str | None = typer.Option(None, "--run-id", help="Run id for the evidence artifact."),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip the native libvirt resource confirmation prompt."),
     connection_uri: str = typer.Option(
-        "qemu:///system",
+        _DEFAULT_CONNECTION_URI,
         "--connection-uri",
         callback=_noncredential_connection_uri,
         help="libvirt connection URI.",
@@ -156,7 +158,7 @@ def validate_evidence(
         help="Realize the libvirt substrate natively (requires a libvirt daemon); default is deterministic.",
     ),
     connection_uri: str = typer.Option(
-        "qemu:///system",
+        _DEFAULT_CONNECTION_URI,
         "--connection-uri",
         callback=_noncredential_connection_uri,
         help="libvirt connection URI (native-live only).",

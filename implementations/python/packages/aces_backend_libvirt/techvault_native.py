@@ -214,18 +214,19 @@ class TechVaultNativeLibvirtDriver:
     ) -> DriverResult:
         networks, domains = specs
         network_handles, domain_handles = handles
-        observation_diagnostics = techvault_observation_diagnostics(
+        diagnostics = techvault_observation_diagnostics(
             networks=networks,
             domains=domains,
             result=DriverResult(observations=observations),
         )
-        if observation_diagnostics:
-            observation_diagnostics.extend(self._rollback(connection, network_handles, domain_handles))
-            return DriverResult(diagnostics=tuple(observation_diagnostics))
-        guest_observations, guest_diagnostics = self._guest_stage(connection, matrix, specs, observations)
-        if guest_diagnostics:
-            guest_diagnostics.extend(self._rollback(connection, network_handles, domain_handles))
-            return DriverResult(diagnostics=tuple(guest_diagnostics))
+        # Staged: the guest observation runs only after the daemon gate passes and a
+        # later stage never repairs an earlier one.
+        guest_observations: tuple[RealizationObservation, ...] = ()
+        if not diagnostics:
+            guest_observations, diagnostics = self._guest_stage(connection, matrix, specs, observations)
+        if diagnostics:
+            diagnostics.extend(self._rollback(connection, network_handles, domain_handles))
+            return DriverResult(diagnostics=tuple(diagnostics))
         try:
             binding = self._material_binding(envelope_digest, configuration_digest)
             snapshot = snapshot_from_observations(matrix, observations, binding=binding)
@@ -260,11 +261,13 @@ class TechVaultNativeLibvirtDriver:
     ) -> dict[str, object]:
         return _native_matrix(networks=networks, domains=domains, name_prefix=self.name_prefix)
 
-    def _render_domain_xml(self, domain: Mapping[str, object], *, kernel: Path, initrd: Path) -> str:
+    # Base extension hooks need no instance state; the guest-certified subclass overrides them.
+    @staticmethod
+    def _render_domain_xml(domain: Mapping[str, object], *, kernel: Path, initrd: Path) -> str:
         return _domain_xml(domain, kernel=kernel, initrd=initrd)
 
+    @staticmethod
     def _guest_stage(
-        self,
         connection: object,
         matrix: Mapping[str, object],
         specs: tuple[tuple[NetworkSpec, ...], tuple[DomainSpec, ...]],
@@ -584,7 +587,7 @@ def _artifact_token(address: str) -> str:
 
 _MESSAGES = {
     _CODE_UNAVAILABLE: "Libvirt connection is unavailable for native TechVault realization.",
-    _CODE_RESIDUAL_STATE: "Native TechVault rollback could not verify cleanup for '{address}'; residual state may remain.",
+    _CODE_RESIDUAL_STATE: "TechVault rollback could not verify cleanup for '{address}'; residual state may remain.",
     _CODE_OWNERSHIP_CONFLICT: "Native object for '{address}' is not owned by that ACES address; refusing mutation.",
     _CODE_READBACK_FAILED: "Native libvirt TechVault readback for '{address}' did not succeed.",
 }

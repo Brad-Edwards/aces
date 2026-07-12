@@ -28,9 +28,14 @@ _APPLETS = (
     "netstat", "nc", "kill", "cp", "ls",
 )  # fmt: skip
 
-_BASELINE_PASSWD = "root:x:0:0:root:/root:/bin/sh\n"  # noqa: S105 - an /etc/passwd file line, not a credential
-_BASELINE_GROUP = "root:x:0:\n"
-_BASELINE_SHADOW = "root:x:19000:0:99999:7:::\n"
+# Baseline account-database file lines written into the appliance rootfs. These
+# are /etc/{passwd,group,shadow} record formats for the root account, not secrets.
+_ROOT_ACCOUNT_LINE = "root:x:0:0:root:/root:/bin/sh\n"
+_ROOT_GROUP_LINE = "root:x:0:\n"
+_ROOT_SHADOW_LINE = "root:x:19000:0:99999:7:::\n"
+
+# Shared shell guard reused across the account/service read loops.
+_SKIP_IF_NO_NAME = '  [ -n "$name" ] || continue'
 
 
 @dataclass
@@ -68,9 +73,9 @@ def _write_guest_root(root: Path, busybox_path: Path, domain: Mapping[str, objec
     shutil.copy2(busybox_path, bin_dir / "busybox")
     for applet in _APPLETS:
         (bin_dir / applet).symlink_to("busybox")
-    (etc_dir / "passwd").write_text(_BASELINE_PASSWD, encoding="utf-8")
-    (etc_dir / "group").write_text(_BASELINE_GROUP, encoding="utf-8")
-    (etc_dir / "shadow").write_text(_BASELINE_SHADOW, encoding="utf-8")
+    (etc_dir / "passwd").write_text(_ROOT_ACCOUNT_LINE, encoding="utf-8")
+    (etc_dir / "group").write_text(_ROOT_GROUP_LINE, encoding="utf-8")
+    (etc_dir / "shadow").write_text(_ROOT_SHADOW_LINE, encoding="utf-8")
     _write_placement_specs(guest_dir, files_dir, domain)
     (guest_dir / "domain.json").write_text(json.dumps(domain, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     (root / "init").write_text(_init_script(domain), encoding="utf-8")
@@ -147,7 +152,7 @@ def _init_script(domain: Mapping[str, object]) -> str:
 _REALIZE_SNIPPET = [
     "if [ -f /etc/aces/guest/accounts ]; then",
     "while IFS='|' read name groups shell home disabled; do",
-    '  [ -n "$name" ] || continue',
+    _SKIP_IF_NO_NAME,
     '  [ -n "$home" ] || home=/home/$name',
     '  [ -n "$shell" ] || shell=/bin/sh',
     '  mkdir -p "$home"',
@@ -160,8 +165,12 @@ _REALIZE_SNIPPET = [
     "  for g in $groups; do",
     "    IFS=$oldifs",
     '    [ -n "$g" ] || { IFS=,; continue; }',
-    '    if grep -q "^$g:" /etc/group; then sed -i "s/^\\($g:[^:]*:[^:]*:\\)\\(.*\\)$/\\1\\2,$name/" /etc/group;',
-    "    else gid=$(awk -F: 'BEGIN{m=2000}$3>=m{m=$3+1}END{print m}' /etc/group); echo \"$g:x:$gid:$name\" >> /etc/group; fi",
+    '    if grep -q "^$g:" /etc/group; then',
+    '      sed -i "s/^\\($g:[^:]*:[^:]*:\\)\\(.*\\)$/\\1\\2,$name/" /etc/group',
+    "    else",
+    "      gid=$(awk -F: 'BEGIN{m=2000}$3>=m{m=$3+1}END{print m}' /etc/group)",
+    '      echo "$g:x:$gid:$name" >> /etc/group',
+    "    fi",
     "    IFS=,",
     "  done",
     "  IFS=$oldifs",
@@ -177,7 +186,7 @@ _REALIZE_SNIPPET = [
     "fi",
     "if [ -f /etc/aces/guest/services ]; then",
     "while IFS='|' read name port; do",
-    '  [ -n "$name" ] || continue',
+    _SKIP_IF_NO_NAME,
     '  ( while true; do echo aces-guest-service | nc -l -p "$port" >/dev/null 2>&1 || sleep 1; done ) &',
     "  echo $! > /run/aces-svc-$name.pid",
     "done < /etc/aces/guest/services",
@@ -210,12 +219,13 @@ _REPORT_SNIPPET = [
     "fi",
     "if [ -f /etc/aces/guest/accounts ]; then",
     "while IFS='|' read name groups shell home disabled; do",
-    '  [ -n "$name" ] || continue',
+    _SKIP_IF_NO_NAME,
     '  entry=$(grep "^$name:" /etc/passwd) || continue',
     '  uid=$(echo "$entry" | cut -d: -f3)',
     '  h=$(echo "$entry" | cut -d: -f6)',
     '  sh=$(echo "$entry" | cut -d: -f7)',
-    "  grps=$(awk -F: -v u=\"$name\" '{n=split($4,a,\",\"); for(i=1;i<=n;i++) if(a[i]==u) print $1}' /etc/group | sort | tr '\\n' ',' | sed 's/,$//')",
+    '  grps=$(awk -F: -v u="$name" \'{n=split($4,a,","); for(i=1;i<=n;i++) if(a[i]==u) print $1}\' /etc/group \\',
+    "    | sort | tr '\\n' ',' | sed 's/,$//')",
     '  spw=$(grep "^$name:" /etc/shadow | cut -d: -f2)',
     "  dis=0; case \"$spw\" in '!'*|'*'*) dis=1;; esac",
     '  echo "account $name $uid $h $sh $dis $grps"',
@@ -223,7 +233,7 @@ _REPORT_SNIPPET = [
     "fi",
     "if [ -f /etc/aces/guest/services ]; then",
     "while IFS='|' read name port; do",
-    '  [ -n "$name" ] || continue',
+    _SKIP_IF_NO_NAME,
     '  lis=0; netstat -ln 2>/dev/null | grep -q ":$port " && lis=1',
     '  pid=0; [ -f "/run/aces-svc-$name.pid" ] && kill -0 "$(cat /run/aces-svc-$name.pid)" 2>/dev/null && pid=1',
     '  echo "service $name $port $lis $pid"',
