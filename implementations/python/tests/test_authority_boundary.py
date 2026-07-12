@@ -63,6 +63,10 @@ authority_roots:
     root: contracts/concept-authority/
     authority: concept-family and controlled-vocabulary authority artifacts
     family: concept-authority
+  - id: normative_provenance
+    root: contracts/provenance/
+    authority: revision-pinned lineage and derivation records
+    family: provenance
 non_normative_roots:
   - id: reference_implementations
     root: implementations/
@@ -107,7 +111,8 @@ normative_artifact_families:
 
 # ADR-009 is immutable; the drift guard requires every authority-root token
 # (specs/, contracts/schemas/, contracts/fixtures/, contracts/profiles/,
-# contracts/realization-envelopes/, contracts/concept-authority/) to appear
+# contracts/realization-envelopes/, contracts/concept-authority/,
+# contracts/provenance/) to appear
 # across the immutable ADR pair. ADR-019 is the
 # canonical-seam decision — required by adr_refs and by the drift guard.
 _GOOD_ADR_AUTHORITY = """# ADR-009: Normative Artifact Authority and Repository Structure
@@ -151,6 +156,7 @@ _GOOD_AUTHORITY_ROOTS: tuple[str, ...] = (
     "contracts/profiles",
     "contracts/realization-envelopes",
     "contracts/concept-authority",
+    "contracts/provenance",
 )
 _GOOD_NON_NORMATIVE_ROOTS: tuple[str, ...] = (
     "implementations",
@@ -181,7 +187,7 @@ def _seed_repo(
     *,
     policy_body: str | None = _GOOD_POLICY,
     adr_body: str | None = _GOOD_ADR_AUTHORITY,
-    seam_body: str | None = "ADR-019 stub mentioning concept-authority and realization-envelopes.\n",
+    seam_body: str | None = "ADR-019 stub mentioning concept-authority, realization-envelopes, and provenance.\n",
     contracts_readme: str | None = _GOOD_CONTRACTS_README,
     specs_readme: str | None = _GOOD_SPECS_README,
     authority_roots: tuple[str, ...] = _GOOD_AUTHORITY_ROOTS,
@@ -307,6 +313,7 @@ def test_canonical_authority_root_ids_cover_every_family() -> None:
         "normative_profiles",
         "normative_realization_envelopes",
         "normative_concept_authority",
+        "normative_provenance",
     }
 
 

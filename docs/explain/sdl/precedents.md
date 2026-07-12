@@ -1,6 +1,12 @@
 # SDL Design Precedents
 
-Every SDL element is adapted from an existing system or standard. This document traces each element to its source.
+ACES combines externally influenced and ACES-native language families. This
+document summarizes design influences and comparisons; the revision-pinned,
+machine-readable provenance record is
+[`contracts/provenance/sdl-lineage-ledger-v1.json`](../../../contracts/provenance/sdl-lineage-ledger-v1.json).
+Only the ledger classifies provenance, artifact/code derivation, compatibility,
+and notice obligations. A source named here may explain a design concern
+without being a source from which ACES adopted syntax, semantics, or code.
 
 The SDL does not borrow every concern from the same place. In practice:
 
@@ -15,33 +21,43 @@ The SDL does not borrow every concern from the same place. In practice:
 - **portable runtime/result contracts** follow the language-neutral boundary
   style used by systems such as Kubernetes, Temporal, and OpenC2
 
-So the source tables below explain both where a section's author-facing shape
-comes from and, where needed, which systems inform its execution semantics.
+The tables below are design-rationale summaries: they identify the plane on
+which a source informed comparison or adaptation. They are not a parallel
+provenance registry.
 
-Each source table adds a **Borrowed** column marking whether ACES took the
-source's *syntax* (the author-facing shape, keys, or structure), its *semantics*
-(the meaning or runtime behavior), or *both*. Where a row is ambiguous, the cell
-names which part was adopted and which was not. The "Deliberate Omissions" table
-is not a borrowing table and carries no such column.
+Each source table adds an **Influence plane** column: *syntax* means the
+author-facing shape was compared or adapted, *semantics* means the source
+informed meaning or behavior, and *both* means both kinds of design work. These
+labels do not assert copying, conformance, or compatibility. The ledger's claim
+plane, classification, exact source boundary, and divergence are authoritative.
+The "Deliberate Omissions" table carries no influence-plane column.
 
 ## Core Structure (from Open Cyber Range SDL)
 
-The base sections start from the [OCR SDL](https://github.com/Open-Cyber-Range/SDL-parser) v0.21.2 surface and are adapted into Python/Pydantic (per ADR-073 the OCR scoring pipeline — metrics/evaluations/TLOs/goals — was not adopted; it lives in the experiment/evaluator plane instead). This repository aims for coverage parity across the adopted OCR concepts while remaining its own SDL; when behavior diverges or OCR's own sources disagree, this document states repository behavior explicitly instead of making clone-level compatibility claims. The OCR SDL was developed by the Norwegian Cyber Range (CR14/NTNU).
+The base sections have syntax and translated-model ancestry in
+[OCR SDL v0.21.2](https://github.com/Open-Cyber-Range/SDL-parser/tree/fe83e8281fc4b954967fbaa5a0d099007ddcb06c),
+pinned to revision `fe83e8281fc4b954967fbaa5a0d099007ddcb06c`.
+The ledger names exact Rust and ACES artifact boundaries and records partial
+syntax compatibility only. ACES does not claim drop-in parser, schema,
+validation, or runtime compatibility. Per ADR-073, the OCR scoring pipeline
+(metrics/evaluations/TLOs/goals) was removed from authored SDL and lives in the
+experiment/evaluator plane. OCR SDL was developed by CR14 / the Norwegian
+Cyber Range.
 
 
-| SDL Element | OCR Source | Borrowed | Changes |
+| SDL Element | OCR Source | Influence plane | Changes |
 | -------------------------- | ------------------------- | --- | --------------------------------------------------- |
 | Scenario | `Scenario` struct | Syntax | Added SDL extension fields |
 | Node (VM/Switch) | `Node`, `VM`, `Switch` | Syntax | Added `os`, `os_version`, `services`, `asset_value` |
 | Resources | `Resources` | Syntax | Human-readable RAM parsing via Python |
-| Role | `Role` | Syntax | Direct port |
+| Role | `Role` | Syntax | OCR-adapted syntax and translated model structure; partial syntax compatibility at the pinned revision |
 | InfraNode | `InfraNode` | Syntax | Added `acls`, `internal` flag |
-| Feature | `Feature` | Syntax | Direct port |
+| Feature | `Feature` | Syntax | OCR-adapted syntax and translated model structure; partial syntax compatibility at the pinned revision |
 | Condition | `Condition` | Both | Added `timeout`, `retries`, `start_period` |
-| Vulnerability | `Vulnerability` | Syntax | Direct port |
+| Vulnerability | `Vulnerability` | Syntax | OCR-adapted syntax and translated model structure; partial syntax compatibility at the pinned revision |
 | Metric/Evaluation/TLO/Goal | OCR scoring pipeline | Not adopted | Removed from the SDL per ADR-073; graded scoring/reward lives in the experiment/evaluator plane (ADR-055/064/069) |
-| Entity | `Entity` + OCR entity surface | Both | Direct port, including OCR fact maps |
-| Inject/Event/Script/Story | OCR orchestration | Both | Direct port |
+| Entity | `Entity` + OCR entity surface | Both | OCR-adapted syntax and translated model structure, including fact-map ancestry; current semantics are ACES-governed |
+| Inject/Event/Script/Story | OCR orchestration | Both | OCR-adapted syntax and translated model structure; current orchestration semantics are ACES-governed |
 | Source | `Source` (name + version) | Syntax | Made provider-neutral |
 
 
@@ -50,7 +66,7 @@ The base sections start from the [OCR SDL](https://github.com/Open-Cyber-Range/S
 ### From CybORG CAGE Challenge
 
 
-| SDL Element | CybORG Source | Borrowed | What We Adapted |
+| SDL Element | CybORG Source | Influence plane | What We Adapted |
 | ----------------------- | ------------------------------------------- | --- | --------------------------------------------- |
 | `Agent` | `Agents:` section (Scenario YAML) | Both | Actions, starting sessions, reward calculator |
 | `InitialKnowledge` | `INT:` (Initial Network Topology) | Semantics | Known hosts and subnets at start |
@@ -67,7 +83,7 @@ ecosystem surfaces. In many cases they are precedents for concerns the
 requirements recognize even when the current SDL syntax does not expose the
 full shape directly.
 
-| Concern | Primary Sources | Borrowed | What We Adapted |
+| Concern | Primary Sources | Influence plane | What We Adapted |
 | ------- | --------------- | --- | --------------- |
 | Participant decision surfaces and role-scoped observations | OpenRange episode/runtime model | Semantics | Participant-visible decision context is treated as a first-class concern distinct from hidden truth assets and internal apparatus state |
 | Control-context assets (instructions, directives, policies) | OpenRange prompt modes, agent-oriented benchmark/task systems | Semantics | Execution-guiding context is modeled as a participant concern without binding the ecosystem to one prompting or policy framework |
@@ -83,7 +99,7 @@ Issue #71 adds a formal participant-semantics design in
 `specs/formal/participant-semantics/` and ADR-022. These precedents inform that
 design without becoming the ACES runtime API or authoring syntax.
 
-| Concern | Primary Sources | Borrowed | What We Adapted |
+| Concern | Primary Sources | Influence plane | What We Adapted |
 | ------- | --------------- | --- | --------------- |
 | Single-agent episode interface | [OpenAI Gym](https://arxiv.org/abs/1606.01540), [Gymnasium](https://arxiv.org/abs/2407.17032) | Semantics | Actions, observations, rewards, reset, termination, and truncation are explicit semantic concepts rather than incidental adapter methods |
 | Multi-agent environment ordering | [PettingZoo](https://arxiv.org/abs/2009.14471), [OpenSpiel](https://arxiv.org/abs/1908.09453), Markov-game literature | Semantics | Per-participant histories and information structure are first-class; joint behavior is not collapsed into one global action stream |
@@ -107,7 +123,7 @@ shared-state references without making framework/tool APIs the SDL authority.
 ### From CyRIS
 
 
-| SDL Element | CyRIS Source | Borrowed | What We Adapted |
+| SDL Element | CyRIS Source | Influence plane | What We Adapted |
 | ----------- | ----------------------------------------- | --- | ------------------------------------------------- |
 | `Content` | `copy_content`, `emulate_traffic_capture` | Semantics | Generalized to file/dataset/directory types |
 | `Account` | `add_account`, `modify_account` | Semantics | Preserved host account-placement lineage; ACES-specific account metadata such as groups, password strength, SPN, and auth method are extensions, not CyRIS-derived directory semantics |
@@ -119,7 +135,7 @@ The `runtime.identity_authorities` surface is a neutral runtime inventory
 surface. It borrows concepts from standards and literature, but does not adopt
 one provider schema as the SDL schema.
 
-| SDL Element | Source Class | Borrowed | What We Adapted |
+| SDL Element | Source Class | Influence plane | What We Adapted |
 | ----------- | ------------ | --- | --------------- |
 | `RuntimeIdentityAuthority` | LDAP/X.500 naming contexts, Kerberos realms, SAML/OIDC issuers, SCIM/IAM tenants, NIST SP 800-63C-4 federation guidance | Semantics | An authority boundary with stable ACES id plus observed namespace facts such as domain, realm, issuer, tenant, and base DN; all authority-local stable ids share one namespace |
 | `RuntimeIdentityService` | LDAP/Kerberos/SAML/OIDC/SCIM/IAM protocol endpoints and same-node `Node.services` transport bindings | Semantics | Protocol/API endpoint inventory without treating the endpoint as the directory contents |
@@ -139,7 +155,7 @@ counterpart: it models the in-app authorization store of search clusters,
 key-value stores, dashboards, and platforms, distinct from the wire-protocol
 directory above and from database engine GRANTs.
 
-| SDL Element | Source Class | Borrowed | What We Adapted |
+| SDL Element | Source Class | Influence plane | What We Adapted |
 | ----------- | ------------ | --- | --------------- |
 | `RuntimeAppAuthorization` | Ferraiolo/Kuhn RBAC, Sandhu et al. RBAC96, ANSI INCITS 359 | Semantics | An application-internal authorization store with a stable ACES id and an open `resource_vocabulary` spine discriminator; tier placement is derived from the referencing spine, not declared |
 | `RuntimeAppAuthorizationPrincipal` | OpenSearch/Elasticsearch security users, Cassandra `system_auth`, Redis ACL users, dashboard/platform accounts | Semantics | Users, service accounts, API keys, and backend roles with reserved/hidden flags and a `credential_classification` only — no raw bcrypt hash, API key, or password |
@@ -155,7 +171,7 @@ any one product's security configuration as the canonical authored SDL shape.
 ### From STIX 2.1
 
 
-| SDL Element | STIX Source | Borrowed | What We Adapted |
+| SDL Element | STIX Source | Influence plane | What We Adapted |
 | -------------------------- | --------------------------------------- | --- | ------------------------------------------ |
 | `Relationship` | Relationship SRO (typed directed edges) | Both | Simplified to 7 relationship types |
 | Cross-reference validation | STIX object referencing model | Semantics | Source/target resolve to any named element |
@@ -165,7 +181,7 @@ any one product's security configuration as the canonical authored SDL shape.
 ### From CACAO v2.0
 
 
-| SDL Element | CACAO Source | Borrowed | What We Adapted |
+| SDL Element | CACAO Source | Influence plane | What We Adapted |
 | --------------------- | ---------------------------------- | --- | ---------------------------------------------------------------------- |
 | `Variable` | `playbook_variables` | Syntax | Types, defaults, allowed_values |
 | `${var}` substitution | CACAO variable substitution syntax | Both (syntax borrowed; resolution semantics deferred to instantiation) | Deferred to instantiation time |
@@ -178,7 +194,7 @@ any one product's security configuration as the canonical authored SDL shape.
 These sources do not define the YAML keys directly, but they strongly inform
 how the runtime interprets workflow behavior after parsing.
 
-| Concern | Primary Sources | Borrowed | What We Adapted |
+| Concern | Primary Sources | Influence plane | What We Adapted |
 | ------- | --------------- | --- | --------------- |
 | Conditional branching over declared predicates | AWS Step Functions `Choice`, CACAO conditional steps | Semantics | Explicit decision nodes with typed predicate dependencies instead of backend-local branching rules |
 | Parallel branch execution and convergence | AWS Step Functions `Parallel`, W3C SCXML `parallel`, Argo DAG fan-out/fan-in patterns | Semantics | Parallel branches are explicit, joins are explicit barriers, and foreign entry into a join is rejected |
@@ -192,7 +208,7 @@ how the runtime interprets workflow behavior after parsing.
 These sources inform the runtime/result contract rather than the SDL YAML
 surface.
 
-| Concern | Primary Sources | Borrowed | What We Adapted |
+| Concern | Primary Sources | Influence plane | What We Adapted |
 | ------- | --------------- | --- | --------------- |
 | Language-neutral backend boundary | Kubernetes API objects, Temporal payload/history model, OpenC2 abstract model + JSON serialization | Semantics | Backends exchange plain-data, versioned workflow result envelopes rather than Python object identity |
 | Explicit compiled contract between definition and execution | Kubernetes versioned object schemas, Temporal workflow definition vs event-history separation | Semantics | Compiler emits a dedicated `result_contract` instead of forcing the manager to infer semantics from incidental planner payloads |
@@ -210,7 +226,7 @@ honestly across simulation, emulation, and live infrastructure.
 The primary research set for this area is curated in
 `research/primary/literature/time-and-simulation/`.
 
-| Concern | Primary Sources | Borrowed | What We Adapted |
+| Concern | Primary Sources | Influence plane | What We Adapted |
 | ------- | --------------- | --- | --------------- |
 | Distinct time domains and clock authority | [ROS 2 Clock and Time](https://design.ros2.org/articles/clock_and_time.html), [FMI 3.0.2](https://fmi-standard.org/docs/3.0.2/) | Semantics | Authored temporal intent and realized clocks cannot be treated as the same thing; multiple clocks and explicit clock authority are first-class concerns |
 | Event-driven, logical, and virtual time progression | [SimPy Time and Scheduling](https://simpy.readthedocs.io/en/4.0.2/topical_guides/time_and_scheduling.html), Misra virtual-time work, DEVS literature | Semantics | Time advancement policy is part of system meaning, not just a backend optimization |
@@ -223,7 +239,7 @@ The primary research set for this area is curated in
 ### From OCSF
 
 
-| SDL Element | OCSF Source | Borrowed | What We Adapted |
+| SDL Element | OCSF Source | Influence plane | What We Adapted |
 | --------------- | ------------------- | --- | -------------------------------- |
 | `OSFamily` enum | `Device.os.type_id` | Both | Vocabulary for OS classification |
 | `ServicePort` | `NetworkEndpoint` | Both | Simplified port/protocol/name; named bindings become first-class refs |
@@ -232,7 +248,7 @@ The primary research set for this area is curated in
 ### From Docker / Deployment Patterns
 
 
-| SDL Element | Source | Borrowed | What We Adapted |
+| SDL Element | Source | Influence plane | What We Adapted |
 | ---------------------------------------- | ------------------------------- | --- | ---------------------------- |
 | `SimpleProperties.internal` | Docker Compose `internal: true` | Both | Network egress blocking flag |
 | `Condition.timeout/retries/start_period` | Docker health check fields | Both | Direct mapping |

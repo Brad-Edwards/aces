@@ -40,6 +40,7 @@ FIXTURES = "fixtures"
 CONCEPT_AUTHORITY = "concept-authority"
 SCHEMAS = "schemas"
 REALIZATION_ENVELOPES = "realization-envelopes"
+PROVENANCE = "provenance"
 
 
 def _bundled_corpus_root() -> Path | None:
@@ -111,7 +112,7 @@ def corpus_family_root(family: str) -> Path:
     """Return the root directory of a normative corpus family.
 
     ``family`` is one of :data:`PROFILES`, :data:`FIXTURES`,
-    :data:`CONCEPT_AUTHORITY`, or :data:`SCHEMAS`.
+    :data:`CONCEPT_AUTHORITY`, :data:`PROVENANCE`, or :data:`SCHEMAS`.
     """
 
     return corpus_root() / family
@@ -121,6 +122,7 @@ __all__ = [
     "CONCEPT_AUTHORITY",
     "FIXTURES",
     "PROFILES",
+    "PROVENANCE",
     "REALIZATION_ENVELOPES",
     "SCHEMAS",
     "corpus_family_root",

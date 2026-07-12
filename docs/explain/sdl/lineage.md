@@ -5,11 +5,19 @@ cyber range SDLs, adversary emulation formats, agent-evaluation environments,
 runtime architectures, and security event schemas that solve adjacent parts of
 the same problem.
 
-This page is a short map of the main influences. It is not a compatibility
-claim, and it is not an exhaustive bibliography. For element-level provenance,
-see [Design Precedents](precedents.md). For a dimension-by-dimension comparison
-against precedent systems, including where those systems lead ACES, see
+This page is a short map of the main influences. It is not a provenance or
+compatibility claim, and it is not an exhaustive bibliography. For design
+rationale, see [Design Precedents](precedents.md). For a dimension-by-dimension
+comparison against precedent systems, including where those systems lead ACES, see
 [Related-Work Comparison](related-work-comparison.md).
+
+The normative audit record is
+[`contracts/provenance/sdl-lineage-ledger-v1.json`](../../../contracts/provenance/sdl-lineage-ledger-v1.json).
+It distinguishes intellectual lineage from artifact/code derivation and from
+implementation examples, pins source revisions and bibliographic identities,
+and records directional compatibility and notice disposition. An influence
+listed on this page is not, by itself, a claim that ACES adopted syntax,
+semantics, examples, or code from that source.
 
 ## Specification Surface
 
@@ -59,7 +67,7 @@ format.
 
 ACES relies on prior work in four different ways:
 
-- **Direct SDL lineage:** top-level `accounts` keeps the CyRIS account
+- **Scenario-language precedents:** top-level `accounts` keeps the CyRIS account
   placement lineage. CyRIS implements `add_account`/`modify_account` as
   host/user management operations in code
   ([modules.py](https://github.com/crond-jaist/cyris/blob/8b65a30581cdd8e126c7b1fa26db2a4b770b7f17/main/modules.py)),
@@ -139,7 +147,7 @@ format.
 
 ACES relies on prior work in four ways:
 
-- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model scenario topology, deployable services/features, and validation or
   deployment concerns. They do not expose a portable first-class DNS zone,
   RRset, resolver-policy, or DNSSEC-posture inventory that ACES could reuse
@@ -189,7 +197,7 @@ manager facts that surrounding ACES surfaces cannot own.
 
 ACES relies on prior work in four ways:
 
-- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, tasks, validation, and
   deployment concerns. None expose a portable first-class security-monitoring
   manager inventory. ACES therefore adds a typed `Node.runtime` surface rather
@@ -241,7 +249,7 @@ listener scope, owner, readiness evidence, and provenance.
 
 ACES relies on prior work in four ways:
 
-- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, tasks, validation, and
   deployment concerns. They do not expose a portable first-class observed
   listener inventory with bind-address/interface semantics. ACES therefore
@@ -293,7 +301,7 @@ and evidence refs.
 
 ACES relies on prior work in four ways:
 
-- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, tasks, validation, and
   deployment concerns. None expose a portable first-class detection-engine
   inventory. ACES therefore adds a typed `Node.runtime` surface rather than
@@ -324,7 +332,7 @@ neither adjacent surface can own.
 
 ACES relies on prior work in four ways:
 
-- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, and validation/deployment
   concerns. None expose a portable first-class application-internal RBAC store,
   so ACES adds a typed node-scoped seam rather than overloading
@@ -365,7 +373,7 @@ relationship rather than a recurrence.
 
 ACES relies on prior work in four ways:
 
-- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, and validation/deployment
   concerns. None expose a portable first-class product-neutral scheduled-job
   cadence, so ACES adds a typed node-scoped seam rather than overloading
@@ -405,7 +413,7 @@ backend JSON bodies.
 
 ACES relies on prior work in four ways:
 
-- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, and validation/deployment
   concerns. None expose a portable first-class non-relational datastore logical
   state, so ACES adds a typed node-scoped seam rather than overloading
@@ -466,7 +474,7 @@ bounded attributes + typed references) rather than raw object bodies.
 
 ACES relies on prior work in four ways:
 
-- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, and validation/deployment
   concerns. None expose a portable first-class security-platform application
   inventory, so ACES adds a typed node-scoped seam rather than overloading
@@ -485,7 +493,7 @@ ACES relies on prior work in four ways:
   [ISO/IEC 27010](https://www.iso.org/standard/68427.html) anchor the
   threat-intel content profile and releasability markings; NIST
   [SP 800-61r2](https://csrc.nist.gov/publications/detail/sp/800-61/rev-2/final)
-  / [r3](https://csrc.nist.gov/publications/detail/sp/800-61/rev-3/ipd) anchors
+  / [r3](https://csrc.nist.gov/pubs/sp/800/61/r3/final) anchors
   the case-management incident-handling profile.
 - **Automation and observability precedents:** OASIS
   [CACAO v2.0](https://docs.oasis-open.org/cacao/security-playbooks/v2.0/security-playbooks-v2.0.html)
@@ -517,7 +525,7 @@ profile executable rather than optional.
 
 ACES relies on prior work in four ways:
 
-- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, and validation/deployment
   concerns. None expose a portable first-class forwarding-agent shipping
   inventory, so ACES adds typed node-scoped and scenario-level seams rather than
@@ -563,7 +571,7 @@ guard that makes the host-root privilege-escalation fact executable.
 
 ACES relies on prior work in four ways:
 
-- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, and validation/deployment
   concerns. None expose a portable first-class container-spawn authority
   inventory, so ACES adds a typed node-scoped seam referencing the existing
@@ -601,7 +609,7 @@ the same posture.
 
 ACES relies on prior work in four ways:
 
-- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and
+- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and
   CRACK model scenario topology, deployable services/features, and
   validation/deployment concerns. None expose a portable first-class
   share-permission/passdb inventory that ACES could reuse directly, which
@@ -657,7 +665,7 @@ ACES surfaces cannot own.
 
 ACES relies on prior work in four ways:
 
-- **Direct SDL lineage:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
+- **Scenario-language precedents:** Open Cyber Range SDL, CyRIS, KYPO, VSDL, and CRACK
   model topology, deployable services/features, accounts, tasks, and
   validation/deployment concerns. None expose a portable first-class
   mail-server logical-state inventory, which is why ACES adds a typed
@@ -703,7 +711,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 
 - [OpenAI Gym](https://arxiv.org/abs/1606.01540),
   [Gymnasium](https://arxiv.org/abs/2407.17032),
-  [PettingZoo](https://papers.nips.cc/paper/2021/hash/7ed2d3454c5eea71148b11d0c25104ff-Abstract.html),
+  [PettingZoo](https://arxiv.org/abs/2009.14471),
   and [OpenSpiel](https://arxiv.org/abs/1908.09453) inform the agent-facing
   interface vocabulary: actions, observations, rewards, resets, local histories,
   imperfect information, and multi-agent interaction.
@@ -797,7 +805,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
 - Lamport logical clocks, HLA time management, Time Warp, DEVS, SimPy, ROS 2
   time, ns-3 realtime mode, and FMI inform ACES's separation of timestamp,
   ordering, clock authority, pacing, synchronization, and causality.
-- [Fidge](https://fileadmin.cs.lth.se/cs/Personal/Amr_Ergawy/dist-algos-papers/4.pdf)/[Mattern](https://www.vs.inf.ethz.ch/publ/papers/VirtTimeGlobStates.pdf)
+- [Fidge](https://doi.org/10.1109/ICDCS.1988.12501)/[Mattern](https://www.vs.inf.ethz.ch/publ/papers/VirtTimeGlobStates.pdf)
   vector time and the
   [Schwarz-Mattern causality survey](https://doi.org/10.1007/BF02277859) are
   the basis for vector-clock ordering claims: scalar Lamport clocks respect
@@ -811,7 +819,7 @@ which dynamic queue/log/config details remain evidence or bounded settings.
   are the formal temporal-contract lineage for schedules, deadlines, dwell,
   and windows.
 - [Berenson et al.'s ANSI SQL isolation critique](https://doi.org/10.1145/223784.223785)
-  and [Adya's generalized isolation theory](https://pmg.csail.mit.edu/papers/adya-phd.pdf)
+  and [Adya's generalized isolation theory](https://hdl.handle.net/1721.1/8703)
   anchor the shared-state isolation-guarantee vocabulary.
 - Halpern-Pearl structural causality informs ACES's treatment of attribution:
   a participant action followed by an alert is not automatically a causal

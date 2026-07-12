@@ -1,8 +1,10 @@
 """ACES Scenario Description Language (SDL).
 
-A backend-agnostic scenario specification language ported from the
-Open Cyber Range SDL and extended with sections for content, accounts,
-relationships, agents, objectives, workflows, and variables.
+A backend-agnostic scenario specification language with revision-pinned syntax
+and translated-model ancestry in Open Cyber Range SDL plus ACES-native
+extensions. The normative derivation boundary is recorded in
+``contracts/provenance/sdl-lineage-ledger-v1.json``; this module does not claim
+drop-in compatibility.
 """
 
 from importlib import import_module

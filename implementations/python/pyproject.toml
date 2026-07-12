@@ -88,6 +88,7 @@ path = "hatch_build.py"
 [tool.hatch.build.targets.sdist.force-include]
 "../../contracts" = "_corpus"
 "../../README.md" = "README.md"
+"../../THIRD_PARTY_NOTICES.md" = "THIRD_PARTY_NOTICES.md"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

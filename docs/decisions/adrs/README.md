@@ -206,3 +206,4 @@ adr-078-backend-neutral-proposition-and-truth-semantics
 | [076](adr-076-portable-sdl-identifiers-and-canonical-addresses.md) | Portable SDL Identifiers and Canonical Addresses | accepted | 2026-07-11 |
 | [077](adr-077-closed-sdl-phase-contracts-and-portable-derivation-evidence.md) | Closed SDL Phase Contracts and Portable Derivation Evidence | accepted | 2026-07-12 |
 | [078](adr-078-backend-neutral-proposition-and-truth-semantics.md) | Backend-Neutral Proposition and Truth Semantics | accepted | 2026-07-12 |
+| [079](adr-079-revision-pinned-sdl-lineage-and-provenance-ledger.md) | Revision-Pinned SDL Lineage And Provenance Ledger | accepted | 2026-07-12 |

@@ -23,6 +23,7 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 from hatchling.metadata.plugin.interface import MetadataHookInterface
 
 _WHEEL_DESTINATION = "aces_contracts/_corpus"
+_NOTICE_WHEEL_DESTINATION = "aces_contracts/_corpus/provenance/THIRD_PARTY_NOTICES.md"
 
 
 class CustomBuildHook(BuildHookInterface):
@@ -46,6 +47,13 @@ class CustomBuildHook(BuildHookInterface):
             )
 
         build_data.setdefault("force_include", {})[str(corpus)] = _WHEEL_DESTINATION
+
+        source_notice = (root.parent.parent / "THIRD_PARTY_NOTICES.md").resolve()
+        vendored_notice = (root / "THIRD_PARTY_NOTICES.md").resolve()
+        notice = source_notice if source_notice.is_file() else vendored_notice
+        if not notice.is_file():
+            raise FileNotFoundError("THIRD_PARTY_NOTICES.md is required in source checkouts and source distributions")
+        build_data["force_include"][str(notice)] = _NOTICE_WHEEL_DESTINATION
 
 
 class ReadmeMetadataHook(MetadataHookInterface):

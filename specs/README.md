@@ -46,3 +46,6 @@ hook).
 - `supply-chain/` — normative prose for the Packaging & Supply Chain
   wave, including the reusable-asset trust/authenticity/integrity policy
   (GOV-913, governed by ADR-071)
+Revision-pinned lineage and derivation records live under the normative
+`contracts/provenance/` authority registered by ADR-019; explanatory lineage
+pages consume that record rather than defining a parallel source registry.

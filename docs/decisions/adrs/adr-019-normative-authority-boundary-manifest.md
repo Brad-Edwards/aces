@@ -119,6 +119,7 @@ decision:
 
 ## Amendments
 
-| Date | Commit/PR | Summary |
-|------|-----------|---------|
+| Date | Commit/PR/Issue | Summary |
+|------|-----------------|---------|
 | 2026-07-11 | #100 | Added `contracts/realization-envelopes/` as the normative authority for configuration-bound backend realization disclosures. |
+| 2026-07-12 | issue #726 | Added `contracts/provenance/` as the normative `provenance` authority for revision-pinned SDL lineage, derivation, citation identity, and third-party notice dispositions. |

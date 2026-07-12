@@ -308,7 +308,7 @@ pacing/synchronization.
   [IEEE 1516](https://standards.ieee.org/ieee/1516/3744/)).
 - **CRACK\* — no.** CRACK's Datalog encoding is atemporal; KYPO records
   timestamps for analysis (partial) but not as a scenario-language semantic
-  ([Russo et al. 2018, IEEE NCA](https://doi.org/10.1016/j.cose.2020.101837);
+  ([Russo et al. 2018, IEEE NCA](https://doi.org/10.1109/NCA.2018.8548324);
   [KYPO dataset, PMC10770710](https://pmc.ncbi.nlm.nih.gov/articles/PMC10770710/)).
 
 ## Where Precedents Lead ACES

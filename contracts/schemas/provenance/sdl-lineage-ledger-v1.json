@@ -1,0 +1,651 @@
+{
+  "$defs": {
+    "ArtifactBoundaryModel": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "minLength": 1,
+          "title": "Artifact",
+          "type": "string"
+        },
+        "symbol_or_pointer": {
+          "minLength": 1,
+          "title": "Symbol Or Pointer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact",
+        "symbol_or_pointer"
+      ],
+      "title": "ArtifactBoundaryModel",
+      "type": "object"
+    },
+    "AuthorityCoordinateModel": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "minLength": 1,
+          "title": "Artifact",
+          "type": "string"
+        },
+        "contract_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contract Id"
+        },
+        "pointer": {
+          "pattern": "^#[^\\s]*$",
+          "title": "Pointer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact",
+        "pointer"
+      ],
+      "title": "AuthorityCoordinateModel",
+      "type": "object"
+    },
+    "BibliographicIdentityModel": {
+      "additionalProperties": false,
+      "properties": {
+        "authors_or_maintainer": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Authors Or Maintainer",
+          "type": "array"
+        },
+        "canonical_url": {
+          "pattern": "^https://[^\\s]+$",
+          "title": "Canonical Url",
+          "type": "string"
+        },
+        "citation_id": {
+          "minLength": 1,
+          "title": "Citation Id",
+          "type": "string"
+        },
+        "container_title": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Container Title"
+        },
+        "doi": {
+          "anyOf": [
+            {
+              "pattern": "^10\\.\\d{4,9}/\\S+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Doi"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "verification_evidence": {
+          "minLength": 1,
+          "title": "Verification Evidence",
+          "type": "string"
+        },
+        "verified_on": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "title": "Verified On",
+          "type": "string"
+        },
+        "year": {
+          "maximum": 2200,
+          "minimum": 1800,
+          "title": "Year",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "citation_id",
+        "title",
+        "authors_or_maintainer",
+        "year",
+        "canonical_url",
+        "verified_on",
+        "verification_evidence"
+      ],
+      "title": "BibliographicIdentityModel",
+      "type": "object"
+    },
+    "CompatibilityDirection": {
+      "enum": [
+        "aces_relative_to_source",
+        "not_applicable"
+      ],
+      "title": "CompatibilityDirection",
+      "type": "string"
+    },
+    "CompatibilityStatus": {
+      "enum": [
+        "not_applicable",
+        "none",
+        "partial",
+        "compatible"
+      ],
+      "title": "CompatibilityStatus",
+      "type": "string"
+    },
+    "GitLineageSourceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_url": {
+          "pattern": "^https://[^\\s]+$",
+          "title": "Canonical Url",
+          "type": "string"
+        },
+        "citation_ref": {
+          "minLength": 1,
+          "title": "Citation Ref",
+          "type": "string"
+        },
+        "commit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Commit",
+          "type": "string"
+        },
+        "kind": {
+          "const": "git",
+          "title": "Kind",
+          "type": "string"
+        },
+        "license_evidence_ref": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "License Evidence Ref"
+        },
+        "license_expression": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "License Expression"
+        },
+        "license_url": {
+          "anyOf": [
+            {
+              "pattern": "^https://[^\\s]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "License Url"
+        },
+        "repository_url": {
+          "pattern": "^https://[^\\s]+$",
+          "title": "Repository Url",
+          "type": "string"
+        },
+        "source_id": {
+          "minLength": 1,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "version_or_edition": {
+          "minLength": 1,
+          "title": "Version Or Edition",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "title",
+        "version_or_edition",
+        "canonical_url",
+        "citation_ref",
+        "kind",
+        "repository_url",
+        "commit"
+      ],
+      "title": "GitLineageSourceModel",
+      "type": "object"
+    },
+    "LineageClaimModel": {
+      "additionalProperties": false,
+      "properties": {
+        "aces_boundaries": {
+          "items": {
+            "$ref": "#/$defs/ArtifactBoundaryModel"
+          },
+          "minItems": 1,
+          "title": "Aces Boundaries",
+          "type": "array"
+        },
+        "citation_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Citation Refs",
+          "type": "array"
+        },
+        "classification": {
+          "$ref": "#/$defs/LineageClassification"
+        },
+        "compatibility": {
+          "$ref": "#/$defs/CompatibilityStatus"
+        },
+        "compatibility_direction": {
+          "$ref": "#/$defs/CompatibilityDirection"
+        },
+        "divergence": {
+          "minLength": 1,
+          "title": "Divergence",
+          "type": "string"
+        },
+        "internal_authority_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Internal Authority Refs",
+          "type": "array"
+        },
+        "plane": {
+          "$ref": "#/$defs/LineagePlane"
+        },
+        "source_boundaries": {
+          "items": {
+            "$ref": "#/$defs/ArtifactBoundaryModel"
+          },
+          "title": "Source Boundaries",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "plane",
+        "classification",
+        "aces_boundaries",
+        "divergence",
+        "compatibility",
+        "compatibility_direction"
+      ],
+      "title": "LineageClaimModel",
+      "type": "object"
+    },
+    "LineageClassification": {
+      "enum": [
+        "adopted_syntax",
+        "adopted_semantics",
+        "adapted",
+        "aces_native"
+      ],
+      "title": "LineageClassification",
+      "type": "string"
+    },
+    "LineageDisposition": {
+      "enum": [
+        "current",
+        "removed",
+        "planned"
+      ],
+      "title": "LineageDisposition",
+      "type": "string"
+    },
+    "LineagePlane": {
+      "enum": [
+        "syntax",
+        "semantics",
+        "artifact_code",
+        "example"
+      ],
+      "title": "LineagePlane",
+      "type": "string"
+    },
+    "LineageSubjectModel": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "$ref": "#/$defs/AuthorityCoordinateModel"
+        },
+        "claims": {
+          "items": {
+            "$ref": "#/$defs/LineageClaimModel"
+          },
+          "minItems": 1,
+          "title": "Claims",
+          "type": "array"
+        },
+        "disposition": {
+          "$ref": "#/$defs/LineageDisposition"
+        },
+        "subject_id": {
+          "pattern": "^[a-z][a-z0-9-]*:[a-z][a-z0-9_-]*$",
+          "title": "Subject Id",
+          "type": "string"
+        },
+        "subject_kind": {
+          "enum": [
+            "top_level_field",
+            "runtime_family",
+            "concept_family",
+            "reference_model"
+          ],
+          "title": "Subject Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "subject_id",
+        "subject_kind",
+        "disposition",
+        "authority",
+        "claims"
+      ],
+      "title": "LineageSubjectModel",
+      "type": "object"
+    },
+    "NoticeDecision": {
+      "enum": [
+        "required_included",
+        "not_required",
+        "unknown"
+      ],
+      "title": "NoticeDecision",
+      "type": "string"
+    },
+    "PublicationLineageSourceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_url": {
+          "pattern": "^https://[^\\s]+$",
+          "title": "Canonical Url",
+          "type": "string"
+        },
+        "citation_ref": {
+          "minLength": 1,
+          "title": "Citation Ref",
+          "type": "string"
+        },
+        "kind": {
+          "const": "publication",
+          "title": "Kind",
+          "type": "string"
+        },
+        "source_id": {
+          "minLength": 1,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "version_or_edition": {
+          "minLength": 1,
+          "title": "Version Or Edition",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "title",
+        "version_or_edition",
+        "canonical_url",
+        "citation_ref",
+        "kind"
+      ],
+      "title": "PublicationLineageSourceModel",
+      "type": "object"
+    },
+    "StandardLineageSourceModel": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_url": {
+          "pattern": "^https://[^\\s]+$",
+          "title": "Canonical Url",
+          "type": "string"
+        },
+        "citation_ref": {
+          "minLength": 1,
+          "title": "Citation Ref",
+          "type": "string"
+        },
+        "kind": {
+          "const": "standard",
+          "title": "Kind",
+          "type": "string"
+        },
+        "maintaining_body": {
+          "minLength": 1,
+          "title": "Maintaining Body",
+          "type": "string"
+        },
+        "source_id": {
+          "minLength": 1,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "version_or_edition": {
+          "minLength": 1,
+          "title": "Version Or Edition",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "title",
+        "version_or_edition",
+        "canonical_url",
+        "citation_ref",
+        "kind",
+        "maintaining_body"
+      ],
+      "title": "StandardLineageSourceModel",
+      "type": "object"
+    },
+    "ThirdPartyDispositionModel": {
+      "additionalProperties": false,
+      "properties": {
+        "derivation_extent": {
+          "minLength": 1,
+          "title": "Derivation Extent",
+          "type": "string"
+        },
+        "derivation_scope": {
+          "items": {
+            "$ref": "#/$defs/ArtifactBoundaryModel"
+          },
+          "minItems": 1,
+          "title": "Derivation Scope",
+          "type": "array"
+        },
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "notice_artifact": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notice Artifact"
+        },
+        "notice_decision": {
+          "$ref": "#/$defs/NoticeDecision"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "reviewed_license_ref": {
+          "minLength": 1,
+          "title": "Reviewed License Ref",
+          "type": "string"
+        },
+        "reviewed_on": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "title": "Reviewed On",
+          "type": "string"
+        },
+        "source_ref": {
+          "minLength": 1,
+          "title": "Source Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_ref",
+        "derivation_scope",
+        "derivation_extent",
+        "reviewed_license_ref",
+        "notice_decision",
+        "rationale",
+        "reviewed_on",
+        "evidence_refs"
+      ],
+      "title": "ThirdPartyDispositionModel",
+      "type": "object"
+    }
+  },
+  "$id": "https://aces.dev/schemas/sdl-lineage-ledger-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "citations": {
+      "items": {
+        "$ref": "#/$defs/BibliographicIdentityModel"
+      },
+      "minItems": 1,
+      "title": "Citations",
+      "type": "array"
+    },
+    "reviewed_on": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "title": "Reviewed On",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "sdl-lineage-ledger/v1",
+      "default": "sdl-lineage-ledger/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sources": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "git": "#/$defs/GitLineageSourceModel",
+            "publication": "#/$defs/PublicationLineageSourceModel",
+            "standard": "#/$defs/StandardLineageSourceModel"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/GitLineageSourceModel"
+          },
+          {
+            "$ref": "#/$defs/StandardLineageSourceModel"
+          },
+          {
+            "$ref": "#/$defs/PublicationLineageSourceModel"
+          }
+        ]
+      },
+      "minItems": 1,
+      "title": "Sources",
+      "type": "array"
+    },
+    "subjects": {
+      "items": {
+        "$ref": "#/$defs/LineageSubjectModel"
+      },
+      "minItems": 1,
+      "title": "Subjects",
+      "type": "array"
+    },
+    "third_party_dispositions": {
+      "items": {
+        "$ref": "#/$defs/ThirdPartyDispositionModel"
+      },
+      "title": "Third Party Dispositions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "reviewed_on",
+    "citations",
+    "sources",
+    "subjects"
+  ],
+  "title": "SDLLineageLedgerModel",
+  "type": "object"
+}

@@ -80,6 +80,10 @@ CANONICAL_AUTHORITY_ROOT_BINDING: dict[str, tuple[str, str]] = {
         "contracts/concept-authority/",
         "concept-authority",
     ),
+    "normative_provenance": (
+        "contracts/provenance/",
+        "provenance",
+    ),
 }
 CANONICAL_AUTHORITY_ROOT_IDS: tuple[str, ...] = tuple(CANONICAL_AUTHORITY_ROOT_BINDING)
 

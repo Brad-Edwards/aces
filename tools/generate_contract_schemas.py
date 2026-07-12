@@ -40,6 +40,8 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "reusable-asset-trust-policy-v1":
         return schemas_dir / "asset-trust" / f"{name}.json"
+    if name == "sdl-lineage-ledger-v1":
+        return schemas_dir / "provenance" / f"{name}.json"
     if name.startswith("semantic-profile-v"):
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("backend-profile-v"):
