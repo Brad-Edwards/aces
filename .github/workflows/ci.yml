@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install uv
-        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8
       - name: Resolve policy base revision
         id: base
         run: |
@@ -71,7 +71,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install uv
-        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8
       - name: Run fuzz session
         run: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s fuzz
 
@@ -87,7 +87,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install uv
-        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8
       - name: Probe for a container runtime
         id: runtime
         run: |
@@ -115,7 +115,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install uv
-        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8
       - name: Run OSV-scanner (advisory)
         run: uv tool run --from 'nox[uv]==2026.4.10' nox -f noxfile.py -s osv_scan
       - name: Upload OSV-scanner report

@@ -99,7 +99,6 @@ CANONICAL_NON_NORMATIVE_ROOT_BINDING: dict[str, str] = {
     "research_notes": "research/",
     "process_notes": "notes/",
     "tooling": "tools/",
-    "changelog_fragments": "changelog.d/",
 }
 CANONICAL_NON_NORMATIVE_ROOT_IDS: tuple[str, ...] = tuple(CANONICAL_NON_NORMATIVE_ROOT_BINDING)
 
