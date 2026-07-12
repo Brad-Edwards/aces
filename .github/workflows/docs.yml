@@ -31,7 +31,7 @@ jobs:
       - name: Build Sphinx docs
         run: |
           uv sync --extra docs --directory implementations/python
-          implementations/python/.venv/bin/sphinx-build -b html docs docs/_build/html
+          implementations/python/.venv/bin/sphinx-build -W --keep-going -b html docs docs/_build/html
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3

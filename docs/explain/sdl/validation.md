@@ -506,7 +506,7 @@ the current validator surface.
 The normative boundary between a fatal **error** and a non-fatal **advisory** —
 including the classification criterion that decides which channel a condition
 belongs to — is stated in
-[`specs/sdl/diagnostics.md` §5](../../../specs/sdl/diagnostics.md). This page is
+{download}`specs/sdl/diagnostics.md <../../../specs/sdl/diagnostics.md>` §5. This page is
 non-normative explanation and cites that criterion rather than restating it: an
 **error** affects SDL meaning (structural/semantic invariants), while an
 **advisory** is a deployability or quality heuristic that leaves SDL meaning
@@ -522,7 +522,7 @@ Current advisory coverage:
 
 The fatal, fail-closed error semantics and the collect-all behaviour described
 here are the explanatory companion to the normative diagnostic boundary in
-[`specs/sdl/diagnostics.md`](../../../specs/sdl/diagnostics.md).
+{download}`specs/sdl/diagnostics.md <../../../specs/sdl/diagnostics.md>`.
 
 All passes run to completion. Errors are collected into a list and raised as a single `SDLValidationError`:
 
