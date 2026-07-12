@@ -6,7 +6,7 @@ import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, BinaryIO
+from typing import BinaryIO, TypeAlias, cast
 
 import rfc8785
 from aces_sdl import canonical_sdl_digest
@@ -16,6 +16,7 @@ from blake3 import blake3
 from .contracts import (
     AssociatedArtifactManifestModel,
     ExperimentApparatusContextModel,
+    ExperimentArtifactRefModel,
     ExperimentRunModel,
     ExperimentSpecModel,
     ExperimentStudyModel,
@@ -25,6 +26,9 @@ from .diagnostics import Diagnostic, Severity
 
 _DOMAIN = "associated-artifact"
 _CHUNK_SIZE = 64 * 1024
+_ARTIFACTS_ADDRESS = "#/artifacts"
+
+JSONValue: TypeAlias = None | bool | int | float | str | list["JSONValue"] | dict[str, "JSONValue"]
 
 
 @dataclass(frozen=True)
@@ -40,7 +44,7 @@ class AssociatedArtifactValidationLimits:
             raise ValueError("associated-artifact validation limits must be non-negative and allow an artifact")
 
 
-def _normalized_canonical_value(value: Any) -> Any:
+def _normalized_canonical_value(value: JSONValue) -> JSONValue:
     if isinstance(value, dict):
         normalized = {key: _normalized_canonical_value(item) for key, item in value.items()}
         checksum = normalized.get("checksum")
@@ -79,8 +83,8 @@ def associated_artifact_set_digest(manifest: AssociatedArtifactManifestModel) ->
     return f"sha256:{digest}"
 
 
-def _reject_duplicate_members(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    result: dict[str, Any] = {}
+def _reject_duplicate_members(pairs: list[tuple[str, JSONValue]]) -> dict[str, JSONValue]:
+    result: dict[str, JSONValue] = {}
     for key, value in pairs:
         if key in result:
             raise ValueError(f"duplicate JSON member {key!r}")
@@ -99,19 +103,18 @@ def _diagnostic(code: str, address: str, message: str) -> Diagnostic:
     return Diagnostic(code=code, domain=_DOMAIN, address=address, message=message, severity=Severity.ERROR)
 
 
-def _parent_matches(manifest: AssociatedArtifactManifestModel, parent: object) -> bool:
+def _scenario_parent_matches(manifest: AssociatedArtifactManifestModel, parent: object) -> bool:
     reference = manifest.parent_ref
-    if reference.ref_kind in {"scenario", "scenario-snapshot"}:
-        if not isinstance(parent, Scenario) or parent.name != reference.ref_id:
-            return False
-        if reference.ref_kind == "scenario":
-            return True
-        if reference.ref_version is not None and parent.version != reference.ref_version:
-            return False
-        if reference.ref_digest is not None:
-            return canonical_sdl_digest(parent).value.casefold() == reference.ref_digest.casefold()
-        return True
+    matches = isinstance(parent, Scenario) and parent.name == reference.ref_id
+    if matches and reference.ref_kind == "scenario-snapshot":
+        matches = reference.ref_version is None or parent.version == reference.ref_version
+        if matches and reference.ref_digest is not None:
+            matches = canonical_sdl_digest(parent).value.casefold() == reference.ref_digest.casefold()
+    return matches
 
+
+def _experiment_parent_matches(manifest: AssociatedArtifactManifestModel, parent: object) -> bool:
+    reference = manifest.parent_ref
     parent_shapes: dict[str, tuple[type[object], str, str]] = {
         "task": (ExperimentTaskModel, "task_id", "task_version"),
         "authoring-input": (ExperimentSpecModel, "spec_id", "spec_version"),
@@ -120,9 +123,16 @@ def _parent_matches(manifest: AssociatedArtifactManifestModel, parent: object) -
         "study": (ExperimentStudyModel, "study_id", "study_version"),
     }
     expected_type, id_field, version_field = parent_shapes[reference.ref_kind]
-    if not isinstance(parent, expected_type) or getattr(parent, id_field) != reference.ref_id:
-        return False
-    return reference.ref_version is None or getattr(parent, version_field) == reference.ref_version
+    matches = isinstance(parent, expected_type) and getattr(parent, id_field) == reference.ref_id
+    if matches and reference.ref_version is not None:
+        matches = getattr(parent, version_field) == reference.ref_version
+    return matches
+
+
+def _parent_matches(manifest: AssociatedArtifactManifestModel, parent: object) -> bool:
+    if manifest.parent_ref.ref_kind in {"scenario", "scenario-snapshot"}:
+        return _scenario_parent_matches(manifest, parent)
+    return _experiment_parent_matches(manifest, parent)
 
 
 def _read_and_hash(reader: BinaryIO, algorithm: str, declared_size: int) -> tuple[int, str] | None:
@@ -145,26 +155,16 @@ def _read_and_hash(reader: BinaryIO, algorithm: str, declared_size: int) -> tupl
     return total, digest.hexdigest()
 
 
-def validate_associated_artifact_manifest(
+def _resource_limit_diagnostics(
     manifest: AssociatedArtifactManifestModel,
-    *,
-    parent: object,
-    artifact_readers: Mapping[str, BinaryIO],
-    limits: AssociatedArtifactValidationLimits | None = None,
+    limits: AssociatedArtifactValidationLimits,
 ) -> tuple[Diagnostic, ...]:
-    """Validate parent/set identity and every payload through bounded readers.
-
-    The caller acquires and immutably stages payloads. This function performs no
-    URI fetching, directory traversal, archive extraction, or ambient lookup.
-    """
-
-    effective_limits = limits or AssociatedArtifactValidationLimits()
     diagnostics: list[Diagnostic] = []
-    if len(manifest.artifacts) > effective_limits.max_artifacts:
+    if len(manifest.artifacts) > limits.max_artifacts:
         diagnostics.append(
             _diagnostic(
                 "associated-artifact.resource-limit-exceeded",
-                "#/artifacts",
+                _ARTIFACTS_ADDRESS,
                 "artifact count exceeds the caller-supplied validation limit",
             )
         )
@@ -172,19 +172,21 @@ def validate_associated_artifact_manifest(
     oversized = [
         artifact_id
         for artifact_id, artifact in manifest.artifacts.items()
-        if artifact.size_bytes > effective_limits.max_artifact_bytes
+        if artifact.size_bytes > limits.max_artifact_bytes
     ]
-    if oversized or declared_total > effective_limits.max_total_bytes:
+    if oversized or declared_total > limits.max_total_bytes:
         diagnostics.append(
             _diagnostic(
                 "associated-artifact.resource-limit-exceeded",
-                "#/artifacts",
+                _ARTIFACTS_ADDRESS,
                 "declared artifact bytes exceed the caller-supplied validation limits",
             )
         )
-    if diagnostics:
-        return tuple(diagnostics)
+    return tuple(diagnostics)
 
+
+def _identity_diagnostics(manifest: AssociatedArtifactManifestModel, parent: object) -> tuple[Diagnostic, ...]:
+    diagnostics: list[Diagnostic] = []
     if not _parent_matches(manifest, parent):
         diagnostics.append(
             _diagnostic(
@@ -201,9 +203,14 @@ def validate_associated_artifact_manifest(
                 "set_digest does not match the canonical parent-plus-artifact-reference set",
             )
         )
+    return tuple(diagnostics)
 
-    manifest_ids = set(manifest.artifacts)
-    supplied_ids = set(artifact_readers)
+
+def _binding_presence_diagnostics(
+    manifest_ids: set[str],
+    supplied_ids: set[str],
+) -> tuple[Diagnostic, ...]:
+    diagnostics: list[Diagnostic] = []
     for artifact_id in sorted(manifest_ids - supplied_ids):
         diagnostics.append(
             _diagnostic(
@@ -216,60 +223,109 @@ def validate_associated_artifact_manifest(
         diagnostics.append(
             _diagnostic(
                 "associated-artifact.payload-binding-unexpected",
-                "#/artifacts",
+                _ARTIFACTS_ADDRESS,
                 f"a byte reader was supplied for undeclared artifact id {artifact_id!r}",
             )
         )
+    return tuple(diagnostics)
 
-    for artifact_id in sorted(manifest_ids & supplied_ids):
-        artifact = manifest.artifacts[artifact_id]
-        reader = artifact_readers[artifact_id]
-        if not hasattr(reader, "read"):
-            diagnostics.append(
-                _diagnostic(
-                    "associated-artifact.payload-binding-invalid",
-                    f"#/artifacts/{artifact_id}",
-                    "the supplied binding is not a concrete byte reader",
-                )
-            )
-            continue
+
+def _read_payload(
+    artifact_id: str,
+    artifact: ExperimentArtifactRefModel,
+    reader: object,
+) -> tuple[tuple[int, str] | None, Diagnostic | None]:
+    address = f"#/artifacts/{artifact_id}"
+    result: tuple[int, str] | None = None
+    diagnostic: Diagnostic | None = None
+    if not hasattr(reader, "read"):
+        diagnostic = _diagnostic(
+            "associated-artifact.payload-binding-invalid",
+            address,
+            "the supplied binding is not a concrete byte reader",
+        )
+    else:
         try:
-            result = _read_and_hash(reader, artifact.checksum.algorithm, artifact.size_bytes)
+            result = _read_and_hash(cast(BinaryIO, reader), artifact.checksum.algorithm, artifact.size_bytes)
         except (OSError, TypeError, ValueError):
-            diagnostics.append(
-                _diagnostic(
-                    "associated-artifact.payload-binding-invalid",
-                    f"#/artifacts/{artifact_id}",
-                    "the concrete byte reader failed without yielding a valid bounded byte stream",
-                )
+            diagnostic = _diagnostic(
+                "associated-artifact.payload-binding-invalid",
+                address,
+                "the concrete byte reader failed without yielding a valid bounded byte stream",
             )
-            continue
-        if result is None:
-            diagnostics.append(
-                _diagnostic(
-                    "associated-artifact.checksum-algorithm-unsupported",
-                    f"#/artifacts/{artifact_id}/checksum/algorithm",
-                    "the checksum algorithm is unavailable to this validator",
-                )
+        if result is None and diagnostic is None:
+            diagnostic = _diagnostic(
+                "associated-artifact.checksum-algorithm-unsupported",
+                f"{address}/checksum/algorithm",
+                "the checksum algorithm is unavailable to this validator",
             )
-            continue
-        actual_size, actual_checksum = result
-        if actual_size != artifact.size_bytes:
-            diagnostics.append(
-                _diagnostic(
-                    "associated-artifact.payload-size-mismatch",
-                    f"#/artifacts/{artifact_id}/size_bytes",
-                    "concrete payload size does not match size_bytes",
-                )
+    return result, diagnostic
+
+
+def _payload_diagnostics(
+    artifact_id: str,
+    artifact: ExperimentArtifactRefModel,
+    reader: object,
+) -> tuple[Diagnostic, ...]:
+    address = f"#/artifacts/{artifact_id}"
+    result, read_diagnostic = _read_payload(artifact_id, artifact, reader)
+    if read_diagnostic is not None:
+        return (read_diagnostic,)
+
+    diagnostics: list[Diagnostic] = []
+    assert result is not None
+    actual_size, actual_checksum = result
+    if actual_size != artifact.size_bytes:
+        diagnostics.append(
+            _diagnostic(
+                "associated-artifact.payload-size-mismatch",
+                f"{address}/size_bytes",
+                "concrete payload size does not match size_bytes",
             )
-        if actual_checksum.casefold() != artifact.checksum.value.casefold():
-            diagnostics.append(
-                _diagnostic(
-                    "associated-artifact.payload-checksum-mismatch",
-                    f"#/artifacts/{artifact_id}/checksum",
-                    "concrete payload bytes do not match the declared checksum",
-                )
+        )
+    if actual_checksum.casefold() != artifact.checksum.value.casefold():
+        diagnostics.append(
+            _diagnostic(
+                "associated-artifact.payload-checksum-mismatch",
+                f"{address}/checksum",
+                "concrete payload bytes do not match the declared checksum",
             )
+        )
+    return tuple(diagnostics)
+
+
+def validate_associated_artifact_manifest(
+    manifest: AssociatedArtifactManifestModel,
+    *,
+    parent: object,
+    artifact_readers: Mapping[str, BinaryIO],
+    limits: AssociatedArtifactValidationLimits | None = None,
+) -> tuple[Diagnostic, ...]:
+    """Validate parent/set identity and every payload through bounded readers.
+
+    The caller acquires and immutably stages payloads. This function performs no
+    URI fetching, directory traversal, archive extraction, or ambient lookup.
+    """
+
+    limit_diagnostics = _resource_limit_diagnostics(
+        manifest,
+        limits or AssociatedArtifactValidationLimits(),
+    )
+    if limit_diagnostics:
+        return limit_diagnostics
+
+    diagnostics = list(_identity_diagnostics(manifest, parent))
+    manifest_ids = set(manifest.artifacts)
+    supplied_ids = set(artifact_readers)
+    diagnostics.extend(_binding_presence_diagnostics(manifest_ids, supplied_ids))
+    for artifact_id in sorted(manifest_ids & supplied_ids):
+        diagnostics.extend(
+            _payload_diagnostics(
+                artifact_id,
+                manifest.artifacts[artifact_id],
+                artifact_readers[artifact_id],
+            )
+        )
     return tuple(diagnostics)
 
 
