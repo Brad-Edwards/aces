@@ -121,7 +121,8 @@ adr-073-scoring-reward-language-scope
 adr-074-experiment-authoring-input-contract-boundary
 adr-075-ecosystem-versioning-deprecation-and-migration-governance
 adr-076-portable-sdl-identifiers-and-canonical-addresses
-adr-077-closed-sdl-phase-contracts-and-portable-derivation-evidence
+adr-077-associated-artifact-manifest-boundary
+adr-078-closed-sdl-phase-contracts-and-portable-derivation-evidence
 ```
 
 | ADR | Title | Status | Date |
@@ -203,4 +204,5 @@ adr-077-closed-sdl-phase-contracts-and-portable-derivation-evidence
 | [074](adr-074-experiment-authoring-input-contract-boundary.md) | Experiment Authoring-Input Contract Boundary | accepted | 2026-07-08 |
 | [075](adr-075-ecosystem-versioning-deprecation-and-migration-governance.md) | Ecosystem Versioning, Deprecation, and Migration Governance | proposed | 2026-07-11 |
 | [076](adr-076-portable-sdl-identifiers-and-canonical-addresses.md) | Portable SDL Identifiers and Canonical Addresses | accepted | 2026-07-11 |
-| [077](adr-077-closed-sdl-phase-contracts-and-portable-derivation-evidence.md) | Closed SDL Phase Contracts and Portable Derivation Evidence | accepted | 2026-07-12 |
+| [077](adr-077-associated-artifact-manifest-boundary.md) | Associated Artifact Manifest Boundary | accepted | 2026-07-12 |
+| [078](adr-078-closed-sdl-phase-contracts-and-portable-derivation-evidence.md) | Closed SDL Phase Contracts and Portable Derivation Evidence | accepted | 2026-07-12 |

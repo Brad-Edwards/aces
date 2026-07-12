@@ -10,6 +10,7 @@ from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Annotated, Any, Literal
+from urllib.parse import parse_qsl, urlsplit
 
 from aces_sdl import VARIABLE_TOKEN_PATTERN
 from aces_sdl.canonical import InstantiatedScenarioSnapshot
@@ -70,6 +71,7 @@ from .planning import (
     require_plan_operation_identity,
 )
 from .versions import (
+    ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION,
     ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
     ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION,
     BACKEND_MANIFEST_V2_SCHEMA_VERSION,
@@ -3068,6 +3070,7 @@ class ExperimentReferenceModel(ContractModel):
         "scenario",
         "scenario-snapshot",
         "task",
+        "authoring-input",
         "protocol",
         "apparatus-context",
         "run",
@@ -3162,6 +3165,32 @@ class ExperimentScenarioSnapshotReferenceModel(ExperimentReferenceModel):
     """Reference constrained to a sealed scenario snapshot."""
 
     ref_kind: Literal["scenario-snapshot"]
+
+
+class AssociatedArtifactParentReferenceModel(ExperimentReferenceModel):
+    """Reference constrained to a supported associated-artifact parent."""
+
+    ref_kind: Literal[
+        "scenario",
+        "scenario-snapshot",
+        "task",
+        "authoring-input",
+        "apparatus-context",
+        "run",
+        "study",
+    ]
+
+    @model_validator(mode="after")
+    def _validate_associated_artifact_parent(self) -> AssociatedArtifactParentReferenceModel:
+        if self.ref_kind == "scenario":
+            if self.ref_version is not None or self.ref_digest is not None or self.ref_path is not None:
+                raise ValueError("generic scenario parents are id-only; use scenario-snapshot for snapshot binding")
+        elif self.ref_kind != "scenario-snapshot" and (self.ref_digest is not None or self.ref_path is not None):
+            raise ValueError(
+                "experiment associated-artifact parents must not carry ref_digest or ref_path without a "
+                "normative parent canonicalization profile"
+            )
+        return self
 
 
 class ExperimentManifestReferenceModel(ExperimentReferenceModel):
@@ -3731,6 +3760,11 @@ class ExperimentArtifactRefModel(ContractModel):
         "scaffold",
         "baseline",
         "cost-resource-trace",
+        "documentation",
+        "operator-guide",
+        "configuration",
+        "profile",
+        "dataset",
         "other",
     ]
     media_type: NonEmptyString
@@ -3747,6 +3781,161 @@ class ExperimentArtifactRefModel(ContractModel):
     def _validate_artifact_created_at(self) -> ExperimentArtifactRefModel:
         _parse_rfc3339_datetime("created_at", self.created_at)
         return self
+
+
+AssociatedArtifactSetDigestString = Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
+_ASSOCIATED_ARTIFACT_SECRET_QUERY_NAMES = frozenset(
+    {
+        "access_token",
+        "api_key",
+        "apikey",
+        "auth",
+        "credential",
+        "key",
+        "password",
+        "secret",
+        "sig",
+        "signature",
+        "token",
+    }
+)
+_ASSOCIATED_ARTIFACT_SECRET_QUERY_FRAGMENTS = (
+    "api-key",
+    "api_key",
+    "apikey",
+    "credential",
+    "password",
+    "secret",
+    "signature",
+    "token",
+)
+
+
+def _validate_associated_artifact_uri(artifact_id: str, uri: str) -> None:
+    parsed = urlsplit(uri)
+    if not parsed.scheme or (parsed.scheme in {"http", "https"} and not parsed.netloc):
+        raise ValueError(f"associated artifact {artifact_id!r} uri must be an absolute URI")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError(f"associated artifact {artifact_id!r} uri must not contain credential userinfo")
+    query_names = {name.casefold() for name, _value in parse_qsl(parsed.query, keep_blank_values=True)}
+    secret_names = {
+        name
+        for name in query_names
+        if name in _ASSOCIATED_ARTIFACT_SECRET_QUERY_NAMES
+        or any(fragment in name for fragment in _ASSOCIATED_ARTIFACT_SECRET_QUERY_FRAGMENTS)
+    }
+    if secret_names:
+        raise ValueError(f"associated artifact {artifact_id!r} uri must not contain secret-bearing query fields")
+
+
+class AssociatedArtifactManifestModel(ContractModel):
+    """One exact non-semantic artifact-reference set attached to one parent."""
+
+    schema_version: Literal[ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION]
+    manifest_id: NonEmptyString
+    manifest_version: NonEmptyString
+    canonicalization_profile: Literal["associated-artifact-set/v1"]
+    scope: Literal["scenario", "experiment"]
+    parent_ref: AssociatedArtifactParentReferenceModel
+    artifacts: dict[NonEmptyString, ExperimentArtifactRefModel] = Field(min_length=1)
+    set_digest: AssociatedArtifactSetDigestString
+
+    @model_validator(mode="after")
+    def _validate_associated_artifact_manifest(self) -> AssociatedArtifactManifestModel:
+        scenario_kinds = {"scenario", "scenario-snapshot"}
+        parent_is_scenario = self.parent_ref.ref_kind in scenario_kinds
+        if (self.scope == "scenario") != parent_is_scenario:
+            raise ValueError("associated-artifact scope and parent kind must agree")
+
+        descriptor_owners: dict[tuple[Any, ...], str] = {}
+        locator_claims: dict[str, tuple[Any, ...]] = {}
+        for artifact_key, artifact in self.artifacts.items():
+            if artifact_key != artifact.artifact_id:
+                raise ValueError(
+                    f"associated artifact map key {artifact_key!r} must equal embedded artifact_id "
+                    f"{artifact.artifact_id!r}"
+                )
+            _validate_associated_artifact_uri(artifact.artifact_id, artifact.uri)
+            descriptor_key = (
+                artifact.role,
+                artifact.media_type,
+                artifact.uri,
+                artifact.checksum.algorithm,
+                artifact.checksum.value.casefold(),
+                artifact.size_bytes,
+                artifact.created_at,
+                artifact.source,
+                tuple(ref.model_dump_json() for ref in artifact.satisfies_refs),
+                artifact.sensitivity,
+                artifact.description,
+            )
+            prior_descriptor_owner = descriptor_owners.get(descriptor_key)
+            if prior_descriptor_owner is not None:
+                raise ValueError(
+                    f"associated artifacts {prior_descriptor_owner!r} and {artifact.artifact_id!r} are exact "
+                    "descriptor aliases; duplicate descriptors require one stable artifact id"
+                )
+            descriptor_owners[descriptor_key] = artifact.artifact_id
+
+            locator_claim = (
+                artifact.media_type,
+                artifact.checksum.algorithm,
+                artifact.checksum.value.casefold(),
+                artifact.size_bytes,
+            )
+            prior_locator_claim = locator_claims.get(artifact.uri)
+            if prior_locator_claim is not None and prior_locator_claim != locator_claim:
+                raise ValueError("one associated-artifact locator must not carry conflicting payload claims")
+            locator_claims[artifact.uri] = locator_claim
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {"properties": {"scope": {"const": "scenario"}}, "required": ["scope"]},
+                    "then": {
+                        "properties": {
+                            "parent_ref": {
+                                "properties": {
+                                    "ref_kind": {"enum": ["scenario", "scenario-snapshot"]},
+                                }
+                            }
+                        }
+                    },
+                },
+                {
+                    "if": {"properties": {"scope": {"const": "experiment"}}, "required": ["scope"]},
+                    "then": {
+                        "properties": {
+                            "parent_ref": {
+                                "properties": {
+                                    "ref_kind": {
+                                        "enum": ["task", "authoring-input", "apparatus-context", "run", "study"]
+                                    },
+                                }
+                            }
+                        }
+                    },
+                },
+            ]
+        )
+        _add_aces_invariant(
+            json_schema,
+            "associated-artifact-parent-set-and-byte-binding",
+            "Full conformance requires matching the concrete parent, recomputing the canonical set digest, "
+            "and binding every checksum and size to an explicitly supplied bounded byte stream.",
+            validator="aces_contracts.associated_artifacts.validate_associated_artifact_manifest",
+            inputs=[{"contract_id": "associated-artifact-manifest-v1", "instance_path": "#"}],
+        )
+        return json_schema
 
 
 class ExperimentValidityNoteModel(ContractModel):
@@ -7131,6 +7320,7 @@ def _event_stream_schema(title: str, item_schema: dict[str, Any]) -> dict[str, A
 
 REUSABLE_ASSET_FAMILIES: tuple[str, ...] = (
     "reusable_scenario",
+    "associated_artifact_set",
     "sdl_module",
     "experiment_task",
     "experiment_study",
@@ -7142,6 +7332,7 @@ _REUSABLE_ASSET_FAMILY_SET = frozenset(REUSABLE_ASSET_FAMILIES)
 
 ReusableAssetFamily = Literal[
     "reusable_scenario",
+    "associated_artifact_set",
     "sdl_module",
     "experiment_task",
     "experiment_study",
@@ -7507,6 +7698,7 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-context-view-v1": ParticipantContextViewModel.model_json_schema(),
         "operation-receipt-v1": OperationReceiptModel.model_json_schema(),
         "operation-status-v1": OperationStatusModel.model_json_schema(),
+        "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_json_schema(),
         "reusable-asset-trust-policy-v1": ReusableAssetTrustPolicyModel.model_json_schema(),
     }
     for contract_id, json_schema in bundle.items():
@@ -7538,6 +7730,10 @@ __all__ = [
     "AttackEnterpriseTacticsSourceModel",
     "AtlasTacticSourceTermModel",
     "AtlasTacticsSourceModel",
+    "ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION",
+    "AssociatedArtifactManifestModel",
+    "AssociatedArtifactParentReferenceModel",
+    "AssociatedArtifactSetDigestString",
     "BACKEND_MANIFEST_V2_SCHEMA_VERSION",
     "ApparatusIdentityModel",
     "BackendCompatibilityModel",

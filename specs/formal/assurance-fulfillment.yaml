@@ -26,7 +26,7 @@ policy_ref: specs/formal/assurance-policy.yaml
 adr_refs:
   - ADR-007
   - ADR-018
-  - ADR-077
+  - ADR-078
 
 # Registry of classified formal-spec subsystems. Every immediate subdirectory of
 # specs/formal/ carrying a README.md must appear here (the checker fails on any

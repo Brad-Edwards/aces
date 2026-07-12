@@ -312,8 +312,11 @@ adrs:
     path: docs/decisions/adrs/adr-076-portable-sdl-identifiers-and-canonical-addresses.md
     pin: cd28329002c1befb1920f0037c07517adbe3811d15e4f559455d05b893c69203
   - id: ADR-077
-    path: docs/decisions/adrs/adr-077-closed-sdl-phase-contracts-and-portable-derivation-evidence.md
-    pin: d0b979f7415ddc3af6fc7d32477416757473acaba76308732ba77d6063eeb287
+    path: docs/decisions/adrs/adr-077-associated-artifact-manifest-boundary.md
+    pin: bbbcb25d36c0b81b4b19198321ae2578e433bc238465397367f5e7dcf3407138
+  - id: ADR-078
+    path: docs/decisions/adrs/adr-078-closed-sdl-phase-contracts-and-portable-derivation-evidence.md
+    pin: d8e2630e332568681d5cf4df5f63971fc5a909c656d380b785e75c016a3744cb
     amendments:
       - date: 2026-07-12
         ref: "#724"

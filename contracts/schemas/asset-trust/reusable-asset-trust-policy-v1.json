@@ -267,6 +267,7 @@
         "asset_family": {
           "enum": [
             "reusable_scenario",
+            "associated_artifact_set",
             "sdl_module",
             "experiment_task",
             "experiment_study",
@@ -323,6 +324,19 @@
             "properties": {
               "asset_family": {
                 "const": "reusable_scenario"
+              }
+            },
+            "required": [
+              "asset_family"
+            ],
+            "type": "object"
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "asset_family": {
+                "const": "associated_artifact_set"
               }
             },
             "required": [
@@ -413,8 +427,8 @@
       "items": {
         "$ref": "#/$defs/ReusableAssetFamilyTrustPolicyModel"
       },
-      "maxItems": 7,
-      "minItems": 7,
+      "maxItems": 8,
+      "minItems": 8,
       "title": "Families",
       "type": "array"
     },
