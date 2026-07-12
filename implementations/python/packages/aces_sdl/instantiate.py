@@ -146,6 +146,23 @@ def _json_pointer_segment(value: str) -> str:
     return value.replace("~", "~0").replace("/", "~1")
 
 
+def _finite_domain_constraint(
+    *,
+    field_pointer: str,
+    value: object,
+    variables: Mapping[str, Variable],
+) -> CapabilityConstraint | None:
+    variable_ref = extract_variable_name(value) if isinstance(value, str) else None
+    variable = variables.get(variable_ref) if variable_ref is not None else None
+    if variable is None or not variable.allowed_values:
+        return None
+    return CapabilityConstraint(
+        field_pointer=field_pointer,
+        parameter=(variable_ref,),
+        allowed_values=tuple(variable.allowed_values),
+    )
+
+
 def _capture_capability_constraints(
     scenario: Scenario | ExpandedScenario,
 ) -> tuple[CapabilityConstraint, ...]:
@@ -153,27 +170,21 @@ def _capture_capability_constraints(
 
     constraints: list[CapabilityConstraint] = []
     for node_name, node in scenario.nodes.items():
-        os_ref = extract_variable_name(node.os) if isinstance(node.os, str) else None
-        variable = scenario.variables.get(os_ref) if os_ref is not None else None
-        if variable is not None and variable.allowed_values:
-            constraints.append(
-                CapabilityConstraint(
-                    field_pointer=f"/nodes/{_json_pointer_segment(node_name)}/os",
-                    parameter=(os_ref,),
-                    allowed_values=tuple(variable.allowed_values),
-                )
-            )
+        constraint = _finite_domain_constraint(
+            field_pointer=f"/nodes/{_json_pointer_segment(node_name)}/os",
+            value=node.os,
+            variables=scenario.variables,
+        )
+        if constraint is not None:
+            constraints.append(constraint)
     for node_name, infrastructure in scenario.infrastructure.items():
-        count_ref = extract_variable_name(infrastructure.count) if isinstance(infrastructure.count, str) else None
-        variable = scenario.variables.get(count_ref) if count_ref is not None else None
-        if variable is not None and variable.allowed_values:
-            constraints.append(
-                CapabilityConstraint(
-                    field_pointer=f"/infrastructure/{_json_pointer_segment(node_name)}/count",
-                    parameter=(count_ref,),
-                    allowed_values=tuple(variable.allowed_values),
-                )
-            )
+        constraint = _finite_domain_constraint(
+            field_pointer=f"/infrastructure/{_json_pointer_segment(node_name)}/count",
+            value=infrastructure.count,
+            variables=scenario.variables,
+        )
+        if constraint is not None:
+            constraints.append(constraint)
     return tuple(constraints)
 
 
@@ -193,7 +204,7 @@ def _safe_model_validation_errors(
     subject: str = "Bound scenario",
 ) -> list[str]:
     diagnostics: list[str] = []
-    for error in exc.errors(include_input=False, include_url=False)[:50]:
+    for error in exc.errors()[:50]:
         location = "/" + "/".join(str(segment) for segment in error.get("loc", ()))
         error_type = str(error.get("type", "invalid_value"))
         diagnostics.append(f"{subject} is invalid at {location or '/'} ({error_type}).")

@@ -107,21 +107,23 @@ def _prefixed_model_path(
     imported: ScenarioContent,
     symbols: dict[str, dict[str, str] | set[str]],
 ) -> str:
+    prefixed_path = path
     for section_name in HASHMAP_SECTIONS:
         prefix = f"{section_name}."
         if not path.startswith(prefix):
             continue
         section = getattr(imported, section_name, {})
         section_symbols = symbols.get(section_name)
-        if not isinstance(section, Mapping) or not isinstance(section_symbols, Mapping):
-            return path
-        for declaration_name in sorted(section, key=len, reverse=True):
-            declaration_path = f"{prefix}{declaration_name}"
-            if (
-                path == declaration_path
-                or path.startswith(f"{declaration_path}.")
-                or path.startswith(f"{declaration_path}[")
-            ):
-                return f"{prefix}{section_symbols[declaration_name]}{path[len(declaration_path) :]}"
-        return path
-    return path
+        if isinstance(section, Mapping) and isinstance(section_symbols, Mapping):
+            for declaration_name in sorted(section, key=len, reverse=True):
+                declaration_path = f"{prefix}{declaration_name}"
+                if (
+                    path == declaration_path
+                    or path.startswith(f"{declaration_path}.")
+                    or path.startswith(f"{declaration_path}[")
+                ):
+                    suffix = path[len(declaration_path) :]
+                    prefixed_path = f"{prefix}{section_symbols[declaration_name]}{suffix}"
+                    break
+        break
+    return prefixed_path

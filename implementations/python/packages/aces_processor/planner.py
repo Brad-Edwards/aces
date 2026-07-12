@@ -37,6 +37,9 @@ from .semantics.realization import realization_disclosure, realization_support_d
 
 __all__ = ["plan", "realization_disclosure", "snapshot_delete_order"]
 
+_COUNT_DOMAIN_INVALID = "provisioner.count-variable-domain-invalid"
+_OS_FAMILY_DOMAIN_INVALID = "provisioner.os-family-variable-domain-invalid"
+
 
 def _planned_resource(address: str, domain: RuntimeDomain, resource_type: str, resource) -> PlannedResource:
     return PlannedResource(
@@ -230,13 +233,13 @@ def _validate_os_allowed_values(
             parsed = parse_enum_or_var(raw_value, OSFamily, field_name="os")
         except ValueError as exc:
             return None, _error_diagnostic(
-                "provisioner.os-family-variable-domain-invalid",
+                _OS_FAMILY_DOMAIN_INVALID,
                 address,
                 (f"Variable '{variable_name}' allowed_values contain value {raw_value!r} invalid for nodes.os: {exc}."),
             )
         if extract_variable_name(parsed) is not None:
             return None, _error_diagnostic(
-                "provisioner.os-family-variable-domain-invalid",
+                _OS_FAMILY_DOMAIN_INVALID,
                 address,
                 f"Variable '{variable_name}' has a non-concrete nodes.os domain.",
             )
@@ -244,7 +247,7 @@ def _validate_os_allowed_values(
             validated_values.append(parsed.value)
             continue
         return None, _error_diagnostic(
-            "provisioner.os-family-variable-domain-invalid",
+            _OS_FAMILY_DOMAIN_INVALID,
             address,
             (
                 "Variable "
@@ -332,7 +335,7 @@ def _validate_count_allowed_values(
             )
         except ValueError as exc:
             return None, _error_diagnostic(
-                "provisioner.count-variable-domain-invalid",
+                _COUNT_DOMAIN_INVALID,
                 address,
                 (
                     "Variable "
@@ -342,7 +345,7 @@ def _validate_count_allowed_values(
             )
         if extract_variable_name(parsed) is not None:
             return None, _error_diagnostic(
-                "provisioner.count-variable-domain-invalid",
+                _COUNT_DOMAIN_INVALID,
                 address,
                 f"Variable '{variable_name}' has a non-concrete infrastructure.count domain.",
             )
@@ -350,7 +353,7 @@ def _validate_count_allowed_values(
             validated_values.append(parsed)
             continue
         return None, _error_diagnostic(
-            "provisioner.count-variable-domain-invalid",
+            _COUNT_DOMAIN_INVALID,
             address,
             (
                 "Variable "

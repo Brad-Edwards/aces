@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Hashable, Iterable
 from enum import Enum
 from typing import Annotated, Literal
 
@@ -185,18 +186,34 @@ def _validate_derivation_collections(
     explicitness: tuple[ExplicitnessProvenanceRecord, ...],
     root_bindings: tuple[ParameterBinding, ...] = (),
 ) -> None:
-    import_namespaces = [record.namespace for record in imports]
-    if len(import_namespaces) != len(set(import_namespaces)):
-        raise ValueError("resolved imports must have unique namespace paths")
+    _require_unique(
+        (record.namespace for record in imports),
+        "resolved imports must have unique namespace paths",
+    )
+    _require_unique(
+        (constraint.field_pointer for constraint in constraints),
+        "capability constraints must address unique concrete fields",
+    )
+    _require_unique(
+        (record.model_path for record in explicitness),
+        "explicitness records must have unique model paths",
+    )
 
-    constraint_pointers = [constraint.field_pointer for constraint in constraints]
-    if len(constraint_pointers) != len(set(constraint_pointers)):
-        raise ValueError("capability constraints must address unique concrete fields")
+    binding_values = _binding_environment(imports, root_bindings)
+    _validate_constraint_bindings(constraints, binding_values)
+    _validate_explicitness_bindings(explicitness, binding_values)
 
-    explicitness_paths = [record.model_path for record in explicitness]
-    if len(explicitness_paths) != len(set(explicitness_paths)):
-        raise ValueError("explicitness records must have unique model paths")
 
+def _require_unique(values: Iterable[Hashable], message: str) -> None:
+    materialized = tuple(values)
+    if len(materialized) != len(set(materialized)):
+        raise ValueError(message)
+
+
+def _binding_environment(
+    imports: tuple[ResolvedImportProvenance, ...],
+    root_bindings: tuple[ParameterBinding, ...],
+) -> dict[tuple[str, ...], JSONScalar]:
     binding_values = {binding.parameter: binding.value for binding in root_bindings}
     for record in imports:
         for binding in record.bindings:
@@ -204,7 +221,13 @@ def _validate_derivation_collections(
             if identity in binding_values:
                 raise ValueError("resolved parameter identities must be globally unique")
             binding_values[identity] = binding.value
+    return binding_values
 
+
+def _validate_constraint_bindings(
+    constraints: tuple[CapabilityConstraint, ...],
+    binding_values: dict[tuple[str, ...], JSONScalar],
+) -> None:
     constraints_by_parameter: dict[tuple[str, ...], tuple[JSONScalar, ...]] = {}
     for constraint in constraints:
         if constraint.parameter not in binding_values:
@@ -217,6 +240,11 @@ def _validate_derivation_collections(
         if not _json_domain_equal(prior_values, constraint.allowed_values):
             raise ValueError("one parameter identity must not carry conflicting capability constraints")
 
+
+def _validate_explicitness_bindings(
+    explicitness: tuple[ExplicitnessProvenanceRecord, ...],
+    binding_values: dict[tuple[str, ...], JSONScalar],
+) -> None:
     for record in explicitness:
         unknown = [identity for identity in record.parameters if identity not in binding_values]
         if unknown:

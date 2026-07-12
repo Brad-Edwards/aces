@@ -268,12 +268,12 @@ def register(mcp: FastMCP) -> None:
             bullets = "\n".join(f"  - {e}" for e in exc.errors)
             return f"INSTANTIATION ERRORS ({len(exc.errors)}):\n{bullets}"
 
+        binding_count = len(concrete.instantiation_provenance.bindings) + sum(
+            len(item.bindings) for item in concrete.instantiation_provenance.imports
+        )
         parts = [
             f"INSTANTIATED - scenario '{concrete.name}' fully resolved.",
-            (
-                "Bindings resolved: "
-                f"{len(concrete.instantiation_provenance.bindings) + sum(len(item.bindings) for item in concrete.instantiation_provenance.imports)}"
-            ),
+            f"Bindings resolved: {binding_count}",
         ]
         section_counts = _section_summary(concrete)
         if section_counts:
