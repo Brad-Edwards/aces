@@ -14,7 +14,7 @@ from ._support import _topological_sort
 
 class _SectionsMixin:
     def _verify_variables(self) -> None:
-        defined = set(self._s.variables.keys())
+        defined = set(getattr(self._s, "variables", {}))
         self._check_variable_refs(self._s, "", defined)
 
     def _check_variable_refs(self, value: object, path: str, defined: set[str]) -> None:

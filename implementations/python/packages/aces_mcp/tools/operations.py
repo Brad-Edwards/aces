@@ -223,7 +223,7 @@ def register(mcp: FastMCP) -> None:
                 "stages": pipeline["stages"],
                 "scenario": {
                     "name": model.scenario_name,
-                    "instantiation_parameters": pipeline["instantiation_parameters"],
+                    "instantiation": pipeline["instantiation"],
                 },
                 "runtime_model": runtime_model_summary(model),
                 "diagnostics": diagnostics(model.diagnostics, stage="compilation"),
@@ -260,7 +260,7 @@ def register(mcp: FastMCP) -> None:
                 "stages": [*pipeline["stages"], stage_ok("planning")],
                 "scenario": {
                     "name": execution_plan.scenario_name,
-                    "instantiation_parameters": pipeline["instantiation_parameters"],
+                    "instantiation": pipeline["instantiation"],
                 },
                 "manifest": {
                     "backend": manifest.identity.name,
@@ -330,7 +330,7 @@ def register(mcp: FastMCP) -> None:
                 "scenario": {
                     "name": scenario.name,
                     "populated_sections": section_counts(scenario),
-                    "instantiation_parameters": pipeline["instantiation_parameters"],
+                    "instantiation": pipeline["instantiation"],
                 },
                 "runtime_model": runtime_model_summary(model),
                 "plan": execution_plan_summary(execution_plan),

@@ -177,13 +177,23 @@
       }
     },
     {
+      "contract_id": "instantiated-scenario-snapshot-v1",
+      "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
+      "stability": "draft",
+      "content_hash": "f912c41c8d6a726b7f220bdc8435a6ad37f3c0478e3aee9ba4010a5dc8fd19c3",
+      "last_change": {
+        "summary": "Introduced the required-profile JCS envelope and annotated derivation evidence as artifact metadata outside the realization-envelope dimension projection.",
+        "content_hash": "f912c41c8d6a726b7f220bdc8435a6ad37f3c0478e3aee9ba4010a5dc8fd19c3"
+      }
+    },
+    {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "d72907f81de54bb182232ef6e6ad719d798fc08efc8e1fca1b4ce0308981394f",
+      "content_hash": "563e15f0da47093795cb5daec53d268bb6f436299e6c258be0d71f7aefc60bd3",
       "last_change": {
-        "summary": "Published bounded composition-generated qualified declaration keys and list-preserving forwarding-agent identities for DSL-101/DSL-102/SEM-205.",
-        "content_hash": "d72907f81de54bb182232ef6e6ad719d798fc08efc8e1fca1b4ce0308981394f"
+        "summary": "Closed the instantiated phase shape, required portable derivation evidence, forbade live authoring machinery, and marked provenance as non-realizable artifact metadata.",
+        "content_hash": "563e15f0da47093795cb5daec53d268bb6f436299e6c258be0d71f7aefc60bd3"
       }
     },
     {

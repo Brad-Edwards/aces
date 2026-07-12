@@ -83,7 +83,7 @@ to match `contracts/schemas/sdl/sdl-authoring-input-v1.json`.
 > section catalog states and mechanically checks the live set; this specification reconciles the
 > language to the published schema rather than freezing a historical count.
 
-## 3. Requiredness
+## 3. Normalized-authoring requiredness
 
 1. `name` is the only **REQUIRED** top-level field. A document without `name` is
    invalid.
@@ -94,6 +94,11 @@ to match `contracts/schemas/sdl/sdl-authoring-input-v1.json`.
    `node` or a runtime family element must carry) is governed by that section's
    schema and, for runtime families, by the owning family ADR
    ([runtime-inventory.md](runtime-inventory.md)).
+
+These rules describe `sdl-authoring-input-v1`. Derived phase contracts add
+their own required members: an instantiated scenario requires
+`instantiation_provenance`, and an instantiated snapshot requires both
+`profile` and `scenario` (§7).
 
 ## 4. Structural closure (fail-closed)
 
@@ -206,40 +211,48 @@ local ids only; expanded and instantiated objects may carry generated qualified
 top-level identities. Nested owner-local ids, including node runtime-family ids,
 remain local.
 
-## 7. Document phases and schema boundary
+## 7. Document phases and schema boundaries
 
-An SDL document passes through up to four forms. Each form is a derived shape
-of the authored document with progressively fewer unresolved constructs:
+SDL has one source presentation followed by four distinct data forms. Their
+object shapes are closed independently; a field absent from a phase is
+forbidden rather than represented by an empty compatibility shell.
 
-1. **Source.** The YAML presentation governed by `sdl-yaml/v1`. Presentation
-   details, anchors, aliases, and migration spellings exist only at this phase.
-2. **Normalised authoring object.** The source is safely constructed, canonical
-   fields are recognized, documented shorthands are expanded, enum/scalar
-   fields are typed, and structural closure is enforced. It **MAY** contain
-   imports and `${…}` placeholders. The published
-   `sdl-authoring-input-v1.json` schema validates this JSON-compatible object,
-   not raw YAML bytes or presentation syntax. Its title and
-   `x-aces-document-phase` annotation identify this boundary. Canonical shipped
-   examples deliberately use longhand normalized values so their strict decoded
-   object also validates directly against the schema.
-3. **Expanded authoring object.** If the document declares imports, module
-   composition is applied **before** full semantic validation, producing an
-   expanded authoring object in which imported content has been merged under
-   its explicit portable namespace. Each imported unit declares a module
-   descriptor whose `module.id` is exactly `portable-id "/" portable-id`;
-   filenames and source paths never supply module or namespace identity. Public
-   exports receive the namespace prefix and non-exported declarations receive
-   the generated `__private` prefix
-   ([ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md)).
-   Full semantic validation
-   ([references.md](references.md), [diagnostics.md](diagnostics.md)) applies to
-   this expanded object, treating unresolved placeholders per §5.6.
-4. **Instantiated scenario.** Instantiation resolves variables against supplied
-   parameters and defaults, producing a concrete document with no surviving
-   variable definitions or unresolved placeholders
-   ([variables-and-instantiation.md](variables-and-instantiation.md)).
+| Form | Required/phase-specific members | Forbidden authoring machinery | Publication |
+|------|---------------------------------|-------------------------------|-------------|
+| Source | YAML presentation governed by `sdl-yaml/v1` | n/a | source profile and YAML fixtures |
+| Normalized authoring | executable sections; `name`; optional `module`, `imports`, `variables` | none | `sdl-authoring-input-v1` |
+| Expanded authoring | executable sections; `name`; root `variables`; typed `expansion_provenance` | `module`, `imports` | internal trusted representation |
+| Instantiated | executable sections; `name`; required `instantiation_provenance` | `module`, `imports`, `variables`, any `${…}` token | `instantiated-scenario-v1` |
+| Canonical instantiated snapshot | required `profile` and admitted `scenario` | all authoring machinery at the envelope; the nested scenario obeys the instantiated row | `instantiated-scenario-snapshot-v1` |
 
-The source → normalized → expanded → instantiated progression refines the two-phase
+The **normalized authoring object** exists after safe source construction,
+canonical field recognition, shorthand expansion, enum/scalar typing, and
+structural closure. It may contain imports and placeholders. Its published
+schema validates that JSON-compatible object, not raw YAML or presentation
+syntax.
+
+The **expanded authoring object** exists after trusted module resolution and
+namespace rewriting but before final root-variable binding. Public exports have
+their declared namespace prefix and non-exported declarations have the generated
+`__private` prefix
+([ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md)).
+Composition consumes `module` and `imports`; their verified resolution facts
+move into typed expansion provenance. Only the composition path may create this
+internal representation or generated qualified declaration keys. Full semantic
+validation applies to it.
+
+The **instantiated scenario** exists after the public binding operation has
+validated its input, selected and checked every binding, substituted values,
+rebuilt the closed concrete shape, checked provenance consistency, and rerun
+semantic validation. Its provenance is part of the portable artifact, not
+Python-private context. Direct/deserialized artifacts must pass the same
+structural and semantic admission before compilation.
+
+The **canonical instantiated snapshot** is a sealed identity envelope, not
+input to source parsing, composition, or substitution. Its profile is
+`aces-sdl-instantiated-snapshot/v1`; §9 defines its bytes and digest.
+
+The source -> normalized -> expanded -> instantiated progression refines the two-phase
 authoring/instantiation model of
 [ADR-001](../../docs/decisions/adrs/adr-001-scenario-description-language.md) and
 the runtime-layering boundary of
@@ -269,11 +282,13 @@ The canonical input is the following JSON object:
 
 `scenario` is the validated expanded authoring object serialized with canonical
 wire field names while omitting fields that were not authored or introduced by
-normalization/composition. The two module maps are the variable specifications
-and node-variable references retained as provenance side channels when imported
-module variables no longer appear in the merged scenario object. Array order
-is significant; object member order is not. Authored omission is significant,
-so an omitted optional field and an explicitly authored default are distinct.
+normalization/composition. The two legacy-named module maps are compatibility
+projections derived from typed expansion provenance: the imported finite domains
+and the concrete fields that depend on them. They preserve this profile's bytes
+and meaning; they are not live variable definitions and do not appear as fields
+of `instantiated-scenario-v1`. Array order is significant; object member order
+is not. Authored omission is significant, so an omitted optional field and an
+explicitly authored default are distinct.
 
 The envelope **MUST** satisfy the I-JSON input constraints and be serialized
 with the JSON Canonicalization Scheme (JCS), RFC 8785. JCS preserves Unicode
@@ -287,3 +302,29 @@ JCS is the serialization rule for this profile; it is not the source of SDL's
 identifier grammar or address semantics. RFC 8785 does not normalize Unicode,
 and SDL likewise preserves display/data strings exactly while restricting only
 declaration identities to the portable ASCII grammar above.
+
+## 9. Canonical instantiated snapshot
+
+The `aces-sdl-instantiated-snapshot/v1` profile identifies one semantically
+admitted instantiated artifact, including its portable derivation evidence. Its
+canonical input is exactly:
+
+```json
+{
+  "profile": "aces-sdl-instantiated-snapshot/v1",
+  "scenario": {}
+}
+```
+
+`scenario` **MUST** validate against `instantiated-scenario-v1`, pass provenance
+consistency checks, and pass the ordinary SDL semantic validator. Snapshot
+construction is not a way to canonicalize an invalid direct model. The profile
+and scenario members are both required; unknown envelope members are forbidden.
+
+The envelope is serialized and digested with the same JCS/SHA-256 rules in §8.
+Any change to concrete content or `instantiation_provenance` changes the
+canonical input. This digest establishes artifact identity under the named
+profile. It does **not** establish that the recorded derivation activity
+occurred, that external module sources remain available, that two scenarios
+produce the same behavior, or that two executions are observationally
+equivalent.

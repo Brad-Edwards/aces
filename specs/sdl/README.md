@@ -1,7 +1,8 @@
-# SDL Authoring Specification
+# SDL Specification
 
 Status: **normative**. This directory is the language-neutral authority for the
-ACES **Scenario Description Language (SDL)** authoring model. It is binding on
+ACES **Scenario Description Language (SDL)** authoring model and portable
+derived phase contracts. It is binding on
 the ecosystem independent of any reference implementation or code-generation
 pipeline, per [ADR-009](../../docs/decisions/adrs/adr-009-normative-artifact-authority-and-repository-structure.md)
 and the [authority boundary manifest](../authority/authority-boundary.yaml).
@@ -28,9 +29,10 @@ Three artifact classes describe the SDL, with distinct authority:
    The prose and the schemas describe the same language and **MUST** agree; a
    divergence between them is a defect to be reconciled, not a license for
    either to override the other. Where this prose states a structural fact
-   (a section's presence, requiredness, or value shape), the published
-   `sdl-authoring-input-v1.json` schema is the authoritative enumeration the
-   prose is written to match. That schema validates the normalized authoring
+   (a section's presence, requiredness, or value shape), the applicable
+   `sdl-authoring-input-v1`, `instantiated-scenario-v1`, or
+   `instantiated-scenario-snapshot-v1` schema is the authoritative enumeration
+   the prose is written to match. The authoring schema validates the normalized
    object, not raw YAML presentation; `document-model.md` §1 and the
    `contracts/fixtures/sdl/sdl-yaml-v1/` corpus define the raw source profile.
 3. **Reference implementations (`implementations/`)** consume both. No Python
@@ -64,13 +66,13 @@ tests, rather than a prose rewrite. The catalogs are:
 
 | File | Catalog | Covers |
 |------|---------|--------|
-| [`document-model.md`](document-model.md) | — | Document encoding, the metadata/composition vs. authoring-section split, requiredness, identifier rules, structural closure, and the authoring → instantiated → expanded phases. |
+| [`document-model.md`](document-model.md) | — | Document encoding, the metadata/composition vs. authoring-section split, requiredness, identifier rules, structural closure, and the normalized -> expanded -> instantiated -> snapshot phases. |
 | [`sections.md`](sections.md) | **1. Section catalog** | Every top-level field: kind, value shape (map-keyed vs. list-valued vs. scalar), requiredness, key shape, and the sections it references. |
 | [`references.md`](references.md) | **2. Reference-resolution catalog** | Reference forms (bare, qualified, nested runtime-family, workflow-step, module-composed), the resolution algorithm, the fail-closed ambiguity rule, and the cross-section reference-edge catalog. |
 | [`variables-and-instantiation.md`](variables-and-instantiation.md) | **3. Variable / instantiation catalog** | Variable types, defaults, `allowed_values`, `${…}` substitution, the instantiation algorithm, and post-instantiation exclusions. |
 | [`runtime-inventory.md`](runtime-inventory.md) | **4. Runtime-family index** | The node-scoped runtime-inventory index — family key, collection name, primary `<noun>_id`, child-ref collections, owning ADR — and the shared invariants stated once, delegating per-field semantics to the family ADRs. |
 | [`observability-and-evidence.md`](observability-and-evidence.md) | **5. Observability and evidence planes** | Scenario-native observability, authored evidence requirements, processor/backend operational observability, captured evidence, derived analysis, and augmentation classification rules. |
-| [`diagnostics.md`](diagnostics.md) | — | The parse / semantic-validation / instantiation diagnostic stages and the normative error-vs-advisory classification criterion. |
+| [`diagnostics.md`](diagnostics.md) | — | The parse / semantic-validation / instantiation stages, direct-artifact admission, and the normative error-vs-advisory classification criterion. |
 
 ## Acceptance-question map
 
@@ -81,7 +83,7 @@ An implementer can answer each structural question from the named file alone:
   The nox contracts gate runs `tools/check_sdl_catalog_parity.py` to prove the
   catalog, published schema, and reference registries remain reconciled.
 - *Which raw YAML documents are canonical SDL, and what receives a stable
-  semantic digest?* → [`document-model.md`](document-model.md) §§1, 5, 7-8.
+  semantic digest?* → [`document-model.md`](document-model.md) §§1, 5, 7-9.
 - *What is a valid identifier for a user-defined key?* →
   [`document-model.md`](document-model.md).
 - *How does a reference resolve, and what happens when it is dangling or
@@ -99,8 +101,9 @@ An implementer can answer each structural question from the named file alone:
 
 ## Scope
 
-In scope: the SDL authoring model — document structure, references, variables,
-instantiation, the runtime-inventory index, observability/evidence plane
+In scope: the SDL authoring model and portable derived phase contracts —
+document structure, references, variables, instantiation/provenance,
+canonical snapshots, the runtime-inventory index, observability/evidence plane
 rules, and the diagnostic boundary.
 
 Out of scope: delivery-level concerns (container, infrastructure-as-code, and

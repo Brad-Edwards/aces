@@ -36,7 +36,7 @@ class SemanticValidator(
     _SectionsMixin,
     _ValidatorCore,
 ):
-    """Validates a Scenario beyond structural Pydantic checks.
+    """Validates executable SDL content beyond structural Pydantic checks.
 
     Call ``validate()`` to run all passes. Raises ``SDLValidationError``
     with all collected errors if any pass fails.

@@ -13,14 +13,14 @@ from aces_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
 from aces_sdl import build_declaration_index
 from aces_sdl.entities import flatten_entities
 from aces_sdl.explicitness import ExplicitnessClass
-from aces_sdl.instantiate import instantiate_scenario
+from aces_sdl.instantiate import admit_instantiated_scenario, instantiate_scenario
 from aces_sdl.nodes import NodeType
 from aces_sdl.orchestration import WorkflowStepType
 from aces_sdl.participant_outcome_semantics import (
     OutcomeInterpretationSourceLayer,
     OutcomeInterpretationTargetLayer,
 )
-from aces_sdl.scenario import InstantiatedScenario, Scenario
+from aces_sdl.scenario import ExpandedScenario, InstantiatedScenario, Scenario
 from aces_sdl.semantics.objective_semantics import (
     OBJECTIVE_WINDOW_DEPENDENCY_ROLES,
     partition_objective_dependencies,
@@ -32,6 +32,7 @@ from aces_sdl.semantics.workflow import (
 
 from .models import (
     AccountPlacement,
+    CompiledCapabilityConstraint,
     ConditionBinding,
     ContentPlacement,
     Diagnostic,
@@ -839,22 +840,32 @@ def _compile_templates(
 
 def _metadata_specs(
     scenario: InstantiatedScenario,
-) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     entity_specs = {name: _dump(entity) for name, entity in flatten_entities(scenario.entities).items()}
     agent_specs = {name: _dump(agent) for name, agent in scenario.agents.items()}
     relationship_specs = {name: _dump(relationship) for name, relationship in scenario.relationships.items()}
-    variable_specs = {name: _dump(variable) for name, variable in scenario.variables.items()}
-    for prefixed_name, spec in scenario.module_variable_specs.items():
-        if prefixed_name in variable_specs:
-            raise ValueError(
-                "Outer scenario variable "
-                f"{prefixed_name!r} collides with a module-import "
-                "provenance entry generated under the reserved private "
-                "namespace; rename the outer variable so it does not "
-                "shadow the imported domain."
+    return entity_specs, agent_specs, relationship_specs
+
+
+def _compile_capability_constraints(
+    scenario: InstantiatedScenario,
+) -> tuple[CompiledCapabilityConstraint, ...]:
+    compiled: list[CompiledCapabilityConstraint] = []
+    for constraint in scenario.instantiation_provenance.capability_constraints:
+        parts = constraint.field_pointer.split("/")
+        section_name, encoded_name, field_name = parts[1:]
+        node_name = encoded_name.replace("~1", "/").replace("~0", "~")
+        node = scenario.nodes[node_name]
+        address = _network_address(node_name) if node.type == NodeType.SWITCH else _node_address(node_name)
+        compiled.append(
+            CompiledCapabilityConstraint(
+                address=address,
+                concern=f"{section_name}.{field_name}",
+                parameter=constraint.parameter,
+                allowed_values=constraint.allowed_values,
             )
-        variable_specs[prefixed_name] = spec
-    return entity_specs, agent_specs, relationship_specs, variable_specs
+        )
+    return tuple(compiled)
 
 
 def _node_dependency_addresses(
@@ -2336,22 +2347,6 @@ def _compile_workflows(
     }
 
 
-def _node_variable_refs_by_address(
-    scenario: InstantiatedScenario,
-    node_variable_refs: dict[str, dict[str, str | None]],
-) -> dict[str, dict[str, str | None]]:
-    refs_by_address: dict[str, dict[str, str | None]] = {}
-    for node_name, refs in node_variable_refs.items():
-        if not refs.get("os") and not refs.get("count"):
-            continue
-        scenario_node = scenario.nodes.get(node_name)
-        if scenario_node is None:
-            continue
-        address = _network_address(node_name) if scenario_node.type == NodeType.SWITCH else _node_address(node_name)
-        refs_by_address[address] = refs
-    return refs_by_address
-
-
 def _realization_requirement_address(scenario: InstantiatedScenario, field_path: str) -> str:
     """Resolve the compiled resource address for a realization-concern path."""
 
@@ -2397,7 +2392,7 @@ def _compile_realization_requirements(
 
 
 def compile_scenario_runtime_model(
-    scenario: Scenario | InstantiatedScenario,
+    scenario: Scenario | ExpandedScenario | InstantiatedScenario,
     *,
     parameters: Mapping[str, object] | None = None,
     profile: str | None = None,
@@ -2412,13 +2407,15 @@ def compile_scenario_runtime_model(
     return compile_runtime_model(concrete_scenario)
 
 
-def compile_runtime_model(scenario: Scenario | InstantiatedScenario) -> RuntimeModel:
+def compile_runtime_model(scenario: Scenario | ExpandedScenario | InstantiatedScenario) -> RuntimeModel:
     """Compile an SDL scenario into bound runtime objects."""
 
-    if not isinstance(scenario, InstantiatedScenario):
-        scenario = instantiate_scenario(scenario, validate_semantics=False)
+    scenario = (
+        admit_instantiated_scenario(scenario)
+        if isinstance(scenario, InstantiatedScenario)
+        else instantiate_scenario(scenario)
+    )
     build_declaration_index(scenario)
-    node_variable_refs = dict(scenario.node_variable_refs)
     diagnostics: list[Diagnostic] = []
 
     (
@@ -2427,7 +2424,7 @@ def compile_runtime_model(scenario: Scenario | InstantiatedScenario) -> RuntimeM
         inject_templates,
         vulnerability_templates,
     ) = _compile_templates(scenario)
-    entity_specs, agent_specs, relationship_specs, variable_specs = _metadata_specs(scenario)
+    entity_specs, agent_specs, relationship_specs = _metadata_specs(scenario)
 
     networks, node_deployments = _compile_node_runtimes(scenario, diagnostics)
     feature_bindings = _compile_feature_bindings(scenario, feature_templates, diagnostics)
@@ -2456,8 +2453,7 @@ def compile_runtime_model(scenario: Scenario | InstantiatedScenario) -> RuntimeM
         entity_specs=entity_specs,
         agent_specs=agent_specs,
         relationship_specs=relationship_specs,
-        variable_specs=variable_specs,
-        node_variable_refs=_node_variable_refs_by_address(scenario, node_variable_refs),
+        capability_constraints=_compile_capability_constraints(scenario),
         networks=networks,
         node_deployments=node_deployments,
         feature_bindings=feature_bindings,

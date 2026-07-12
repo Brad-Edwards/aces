@@ -145,11 +145,17 @@ On success, the returned `Scenario` may still carry non-fatal advisories in `sce
 ## API
 
 ```python
+import json
+from pathlib import Path
+
 from aces.core.sdl import parse_sdl, parse_sdl_file
 from aces_sdl import (
     SDLMigrationPolicy,
+    admit_instantiated_scenario,
+    canonical_instantiated_sdl_digest,
     canonical_sdl_digest,
     format_sdl_source,
+    instantiate_scenario,
     load_sdl_fragment,
 )
 
@@ -168,6 +174,12 @@ scenario = parse_sdl(legacy_yaml, migration_policy=SDLMigrationPolicy.ACCEPT)
 
 # Versioned semantic identity requires successful semantic validation.
 digest = canonical_sdl_digest(parse_sdl(yaml_string))
+
+# Instantiation returns the closed portable artifact; direct JSON artifacts use
+# the same admission gate before compilation or snapshotting.
+concrete = instantiate_scenario(scenario, parameters={})
+restored = admit_instantiated_scenario(json.loads(concrete.model_dump_json()))
+snapshot_digest = canonical_instantiated_sdl_digest(restored)
 
 # Advanced authoring tools can preflight a fragment at its final address.
 nodes = load_sdl_fragment(

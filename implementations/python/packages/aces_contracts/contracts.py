@@ -13,6 +13,7 @@ from typing import Annotated, Any, Literal
 from urllib.parse import parse_qsl, urlsplit
 
 from aces_sdl import VARIABLE_TOKEN_PATTERN
+from aces_sdl.canonical import InstantiatedScenarioSnapshot
 from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 from aces_sdl.identifiers import PORTABLE_IDENTIFIER_JSON_SCHEMA, QUALIFIED_IDENTIFIER_MAX_LENGTH
 from aces_sdl.observability_plane_semantics import classify_contract_plane
@@ -443,8 +444,15 @@ def _extend_reported_value_status_schema(json_schema: JsonSchemaValue) -> None:
 
 _DEFS_KEY = "$defs"
 _INSTANTIATION_INVARIANT_CONTRACT_ID = "instantiated-scenario-v1"
+_INSTANTIATED_SNAPSHOT_CONTRACT_ID = "instantiated-scenario-snapshot-v1"
 _SDL_AUTHORING_CONTRACT_ID = "sdl-authoring-input-v1"
-_SDL_IDENTIFIER_CONTRACT_IDS = frozenset({_SDL_AUTHORING_CONTRACT_ID, _INSTANTIATION_INVARIANT_CONTRACT_ID})
+_SDL_IDENTIFIER_CONTRACT_IDS = frozenset(
+    {
+        _SDL_AUTHORING_CONTRACT_ID,
+        _INSTANTIATION_INVARIANT_CONTRACT_ID,
+        _INSTANTIATED_SNAPSHOT_CONTRACT_ID,
+    }
+)
 _SCHEMA_MAP_KEYS = ("properties", "patternProperties", _DEFS_KEY)
 _SCHEMA_SUBSCHEMA_KEYS = (
     "additionalProperties",
@@ -555,11 +563,23 @@ def _attach_sdl_identifier_constraints(contract_id: str, schema: dict[str, Any])
         _attach_scenario_identifier_constraints(contract_id, schema)
 
 
-def _attach_scenario_identifier_constraints(contract_id: str, schema: dict[str, Any]) -> None:
+def _scenario_schema_for_identifier_constraints(
+    contract_id: str,
+    schema: dict[str, Any],
+) -> dict[str, Any] | None:
+    if contract_id != _INSTANTIATED_SNAPSHOT_CONTRACT_ID:
+        return schema
+    nested = schema.get(_DEFS_KEY, {}).get("InstantiatedScenario")
+    return nested if isinstance(nested, dict) else None
 
-    qualified = contract_id == _INSTANTIATION_INVARIANT_CONTRACT_ID
+
+def _attach_scenario_identifier_constraints(contract_id: str, schema: dict[str, Any]) -> None:
+    scenario_schema = _scenario_schema_for_identifier_constraints(contract_id, schema)
+    if scenario_schema is None:
+        return
+    qualified = contract_id != _SDL_AUTHORING_CONTRACT_ID
     for section_name in HASHMAP_SECTIONS:
-        section = schema.get("properties", {}).get(section_name)
+        section = scenario_schema.get("properties", {}).get(section_name)
         if not isinstance(section, dict):
             continue
         local_maximum = 35 if section_name == "nodes" else 64
@@ -571,7 +591,7 @@ def _attach_scenario_identifier_constraints(contract_id: str, schema: dict[str, 
     _attach_runtime_identifier_constraints(schema)
     forwarding_id_schema = _qualified_property_names() if qualified else _portable_property_names()
     _constrain_collection_item_field(
-        schema,
+        scenario_schema,
         "forwarding_agents",
         "forwarding_agent_id",
         forwarding_id_schema,
@@ -635,16 +655,16 @@ def _forbid_variable_tokens_in_strings(node: object) -> None:
 
 
 def _attach_instantiation_invariants(contract_id: str, json_schema: dict[str, Any]) -> None:
-    """Differentiate the instantiated-scenario contract from authoring-input.
+    """Apply the no-substitution-token invariant to concrete SDL artifacts.
 
-    The authoring (``Scenario``) and instantiated (``InstantiatedScenario``)
-    models share every field, so their generated schemas are identical apart
-    from metadata. An instantiated scenario is fully concrete, so the
-    instantiated schema additionally forbids unresolved ``${var}`` tokens in
-    string values — both whole-string placeholders and embedded tokens (issue
-    #500). The matching model-level invariant lives on ``InstantiatedScenario``.
+    An instantiated scenario is fully concrete, so its payload and canonical
+    snapshot forbid unresolved ``${var}`` tokens in string values. The matching
+    model-level invariant lives on ``InstantiatedScenario``.
     """
-    if contract_id != _INSTANTIATION_INVARIANT_CONTRACT_ID:
+    if contract_id not in {
+        _INSTANTIATION_INVARIANT_CONTRACT_ID,
+        _INSTANTIATED_SNAPSHOT_CONTRACT_ID,
+    }:
         return
     _forbid_variable_tokens_in_strings(json_schema)
 
@@ -7620,6 +7640,7 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "aces-semantic-invariants-v1": _aces_semantic_invariant_profile_schema_for_bundle(),
         "sdl-authoring-input-v1": Scenario.model_json_schema(),
         "instantiated-scenario-v1": InstantiatedScenario.model_json_schema(),
+        "instantiated-scenario-snapshot-v1": InstantiatedScenarioSnapshot.model_json_schema(),
         "scenario-instantiation-request-v1": InstantiationRequestModel.model_json_schema(),
         "backend-manifest-v2": BackendManifestV2Model.model_json_schema(),
         "realization-envelope-v1": BackendRealizationEnvelopeModel.model_json_schema(),

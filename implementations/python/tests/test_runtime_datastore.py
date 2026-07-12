@@ -43,7 +43,11 @@ from pydantic import ValidationError
 
 from aces.core.sdl.scenario import Scenario
 
-_PUBLISHED_SDL_SCHEMA_NAMES = ("instantiated-scenario-v1", "sdl-authoring-input-v1")
+_PUBLISHED_SDL_SCHEMA_NAMES = (
+    "instantiated-scenario-snapshot-v1",
+    "instantiated-scenario-v1",
+    "sdl-authoring-input-v1",
+)
 _DATASTORE_MAPPING_SCHEMA_FIELDS = {
     "date_detection",
     "description",
@@ -671,7 +675,7 @@ def _string_branch(schema_name: str) -> dict:
     string values (issue #500); the authoring contract still accepts them, so
     the two schemas now differ on every string branch.
     """
-    if schema_name == "instantiated-scenario-v1":
+    if schema_name in {"instantiated-scenario-v1", "instantiated-scenario-snapshot-v1"}:
         return {"type": "string", "not": {"pattern": VARIABLE_TOKEN_PATTERN}}
     return {"type": "string"}
 

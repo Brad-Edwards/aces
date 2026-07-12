@@ -78,6 +78,10 @@ longest-match rule.
 3. After instantiation substitutes a concrete value, the normal reference rules
    (§2) apply to that value. A reference that becomes dangling or ambiguous only
    after substitution fails at instantiation.
+4. A direct or deserialized instantiated artifact is not exempt. Its required
+   provenance can explain binding and resolution inputs, but it does not create
+   declarations or authorize references. Artifact admission reruns the same
+   declaration-index and reference checks before compilation or snapshotting.
 
 ## 4. Failure semantics (fail-closed)
 

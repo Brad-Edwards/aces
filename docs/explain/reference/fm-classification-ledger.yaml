@@ -447,3 +447,16 @@ entries:
       - kind: property_based_or_differential_tests
         path: implementations/python/tests/test_sdl_identifiers.py
     waived_artifacts: []
+  - adr: ADR-078
+    surface: Closed SDL phase contracts and portable derivation evidence
+    fm_level: FM2
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/sdl-phases/README.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_phase_contracts.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/packages/aces_sdl/phase_contracts.py
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_sdl_phase_contracts.py
+    waived_artifacts: []

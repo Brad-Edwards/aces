@@ -6,19 +6,24 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
+
 from ._base import is_variable_ref
 from ._composition_budget import CompositionBudget, CompositionTraversal
+from ._composition_provenance import (
+    prefixed_constraint as _prefixed_constraint,
+)
+from ._composition_provenance import (
+    prefixed_explicitness as _prefixed_explicitness,
+)
+from ._composition_provenance import (
+    prefixed_import_record as _prefixed_import_record,
+)
+from ._composition_provenance import (
+    resolved_import_record as _resolved_import_record,
+)
 from ._errors import SDLInstantiationError, SDLParseDiagnostic, SDLParseError
 from ._identifiers import QualifiedName
-from ._module_provenance import (
-    add_unique_provenance as _add_unique_provenance,
-)
-from ._module_provenance import (
-    dump_variable_spec as _dump_variable_spec,
-)
-from ._module_provenance import (
-    rename_variable_ref,
-)
 from ._module_symbols import FORWARDING_AGENTS_SECTION
 from ._module_symbols import HASHMAP_SECTIONS as _HASHMAP_SECTIONS
 from ._module_symbols import (
@@ -35,14 +40,20 @@ from ._source_profile import (
     SDLSourceParseOptions,
 )
 from .entities import flatten_entities
-from .instantiate import instantiate_scenario
+from .instantiate import _bind_scenario_content
 from .module_registry import (
     load_lockfile,
     load_trust_policy,
     resolve_import,
 )
 from .parser import _load_normalized_data
-from .scenario import ExpandedScenario, ImportDecl, ModuleDescriptor, Scenario
+from .phase_contracts import (
+    CapabilityConstraint,
+    ExpansionProvenance,
+    ExplicitnessProvenanceRecord,
+    ResolvedImportProvenance,
+)
+from .scenario import ExpandedScenario, ImportDecl, ModuleDescriptor, ScenarioContent
 
 
 def _prefix(namespace: str, name: str) -> str:
@@ -60,7 +71,7 @@ def _maybe_rename(name: str, name_map: Mapping[str, str]) -> str:
 
 
 def _validate_descriptor_exports(
-    scenario: Scenario,
+    scenario: ScenarioContent,
     descriptor: ModuleDescriptor,
 ) -> None:
     for section_name, exported_names in descriptor.exports.items():
@@ -158,22 +169,18 @@ def _rewrite_evidence_requirement(
 
 def _namespace_payload(
     payload: dict[str, Any],
-    imported: Scenario,
+    imported: ScenarioContent,
     namespace: str,
+    descriptor: ModuleDescriptor,
 ) -> dict[str, Any]:
     namespaced = dict(payload)
-    descriptor = imported.module or ModuleDescriptor(
-        id=imported.name,
-        version=imported.version,
-        parameters=sorted(imported.variables.keys()),
-        exports={
-            section: sorted(getattr(imported, section).keys())
-            for section in _HASHMAP_SECTIONS
-            if getattr(imported, section)
-        },
-    )
     _validate_descriptor_exports(imported, descriptor)
-    symbols = _symbol_index(imported, namespace=namespace, descriptor=descriptor)
+    symbols = _symbol_index(
+        imported,
+        namespace=namespace,
+        descriptor=descriptor,
+        restrict_to_descriptor=True,
+    )
 
     for node in namespaced.get("nodes", {}).values():
         if isinstance(node, dict):
@@ -327,9 +334,11 @@ def _namespace_payload(
                     identifier,
                     _private_prefix(namespace, identifier),
                 )
-    namespaced["variables"] = {}
-    namespaced["module"] = None
-    namespaced["imports"] = []
+    namespaced.pop("variables", None)
+    namespaced.pop("module", None)
+    namespaced.pop("imports", None)
+    namespaced.pop("expansion_provenance", None)
+    namespaced.pop("instantiation_provenance", None)
     return namespaced
 
 
@@ -375,23 +384,8 @@ def expand_sdl_modules(
     limits: SDLParserLimits = DEFAULT_PARSER_LIMITS,
     source_diagnostics: list[SDLParseDiagnostic] | None = None,
     _traversal: CompositionTraversal | None = None,
-) -> tuple[
-    dict[str, Any],
-    dict[str, str],
-    dict[str, dict[str, object]],
-    dict[str, dict[str, str | None]],
-]:
-    """Expand local SDL imports into one canonical merged payload.
-
-    Returns ``(merged_payload, namespaces, module_variable_specs,
-    module_node_variable_refs)``. The trailing two channels carry capability-
-    variable provenance across the import boundary so the runtime planner can
-    enforce `allowed_values` against backend support for imported parameterized
-    modules. The composition step strips imported variables from the merged
-    payload by design; these side-channel dicts preserve their specs
-    (namespace-prefixed) and the imported nodes' `${name}` refs (with both
-    node and variable names namespace-prefixed) for downstream consumers.
-    """
+) -> tuple[dict[str, Any], ExpansionProvenance]:
+    """Expand trusted imports into executable content and portable evidence."""
 
     traversal = _traversal or CompositionTraversal(
         seen=frozenset(),
@@ -409,9 +403,9 @@ def expand_sdl_modules(
     merged = dict(data)
     merged.setdefault("imports", [])
     merged.setdefault("version", "*")
-    namespaces: dict[str, str] = {}
-    module_variable_specs: dict[str, dict[str, object]] = {}
-    module_node_variable_refs: dict[str, dict[str, str | None]] = {}
+    import_records: list[ResolvedImportProvenance] = []
+    capability_constraints: list[CapabilityConstraint] = []
+    explicitness_records: list[ExplicitnessProvenanceRecord] = []
     lockfile = load_lockfile(resolved_path.parent)
     trust_policy = load_trust_policy(resolved_path.parent)
 
@@ -444,12 +438,7 @@ def expand_sdl_modules(
             limits=limits,
             source_diagnostics=source_diagnostics,
         )
-        (
-            imported_expanded,
-            imported_namespaces,
-            inner_module_variable_specs,
-            inner_module_node_variable_refs,
-        ) = expand_sdl_modules(
+        imported_expanded, inner_provenance = expand_sdl_modules(
             imported_raw,
             path=import_path,
             source_format=source_format,
@@ -460,108 +449,55 @@ def expand_sdl_modules(
         )
         try:
             imported_scenario = ExpandedScenario.model_validate(imported_expanded)
-            # Re-attach the deeper-import provenance so `instantiate_scenario`
-            # can propagate it onto the `InstantiatedScenario` alongside
-            # whatever local refs it captures.
-            imported_scenario._set_module_variable_specs(inner_module_variable_specs)
-            imported_scenario._set_module_node_variable_refs(inner_module_node_variable_refs)
-            imported_instantiated = instantiate_scenario(
-                imported_scenario,
-                parameters=import_decl.parameters,
-                validate_semantics=False,
-            )
+            bound = _bind_scenario_content(imported_scenario, import_decl.parameters)
+        except ValidationError as exc:
+            raise SDLParseError("Imported SDL unit is structurally invalid", path=import_path) from exc
         except SDLInstantiationError as exc:
             raise SDLParseError(str(exc), path=import_path) from exc
-        imported_instantiated.module = resolved_import.module_descriptor
         namespace = import_decl.namespace
-
-        descriptor = imported_instantiated.module
-        if descriptor is None:
-            raise SDLParseError("Imported SDL units require an explicit module descriptor", path=import_path)
-        symbols = _symbol_index(imported_instantiated, namespace=namespace, descriptor=descriptor)
-
-        # Local imported variables get namespace-prefixed (private prefix; they
-        # are not exported) and threaded into the module-variable-specs
-        # accumulator. Deeper-import specs from `imported_instantiated.module_variable_specs`
-        # are already prefixed at their level; re-prefix them at this level too.
-        # Collisions on the generated private-prefix namespace are rejected
-        # outright: silently letting one provenance entry overwrite another
-        # would let the planner validate an imported node against the wrong
-        # `allowed_values` domain. The same applies to the node-ref merge below.
-        local_var_renames = {name: _private_prefix(namespace, name) for name in imported_instantiated.variables}
-        for var_name, spec in imported_instantiated.variables.items():
-            _add_unique_provenance(
-                module_variable_specs,
-                local_var_renames[var_name],
-                _dump_variable_spec(spec),
-                kind="variable spec",
-                source_path=import_path,
-            )
-        for inner_name, spec in imported_instantiated.module_variable_specs.items():
-            _add_unique_provenance(
-                module_variable_specs,
-                _prefix(namespace, inner_name),
-                dict(spec),
-                kind="variable spec",
-                source_path=import_path,
-            )
-
-        # Captured node refs come from two sources: locally-captured refs in
-        # the imported scenario (`imported_instantiated.node_variable_refs`)
-        # whose node-name keys are still the imported scenario's own names,
-        # and pre-existing deeper-import refs in
-        # `imported_instantiated.module_node_variable_refs` whose node names
-        # are already deeper-prefixed. Both need this level's namespace
-        # applied to node names and variable names, with the variable name
-        # routed through the local rename map when local, else through the
-        # outer-prefix when deeper.
-        node_renames = symbols.get("nodes") or {}
-        for node_name, refs in imported_instantiated.node_variable_refs.items():
-            renamed_node = node_renames.get(node_name) or _prefix(namespace, node_name)
-            _add_unique_provenance(
-                module_node_variable_refs,
-                renamed_node,
-                {
-                    "os": _rename_variable_ref(refs.get("os"), local_var_renames, namespace),
-                    "count": _rename_variable_ref(refs.get("count"), local_var_renames, namespace),
-                },
-                kind="node variable ref",
-                source_path=import_path,
-            )
-        for inner_node_name, refs in imported_instantiated.module_node_variable_refs.items():
-            renamed_node = _prefix(namespace, inner_node_name)
-            _add_unique_provenance(
-                module_node_variable_refs,
-                renamed_node,
-                {
-                    "os": _rename_variable_ref(refs.get("os"), local_var_renames, namespace),
-                    "count": _rename_variable_ref(refs.get("count"), local_var_renames, namespace),
-                },
-                kind="node variable ref",
-                source_path=import_path,
-            )
+        descriptor = resolved_import.module_descriptor
+        symbols = _symbol_index(
+            bound.content,
+            namespace=namespace,
+            descriptor=descriptor,
+            restrict_to_descriptor=True,
+        )
 
         namespaced_payload = _namespace_payload(
-            imported_instantiated.model_dump(mode="python", by_alias=True),
-            imported_instantiated,
+            bound.content.model_dump(mode="python", by_alias=True),
+            bound.content,
             namespace,
+            descriptor,
         )
         budget.check_namespaces(namespaced_payload, path=import_path)
         merged = _merge_sections(merged, namespaced_payload, path=import_path)
-        namespaces[str(import_path)] = namespace
-        namespaces.update(imported_namespaces)
 
-    merged["imports"] = []
-    return merged, namespaces, module_variable_specs, module_node_variable_refs
+        import_records.append(_resolved_import_record(resolved_import, requested=import_decl, bindings=bound))
+        import_records.extend(_prefixed_import_record(record, namespace) for record in inner_provenance.imports)
+        capability_constraints.extend(
+            _prefixed_constraint(
+                constraint,
+                namespace=namespace,
+                symbols=symbols,
+            )
+            for constraint in bound.capability_constraints
+        )
+        explicitness_records.extend(
+            _prefixed_explicitness(
+                record,
+                namespace=namespace,
+                imported=bound.content,
+                symbols=symbols,
+            )
+            for record in bound.explicitness
+        )
 
-
-def _rename_variable_ref(
-    ref: str | None,
-    local_var_renames: Mapping[str, str],
-    namespace: str,
-) -> str | None:
-    """Thin shim binding `_module_provenance.rename_variable_ref` to this
-    file's local `_prefix` namespace helper. The provenance module accepts
-    the prefix function as a parameter to avoid a circular import."""
-
-    return rename_variable_ref(ref, local_var_renames, namespace, prefix=_prefix)
+    provenance = ExpansionProvenance(
+        imports=tuple(import_records),
+        capability_constraints=tuple(capability_constraints),
+        explicitness=tuple(explicitness_records),
+    )
+    merged.pop("imports", None)
+    merged.pop("module", None)
+    merged["expansion_provenance"] = provenance.model_dump(mode="python")
+    return merged, provenance

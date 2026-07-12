@@ -62,6 +62,16 @@ _portable_identifier_strategy = st.builds(
 )
 
 
+def _minimal_instantiation_provenance() -> dict[str, object]:
+    return {
+        "authored_digest": {
+            "profile": "aces-sdl-semantic/v1",
+            "algorithm": "sha256",
+            "value": f"sha256:{'0' * 64}",
+        }
+    }
+
+
 @pytest.mark.parametrize(
     "identifier",
     ["a", "0", "001", "a-b", "a_b", "a" * 64],
@@ -351,7 +361,6 @@ nodes:
     instantiated = instantiate_scenario(
         scenario,
         parameters={"label": "renamed.node"},
-        validate_semantics=False,
     )
 
     assert set(instantiated.nodes) == {"vm"}
@@ -484,7 +493,11 @@ def test_published_authoring_schema_rejects_nonportable_declaration_key() -> Non
 
 def test_published_instantiated_schema_accepts_generated_qualified_key() -> None:
     schema = schema_bundle()["instantiated-scenario-v1"]
-    payload = {"name": "root", "nodes": {"shared.vm": {"type": "switch"}}}
+    payload = {
+        "name": "root",
+        "nodes": {"shared.vm": {"type": "switch"}},
+        "instantiation_provenance": _minimal_instantiation_provenance(),
+    }
 
     assert list(jsonschema.Draft202012Validator(schema).iter_errors(payload)) == []
 
@@ -578,6 +591,10 @@ def test_published_schema_separates_top_level_forwarder_identity_phases() -> Non
         "name": "root",
         "forwarding_agents": [{"forwarding_agent_id": "shared.shipper"}],
     }
+    instantiated_top_level = {
+        **top_level,
+        "instantiation_provenance": _minimal_instantiation_provenance(),
+    }
     nested_runtime = {
         "name": "root",
         "nodes": {
@@ -588,11 +605,12 @@ def test_published_schema_separates_top_level_forwarder_identity_phases() -> Non
                 },
             }
         },
+        "instantiation_provenance": _minimal_instantiation_provenance(),
     }
 
     with pytest.raises(jsonschema.ValidationError):
         jsonschema.Draft202012Validator(authoring).validate(top_level)
-    jsonschema.Draft202012Validator(instantiated).validate(top_level)
+    jsonschema.Draft202012Validator(instantiated).validate(instantiated_top_level)
     with pytest.raises(jsonschema.ValidationError):
         jsonschema.Draft202012Validator(instantiated).validate(nested_runtime)
 

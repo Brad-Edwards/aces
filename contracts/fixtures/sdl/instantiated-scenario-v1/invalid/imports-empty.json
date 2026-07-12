@@ -1,6 +1,6 @@
 {
-  "name": "concrete-scenario",
-  "description": "deploy ${region} cluster",
+  "name": "forbidden-imports",
+  "imports": [],
   "instantiation_provenance": {
   "authored_digest": {
     "profile": "aces-sdl-semantic/v1",

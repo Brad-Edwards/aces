@@ -24,7 +24,7 @@ from typing import Any
 from aces_backend_protocols.capabilities import BackendManifest
 from aces_contracts.diagnostics import Diagnostic
 from aces_sdl.parser import parse_sdl, parse_sdl_file
-from aces_sdl.scenario import InstantiatedScenario, Scenario
+from aces_sdl.scenario import ExpandedScenario, InstantiatedScenario, Scenario
 
 from aces_processor.compiler import compile_scenario_runtime_model
 from aces_processor.manifest import (
@@ -44,7 +44,7 @@ __all__ = [
 
 # SDL authoring input the reference processor accepts: raw SDL text, a path to an
 # SDL file, or an already-parsed scenario (parameterized or instantiated).
-ScenarioInput = str | Path | Scenario | InstantiatedScenario
+ScenarioInput = str | Path | Scenario | ExpandedScenario | InstantiatedScenario
 
 
 @dataclass(frozen=True)
@@ -63,10 +63,8 @@ class ReferenceProcessorResult:
         return not any(diag.is_error for diag in self.diagnostics)
 
 
-def _resolve_scenario(scenario: ScenarioInput) -> Scenario:
-    # ``InstantiatedScenario`` is a ``Scenario`` subclass, so the isinstance
-    # check covers both parsed and instantiated inputs without re-parsing.
-    if isinstance(scenario, Scenario):
+def _resolve_scenario(scenario: ScenarioInput) -> Scenario | ExpandedScenario | InstantiatedScenario:
+    if isinstance(scenario, (Scenario, ExpandedScenario, InstantiatedScenario)):
         return scenario
     if isinstance(scenario, Path):
         return parse_sdl_file(scenario)
@@ -74,7 +72,7 @@ def _resolve_scenario(scenario: ScenarioInput) -> Scenario:
         return parse_sdl(scenario)
     raise TypeError(
         "scenario must be SDL text (str), a file path (Path), or a parsed "
-        f"Scenario/InstantiatedScenario; got {type(scenario).__name__}"
+        f"Scenario/ExpandedScenario/InstantiatedScenario; got {type(scenario).__name__}"
     )
 
 

@@ -5,12 +5,14 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
+import pytest
+
 from aces.core.runtime.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
 from aces.core.runtime.compiler import compile_runtime_model
-from aces.core.sdl import parse_sdl, parse_sdl_file
+from aces.core.sdl import SDLInstantiationError, parse_sdl, parse_sdl_file
 
 
 def _scenario(yaml_str: str):
@@ -599,10 +601,9 @@ workflows:
         assert model.objectives["evaluation.objective.initial"].result_contract.supports_passed is True
         assert not model.diagnostics
 
-    def test_objective_window_step_outside_window_workflows_emits_diagnostic(self):
-        model = compile_runtime_model(
-            parse_sdl(
-                textwrap.dedent("""
+    def test_objective_window_step_outside_window_workflows_fails_admission(self):
+        scenario = parse_sdl(
+            textwrap.dedent("""
 name: broken-window
 nodes:
   vm:
@@ -632,20 +633,19 @@ workflows:
     steps:
       finish: {type: end}
 """),
-                skip_semantic_validation=True,
-            )
+            skip_semantic_validation=True,
         )
 
-        diagnostics = {(diag.code, diag.address) for diag in model.diagnostics}
-        assert (
-            "evaluation.workflow-step-ref-workflow-outside-window",
-            "evaluation.objective.initial",
-        ) in diagnostics
+        with pytest.raises(SDLInstantiationError) as exc_info:
+            compile_runtime_model(scenario)
+        assert any(
+            "Objective 'initial' window step 'other.finish' is not part of the referenced workflows" in error
+            for error in exc_info.value.errors
+        )
 
-    def test_missing_node_bindings_emit_diagnostics_without_crashing(self):
-        model = compile_runtime_model(
-            parse_sdl(
-                textwrap.dedent("""
+    def test_missing_node_bindings_fail_compiler_admission(self):
+        scenario = parse_sdl(
+            textwrap.dedent("""
 name: broken-bindings
 nodes:
   vm:
@@ -657,22 +657,20 @@ nodes:
     injects: {phish: web}
     roles: {web: appuser}
 """),
-                skip_semantic_validation=True,
-            )
+            skip_semantic_validation=True,
         )
 
-        codes = {diag.code for diag in model.diagnostics}
-        assert "provisioning.feature-template-ref-unbound" in codes
-        assert "evaluation.condition-template-ref-unbound" in codes
-        assert "orchestration.inject-template-ref-unbound" in codes
-        assert model.feature_bindings == {}
-        assert model.condition_bindings == {}
-        assert model.inject_bindings == {}
+        with pytest.raises(SDLInstantiationError) as exc_info:
+            compile_runtime_model(scenario)
+        assert exc_info.value.errors == [
+            "Node 'vm' references undefined feature 'nginx'",
+            "Node 'vm' references undefined condition 'health'",
+            "Node 'vm' references undefined inject 'phish'",
+        ]
 
-    def test_missing_runtime_graph_refs_emit_partial_model_diagnostics(self):
-        model = compile_runtime_model(
-            parse_sdl(
-                textwrap.dedent("""
+    def test_missing_runtime_graph_refs_fail_compiler_admission(self):
+        scenario = parse_sdl(
+            textwrap.dedent("""
 name: broken-graph
 nodes:
   vm:
@@ -708,25 +706,24 @@ workflows:
         else: finish
       finish: {type: end}
 """),
-                skip_semantic_validation=True,
-            )
+            skip_semantic_validation=True,
         )
 
-        codes = {diag.code for diag in model.diagnostics}
-        assert "orchestration.event-ref-unbound" in codes
-        assert "orchestration.script-ref-unbound" in codes
-        assert "evaluation.condition-ref-unbound" in codes
-        assert "evaluation.workflow-ref-unbound" in codes
-        assert "evaluation.workflow-step-ref-workflow-unbound" in codes
-        assert "evaluation.workflow-step-ref-invalid-format" in codes
-        assert "orchestration.objective-ref-unbound" in codes
-
-        assert model.scripts["orchestration.script.timeline"].event_addresses == ()
-        assert model.stories["orchestration.story.main"].script_addresses == ()
-        assert model.objectives["evaluation.objective.initial"].success_addresses == ()
-        assert model.objectives["evaluation.objective.initial"].window_workflow_addresses == ()
-        assert model.objectives["evaluation.objective.initial"].window_step_refs == ()
-        assert model.workflows["orchestration.workflow.flow"].referenced_objective_addresses == ()
+        with pytest.raises(SDLInstantiationError) as exc_info:
+            compile_runtime_model(scenario)
+        errors = exc_info.value.errors
+        assert any("Script 'timeline' references undefined event 'missing-event'" in error for error in errors)
+        assert any("Story 'main' references undefined script 'missing-script'" in error for error in errors)
+        assert any(
+            "Objective 'initial' references undefined condition 'missing-condition'" in error for error in errors
+        )
+        assert any("Objective 'initial' references undefined workflow 'missing-workflow'" in error for error in errors)
+        assert any("window step 'missing-workflow.branch' references undefined workflow" in error for error in errors)
+        assert any("window step 'badstep' must use '<workflow>.<step>' syntax" in error for error in errors)
+        assert any(
+            "Workflow 'flow' step 'branch' references undefined objective 'missing-objective'" in error
+            for error in errors
+        )
 
     def test_workflow_with_retry_and_step_state_compiles(self):
         model = compile_runtime_model(

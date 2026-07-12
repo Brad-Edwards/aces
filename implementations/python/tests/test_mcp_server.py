@@ -348,18 +348,22 @@ name: param-test
 variables:
   greeting:
     type: string
-    default: hello
+    required: true
 """
         text = _call(
             server,
             "sdl_instantiate",
-            {"sdl_content": sdl, "parameters_json": '{"greeting": "hi"}'},
+            {"sdl_content": sdl, "parameters_json": '{"greeting": "s3cr3t-marker-9b2d"}'},
         )
         assert text.startswith("INSTANTIATED")
-        # Verify the supplied parameter actually substituted into the resolved
-        # scenario rather than the default being silently retained.
-        assert "'greeting': 'hi'" in text
-        assert "'greeting': 'hello'" not in text
+        assert "Bindings resolved: 1" in text
+        assert "greeting" not in text
+        assert "s3cr3t-marker-9b2d" not in text
+
+        missing = _call(server, "sdl_instantiate", {"sdl_content": sdl})
+        assert missing.startswith("INSTANTIATION ERRORS")
+        assert "required" in missing
+        assert "s3cr3t-marker-9b2d" not in missing
 
     def test_instantiate_bad_json(self, server):
         text = _call(

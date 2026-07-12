@@ -28,7 +28,6 @@ _SECTION_FIELDS = [
     "outcome_interpretation_rules",
     "objectives",
     "workflows",
-    "variables",
 ]
 
 
@@ -100,7 +99,12 @@ def compile_pipeline(
         "scenario": concrete,
         "model": model,
         "source_diagnostics": [item.as_dict() for item in scenario.source_diagnostics],
-        "instantiation_parameters": concrete.instantiation_parameters,
+        "instantiation": {
+            "binding_count": len(concrete.instantiation_provenance.bindings)
+            + sum(len(item.bindings) for item in concrete.instantiation_provenance.imports),
+            "import_count": len(concrete.instantiation_provenance.imports),
+            "profile": concrete.instantiation_provenance.selected_profile,
+        },
     }
 
 
@@ -214,7 +218,7 @@ def runtime_model_summary(model: Any) -> dict[str, Any]:
             "entities": len(model.entity_specs),
             "agents": len(model.agent_specs),
             "relationships": len(model.relationship_specs),
-            "variables": len(model.variable_specs),
+            "capability_constraints": len(model.capability_constraints),
         },
         "domains": {
             "provisioning": {

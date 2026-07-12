@@ -320,7 +320,7 @@ def _validate_witness_payload(payload: dict[str, object], envelope: RealizationE
     try:
         raw = Scenario.model_validate(payload)
         raw._set_semantic_validated(False)
-        instantiated = instantiate_scenario(raw, validate_semantics=True)
+        instantiated = instantiate_scenario(raw)
     except (ValidationError, SDLValidationError, SDLInstantiationError):
         return WitnessResult(
             None,

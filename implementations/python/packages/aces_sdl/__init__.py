@@ -8,11 +8,16 @@ relationships, agents, objectives, workflows, and variables.
 from importlib import import_module
 
 __all__ = [
+    "admit_instantiated_scenario",
+    "canonical_instantiated_sdl_bytes",
+    "canonical_instantiated_sdl_digest",
     "canonical_sdl_bytes",
     "canonical_sdl_digest",
     "build_declaration_index",
+    "INSTANTIATED_SNAPSHOT_PROFILE",
     "instantiate_scenario",
     "InstantiatedScenario",
+    "InstantiatedScenarioSnapshot",
     "SDLCanonicalDigest",
     "SDL_CANONICAL_PROFILE",
     "SDLFormatResult",
@@ -46,7 +51,15 @@ def __getattr__(name: str):
         "SDLValidationError",
     }:
         module = import_module("aces_sdl._errors")
-    elif name in {"canonical_sdl_bytes", "canonical_sdl_digest", "SDLCanonicalDigest"}:
+    elif name in {
+        "canonical_instantiated_sdl_bytes",
+        "canonical_instantiated_sdl_digest",
+        "canonical_sdl_bytes",
+        "canonical_sdl_digest",
+        "INSTANTIATED_SNAPSHOT_PROFILE",
+        "InstantiatedScenarioSnapshot",
+        "SDLCanonicalDigest",
+    }:
         module = import_module("aces_sdl.canonical")
     elif name in {"format_sdl_source", "SDLFormatResult"}:
         module = import_module("aces_sdl.formatting")
@@ -61,7 +74,7 @@ def __getattr__(name: str):
         module = import_module("aces_sdl._base")
     elif name == "build_declaration_index":
         module = import_module("aces_sdl._declarations")
-    elif name == "instantiate_scenario":
+    elif name in {"admit_instantiated_scenario", "instantiate_scenario"}:
         module = import_module("aces_sdl.instantiate")
     elif name in {"load_sdl_fragment", "parse_sdl", "parse_sdl_file"}:
         module = import_module("aces_sdl.parser")

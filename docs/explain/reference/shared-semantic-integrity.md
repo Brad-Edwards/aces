@@ -33,8 +33,9 @@ The current canonical lifecycle is:
 2. `SemanticValidator` enforces static SDL semantics and collects all authoring
    errors
 3. `instantiate_scenario()` applies parameters/defaults, rejects unresolved
-   placeholders, rebuilds a concrete `InstantiatedScenario`, and reruns
-   semantic validation
+   placeholders, rebuilds the closed `InstantiatedScenario` with portable
+   derivation evidence, and reruns semantic validation; direct/deserialized
+   artifacts pass `admit_instantiated_scenario()` before compilation
 4. `compile_runtime_model()` emits canonical runtime addresses, typed runtime
    resources, and compiled result/execution contracts
 5. `plan()` validates backend capability semantics and derives typed
@@ -55,7 +56,9 @@ Use these existing surfaces before adding anything new:
 - SDL shape and local parsing: `aces_sdl.SDLModel`, `sdl-yaml/v1` source-profile
   enforcement, explicit migration, variable-key rejection, and `SDLParseError`
 - static SDL validation: `SemanticValidator` and `SDLValidationError`
-- instantiation: `instantiate_scenario()` and `SDLInstantiationError`
+- instantiation/admission: `instantiate_scenario()`,
+  `admit_instantiated_scenario()`, `SDLInstantiationError`, and the published
+  instantiated artifact/snapshot schemas
 - shared SDL semantics: `aces_sdl.semantics.objectives` and
   `aces_sdl.semantics.workflow`
 - runtime graph semantics: `aces_processor.semantics.planner`
@@ -87,7 +90,8 @@ A SEM-200 implementation must pass every gate it touches:
   out-of-scope references; collect errors through the existing validation
   exception instead of adding a new hierarchy.
 - instantiation gate: concrete scenarios must rerun semantic validation after
-  parameter/default substitution.
+  parameter/default substitution; direct artifacts must have the closed phase
+  shape, portable provenance, and the same semantic admission.
 - contract gate: external payloads use `ContractModel`, published schema
   generation, fixtures, and `tools/check_json_artifacts.py`; do not edit
   `contracts/schemas/` directly.
@@ -227,7 +231,7 @@ so they are tracked by their own requirements, not here.
 | Fail-closed semantic validation (cross-cutting gate) | SEM-201 | validation, instantiation | `implementations/python/packages/aces_sdl/validator/__init__.py`, `implementations/python/packages/aces_sdl/instantiate.py`, `implementations/python/tests/test_sdl_validator.py` | active |
 | Stable identifiers, parameterized values, and qualified references | DSL-101, DSL-102, SEM-205 | authoring, validation, instantiation, compilation, planning, execution, observation | `docs/decisions/adrs/adr-076-portable-sdl-identifiers-and-canonical-addresses.md`, `specs/sdl/document-model.md`, `specs/sdl/references.md`, `implementations/python/packages/aces_sdl/_identifiers.py`, `implementations/python/packages/aces_sdl/_declarations.py`, `implementations/python/packages/aces_sdl/parser.py`, `implementations/python/packages/aces_sdl/composition.py`, `implementations/python/packages/aces_processor/compiler.py`, `implementations/python/packages/aces_runtime/backend_calls.py`, `implementations/python/packages/aces_runtime/control_plane.py`, `implementations/python/tests/test_sdl_identifiers.py` | active |
 | Deterministic module composition and canonical-identity stability across expansion | DSL-103, SEM-205 | authoring, validation, compilation | `implementations/python/packages/aces_sdl/composition.py`, `implementations/python/packages/aces_sdl/module_registry.py`, `specs/formal/composition-readiness.md`, `implementations/python/tests/test_sdl_module_registry.py` | active |
-| Instantiation and revalidation of concrete scenarios | RUN-301 | instantiation, validation | `implementations/python/packages/aces_sdl/instantiate.py`, `implementations/python/tests/test_sdl_validator.py`, `implementations/python/tests/test_run_300_lifecycle.py` | active |
+| Instantiation, closed portable phase contracts, and revalidation of concrete scenarios | RUN-301 | instantiation, validation | `docs/decisions/adrs/adr-078-closed-sdl-phase-contracts-and-portable-derivation-evidence.md`, `specs/formal/sdl-phases/README.md`, `contracts/schemas/sdl/instantiated-scenario-v1.json`, `contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json`, `implementations/python/packages/aces_sdl/phase_contracts.py`, `implementations/python/packages/aces_sdl/instantiate.py`, `implementations/python/tests/test_sdl_phase_contracts.py`, `implementations/python/tests/test_instantiated_scenario_schema.py`, `implementations/python/tests/test_sdl_validator.py`, `implementations/python/tests/test_run_300_lifecycle.py` | active |
 | Objective windows, referenced scopes, reachability, and refresh | SEM-202 | validation, compilation, planning | `implementations/python/packages/aces_sdl/semantics/objectives.py`, `specs/formal/objectives/README.md`, `specs/formal/objectives/window-consistency.md`, `implementations/python/tests/test_semantics_objectives.py`, `implementations/python/tests/test_fm2_semantics.py` | active |
 | Declarative objective actor binding, target resolution, success interpretation, and dependency ordering | DSL-112, SEM-207 | authoring, validation, instantiation, compilation, planning | `implementations/python/packages/aces_sdl/objectives.py`, `implementations/python/packages/aces_sdl/semantics/objective_semantics.py`, `implementations/python/packages/aces_sdl/validator/__init__.py`, `implementations/python/packages/aces_processor/compiler.py`, `implementations/python/packages/aces_processor/models.py`, `specs/formal/objectives/README.md`, `specs/formal/objectives/declarative-objective-semantics.md`, `implementations/python/tests/test_semantics_objectives.py`, `implementations/python/tests/test_fm2_semantics.py`, `implementations/python/tests/test_sdl_validator.py` | active |
 | Workflow control semantics (branching, joins, calling, retry, completion, history) | DSL-113, SEM-203 | authoring, validation, compilation, planning, execution, observation | `implementations/python/packages/aces_sdl/orchestration.py`, `implementations/python/packages/aces_sdl/semantics/workflow.py`, `specs/formal/workflows/README.md`, `specs/formal/workflows/state-machine.md`, `implementations/python/tests/test_sdl_validator.py`, `implementations/python/tests/test_runtime_models.py`, `implementations/python/tests/test_sdl_models.py` | active |
