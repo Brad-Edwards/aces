@@ -142,7 +142,8 @@ class LibvirtProvisioner:
         diagnostics.extend(self._delete_targets(delete_networks, delete_domains))
         return diagnostics
 
-    def _active_addresses(self, plan: ProvisioningPlan, realization: Realization) -> set[str]:
+    @staticmethod
+    def _active_addresses(plan: ProvisioningPlan, realization: Realization) -> set[str]:
         active = {op.address for op in plan.operations if op.action in {ChangeAction.CREATE, ChangeAction.UPDATE}}
         # A changed placement must realize its target domain even when the node
         # itself is UNCHANGED: the domain's seed now carries different cloud-init.
