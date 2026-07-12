@@ -1879,7 +1879,7 @@ from the authored requirement.
 Declarative experiment semantics that bind actors, targets, timing, and success
 criteria in the same SDL. Objective success composes invariant or postcondition
 assertions over backend-neutral propositions
-([ADR-078](../../decisions/adrs/adr-078-backend-neutral-proposition-and-truth-semantics.md)).
+([ADR-079](../../decisions/adrs/adr-079-backend-neutral-proposition-and-truth-semantics.md)).
 
 ```yaml
 objectives:

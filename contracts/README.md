@@ -91,4 +91,4 @@ governed by
 [ADR-019](../docs/decisions/adrs/adr-019-normative-authority-boundary-manifest.md)
 and enforced by `tools/check_authority_boundary.py`.
 The `provenance/` family contains revision-pinned SDL lineage, derivation, and
-third-party notice dispositions governed by ADR-019 and ADR-079.
+third-party notice dispositions governed by ADR-019 and ADR-080.

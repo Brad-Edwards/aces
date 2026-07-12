@@ -3,6 +3,30 @@
   "policy_id": "aces-reusable-asset-trust-policy",
   "families": [
     {
+      "asset_family": "associated_artifact_set",
+      "identity_basis": "associated-artifact-manifest-v1 canonical parent-plus-reference-set digest",
+      "evidence_requirements": [
+        {
+          "evidence_class": "integrity_digest",
+          "enforcement": "required",
+          "mechanism_ref": "associated-artifact-set/v1 derived set_digest",
+          "description": "The set digest binds the exact parent reference and keyed artifact-reference set without changing parent identity."
+        },
+        {
+          "evidence_class": "artifact_checksum",
+          "enforcement": "required",
+          "mechanism_ref": "validate_associated_artifact_manifest bounded concrete-byte validation",
+          "description": "Every referenced payload checksum and size is recomputed from an explicitly supplied bounded byte stream."
+        },
+        {
+          "evidence_class": "authenticity_signature",
+          "enforcement": "optional",
+          "mechanism_ref": "downstream signature over the derived associated-artifact set digest",
+          "description": "A signature may authenticate the set digest, but neither the digest nor payload checksums establish authenticity alone."
+        }
+      ]
+    },
+    {
       "asset_family": "reusable_scenario",
       "identity_basis": "instantiated-scenario-v1 / scenario-instantiation-request-v1 scenario reference id",
       "evidence_requirements": [

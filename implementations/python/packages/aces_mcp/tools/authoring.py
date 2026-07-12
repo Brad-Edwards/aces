@@ -450,7 +450,7 @@ entities:
     name: Red Team
     role: Red
 
-# Objective success references assertions over typed propositions per ADR-078.
+# Objective success references assertions over typed propositions per ADR-079.
 # Graded scoring/reward, if a study needs it, lives in the experiment/evaluator
 # plane (ADR-055/064/069), not in the SDL.
 objectives:

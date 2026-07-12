@@ -2,7 +2,7 @@
 
 Classification: FM2, refinement/constraint semantics.
 
-This note states the invariants for ADR-077. It is a lightweight formal model,
+This note states the invariants for ADR-078. It is a lightweight formal model,
 not a machine-checked proof and not an operational semantics for scenario
 behavior.
 

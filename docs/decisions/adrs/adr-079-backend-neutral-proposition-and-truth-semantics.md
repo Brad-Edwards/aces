@@ -1,4 +1,4 @@
-# ADR-078: Backend-Neutral Proposition and Truth Semantics
+# ADR-079: Backend-Neutral Proposition and Truth Semantics
 
 ## Status
 

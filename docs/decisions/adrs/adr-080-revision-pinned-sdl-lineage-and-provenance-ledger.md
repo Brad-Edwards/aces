@@ -1,4 +1,4 @@
-# ADR-079: Revision-Pinned SDL Lineage And Provenance Ledger
+# ADR-080: Revision-Pinned SDL Lineage And Provenance Ledger
 
 ## Status
 

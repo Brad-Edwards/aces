@@ -91,7 +91,7 @@ The load-bearing findings:
   nothing in ACES. It is the weakest surface in the language.
 - Typed propositions/assertions are observable state claims and `objectives`
   are participant intent. Executable `conditions` are probe realizations, not
-  state facts (ADR-078).
+  state facts (ADR-079).
 - The one leak between the two sides is `objectives.success`, which today can be
   satisfied by the scoring pipeline instead of by observable state.
 
@@ -137,7 +137,7 @@ can assert about its own observable state (ADR-020's reproducibility warning).
 typed propositions, not `conditions`, `metrics`, `evaluations`, `tlos`, or
 `goals`. This preserves the issue #671 boundary: success is expressed against
 observable state, which is in-horizon, rather than either an executable probe
-or a score-shaped grading pipeline. ADR-078 defines the proposition and result
+or a score-shaped grading pipeline. ADR-079 defines the proposition and result
 semantics.
 
 ### 4. Graded scoring and reward live only in the experiment/evaluator plane
@@ -182,7 +182,7 @@ Removal is staged, not abrupt (answering issue #671 question 4):
    the SDL. They are vestigial given the experiment-vs-data-use boundary; their
    concerns belong to the experiment/evaluator plane.
 2. **Should objective success reference conditions rather than a score?** It
-   should reference observable state rather than a score, but ADR-078 corrects
+   should reference observable state rather than a score, but ADR-079 corrects
    the original category error: typed propositions/assertions state observable
    truth; executable conditions only realize probes.
 3. **If scoring belongs somewhere, is it the SDL or an experiment/evaluator
@@ -272,4 +272,4 @@ ratification. The ADR is proposed; implementation is spawned on acceptance.
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-07-06 | #682 | Accepted (proposed → accepted) and realized under SEM-206: the SDL scoring/reward surfaces (`metrics`/`evaluations`/`tlos`/`goals` and `agents.reward_calculator`) were removed, `objectives.success` narrowed to `conditions`, ADR-002's objective-success clause amended, and the published SDL schemas updated with change-ledger entries. The staged deprecation window in §5 was collapsed into one change: all in-repo consumers were migrated together, with the downstream `Brad-Edwards/aptl#606` tracked to follow. |
-| 2026-07-12 | #725 | Per [ADR-078](adr-078-backend-neutral-proposition-and-truth-semantics.md), corrected the earlier classification of executable conditions as observable facts. Objective success now composes assertions over typed propositions; scoring/reward remains in the experiment/evaluator plane. |
+| 2026-07-12 | #725 | Per [ADR-079](adr-079-backend-neutral-proposition-and-truth-semantics.md), corrected the earlier classification of executable conditions as observable facts. Objective success now composes assertions over typed propositions; scoring/reward remains in the experiment/evaluator plane. |
