@@ -141,15 +141,22 @@ class LineageClaimModel(ContractModel):
     @model_validator(mode="after")
     def validate_claim_dimensions(self) -> LineageClaimModel:
         if self.classification is LineageClassification.ACES_NATIVE:
-            if self.source_refs or self.source_boundaries:
-                raise ValueError("ACES-native claims must not name an external source boundary")
-            if not self.internal_authority_refs:
-                raise ValueError("ACES-native claims require internal authority refs")
-            if self.compatibility is not CompatibilityStatus.NOT_APPLICABLE:
-                raise ValueError("ACES-native claims have no source compatibility relation")
-            if self.compatibility_direction is not CompatibilityDirection.NOT_APPLICABLE:
-                raise ValueError("ACES-native claims have no source compatibility direction")
-            return self
+            self._validate_native_dimensions()
+        else:
+            self._validate_external_dimensions()
+        return self
+
+    def _validate_native_dimensions(self) -> None:
+        if self.source_refs or self.source_boundaries:
+            raise ValueError("ACES-native claims must not name an external source boundary")
+        if not self.internal_authority_refs:
+            raise ValueError("ACES-native claims require internal authority refs")
+        if self.compatibility is not CompatibilityStatus.NOT_APPLICABLE:
+            raise ValueError("ACES-native claims have no source compatibility relation")
+        if self.compatibility_direction is not CompatibilityDirection.NOT_APPLICABLE:
+            raise ValueError("ACES-native claims have no source compatibility direction")
+
+    def _validate_external_dimensions(self) -> None:
         if not self.source_refs or not self.source_boundaries or not self.citation_refs:
             raise ValueError("non-native claims require source, source boundary, and citation refs")
         if self.classification is LineageClassification.ADOPTED_SYNTAX and self.plane is not LineagePlane.SYNTAX:
@@ -158,7 +165,6 @@ class LineageClaimModel(ContractModel):
             raise ValueError("adopted_semantics is valid only on the semantics plane")
         if self.compatibility_direction is not CompatibilityDirection.ACES_RELATIVE_TO_SOURCE:
             raise ValueError("non-native claims assess ACES relative to the named source")
-        return self
 
 
 class LineageSubjectModel(ContractModel):
@@ -265,39 +271,70 @@ class SDLLineageLedgerModel(ContractModel):
         disposition_artifacts: dict[str, set[str]],
     ) -> None:
         for claim in subject.claims:
-            unknown_sources = set(claim.source_refs) - source_ids
-            unknown_citations = set(claim.citation_refs) - citation_ids
-            if unknown_sources:
-                raise ValueError(f"subject {subject.subject_id!r} has unknown source refs")
-            if unknown_citations:
-                raise ValueError(f"subject {subject.subject_id!r} has unknown citation refs")
-            expected_citations = {
-                source_citations[source_ref] for source_ref in claim.source_refs if source_ref in source_citations
-            }
-            if set(claim.citation_refs) != expected_citations:
-                raise ValueError(f"subject {subject.subject_id!r} claim citation refs do not identify its sources")
-            if claim.plane is LineagePlane.ARTIFACT_CODE and not set(claim.source_refs).issubset(disposition_sources):
-                raise ValueError(f"subject {subject.subject_id!r} artifact/code claim lacks notice disposition")
-            if claim.plane is LineagePlane.ARTIFACT_CODE and not set(claim.source_refs).issubset(
-                resolved_disposition_sources
-            ):
+            SDLLineageLedgerModel._validate_claim_references(
+                subject.subject_id,
+                claim,
+                source_ids,
+                source_citations,
+                citation_ids,
+            )
+            SDLLineageLedgerModel._validate_artifact_code_claim(
+                subject.subject_id,
+                claim,
+                disposition_sources,
+                resolved_disposition_sources,
+                disposition_artifacts,
+            )
+            SDLLineageLedgerModel._validate_planned_compatibility(subject, claim)
+
+    @staticmethod
+    def _validate_claim_references(
+        subject_id: str,
+        claim: LineageClaimModel,
+        source_ids: set[str],
+        source_citations: dict[str, str],
+        citation_ids: set[str],
+    ) -> None:
+        if set(claim.source_refs) - source_ids:
+            raise ValueError(f"subject {subject_id!r} has unknown source refs")
+        if set(claim.citation_refs) - citation_ids:
+            raise ValueError(f"subject {subject_id!r} has unknown citation refs")
+        expected_citations = {source_citations[source_ref] for source_ref in claim.source_refs}
+        if set(claim.citation_refs) != expected_citations:
+            raise ValueError(f"subject {subject_id!r} claim citation refs do not identify its sources")
+
+    @staticmethod
+    def _validate_artifact_code_claim(
+        subject_id: str,
+        claim: LineageClaimModel,
+        disposition_sources: set[str],
+        resolved_disposition_sources: set[str],
+        disposition_artifacts: dict[str, set[str]],
+    ) -> None:
+        if claim.plane is not LineagePlane.ARTIFACT_CODE:
+            return
+        claim_sources = set(claim.source_refs)
+        if not claim_sources.issubset(disposition_sources):
+            raise ValueError(f"subject {subject_id!r} artifact/code claim lacks notice disposition")
+        if not claim_sources.issubset(resolved_disposition_sources):
+            raise ValueError(f"subject {subject_id!r} artifact/code claim has unresolved notice disposition")
+        claim_artifacts = {boundary.artifact for boundary in claim.aces_boundaries}
+        for source_ref in claim.source_refs:
+            uncovered = claim_artifacts - disposition_artifacts.get(source_ref, set())
+            if uncovered:
                 raise ValueError(
-                    f"subject {subject.subject_id!r} artifact/code claim has unresolved notice disposition"
+                    f"subject {subject_id!r} artifact/code claim is outside the audited "
+                    f"derivation scope for {source_ref!r}: {sorted(uncovered)}"
                 )
-            if claim.plane is LineagePlane.ARTIFACT_CODE:
-                claim_artifacts = {boundary.artifact for boundary in claim.aces_boundaries}
-                for source_ref in claim.source_refs:
-                    uncovered = claim_artifacts - disposition_artifacts.get(source_ref, set())
-                    if uncovered:
-                        raise ValueError(
-                            f"subject {subject.subject_id!r} artifact/code claim is outside the audited "
-                            f"derivation scope for {source_ref!r}: {sorted(uncovered)}"
-                        )
-            if subject.disposition is LineageDisposition.PLANNED and claim.compatibility in {
-                CompatibilityStatus.COMPATIBLE,
-                CompatibilityStatus.PARTIAL,
-            }:
-                raise ValueError(f"planned subject {subject.subject_id!r} cannot claim current compatibility")
+
+    @staticmethod
+    def _validate_planned_compatibility(subject: LineageSubjectModel, claim: LineageClaimModel) -> None:
+        current_compatibility = {
+            CompatibilityStatus.COMPATIBLE,
+            CompatibilityStatus.PARTIAL,
+        }
+        if subject.disposition is LineageDisposition.PLANNED and claim.compatibility in current_compatibility:
+            raise ValueError(f"planned subject {subject.subject_id!r} cannot claim current compatibility")
 
 
 def sdl_lineage_ledger_path() -> Path:
