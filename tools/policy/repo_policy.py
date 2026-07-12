@@ -114,41 +114,55 @@ def evaluate_repo_policy(
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# ADR-015: SDL→processor layering rule + 600-line source-file cap.
+# ADR-015: SDL→processor layering rule + 500-line source-file cap.
 #
 # These two gates catch unintentional regressions in normal contributions:
 # a developer who accidentally writes `import aces_processor` in `aces_sdl/`,
-# or one who pushes a >600-line file, or a split PR that forgets to drain
+# or one who pushes a >500-line file, or a split PR that forgets to drain
 # its allowlist entry. The policy and its YAML config are PR-mutable; PR
 # review (not this code) defends against deliberate weakening. See ADR-015.
 # ──────────────────────────────────────────────────────────────────────────
 
 _POLICY_CONFIG_PATH = "tools/policy/adr_policy.yaml"
 
-# The set of source files that were over the 600-line cap when ADR-015
-# landed. The size-cap allowlist (tools/policy/oversized_allowlist.yaml) may
-# only ever be a SUBSET of this set: entries are removed as child PRs of #3
-# split their file, and no new entry may be added. This is a code constant —
-# not config in adr_policy.yaml — so that "the allowlist only shrinks" is
-# enforced against a fixed reference rather than against an input the same PR
-# can edit. Adding a 15th oversized file therefore requires a diff to this
-# module, which PR review scrutinises as policy, not as data noise.
+# The set of source files that were over the source-file cap when the current
+# cap was adopted. The cap was originally 600 lines (ADR-015 landing); it was
+# lowered to 500 on 2026-07-12 (#561, ADR-015 Amendments), and this reference
+# set was re-baselined to the files over 500 lines at that time. The size-cap
+# allowlist (tools/policy/oversized_allowlist.yaml) may only ever be a SUBSET
+# of this set: entries are removed as split PRs shrink their file, and no new
+# entry may be added. This is a code constant — not config in adr_policy.yaml —
+# so that "the allowlist only shrinks" is enforced against a fixed reference
+# rather than against an input the same PR can edit. Adding an oversized file
+# therefore requires a diff to this module, which PR review scrutinises as
+# policy, not as data noise.
 _ADR015_INITIAL_OVERSIZED_FILES: frozenset[str] = frozenset(
     {
-        "implementations/python/packages/aces_processor/models.py",
-        "implementations/python/packages/aces_processor/manager.py",
-        "implementations/python/packages/aces_processor/compiler.py",
-        "implementations/python/packages/aces_sdl/validator.py",
-        "implementations/python/packages/aces_contracts/contracts.py",
-        "implementations/python/packages/aces_processor/planner.py",
-        "implementations/python/packages/aces_processor/control_plane.py",
-        "implementations/python/packages/aces_conformance/conformance.py",
+        "implementations/python/packages/aces_backend_libvirt/drivers/libvirt.py",
+        "implementations/python/packages/aces_backend_libvirt/realization.py",
+        "implementations/python/packages/aces_backend_libvirt/techvault_native.py",
         "implementations/python/packages/aces_backend_stubs/stubs.py",
-        "implementations/python/packages/aces_sdl/module_registry.py",
-        "implementations/python/packages/aces_processor/control_plane_api.py",
+        "implementations/python/packages/aces_conformance/conformance.py",
+        "implementations/python/packages/aces_contracts/contracts.py",
+        "implementations/python/packages/aces_contracts/workflow.py",
         "implementations/python/packages/aces_mcp/tools/authoring.py",
         "implementations/python/packages/aces_mcp/tools/inspection.py",
+        "implementations/python/packages/aces_mcp/tools/reference.py",
+        "implementations/python/packages/aces_operations/_evidence_run_artifact.py",
+        "implementations/python/packages/aces_processor/compiler.py",
+        "implementations/python/packages/aces_processor/models.py",
+        "implementations/python/packages/aces_processor/planner.py",
+        "implementations/python/packages/aces_runtime/control_plane.py",
+        "implementations/python/packages/aces_runtime/control_plane_api.py",
+        "implementations/python/packages/aces_runtime/workflow_result_contract_checks.py",
+        "implementations/python/packages/aces_sdl/composition.py",
+        "implementations/python/packages/aces_sdl/module_registry.py",
         "implementations/python/packages/aces_sdl/orchestration.py",
+        "implementations/python/packages/aces_sdl/participant_behavior.py",
+        "implementations/python/packages/aces_sdl/runtime_mail_service.py",
+        "implementations/python/packages/aces_sdl/runtime_security_monitoring.py",
+        "implementations/python/packages/aces_sdl/semantics/objective_semantics.py",
+        "implementations/python/packages/aces_sdl/semantics/participant_behavior.py",
     }
 )
 
@@ -505,7 +519,7 @@ def _check_drain(allowlist: frozenset[str], allowlist_path: str) -> list[PolicyF
             "oversized-allowlist-locked",
             (
                 f"'{path}' is in {allowlist_path} but is not one of the files that were over the "
-                "600-line cap when ADR-015 landed (_ADR015_INITIAL_OVERSIZED_FILES in "
+                "source-file cap when it was adopted (_ADR015_INITIAL_OVERSIZED_FILES in "
                 "tools/policy/repo_policy.py); the allowlist may only shrink — split the file instead of adding it"
             ),
             allowlist_path,

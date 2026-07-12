@@ -66,7 +66,11 @@ adrs:
     pin: 940ce80b1f1d94e3efb4a9f56cb9147d09c9a9dc1453a4977c7a5e194238d708
   - id: ADR-015
     path: docs/decisions/adrs/adr-015-sdl-processor-layering-and-source-file-size-cap.md
-    pin: 1e6000c3405e84765a993d326a8d97822e7b28a6714463bcd4d1550951f20ec7
+    pin: bc5038164e535c4d506962e27cee07e720f5c8a77cb17d018dedb3dba927936f
+    amendments:
+      - date: 2026-07-12
+        ref: "#561"
+        summary: "Lowered the non-test source-file cap from 600 to 500 lines to align with SonarCloud S104; re-baselined _ADR015_INITIAL_OVERSIZED_FILES and the oversized allowlist to the files over 500 lines at amendment time."
   - id: ADR-016
     path: docs/decisions/adrs/adr-016-semantic-layer-scope-and-coverage-model.md
     pin: ff9a71be7f6d427b88ff26317da36e14b6cc5943418cd941df88dca29033449b

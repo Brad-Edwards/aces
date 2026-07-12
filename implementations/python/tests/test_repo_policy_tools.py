@@ -549,7 +549,7 @@ def test_module_boundaries_reject_runtime_importing_sdl_semantics(tmp_path: Path
     assert [f.rule_id for f in failures] == ["module-boundary-import"]
 
 
-# ── ADR-015: 600-line source-file cap ───────────────────────────────────
+# ── ADR-015: 500-line source-file cap ───────────────────────────────────
 
 # A path that is in _ADR015_INITIAL_OVERSIZED_FILES (the code constant in
 # tools/policy/repo_policy.py), so the allowlist-subset (drain) check passes
@@ -629,7 +629,7 @@ def test_allowlist_entry_not_in_locked_set_is_rejected(tmp_path: Path) -> None:
 
 def test_allowlist_subset_of_locked_set_passes(tmp_path: Path) -> None:
     repo_root = setup_policy_repo(tmp_path)
-    # A strict subset of the 14 initial oversized entries — the drained state.
+    # A strict subset of the initial oversized entries — the drained state.
     write_text(repo_root / "tools" / "policy" / "oversized_allowlist.yaml", f"files:\n  - {_LOCKED_PATH}\n")
     write_text(repo_root / _LOCKED_PATH, "x = 1\n" * 700)
 
@@ -752,7 +752,7 @@ def test_stale_allowlist_entry_below_cap_is_rejected(tmp_path: Path) -> None:
     even though the file's deletion/shrink isn't in the changed set."""
     repo_root = setup_policy_repo(tmp_path)
     write_text(repo_root / "tools" / "policy" / "oversized_allowlist.yaml", f"files:\n  - {_LOCKED_PATH}\n")
-    write_text(repo_root / _LOCKED_PATH, "x = 1\n" * 100)  # well under the 600-line cap
+    write_text(repo_root / _LOCKED_PATH, "x = 1\n" * 100)  # well under the 500-line cap
 
     failures = evaluate_repo_policy(
         repo_root,

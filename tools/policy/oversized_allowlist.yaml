@@ -1,15 +1,34 @@
-# Files over the 600-line cap (tools/policy/adr_policy.yaml :: oversized_source_files).
+# Files over the 500-line cap (tools/policy/adr_policy.yaml :: oversized_source_files).
 # Each entry is a path relative to the repository root and must be one of the
 # files in _ADR015_INITIAL_OVERSIZED_FILES (tools/policy/repo_policy.py) — the
-# fixed reference set. The allowlist may only shrink: each split PR (a child of
-# issue #3) removes its file once it's been split below the cap. The modularity
-# tracker (#3) closes when this list is empty. Do NOT add new entries — split
-# the file instead. (See ADR-015.)
+# fixed reference set. The allowlist may only shrink: each split PR removes its
+# file once it's been split below the cap. The modularity tracker closes when
+# this list is empty. Do NOT add new entries — split the file instead. This set
+# was re-baselined to the 500-line cap on 2026-07-12 (#561); see ADR-015 §2 and
+# its Amendments section.
 files:
-  - implementations/python/packages/aces_processor/models.py
-  - implementations/python/packages/aces_processor/compiler.py
-  - implementations/python/packages/aces_contracts/contracts.py
-  - implementations/python/packages/aces_processor/planner.py
+  - implementations/python/packages/aces_backend_libvirt/drivers/libvirt.py
+  - implementations/python/packages/aces_backend_libvirt/realization.py
+  - implementations/python/packages/aces_backend_libvirt/techvault_native.py
+  - implementations/python/packages/aces_backend_stubs/stubs.py
   - implementations/python/packages/aces_conformance/conformance.py
-  - implementations/python/packages/aces_sdl/module_registry.py
+  - implementations/python/packages/aces_contracts/contracts.py
+  - implementations/python/packages/aces_contracts/workflow.py
   - implementations/python/packages/aces_mcp/tools/authoring.py
+  - implementations/python/packages/aces_mcp/tools/inspection.py
+  - implementations/python/packages/aces_mcp/tools/reference.py
+  - implementations/python/packages/aces_operations/_evidence_run_artifact.py
+  - implementations/python/packages/aces_processor/compiler.py
+  - implementations/python/packages/aces_processor/models.py
+  - implementations/python/packages/aces_processor/planner.py
+  - implementations/python/packages/aces_runtime/control_plane_api.py
+  - implementations/python/packages/aces_runtime/control_plane.py
+  - implementations/python/packages/aces_runtime/workflow_result_contract_checks.py
+  - implementations/python/packages/aces_sdl/composition.py
+  - implementations/python/packages/aces_sdl/module_registry.py
+  - implementations/python/packages/aces_sdl/orchestration.py
+  - implementations/python/packages/aces_sdl/participant_behavior.py
+  - implementations/python/packages/aces_sdl/runtime_mail_service.py
+  - implementations/python/packages/aces_sdl/runtime_security_monitoring.py
+  - implementations/python/packages/aces_sdl/semantics/objective_semantics.py
+  - implementations/python/packages/aces_sdl/semantics/participant_behavior.py
