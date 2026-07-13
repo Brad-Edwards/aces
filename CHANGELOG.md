@@ -8,6 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 PRs do **not** edit this file directly. release-please maintains it from the
 Conventional Commit history on `main` (#684).
 
+## [0.20.0](https://github.com/Brad-Edwards/aces/compare/v0.19.1...v0.20.0) (2026-07-13)
+
+
+### Features
+
+* add experiment authoring-input contract and MCP authoring surface ([#711](https://github.com/Brad-Edwards/aces/issues/711)) ([ac5f697](https://github.com/Brad-Edwards/aces/commit/ac5f69719c87f7fb4fa85aa2c3a141c834a6ec73))
+* define associated artifact manifest contracts ([#741](https://github.com/Brad-Edwards/aces/issues/741)) ([066b3f0](https://github.com/Brad-Edwards/aces/commit/066b3f0c6103deb732795ebba90c4822d798f942))
+* define backend-neutral proposition semantics ([#744](https://github.com/Brad-Edwards/aces/issues/744)) ([ccb4913](https://github.com/Brad-Edwards/aces/commit/ccb49134395ff51120710981e209d97b791129c5))
+* enforce closed SDL phase contracts ([#742](https://github.com/Brad-Edwards/aces/issues/742)) ([b2f0756](https://github.com/Brad-Edwards/aces/commit/b2f0756440aa18b43e33ca685ee0a666f64b10aa))
+* enforce portable SDL identifiers ([#736](https://github.com/Brad-Edwards/aces/issues/736)) ([40af65b](https://github.com/Brad-Edwards/aces/commit/40af65b9513023a380b8121ad412686a9e08dc8c))
+* enforce TechVault realization disclosure ([#735](https://github.com/Brad-Edwards/aces/issues/735)) ([47e7220](https://github.com/Brad-Edwards/aces/commit/47e72201cd3b36b6b1c45467add2246a0b4186b4))
+* expose completeness profiles through MCP ([#755](https://github.com/Brad-Edwards/aces/issues/755)) ([23021cf](https://github.com/Brad-Edwards/aces/commit/23021cf027e787bf66303539a652905c701e1075))
+* **libvirt:** add guest-observed realization probes (ASR-519) ([#737](https://github.com/Brad-Edwards/aces/issues/737)) ([ef4cbed](https://github.com/Brad-Edwards/aces/commit/ef4cbed0a5eabb2e873e90bae2f05a049a39b9f9))
+* **libvirt:** publish configuration-bound realization envelopes ([#730](https://github.com/Brad-Edwards/aces/issues/730)) ([7d48c05](https://github.com/Brad-Edwards/aces/commit/7d48c0531db294c18826382dec0ef6209197495c))
+* publish revision-pinned SDL lineage ledger ([#745](https://github.com/Brad-Edwards/aces/issues/745)) ([04ccd2f](https://github.com/Brad-Edwards/aces/commit/04ccd2f5bdd8e5ab53730942defcd6e63bca74c8))
+* publish scientific scenario completeness profiles ([#751](https://github.com/Brad-Edwards/aces/issues/751)) ([d2774d9](https://github.com/Brad-Edwards/aces/commit/d2774d980a376553e34a5e7032199232d37f32b4))
+* **sdl:** add DSL-115 authoring specificity helper ([#710](https://github.com/Brad-Edwards/aces/issues/710)) ([a6036f4](https://github.com/Brad-Edwards/aces/commit/a6036f4cb0049c42217f28304070fc3b197d35b9))
+* **sdl:** add realization-envelope membership/subsumption/witness relation ([#668](https://github.com/Brad-Edwards/aces/issues/668)) ([#685](https://github.com/Brad-Edwards/aces/issues/685)) ([24d3e09](https://github.com/Brad-Edwards/aces/commit/24d3e097bae4d4e90032ab985f12702c8ad798f9))
+* **sdl:** define canonical YAML source profile ([#732](https://github.com/Brad-Edwards/aces/issues/732)) ([04d0682](https://github.com/Brad-Edwards/aces/commit/04d068208381410cc56468c9db2dcff92b2aa263))
+
+
+### Bug Fixes
+
+* derive honest version identifiers, consolidate on release-please (GOV-901) ([#750](https://github.com/Brad-Edwards/aces/issues/750)) ([526e777](https://github.com/Brad-Edwards/aces/commit/526e7770f178798db6ea5691f7770ba62d998b0f))
+* reject ambiguous SDL mapping keys ([#731](https://github.com/Brad-Edwards/aces/issues/731)) ([2a70e6a](https://github.com/Brad-Edwards/aces/commit/2a70e6ae92d96f3e7542d3f930ac6fb240244102))
+
+
+### Documentation
+
+* define ecosystem evolution governance policy ([#718](https://github.com/Brad-Edwards/aces/issues/718)) ([73d1a0f](https://github.com/Brad-Edwards/aces/commit/73d1a0ffd6f487ffc1d5dcfa63366bd069997482))
+
 ## [0.19.1](https://github.com/Brad-Edwards/aces/compare/v0.19.0...v0.19.1) (2026-07-06)
 
 
