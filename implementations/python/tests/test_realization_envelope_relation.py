@@ -531,6 +531,10 @@ def test_binding_scope_breaks_equal_path_ties_independent_of_list_order() -> Non
 
 
 def test_topology_and_app_bindings_conflict_as_sibling_scopes() -> None:
+    domains = {
+        "linux": ExactDomain(value="linux"),
+        "windows": ExactDomain(value="windows"),
+    }
     bindings = [
         EnvelopeBinding(
             path="nodes.web.os",
@@ -549,10 +553,7 @@ def test_topology_and_app_bindings_conflict_as_sibling_scopes() -> None:
         RealizationEnvelopeModel(
             id="sibling-binding-conflict",
             scope=EnvelopeScope.SCENARIO,
-            domains={
-                "linux": ExactDomain(value="linux"),
-                "windows": ExactDomain(value="windows"),
-            },
+            domains=domains,
             bindings=bindings,
         )
 
