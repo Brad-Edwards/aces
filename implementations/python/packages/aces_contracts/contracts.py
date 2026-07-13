@@ -7899,9 +7899,7 @@ class ReusableAssetTrustPolicyModel(ContractModel):
         return json_schema
 
 
-def schema_bundle() -> dict[str, dict[str, Any]]:
-    """Return the repo-published JSON Schemas for external contracts."""
-
+def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
     from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel
 
     from .provenance import SDLLineageLedgerModel
@@ -7910,7 +7908,7 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         ScientificCompletenessTaxonomyModel,
     )
 
-    bundle = {
+    return {
         "aces-semantic-invariants-v1": _aces_semantic_invariant_profile_schema_for_bundle(),
         "sdl-authoring-input-v1": Scenario.model_json_schema(),
         "instantiated-scenario-v1": InstantiatedScenario.model_json_schema(),
@@ -7979,6 +7977,12 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_json_schema(),
         "reusable-asset-trust-policy-v1": ReusableAssetTrustPolicyModel.model_json_schema(),
     }
+
+
+def schema_bundle() -> dict[str, dict[str, Any]]:
+    """Return the repo-published JSON Schemas for external contracts."""
+
+    bundle = _raw_schema_bundle()
     _add_aces_invariant(
         bundle["scientific-completeness-taxonomy-v1"],
         "scientific-completeness-taxonomy-rectangular",
