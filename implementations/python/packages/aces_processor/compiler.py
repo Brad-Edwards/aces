@@ -949,6 +949,12 @@ def _node_dependency_addresses(
     return addresses
 
 
+@dataclass(frozen=True)
+class _NodeRuntimeTargets:
+    networks: dict[str, NetworkRuntime]
+    node_deployments: dict[str, NodeRuntime]
+
+
 def _compile_node_runtimes(
     scenario: InstantiatedScenario,
     diagnostics: list[Diagnostic],
@@ -956,6 +962,7 @@ def _compile_node_runtimes(
 ) -> tuple[dict[str, NetworkRuntime], dict[str, NodeRuntime]]:
     networks: dict[str, NetworkRuntime] = {}
     node_deployments: dict[str, NodeRuntime] = {}
+    targets = _NodeRuntimeTargets(networks=networks, node_deployments=node_deployments)
     for node_name, node in scenario.nodes.items():
         node_spec = _dump(node)
         infra = scenario.infrastructure.get(node_name)
@@ -996,8 +1003,7 @@ def _compile_node_runtimes(
             infra_spec=infra_spec,
             dependency_addresses=dependency_addresses,
             domain_topology=compiled_domain_binding,
-            networks=networks,
-            node_deployments=node_deployments,
+            targets=targets,
         )
     return networks, node_deployments
 
@@ -1010,12 +1016,11 @@ def _record_node_runtime(
     infra_spec: dict[str, Any],
     dependency_addresses: list[str],
     domain_topology: DomainTopologyBinding | None,
-    networks: dict[str, NetworkRuntime],
-    node_deployments: dict[str, NodeRuntime],
+    targets: _NodeRuntimeTargets,
 ) -> None:
     spec = {"node": node_spec, "infrastructure": infra_spec}
     if node_type == NodeType.SWITCH:
-        networks[_network_address(node_name)] = NetworkRuntime(
+        targets.networks[_network_address(node_name)] = NetworkRuntime(
             address=_network_address(node_name),
             name=node_name,
             node_name=node_name,
@@ -1024,7 +1029,7 @@ def _record_node_runtime(
             refresh_dependencies=_dedupe(dependency_addresses),
         )
         return
-    node_deployments[_node_address(node_name)] = NodeRuntime(
+    targets.node_deployments[_node_address(node_name)] = NodeRuntime(
         address=_node_address(node_name),
         name=node_name,
         node_name=node_name,
