@@ -47,7 +47,7 @@ target-resolution, success-interpretation, and dependency-ordering semantics
 - compiled runtime objective resource, addresses, diagnostics, and
   ordering/refresh derivation:
   - `implementations/python/packages/aces_processor/compiler.py`
-  - `implementations/python/packages/aces_processor/models.py`
+  - `implementations/python/packages/aces_processor/models/`
 - planner ordering/refresh reconciliation:
   - `implementations/python/packages/aces_processor/planner.py`
   - `implementations/python/packages/aces_processor/semantics/planner.py`

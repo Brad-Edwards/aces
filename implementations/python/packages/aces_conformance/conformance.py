@@ -74,6 +74,7 @@ from aces_contracts.workflow import WorkflowExecutionState
 from aces_processor.models import (
     ParticipantActionContractRuntime,
     ParticipantBehaviorHistoryEvent,
+    ParticipantHistoryAddressScope,
     ParticipantObservationBoundaryRuntime,
     iter_participant_behavior_history_violations,
     iter_participant_behavior_joint_action_violations,
@@ -695,12 +696,14 @@ def _participant_behavior_history_diagnostics(
     diagnostics: list[Diagnostic] = []
     for address, message in iter_participant_behavior_history_violations(
         payload,
-        action_contract_addresses=action_contract_addresses,
         action_contracts=action_contracts,
-        observation_boundary_addresses=observation_boundary_addresses,
         observation_boundaries=observation_boundaries,
         participant_episode_history=participant_episode_history,
         expected_participant_address=expected_participant_address,
+        address_scope=ParticipantHistoryAddressScope(
+            action_contract_addresses=action_contract_addresses,
+            observation_boundary_addresses=observation_boundary_addresses,
+        ),
     ):
         if address.startswith(history_key):
             diagnostic_address = root_address + address.removeprefix(history_key)

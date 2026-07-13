@@ -109,7 +109,7 @@ extend these rather than introduce parallel registries:
   `implementations/python/packages/aces_processor/compiler.py`,
   `implementations/python/packages/aces_processor/semantics/planner.py`
 - runtime diagnostics, results, and snapshots:
-  `implementations/python/packages/aces_processor/models.py`
+  `implementations/python/packages/aces_processor/models/`
   (`Diagnostic`, runtime plan / result / snapshot models)
 - semantic profiles, controlled vocabularies, and reference models:
   `specs/concept-authority/`, `implementations/python/packages/aces_contracts/`
