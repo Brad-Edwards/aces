@@ -26,6 +26,7 @@ source_refs:
 recommended_workflow:
   - aces_tool_surface
   - aces_agent_guidance
+  - aces_intended_use_profiles
   - sdl_overview
   - sdl_section_reference
   - sdl_completions
@@ -76,7 +77,7 @@ guidance:
 
     - id: valid-sdl-not-scientific-completeness
       audience: [contributor, operator]
-      surfaces: [sdl, assessment, docs]
+      surfaces: [mcp, sdl, assessment, docs]
       statement: >-
         Structural and semantic SDL validity establishes only the valid-fragment
         profile. Do not describe a scenario as deployable, participant-ready,

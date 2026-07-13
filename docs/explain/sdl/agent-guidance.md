@@ -79,9 +79,11 @@ A conservative agent workflow is:
 
 1. Call `aces_tool_surface` to discover the available tool families.
 2. Call `aces_agent_guidance` for current boundaries and review priorities.
-3. Use `sdl_overview` and `sdl_section_reference` for SDL structure.
-4. Use language-service tools for small edits and diagnostics.
-5. Use `sdl_validate`, `sdl_design_assessment`, `sdl_plan`, and
+3. Call `aces_intended_use_profiles` to select the intended claim scope and
+   inspect current ACES delivery blockers.
+4. Use `sdl_overview` and `sdl_section_reference` for SDL structure.
+5. Use language-service tools for small edits and diagnostics.
+6. Use `sdl_validate`, `sdl_design_assessment`, `sdl_plan`, and
    `sdl_claims_assessment` before returning claims about readiness,
    portability, execution, or evidence.
 

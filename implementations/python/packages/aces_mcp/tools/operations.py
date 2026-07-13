@@ -45,8 +45,9 @@ def register(mcp: FastMCP) -> None:
                     "ACES scenarios for researchers and range designers."
                 ),
                 "recommended_workflow": [
-                    "sdl_overview",
                     "aces_agent_guidance",
+                    "aces_intended_use_profiles",
+                    "sdl_overview",
                     "sdl_section_reference",
                     "sdl_scaffold or user-authored SDL",
                     "sdl_completions / sdl_diagnostics / sdl_apply_edit while authoring",
@@ -102,6 +103,7 @@ def register(mcp: FastMCP) -> None:
                     ],
                     "guidance": [
                         "aces_agent_guidance",
+                        "aces_intended_use_profiles",
                     ],
                 },
                 "boundaries": [
