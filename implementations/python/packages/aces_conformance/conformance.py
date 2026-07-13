@@ -22,9 +22,14 @@ from aces_contracts.backend_profiles import (
     backend_profiles_root,
     load_backend_profile_from_path,
 )
+from aces_contracts.behavioral_relations import (
+    BehavioralRelationCatalogModel,
+    validate_behavioral_claim_binding,
+)
 from aces_contracts.contracts import (
     AssociatedArtifactManifestModel,
     BackendManifestV2Model,
+    BehavioralClaimBindingModel,
     EvaluationHistoryEventModel,
     EvaluationPlanModel,
     EvaluationResultStateModel,
@@ -232,11 +237,49 @@ class BackendConformanceReport:
 
     profile: str
     passed: bool
+    claim: BehavioralClaimBindingModel
     cases: tuple[ConformanceCaseResult, ...] = ()
     contract_versions: dict[str, str] = field(default_factory=dict)
     unsupported_contract_gaps: tuple[str, ...] = ()
     unsupported_capability_gaps: tuple[str, ...] = ()
     diagnostics: tuple[Diagnostic, ...] = ()
+
+
+def _bounded_conformance_claim(
+    *,
+    profile: str,
+    cases: tuple[ConformanceCaseResult, ...],
+    left_carrier_ref: str,
+) -> BehavioralClaimBindingModel:
+    """Describe exactly what a conformance report's finite cases establish."""
+
+    evidence_refs = [f"conformance-case:{case.contract_name}:{case.name}" for case in cases]
+    binding = BehavioralClaimBindingModel(
+        taxonomy_id="aces-behavioral-relations",
+        taxonomy_revision="rev1",
+        relation_id="bounded-probe-success",
+        subject=f"Backend conformance for profile {profile}",
+        left_carrier_ref=left_carrier_ref,
+        right_carrier_ref=f"backend-profile:{profile}",
+        observation_projection_ref="backend-conformance-case-report",
+        observation_projection_revision="rev1",
+        quantifier_scope="finite-cases",
+        evidence_scope="finite",
+        evidence_boundary=(
+            f"The {len(cases)} named fixture and target-probe cases recorded in this report; "
+            "no unexecuted input, trace, scheduler, strategy, or environment is quantified."
+        ),
+        assurance_status="tested",
+        evidence_refs=evidence_refs,
+        limitations=[
+            "Case results are bounded by the selected profile, corpus revision, target, and execution environment."
+        ],
+        explicit_non_claims=[
+            "Does not establish trace equivalence or bisimulation.",
+            "Does not establish strategic, epistemic, probabilistic, timed, or partial-order equivalence.",
+        ],
+    )
+    return validate_behavioral_claim_binding(binding)
 
 
 _MODEL_VALIDATORS = {
@@ -263,6 +306,7 @@ _MODEL_VALIDATORS = {
 
 _STRUCTURAL_ONLY_VALIDATORS = {
     "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_validate,
+    "behavioral-relations-v1": BehavioralRelationCatalogModel.model_validate,
     "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_validate,
     "experiment-authoring-input-v1": ExperimentSpecModel.model_validate,
     "experiment-study-v1": ExperimentStudyModel.model_validate,
@@ -1117,10 +1161,17 @@ def run_fixture_suite(
                     )
                 )
 
+    profile_id = _to_profile_id(profile)
+    case_tuple = tuple(cases)
     return BackendConformanceReport(
-        profile=_to_profile_id(profile),
+        profile=profile_id,
         passed=not diagnostics and all(case.passed for case in cases),
-        cases=tuple(cases),
+        claim=_bounded_conformance_claim(
+            profile=profile_id,
+            cases=case_tuple,
+            left_carrier_ref=f"conformance-fixture-suite:{profile_id}",
+        ),
+        cases=case_tuple,
         contract_versions={name: str(schema.get("title", name)) for name, schema in bundle.items() if name in required},
         diagnostics=tuple(diagnostics),
     )
@@ -1275,6 +1326,11 @@ def run_target_conformance(
         return BackendConformanceReport(
             profile=profile_id,
             passed=False,
+            claim=_bounded_conformance_claim(
+                profile=profile_id,
+                cases=fixture_report.cases,
+                left_carrier_ref=f"backend-target:{target.name}",
+            ),
             cases=fixture_report.cases,
             contract_versions=dict(fixture_report.contract_versions),
             diagnostics=diagnostics,
@@ -1318,6 +1374,11 @@ def run_target_conformance(
     return BackendConformanceReport(
         profile=_to_profile_id(effective_profile),
         passed=passed,
+        claim=_bounded_conformance_claim(
+            profile=_to_profile_id(effective_profile),
+            cases=cases,
+            left_carrier_ref=f"backend-target:{target.name}",
+        ),
         cases=cases,
         contract_versions=dict(fixture_report.contract_versions),
         unsupported_contract_gaps=contract_gaps,

@@ -208,8 +208,15 @@
       "evidence": [{"kind": "implementation", "path": "implementations/python/packages/aces_sdl/participant_behavior_specification.py", "claim": "Current behavior specification surface."}]
     },
     {
-      "concern_id": "behavioral-relation-taxonomy", "status": "missing", "limitation": "ACES explicitly disclaims bisimulation today; the cross-relation taxonomy and conflation audit are tracked separately.", "issue_refs": ["#747"],
-      "evidence": [{"kind": "normative-spec", "path": "specs/formal/objectives/proposition-and-assertion-semantics.md", "claim": "Current explicit non-bisimulation boundary."}]
+      "concern_id": "behavioral-relation-taxonomy", "status": "implemented", "limitation": "The revisioned taxonomy, bindings, finite-evidence gate, and counterexamples are implemented; universal simulation, refinement, equivalence, bisimulation, epistemic, strategic, probabilistic, timed, and partial-order proofs remain deliberately unproved or future.", "issue_refs": [],
+      "evidence": [
+        {"kind": "normative-spec", "path": "specs/formal/behavioral-relations/README.md", "claim": "Normative relation definitions, dimensions, claim surfaces, assurance states, and counterexamples."},
+        {"kind": "published-schema", "path": "contracts/schemas/concept-authority/behavioral-relations-v1.json", "contract_id": "behavioral-relations-v1", "claim": "Published closed contract for the revisioned taxonomy."},
+        {"kind": "implementation", "path": "tools/check_behavioral_relation_claims.py", "claim": "Semantic claim-binding and overclaim gate."},
+        {"kind": "conformance", "path": "implementations/python/packages/aces_conformance/conformance.py", "claim": "Backend conformance reports disclose bounded-probe relation, projection, case boundary, and nonclaims."},
+        {"kind": "test", "path": "implementations/python/tests/test_behavioral_relations.py", "claim": "Catalog, binding, counterexample, and property-based relation tests."},
+        {"kind": "documentation", "path": "docs/research/behavioral-relations/conflation-audit-2026-07-13.md", "claim": "Claim-surface conflation audit and remediation record."}
+      ]
     },
     {
       "concern_id": "apparatus-constraints", "status": "external-contract", "limitation": "Apparatus constraints/context scope claims to a realization; they do not guarantee availability.",

@@ -1,0 +1,107 @@
+{
+  "schema_version": "behavioral-relations/v1",
+  "taxonomy_id": "aces-behavioral-relations",
+  "taxonomy_revision": "rev1",
+  "bibliography": [
+    {
+      "source_id": "milner-1980",
+      "title": "A Calculus of Communicating Systems",
+      "authors": ["Robin Milner"],
+      "publication_year": 1980,
+      "publication_venue": "Lecture Notes in Computer Science",
+      "edition_or_version": "First edition",
+      "immutable_locator": {"kind": "doi", "value": "10.1007/3-540-10235-3"}
+    }
+  ],
+  "relations": {
+    "bounded-probe-success": {
+      "relation_id": "bounded-probe-success",
+      "display_name": "Bounded probe success",
+      "relation_class": "predicate",
+      "definition": "Every named finite case has its expected result.",
+      "left_carrier": "A concrete implementation run.",
+      "right_carrier": "A finite named case set.",
+      "initial_states": "The setup state of each named case.",
+      "transition_signature": {
+        "applicability": "applicable",
+        "labels": "Named case actions.",
+        "transition_relation": "Transitions exercised by each case.",
+        "observable_actions": "Case-reported actions.",
+        "hidden_actions": "Harness actions not reported by the case.",
+        "stuttering_actions": "Declared no-op harness actions."
+      },
+      "observation_projection": {
+        "applicability": "parameterized",
+        "subject": "Case reporter",
+        "policy_ref": "behavioral-relations/bounded-probe-projection",
+        "policy_revision": "rev1",
+        "redaction_scope": "Only named case outputs are retained.",
+        "order_treatment": "Case order is preserved.",
+        "simultaneity_treatment": "Only explicitly declared simultaneity is retained."
+      },
+      "projection_required": true,
+      "direction": "unary",
+      "quantification": {
+        "states": "States reached by named cases.",
+        "traces": "Enumerated finite traces.",
+        "schedulers": "Schedulers exercised by the harness.",
+        "strategies": "Strategies exercised by the harness.",
+        "environments": "Named environments.",
+        "observations": "Case-reported observations."
+      },
+      "dimensions": {
+        "nondeterminism": {"status": "parameterized", "treatment": "Only sampled choices are covered."},
+        "concurrency": {"status": "parameterized", "treatment": "Only exercised interleavings are covered."},
+        "probability": {"status": "outside-scope", "treatment": "No distribution claim is made."},
+        "time": {"status": "parameterized", "treatment": "Only the case clock is covered."},
+        "partial_order": {"status": "outside-scope", "treatment": "No event-structure claim is made."}
+      },
+      "preservation": {
+        "property": "Expected outcomes of named cases.",
+        "proof_obligation": "Execute each named case and compare its bounded expected result."
+      },
+      "bounded_evidence": ["A passing fixture suite."],
+      "explicit_non_claims": ["Finite success does not establish trace equivalence or bisimulation."],
+      "incompatible_claim_surfaces": ["Universal behavioral equivalence."],
+      "assurance": {
+        "definition_status": "defined",
+        "implementation_status": "implemented",
+        "test_status": "bounded",
+        "proof_status": "deliberately-unproved",
+        "evidence_refs": ["implementations/python/packages/aces_conformance/conformance.py"]
+      },
+      "source_refs": ["milner-1980"]
+    }
+  },
+  "claim_surfaces": [
+    {
+      "surface_id": "fixture-surface",
+      "intended_relation_ids": ["bounded-probe-success"],
+      "evidence_boundary": "The one relation in this minimal fixture.",
+      "prohibited_relation_ids": ["bounded-probe-success"],
+      "explicit_non_claims": ["This fixture is not the canonical claim-surface policy."]
+    }
+  ],
+  "worked_examples": {
+    "minimal-probe": {
+      "example_id": "minimal-probe",
+      "purpose": "Exercise the transition-system fixture shape.",
+      "left_system": {
+        "states": ["l0", "l1"],
+        "initial_state": "l0",
+        "transitions": [{"source": "l0", "action": "a", "target": "l1"}]
+      },
+      "right_system": {
+        "states": ["r0", "r1"],
+        "initial_state": "r0",
+        "transitions": [{"source": "r0", "action": "a", "target": "r1"}]
+      },
+      "tested_visible_trace": ["a"],
+      "hidden_action": "tau",
+      "expected_strong_bisimulation": true,
+      "expected_weak_matching": true,
+      "evidence_boundary": "One visible action in a minimal fixture.",
+      "explicit_non_claims": ["The fixture does not prove the canonical catalog's relation set."]
+    }
+  }
+}

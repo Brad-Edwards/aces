@@ -72,9 +72,9 @@ The following block is checked mechanically against the normative artifacts.
 | --- | --- | --- |
 | `valid-sdl-fragment` | yes | none |
 | `deployable-scenario-intent` | no | `authored-observed-state-separation`, `backend-teardown-reconciliation`, `credential-intent`, `scoped-specificity-open-world-intent` |
-| `participant-evaluation-scenario` | no | `authored-observed-state-separation`, `backend-teardown-reconciliation`, `behavioral-relation-taxonomy`, `clock-declaration`, `credential-intent`, `deadlines-and-windows`, `flexible-step-tooling`, `pacing-and-synchronization`, `participant-action-observation`, `participant-budgets`, `participant-episode-reset`, `portable-behavior-contracts`, `scoped-specificity-open-world-intent`, `temporal-ordering-causality`, `time-domain-declaration`, `verifier-and-adjudication` |
-| `controlled-experiment-scenario` | no | `authored-observed-state-separation`, `backend-teardown-reconciliation`, `behavioral-relation-taxonomy`, `clock-declaration`, `credential-intent`, `deadlines-and-windows`, `host-architecture-constraints`, `pacing-and-synchronization`, `scoped-specificity-open-world-intent`, `temporal-ordering-causality`, `time-domain-declaration`, `verifier-and-adjudication` |
-| `reproducible-benchmark-study-input` | no | `authored-observed-state-separation`, `backend-teardown-reconciliation`, `behavioral-relation-taxonomy`, `clock-declaration`, `credential-intent`, `credential-materialization`, `deadlines-and-windows`, `flexible-step-tooling`, `hidden-benchmark-assets`, `host-architecture-constraints`, `pacing-and-synchronization`, `participant-action-observation`, `participant-budgets`, `participant-episode-reset`, `portable-behavior-contracts`, `reference-trajectories`, `scoped-specificity-open-world-intent`, `temporal-ordering-causality`, `time-domain-declaration`, `verifier-and-adjudication`, `weakness-exploitability-semantics` |
+| `participant-evaluation-scenario` | no | `authored-observed-state-separation`, `backend-teardown-reconciliation`, `clock-declaration`, `credential-intent`, `deadlines-and-windows`, `flexible-step-tooling`, `pacing-and-synchronization`, `participant-action-observation`, `participant-budgets`, `participant-episode-reset`, `portable-behavior-contracts`, `scoped-specificity-open-world-intent`, `temporal-ordering-causality`, `time-domain-declaration`, `verifier-and-adjudication` |
+| `controlled-experiment-scenario` | no | `authored-observed-state-separation`, `backend-teardown-reconciliation`, `clock-declaration`, `credential-intent`, `deadlines-and-windows`, `host-architecture-constraints`, `pacing-and-synchronization`, `scoped-specificity-open-world-intent`, `temporal-ordering-causality`, `time-domain-declaration`, `verifier-and-adjudication` |
+| `reproducible-benchmark-study-input` | no | `authored-observed-state-separation`, `backend-teardown-reconciliation`, `clock-declaration`, `credential-intent`, `credential-materialization`, `deadlines-and-windows`, `flexible-step-tooling`, `hidden-benchmark-assets`, `host-architecture-constraints`, `pacing-and-synchronization`, `participant-action-observation`, `participant-budgets`, `participant-episode-reset`, `portable-behavior-contracts`, `reference-trajectories`, `scoped-specificity-open-world-intent`, `temporal-ordering-causality`, `time-domain-declaration`, `verifier-and-adjudication`, `weakness-exploitability-semantics` |
 <!-- scientific-completeness-summary:end -->
 
 Only a computed-complete profile may cite a minimal example as completeness
@@ -101,10 +101,12 @@ Profile validity is also distinct from:
 - trace equivalence, refinement, observational equivalence, Park-Milner
   bisimulation, epistemic equivalence, or multi-agent strategic equivalence.
 
-Issue #747 owns the behavioral-relation taxonomy. Until that work is delivered,
-REV1 records the concern as missing and stronger profiles that require it remain
-incomplete. Passing the same bounded probes or producing equal result tuples is
-not evidence of bisimulation.
+The revisioned behavioral-relation taxonomy is defined by
+`aces-behavioral-relations@rev1`. Every profile binds its intended claim to that
+catalog and lists relations it does not claim. This implements the taxonomy
+concern without promoting any currently incomplete stronger profile: passing
+the same bounded probes or producing equal result tuples is not evidence of
+bisimulation.
 
 ## Security And Evidence Boundary
 

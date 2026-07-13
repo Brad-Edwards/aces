@@ -530,6 +530,10 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
             "skipped on staged check; runs on push and verify",
         )
         reporter.skip(
+            "policy / behavioral relation claims",
+            "skipped on staged check; runs on push and verify",
+        )
+        reporter.skip(
             "policy / agent guidance profile",
             "skipped on staged check; runs on push and verify",
         )
@@ -561,6 +565,10 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
         reporter.run(
             "policy / concept authority governance",
             lambda: _run_project_python(session, "tools/check_concept_authority_governance.py"),
+        )
+        reporter.run(
+            "policy / behavioral relation claims",
+            lambda: _run_project_python(session, "tools/check_behavioral_relation_claims.py"),
         )
         reporter.run(
             "policy / agent guidance profile",

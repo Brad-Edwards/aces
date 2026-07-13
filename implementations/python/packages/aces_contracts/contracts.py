@@ -120,6 +120,64 @@ class ContractModel(BaseModel):
 
 
 NonEmptyString = Annotated[str, Field(min_length=1)]
+BehavioralRelationId = Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]*$")]
+BehavioralTaxonomyRevision = Annotated[str, Field(pattern=r"^[a-z0-9][a-z0-9.-]*$")]
+
+
+class BehavioralClaimBindingModel(ContractModel):
+    """A bounded claim tied to one revisioned behavioral-relation definition.
+
+    This is deliberately a claim *binding*, not another relation registry. The
+    catalog owns relation meaning; consumers supply the subject, carriers,
+    quantifier/evidence boundary, assurance state, and explicit limitations.
+    """
+
+    taxonomy_id: NonEmptyString
+    taxonomy_revision: BehavioralTaxonomyRevision
+    relation_id: BehavioralRelationId
+    subject: NonEmptyString
+    left_carrier_ref: NonEmptyString | None = None
+    right_carrier_ref: NonEmptyString | None = None
+    observation_projection_ref: NonEmptyString | None = None
+    observation_projection_revision: NonEmptyString | None = None
+    quantifier_scope: Literal[
+        "single-artifact",
+        "finite-cases",
+        "sampled-population",
+        "all-admitted-inputs",
+        "all-traces",
+        "all-strategies",
+    ]
+    evidence_scope: Literal["structural", "finite", "statistical", "model-check", "proof"]
+    evidence_boundary: NonEmptyString
+    assurance_status: Literal[
+        "defined",
+        "implemented",
+        "tested",
+        "model-checked",
+        "proved",
+        "deliberately-unproved",
+        "future",
+    ]
+    evidence_refs: list[NonEmptyString] = Field(default_factory=list)
+    limitations: list[NonEmptyString] = Field(min_length=1)
+    explicit_non_claims: list[NonEmptyString] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _validate_claim_strength(self) -> BehavioralClaimBindingModel:
+        universal_scopes = {"all-admitted-inputs", "all-traces", "all-strategies"}
+        if self.quantifier_scope in universal_scopes and self.evidence_scope not in {"model-check", "proof"}:
+            raise ValueError("universal quantification requires model-check or proof evidence")
+        if self.assurance_status == "proved" and self.evidence_scope != "proof":
+            raise ValueError("proved assurance requires proof evidence")
+        if self.assurance_status == "model-checked" and self.evidence_scope != "model-check":
+            raise ValueError("model-checked assurance requires model-check evidence")
+        projection_values = (self.observation_projection_ref, self.observation_projection_revision)
+        if (projection_values[0] is None) != (projection_values[1] is None):
+            raise ValueError("observation projection ref and revision must be supplied together")
+        return self
+
+
 Rfc3339DateTimeString = Annotated[
     str,
     Field(
@@ -6086,6 +6144,7 @@ class ExperimentStudyModel(ContractModel):
     description: NonEmptyString
     purpose: NonEmptyString
     research_questions: list[NonEmptyString] = Field(default_factory=list)
+    behavioral_claims: list[BehavioralClaimBindingModel] = Field(default_factory=list)
     membership: dict[NonEmptyString, ExperimentStudyMembershipModel] = Field(min_length=1)
     inclusion_criteria: list[NonEmptyString] = Field(min_length=1)
     factors: dict[NonEmptyString, ExperimentStudyFactorModel] = Field(default_factory=dict)
@@ -6097,6 +6156,14 @@ class ExperimentStudyModel(ContractModel):
 
     @model_validator(mode="after")
     def _validate_claim_bearing_study(self) -> ExperimentStudyModel:
+        from .behavioral_relations import load_behavioral_relation_catalog, validate_behavioral_claim_binding
+
+        catalog = load_behavioral_relation_catalog()
+        relation_ids = [claim.relation_id for claim in self.behavioral_claims]
+        if len(relation_ids) != len(set(relation_ids)):
+            raise ValueError("study behavioral claim relation ids must be unique")
+        for claim in self.behavioral_claims:
+            validate_behavioral_claim_binding(claim, catalog)
         if self.run_allocation is not None:
             undeclared_blocking_factors = sorted(
                 factor_id for factor_id in self.run_allocation.blocking_factors if factor_id not in self.factors
@@ -6139,6 +6206,8 @@ class ExperimentStudyModel(ContractModel):
         if self.study_kind in {"study", "benchmark"}:
             if not self.research_questions:
                 raise ValueError("study and benchmark records must include at least one research question")
+            if not self.behavioral_claims:
+                raise ValueError("study and benchmark records must include at least one behavioral claim binding")
             if self.run_allocation is None:
                 raise ValueError("study and benchmark records must include run_allocation")
             if self.analysis_plan is None:
@@ -6162,9 +6231,16 @@ class ExperimentStudyModel(ContractModel):
                     "required": ["study_kind"],
                 },
                 "then": {
-                    "required": ["research_questions", "run_allocation", "analysis_plan", "validity_notes"],
+                    "required": [
+                        "research_questions",
+                        "behavioral_claims",
+                        "run_allocation",
+                        "analysis_plan",
+                        "validity_notes",
+                    ],
                     "properties": {
                         "research_questions": {"minItems": 1},
+                        "behavioral_claims": {"minItems": 1},
                         "run_allocation": {"type": "object"},
                         "analysis_plan": {"type": "object"},
                         "validity_notes": {"minItems": 1},
@@ -6175,8 +6251,8 @@ class ExperimentStudyModel(ContractModel):
         _add_aces_invariant(
             json_schema,
             "claim-bearing-study-analysis-plan-required",
-            "Study and benchmark records must include research questions, run allocation, a substantive analysis plan, "
-            "and validity notes.",
+            "Study and benchmark records must include research questions, revisioned behavioral claim bindings, run "
+            "allocation, a substantive analysis plan, and validity notes.",
             validator="aces_contracts.contracts.ExperimentStudyModel._validate_claim_bearing_study",
             inputs=[{"contract_id": "experiment-study-v1", "instance_path": "#"}],
         )
@@ -7903,6 +7979,7 @@ class ReusableAssetTrustPolicyModel(ContractModel):
 def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
     from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel
 
+    from .behavioral_relations import BehavioralRelationCatalogModel
     from .provenance import SDLLineageLedgerModel
     from .scientific_completeness import (
         ScientificCompletenessAssessmentModel,
@@ -7921,6 +7998,7 @@ def _raw_schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-implementation-manifest-v1": ParticipantImplementationManifestModel.model_json_schema(),
         "participant-implementation-provenance-v1": ParticipantImplementationProvenanceModel.model_json_schema(),
         "concept-families-v1": ConceptFamilyCatalogModel.model_json_schema(),
+        "behavioral-relations-v1": BehavioralRelationCatalogModel.model_json_schema(),
         "reference-models-v1": ReferenceModelCatalogModel.model_json_schema(),
         "uco-alignment-v1": UcoAlignmentCatalogModel.model_json_schema(),
         "controlled-vocabularies-v1": ControlledVocabularyCatalogModel.model_json_schema(),
@@ -7985,12 +8063,42 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
 
     bundle = _raw_schema_bundle()
     _add_aces_invariant(
+        bundle["behavioral-relations-v1"],
+        "behavioral-relations-reference-resolution",
+        "Relation map keys, bibliography references, claim-surface relation references, and worked-example keys "
+        "must resolve exactly inside one taxonomy revision.",
+        validator="aces_contracts.behavioral_relations.BehavioralRelationCatalogModel",
+        inputs=[{"contract_id": "behavioral-relations-v1", "instance_path": "#"}],
+    )
+    _add_aces_invariant(
+        bundle["experiment-study-v1"],
+        "study-behavioral-claim-catalog-resolution",
+        "Every study behavioral claim must resolve against the canonical taxonomy revision, include a required "
+        "observation projection, and keep bounded evidence out of universal quantifiers.",
+        validator="aces_contracts.behavioral_relations.validate_behavioral_claim_binding",
+        inputs=[
+            {"contract_id": "experiment-study-v1", "instance_path": "#/behavioral_claims"},
+            {"contract_id": "behavioral-relations-v1", "instance_path": "#"},
+        ],
+    )
+    _add_aces_invariant(
         bundle["scientific-completeness-taxonomy-v1"],
         "scientific-completeness-taxonomy-rectangular",
         "Concern and profile ids must be unique, and every profile disposition "
         "map must exactly cover the taxonomy concern set.",
         validator="aces_contracts.scientific_completeness.ScientificCompletenessTaxonomyModel",
         inputs=[{"contract_id": "scientific-completeness-taxonomy-v1", "instance_path": "#"}],
+    )
+    _add_aces_invariant(
+        bundle["scientific-completeness-taxonomy-v1"],
+        "scientific-completeness-behavioral-claim-resolution",
+        "Each profile must carry resolved behavioral claim bindings and disjoint, catalog-resolved nonclaimed "
+        "relation ids.",
+        validator="aces_contracts.scientific_completeness.CompletenessProfileModel.validate_behavioral_claims",
+        inputs=[
+            {"contract_id": "scientific-completeness-taxonomy-v1", "instance_path": "#/profiles"},
+            {"contract_id": "behavioral-relations-v1", "instance_path": "#"},
+        ],
     )
     _add_aces_invariant(
         bundle["scientific-completeness-assessment-v1"],
@@ -8050,6 +8158,9 @@ __all__ = [
     "BackendCompatibilityModel",
     "BackendManifestV2Model",
     "BackendCapabilitiesV2Model",
+    "BehavioralClaimBindingModel",
+    "BehavioralRelationId",
+    "BehavioralTaxonomyRevision",
     "CONCEPT_FAMILIES_SCHEMA_VERSION",
     "ConceptBindingEntryModel",
     "ConceptFamilyCatalogModel",

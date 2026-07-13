@@ -728,11 +728,11 @@ class TestOperationTools:
 
         profile = payload["profile"]
         assert profile["aces_delivery"]["complete"] is False
-        assert "behavioral-relation-taxonomy" in profile["aces_delivery"]["blocking_concern_ids"]
+        assert "behavioral-relation-taxonomy" not in profile["aces_delivery"]["blocking_concern_ids"]
         assert "experiment_validate" in profile["next_tools"]
         required = {item["concern_id"]: item for item in profile["required_concerns"]}
-        assert required["behavioral-relation-taxonomy"]["status"] == "missing"
-        assert required["behavioral-relation-taxonomy"]["issue_refs"] == ["#747"]
+        assert required["behavioral-relation-taxonomy"]["status"] == "implemented"
+        assert required["behavioral-relation-taxonomy"]["issue_refs"] == []
         assert payload["scenario_assessment"]["performed"] is False
 
     def test_intended_use_profile_rejects_unknown_id(self, server):
