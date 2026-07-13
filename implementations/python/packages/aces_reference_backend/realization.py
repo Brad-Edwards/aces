@@ -178,23 +178,31 @@ def _service_specs(
     services: list[ServiceSpec] = []
     diagnostics: list[Diagnostic] = []
     for index, raw_service in enumerate(raw_services):
-        if not isinstance(raw_service, Mapping):
+        service = _service_spec(raw_service)
+        if service is None:
             diagnostics.append(_invalid_service(resource, index))
             continue
-        port = raw_service.get("port")
-        protocol = raw_service.get("protocol", "tcp")
-        name = raw_service.get("name", "")
-        if (
-            not isinstance(port, int)
-            or isinstance(port, bool)
-            or not 1 <= port <= 65535
-            or not isinstance(protocol, str)
-            or not isinstance(name, str)
-        ):
-            diagnostics.append(_invalid_service(resource, index))
-            continue
-        services.append(ServiceSpec(port=port, protocol=protocol, name=name))
+        services.append(service)
     return tuple(services), tuple(diagnostics)
+
+
+def _service_spec(raw_service: object) -> ServiceSpec | None:
+    if not isinstance(raw_service, Mapping):
+        return None
+    port = raw_service.get("port")
+    if not _valid_service_port(port):
+        return None
+    protocol = raw_service.get("protocol", "tcp")
+    if not isinstance(protocol, str):
+        return None
+    name = raw_service.get("name", "")
+    if not isinstance(name, str):
+        return None
+    return ServiceSpec(port=port, protocol=protocol, name=name)
+
+
+def _valid_service_port(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= 65535
 
 
 def _image_ref(payload: Mapping[str, object]) -> str:
