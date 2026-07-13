@@ -180,20 +180,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "8670e3cf3aafc452f25311e4eb98ed82bb89561faaaf368a9232448c8440a3c3",
+      "content_hash": "2b17c6c70899c17c46649c5de8724c2f8529641155b03777e7437265b2559e0a",
       "last_change": {
-        "summary": "Published backend-neutral propositions and assertions in canonical instantiated scenario snapshots.",
-        "content_hash": "8670e3cf3aafc452f25311e4eb98ed82bb89561faaaf368a9232448c8440a3c3"
+        "summary": "Removed observation-only health results, generated network identity, scanner findings, and scanner capture provenance from instantiated runtime contract snapshots.",
+        "content_hash": "2b17c6c70899c17c46649c5de8724c2f8529641155b03777e7437265b2559e0a"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "58d4f2e69b91ad1639717d7892499bd1b2f007e23c0cb980314cbd701c2cd000",
+      "content_hash": "11f87bec135c48910ce7c48c6f64a807e2fa305ae0855d96238c744e80d5fc2a",
       "last_change": {
-        "summary": "Published backend-neutral propositions, assertions, role-constrained truth references, and explicit condition-to-proposition bindings.",
-        "content_hash": "58d4f2e69b91ad1639717d7892499bd1b2f007e23c0cb980314cbd701c2cd000"
+        "summary": "Removed observation-only health results, generated network identity, scanner findings, and scanner capture provenance from instantiated runtime contracts.",
+        "content_hash": "11f87bec135c48910ce7c48c6f64a807e2fa305ae0855d96238c744e80d5fc2a"
       }
     },
     {
@@ -446,10 +446,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "17f941e916ffcbeb3e36b894029332326257bc7e4d1ab3419bc6e06c7f06f801",
+      "content_hash": "271972c3a991cfb98b19950d2c33bf53f3aca4c9f0cae275f3b191ebcf8152e9",
       "last_change": {
-        "summary": "Published backend-neutral proposition and assertion authoring, role-constrained objective/event/workflow/participant references, and explicit probe bindings.",
-        "content_hash": "17f941e916ffcbeb3e36b894029332326257bc7e4d1ab3419bc6e06c7f06f801"
+        "summary": "Removed observation-only health results, generated network identity, scanner findings, and scanner capture provenance from authored runtime contracts.",
+        "content_hash": "271972c3a991cfb98b19950d2c33bf53f3aca4c9f0cae275f3b191ebcf8152e9"
       }
     },
     {

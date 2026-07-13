@@ -224,3 +224,9 @@ different facts.
   — adjacent container-security practice identifying images, runtime
   configuration, orchestrators, and host interactions as distinct
   security-relevant surfaces.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-13 | #417 | Refined the six-way carrier boundary: participant-discoverable facts are preserved in evidence by default and enter authored `Node.runtime` only through a deliberate exact, constrained, or open scenario requirement; observation alone is not promotion authority. |

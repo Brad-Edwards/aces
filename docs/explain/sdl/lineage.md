@@ -58,6 +58,17 @@ semantics, examples, or code from that source.
   raw SBOM documents, scanner output, or invocation/capability semantics into
   the SDL schema.
 
+The authored/defaulted/planned/realized/observed/derived distinction tested by
+[issue #160](https://github.com/Brad-Edwards/aces/issues/160) is a carrier
+boundary, not a vocabulary tag. SDL and `model_fields_set` carry authored and
+defaulted meaning; compiler plans carry planned operations; realization
+provenance and realized-form disclosures carry admitted choices; evidence
+records and inventory ledgers carry observations; derived-measure contracts
+carry interpretations. Docker identifiers, health results, and scanner state
+therefore remain evidence even when an SDL model could otherwise represent the
+same scalar shape. Deliberate authoring is the only promotion into scenario
+requirements.
+
 ## Directory, Domain, And Identity Authority Semantics
 
 The `runtime.identity_authorities` surface is issue #401's response to an

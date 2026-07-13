@@ -50,10 +50,7 @@ nodes:
       - {name: wazuh-api, port: 55000, protocol: tcp}
       - {name: agent-events, port: 1514, protocol: tcp}
       - {name: syslog, port: 514, protocol: udp}
-    runtime:
-      health:
-        status: healthy
-        description: Runtime healthcheck must pass before evaluator evidence is complete.
+    conditions: {wazuh-manager-health: ""}
   wazuh-indexer:
     type: vm
     os: linux
@@ -193,6 +190,10 @@ content:
     tags: [hidden-truth]
 
 conditions:
+  wazuh-manager-health:
+    command: /usr/local/bin/check-wazuh-manager
+    interval: 30
+    description: Declarative healthcheck required before evaluator evidence is complete.
   participant-observation-recorded:
     proposition: participant-observation-recorded
     command: /usr/local/bin/check-participant-observation

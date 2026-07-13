@@ -92,9 +92,11 @@ def test_scenario_delivery_drift_findings_have_evidence_fields() -> None:
             assert field in section
 
 
-def test_sections_runtime_summary_uses_corrected_boundary() -> None:
+def test_sections_runtime_summary_uses_authored_evidence_boundary() -> None:
     text = SECTIONS_DOC.read_text(encoding="utf-8")
 
     assert "not authored deployable\nfeatures or exposed network services" not in text
-    assert "participant-observable and analysis-relevant runtime state" in text
-    assert "does not exclude host-published\nbindings" in text
+    assert "`runtime` is authored declarative contract state" in text
+    assert "A value does not become an SDL\nrequirement merely because Docker" in text
+    assert "Container health results are evidence" in text
+    assert "Docker network IDs, endpoint IDs, generated DNS names" in text

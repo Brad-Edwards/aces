@@ -35,7 +35,8 @@ def _scenario_with_explicitness_cases():
               network:
                 endpoints:
                   - network: net
-                    network_id_stability: unknown
+                    backend:
+                      driver: unknown
         infrastructure:
           net:
             count: 1
@@ -56,10 +57,7 @@ def test_semantic_validator_attaches_exact_constrained_and_open_classifications(
 
     assert explicitness["nodes.vm.resources.cpu"].classification is ExplicitnessClass.EXACT
     assert explicitness["nodes.vm.os"].classification is ExplicitnessClass.CONSTRAINED
-    assert (
-        explicitness["nodes.vm.runtime.network.endpoints[0].network_id_stability"].classification
-        is ExplicitnessClass.OPEN
-    )
+    assert explicitness["nodes.vm.runtime.network.endpoints[0].backend.driver"].classification is ExplicitnessClass.OPEN
 
 
 def test_instantiation_downgrades_substituted_values_without_creating_false_exactness():

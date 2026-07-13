@@ -204,14 +204,25 @@ instead of pretending a local build recipe exists.
    binds, service DNS names, static IPs, and healthcheck dependencies
    become visible.
 
-10. Attempt maximal ACES specification.
+10. Attempt maximal ACES mapping without silently promoting evidence.
 
-   For every participant-discoverable fact, attempt to represent it in ACES.
+   For every participant-discoverable fact, identify the most specific ACES
+   carrier. First preserve the exact observation in the source evidence bundle
+   and `mapping-ledger.yaml`. Then decide whether it is authored/defaulted
+   contract state, a planned or realized choice, an observation, or a derived
+   interpretation. Schema compatibility alone does not authorize copying a
+   captured value into SDL.
+
+   Attempt to represent deliberate scenario requirements in ACES SDL.
    Use the most specific existing SDL surface available: nodes,
    infrastructure, services, features, content, accounts, relationships,
    agents, objectives, workflows, variables, or a contract surface if one
-   already exists. The question at this stage is not "should we specify
-   less?" It is "can ACES fully specify this discovered world fact?"
+   already exists. The questions at this stage are "where can ACES preserve
+   this fact exactly?" and, separately, "does the scenario author intend to
+   require it?" Generated Docker network/endpoint IDs, generated DNS
+   identities, health results, and scanner version/database/time/findings
+   remain evidence by default. A deliberate promotion into SDL makes the value
+   ordinary exact, constrained, or open contract state.
    Record the result in `mapping-ledger.yaml` instead of relying on prose.
    Each captured fact must have one of these dispositions:
 
