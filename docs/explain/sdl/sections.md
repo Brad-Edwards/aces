@@ -88,7 +88,7 @@ nodes:
       operator:                         # longhand
         username: ops
         entities: [blue-team.alice]     # binds to entity
-    services:                           # exposed network services
+    services:                           # authored node-local transport bindings
       - port: 80
         protocol: tcp
         name: http
@@ -723,6 +723,15 @@ For **VM** nodes, `resources` remain optional at the SDL layer to preserve abstr
 When `features`, `conditions`, or `injects` use the `{name: role}` form, the role must be declared in the node's `roles` map.
 
 Concrete service bindings on a VM must be unique by `protocol` + `port`. Reusing `53/tcp` and `53/udp` is valid; declaring `443/tcp` twice on the same node is rejected. If a service binding also has a `name`, that `name` must be unique within the node and can be targeted directly as `nodes.<node>.services.<service_name>`.
+
+A `services` entry identifies an authored node-local transport binding. It does
+not authorize any source to reach the port, prove a live listener, publish a
+host port, or classify an `internal`/`external` audience. Traffic authorization
+is declared separately through `infrastructure.*.acls`; observed bind state is
+recorded in `runtime.service_listeners`, and host publication is recorded in
+`runtime.network.published_ports`. Service entries are closed-world objects, so
+an unmodeled field such as `role` is rejected rather than interpreted as policy
+or silently dropped.
 
 `runtime` is authored declarative contract state for VM/container nodes. Every
 field present there requires exact state, constrains acceptable state, or marks

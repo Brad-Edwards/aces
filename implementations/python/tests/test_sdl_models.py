@@ -2551,6 +2551,10 @@ class TestServicePort:
         sp = ServicePort(port="${service_port}", name="https")
         assert sp.port == "${service_port}"
 
+    def test_rejects_unmodeled_role_as_reachability_policy(self):
+        with pytest.raises(ValidationError, match="role"):
+            ServicePort.model_validate({"port": 80, "protocol": "tcp", "name": "http", "role": "internal"})
+
 
 class TestConditionExtensions:
     def test_timeout_and_retries(self):

@@ -17,7 +17,7 @@ from aces_backend_protocols.naming import provider_resource_name
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
 
-from .driver import ContainerSpec, NetworkSpec
+from .driver import ContainerSpec, NetworkSpec, ServiceSpec
 
 _DOMAIN = "runtime"
 
@@ -81,7 +81,11 @@ def interpret_provisioning_plan(plan: ProvisioningPlan) -> Realization:
 
     networks = [_network_spec(resource, payload) for resource, payload in network_resources]
     network_lookup = _network_address_lookup(networks)
-    containers = [_container_spec(resource, payload, network_lookup) for resource, payload in node_resources]
+    containers: list[ContainerSpec] = []
+    for resource, payload in node_resources:
+        container, service_diagnostics = _container_spec(resource, payload, network_lookup)
+        containers.append(container)
+        diagnostics.extend(service_diagnostics)
     placements = [_placement(resource, payload) for resource, payload in placement_resources]
 
     return Realization(
@@ -135,7 +139,7 @@ def _container_spec(
     resource: PlannedResource,
     payload: Mapping[str, object],
     network_lookup: dict[str, str],
-) -> ContainerSpec:
+) -> tuple[ContainerSpec, tuple[Diagnostic, ...]]:
     infrastructure = _infrastructure_spec(payload)
     networks = infrastructure.get("networks")
     references: tuple[str, ...] = ()
@@ -146,12 +150,51 @@ def _container_spec(
     # contract stays total even when a node names a network not in this plan.
     network_addresses = tuple(network_lookup.get(ref, ref) for ref in references)
     image_ref = _image_ref(payload)
-    return ContainerSpec(
-        address=resource.address,
-        name=_resource_name(resource, payload),
-        image_ref=image_ref,
-        networks=network_addresses,
+    services, diagnostics = _service_specs(resource, payload)
+    return (
+        ContainerSpec(
+            address=resource.address,
+            name=_resource_name(resource, payload),
+            image_ref=image_ref,
+            networks=network_addresses,
+            services=services,
+        ),
+        diagnostics,
     )
+
+
+def _service_specs(
+    resource: PlannedResource,
+    payload: Mapping[str, object],
+) -> tuple[tuple[ServiceSpec, ...], tuple[Diagnostic, ...]]:
+    spec = payload.get("spec")
+    node = spec.get("node") if isinstance(spec, Mapping) else None
+    raw_services = node.get("services") if isinstance(node, Mapping) else None
+    if raw_services is None:
+        return (), ()
+    if not isinstance(raw_services, (list, tuple)):
+        return (), (_invalid_services(resource),)
+
+    services: list[ServiceSpec] = []
+    diagnostics: list[Diagnostic] = []
+    for index, raw_service in enumerate(raw_services):
+        if not isinstance(raw_service, Mapping):
+            diagnostics.append(_invalid_service(resource, index))
+            continue
+        port = raw_service.get("port")
+        protocol = raw_service.get("protocol", "tcp")
+        name = raw_service.get("name", "")
+        if (
+            not isinstance(port, int)
+            or isinstance(port, bool)
+            or not 1 <= port <= 65535
+            or not isinstance(protocol, str)
+            or not isinstance(name, str)
+        ):
+            diagnostics.append(_invalid_service(resource, index))
+            continue
+        services.append(ServiceSpec(port=port, protocol=protocol, name=name))
+    return tuple(services), tuple(diagnostics)
 
 
 def _image_ref(payload: Mapping[str, object]) -> str:
@@ -211,6 +254,30 @@ def _invalid_payload(resource: PlannedResource) -> Diagnostic:
         message=(
             f"Reference backend expected provisioning resource '{resource.address}' "
             f"of type '{resource.resource_type}' to carry a mapping payload."
+        ),
+        severity=Severity.ERROR,
+    )
+
+
+def _invalid_services(resource: PlannedResource) -> Diagnostic:
+    return Diagnostic(
+        code="reference-backend.realization.services-invalid",
+        domain=_DOMAIN,
+        address=resource.address,
+        message=(f"Reference backend expected provisioning node '{resource.address}' to carry services as a sequence."),
+        severity=Severity.ERROR,
+    )
+
+
+def _invalid_service(resource: PlannedResource, index: int) -> Diagnostic:
+    return Diagnostic(
+        code="reference-backend.realization.service-invalid",
+        domain=_DOMAIN,
+        address=resource.address,
+        message=(
+            f"Reference backend expected service entry {index} on provisioning "
+            f"node '{resource.address}' to contain a concrete port, protocol, "
+            "and optional name."
         ),
         severity=Severity.ERROR,
     )

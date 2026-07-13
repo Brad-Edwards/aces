@@ -1078,6 +1078,40 @@ workflows:
         assert "evaluator.objectives-unsupported" in codes
         assert not execution_plan.is_valid
 
+    def test_acl_capability_validation_covers_node_attached_rules(self):
+        limited = _limited_backend_manifest(
+            name="limited",
+            provisioner=ProvisionerCapabilities(
+                name="limited-provisioner",
+                supported_node_types=frozenset({"vm"}),
+                supported_os_families=frozenset({"linux"}),
+                supports_acls=False,
+            ),
+        )
+        model = compile_runtime_model(
+            _scenario("""
+name: node-acl
+nodes:
+  web:
+    type: vm
+    os: linux
+    resources: {ram: 1 gib, cpu: 1}
+infrastructure:
+  web:
+    count: 1
+    acls:
+      - {direction: in, protocol: tcp, ports: [443], action: allow}
+""")
+        )
+
+        execution_plan = plan(model, limited)
+
+        acl_diagnostics = [
+            diagnostic for diagnostic in execution_plan.diagnostics if diagnostic.code == "provisioner.acls-unsupported"
+        ]
+        assert [diagnostic.address for diagnostic in acl_diagnostics] == ["provision.node.web"]
+        assert not execution_plan.is_valid
+
     def test_variable_backed_os_allowed_values_pass_when_all_supported(self):
         manifest = _limited_backend_manifest(
             name="limited",

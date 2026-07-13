@@ -35,12 +35,29 @@ class NetworkSpec:
 
 
 @dataclass(frozen=True)
+class ServiceSpec:
+    """Portable authored service descriptor carried to a deployment driver.
+
+    The descriptor identifies a node-local transport binding. Its presence
+    does not authorize traffic, publish a host port, or prove that a listener
+    exists. Drivers may inspect it when declaring service support, but must not
+    infer reachability from it.
+    """
+
+    port: int
+    protocol: str
+    name: str = ""
+
+
+@dataclass(frozen=True)
 class ContainerSpec:
     """Portable description of a container to realize.
 
     ``image_ref`` is a portable image reference (a name/tag or digest), not
     a pulled local image id. ``networks`` are ACES network resource
-    addresses. ``labels`` carries only non-sensitive classification labels.
+    addresses. ``services`` preserves authored node-local transport binding
+    descriptors without granting reachability or host publication. ``labels``
+    carries only non-sensitive classification labels.
     """
 
     address: str
@@ -48,6 +65,7 @@ class ContainerSpec:
     image_ref: str
     networks: tuple[str, ...] = ()
     labels: dict[str, str] = field(default_factory=dict)
+    services: tuple[ServiceSpec, ...] = ()
 
 
 @dataclass(frozen=True)
