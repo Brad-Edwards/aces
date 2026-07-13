@@ -337,9 +337,10 @@ def test_scientific_completeness_profile_rejects_unknown_relation_binding():
         )
     )
     payload["profiles"][0]["behavioral_claims"][0]["relation_id"] = "unknown-relation"
+    taxonomy_type = type(load_scientific_completeness_taxonomy())
 
     with pytest.raises(ValidationError, match="unknown relation"):
-        type(load_scientific_completeness_taxonomy()).model_validate(payload)
+        taxonomy_type.model_validate(payload)
 
 
 def test_study_claims_are_revisioned_bounded_and_required_for_claim_bearing_studies():
