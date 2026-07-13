@@ -16,13 +16,13 @@ from .behavior_resources import (
 from .resources import _PARTICIPANT_OUTCOME_RULE_PREFIX
 
 
-def _outcome_source_layer_from_payload(value: Any) -> OutcomeInterpretationSourceLayer:
+def _outcome_source_layer_from_payload(value: object) -> OutcomeInterpretationSourceLayer:
     if isinstance(value, OutcomeInterpretationSourceLayer):
         return value
     return OutcomeInterpretationSourceLayer(str(value))
 
 
-def _outcome_target_layer_from_payload(value: Any) -> OutcomeInterpretationTargetLayer:
+def _outcome_target_layer_from_payload(value: object) -> OutcomeInterpretationTargetLayer:
     if isinstance(value, OutcomeInterpretationTargetLayer):
         return value
     return OutcomeInterpretationTargetLayer(str(value))
@@ -158,16 +158,38 @@ class ParticipantOutcomeTargetRecord:
             raise ValueError("reward_signal outcome targets require governance_ref")
 
 
-def _participant_outcome_source_records_from_payload(value: Any) -> tuple[ParticipantOutcomeSourceRecord, ...]:
+def _participant_outcome_source_records_from_payload(value: object) -> tuple[ParticipantOutcomeSourceRecord, ...]:
     if isinstance(value, (str, bytes, Mapping)) or not isinstance(value, Iterable):
         raise TypeError("outcome source_bindings must be a list of source records")
     return tuple(ParticipantOutcomeSourceRecord.from_payload(item) for item in value)
 
 
-def _participant_outcome_target_records_from_payload(value: Any) -> tuple[ParticipantOutcomeTargetRecord, ...]:
+def _participant_outcome_target_records_from_payload(value: object) -> tuple[ParticipantOutcomeTargetRecord, ...]:
     if isinstance(value, (str, bytes, Mapping)) or not isinstance(value, Iterable):
         raise TypeError("outcome target_bindings must be a list of target records")
     return tuple(ParticipantOutcomeTargetRecord.from_payload(item) for item in value)
+
+
+def _validate_outcome_source_bindings(source_bindings: tuple[ParticipantOutcomeSourceRecord, ...]) -> None:
+    if not isinstance(source_bindings, tuple):
+        raise TypeError("source_bindings must be a tuple")
+    if not source_bindings:
+        raise ValueError("participant outcome interpretations require source_bindings")
+    if any(not isinstance(source, ParticipantOutcomeSourceRecord) for source in source_bindings):
+        raise TypeError("source_bindings must contain ParticipantOutcomeSourceRecord values")
+    if len({source.source_id for source in source_bindings}) != len(source_bindings):
+        raise ValueError("participant outcome source_id values must be unique")
+
+
+def _validate_outcome_target_bindings(target_bindings: tuple[ParticipantOutcomeTargetRecord, ...]) -> None:
+    if not isinstance(target_bindings, tuple):
+        raise TypeError("target_bindings must be a tuple")
+    if not target_bindings:
+        raise ValueError("participant outcome interpretations require target_bindings")
+    if any(not isinstance(target, ParticipantOutcomeTargetRecord) for target in target_bindings):
+        raise TypeError("target_bindings must contain ParticipantOutcomeTargetRecord values")
+    if len({target.target_id for target in target_bindings}) != len(target_bindings):
+        raise ValueError("participant outcome target_id values must be unique")
 
 
 @dataclass(frozen=True)
@@ -254,22 +276,8 @@ class ParticipantOutcomeInterpretationRecord:
             self.observation_point,
             "participant outcome observation_point must be a non-empty string",
         )
-        if not isinstance(self.source_bindings, tuple):
-            raise TypeError("source_bindings must be a tuple")
-        if not self.source_bindings:
-            raise ValueError("participant outcome interpretations require source_bindings")
-        if any(not isinstance(source, ParticipantOutcomeSourceRecord) for source in self.source_bindings):
-            raise TypeError("source_bindings must contain ParticipantOutcomeSourceRecord values")
-        if len({source.source_id for source in self.source_bindings}) != len(self.source_bindings):
-            raise ValueError("participant outcome source_id values must be unique")
-        if not isinstance(self.target_bindings, tuple):
-            raise TypeError("target_bindings must be a tuple")
-        if not self.target_bindings:
-            raise ValueError("participant outcome interpretations require target_bindings")
-        if any(not isinstance(target, ParticipantOutcomeTargetRecord) for target in self.target_bindings):
-            raise TypeError("target_bindings must contain ParticipantOutcomeTargetRecord values")
-        if len({target.target_id for target in self.target_bindings}) != len(self.target_bindings):
-            raise ValueError("participant outcome target_id values must be unique")
+        _validate_outcome_source_bindings(self.source_bindings)
+        _validate_outcome_target_bindings(self.target_bindings)
         if not _tuple_of_non_empty_strings(self.evidence_refs, field_name="evidence_refs"):
             raise ValueError("participant outcome interpretations require evidence_refs")
         if not _tuple_of_non_empty_strings(self.limitations, field_name="limitations"):
@@ -278,7 +286,7 @@ class ParticipantOutcomeInterpretationRecord:
 
 
 def _participant_outcome_interpretation_records_from_payload(
-    value: Any,
+    value: object,
 ) -> tuple[ParticipantOutcomeInterpretationRecord, ...]:
     if isinstance(value, (str, bytes, Mapping)) or not isinstance(value, Iterable):
         raise TypeError("outcome_interpretations must be a list of interpretation records")

@@ -18,25 +18,25 @@ from .behavior_resources import (
 )
 
 
-def _participant_time_domain_from_payload(value: Any) -> ParticipantTimeDomain:
+def _participant_time_domain_from_payload(value: object) -> ParticipantTimeDomain:
     if isinstance(value, ParticipantTimeDomain):
         return value
     return ParticipantTimeDomain(str(value))
 
 
-def _participant_temporal_event_point_from_payload(value: Any) -> ParticipantTemporalEventPoint:
+def _participant_temporal_event_point_from_payload(value: object) -> ParticipantTemporalEventPoint:
     if isinstance(value, ParticipantTemporalEventPoint):
         return value
     return ParticipantTemporalEventPoint(str(value))
 
 
-def _participant_temporal_state_from_payload(value: Any) -> ParticipantTemporalState:
+def _participant_temporal_state_from_payload(value: object) -> ParticipantTemporalState:
     if isinstance(value, ParticipantTemporalState):
         return value
     return ParticipantTemporalState(str(value))
 
 
-def _participant_temporal_event_points_from_payload(value: Any) -> tuple[ParticipantTemporalEventPoint, ...]:
+def _participant_temporal_event_points_from_payload(value: object) -> tuple[ParticipantTemporalEventPoint, ...]:
     if isinstance(value, (str, bytes, Mapping)) or not isinstance(value, Iterable):
         raise TypeError("temporal event_points must be a list of event-point strings")
     points = tuple(_participant_temporal_event_point_from_payload(item) for item in value)
@@ -197,13 +197,116 @@ def _participant_temporal_state_transition_from_payload(
     return ParticipantTemporalStateTransition.from_payload(value)
 
 
-def iter_participant_temporal_state_machine_violations(
-    transitions: Iterable[ParticipantTemporalStateTransition | Mapping[str, Any]],
-) -> Iterator[tuple[str, str]]:
-    """Yield SEM-213 abstract state-machine violations."""
+def _try_parse_temporal_transition(
+    raw_transition: ParticipantTemporalStateTransition | Mapping[str, Any],
+) -> tuple[ParticipantTemporalStateTransition | None, str | None]:
+    """Parse one raw transition, returning either the transition or an error message."""
+    try:
+        return _participant_temporal_state_transition_from_payload(raw_transition), None
+    except (TypeError, ValueError) as exc:
+        return None, f"participant temporal state transition is invalid: {exc}"
 
-    prior_state: dict[str, ParticipantTemporalState] = {}
-    domain_authority: dict[str, tuple[ParticipantTimeDomain, str]] = {}
+
+def _iter_domain_authority_violations(
+    locator: str,
+    key: str,
+    transition: ParticipantTemporalStateTransition,
+    domain_authority: dict[str, tuple[ParticipantTimeDomain, str]],
+) -> Iterator[tuple[str, str]]:
+    observed_domain_authority = (transition.time_domain, transition.clock_authority)
+    if key in domain_authority and domain_authority[key] != observed_domain_authority:
+        expected_domain, expected_authority = domain_authority[key]
+        yield (
+            locator,
+            f"temporal contract {key!r} changed time domain or clock authority from "
+            f"{expected_domain.value}/{expected_authority!r} to "
+            f"{transition.time_domain.value}/{transition.clock_authority!r}",
+        )
+    else:
+        domain_authority[key] = observed_domain_authority
+
+
+def _iter_from_state_mismatch_violations(
+    locator: str,
+    key: str,
+    transition: ParticipantTemporalStateTransition,
+    prior_state: dict[str, ParticipantTemporalState],
+    boundary_states: set[ParticipantTemporalState],
+    crosses_boundary: bool,
+) -> Iterator[tuple[str, str]]:
+    if (
+        key in prior_state
+        and transition.from_state != prior_state[key]
+        and prior_state[key] not in boundary_states
+        and not crosses_boundary
+    ):
+        yield (
+            locator,
+            f"temporal contract {key!r} transition from_state {transition.from_state.value!r} "
+            f"does not match prior to_state {prior_state[key].value!r}",
+        )
+
+
+def _iter_cadence_violations(
+    locator: str,
+    key: str,
+    transition: ParticipantTemporalStateTransition,
+    prior_state: dict[str, ParticipantTemporalState],
+    cadence_guard_events: set[ParticipantTemporalEventPoint],
+    cadence_ready_states: set[ParticipantTemporalState],
+    crosses_boundary: bool,
+) -> Iterator[tuple[str, str]]:
+    if (
+        transition.from_state == ParticipantTemporalState.CADENCE_WAITING
+        and transition.event_point in cadence_guard_events
+        and not crosses_boundary
+    ):
+        yield (locator, "cadence repeated event requires cadence_ready or reset/replay boundary before reuse")
+    elif (
+        transition.to_state == ParticipantTemporalState.CADENCE_WAITING
+        and transition.from_state not in cadence_ready_states
+        and prior_state.get(key) not in cadence_ready_states
+        and not crosses_boundary
+    ):
+        yield (locator, "cadence_waiting requires prior cadence_ready or eligible state in the same segment")
+
+
+def _iter_dwell_violations(
+    locator: str,
+    key: str,
+    transition: ParticipantTemporalStateTransition,
+    prior_state: dict[str, ParticipantTemporalState],
+) -> Iterator[tuple[str, str]]:
+    if (
+        transition.to_state == ParticipantTemporalState.DWELL_SATISFIED
+        and transition.from_state != ParticipantTemporalState.DWELL_ACTIVE
+        and prior_state.get(key) != ParticipantTemporalState.DWELL_ACTIVE
+    ):
+        yield (locator, "dwell_satisfied requires prior dwell_active state in the same temporal segment")
+
+
+def _iter_terminal_state_violations(
+    locator: str,
+    transition: ParticipantTemporalStateTransition,
+    terminal_states: set[ParticipantTemporalState],
+    boundary_events: set[ParticipantTemporalEventPoint],
+    boundary_states: set[ParticipantTemporalState],
+) -> Iterator[tuple[str, str]]:
+    if (
+        transition.from_state in terminal_states
+        and transition.event_point not in boundary_events
+        and transition.to_state not in boundary_states
+    ):
+        yield (locator, "terminal temporal state requires reset or replay boundary before reuse")
+
+
+def _iter_temporal_transition_violations(
+    locator: str,
+    transition: ParticipantTemporalStateTransition,
+    prior_state: dict[str, ParticipantTemporalState],
+    domain_authority: dict[str, tuple[ParticipantTimeDomain, str]],
+) -> Iterator[tuple[str, str]]:
+    """Yield every SEM-213 violation raised by a single already-parsed transition."""
     terminal_states = {ParticipantTemporalState.DEADLINE_MISSED, ParticipantTemporalState.TIMEOUT}
     boundary_events = {ParticipantTemporalEventPoint.RESET, ParticipantTemporalEventPoint.REPLAY}
     boundary_states = {ParticipantTemporalState.RESET, ParticipantTemporalState.REPLAY_BOUNDARY}
@@ -220,66 +323,37 @@ def iter_participant_temporal_state_machine_violations(
         ParticipantTemporalState.REPLAY_BOUNDARY,
     }
 
+    key = transition.temporal_contract_id
+    crosses_boundary = transition.event_point in boundary_events or transition.to_state in boundary_states
+
+    checks = (
+        _iter_domain_authority_violations(locator, key, transition, domain_authority),
+        _iter_from_state_mismatch_violations(locator, key, transition, prior_state, boundary_states, crosses_boundary),
+        _iter_cadence_violations(
+            locator, key, transition, prior_state, cadence_guard_events, cadence_ready_states, crosses_boundary
+        ),
+        _iter_dwell_violations(locator, key, transition, prior_state),
+        _iter_terminal_state_violations(locator, transition, terminal_states, boundary_events, boundary_states),
+    )
+    for check in checks:
+        yield from check
+
+    prior_state[key] = transition.to_state
+
+
+def iter_participant_temporal_state_machine_violations(
+    transitions: Iterable[ParticipantTemporalStateTransition | Mapping[str, Any]],
+) -> Iterator[tuple[str, str]]:
+    """Yield SEM-213 abstract state-machine violations."""
+
+    prior_state: dict[str, ParticipantTemporalState] = {}
+    domain_authority: dict[str, tuple[ParticipantTimeDomain, str]] = {}
+
     for index, raw_transition in enumerate(transitions):
         locator = f"participant temporal state transition[{index}]"
-        try:
-            transition = _participant_temporal_state_transition_from_payload(raw_transition)
-        except (TypeError, ValueError) as exc:
-            yield (locator, f"participant temporal state transition is invalid: {exc}")
+        transition, parse_error = _try_parse_temporal_transition(raw_transition)
+        if transition is None:
+            yield (locator, parse_error or "")
             continue
 
-        key = transition.temporal_contract_id
-        observed_domain_authority = (transition.time_domain, transition.clock_authority)
-        if key in domain_authority and domain_authority[key] != observed_domain_authority:
-            expected_domain, expected_authority = domain_authority[key]
-            yield (
-                locator,
-                f"temporal contract {key!r} changed time domain or clock authority from "
-                f"{expected_domain.value}/{expected_authority!r} to "
-                f"{transition.time_domain.value}/{transition.clock_authority!r}",
-            )
-        else:
-            domain_authority[key] = observed_domain_authority
-
-        crosses_boundary = transition.event_point in boundary_events or transition.to_state in boundary_states
-        if (
-            key in prior_state
-            and transition.from_state != prior_state[key]
-            and prior_state[key] not in boundary_states
-            and not crosses_boundary
-        ):
-            yield (
-                locator,
-                f"temporal contract {key!r} transition from_state {transition.from_state.value!r} "
-                f"does not match prior to_state {prior_state[key].value!r}",
-            )
-
-        if (
-            transition.from_state == ParticipantTemporalState.CADENCE_WAITING
-            and transition.event_point in cadence_guard_events
-            and not crosses_boundary
-        ):
-            yield (locator, "cadence repeated event requires cadence_ready or reset/replay boundary before reuse")
-        elif (
-            transition.to_state == ParticipantTemporalState.CADENCE_WAITING
-            and transition.from_state not in cadence_ready_states
-            and prior_state.get(key) not in cadence_ready_states
-            and not crosses_boundary
-        ):
-            yield (locator, "cadence_waiting requires prior cadence_ready or eligible state in the same segment")
-
-        if (
-            transition.to_state == ParticipantTemporalState.DWELL_SATISFIED
-            and transition.from_state != ParticipantTemporalState.DWELL_ACTIVE
-            and prior_state.get(key) != ParticipantTemporalState.DWELL_ACTIVE
-        ):
-            yield (locator, "dwell_satisfied requires prior dwell_active state in the same temporal segment")
-
-        if (
-            transition.from_state in terminal_states
-            and transition.event_point not in boundary_events
-            and transition.to_state not in boundary_states
-        ):
-            yield (locator, "terminal temporal state requires reset or replay boundary before reuse")
-
-        prior_state[key] = transition.to_state
+        yield from _iter_temporal_transition_violations(locator, transition, prior_state, domain_authority)

@@ -182,7 +182,7 @@ def map_backend_diagnostic_to_participant_failure(
     return ParticipantFailureClass.BACKEND_ERROR if code else ParticipantFailureClass.UNKNOWN
 
 
-def _as_string_set(value: Any) -> set[str]:
+def _as_string_set(value: object) -> set[str]:
     if isinstance(value, (str, bytes, Mapping)) or not isinstance(value, Iterable):
         return set()
     return {str(item) for item in value if isinstance(item, str) and item}
@@ -228,29 +228,18 @@ def _contract_uses_sem211_action_results(contract: ParticipantActionContractRunt
     return bool(contract.precondition_classes or contract.effect_classes or contract.failure_classes)
 
 
-def validate_participant_action_result_contract(
+_ContractRefMap = dict[tuple[str, str], dict[str, set[str]]]
+
+
+def _sem211_precondition_violations(
     result: "ParticipantActionResult",
     contract: ParticipantActionContractRuntime,
+    declared_precondition_classes: set[str],
+    declared_preconditions: set[tuple[str, str]],
+    declared_precondition_refs: _ContractRefMap,
 ) -> list[str]:
-    """Return SEM-211 contract violations for one typed action result."""
-
     violations: list[str] = []
-    if result.action_contract_address != contract.address:
-        violations.append(
-            "action_result action_contract_address "
-            f"{result.action_contract_address!r} does not match compiled action contract {contract.address!r}"
-        )
-        return violations
-
-    declared_precondition_classes = set(contract.precondition_classes)
-    declared_effect_classes = set(contract.effect_classes)
-    declared_failure_classes = set(contract.failure_classes)
-    declared_precondition_refs = _contract_sem211_precondition_refs(contract)
-    declared_effect_refs = _contract_sem211_effect_refs(contract)
-    declared_preconditions = set(declared_precondition_refs)
-    declared_effects = set(declared_effect_refs)
     reported_preconditions: set[tuple[str, str]] = set()
-
     for precondition in result.preconditions:
         precondition_key = (precondition.precondition_id, precondition.precondition_class.value)
         reported_preconditions.add(precondition_key)
@@ -283,7 +272,17 @@ def validate_participant_action_result_contract(
             f"action_result is missing declared precondition {precondition_id!r}/"
             f"{precondition_class!r} for {contract.address}"
         )
+    return violations
 
+
+def _sem211_effect_violations(
+    result: "ParticipantActionResult",
+    contract: ParticipantActionContractRuntime,
+    declared_effect_classes: set[str],
+    declared_effects: set[tuple[str, str]],
+    declared_effect_refs: _ContractRefMap,
+) -> list[str]:
+    violations: list[str] = []
     for effect in result.effects:
         effect_key = (effect.effect_id, effect.effect_class.value)
         if effect.effect_class.value not in declared_effect_classes:
@@ -303,22 +302,88 @@ def validate_participant_action_result_contract(
                 violations.append(f"action_result effect {effect.effect_id!r} reports undeclared target_ref {ref!r}")
             for ref in sorted(undeclared_evidence_refs):
                 violations.append(f"action_result effect {effect.effect_id!r} reports undeclared evidence_ref {ref!r}")
+    return violations
 
-    declared_result_evidence_refs = {
-        ref for declared_refs in declared_precondition_refs.values() for ref in declared_refs["evidence_refs"]
-    } | {ref for declared_refs in declared_effect_refs.values() for ref in declared_refs["evidence_refs"]}
-    reported_result_evidence_refs = {
-        ref for precondition in result.preconditions for ref in precondition.evidence_refs
-    } | {ref for effect in result.effects for ref in effect.evidence_refs}
-    if declared_precondition_refs or declared_effect_refs:
-        for ref in sorted(set(result.evidence_refs) - declared_result_evidence_refs):
-            violations.append(f"action_result reports undeclared evidence_ref {ref!r}")
-        for ref in sorted(set(result.evidence_refs) & declared_result_evidence_refs - reported_result_evidence_refs):
-            violations.append(
-                f"action_result evidence_ref {ref!r} is not grounded in reported precondition or effect evidence_refs"
-            )
 
-    if result.failure_class is not None and result.failure_class.value not in declared_failure_classes:
+def _sem211_declared_evidence_refs(
+    declared_precondition_refs: _ContractRefMap,
+    declared_effect_refs: _ContractRefMap,
+) -> set[str]:
+    refs: set[str] = set()
+    for declared_refs in declared_precondition_refs.values():
+        refs.update(declared_refs["evidence_refs"])
+    for declared_refs in declared_effect_refs.values():
+        refs.update(declared_refs["evidence_refs"])
+    return refs
+
+
+def _sem211_reported_evidence_refs(result: "ParticipantActionResult") -> set[str]:
+    refs: set[str] = set()
+    for precondition in result.preconditions:
+        refs.update(precondition.evidence_refs)
+    for effect in result.effects:
+        refs.update(effect.evidence_refs)
+    return refs
+
+
+def _sem211_result_evidence_violations(
+    result: "ParticipantActionResult",
+    declared_precondition_refs: _ContractRefMap,
+    declared_effect_refs: _ContractRefMap,
+) -> list[str]:
+    if not (declared_precondition_refs or declared_effect_refs):
+        return []
+    declared_result_evidence_refs = _sem211_declared_evidence_refs(declared_precondition_refs, declared_effect_refs)
+    reported_result_evidence_refs = _sem211_reported_evidence_refs(result)
+    violations: list[str] = []
+    for ref in sorted(set(result.evidence_refs) - declared_result_evidence_refs):
+        violations.append(f"action_result reports undeclared evidence_ref {ref!r}")
+    for ref in sorted(set(result.evidence_refs) & declared_result_evidence_refs - reported_result_evidence_refs):
+        violations.append(
+            f"action_result evidence_ref {ref!r} is not grounded in reported precondition or effect evidence_refs"
+        )
+    return violations
+
+
+def validate_participant_action_result_contract(
+    result: "ParticipantActionResult",
+    contract: ParticipantActionContractRuntime,
+) -> list[str]:
+    """Return SEM-211 contract violations for one typed action result."""
+
+    if result.action_contract_address != contract.address:
+        return [
+            "action_result action_contract_address "
+            f"{result.action_contract_address!r} does not match compiled action contract {contract.address!r}"
+        ]
+
+    declared_precondition_refs = _contract_sem211_precondition_refs(contract)
+    declared_effect_refs = _contract_sem211_effect_refs(contract)
+    declared_preconditions = set(declared_precondition_refs)
+    declared_effects = set(declared_effect_refs)
+
+    violations: list[str] = []
+    violations.extend(
+        _sem211_precondition_violations(
+            result,
+            contract,
+            set(contract.precondition_classes),
+            declared_preconditions,
+            declared_precondition_refs,
+        )
+    )
+    violations.extend(
+        _sem211_effect_violations(
+            result,
+            contract,
+            set(contract.effect_classes),
+            declared_effects,
+            declared_effect_refs,
+        )
+    )
+    violations.extend(_sem211_result_evidence_violations(result, declared_precondition_refs, declared_effect_refs))
+
+    if result.failure_class is not None and result.failure_class.value not in set(contract.failure_classes):
         violations.append(
             f"action_result failure_class {result.failure_class.value!r} is not declared by {contract.address}"
         )

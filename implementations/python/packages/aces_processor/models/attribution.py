@@ -165,6 +165,40 @@ class ParticipantAttributionEvidenceBasis:
             raise ValueError("evidence_basis observer_effects must disclose at least one observer effect")
 
 
+def _validate_participant_attribution_edge_types(
+    cause_candidate: ParticipantAttributionCandidate,
+    effect_candidate: ParticipantAttributionCandidate,
+    ordering_basis: ParticipantAttributionOrderingBasis,
+    evidence_basis: ParticipantAttributionEvidenceBasis,
+    support_class: ParticipantAttributionSupportClass,
+) -> None:
+    if not isinstance(cause_candidate, ParticipantAttributionCandidate):
+        raise TypeError("cause_candidate must be a ParticipantAttributionCandidate")
+    if not isinstance(effect_candidate, ParticipantAttributionCandidate):
+        raise TypeError("effect_candidate must be a ParticipantAttributionCandidate")
+    if not isinstance(ordering_basis, ParticipantAttributionOrderingBasis):
+        raise TypeError("ordering_basis must be a ParticipantAttributionOrderingBasis")
+    if not isinstance(evidence_basis, ParticipantAttributionEvidenceBasis):
+        raise TypeError("evidence_basis must be a ParticipantAttributionEvidenceBasis")
+    if not isinstance(support_class, ParticipantAttributionSupportClass):
+        raise TypeError("support_class must be a ParticipantAttributionSupportClass")
+
+
+def _validate_participant_attribution_edge_causal_rules(
+    support_class: ParticipantAttributionSupportClass,
+    ordering_basis: ParticipantAttributionOrderingBasis,
+    effect_candidate: ParticipantAttributionCandidate,
+    interpretation_rule_ref: str | None,
+) -> None:
+    if (
+        support_class in STRONG_ATTRIBUTION_SUPPORT_CLASSES
+        and ordering_basis.basis_kind == ParticipantAttributionOrderingBasisKind.TIMESTAMP_ADJACENCY
+    ):
+        raise ValueError("timestamp_adjacency ordering_basis cannot support strong causal attribution claims")
+    if effect_candidate.candidate_kind in OUTCOME_ATTRIBUTION_CANDIDATE_KINDS and interpretation_rule_ref is None:
+        raise ValueError("downstream outcome attribution requires interpretation_rule_ref")
+
+
 @dataclass(frozen=True)
 class ParticipantAttributionEdge:
     """Evidence-labeled SEM-212 attribution edge."""
@@ -262,16 +296,13 @@ class ParticipantAttributionEdge:
             self.observation_point,
             "participant attribution observation_point must be a non-empty string",
         )
-        if not isinstance(self.cause_candidate, ParticipantAttributionCandidate):
-            raise TypeError("cause_candidate must be a ParticipantAttributionCandidate")
-        if not isinstance(self.effect_candidate, ParticipantAttributionCandidate):
-            raise TypeError("effect_candidate must be a ParticipantAttributionCandidate")
-        if not isinstance(self.ordering_basis, ParticipantAttributionOrderingBasis):
-            raise TypeError("ordering_basis must be a ParticipantAttributionOrderingBasis")
-        if not isinstance(self.evidence_basis, ParticipantAttributionEvidenceBasis):
-            raise TypeError("evidence_basis must be a ParticipantAttributionEvidenceBasis")
-        if not isinstance(self.support_class, ParticipantAttributionSupportClass):
-            raise TypeError("support_class must be a ParticipantAttributionSupportClass")
+        _validate_participant_attribution_edge_types(
+            self.cause_candidate,
+            self.effect_candidate,
+            self.ordering_basis,
+            self.evidence_basis,
+            self.support_class,
+        )
         _validate_required_string(self.confidence, "participant attribution confidence must be a non-empty string")
         _validate_required_string(self.strength, "participant attribution strength must be a non-empty string")
         limitations = _tuple_of_non_empty_strings(self.limitations, field_name="limitations")
@@ -284,13 +315,9 @@ class ParticipantAttributionEdge:
             self.interpretation_rule_ref,
             "interpretation_rule_ref must be a non-empty string or None",
         )
-        if (
-            self.support_class in STRONG_ATTRIBUTION_SUPPORT_CLASSES
-            and self.ordering_basis.basis_kind == ParticipantAttributionOrderingBasisKind.TIMESTAMP_ADJACENCY
-        ):
-            raise ValueError("timestamp_adjacency ordering_basis cannot support strong causal attribution claims")
-        if (
-            self.effect_candidate.candidate_kind in OUTCOME_ATTRIBUTION_CANDIDATE_KINDS
-            and self.interpretation_rule_ref is None
-        ):
-            raise ValueError("downstream outcome attribution requires interpretation_rule_ref")
+        _validate_participant_attribution_edge_causal_rules(
+            self.support_class,
+            self.ordering_basis,
+            self.effect_candidate,
+            self.interpretation_rule_ref,
+        )

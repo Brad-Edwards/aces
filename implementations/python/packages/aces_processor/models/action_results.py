@@ -200,6 +200,44 @@ _PARTICIPANT_ACTION_TERMINAL_EFFECT_STATUSES = frozenset(
 )
 
 
+def _validate_action_result_required_fields(payload: Mapping[str, Any]) -> None:
+    if not isinstance(payload, Mapping):
+        raise TypeError("participant action result must be a mapping")
+    missing = [
+        key
+        for key in (
+            "status",
+            "participant_address",
+            "episode_id",
+            "action_instance_id",
+            "action_contract_address",
+            "observation_point",
+        )
+        if key not in payload
+    ]
+    if missing:
+        raise ValueError("participant action result is missing required fields: " + ", ".join(missing))
+
+
+def _ensure_iterable_of_item_payloads(value: object, message: str) -> None:
+    if isinstance(value, (str, bytes, Mapping)) or not isinstance(value, Iterable):
+        raise TypeError(message)
+
+
+def _coerce_action_result_status(status_raw: object) -> ParticipantActionResultStatus:
+    if isinstance(status_raw, ParticipantActionResultStatus):
+        return status_raw
+    return ParticipantActionResultStatus(str(status_raw))
+
+
+def _coerce_action_result_failure_class(failure_raw: object) -> ParticipantFailureClass | None:
+    if failure_raw is None:
+        return None
+    if isinstance(failure_raw, ParticipantFailureClass):
+        return failure_raw
+    return ParticipantFailureClass(str(failure_raw))
+
+
 @dataclass(frozen=True)
 class ParticipantActionResult:
     """Typed SEM-211 local result for a participant action attempt."""
@@ -219,36 +257,17 @@ class ParticipantActionResult:
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> "ParticipantActionResult":
-        if not isinstance(payload, Mapping):
-            raise TypeError("participant action result must be a mapping")
-        missing = [
-            key
-            for key in (
-                "status",
-                "participant_address",
-                "episode_id",
-                "action_instance_id",
-                "action_contract_address",
-                "observation_point",
-            )
-            if key not in payload
-        ]
-        if missing:
-            raise ValueError("participant action result is missing required fields: " + ", ".join(missing))
+        _validate_action_result_required_fields(payload)
         status_raw = payload.get("status")
         failure_raw = payload.get("failure_class")
         preconditions_raw = payload.get("preconditions", ())
         effects_raw = payload.get("effects", ())
-        if isinstance(preconditions_raw, (str, bytes, Mapping)) or not isinstance(preconditions_raw, Iterable):
-            raise TypeError("preconditions must be a list of participant action precondition results")
-        if isinstance(effects_raw, (str, bytes, Mapping)) or not isinstance(effects_raw, Iterable):
-            raise TypeError("effects must be a list of participant action effect results")
+        _ensure_iterable_of_item_payloads(
+            preconditions_raw, "preconditions must be a list of participant action precondition results"
+        )
+        _ensure_iterable_of_item_payloads(effects_raw, "effects must be a list of participant action effect results")
         return cls(
-            status=(
-                status_raw
-                if isinstance(status_raw, ParticipantActionResultStatus)
-                else ParticipantActionResultStatus(str(status_raw))
-            ),
+            status=_coerce_action_result_status(status_raw),
             participant_address=str(payload.get("participant_address")),
             episode_id=str(payload.get("episode_id")),
             action_instance_id=str(payload.get("action_instance_id")),
@@ -256,15 +275,7 @@ class ParticipantActionResult:
             observation_point=str(payload.get("observation_point")),
             preconditions=tuple(ParticipantActionPreconditionResult.from_payload(item) for item in preconditions_raw),
             effects=tuple(ParticipantActionEffectResult.from_payload(item) for item in effects_raw),
-            failure_class=(
-                None
-                if failure_raw is None
-                else (
-                    failure_raw
-                    if isinstance(failure_raw, ParticipantFailureClass)
-                    else ParticipantFailureClass(str(failure_raw))
-                )
-            ),
+            failure_class=_coerce_action_result_failure_class(failure_raw),
             observations=_tuple_of_non_empty_strings(payload.get("observations", ()), field_name="observations"),
             evidence_refs=_tuple_of_non_empty_strings(payload.get("evidence_refs", ()), field_name="evidence_refs"),
             diagnostics=_tuple_of_non_empty_strings(payload.get("diagnostics", ()), field_name="diagnostics"),
@@ -287,6 +298,14 @@ class ParticipantActionResult:
         }
 
     def __post_init__(self) -> None:
+        self._validate_identity_fields()
+        self._validate_preconditions_collection()
+        self._validate_effects_collection()
+        self._validate_failure_class_and_strings()
+        self._validate_scope()
+        self._validate_fail_closed()
+
+    def _validate_identity_fields(self) -> None:
         if not isinstance(self.status, ParticipantActionResultStatus):
             raise TypeError("status must be a ParticipantActionResultStatus")
         _validate_required_string(
@@ -312,6 +331,8 @@ class ParticipantActionResult:
         )
         if not _observation_point_matches_action_instance(self.observation_point, self.action_instance_id):
             raise ValueError("action result observation_point must be anchored to action_instance_id")
+
+    def _validate_preconditions_collection(self) -> None:
         if not isinstance(self.preconditions, tuple):
             raise TypeError("preconditions must be a tuple")
         if not self.preconditions:
@@ -320,19 +341,21 @@ class ParticipantActionResult:
             raise TypeError("preconditions must contain ParticipantActionPreconditionResult values")
         if len({item.precondition_id for item in self.preconditions}) != len(self.preconditions):
             raise ValueError("precondition result ids must be unique")
+
+    def _validate_effects_collection(self) -> None:
         if not isinstance(self.effects, tuple):
             raise TypeError("effects must be a tuple")
         if any(not isinstance(item, ParticipantActionEffectResult) for item in self.effects):
             raise TypeError("effects must contain ParticipantActionEffectResult values")
         if len({item.effect_id for item in self.effects}) != len(self.effects):
             raise ValueError("effect result ids must be unique")
+
+    def _validate_failure_class_and_strings(self) -> None:
         if self.failure_class is not None and not isinstance(self.failure_class, ParticipantFailureClass):
             raise TypeError("failure_class must be a ParticipantFailureClass or None")
         _tuple_of_non_empty_strings(self.observations, field_name="observations")
         _tuple_of_non_empty_strings(self.evidence_refs, field_name="evidence_refs")
         _tuple_of_non_empty_strings(self.diagnostics, field_name="diagnostics")
-        self._validate_scope()
-        self._validate_fail_closed()
 
     def _validate_scope(self) -> None:
         for precondition in self.preconditions:
@@ -357,17 +380,29 @@ class ParticipantActionResult:
                 ParticipantActionPreconditionStatus.UNRESOLVED,
             }
         ]
+        self._validate_blocked_preconditions(blocked)
+        self._validate_no_failure_class_for_success()
+        self._validate_terminal_effects_present()
+        self._validate_failure_status_requires_failure_class()
+
+    def _validate_blocked_preconditions(self, blocked: list[ParticipantActionPreconditionResult]) -> None:
         if blocked and self.status in _PARTICIPANT_ACTION_SUCCESS_STATUSES:
             raise ValueError("unsatisfied or unresolved preconditions fail closed")
         if blocked and self.failure_class is None:
             raise ValueError("unsatisfied or unresolved preconditions require a portable failure_class")
+
+    def _validate_no_failure_class_for_success(self) -> None:
         if self.status == ParticipantActionResultStatus.SUCCEEDED:
             if self.failure_class is not None:
                 raise ValueError("succeeded action results may not report failure_class")
         if self.status == ParticipantActionResultStatus.ACCEPTED and self.failure_class is not None:
             raise ValueError("accepted action results may not report failure_class")
+
+    def _validate_terminal_effects_present(self) -> None:
         if self.status in _PARTICIPANT_ACTION_TERMINAL_EFFECT_STATUSES:
             if not self.effects:
                 raise ValueError(f"{self.status.value} action results require declared effects")
+
+    def _validate_failure_status_requires_failure_class(self) -> None:
         if self.status in _PARTICIPANT_ACTION_FAILURE_STATUSES and self.failure_class is None:
             raise ValueError(f"{self.status.value} action results require a portable failure_class")

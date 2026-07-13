@@ -15,6 +15,7 @@ from aces_processor.models import (
     ParticipantActionResultStatus,
     ParticipantBehaviorHistoryEvent,
     ParticipantBehaviorHistoryEventType,
+    ParticipantHistoryAddressScope,
     ParticipantObservationStatus,
     RuntimeSnapshot,
     iter_participant_behavior_history_violations,
@@ -594,9 +595,11 @@ def test_terminal_observation_requires_sem_211_action_result_when_contract_avail
     violations = list(
         iter_participant_behavior_history_violations(
             events,
-            action_contract_addresses=set(model.action_contracts),
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses=set(model.action_contracts),
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             action_contracts=model.action_contracts,
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
         )
     )
 
@@ -659,9 +662,11 @@ def test_action_result_must_report_every_declared_precondition():
                 },
                 observation.to_payload(),
             ],
-            action_contract_addresses=set(model.action_contracts),
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses=set(model.action_contracts),
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             action_contracts=model.action_contracts,
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
         )
     )
 
@@ -738,9 +743,11 @@ def test_action_result_precondition_refs_must_be_declared_by_contract():
                 },
                 observation.to_payload(),
             ],
-            action_contract_addresses=set(model.action_contracts),
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses=set(model.action_contracts),
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             action_contracts=model.action_contracts,
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
         )
     )
 
@@ -817,9 +824,11 @@ def test_action_result_effects_must_be_declared_by_compiled_contract():
                 },
                 observation.to_payload(),
             ],
-            action_contract_addresses=set(model.action_contracts),
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses=set(model.action_contracts),
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             action_contracts=model.action_contracts,
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
         )
     )
 
@@ -894,9 +903,11 @@ def test_action_result_effect_refs_must_be_declared_by_contract():
                 },
                 observation.to_payload(),
             ],
-            action_contract_addresses=set(model.action_contracts),
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses=set(model.action_contracts),
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             action_contracts=model.action_contracts,
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
         )
     )
 
@@ -966,9 +977,11 @@ def test_action_result_summary_evidence_refs_must_be_declared_by_contract():
                 },
                 observation.to_payload(),
             ],
-            action_contract_addresses=set(model.action_contracts),
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses=set(model.action_contracts),
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             action_contracts=model.action_contracts,
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
         )
     )
 
@@ -1004,9 +1017,11 @@ def test_action_result_summary_evidence_refs_must_be_grounded_in_reported_result
     violations = list(
         iter_participant_behavior_history_violations(
             _history_payloads_for_action_result(result),
-            action_contract_addresses=set(model.action_contracts),
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses=set(model.action_contracts),
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             action_contracts=model.action_contracts,
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
         )
     )
 
@@ -1052,9 +1067,11 @@ def test_action_result_refs_must_be_authorized_by_observation_boundary():
     violations = list(
         iter_participant_behavior_history_violations(
             _history_payloads_for_action_result(result),
-            action_contract_addresses=set(model.action_contracts),
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses=set(model.action_contracts),
+                observation_boundary_addresses=None,
+            ),
             action_contracts=model.action_contracts,
-            observation_boundary_addresses=None,
             observation_boundaries=model.observation_boundaries,
         )
     )
@@ -1096,9 +1113,11 @@ def test_action_result_effect_targets_must_be_authorized_by_observation_boundary
     violations = list(
         iter_participant_behavior_history_violations(
             _history_payloads_for_action_result(result),
-            action_contract_addresses=set(model.action_contracts),
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses=set(model.action_contracts),
+                observation_boundary_addresses=None,
+            ),
             action_contracts=model.action_contracts,
-            observation_boundary_addresses=None,
             observation_boundaries=model.observation_boundaries,
         )
     )
@@ -1140,9 +1159,11 @@ def test_action_result_evidence_refs_must_be_authorized_by_observation_boundary(
     violations = list(
         iter_participant_behavior_history_violations(
             _history_payloads_for_action_result(result),
-            action_contract_addresses=set(model.action_contracts),
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses=set(model.action_contracts),
+                observation_boundary_addresses=None,
+            ),
             action_contracts=model.action_contracts,
-            observation_boundary_addresses=None,
             observation_boundaries=model.observation_boundaries,
         )
     )
@@ -1207,9 +1228,11 @@ def test_action_result_failure_class_must_be_declared_by_compiled_contract():
                 },
                 observation.to_payload(),
             ],
-            action_contract_addresses=set(model.action_contracts),
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses=set(model.action_contracts),
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             action_contracts=model.action_contracts,
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
         )
     )
 

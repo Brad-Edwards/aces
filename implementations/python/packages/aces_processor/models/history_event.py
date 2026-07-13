@@ -23,12 +23,12 @@ from aces_sdl.participant_behavior import ParticipantInteractionClass
 from .action_results import ParticipantActionResult
 from .attribution import ParticipantAttributionEdge
 from .behavior_resources import (
-    _PARTICIPANT_OBSERVATION_DETAIL_REF_KEYS,
     _PARTICIPANT_TERMINAL_OBSERVATION_STATUSES,
     _observation_point_matches_action_instance,
     _optional_payload_string,
     _participant_observation_status_from_payload,
 )
+from .history_event_grounding import _event_attribution_grounded_refs, _optional_enum_value
 from .history_event_payloads import (
     _participant_action_result_from_payload,
     _participant_admission_disposition_from_payload,
@@ -148,20 +148,18 @@ class ParticipantBehaviorHistoryEvent:
             "action_instance_id": self.action_instance_id,
             "action_contract_address": self.action_contract_address,
             "observation_boundary_address": self.observation_boundary_address,
-            "observation_status": self.observation_status.value if self.observation_status is not None else None,
+            "observation_status": _optional_enum_value(self.observation_status),
             "actor_provenance": self.actor_provenance,
-            "lifecycle_phase": self.lifecycle_phase.value if self.lifecycle_phase is not None else None,
-            "phase_realization": self.phase_realization.value if self.phase_realization is not None else None,
-            "admission_disposition": (
-                self.admission_disposition.value if self.admission_disposition is not None else None
-            ),
+            "lifecycle_phase": _optional_enum_value(self.lifecycle_phase),
+            "phase_realization": _optional_enum_value(self.phase_realization),
+            "admission_disposition": _optional_enum_value(self.admission_disposition),
             "operation_ref": self.operation_ref,
-            "operation_state": self.operation_state.value if self.operation_state is not None else None,
+            "operation_state": _optional_enum_value(self.operation_state),
             "state_transition_kind": self.state_transition_kind,
             "post_state_digest": self.post_state_digest,
             "joint_action_set_id": self.joint_action_set_id,
             "realized_order": self.realized_order,
-            "interaction_class": self.interaction_class.value if self.interaction_class is not None else None,
+            "interaction_class": _optional_enum_value(self.interaction_class),
             "interaction_ref": self.interaction_ref,
             "shared_state_refs": list(self.shared_state_refs),
             "action_result": self.action_result.to_payload() if self.action_result is not None else None,
@@ -319,12 +317,12 @@ class ParticipantBehaviorHistoryEvent:
             raise ValueError("participant temporal_contract_id values must be unique per event")
 
     @staticmethod
-    def _validate_required_string(value: Any, message: str) -> None:
+    def _validate_required_string(value: object, message: str) -> None:
         if not isinstance(value, str) or not value:
             raise TypeError(message)
 
     @staticmethod
-    def _validate_optional_string(value: Any, message: str) -> None:
+    def _validate_optional_string(value: object, message: str) -> None:
         if value is not None and (not isinstance(value, str) or not value):
             raise TypeError(message)
 
@@ -342,34 +340,52 @@ class ParticipantBehaviorHistoryEvent:
         validators[self.event_type]()
 
     def _validate_interaction_fields(self) -> None:
-        if self.joint_action_set_id is None and self.realized_order is not None:
+        self._validate_joint_action_pairing(self.joint_action_set_id, self.realized_order)
+        self._validate_interaction_class_consistency(
+            self.interaction_class,
+            self.interaction_ref,
+            self.joint_action_set_id,
+            self.shared_state_refs,
+        )
+
+    @staticmethod
+    def _validate_joint_action_pairing(joint_action_set_id: str | None, realized_order: int | None) -> None:
+        if joint_action_set_id is None and realized_order is not None:
             raise ValueError("realized_order requires joint_action_set_id")
-        if self.joint_action_set_id is not None and self.realized_order is None:
+        if joint_action_set_id is not None and realized_order is None:
             raise ValueError("joint_action_set_id requires realized_order")
-        if self.interaction_class is None:
-            if self.interaction_ref is not None:
+
+    @staticmethod
+    def _validate_interaction_class_consistency(
+        interaction_class: ParticipantInteractionClass | None,
+        interaction_ref: str | None,
+        joint_action_set_id: str | None,
+        shared_state_refs: tuple[str, ...],
+    ) -> None:
+        if interaction_class is None:
+            if interaction_ref is not None:
                 raise ValueError("interaction_ref requires interaction_class")
             return
-        if self.joint_action_set_id is None:
+        if joint_action_set_id is None:
             raise ValueError("interaction_class requires joint_action_set_id and realized_order")
         if (
-            self.interaction_class
+            interaction_class
             in {
                 ParticipantInteractionClass.COORDINATION,
                 ParticipantInteractionClass.INTERFERENCE,
             }
-            and self.interaction_ref is None
+            and interaction_ref is None
         ):
-            raise ValueError(f"{self.interaction_class.value} events require interaction_ref")
+            raise ValueError(f"{interaction_class.value} events require interaction_ref")
         if (
-            self.interaction_class
+            interaction_class
             in {
                 ParticipantInteractionClass.CONTENTION,
                 ParticipantInteractionClass.SHARED_STATE_CHANGE,
             }
-            and not self.shared_state_refs
+            and not shared_state_refs
         ):
-            raise ValueError(f"{self.interaction_class.value} events require shared_state_refs")
+            raise ValueError(f"{interaction_class.value} events require shared_state_refs")
 
     def _validate_action_attempted_fields(self) -> None:
         if self.action_contract_address is None:
@@ -471,25 +487,4 @@ class ParticipantBehaviorHistoryEvent:
             raise ValueError(f"attribution edge effect_candidate {edge.effect_candidate.ref!r} is not grounded")
 
     def _attribution_grounded_refs(self) -> set[str]:
-        refs: set[str] = {self.action_instance_id}
-        if self.action_contract_address is not None:
-            refs.add(self.action_contract_address)
-        if self.observation_boundary_address is not None:
-            refs.add(self.observation_boundary_address)
-        if self.post_state_digest is not None:
-            refs.add(self.post_state_digest)
-        for key in _PARTICIPANT_OBSERVATION_DETAIL_REF_KEYS:
-            value = self.details.get(key)
-            if isinstance(value, (list, tuple)):
-                refs.update(str(item) for item in value if isinstance(item, str) and item)
-        if self.action_result is None:
-            return refs
-        refs.update(self.action_result.observations)
-        refs.update(self.action_result.evidence_refs)
-        for precondition in self.action_result.preconditions:
-            refs.update(precondition.support_refs)
-            refs.update(precondition.evidence_refs)
-        for effect in self.action_result.effects:
-            refs.update(effect.target_refs)
-            refs.update(effect.evidence_refs)
-        return refs
+        return _event_attribution_grounded_refs(self)

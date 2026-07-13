@@ -17,13 +17,13 @@ from .attribution import ParticipantAttributionEdge
 from .temporal import ParticipantTemporalRuntimeContext
 
 
-def _participant_behavior_event_type_from_payload(value: Any) -> ParticipantBehaviorHistoryEventType:
+def _participant_behavior_event_type_from_payload(value: object) -> ParticipantBehaviorHistoryEventType:
     if isinstance(value, ParticipantBehaviorHistoryEventType):
         return value
     return ParticipantBehaviorHistoryEventType(str(value))
 
 
-def _participant_interaction_class_from_payload(value: Any) -> ParticipantInteractionClass | None:
+def _participant_interaction_class_from_payload(value: object) -> ParticipantInteractionClass | None:
     if value is None:
         return None
     if isinstance(value, ParticipantInteractionClass):
@@ -71,7 +71,7 @@ def _participant_lifecycle_operation_state_from_payload(
     return ParticipantLifecycleOperationState(str(value))
 
 
-def _participant_behavior_shared_state_refs_from_payload(value: Any) -> tuple[str, ...]:
+def _participant_behavior_shared_state_refs_from_payload(value: object) -> tuple[str, ...]:
     if value is None:
         return ()
     if not isinstance(value, (list, tuple)):
@@ -79,7 +79,7 @@ def _participant_behavior_shared_state_refs_from_payload(value: Any) -> tuple[st
     return tuple(str(ref) for ref in value)
 
 
-def _participant_action_result_from_payload(value: Any) -> ParticipantActionResult | None:
+def _participant_action_result_from_payload(value: object) -> ParticipantActionResult | None:
     if value is None:
         return None
     if isinstance(value, ParticipantActionResult):
@@ -87,7 +87,7 @@ def _participant_action_result_from_payload(value: Any) -> ParticipantActionResu
     return ParticipantActionResult.from_payload(value)
 
 
-def _participant_attribution_edges_from_payload(value: Any) -> tuple[ParticipantAttributionEdge, ...]:
+def _participant_attribution_edges_from_payload(value: object) -> tuple[ParticipantAttributionEdge, ...]:
     if value is None:
         return ()
     if isinstance(value, (str, bytes, Mapping)) or not isinstance(value, Iterable):
@@ -98,7 +98,7 @@ def _participant_attribution_edges_from_payload(value: Any) -> tuple[Participant
     )
 
 
-def _participant_temporal_contexts_from_payload(value: Any) -> tuple[ParticipantTemporalRuntimeContext, ...]:
+def _participant_temporal_contexts_from_payload(value: object) -> tuple[ParticipantTemporalRuntimeContext, ...]:
     if value is None:
         return ()
     if isinstance(value, (str, bytes, Mapping)) or not isinstance(value, Iterable):
@@ -111,7 +111,7 @@ def _participant_temporal_contexts_from_payload(value: Any) -> tuple[Participant
     )
 
 
-def _participant_behavior_details_from_payload(value: Any) -> dict[str, Any]:
+def _participant_behavior_details_from_payload(value: object) -> dict[str, Any]:
     if value is None:
         value = {}
     if not isinstance(value, Mapping):

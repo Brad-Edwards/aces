@@ -101,9 +101,9 @@ from .attribution import (
     ParticipantAttributionOrderingBasis,
 )
 from .behavior_history_violations import (
+    ParticipantHistoryAddressScope,
     iter_participant_behavior_history_violations,
     iter_participant_behavior_joint_action_violations,
-    validate_participant_outcome_interpretation_record,
 )
 from .behavior_resources import (
     EventRuntime,
@@ -128,6 +128,7 @@ from .outcome import (
     ParticipantOutcomeSourceRecord,
     ParticipantOutcomeTargetRecord,
 )
+from .outcome_interpretation_validation import validate_participant_outcome_interpretation_record
 from .resources import (
     AccountPlacement,
     AssertionRuntime,
@@ -218,6 +219,7 @@ __all__ = [
     "ParticipantEpisodeStatus",
     "ParticipantEpisodeTerminalReason",
     "ParticipantEpisodeTerminateRequest",
+    "ParticipantHistoryAddressScope",
     "ParticipantLifecycleOperationState",
     "ParticipantObservationBoundaryRuntime",
     "ParticipantObservationStatus",

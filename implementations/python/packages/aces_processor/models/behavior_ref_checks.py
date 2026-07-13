@@ -16,6 +16,24 @@ from .behavior_resources import (
 from .history_event import ParticipantBehaviorHistoryEvent
 
 
+def _participant_behavior_detail_refs_result(
+    value: object,
+    *,
+    key: str,
+) -> tuple[tuple[str, ...], str | None]:
+    if isinstance(value, (str, bytes, Mapping)) or not isinstance(value, Iterable):
+        return (), f"observation details field {key!r} must be a list of strings"
+    items = tuple(value)
+    refs = tuple(str(ref) for ref in items if isinstance(ref, str) and ref)
+    if len(refs) != len(items):
+        message: str | None = f"observation details field {key!r} must contain only non-empty strings"
+    elif len(set(refs)) != len(refs):
+        message = f"observation details field {key!r} must not contain duplicate refs"
+    else:
+        message = None
+    return refs, message
+
+
 def _participant_behavior_detail_refs(
     event: ParticipantBehaviorHistoryEvent,
     *,
@@ -24,16 +42,10 @@ def _participant_behavior_detail_refs(
 ) -> tuple[tuple[str, ...], list[tuple[str, str]]]:
     if key not in event.details:
         return (), []
-    value = event.details[key]
-    if isinstance(value, (str, bytes, Mapping)) or not isinstance(value, Iterable):
-        return (), [(locator, f"observation details field {key!r} must be a list of strings")]
-    items = tuple(value)
-    refs = tuple(str(ref) for ref in items if isinstance(ref, str) and ref)
-    if len(refs) != len(items):
-        return (), [(locator, f"observation details field {key!r} must contain only non-empty strings")]
-    if len(set(refs)) != len(refs):
-        return (), [(locator, f"observation details field {key!r} must not contain duplicate refs")]
-    return refs, []
+    refs, message = _participant_behavior_detail_refs_result(event.details[key], key=key)
+    if message is None:
+        return refs, []
+    return (), [(locator, message)]
 
 
 def _participant_behavior_detail_shape_violations(
@@ -403,6 +415,32 @@ def _participant_behavior_attribution_evidence_ref_violations(
     return violations
 
 
+def _participant_behavior_attribution_visibility_candidate_violations(
+    *,
+    locator: str,
+    edge: ParticipantAttributionEdge,
+    candidate: ParticipantAttributionCandidate,
+    boundary: ParticipantObservationBoundaryRuntime,
+    relation: Mapping[str, str],
+    effective_order: int,
+) -> list[tuple[str, str]]:
+    disposition = relation.get(candidate.ref)
+    if disposition is None and candidate.ref in boundary.hidden_refs:
+        disposition = "hidden"
+    if disposition is None or disposition in _PARTICIPANT_VISIBLE_VIEW_DISPOSITIONS:
+        return []
+    return [
+        (
+            locator,
+            (
+                f"attribution edge {edge.edge_id!r} {candidate.candidate_kind.value} candidate "
+                f"{candidate.ref!r} is not participant-visible at effective_order {effective_order}: "
+                f"disposition {disposition!r}"
+            ),
+        )
+    ]
+
+
 def _participant_behavior_attribution_candidate_ref_violations(
     *,
     locator: str,
@@ -423,18 +461,11 @@ def _participant_behavior_attribution_candidate_ref_violations(
             relation=relation,
             effective_order=effective_order,
         )
-    disposition = relation.get(candidate.ref)
-    if disposition is None and candidate.ref in boundary.hidden_refs:
-        disposition = "hidden"
-    if disposition is None or disposition in _PARTICIPANT_VISIBLE_VIEW_DISPOSITIONS:
-        return []
-    return [
-        (
-            locator,
-            (
-                f"attribution edge {edge.edge_id!r} {candidate.candidate_kind.value} candidate "
-                f"{candidate.ref!r} is not participant-visible at effective_order {effective_order}: "
-                f"disposition {disposition!r}"
-            ),
-        )
-    ]
+    return _participant_behavior_attribution_visibility_candidate_violations(
+        locator=locator,
+        edge=edge,
+        candidate=candidate,
+        boundary=boundary,
+        relation=relation,
+        effective_order=effective_order,
+    )

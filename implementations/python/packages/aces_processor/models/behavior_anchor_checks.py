@@ -5,16 +5,14 @@ from typing import Any
 
 from aces_contracts.participant_behavior import ParticipantBehaviorHistoryEventType
 from aces_contracts.participant_episode import ParticipantEpisodeHistoryEvent
-from aces_sdl.participant_outcome_semantics import (
-    PROVENANCE_REQUIRED_OUTCOME_SOURCE_LAYERS,
-    OutcomeInterpretationSourceLayer,
-)
 
+from .behavior_anchor_index import (
+    _participant_behavior_history_anchor_indexes,
+    _participant_behavior_transition_anchor_index,
+)
 from .behavior_grounding_checks import (
     _participant_behavior_attribution_ref_authorization_violations,
-    _participant_behavior_history_anchor_indexes,
     _participant_behavior_outcome_ref_authorization_violations,
-    _participant_behavior_transition_anchor_index,
 )
 from .behavior_ref_checks import (
     _participant_behavior_action_result_ref_authorization_violations,
@@ -27,13 +25,12 @@ from .behavior_ref_checks import (
     _participant_behavior_view_relation_deltas_by_order,
     _participant_behavior_visibility_detail_violations,
 )
-from .behavior_resources import ParticipantObservationBoundaryRuntime, ParticipantOutcomeInterpretationRuleRuntime
+from .behavior_resources import ParticipantObservationBoundaryRuntime
 from .history_event import ParticipantBehaviorHistoryEvent
 from .resources import (
     _PARTICIPANT_BEHAVIOR_HISTORY_KEY,
     _PARTICIPANT_EPISODE_TERMINAL_EVENTS,
     ParticipantActionContractRuntime,
-    _as_string_set,
 )
 from .temporal import ParticipantTemporalRuntimeContext
 
@@ -52,12 +49,44 @@ def _participant_behavior_transition_anchor_violation(
     transition_id = str(transition.get("transition_id", ""))
     locator = f"{boundary_address}.view_transitions.{transition_id}"
     if event_type == "episode_close":
-        if episode_close_resolved:
-            return None
-        return (
-            locator,
-            "visibility transition anchor does not resolve to a terminal participant episode history event",
+        return _participant_behavior_episode_close_transition_violation(
+            locator=locator,
+            episode_close_resolved=episode_close_resolved,
         )
+    return _participant_behavior_action_transition_anchor_violation(
+        event_type=event_type,
+        action_instance_id=action_instance_id,
+        locator=locator,
+        boundary_address=boundary_address,
+        action_attempts=action_attempts,
+        state_transitions=state_transitions,
+        observations=observations,
+    )
+
+
+def _participant_behavior_episode_close_transition_violation(
+    *,
+    locator: str,
+    episode_close_resolved: bool,
+) -> tuple[str, str] | None:
+    if episode_close_resolved:
+        return None
+    return (
+        locator,
+        "visibility transition anchor does not resolve to a terminal participant episode history event",
+    )
+
+
+def _participant_behavior_action_transition_anchor_violation(
+    *,
+    event_type: str,
+    action_instance_id: object,
+    locator: str,
+    boundary_address: str,
+    action_attempts: Mapping[str, int],
+    state_transitions: Mapping[str, int],
+    observations: Mapping[tuple[str, str | None], int],
+) -> tuple[str, str] | None:
     if not isinstance(action_instance_id, str) or not action_instance_id:
         return (locator, "visibility transition anchors require action_instance_id")
     event_indexes = {
@@ -68,16 +97,18 @@ def _participant_behavior_transition_anchor_violation(
     if event_type not in event_indexes:
         return (locator, f"visibility transition anchor has unknown history_event_type {event_type!r}")
     if event_indexes[event_type]:
-        return None
-    article = "an" if event_type == "observation_emitted" else "a"
-    return (locator, f"visibility transition anchor does not resolve to {article} {event_type} event")
+        result = None
+    else:
+        article = "an" if event_type == "observation_emitted" else "a"
+        result = (locator, f"visibility transition anchor does not resolve to {article} {event_type} event")
+    return result
 
 
 def _participant_behavior_transition_anchor_violations(
     events: list[ParticipantBehaviorHistoryEvent],
     *,
     observation_boundaries: Mapping[str, ParticipantObservationBoundaryRuntime],
-    participant_episode_history: Any = None,
+    participant_episode_history: object = None,
 ) -> Iterator[tuple[str, str]]:
     action_attempts, state_transitions, observations = _participant_behavior_history_anchor_indexes(events)
     episode_close_resolved = _participant_behavior_episode_close_resolved(
@@ -101,7 +132,7 @@ def _participant_behavior_transition_anchor_violations(
 def _participant_behavior_episode_close_resolved(
     events: list[ParticipantBehaviorHistoryEvent],
     *,
-    participant_episode_history: Any,
+    participant_episode_history: object,
 ) -> bool:
     if not isinstance(participant_episode_history, list):
         return False
@@ -109,6 +140,20 @@ def _participant_behavior_episode_close_resolved(
     episode_ids = {event.episode_id for event in events}
     if not participant_addresses or not episode_ids:
         return False
+    closed_episode_ids = _participant_behavior_episode_closed_ids(
+        participant_episode_history,
+        participant_addresses=participant_addresses,
+        episode_ids=episode_ids,
+    )
+    return episode_ids <= closed_episode_ids
+
+
+def _participant_behavior_episode_closed_ids(
+    participant_episode_history: list[object],
+    *,
+    participant_addresses: set[str],
+    episode_ids: set[str],
+) -> set[str]:
     closed_episode_ids: set[str] = set()
     for event in participant_episode_history:
         if not isinstance(event, Mapping):
@@ -123,7 +168,7 @@ def _participant_behavior_episode_close_resolved(
             continue
         if normalized.event_type in _PARTICIPANT_EPISODE_TERMINAL_EVENTS:
             closed_episode_ids.add(normalized.episode_id)
-    return episode_ids <= closed_episode_ids
+    return closed_episode_ids
 
 
 def _participant_behavior_observation_effective_relation(
@@ -322,12 +367,30 @@ def _participant_temporal_context_contract_violations(
     *,
     contract: ParticipantActionContractRuntime,
 ) -> list[str]:
-    violations: list[str] = []
     temporal_contracts = _contract_sem213_temporal_contracts(contract)
     temporal_contract = temporal_contracts.get(context.temporal_contract_id)
     if temporal_contract is None:
         return [f"temporal context references undeclared temporal_contract_id {context.temporal_contract_id!r}"]
 
+    violations: list[str] = []
+    violations.extend(_participant_temporal_context_scalar_violations(context, temporal_contract=temporal_contract))
+    violations.extend(
+        _participant_temporal_context_disclosure_violations(
+            context,
+            temporal_contract=temporal_contract,
+            contract=contract,
+        )
+    )
+    violations.extend(_participant_temporal_context_boundary_violations(context, temporal_contract=temporal_contract))
+    return violations
+
+
+def _participant_temporal_context_scalar_violations(
+    context: ParticipantTemporalRuntimeContext,
+    *,
+    temporal_contract: Mapping[str, Any],
+) -> list[str]:
+    violations: list[str] = []
     declared_time_domain = str(temporal_contract.get("time_domain", ""))
     if context.time_domain.value != declared_time_domain:
         violations.append(
@@ -349,8 +412,17 @@ def _participant_temporal_context_contract_violations(
             f"temporal context {context.temporal_contract_id!r} event_points {observed_event_points!r} "
             f"do not match compiled contract {declared_event_points!r}"
         )
+    return violations
 
-    declared_contract_disclosures = set(str(ref) for ref in temporal_contract.get("backend_disclosure_refs", ()))
+
+def _participant_temporal_context_disclosure_violations(
+    context: ParticipantTemporalRuntimeContext,
+    *,
+    temporal_contract: Mapping[str, Any],
+    contract: ParticipantActionContractRuntime,
+) -> list[str]:
+    violations: list[str] = []
+    declared_contract_disclosures = {str(ref) for ref in temporal_contract.get("backend_disclosure_refs", ())}
     declared_disclosures = _contract_sem213_backend_disclosure_ids(contract)
     for ref in sorted(set(context.backend_disclosure_refs) - declared_contract_disclosures):
         violations.append(
@@ -361,7 +433,15 @@ def _participant_temporal_context_contract_violations(
         violations.append(
             f"temporal context {context.temporal_contract_id!r} reports unknown backend_disclosure_ref {ref!r}"
         )
+    return violations
 
+
+def _participant_temporal_context_boundary_violations(
+    context: ParticipantTemporalRuntimeContext,
+    *,
+    temporal_contract: Mapping[str, Any],
+) -> list[str]:
+    violations: list[str] = []
     declared_reset_boundary = temporal_contract.get("reset_boundary")
     if declared_reset_boundary is not None and context.reset_boundary != str(declared_reset_boundary):
         violations.append(
@@ -374,7 +454,6 @@ def _participant_temporal_context_contract_violations(
             f"temporal context {context.temporal_contract_id!r} replay_boundary {context.replay_boundary!r} "
             f"does not match compiled contract {str(declared_replay_boundary)!r}"
         )
-
     return violations
 
 
@@ -395,49 +474,3 @@ def _participant_behavior_temporal_contract_violations(
         for context in event.temporal_contexts:
             for violation in _participant_temporal_context_contract_violations(context, contract=contract):
                 yield (locator, violation)
-
-
-def _contract_sem215_source_bindings(
-    rule: ParticipantOutcomeInterpretationRuleRuntime,
-) -> dict[tuple[str, str], dict[str, str | set[str]]]:
-    bindings = rule.spec.get("source_bindings", ())
-    if isinstance(bindings, (str, bytes, Mapping)) or not isinstance(bindings, Iterable):
-        return {}
-    declarations: dict[tuple[str, str], dict[str, str | set[str]]] = {}
-    for index, binding in enumerate(bindings):
-        if not isinstance(binding, Mapping) or not binding.get("source_id") or not binding.get("source_layer"):
-            continue
-        declarations[(str(binding.get("source_id")), str(binding.get("source_layer")))] = {
-            "ref": rule.source_refs[index] if index < len(rule.source_refs) else str(binding.get("ref", "")),
-            "evidence_refs": _as_string_set(binding.get("evidence_refs", ())),
-            "provenance_refs": _as_string_set(binding.get("provenance_refs", ())),
-        }
-    return declarations
-
-
-def _contract_sem215_target_bindings(
-    rule: ParticipantOutcomeInterpretationRuleRuntime,
-) -> dict[tuple[str, str], dict[str, str | set[str] | None]]:
-    bindings = rule.spec.get("target_bindings", ())
-    if isinstance(bindings, (str, bytes, Mapping)) or not isinstance(bindings, Iterable):
-        return {}
-    declarations: dict[tuple[str, str], dict[str, str | set[str] | None]] = {}
-    for index, binding in enumerate(bindings):
-        if not isinstance(binding, Mapping) or not binding.get("target_id") or not binding.get("target_layer"):
-            continue
-        governance_ref = binding.get("governance_ref")
-        declarations[(str(binding.get("target_id")), str(binding.get("target_layer")))] = {
-            "ref": rule.target_refs[index] if index < len(rule.target_refs) else str(binding.get("ref", "")),
-            "governance_ref": str(governance_ref) if governance_ref is not None else None,
-            "evidence_refs": _as_string_set(binding.get("evidence_refs", ())),
-            "limitations": _as_string_set(binding.get("limitations", ())),
-        }
-    return declarations
-
-
-def _outcome_source_layer_requires_provenance(layer: str) -> bool:
-    try:
-        source_layer = OutcomeInterpretationSourceLayer(layer)
-    except ValueError:
-        return False
-    return source_layer in PROVENANCE_REQUIRED_OUTCOME_SOURCE_LAYERS

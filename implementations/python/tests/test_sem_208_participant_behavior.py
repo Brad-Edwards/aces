@@ -10,6 +10,7 @@ from aces_processor.compiler import compile_runtime_model
 from aces_processor.models import (
     ParticipantBehaviorHistoryEvent,
     ParticipantBehaviorHistoryEventType,
+    ParticipantHistoryAddressScope,
     ParticipantObservationBoundaryRuntime,
     ParticipantObservationStatus,
     iter_participant_behavior_history_violations,
@@ -1767,8 +1768,10 @@ def test_behavior_history_requires_terminal_observation_for_action_instance():
     violations = list(
         iter_participant_behavior_history_violations(
             [action.to_payload()],
-            action_contract_addresses={ACTION_ADDRESS},
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses={ACTION_ADDRESS},
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
         )
     )
 
@@ -1816,8 +1819,10 @@ def test_behavior_history_pairs_state_transition_and_terminal_observation():
         list(
             iter_participant_behavior_history_violations(
                 [action.to_payload(), transition.to_payload(), observation.to_payload()],
-                action_contract_addresses={ACTION_ADDRESS},
-                observation_boundary_addresses={OBSERVATION_ADDRESS},
+                address_scope=ParticipantHistoryAddressScope(
+                    action_contract_addresses={ACTION_ADDRESS},
+                    observation_boundary_addresses={OBSERVATION_ADDRESS},
+                ),
             )
         )
         == []
@@ -1835,8 +1840,10 @@ def test_behavior_history_rejects_observation_details_that_expose_hidden_truth()
     violations = list(
         iter_participant_behavior_history_violations(
             events,
-            action_contract_addresses={ACTION_ADDRESS},
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses={ACTION_ADDRESS},
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             observation_boundaries=model.observation_boundaries,
             participant_episode_history=_completed_episode_history_payloads(),
         )
@@ -1882,8 +1889,10 @@ def test_behavior_history_rejects_future_episode_close_disclosure_in_observation
     violations = list(
         iter_participant_behavior_history_violations(
             events,
-            action_contract_addresses={ACTION_ADDRESS},
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses={ACTION_ADDRESS},
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             observation_boundaries=model.observation_boundaries,
             participant_episode_history=_completed_episode_history_payloads(),
         )
@@ -1927,8 +1936,10 @@ def test_behavior_history_rejects_unresolved_episode_close_transition_anchor():
     violations = list(
         iter_participant_behavior_history_violations(
             _complete_behavior_history_payloads(ACTION_INSTANCE),
-            action_contract_addresses={ACTION_ADDRESS},
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses={ACTION_ADDRESS},
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             observation_boundaries=model.observation_boundaries,
             participant_episode_history=[],
         )
@@ -2007,8 +2018,10 @@ def test_behavior_history_does_not_import_unanchored_lower_order_transition_snap
     violations = list(
         iter_participant_behavior_history_violations(
             events,
-            action_contract_addresses={ACTION_ADDRESS},
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses={ACTION_ADDRESS},
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             observation_boundaries={OBSERVATION_ADDRESS: boundary},
         )
     )
@@ -2032,8 +2045,10 @@ def test_behavior_history_rejects_nested_observation_details_payload_side_channe
     violations = list(
         iter_participant_behavior_history_violations(
             events,
-            action_contract_addresses={ACTION_ADDRESS},
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses={ACTION_ADDRESS},
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             observation_boundaries=model.observation_boundaries,
         )
     )
@@ -2057,8 +2072,10 @@ def test_behavior_history_rejects_caller_supplied_observation_effective_order():
     violations = list(
         iter_participant_behavior_history_violations(
             events,
-            action_contract_addresses={ACTION_ADDRESS},
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses={ACTION_ADDRESS},
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             observation_boundaries=model.observation_boundaries,
         )
     )
@@ -2081,8 +2098,10 @@ def test_behavior_history_rejects_details_on_non_observation_events():
     violations = list(
         iter_participant_behavior_history_violations(
             events,
-            action_contract_addresses={ACTION_ADDRESS},
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses={ACTION_ADDRESS},
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
         )
     )
 
@@ -2101,8 +2120,10 @@ def test_behavior_history_rejects_unresolved_visibility_transition_anchor():
     violations = list(
         iter_participant_behavior_history_violations(
             _complete_behavior_history_payloads(ACTION_INSTANCE),
-            action_contract_addresses={ACTION_ADDRESS},
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses={ACTION_ADDRESS},
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
             observation_boundaries=model.observation_boundaries,
         )
     )
@@ -2124,8 +2145,10 @@ def test_behavior_history_rejects_duplicate_realized_order_in_joint_action_set()
     violations = list(
         iter_participant_behavior_history_violations(
             events,
-            action_contract_addresses={ACTION_ADDRESS},
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses={ACTION_ADDRESS},
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
         )
     )
 
@@ -2175,8 +2198,10 @@ def test_behavior_history_rejects_state_transition_observation_digest_mismatch()
     violations = list(
         iter_participant_behavior_history_violations(
             [action.to_payload(), transition.to_payload(), observation.to_payload()],
-            action_contract_addresses={ACTION_ADDRESS},
-            observation_boundary_addresses={OBSERVATION_ADDRESS},
+            address_scope=ParticipantHistoryAddressScope(
+                action_contract_addresses={ACTION_ADDRESS},
+                observation_boundary_addresses={OBSERVATION_ADDRESS},
+            ),
         )
     )
 
@@ -2213,8 +2238,10 @@ def test_behavior_history_allows_orphaned_action_observation_without_state_diges
         list(
             iter_participant_behavior_history_violations(
                 [action.to_payload(), observation.to_payload()],
-                action_contract_addresses={ACTION_ADDRESS},
-                observation_boundary_addresses={OBSERVATION_ADDRESS},
+                address_scope=ParticipantHistoryAddressScope(
+                    action_contract_addresses={ACTION_ADDRESS},
+                    observation_boundary_addresses={OBSERVATION_ADDRESS},
+                ),
             )
         )
         == []

@@ -217,7 +217,7 @@ class WorkflowRuntime(ResolvedResource):
     state_schema_version: str = WORKFLOW_STATE_SCHEMA_VERSION
 
 
-def _participant_observation_status_from_payload(value: Any) -> ParticipantObservationStatus | None:
+def _participant_observation_status_from_payload(value: object) -> ParticipantObservationStatus | None:
     if isinstance(value, ParticipantObservationStatus):
         return value
     if value is None:
@@ -225,12 +225,12 @@ def _participant_observation_status_from_payload(value: Any) -> ParticipantObser
     return ParticipantObservationStatus(str(value))
 
 
-def _validate_required_string(value: Any, message: str) -> None:
+def _validate_required_string(value: object, message: str) -> None:
     if not isinstance(value, str) or not value:
         raise TypeError(message)
 
 
-def _validate_optional_string(value: Any, message: str) -> None:
+def _validate_optional_string(value: object, message: str) -> None:
     if value is not None and (not isinstance(value, str) or not value):
         raise TypeError(message)
 
@@ -245,7 +245,7 @@ def _validate_required_address(value: str, *, prefix: str, message: str) -> None
         raise ValueError(message)
 
 
-def _tuple_of_non_empty_strings(value: Any, *, field_name: str) -> tuple[str, ...]:
+def _tuple_of_non_empty_strings(value: object, *, field_name: str) -> tuple[str, ...]:
     if value is None:
         return ()
     if isinstance(value, (str, bytes, Mapping)) or not isinstance(value, Iterable):

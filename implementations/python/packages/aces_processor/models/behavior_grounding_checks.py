@@ -1,7 +1,6 @@
 """Participant-behavior outcome-grounding and anchor-index violation checks."""
 
 from collections.abc import Iterable, Iterator, Mapping
-from typing import Any
 
 from aces_contracts.participant_behavior import ParticipantBehaviorHistoryEventType
 from aces_contracts.participant_episode import ParticipantEpisodeHistoryEvent
@@ -191,31 +190,52 @@ def _participant_behavior_event_evidence_refs(event: ParticipantBehaviorHistoryE
     return evidence_refs
 
 
+def _participant_episode_histories_from_source(
+    participant_episode_history: object,
+) -> Iterable[object]:
+    if isinstance(participant_episode_history, Mapping):
+        return participant_episode_history.values()
+    if isinstance(participant_episode_history, list):
+        return (participant_episode_history,)
+    return ()
+
+
+def _participant_episode_normalized_history_event(
+    event: object,
+) -> ParticipantEpisodeHistoryEvent | None:
+    if not isinstance(event, Mapping):
+        return None
+    try:
+        return ParticipantEpisodeHistoryEvent.from_payload(event)
+    except (TypeError, ValueError):
+        return None
+
+
+def _participant_episode_terminal_status_entry(
+    event: object,
+) -> tuple[tuple[str, str], str] | None:
+    normalized = _participant_episode_normalized_history_event(event)
+    if normalized is None:
+        return None
+    terminal_reason = _PARTICIPANT_EPISODE_TERMINAL_EVENTS.get(normalized.event_type)
+    if terminal_reason is None:
+        return None
+    return (normalized.participant_address, normalized.episode_id), terminal_reason.value
+
+
 def _participant_episode_terminal_statuses(
-    participant_episode_history: Any,
+    participant_episode_history: object,
 ) -> dict[tuple[str, str], set[str]]:
     terminal_statuses: dict[tuple[str, str], set[str]] = {}
-    if isinstance(participant_episode_history, Mapping):
-        histories = participant_episode_history.values()
-    elif isinstance(participant_episode_history, list):
-        histories = (participant_episode_history,)
-    else:
-        histories = ()
-    for history in histories:
+    for history in _participant_episode_histories_from_source(participant_episode_history):
         if isinstance(history, (str, bytes, Mapping)) or not isinstance(history, Iterable):
             continue
         for event in history:
-            if not isinstance(event, Mapping):
+            entry = _participant_episode_terminal_status_entry(event)
+            if entry is None:
                 continue
-            try:
-                normalized = ParticipantEpisodeHistoryEvent.from_payload(event)
-            except (TypeError, ValueError):
-                continue
-            terminal_reason = _PARTICIPANT_EPISODE_TERMINAL_EVENTS.get(normalized.event_type)
-            if terminal_reason is None:
-                continue
-            key = (normalized.participant_address, normalized.episode_id)
-            terminal_statuses.setdefault(key, set()).add(terminal_reason.value)
+            key, value = entry
+            terminal_statuses.setdefault(key, set()).add(value)
     return terminal_statuses
 
 
@@ -290,6 +310,28 @@ def _participant_behavior_outcome_action_source_grounding_violations(
     return violations
 
 
+def _participant_behavior_outcome_episode_status_mismatch_violations(
+    *,
+    locator: str,
+    record: ParticipantOutcomeInterpretationRecord,
+    source: ParticipantOutcomeSourceRecord,
+    statuses: set[str],
+) -> list[tuple[str, str]]:
+    if source.observed_value in statuses:
+        return []
+    expected = ", ".join(repr(status) for status in sorted(statuses))
+    return [
+        (
+            locator,
+            (
+                f"outcome interpretation {record.interpretation_id!r} source {source.source_id!r} "
+                f"observed_value {source.observed_value!r} does not match participant_episode_history terminal status "
+                f"{expected}"
+            ),
+        )
+    ]
+
+
 def _participant_behavior_outcome_episode_status_grounding_violations(
     *,
     locator: str,
@@ -311,19 +353,12 @@ def _participant_behavior_outcome_episode_status_grounding_violations(
                 ),
             )
         ]
-    if source.observed_value in statuses:
-        return []
-    expected = ", ".join(repr(status) for status in sorted(statuses))
-    return [
-        (
-            locator,
-            (
-                f"outcome interpretation {record.interpretation_id!r} source {source.source_id!r} "
-                f"observed_value {source.observed_value!r} does not match participant_episode_history terminal status "
-                f"{expected}"
-            ),
-        )
-    ]
+    return _participant_behavior_outcome_episode_status_mismatch_violations(
+        locator=locator,
+        record=record,
+        source=source,
+        statuses=statuses,
+    )
 
 
 def _participant_behavior_outcome_source_grounding_violations(
@@ -377,7 +412,7 @@ def _participant_behavior_outcome_source_grounding_violations(
 def _participant_behavior_outcome_event_grounding_violations(
     events: Iterable[ParticipantBehaviorHistoryEvent],
     *,
-    participant_episode_history: Any = None,
+    participant_episode_history: object = None,
 ) -> Iterator[tuple[str, str]]:
     terminal_statuses = _participant_episode_terminal_statuses(participant_episode_history)
     for index, event in enumerate(events):
@@ -412,42 +447,3 @@ def _participant_behavior_outcome_event_grounding_violations(
                     refs=target.evidence_refs,
                     grounded_evidence_refs=grounded_evidence_refs,
                 )
-
-
-def _participant_behavior_history_anchor_indexes(
-    events: Iterable[ParticipantBehaviorHistoryEvent],
-) -> tuple[dict[str, int], dict[str, int], dict[tuple[str, str | None], int]]:
-    action_attempts: dict[str, int] = {}
-    state_transitions: dict[str, int] = {}
-    observations: dict[tuple[str, str | None], int] = {}
-    for index, event in enumerate(events):
-        if event.event_type == ParticipantBehaviorHistoryEventType.ACTION_ATTEMPTED:
-            action_attempts.setdefault(event.action_instance_id, index)
-        elif event.event_type == ParticipantBehaviorHistoryEventType.STATE_TRANSITION_RECORDED:
-            state_transitions.setdefault(event.action_instance_id, index)
-        elif event.event_type == ParticipantBehaviorHistoryEventType.OBSERVATION_EMITTED:
-            observations.setdefault((event.action_instance_id, event.observation_boundary_address), index)
-    return action_attempts, state_transitions, observations
-
-
-def _participant_behavior_transition_anchor_index(
-    *,
-    transition: Mapping[str, Any],
-    boundary_address: str,
-    action_attempts: Mapping[str, int],
-    state_transitions: Mapping[str, int],
-    observations: Mapping[tuple[str, str | None], int],
-) -> int | None:
-    event_type = str(transition.get("history_event_type", ""))
-    if event_type == "episode_close":
-        return None
-    action_instance_id = transition.get("action_instance_id")
-    if not isinstance(action_instance_id, str) or not action_instance_id:
-        return None
-    if event_type == "action_attempted":
-        return action_attempts.get(action_instance_id)
-    if event_type == "state_transition_recorded":
-        return state_transitions.get(action_instance_id)
-    if event_type == "observation_emitted":
-        return observations.get((action_instance_id, boundary_address))
-    return None
