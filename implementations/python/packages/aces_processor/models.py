@@ -20,6 +20,7 @@ from aces_backend_protocols.capabilities import (
     WorkflowFeature,
     WorkflowStatePredicateFeature,
 )
+from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic as Diagnostic
 from aces_contracts.diagnostics import Severity as Severity
 from aces_contracts.evaluation import (
@@ -235,6 +236,7 @@ from aces_sdl.participant_temporal_semantics import (
     ParticipantTemporalState,
     ParticipantTimeDomain,
 )
+from aces_sdl.scenario import InstantiatedScenario
 from aces_sdl.semantics.workflow import (
     WorkflowStepSemanticContract,
 )
@@ -300,6 +302,25 @@ class FeatureBinding(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class PropositionRuntime(ResolvedResource):
+    """Compiled backend-neutral proposition with resolved finite subjects."""
+
+    subject_addresses: tuple[str, ...] = ()
+    predicate_kind: str = ""
+    evaluation_basis: str = ""
+    evidence_requirement_refs: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class AssertionRuntime(ResolvedResource):
+    """Compiled assertion use over one proposition."""
+
+    proposition_address: str = ""
+    role: str = ""
+    polarity: str = ""
+
+
+@dataclass(frozen=True)
 class ConditionBinding(ResolvedResource):
     """Condition template bound to a specific node role."""
 
@@ -308,6 +329,7 @@ class ConditionBinding(ResolvedResource):
     condition_name: str = ""
     template_address: str = ""
     role_name: str = ""
+    proposition_address: str = ""
     result_contract: "EvaluationResultContract" = field(
         default_factory=lambda: EvaluationResultContract(resource_type="condition-binding")
     )
@@ -579,8 +601,8 @@ class ParticipantBehaviorRuntime(ResolvedResource):
     starting_account_refs: tuple[str, ...] = ()
     starting_account_addresses: tuple[str, ...] = ()
     initial_knowledge_addresses: tuple[str, ...] = ()
-    starting_condition_refs: tuple[str, ...] = ()
-    starting_condition_addresses: tuple[str, ...] = ()
+    starting_assertion_refs: tuple[str, ...] = ()
+    starting_assertion_addresses: tuple[str, ...] = ()
     authority_anchor_refs: tuple[str, ...] = ()
     authority_anchor_addresses: tuple[str, ...] = ()
     operating_scope_refs: tuple[str, ...] = ()
@@ -618,8 +640,8 @@ class ParticipantBehaviorSpecificationRuntime(ResolvedResource):
 class EventRuntime(ResolvedResource):
     """Resolved orchestration event."""
 
-    condition_names: tuple[str, ...] = ()
-    condition_addresses: tuple[str, ...] = ()
+    assertion_names: tuple[str, ...] = ()
+    assertion_addresses: tuple[str, ...] = ()
     inject_names: tuple[str, ...] = ()
     inject_addresses: tuple[str, ...] = ()
 
@@ -664,7 +686,7 @@ class WorkflowStepStatePredicateRuntime:
 class WorkflowPredicateRuntime:
     """Resolved workflow predicate semantics."""
 
-    condition_addresses: tuple[str, ...] = ()
+    assertion_addresses: tuple[str, ...] = ()
     objective_addresses: tuple[str, ...] = ()
     step_state_predicates: tuple[WorkflowStepStatePredicateRuntime, ...] = ()
 
@@ -673,7 +695,7 @@ class WorkflowPredicateRuntime:
         seen: set[str] = set()
         ordered: list[str] = []
         for address in (
-            *self.condition_addresses,
+            *self.assertion_addresses,
             *self.objective_addresses,
         ):
             if address in seen:
@@ -728,7 +750,7 @@ class WorkflowRuntime(ResolvedResource):
     control_steps: dict[str, WorkflowStepRuntime] = field(default_factory=dict)
     control_edges: dict[str, tuple[str, ...]] = field(default_factory=dict)
     join_owners: dict[str, str] = field(default_factory=dict)
-    step_condition_addresses: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    step_assertion_addresses: dict[str, tuple[str, ...]] = field(default_factory=dict)
     step_predicate_addresses: dict[str, tuple[str, ...]] = field(default_factory=dict)
     required_features: tuple[WorkflowFeature, ...] = ()
     required_state_predicate_features: tuple[WorkflowStatePredicateFeature, ...] = ()
@@ -4182,6 +4204,25 @@ class ObjectiveRuntime(ResolvedResource):
 
 
 @dataclass(frozen=True)
+class CompiledCapabilityConstraint:
+    """One finite SDL capability domain lowered onto a compiled resource."""
+
+    address: str
+    concern: str
+    parameter: tuple[str, ...]
+    allowed_values: tuple[str | int | float | bool, ...]
+
+    def __post_init__(self) -> None:
+        require_compiled_address(self.address, field_name="capability constraint address")
+        if self.concern not in {"nodes.os", "infrastructure.count"}:
+            raise ValueError("compiled capability constraint has an unsupported concern")
+        if not self.parameter or any(not segment for segment in self.parameter):
+            raise ValueError("compiled capability constraint requires a parameter identity")
+        if not self.allowed_values:
+            raise ValueError("compiled capability constraint requires a non-empty domain")
+
+
+@dataclass(frozen=True)
 class RuntimeModel:
     """Compiled SDL runtime model.
 
@@ -4197,19 +4238,15 @@ class RuntimeModel:
     entity_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
     agent_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
     relationship_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
-    variable_specs: dict[str, dict[str, Any]] = field(default_factory=dict)
-    # Pre-instantiation `${name}` refs on `nodes.os` and `infrastructure.count`,
-    # keyed by the network/node resource address. Lets the planner reach a
-    # variable's `allowed_values` even after `compile_runtime_model` substitutes
-    # the resolved values onto the corresponding runtime resources. Kept on the
-    # model rather than on the resources themselves so the provenance does not
-    # leak into the backend-facing `resource_payload()` envelope. Inner dict
-    # carries `"os"` and `"count"` keys; missing or `None` values mean the
-    # field was authored as a concrete literal rather than a variable ref.
-    node_variable_refs: dict[str, dict[str, str | None]] = field(default_factory=dict)
+    # Typed compiler metadata for finite pre-instantiation domains. It is
+    # consumed by planner capability checks and never enters backend resource
+    # payloads.
+    capability_constraints: tuple[CompiledCapabilityConstraint, ...] = ()
     networks: dict[str, NetworkRuntime] = field(default_factory=dict)
     node_deployments: dict[str, NodeRuntime] = field(default_factory=dict)
     feature_bindings: dict[str, FeatureBinding] = field(default_factory=dict)
+    propositions: dict[str, PropositionRuntime] = field(default_factory=dict)
+    assertions: dict[str, AssertionRuntime] = field(default_factory=dict)
     condition_bindings: dict[str, ConditionBinding] = field(default_factory=dict)
     injects: dict[str, InjectRuntime] = field(default_factory=dict)
     inject_bindings: dict[str, InjectBinding] = field(default_factory=dict)
@@ -4227,10 +4264,54 @@ class RuntimeModel:
     objectives: dict[str, ObjectiveRuntime] = field(default_factory=dict)
     diagnostics: list[Diagnostic] = field(default_factory=list)
     # SEM-218 typed compiler emission: each authored realization concern with
-    # its preserved explicitness class. Model-side metadata (like
-    # `node_variable_refs`); it never enters the backend-facing
+    # its preserved explicitness class. Model-side metadata; it never enters the backend-facing
     # `resource_payload()` envelope. Consumed by the planner realization gate.
     realization_requirements: tuple[CompiledRealizationRequirement, ...] = ()
+    realization_instance: InstantiatedScenario | None = None
+
+    def __post_init__(self) -> None:
+        owners: dict[str, str] = {}
+        address_map_fields = (
+            "networks",
+            "node_deployments",
+            "feature_bindings",
+            "propositions",
+            "assertions",
+            "condition_bindings",
+            "injects",
+            "inject_bindings",
+            "content_placements",
+            "account_placements",
+            "action_contracts",
+            "observation_boundaries",
+            "outcome_interpretation_rules",
+            "participant_behaviors",
+            "behavior_specifications",
+            "events",
+            "scripts",
+            "stories",
+            "workflows",
+            "objectives",
+        )
+        for field_name in address_map_fields:
+            value = getattr(self, field_name)
+            for map_key, item in value.items():
+                address = getattr(item, "address", None)
+                if not isinstance(address, str):
+                    raise TypeError(f"RuntimeModel {field_name} entries must carry an address")
+                require_compiled_address(address)
+                require_compiled_address(map_key, field_name="runtime model map key")
+                if map_key != address:
+                    raise ValueError(f"RuntimeModel {field_name} map key must equal embedded address")
+                previous_owner = owners.get(address)
+                if previous_owner is not None and previous_owner != field_name:
+                    raise ValueError(
+                        f"RuntimeModel duplicate compiled address across {previous_owner} and {field_name}"
+                    )
+                owners[address] = field_name
+        capability_keys = [(constraint.address, constraint.concern) for constraint in self.capability_constraints]
+        if len(capability_keys) != len(set(capability_keys)):
+            raise ValueError("RuntimeModel capability constraints must address unique fields")
 
 
 @dataclass(frozen=True)

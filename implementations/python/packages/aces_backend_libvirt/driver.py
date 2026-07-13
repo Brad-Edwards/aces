@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from aces_contracts.diagnostics import Diagnostic
+from aces_contracts.realization_envelope import ObservationStrength, RealizationConcern
 
 from .cloudinit import CloudInitSpec
 
@@ -78,12 +79,24 @@ class DomainHandle:
 
 
 @dataclass(frozen=True)
+class RealizationObservation:
+    """Bounded typed readback for one realized concern field."""
+
+    address: str
+    field_path: str
+    concern: RealizationConcern
+    source: ObservationStrength
+    value: object
+
+
+@dataclass(frozen=True)
 class DriverResult:
     """Aggregate portable result from a libvirt driver call."""
 
     networks: tuple[NetworkHandle, ...] = ()
     domains: tuple[DomainHandle, ...] = ()
     diagnostics: tuple[Diagnostic, ...] = ()
+    observations: tuple[RealizationObservation, ...] = ()
 
 
 class LibvirtDriver(Protocol):

@@ -35,7 +35,12 @@ if str(REPO_ROOT) not in sys.path:
 
 import yaml
 
-from tools.policy.common import PolicyFailure, apply_exceptions, failures_to_json, load_exceptions
+from tools.policy.common import (
+    PolicyFailure,
+    apply_exceptions,
+    failures_to_json,
+    load_exceptions,
+)
 
 # --------------------------------------------------------------------------- #
 # Canonical paths and baseline invariants. Test code imports these directly   #
@@ -57,7 +62,7 @@ ADR_SEAM_REF = "ADR-019"  # the canonical-seam decision that governs THIS file
 ADR_REFS: tuple[str, ...] = (ADR_SOURCE_REF, ADR_SEAM_REF)
 POLICY_VALUE = "normative-artifact-authority"
 
-# The five canonical normative-artifact families ADR-009 names, pinned to
+# The canonical normative-artifact families ADR-009 and ADR-019 name, pinned to
 # their expected root path AND family token. The YAML may not swap a
 # canonical id onto a different root or relabel its family without failing
 # the gate — otherwise `normative_schemas` and `normative_fixtures` could be
@@ -67,7 +72,18 @@ CANONICAL_AUTHORITY_ROOT_BINDING: dict[str, tuple[str, str]] = {
     "normative_schemas": ("contracts/schemas/", "schemas"),
     "normative_fixtures": ("contracts/fixtures/", "fixtures"),
     "normative_profiles": ("contracts/profiles/", "profiles"),
-    "normative_concept_authority": ("contracts/concept-authority/", "concept-authority"),
+    "normative_realization_envelopes": (
+        "contracts/realization-envelopes/",
+        "realization-envelopes",
+    ),
+    "normative_concept_authority": (
+        "contracts/concept-authority/",
+        "concept-authority",
+    ),
+    "normative_provenance": (
+        "contracts/provenance/",
+        "provenance",
+    ),
 }
 CANONICAL_AUTHORITY_ROOT_IDS: tuple[str, ...] = tuple(CANONICAL_AUTHORITY_ROOT_BINDING)
 
@@ -83,7 +99,6 @@ CANONICAL_NON_NORMATIVE_ROOT_BINDING: dict[str, str] = {
     "research_notes": "research/",
     "process_notes": "notes/",
     "tooling": "tools/",
-    "changelog_fragments": "changelog.d/",
 }
 CANONICAL_NON_NORMATIVE_ROOT_IDS: tuple[str, ...] = tuple(CANONICAL_NON_NORMATIVE_ROOT_BINDING)
 
@@ -104,6 +119,7 @@ CANONICAL_LEGACY_TOP_LEVEL_DIRS: tuple[str, ...] = ("schemas", "conformance", "s
 # pins roots, so the classification cannot be silently dropped or relabelled.
 CANONICAL_ARTIFACT_FAMILY_BINDING: dict[str, str] = {
     "specs/agent-guidance/agent-guidance.yaml": "governance-guidance",
+    "specs/evolution/deprecation-records.yaml": "deprecation-records",
 }
 
 # Required top-level fields and per-entry fields. Used by both the YAML shape
@@ -120,7 +136,12 @@ _REQUIRED_TOP_LEVEL_FIELDS: tuple[str, ...] = (
 )
 _REQUIRED_AUTHORITY_ROOT_FIELDS: tuple[str, ...] = ("id", "root", "authority", "family")
 _REQUIRED_NON_NORMATIVE_ROOT_FIELDS: tuple[str, ...] = ("id", "root", "note")
-_REQUIRED_ARTIFACT_FAMILY_FIELDS: tuple[str, ...] = ("id", "artifact", "authority", "family")
+_REQUIRED_ARTIFACT_FAMILY_FIELDS: tuple[str, ...] = (
+    "id",
+    "artifact",
+    "authority",
+    "family",
+)
 _REQUIRED_SCHEMA_AUTHORITY_FIELDS: tuple[str, ...] = (
     "normative_root",
     "publication_manifest",
@@ -375,10 +396,20 @@ def _check_authority_roots(raw: dict, source_path: str) -> tuple[list[dict], lis
 
         seen_ids.add(root_id)
         seen_roots.add(root_path)
-        validated.append({"id": root_id, "root": root_path, "authority": entry["authority"], "family": entry["family"]})
+        validated.append(
+            {
+                "id": root_id,
+                "root": root_path,
+                "authority": entry["authority"],
+                "family": entry["family"],
+            }
+        )
 
     validated_by_id = {entry["id"]: entry for entry in validated}
-    for canonical_id, (expected_root, expected_family) in CANONICAL_AUTHORITY_ROOT_BINDING.items():
+    for canonical_id, (
+        expected_root,
+        expected_family,
+    ) in CANONICAL_AUTHORITY_ROOT_BINDING.items():
         if canonical_id not in seen_ids:
             failures.append(
                 _fail(
@@ -1398,7 +1429,11 @@ def evaluate_authority_boundary(repo_root: Path) -> list[PolicyFailure]:
     failures.extend(_check_schema_authority_block(raw, AUTHORITY_BOUNDARY_RELATIVE_PATH))
     failures.extend(
         _check_normative_artifact_families(
-            repo_root, raw, authority_roots, non_normative_roots, AUTHORITY_BOUNDARY_RELATIVE_PATH
+            repo_root,
+            raw,
+            authority_roots,
+            non_normative_roots,
+            AUTHORITY_BOUNDARY_RELATIVE_PATH,
         )
     )
 

@@ -89,12 +89,13 @@ red team attempts data theft and radiology disruption?
 - Objective success expressed against observable `conditions` (e.g. service
   uptime and recovery state); any graded scoring of the exercise is an
   experiment/evaluator-plane concern, not authored SDL
-- Strong distinction between in-world telemetry and any extra experiment-side
-  evidence capture outside the current SDL syntax
+- Strong distinction between in-world telemetry, authored
+  `evidence_requirements`, and experiment-side captured evidence
 
 ### SDL Stress Surface
 
-- All 17 sections
+- Broad coverage across topology, participant, narrative, objective, workflow,
+  and evidence authoring surfaces
 - Hybrid IT + clinical + vendor trust boundaries
 - Multiple agents with distinct initial knowledge and subnet scope
 - Objectives that target systems, relationships, and content

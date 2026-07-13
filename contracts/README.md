@@ -6,7 +6,10 @@ The goal of this bucket is organizational clarity:
 
 - `schemas/` contains published contract schemas
 - `fixtures/` contains valid and invalid payload corpora for those contracts
-- `profiles/` contains capability profile declarations
+- `profiles/` contains capability profiles and separately versioned
+  scientific-completeness taxonomy/assessment declarations
+- `realization-envelopes/` contains configuration-bound backend realization
+  declarations whose identity is carried through manifests, plans, and snapshots
 
 `schema-publication-manifest.json` is the authoritative publication inventory
 for the current machine-readable schema set. The contracts verification gate
@@ -88,3 +91,5 @@ The canonical machine-readable manifest of the authority boundary
 governed by
 [ADR-019](../docs/decisions/adrs/adr-019-normative-authority-boundary-manifest.md)
 and enforced by `tools/check_authority_boundary.py`.
+The `provenance/` family contains revision-pinned SDL lineage, derivation, and
+third-party notice dispositions governed by ADR-019 and ADR-080.

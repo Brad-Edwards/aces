@@ -26,6 +26,7 @@ policy_ref: specs/formal/assurance-policy.yaml
 adr_refs:
   - ADR-007
   - ADR-018
+  - ADR-078
 
 # Registry of classified formal-spec subsystems. Every immediate subdirectory of
 # specs/formal/ carrying a README.md must appear here (the checker fails on any
@@ -63,6 +64,9 @@ subsystems:
     fm_level: FM2
   - id: validation-admission-profiles
     path: specs/formal/validation-admission-profiles
+    fm_level: FM2
+  - id: sdl-phases
+    path: specs/formal/sdl-phases
     fm_level: FM2
 
 # Fulfillment, keyed by subsystem id. delivered_artifacts name a concrete,
@@ -351,3 +355,15 @@ entries:
         rationale: >-
           No property-based or differential validation-basis coverage ships
           with this design-only issue.
+
+  - subsystem: sdl-phases
+    delivered_artifacts:
+      - kind: invariant_list
+        path: specs/formal/sdl-phases/README.md
+      - kind: unit_tests
+        path: implementations/python/tests/test_sdl_phase_contracts.py
+      - kind: typed_ir_or_contract_coverage
+        path: implementations/python/packages/aces_sdl/phase_contracts.py
+      - kind: property_based_or_differential_tests
+        path: implementations/python/tests/test_sdl_phase_contracts.py
+    waived_artifacts: []

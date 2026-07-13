@@ -89,8 +89,9 @@ The load-bearing findings:
   cross-reference validator** anywhere in `aces_sdl/validator/`. It names a
   CybORG reward class that runs outside participant perception and binds to
   nothing in ACES. It is the weakest surface in the language.
-- `conditions` are observable state facts and `objectives` are participant
-  intent; both are read within the horizon and pass the discriminator.
+- Typed propositions/assertions are observable state claims and `objectives`
+  are participant intent. Executable `conditions` are probe realizations, not
+  state facts (ADR-079).
 - The one leak between the two sides is `objectives.success`, which today can be
   satisfied by the scoring pipeline instead of by observable state.
 
@@ -122,21 +123,22 @@ The recommendation is therefore to **deprecate and remove** these five surfaces
 from the SDL authoring language, its published schemas, the reference model, and
 the example corpus.
 
-### 2. `objectives` and `conditions` stay in the horizon
+### 2. Objectives and observable propositions stay in the horizon
 
-`conditions` (observable state) and `objectives` (participant intent) are
-authored scenario meaning and remain first-class SDL surfaces. Removing the
-grading pipeline must not weaken what a scenario can assert about its own
-observable state (ADR-020's reproducibility warning).
+Typed propositions/assertions (observable state claims) and `objectives`
+(participant intent) are authored scenario meaning and remain first-class SDL
+surfaces. `conditions` remain only as explicitly proposition-bound probe
+implementations. Removing the grading pipeline must not weaken what a scenario
+can assert about its own observable state (ADR-020's reproducibility warning).
 
 ### 3. Objective success references observable state, not a score
 
-`objectives.success` is narrowed to reference `conditions` (observable state),
-not `metrics` / `evaluations` / `tlos` / `goals`. This directly answers issue
-#671 question 2: success criteria should be expressed against observable state,
-which is in-horizon, rather than a score-shaped grading pipeline, which is not.
-On acceptance this narrows the success clause established by ADR-002 §Decision,
-and the implementing issue records an ADR-002 amendment.
+`objectives.success` references invariant or postcondition assertions over
+typed propositions, not `conditions`, `metrics`, `evaluations`, `tlos`, or
+`goals`. This preserves the issue #671 boundary: success is expressed against
+observable state, which is in-horizon, rather than either an executable probe
+or a score-shaped grading pipeline. ADR-079 defines the proposition and result
+semantics.
 
 ### 4. Graded scoring and reward live only in the experiment/evaluator plane
 
@@ -156,10 +158,10 @@ Removal is staged, not abrupt (answering issue #671 question 4):
 
 - **Deprecate first.** Mark the five surfaces deprecated in the schema and the
   SDL sections documentation with a pointer to the experiment/evaluator plane
-  and to `conditions`-based objective success. Emit a deprecation diagnostic
+  and to proposition/assertion-based objective success. Emit a deprecation diagnostic
   when a scenario uses them.
 - **Migrate the four study-style scenarios.** For each, re-express objective
-  success against `conditions`; move any genuinely-graded evaluation into an
+  success against typed propositions/assertions; move any genuinely-graded evaluation into an
   `experiment-*` artifact where the study intends scientific comparison; drop
   `reward_calculator` (it binds to nothing). The six `techvault-*` scenarios
   need no change.
@@ -179,8 +181,10 @@ Removal is staged, not abrupt (answering issue #671 question 4):
 1. **Do the scoring sections and `reward_calculator` belong in ACES?** Not in
    the SDL. They are vestigial given the experiment-vs-data-use boundary; their
    concerns belong to the experiment/evaluator plane.
-2. **Should objective success reference conditions rather than a score?** Yes —
-   objective success references observable state (`conditions`).
+2. **Should objective success reference conditions rather than a score?** It
+   should reference observable state rather than a score, but ADR-079 corrects
+   the original category error: typed propositions/assertions state observable
+   truth; executable conditions only realize probes.
 3. **If scoring belongs somewhere, is it the SDL or an experiment/evaluator
    contract?** The experiment/evaluator contract boundary (ADR-055/064/069), and
    only in the SDL when a participant consumes the signal in-run.
@@ -235,8 +239,9 @@ ratification. The ADR is proposed; implementation is spawned on acceptance.
 
 - One authority for scoring/evaluation/reward: the experiment/evaluator plane.
   The SDL stops carrying a duplicate, weaker copy.
-- `objectives.success` becomes reproducible and in-horizon (observable state
-  only), closing the leak between authored meaning and grading.
+- `objectives.success` becomes inspectable and in-horizon (typed observable
+  propositions only), closing both the grading leak and the probe/meaning
+  conflation.
 - The language shrinks by five surfaces, one of which (`reward_calculator`) was
   unvalidated and unbound.
 - SEM-206 and `Brad-Edwards/aptl#606` get a decision to follow instead of a
@@ -267,3 +272,4 @@ ratification. The ADR is proposed; implementation is spawned on acceptance.
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-07-06 | #682 | Accepted (proposed → accepted) and realized under SEM-206: the SDL scoring/reward surfaces (`metrics`/`evaluations`/`tlos`/`goals` and `agents.reward_calculator`) were removed, `objectives.success` narrowed to `conditions`, ADR-002's objective-success clause amended, and the published SDL schemas updated with change-ledger entries. The staged deprecation window in §5 was collapsed into one change: all in-repo consumers were migrated together, with the downstream `Brad-Edwards/aptl#606` tracked to follow. |
+| 2026-07-12 | #725 | Per [ADR-079](adr-079-backend-neutral-proposition-and-truth-semantics.md), corrected the earlier classification of executable conditions as observable facts. Objective success now composes assertions over typed propositions; scoring/reward remains in the experiment/evaluator plane. |

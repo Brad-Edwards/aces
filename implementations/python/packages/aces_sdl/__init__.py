@@ -1,21 +1,42 @@
 """ACES Scenario Description Language (SDL).
 
-A backend-agnostic scenario specification language ported from the
-Open Cyber Range SDL and extended with sections for content, accounts,
-relationships, agents, objectives, workflows, and variables.
+A backend-agnostic scenario specification language with revision-pinned syntax
+and translated-model ancestry in Open Cyber Range SDL plus ACES-native
+extensions. The normative derivation boundary is recorded in
+``contracts/provenance/sdl-lineage-ledger-v1.json``; this module does not claim
+drop-in compatibility.
 """
 
 from importlib import import_module
 
 __all__ = [
+    "admit_instantiated_scenario",
+    "canonical_instantiated_sdl_bytes",
+    "canonical_instantiated_sdl_digest",
+    "canonical_sdl_bytes",
+    "canonical_sdl_digest",
+    "build_declaration_index",
+    "INSTANTIATED_SNAPSHOT_PROFILE",
     "instantiate_scenario",
     "InstantiatedScenario",
+    "InstantiatedScenarioSnapshot",
+    "SDLCanonicalDigest",
+    "SDL_CANONICAL_PROFILE",
+    "SDLFormatResult",
+    "format_sdl_source",
+    "load_sdl_fragment",
     "parse_sdl",
     "parse_sdl_file",
     "Scenario",
     "SDLError",
     "SDLInstantiationError",
+    "SDLMigrationPolicy",
+    "SDLParserLimits",
+    "SDL_SOURCE_FORMAT",
+    "SDLParseDiagnostic",
     "SDLParseError",
+    "SDLSourcePosition",
+    "SDLSourceRange",
     "SDLValidationError",
     "VARIABLE_TOKEN_PATTERN",
 ]
@@ -25,15 +46,39 @@ def __getattr__(name: str):
     if name in {
         "SDLError",
         "SDLInstantiationError",
+        "SDLParseDiagnostic",
         "SDLParseError",
+        "SDLSourcePosition",
+        "SDLSourceRange",
         "SDLValidationError",
     }:
         module = import_module("aces_sdl._errors")
+    elif name in {
+        "canonical_instantiated_sdl_bytes",
+        "canonical_instantiated_sdl_digest",
+        "canonical_sdl_bytes",
+        "canonical_sdl_digest",
+        "INSTANTIATED_SNAPSHOT_PROFILE",
+        "InstantiatedScenarioSnapshot",
+        "SDLCanonicalDigest",
+    }:
+        module = import_module("aces_sdl.canonical")
+    elif name in {"format_sdl_source", "SDLFormatResult"}:
+        module = import_module("aces_sdl.formatting")
+    elif name in {
+        "SDL_CANONICAL_PROFILE",
+        "SDLMigrationPolicy",
+        "SDLParserLimits",
+        "SDL_SOURCE_FORMAT",
+    }:
+        module = import_module("aces_sdl._source_profile")
     elif name == "VARIABLE_TOKEN_PATTERN":
         module = import_module("aces_sdl._base")
-    elif name == "instantiate_scenario":
+    elif name == "build_declaration_index":
+        module = import_module("aces_sdl._declarations")
+    elif name in {"admit_instantiated_scenario", "instantiate_scenario"}:
         module = import_module("aces_sdl.instantiate")
-    elif name in {"parse_sdl", "parse_sdl_file"}:
+    elif name in {"load_sdl_fragment", "parse_sdl", "parse_sdl_file"}:
         module = import_module("aces_sdl.parser")
     elif name in {"InstantiatedScenario", "Scenario"}:
         module = import_module("aces_sdl.scenario")

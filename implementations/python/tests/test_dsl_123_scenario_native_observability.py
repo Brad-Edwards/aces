@@ -43,7 +43,52 @@ def _scenario(*, objective_target: str = OBSERVABILITY_REF, interaction_target: 
             }
         },
         entities={"blue": {"role": "blue"}},
-        conditions={"observability-ready": {"command": "/bin/true", "interval": 15}},
+        conditions={
+            "observability-ready": {
+                "command": "/bin/true",
+                "interval": 15,
+                "proposition": "observability-inspected",
+            }
+        },
+        evidence_requirements={
+            "inspection-record": {
+                "description": "Record whether the participant inspected the governed observability endpoint.",
+                "source_refs": [OBSERVABILITY_REF],
+                "scope_refs": ["nodes.siem"],
+                "trigger_ref": "conditions.observability-ready",
+                "channel": "log",
+                "artifact_role": "proposition_truth_evidence",
+                "media_types": ["application/json"],
+                "sensitivity": "plain",
+                "redaction": "none",
+                "integrity": "checksum",
+                "retention": "study_lifetime",
+                "loss_disclosure": "required",
+            }
+        },
+        propositions={
+            "observability-inspected": {
+                "description": "The participant inspected the governed observability endpoint.",
+                "subjects": [OBSERVABILITY_REF],
+                "basis": "observed_state",
+                "predicate": {
+                    "kind": "boolean",
+                    "property": "participant-inspected",
+                    "semantic_ref": "urn:aces:observable:participant-inspected",
+                    "operator": "equals",
+                    "expected": True,
+                },
+                "evidence_requirements": ["inspection-record"],
+            }
+        },
+        assertions={
+            "observability-inspected": {
+                "description": "Inspection must be observed at the objective boundary.",
+                "proposition": "observability-inspected",
+                "role": "postcondition",
+                "polarity": "positive",
+            }
+        },
         relationships={
             "dashboard-depends-on-listener": {
                 "type": "depends_on",
@@ -91,7 +136,7 @@ def _scenario(*, objective_target: str = OBSERVABILITY_REF, interaction_target: 
                 "entity": "blue",
                 "actions": ["inspect-dashboard"],
                 "targets": [objective_target],
-                "success": {"conditions": ["observability-ready"]},
+                "success": {"assertions": ["observability-inspected"]},
             }
         },
     )

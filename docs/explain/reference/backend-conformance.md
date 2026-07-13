@@ -95,7 +95,7 @@ The conformance path touches these gates:
   reports `conformance.unsupported-capability-claim` when a manifest claims a
   role or feature without the runtime contract evidence surface needed to check
   it.
-- Control-plane probe validation: live probes must use `RuntimeControlPlane`
+- Control-plane probe validation: target probes must use `RuntimeControlPlane`
   and existing operation receipt/status/snapshot envelopes rather than backend
   native objects.
 - Error-envelope leakage: report failures as `Diagnostic` values with stable
@@ -186,29 +186,30 @@ delegate that forwards to the same Typer command.
 
 ## Target Conformance Reference Scenario
 
-Target conformance drives a live provisioning/snapshot probe (issue #606) that
-proves *real* realization — a succeeded provisioning operation, non-empty
-changed addresses, and a mutated snapshot — not merely a valid manifest. The
-probe needs a scenario to realize. By default it uses a generic linux-vm
-scenario (`_DEFAULT_CONFORMANCE_SCENARIO`).
+Target conformance drives a provisioning/snapshot probe (issue #606) that proves
+the target adapter accepts a plan, reports changed addresses, and mutates a
+snapshot rather than passing on manifest shape alone. With a recording driver,
+this is hermetic adapter evidence, not native libvirt or guest realization.
+Native and guest certification require the stronger observation gates tracked
+by issues #715-#717. The probe needs a scenario to exercise and defaults to a
+generic linux-vm scenario (`_DEFAULT_CONFORMANCE_SCENARIO`).
 
 A single hard-coded scenario wrongly assumes *every* backend can realize it.
 Fixed-topology emulation backends (which map ACES nodes onto a pre-built
 environment) and bounded simulation backends legitimately cannot realize an
 arbitrary scenario, yet still honor the provisioning contract. `run_target_conformance`
 therefore accepts an optional `reference_scenario` (issue #663): a backend or
-caller supplies a scenario it declares it can realize, and the probe holds it to
-**full realization of that scenario** — the #606 mutation guard is unchanged, so
-this negotiates *which* scenario is realized without weakening the requirement
-that one is.
+caller supplies a scenario inside its declared envelope. The probe verifies
+adapter-level accounting for that scenario; it does not upgrade driver-reported
+facts to daemon- or guest-observed evidence.
 
-This runner parameter is a **temporary bridge**. The durable answer is a portable
-*realizability envelope* — one parameterized/typed SDL semantics with open/closed
-posture that both authored scenarios and backend manifests reference, plus a
-scenario/envelope subsumption relation the probe checks (and from which it derives
-an in-envelope witness). That design is tracked in #667, with the subsumption
-relation in #668; contract conformance and scenario realizability are distinct
-dimensions and must stay separately reportable.
+Issue #100 publishes configuration-bound realization envelopes using the shared
+parameterized SDL semantics from #667 and the membership/subsumption relation
+from #668. Manifests, provisioning plans, and snapshots carry one immutable
+envelope/configuration identity. Replacing the temporary
+`reference_scenario` bridge with generated positive and negative probes remains
+tracked by #716; contract, adapter, native-daemon, and guest conformance remain
+distinct reportable dimensions.
 
 ## Non-Goals
 

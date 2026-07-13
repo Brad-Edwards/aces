@@ -18,6 +18,7 @@ body:
         - {port: 443, name: https}
   conditions:
     telemetry-ready:
+      proposition: telemetry-ready
       command: test -f /var/lib/aces/telemetry-ready
       interval: 30
   injects:
@@ -25,12 +26,12 @@ body:
       description: Operator starts the run window.
   events:
     run-start:
-      conditions: [telemetry-ready]
+      assertions: [pre-telemetry-ready]
       injects: [start-run]
   scripts:
     run-script:
-      start-time: 0
-      end-time: 15 min
+      start_time: 0
+      end_time: 15 min
       speed: 1.0
       events:
         run-start: 1 min
@@ -44,12 +45,49 @@ body:
   agents:
     run-operator:
       entity: operator-team
+  propositions:
+    telemetry-ready:
+      description: The governed telemetry-ready observation is true for the addressed scenario subject.
+      subjects:
+      - nodes.service.services.https
+      basis: observed_state
+      predicate:
+        kind: boolean
+        property: telemetry-ready
+        semantic_ref: urn:aces:observable:telemetry-ready
+        operator: equals
+        expected: true
+      evidence_requirements: [objective-truth-evidence]
+  assertions:
+    telemetry-ready:
+      proposition: telemetry-ready
+      role: postcondition
+      polarity: positive
+    pre-telemetry-ready:
+      proposition: telemetry-ready
+      role: precondition
+      polarity: positive
+  evidence_requirements:
+    objective-truth-evidence:
+      description: Capture evidence used to decide authored proposition assertions.
+      source_refs:
+      - nodes.service.services.https
+      scope: authored assertion evaluation
+      boundary_kind: assertion_evaluation
+      channel: log
+      artifact_role: proposition_truth_evidence
+      media_types: [application/json]
+      sensitivity: plain
+      redaction: redact_secrets
+      integrity: checksum
+      retention: study_lifetime
+      loss_disclosure: required
   objectives:
     observe-run-telemetry:
       agent: run-operator
       targets: [nodes.service.services.https]
       success:
-        conditions: [telemetry-ready]
+        assertions: [telemetry-ready]
       window:
         stories: [run-story]
         scripts: [run-script]
@@ -61,6 +99,6 @@ body:
         observe:
           type: objective
           objective: observe-run-telemetry
-          on-success: done
+          on_success: done
         done:
           type: end

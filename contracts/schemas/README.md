@@ -8,10 +8,10 @@ be the home of the authoritative machine-readable artifacts, independent of any
 single implementation language or package layout.
 
 Current published schemas cover:
-- SDL authoring input
-- instantiated scenarios
-- backend manifests (`v1` legacy plus shared-apparatus `v2`)
-- processor manifests (`v1` legacy plus shared-apparatus `v2`)
+- SDL normalized authoring objects (not raw YAML presentation)
+- instantiated scenarios and canonical instantiated snapshots
+- backend manifests (shared-apparatus `v2`)
+- processor manifests (shared-apparatus `v2`)
 - concept-authority catalogs
 - reference model catalogs
 - UCO alignment evidence
@@ -27,6 +27,32 @@ Current published schemas cover:
   context-view meaning and comparability semantics
 - experiment-core task, run, apparatus-context, study/collection, capture
   specification, raw evidence, and derived measure contracts
+
+`sdl/sdl-authoring-input-v1.json` begins after `sdl-yaml/v1` source decoding,
+canonical-field recognition, shorthand expansion, enum normalization, and typed
+construction. Its title and `x-aces-document-phase` annotation state that
+boundary. Raw YAML properties such as duplicate keys, tags, directives,
+anchors, aliases, Core scalar resolution, and resource limits are specified in
+`specs/sdl/document-model.md` and tested by
+`contracts/fixtures/sdl/sdl-yaml-v1/`; JSON Schema cannot express them.
+
+`sdl/instantiated-scenario-v1.json` is a distinct closed derived-artifact
+contract. It requires `instantiation_provenance`, forbids `variables`,
+`imports`, and `module` even when empty/null, and forbids a `${name}` token in
+every string value. `sdl/instantiated-scenario-snapshot-v1.json` adds the
+required `aces-sdl-instantiated-snapshot/v1` canonical profile envelope. The
+`x-aces-realization-dimension: false` annotation on
+`instantiation_provenance` declares that this required exchange metadata is
+excluded only from realization-envelope child-dimension enumeration; it remains
+part of validation and canonical identity. The
+corresponding valid and invalid fixtures live under
+`contracts/fixtures/sdl/instantiated-scenario-v1/` and
+`instantiated-scenario-snapshot-v1/`.
+
+These schemas enforce portable structure and scalar constraints. Cross-field
+provenance relations, reference resolution, and graph semantics remain the
+normative model/semantic-admission layer; schema validity alone does not assert
+that provenance is truthful or that an artifact is compiler-admitted.
 
 Current filenames still use `runtime` for some live-execution artifacts. That
 naming is preserved for compatibility while the repository migrates toward the
@@ -53,9 +79,9 @@ particular:
 - backend capability blocks must declare concrete provisioning and orchestration
   surfaces rather than empty shells
 
-`v1` backend and processor manifests remain checked in as deprecated legacy
-schema artifacts. The reference stack, contract tests, and conformance profiles
-use `v2`.
+Only the shared-apparatus `v2` backend and processor manifests are published;
+no `v1` backend or processor manifest schema is checked in. The reference
+stack, contract tests, and conformance profiles use `v2`.
 
 ## Concept Authority Catalog
 
@@ -92,6 +118,12 @@ assumptions required across authoring, exchange, processing, and execution
 phases.
 
 The initial profile lives at `contracts/profiles/semantic/reference-stack-v1.json`.
+
+The `scientific-completeness-taxonomy-v1` and
+`scientific-completeness-assessment-v1` schemas keep stable intended-use
+profiles separate from time-varying delivery evidence. Their normative
+artifacts live under `contracts/profiles/scientific-completeness/`; neither is
+an SDL validation-strength profile or a backend capability declaration.
 Its processing and execution phases also declare required concept bindings for
 the governed apparatus-manifest vocabulary surfaces introduced by GOV-918.
 

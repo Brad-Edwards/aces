@@ -136,8 +136,8 @@ accounts:
 
 ## Documentation
 
-- [SDL Sections Reference](sections.md) — Complete reference for all 17 sections
-- [Parser Behavior](parser.md) — Key normalization, shorthand expansion, SDL-only parsing
+- [SDL Sections Reference](sections.md) — Explanatory reference for the complete live authoring-section catalog
+- [Parser Behavior](parser.md) — `sdl-yaml/v1`, explicit migration, typed normalization, and canonical identity
 - [Language-Service Tools](language-service.md) — Agent-facing completions, references, formatting, diagnostics, and structured edits
 - [Agent Guidance Profile](agent-guidance.md) — Machine-readable scope boundaries, invariants, review priorities, and safe-operating expectations
 - [Semantic Validation](validation.md) — Cross-reference checks and what the validator enforces
@@ -145,6 +145,7 @@ accounts:
 - [Academic Lineage](lineage.md) — Primary-source lineage for SDL semantics
 - [Scenario/Delivery Drift Audit](scenario-delivery-drift-audit.md) — Audit and remediation record for classification drift after ADR-033
 - [Limitations](limitations.md) — Current expressiveness and materialization gaps
+- [Scientific-Scenario Completeness](scientific-scenario-completeness.md) — REV1 intended-use profiles and current blocking concerns
 - [Testing](testing.md) — How to run unit tests, stress tests, and fuzz tests
 - [Complex Scenario Designs](complex-scenarios.md) — Up-front design briefs for large example exercises
 - [Runtime Architecture](runtime-architecture.md) — SDL-native compiler, composite plans, and runtime targets

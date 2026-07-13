@@ -57,9 +57,9 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(
         name="sdl_format",
         description=(
-            "Format SDL YAML into the repository's normalized authoring shape. "
-            "Returns the formatted content and any diagnostics produced after "
-            "formatting."
+            "Migrate recognized legacy SDL field spellings and format the result "
+            "as canonical sdl-yaml/v1. Returns source-ranged migration advisories "
+            "and any diagnostics produced after formatting."
         ),
     )
     def sdl_format(sdl_content: str) -> str:

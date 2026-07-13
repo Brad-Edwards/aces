@@ -42,7 +42,8 @@ Each objective may declare:
 - exactly one actor: `agent` or `entity`
 - optional `actions`
 - optional `targets`
-- required `success` criteria referencing declared `conditions`, `metrics`, `evaluations`, `tlos`, or `goals`
+- required `success` criteria composing declared invariant or postcondition
+  assertions over backend-neutral propositions (ADR-079)
 - optional `window` constraints over `stories`, `scripts`, and `events`
 - optional `depends_on` links forming an acyclic ordering relation between objectives
 
@@ -53,7 +54,10 @@ This section is intentionally declarative. It expresses:
 - when the objective matters
 - how success should be interpreted
 
-It does **not** encode backend-specific validation probes such as Wazuh queries, command execution, file checks, polling loops, or session orchestration. Those remain runtime concerns and continue to live outside the SDL.
+It does **not** encode backend-specific validation probes such as Wazuh queries,
+command execution, file checks, polling loops, or session orchestration in
+objective meaning. Legacy `conditions` carry probe implementation mechanics;
+they are not propositions and cannot be referenced as objective success.
 
 It also does **not** identify the concrete participant implementation that will
 realize an authored `agent` or `entity` role in a given run. That remains a
@@ -94,3 +98,4 @@ This ADR refines ADR-001's SDL boundary by making declarative objectives part of
 | Date | Commit/PR | Summary |
 |------|-----------|---------|
 | 2026-07-05 | #682 | Per [ADR-073](adr-073-scoring-reward-language-scope.md), narrowed the objective-success clause: `objectives.success` references observable state (`conditions`) only. The OCR scoring pipeline (`metrics` / `evaluations` / `tlos` / `goals`) this ADR preserved was removed from the SDL; graded scoring and reward now live in the experiment/evaluator plane (ADR-055/064/069). |
+| 2026-07-12 | #725 | Per [ADR-079](adr-079-backend-neutral-proposition-and-truth-semantics.md), corrected the condition/proposition conflation: objective success now composes invariant or postcondition assertions over typed propositions; executable conditions are probe realizations only. |

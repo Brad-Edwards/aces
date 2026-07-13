@@ -49,18 +49,26 @@ _SCENARIO = dedent(
         conditions: {health: ops}
         roles: {ops: operator}
     conditions:
-      health: {command: /bin/true, interval: 15}
+      health: {proposition: health-state, command: /bin/true, interval: 15}
     entities:
       blue: {role: blue}
+    propositions:
+      health-state:
+        description: The admitted scenario declares the VM used by this test.
+        subjects: [nodes.vm1]
+        basis: declared_state
+        predicate: {kind: presence, property: node, semantic_ref: "urn:aces:declared-property:node", operator: exists}
+    assertions:
+      health: {proposition: health-state, role: postcondition}
     objectives:
       validate:
         entity: blue
-        success: {conditions: [health]}
+        success: {assertions: [health]}
     workflows:
       response:
         start: run
         steps:
-          run: {type: objective, objective: validate, on-success: finish}
+          run: {type: objective, objective: validate, on_success: finish}
           finish: {type: end}
     """
 )
@@ -80,18 +88,26 @@ _PARAM_SCENARIO = dedent(
         conditions: {health: ops}
         roles: {ops: operator}
     conditions:
-      health: {command: /bin/true, interval: 15}
+      health: {proposition: health-state, command: /bin/true, interval: 15}
     entities:
       blue: {role: blue}
+    propositions:
+      health-state:
+        description: The admitted scenario declares the VM used by this test.
+        subjects: [nodes.vm1]
+        basis: declared_state
+        predicate: {kind: presence, property: node, semantic_ref: "urn:aces:declared-property:node", operator: exists}
+    assertions:
+      health: {proposition: health-state, role: postcondition}
     objectives:
       validate:
         entity: blue
-        success: {conditions: [health]}
+        success: {assertions: [health]}
     workflows:
       response:
         start: run
         steps:
-          run: {type: objective, objective: validate, on-success: finish}
+          run: {type: objective, objective: validate, on_success: finish}
           finish: {type: end}
     """
 )
@@ -207,8 +223,8 @@ class TestReferenceProcessorEndToEndEvidence:
         control_plane = RuntimeControlPlane(target)
         for sub_plan, submit in (
             (result.execution_plan.provisioning, control_plane.submit_provisioning),
-            (result.execution_plan.orchestration, control_plane.submit_orchestration),
             (result.execution_plan.evaluation, control_plane.submit_evaluation),
+            (result.execution_plan.orchestration, control_plane.submit_orchestration),
         ):
             receipt = submit(sub_plan)
             assert receipt.accepted, receipt.diagnostics

@@ -83,8 +83,44 @@ features:
 
 conditions:
   alive:
+    proposition: web-alive
     command: "curl -sf http://localhost/ || exit 1"
     interval: 15
+
+evidence_requirements:
+  web-health-evidence:
+    description: Capture the governed web health observation.
+    source_refs: [nodes.web]
+    scope_refs: [nodes.web]
+    trigger_ref: conditions.alive
+    channel: api_response
+    artifact_role: proposition_truth_evidence
+    media_types: [application/json]
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: study_lifetime
+    loss_disclosure: required
+
+propositions:
+  web-alive:
+    description: The governed web service responds successfully.
+    subjects: [nodes.web]
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: service-alive
+      semantic_ref: urn:aces:observable:service-alive
+      operator: equals
+      expected: true
+    evidence_requirements: [web-health-evidence]
+
+assertions:
+  web-alive:
+    description: The web service must be alive at the objective boundary.
+    proposition: web-alive
+    role: postcondition
+    polarity: positive
 
 vulnerabilities:
   sqli: {name: SQL Injection, description: "SQLi in login", technical: true, class: CWE-89}
@@ -107,8 +143,8 @@ events:
 
 scripts:
   timeline:
-    start-time: 0
-    end-time: 2 hour
+    start_time: 0
+    end_time: 2 hour
     speed: "${speed}"
     events:
       attack: 30 min
@@ -141,14 +177,14 @@ objectives:
     agent: red-agent
     actions: [Scan]
     targets: [web]
-    success: {conditions: [alive]}
+    success: {assertions: [web-alive]}
     window: {stories: [exercise]}
 
 workflows:
   flow:
     start: do-it
     steps:
-      do-it: {type: objective, objective: red-access, on-success: done}
+      do-it: {type: objective, objective: red-access, on_success: done}
       done: {type: end}
 """
 
@@ -172,11 +208,25 @@ class TestReferenceTools:
     def test_sdl_overview_returns_content(self, server):
         text = _call(server, "sdl_overview")
         assert "SDL" in text
-        # Both pieces of evidence must be present; an OR disjunction over
-        # "17" / "sections" would let either drift go undetected.
-        assert "17" in text
-        assert "sections" in text.lower()
+        assert "authoring sections" in text.lower()
+        assert "17 sections" not in text.lower()
         assert "nodes" in text
+
+    @pytest.mark.parametrize(
+        "section",
+        [
+            "forwarding_agents",
+            "action_contracts",
+            "observation_boundaries",
+            "outcome_interpretation_rules",
+            "behavior_specifications",
+            "evidence_requirements",
+        ],
+    )
+    def test_sdl_section_reference_covers_live_sections(self, server, section):
+        text = _call(server, "sdl_section_reference", {"section": section})
+        assert "Unknown section" not in text
+        assert "not found" not in text
 
     def test_sdl_section_reference_valid(self, server):
         text = _call(server, "sdl_section_reference", {"section": "nodes"})
@@ -253,6 +303,19 @@ class TestAuthoringTools:
         assert "semantic validation was skipped" in text
         assert "ghost-feature" not in text
 
+    def test_validate_requires_explicit_migration_policy(self, server):
+        strict = _call(server, "sdl_validate", {"sdl_content": "Name: migrated\n"})
+        assert "sdl.noncanonical_field" in strict
+
+        migrated = _call(
+            server,
+            "sdl_validate",
+            {"sdl_content": "Name: migrated\n", "accept_migration_syntax": True},
+        )
+        assert migrated.startswith("VALID")
+        assert "Source migration advisories (1)" in migrated
+        assert "sdl.noncanonical_field" in migrated
+
     def test_validate_section_valid(self, server):
         text = _call(
             server,
@@ -271,6 +334,21 @@ class TestAuthoringTools:
             {"section": "nodes", "section_yaml": "{{not yaml"},
         )
         assert "YAML ERROR" in text
+
+    def test_validate_section_rejects_duplicates_before_fragment_round_trip(self, server):
+        text = _call(
+            server,
+            "sdl_validate_section",
+            {
+                "section": "nodes",
+                "section_yaml": "sw:\n  Type: switch\n  type: switch",
+            },
+        )
+
+        assert "PARSE ERROR" in text
+        assert "sdl.mapping_key_conflict" in text
+        assert "/nodes/sw/type" in text
+        assert "line 3, column 3" in text
 
     def test_validate_section_bad_section(self, server):
         text = _call(
@@ -306,18 +384,22 @@ name: param-test
 variables:
   greeting:
     type: string
-    default: hello
+    required: true
 """
         text = _call(
             server,
             "sdl_instantiate",
-            {"sdl_content": sdl, "parameters_json": '{"greeting": "hi"}'},
+            {"sdl_content": sdl, "parameters_json": '{"greeting": "s3cr3t-marker-9b2d"}'},
         )
         assert text.startswith("INSTANTIATED")
-        # Verify the supplied parameter actually substituted into the resolved
-        # scenario rather than the default being silently retained.
-        assert "'greeting': 'hi'" in text
-        assert "'greeting': 'hello'" not in text
+        assert "Bindings resolved: 1" in text
+        assert "greeting" not in text
+        assert "s3cr3t-marker-9b2d" not in text
+
+        missing = _call(server, "sdl_instantiate", {"sdl_content": sdl})
+        assert missing.startswith("INSTANTIATION ERRORS")
+        assert "required" in missing
+        assert "s3cr3t-marker-9b2d" not in missing
 
     def test_instantiate_bad_json(self, server):
         text = _call(
@@ -363,8 +445,13 @@ class TestLanguageServiceTools:
             {"sdl_content": "Name: x\nNodes:\n  sw: {Type: Switch}\n"},
         )
 
-        assert payload["status"] == "formatted"
+        assert payload["status"] == "formatted_with_diagnostics"
         assert payload["content"].startswith("name: x\nnodes:\n")
+        assert [item["code"] for item in payload["diagnostics"]] == [
+            "sdl.noncanonical_field",
+            "sdl.noncanonical_field",
+            "sdl.noncanonical_field",
+        ]
 
     def test_diagnostics_return_structured_errors(self, server):
         payload = _json_call(
@@ -588,9 +675,11 @@ class TestOperationTools:
         payload = _json_call(server, "aces_tool_surface")
         assert payload["surface"] == "aces-sdl"
         assert "aces_agent_guidance" in payload["recommended_workflow"]
+        assert "aces_intended_use_profiles" in payload["recommended_workflow"]
         assert "sdl_claims_assessment" in payload["recommended_workflow"]
         assert "sdl_completions" in payload["tool_families"]["language_service"]
         assert "aces_agent_guidance" in payload["tool_families"]["guidance"]
+        assert "aces_intended_use_profiles" in payload["tool_families"]["guidance"]
         assert any("does not expose participant cyber actions" in item for item in payload["boundaries"])
 
     def test_agent_guidance_returns_machine_usable_profile(self, server):
@@ -614,6 +703,50 @@ class TestOperationTools:
             assert entries
             assert all("operator" in entry["audience"] for entry in entries)
 
+    def test_intended_use_profiles_exposes_canonical_catalog(self, server):
+        payload = _json_call(server, "aces_intended_use_profiles")
+
+        assert payload["status"] == "ok"
+        assert payload["scope"] == "aces-delivery-capability"
+        assert payload["taxonomy_revision"] == "rev1"
+        assert len(payload["profiles"]) == 5
+        assert payload["scenario_assessment"]["status"] == "not-assessed"
+        assert {item["profile_id"] for item in payload["profiles"]} == {
+            "valid-sdl-fragment",
+            "deployable-scenario-intent",
+            "participant-evaluation-scenario",
+            "controlled-experiment-scenario",
+            "reproducible-benchmark-study-input",
+        }
+
+    def test_intended_use_profile_exposes_blockers_and_authoring_route(self, server):
+        payload = _json_call(
+            server,
+            "aces_intended_use_profiles",
+            {"profile_id": "controlled-experiment-scenario"},
+        )
+
+        profile = payload["profile"]
+        assert profile["aces_delivery"]["complete"] is False
+        assert "behavioral-relation-taxonomy" in profile["aces_delivery"]["blocking_concern_ids"]
+        assert "experiment_validate" in profile["next_tools"]
+        required = {item["concern_id"]: item for item in profile["required_concerns"]}
+        assert required["behavioral-relation-taxonomy"]["status"] == "missing"
+        assert required["behavioral-relation-taxonomy"]["issue_refs"] == ["#747"]
+        assert payload["scenario_assessment"]["performed"] is False
+
+    def test_intended_use_profile_rejects_unknown_id(self, server):
+        payload = _json_call(server, "aces_intended_use_profiles", {"profile_id": "attack-scenario"})
+
+        assert payload["status"] == "invalid"
+        assert payload["diagnostics"][0]["code"] == "aces.intended_use_profile.unknown"
+        assert "valid-sdl-fragment" in payload["diagnostics"][0]["available_profile_ids"]
+
+    def test_non_experiment_profile_does_not_recommend_experiment_tools(self, server):
+        payload = _json_call(server, "aces_intended_use_profiles", {"profile_id": "valid-sdl-fragment"})
+
+        assert "experiment_validate" not in payload["profile"]["next_tools"]
+
     def test_parse_returns_machine_readable_summary(self, server):
         payload = _json_call(server, "sdl_parse", {"sdl_content": MINIMAL_SDL})
         assert payload["status"] == "parsed"
@@ -630,6 +763,32 @@ class TestOperationTools:
         assert payload["status"] == "invalid"
         assert payload["stage"] == "semantic_validation"
         assert "ghost-feature" in payload["diagnostics"][0]["message"]
+
+    @pytest.mark.parametrize("tool", ["sdl_parse", "sdl_compile"])
+    def test_operation_tools_require_explicit_migration_policy(self, server, tool):
+        strict = _json_call(server, tool, {"sdl_content": "Name: migrated\n"})
+        assert strict["status"] == "invalid"
+        assert strict["diagnostics"][0]["code"] == "sdl.noncanonical_field"
+
+        migrated = _json_call(
+            server,
+            tool,
+            {"sdl_content": "Name: migrated\n", "accept_migration_syntax": True},
+        )
+        assert migrated["status"] in {"parsed", "compiled"}
+        diagnostics = migrated.get("source_diagnostics", migrated["scenario"].get("source_diagnostics", []))
+        assert diagnostics[0]["code"] == "sdl.noncanonical_field"
+
+    @pytest.mark.parametrize("tool", ["sdl_parse", "sdl_compile"])
+    def test_operation_tools_preserve_mapping_conflict_diagnostics(self, server, tool):
+        payload = _json_call(server, tool, {"sdl_content": "Name: first\nname: second\n"})
+
+        assert payload["status"] == "invalid"
+        diagnostic = payload["diagnostics"][0]
+        assert diagnostic["code"] == "sdl.mapping_key_conflict"
+        assert diagnostic["path"] == "/name"
+        assert diagnostic["authored_keys"] == ["Name", "name"]
+        assert diagnostic["range"]["start"] == {"line": 2, "column": 1}
 
     def test_compile_summarizes_runtime_model(self, server):
         payload = _json_call(server, "sdl_compile", {"sdl_content": FULL_SDL})

@@ -31,7 +31,7 @@ Existing coverage:
 - `controlled-vocabularies-v1` already defines
   `participant-decision-surface-modes` and
   `participant-offensive-behavior-activities`.
-- Issue #206 adds SDL `behavior-specifications` authoring, semantic
+- Issue #206 adds SDL `behavior_specifications` authoring, semantic
   validation, generated schema coverage, and compiled
   `participant.behavior-specification.*` runtime records for ACT-606.
 
@@ -268,7 +268,7 @@ Rules:
 
 Implementation issue #206 adds the executable SDL authoring and validation
 surface for this aggregate. The Python reference implementation parses
-`behavior-specifications`, validates participant, role, action, observation,
+`behavior_specifications`, validates participant, role, action, observation,
 outcome, authority, extension, and governed-mode refs, includes the surface in
 generated SDL schemas, and compiles stable
 `participant.behavior-specification.<name>` runtime records without creating a
@@ -282,7 +282,7 @@ Authority and scope are authored semantics. The model distinguishes:
 | --- | --- | --- |
 | `starting_accounts` | Initial declared access anchors | proof of authority |
 | `initial_knowledge` | Participant starting knowledge refs | hidden truth |
-| `starting_conditions` | Declared state or setup preconditions | setup commands |
+| `starting_assertions` | Precondition assertions over declared propositions | setup commands or proof that a probe passed |
 | `authority_anchors` | Declared bases for allowed or expected action | bearer tokens, HTTP auth, OS user |
 | `operating_scope` | Declared targetable action/observation boundary | backend sandbox, process boundary |
 | action preconditions | Contract-level applicability checks | free-form policy prose |
@@ -312,7 +312,7 @@ Executable ACT-607 work must extend the existing participant-authoring and
 behavior surfaces. The canonical incumbents are:
 
 - SDL authored semantics: `agents.*.starting_accounts`,
-  `initial_knowledge`, `starting_conditions`, `authority_anchors`,
+  `initial_knowledge`, `starting_assertions`, `authority_anchors`,
   `operating_scope`, and behavior-specification `authority_scope_refs`.
 - Action and observation semantics: typed participant action preconditions,
   governed failure classes such as `authority_denied`, observation boundaries,

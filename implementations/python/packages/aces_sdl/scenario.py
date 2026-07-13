@@ -13,11 +13,19 @@ outside the SDL.
 """
 
 from collections.abc import Mapping
-from typing import Annotated
+from typing import ClassVar
 
-from pydantic import Field, PrivateAttr, StringConstraints, model_validator
+from pydantic import ConfigDict, Field, PrivateAttr, model_validator
 
-from ._base import VARIABLE_NAME_PATTERN, VARIABLE_TOKEN_RE, SDLModel
+from ._base import VARIABLE_TOKEN_RE, SDLModel
+from ._errors import SDLParseDiagnostic
+from ._identifiers import (
+    PortableIdentifier,
+    QualifiedName,
+    require_module_identifier,
+    require_portable_identifier,
+)
+from ._mapping_scopes import HASHMAP_SECTIONS
 from .accounts import Account
 from .agents import Agent
 from .conditions import Condition
@@ -36,13 +44,57 @@ from .participant_behavior import (
 )
 from .participant_behavior_specification import ParticipantBehaviorSpecification
 from .participant_outcome_semantics import OutcomeInterpretationRule
+from .phase_contracts import (
+    CapabilityConstraint,
+    ExpansionProvenance,
+    InstantiationProvenance,
+    _json_value_equal,
+)
+from .propositions import Assertion, Proposition
 from .relationships import Relationship
 from .runtime_forwarding_agent import RuntimeForwardingAgent
 from .variables import Variable
 from .vulnerabilities import Vulnerability
 
-VariableName = Annotated[str, StringConstraints(pattern=f"^{VARIABLE_NAME_PATTERN}$")]
-VariableDefinitions = dict[VariableName, Variable]
+VariableName = PortableIdentifier
+VariableDefinitions = dict[PortableIdentifier, Variable]
+
+
+def _legacy_constraint_name(parameter: tuple[str, ...]) -> str:
+    """Project a typed identity into the pre-#724 private planner key."""
+
+    if len(parameter) == 1:
+        return parameter[0]
+    return ".".join((*parameter[:-1], "__private", parameter[-1]))
+
+
+def _constraint_variable_specs(
+    constraints: tuple[CapabilityConstraint, ...],
+) -> dict[str, dict[str, object]]:
+    return {
+        _legacy_constraint_name(constraint.parameter): {
+            "allowed_values": list(constraint.allowed_values),
+        }
+        for constraint in constraints
+    }
+
+
+def _constraint_node_refs(
+    constraints: tuple[CapabilityConstraint, ...],
+) -> dict[str, dict[str, str | None]]:
+    refs: dict[str, dict[str, str | None]] = {}
+    for constraint in constraints:
+        parts = constraint.field_pointer.split("/")
+        if len(parts) != 4 or parts[1] not in {"nodes", "infrastructure"}:
+            continue
+        field_name = parts[3]
+        if (parts[1], field_name) not in {("nodes", "os"), ("infrastructure", "count")}:
+            continue
+        node_name = parts[2].replace("~1", "/").replace("~0", "~")
+        refs.setdefault(node_name, {"os": None, "count": None})[field_name] = _legacy_constraint_name(
+            constraint.parameter
+        )
+    return refs
 
 
 def _collect_variable_tokens(value: object) -> list[str]:
@@ -64,19 +116,98 @@ def _collect_variable_tokens(value: object) -> list[str]:
     return found
 
 
+def _validate_declaration_identifier(
+    identifier: object,
+    *,
+    section_name: str,
+    allow_qualified: bool,
+) -> None:
+    if allow_qualified:
+        local_name = QualifiedName.parse(identifier).parts[-1]
+    else:
+        local_name = require_portable_identifier(identifier, field_name=f"{section_name} declaration key")
+    if section_name == "nodes" and len(local_name) > 35:
+        raise ValueError("nodes declaration key must be at most 35 characters")
+
+
+def _validate_section_declaration_keys(value: Mapping[object, object], *, allow_qualified: bool) -> None:
+    for section_name in HASHMAP_SECTIONS:
+        declarations = value.get(section_name)
+        if not isinstance(declarations, Mapping):
+            continue
+        for identifier in declarations:
+            _validate_declaration_identifier(
+                identifier,
+                section_name=section_name,
+                allow_qualified=allow_qualified,
+            )
+
+
+def _forwarding_agent_identifier(agent: object) -> object:
+    if isinstance(agent, RuntimeForwardingAgent):
+        return agent.forwarding_agent_id
+    if isinstance(agent, Mapping):
+        return agent.get("forwarding_agent_id")
+    return None
+
+
+def _validate_forwarding_agent_identifiers(
+    agents: object,
+    *,
+    allow_qualified: bool,
+    field_name: str,
+) -> None:
+    if not isinstance(agents, (list, tuple)):
+        return
+    for agent in agents:
+        identifier = _forwarding_agent_identifier(agent)
+        if allow_qualified:
+            QualifiedName.parse(identifier)
+        else:
+            require_portable_identifier(identifier, field_name=field_name)
+
+
+def _node_runtime(node: object) -> object | None:
+    if isinstance(node, Node):
+        return node.runtime
+    if isinstance(node, Mapping):
+        return node.get("runtime")
+    return None
+
+
+def _runtime_forwarding_agents(runtime: object) -> object:
+    if isinstance(runtime, Mapping):
+        return runtime.get("forwarding_agents", ())
+    return getattr(runtime, "forwarding_agents", ())
+
+
+def _validate_runtime_forwarding_agent_identifiers(value: Mapping[object, object]) -> None:
+    nodes = value.get("nodes")
+    if not isinstance(nodes, Mapping):
+        return
+    for node in nodes.values():
+        runtime = _node_runtime(node)
+        if runtime is None:
+            continue
+        _validate_forwarding_agent_identifiers(
+            _runtime_forwarding_agents(runtime),
+            allow_qualified=False,
+            field_name="runtime forwarding_agent_id",
+        )
+
+
 class ModuleDescriptor(SDLModel):
     """Published module metadata for SDL composition."""
 
     id: str
     version: str
-    parameters: list[str] = Field(default_factory=list)
+    parameters: list[PortableIdentifier] = Field(default_factory=list)
     exports: dict[str, list[str]] = Field(default_factory=dict)
     description: str = ""
 
     @model_validator(mode="after")
     def validate_descriptor(self) -> "ModuleDescriptor":
-        if "/" not in self.id or self.id.startswith("/") or self.id.endswith("/"):
-            raise ValueError("module.id must use canonical 'publisher/name' format")
+        require_module_identifier(self.id)
         if len(self.parameters) != len(set(self.parameters)):
             raise ValueError("module.parameters must be unique")
         for section, names in self.exports.items():
@@ -92,7 +223,7 @@ class ImportDecl(SDLModel):
     path: str = ""
     namespace: str = ""
     version: str = "*"
-    parameters: dict[str, object] = Field(default_factory=dict)
+    parameters: dict[PortableIdentifier, object] = Field(default_factory=dict)
     digest: str = ""
 
     @model_validator(mode="after")
@@ -101,11 +232,9 @@ class ImportDecl(SDLModel):
             raise ValueError("Import requires either 'source' or deprecated 'path'")
         if self.source and self.path:
             raise ValueError("Import may specify only one of 'source' or 'path'")
-        if self.path and not self.namespace:
-            # Local path imports remain backward compatible and may derive namespace.
-            return self
-        if self.source.startswith("oci:") and not self.namespace:
-            raise ValueError("OCI imports require an explicit namespace")
+        if not self.namespace:
+            raise ValueError("Import requires an explicit namespace")
+        require_portable_identifier(self.namespace, field_name="namespace")
         return self
 
     @property
@@ -115,26 +244,23 @@ class ImportDecl(SDLModel):
         return f"local:{self.path}"
 
 
-class Scenario(SDLModel):
-    """Top-level scenario specification.
+class ScenarioContent(SDLModel):
+    """Executable SDL content shared by the closed document-phase types."""
 
-    A YAML document with up to 23 named sections. Only ``name``
-    is required. All sections are optional dicts keyed by
-    user-defined identifiers.
-    """
+    _allows_qualified_declaration_keys: ClassVar[bool] = False
 
     # --- Identity ---
-    name: str
+    name: PortableIdentifier
     version: str = "*"
     description: str = ""
-    module: ModuleDescriptor | None = None
-    imports: list[ImportDecl] = Field(default_factory=list)
 
-    # --- OCR SDL: 14 sections ---
+    # OCR-derived topology and exercise-narrative sections.
     nodes: dict[str, Node] = Field(default_factory=dict)
     infrastructure: dict[str, InfraNode] = Field(default_factory=dict)
     features: dict[str, Feature] = Field(default_factory=dict)
     conditions: dict[str, Condition] = Field(default_factory=dict)
+    propositions: dict[str, Proposition] = Field(default_factory=dict)
+    assertions: dict[str, Assertion] = Field(default_factory=dict)
     vulnerabilities: dict[str, Vulnerability] = Field(default_factory=dict)
     entities: dict[str, Entity] = Field(default_factory=dict)
     injects: dict[str, Inject] = Field(default_factory=dict)
@@ -155,24 +281,25 @@ class Scenario(SDLModel):
     evidence_requirements: dict[str, EvidenceRequirement] = Field(default_factory=dict)
     objectives: dict[str, Objective] = Field(default_factory=dict)
     workflows: dict[str, Workflow] = Field(default_factory=dict)
-    variables: VariableDefinitions = Field(
-        default_factory=dict,
-        json_schema_extra={"additionalProperties": False},
-    )
-
     _advisories: list[str] = PrivateAttr(default_factory=list)
+    _source_diagnostics: tuple[SDLParseDiagnostic, ...] = PrivateAttr(default=())
     _semantic_validated: bool = PrivateAttr(default=False)
-    # Capability-variable provenance carried across the SDL module-import
-    # composition boundary. The composition pass strips imported variables
-    # from the merged payload by design, so this side-channel preserves the
-    # imported variable specs (namespace-prefixed) and the imported nodes'
-    # `${name}` refs onto the outer scenario. The instantiation and runtime-
-    # compile paths read these to enforce backend `allowed_values` against
-    # imported modules even though their variables don't survive the merge.
-    # Inner mapping shape mirrors `InstantiatedScenario._node_variable_refs`.
-    _module_variable_specs: dict[str, dict[str, object]] = PrivateAttr(default_factory=dict)
-    _module_node_variable_refs: dict[str, dict[str, str | None]] = PrivateAttr(default_factory=dict)
     _explicitness: dict[str, ExplicitnessRecord] = PrivateAttr(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_declaration_keys(cls, value: object) -> object:
+        if not isinstance(value, Mapping):
+            return value
+        allow_qualified = cls._allows_qualified_declaration_keys
+        _validate_section_declaration_keys(value, allow_qualified=allow_qualified)
+        _validate_forwarding_agent_identifiers(
+            value.get("forwarding_agents", ()),
+            allow_qualified=allow_qualified,
+            field_name="forwarding_agent_id",
+        )
+        _validate_runtime_forwarding_agent_identifiers(value)
+        return value
 
     @property
     def advisories(self) -> list[str]:
@@ -181,6 +308,14 @@ class Scenario(SDLModel):
 
     def _set_advisories(self, advisories: list[str]) -> None:
         self._advisories = list(advisories)
+
+    @property
+    def source_diagnostics(self) -> tuple[SDLParseDiagnostic, ...]:
+        """Non-fatal source migration diagnostics retained after parsing."""
+        return self._source_diagnostics
+
+    def _set_source_diagnostics(self, diagnostics: list[SDLParseDiagnostic]) -> None:
+        self._source_diagnostics = tuple(diagnostics)
 
     @property
     def semantic_validated(self) -> bool:
@@ -198,24 +333,73 @@ class Scenario(SDLModel):
     def _set_explicitness(self, explicitness: dict[str, ExplicitnessRecord]) -> None:
         self._explicitness = dict(explicitness)
 
+
+class Scenario(ScenarioContent):
+    """Normalized SDL authoring object.
+
+    This model applies after ``sdl-yaml/v1`` source-profile checks, structural
+    key canonicalization, shorthand expansion, enum normalization, and typed
+    construction, but before module expansion and instantiation. Its JSON
+    Schema does not validate YAML presentation details.
+    """
+
+    model_config = ConfigDict(
+        title="SDL Normalized Authoring Object v1",
+        json_schema_extra={
+            "x-aces-document-phase": "normalized-authoring-object",
+            "x-aces-source-profile": "sdl-yaml/v1",
+            "x-aces-validates-raw-source": False,
+        },
+    )
+
+    module: ModuleDescriptor | None = None
+    imports: list[ImportDecl] = Field(default_factory=list)
+    variables: VariableDefinitions = Field(
+        default_factory=dict,
+        json_schema_extra={"additionalProperties": False},
+    )
+
     @property
     def module_variable_specs(self) -> dict[str, dict[str, object]]:
-        """Namespace-prefixed variable specs preserved across module imports."""
-        return {name: dict(spec) for name, spec in self._module_variable_specs.items()}
+        return {}
 
     @property
     def module_node_variable_refs(self) -> dict[str, dict[str, str | None]]:
-        """Refs on imported-module nodes that survived the composition merge."""
-        return {name: dict(refs) for name, refs in self._module_node_variable_refs.items()}
-
-    def _set_module_variable_specs(self, specs: dict[str, dict[str, object]]) -> None:
-        self._module_variable_specs = {name: dict(spec) for name, spec in specs.items()}
-
-    def _set_module_node_variable_refs(self, refs: dict[str, dict[str, str | None]]) -> None:
-        self._module_node_variable_refs = {name: dict(entry) for name, entry in refs.items()}
+        return {}
 
 
-class InstantiatedScenario(Scenario):
+class ExpandedScenario(ScenarioContent):
+    """Internal authoring object after trusted import expansion."""
+
+    _allows_qualified_declaration_keys: ClassVar[bool] = True
+
+    model_config = ConfigDict(
+        title="SDL Expanded Authoring Object v1",
+        json_schema_extra={"x-aces-document-phase": "expanded-authoring-object"},
+    )
+
+    variables: VariableDefinitions = Field(
+        default_factory=dict,
+        json_schema_extra={"additionalProperties": False},
+    )
+    expansion_provenance: ExpansionProvenance = Field(default_factory=ExpansionProvenance)
+
+    @property
+    def module_variable_specs(self) -> dict[str, dict[str, object]]:
+        """Compatibility projection of imported allowed-value constraints."""
+        return _constraint_variable_specs(self.expansion_provenance.capability_constraints)
+
+    @property
+    def module_node_variable_refs(self) -> dict[str, dict[str, str | None]]:
+        """Compatibility projection retained until compiler migration completes."""
+        return _constraint_node_refs(self.expansion_provenance.capability_constraints)
+
+    @property
+    def module_namespaces(self) -> dict[str, str]:
+        return {record.resolved_source: ".".join(record.namespace) for record in self.expansion_provenance.imports}
+
+
+class InstantiatedScenario(ScenarioContent):
     """Scenario with all ``${var}`` references resolved to concrete values.
 
     Unlike the authoring-input contract, an instantiated scenario MUST NOT
@@ -224,66 +408,74 @@ class InstantiatedScenario(Scenario):
     (``"host-${index}"``). The invariant is enforced both by the model
     validator below and by the published ``instantiated-scenario-v1`` JSON
     Schema, which forbids the token in every string field. The schema is
-    marginally stricter than the runtime instantiation engine in one
-    pathological case: if a resolved variable *value* itself re-introduces a
-    literal ``${name}`` sequence (single-pass substitution does not re-scan
-    it), the schema and this validator treat it as non-concrete and reject it.
+    If a resolved variable value itself introduces a literal ``${name}``
+    sequence, the single-pass substitution step does not interpret it as a
+    second substitution request; final model admission still treats the result
+    as non-concrete and rejects the public instantiation.
     """
 
-    _instantiation_parameters: dict[str, object] = PrivateAttr(default_factory=dict)
-    _instantiation_profile: str | None = PrivateAttr(default=None)
-    # Snapshot of pre-instantiation `${name}` refs on `nodes.os` and
-    # `infrastructure.count`, captured by `instantiate_scenario` before
-    # substitution. Carries downstream so the runtime processor / planner
-    # can reach each variable's `allowed_values` after the resolved values
-    # have been written onto the concrete scenario.
-    _node_variable_refs: dict[str, dict[str, str | None]] = PrivateAttr(default_factory=dict)
+    _allows_qualified_declaration_keys: ClassVar[bool] = True
+
+    model_config = ConfigDict(
+        title="SDL Instantiated Scenario v1",
+        json_schema_extra={
+            "x-aces-document-phase": "instantiated-scenario",
+            "x-aces-authored-identity-profile": "aces-sdl-semantic/v1",
+        },
+    )
+
+    instantiation_provenance: InstantiationProvenance = Field(
+        json_schema_extra={"x-aces-realization-dimension": False},
+    )
 
     @property
-    def instantiation_parameters(self) -> dict[str, object]:
-        """Concrete parameter values used during instantiation."""
-        return dict(self._instantiation_parameters)
+    def explicitness(self) -> dict[str, ExplicitnessRecord]:
+        """Portable SEM-218 records keyed by SDL model path."""
 
-    @property
-    def instantiation_profile(self) -> str | None:
-        """Optional instantiation profile name."""
-        return self._instantiation_profile
-
-    @property
-    def node_variable_refs(self) -> dict[str, dict[str, str | None]]:
-        """Pre-instantiation `${var}` refs on `nodes.os` / `infrastructure.count`."""
-        return {name: dict(refs) for name, refs in self._node_variable_refs.items()}
-
-    def _set_instantiation_context(
-        self,
-        *,
-        parameters: dict[str, object],
-        profile: str | None,
-    ) -> None:
-        self._instantiation_parameters = dict(parameters)
-        self._instantiation_profile = profile
-
-    def _set_node_variable_refs(self, refs: dict[str, dict[str, str | None]]) -> None:
-        self._node_variable_refs = {name: dict(entry) for name, entry in refs.items()}
+        return {
+            record.model_path: ExplicitnessRecord(
+                path=record.model_path,
+                classification=record.classification,
+                provenance=record.provenance,
+                reason=record.reason,
+                variables=tuple(".".join(parameter) for parameter in record.parameters),
+            )
+            for record in self.instantiation_provenance.explicitness
+        }
 
     @model_validator(mode="after")
     def _reject_unresolved_variable_references(self) -> "InstantiatedScenario":
-        payload = self.model_dump(mode="python", by_alias=True)
+        payload = self.model_dump(mode="json", by_alias=True)
         tokens = sorted(set(_collect_variable_tokens(payload)))
         if tokens:
             joined = ", ".join(tokens)
             raise ValueError(f"InstantiatedScenario must not contain unresolved variable references: {joined}")
+        binding_values = {binding.parameter: binding.value for binding in self.instantiation_provenance.bindings}
+        for imported in self.instantiation_provenance.imports:
+            for binding in imported.bindings:
+                binding_values[(*imported.namespace, *binding.parameter)] = binding.value
+        for constraint in self.instantiation_provenance.capability_constraints:
+            try:
+                concrete_value = _resolve_json_pointer(payload, constraint.field_pointer)
+            except (KeyError, IndexError, TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"Capability constraint field_pointer does not resolve: {constraint.field_pointer}"
+                ) from exc
+            if constraint.parameter not in binding_values:
+                raise ValueError("Capability constraint references an unresolved parameter identity")
+            if not _json_value_equal(concrete_value, binding_values[constraint.parameter]):
+                raise ValueError("Capability constraint binding does not match the concrete field value")
         return self
 
 
-class ExpandedScenario(Scenario):
-    """Scenario produced by module/import expansion."""
-
-    _module_namespaces: dict[str, str] = PrivateAttr(default_factory=dict)
-
-    @property
-    def module_namespaces(self) -> dict[str, str]:
-        return dict(self._module_namespaces)
-
-    def _set_module_namespaces(self, namespaces: dict[str, str]) -> None:
-        self._module_namespaces = dict(namespaces)
+def _resolve_json_pointer(payload: object, pointer: str) -> object:
+    current = payload
+    for raw_segment in pointer.split("/")[1:]:
+        segment = raw_segment.replace("~1", "/").replace("~0", "~")
+        if isinstance(current, Mapping):
+            current = current[segment]
+        elif isinstance(current, (list, tuple)):
+            current = current[int(segment)]
+        else:
+            raise TypeError("JSON Pointer traverses a scalar value")
+    return current

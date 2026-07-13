@@ -51,128 +51,128 @@ def _scenario_yaml() -> str:
         entities:
           red-team:
             role: red
-        action-contracts:
+        action_contracts:
           scan:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            behavioral-granularity: atomic
-            procedure-basis: nmap service discovery
-            realization-profile: backend-declared
-            fidelity-claim: records participant discovery timing without claiming portable wall-clock fidelity
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            behavioral_granularity: atomic
+            procedure_basis: nmap service discovery
+            realization_profile: backend-declared
+            fidelity_claim: records participant discovery timing without claiming portable wall-clock fidelity
             preconditions:
-              - precondition-id: scheduled-window-open
-                precondition-class: temporal
+              - precondition_id: scheduled-window-open
+                precondition_class: temporal
                 description: scan may start only inside the scenario maintenance window
-                support-refs: [windows.maintenance]
-              - precondition-id: backend-can-realize-scan
-                precondition-class: realization
+                support_refs: [windows.maintenance]
+              - precondition_id: backend-can-realize-scan
+                precondition_class: realization
                 description: backend can realize the scan action contract
-                support-refs: [backend.participant-runtime]
+                support_refs: [backend.participant-runtime]
             effects:
-              - effect-id: terminal-scan-observation
-                effect-class: observation_effect
+              - effect_id: terminal-scan-observation
+                effect_class: observation_effect
                 description: terminal scan observation is emitted for the participant
-                evidence-refs: [evidence.scan-output]
-            failure-classes: [precondition_unsatisfied, timeout, backend_error, unknown]
-            temporal-contracts:
-              - temporal-id: scan-schedule
-                temporal-kind: schedule
-                time-domain: scenario_time
-                clock-authority: scenario.author.clock
-                event-points: [submit, start]
+                evidence_refs: [evidence.scan-output]
+            failure_classes: [precondition_unsatisfied, timeout, backend_error, unknown]
+            temporal_contracts:
+              - temporal_id: scan-schedule
+                temporal_kind: schedule
+                time_domain: scenario_time
+                clock_authority: scenario.author.clock
+                event_points: [submit, start]
                 description: scan is eligible only during the authored maintenance window
-                window-ref: windows.maintenance
-                ordering-basis: participant schedule relation, not raw timestamp causality
-                backend-disclosure-refs: [timing.remote-pacing]
-              - temporal-id: scan-cadence
-                temporal-kind: cadence
-                time-domain: episode_step
-                clock-authority: processor.episode-sequence
-                event-points: [submit]
+                window_ref: windows.maintenance
+                ordering_basis: participant schedule relation, not raw timestamp causality
+                backend_disclosure_refs: [timing.remote-pacing]
+              - temporal_id: scan-cadence
+                temporal_kind: cadence
+                time_domain: episode_step
+                clock_authority: processor.episode-sequence
+                event_points: [submit]
                 description: scan attempts are rate-limited per participant episode
-                duration-ref: cadence.scan.per-episode
-                reset-boundary: participant episode reset starts a new cadence segment
-                replay-boundary: replay preserves the original cadence segment id
-                randomization-basis: seeded participant episode sequence
-                ordering-basis: participant episode sequence
-                backend-disclosure-refs: [timing.remote-pacing]
-              - temporal-id: scan-deadline
-                temporal-kind: deadline
-                time-domain: backend_time
-                clock-authority: backend.adapter.clock
-                event-points: [submit, deadline, end]
+                duration_ref: cadence.scan.per-episode
+                reset_boundary: participant episode reset starts a new cadence segment
+                replay_boundary: replay preserves the original cadence segment id
+                randomization_basis: seeded participant episode sequence
+                ordering_basis: participant episode sequence
+                backend_disclosure_refs: [timing.remote-pacing]
+              - temporal_id: scan-deadline
+                temporal_kind: deadline
+                time_domain: backend_time
+                clock_authority: backend.adapter.clock
+                event_points: [submit, deadline, end]
                 description: backend must realize the scan before the participant timeout
-                duration-ref: duration.scan.deadline
-                reset-boundary: participant episode reset clears the deadline state
-                replay-boundary: replay reports the original deadline state
-                ordering-basis: backend event order relation
-                backend-disclosure-refs: [timing.remote-pacing, timing.serialization]
-              - temporal-id: scan-dwell
-                temporal-kind: dwell
-                time-domain: scenario_time
-                clock-authority: scenario.author.clock
-                event-points: [start, end]
+                duration_ref: duration.scan.deadline
+                reset_boundary: participant episode reset clears the deadline state
+                replay_boundary: replay reports the original deadline state
+                ordering_basis: backend event order relation
+                backend_disclosure_refs: [timing.remote-pacing, timing.serialization]
+              - temporal_id: scan-dwell
+                temporal_kind: dwell
+                time_domain: scenario_time
+                clock_authority: scenario.author.clock
+                event_points: [start, end]
                 description: target service must remain in scope for the scan dwell window
-                window-ref: windows.maintenance
-                duration-ref: duration.scan.dwell
-                reset-boundary: participant episode reset clears dwell accumulation
-                replay-boundary: replay reports original dwell evidence
-                ordering-basis: scenario window relation
-                backend-disclosure-refs: [timing.serialization]
-              - temporal-id: scan-latency
-                temporal-kind: latency
-                time-domain: backend_time
-                clock-authority: backend.adapter.clock
-                event-points: [submit, observed]
+                window_ref: windows.maintenance
+                duration_ref: duration.scan.dwell
+                reset_boundary: participant episode reset clears dwell accumulation
+                replay_boundary: replay reports original dwell evidence
+                ordering_basis: scenario window relation
+                backend_disclosure_refs: [timing.serialization]
+              - temporal_id: scan-latency
+                temporal_kind: latency
+                time_domain: backend_time
+                clock_authority: backend.adapter.clock
+                event_points: [submit, observed]
                 description: terminal observation latency is measured from submit to observation delivery
-                duration-ref: duration.scan.observation-latency
-                reset-boundary: participant episode reset closes the latency segment
-                replay-boundary: replay reports original latency evidence
-                ordering-basis: backend delivery order relation
-                backend-disclosure-refs: [timing.remote-pacing]
-              - temporal-id: scan-window
-                temporal-kind: time_window
-                time-domain: wall_clock_time
-                clock-authority: study.coordinator.clock
-                event-points: [window_open, window_close]
+                duration_ref: duration.scan.observation-latency
+                reset_boundary: participant episode reset closes the latency segment
+                replay_boundary: replay reports original latency evidence
+                ordering_basis: backend delivery order relation
+                backend_disclosure_refs: [timing.remote-pacing]
+              - temporal_id: scan-window
+                temporal_kind: time_window
+                time_domain: wall_clock_time
+                clock_authority: study.coordinator.clock
+                event_points: [window_open, window_close]
                 description: study-level collection window for participant attempts
-                window-ref: study.collection-window
-                reset-boundary: participant episode reset does not change the study window
-                replay-boundary: replay reports the original study window
-                randomization-basis: study coordinator seed and cohort assignment
-                ordering-basis: study coordinator window relation
-                backend-disclosure-refs: [timing.remote-pacing]
-            backend-timing-disclosures:
-              - disclosure-id: timing.remote-pacing
-                disclosure-kind: pacing
-                support-mode: disclosed_limitation
+                window_ref: study.collection-window
+                reset_boundary: participant episode reset does not change the study window
+                replay_boundary: replay reports the original study window
+                randomization_basis: study coordinator seed and cohort assignment
+                ordering_basis: study coordinator window relation
+                backend_disclosure_refs: [timing.remote-pacing]
+            backend_timing_disclosures:
+              - disclosure_id: timing.remote-pacing
+                disclosure_kind: pacing
+                support_mode: disclosed_limitation
                 description: remote backend pacing is best-effort and not portable semantic time
-                affected-temporal-ids:
+                affected_temporal_ids:
                   - scan-schedule
                   - scan-cadence
                   - scan-deadline
                   - scan-latency
                   - scan-window
                 limitations: [wall-clock pacing may lag backend event time]
-              - disclosure-id: timing.serialization
-                disclosure-kind: serialization
-                support-mode: disclosed_limitation
+              - disclosure_id: timing.serialization
+                disclosure_kind: serialization
+                support_mode: disclosed_limitation
                 description: backend serializes scan realization before emitting terminal observation
-                affected-temporal-ids: [scan-deadline, scan-dwell]
+                affected_temporal_ids: [scan-deadline, scan-dwell]
                 limitations: [serialized order is disclosed as realized order, not simultaneity]
         agents:
           red-agent:
             entity: red-team
             actions: [scan]
-            observation-boundaries: [red-view]
-        observation-boundaries:
+            observation_boundaries: [red-view]
+        observation_boundaries:
           red-view:
-            projection-basis: participant-local projection
-            observable-refs: [nodes.web.services.http]
-            hidden-refs: []
-            evidence-refs: [evidence.scan-output]
-            redaction-policy: no hidden refs in this SEM-213 fixture
-            latency-profile: terminal observation emitted after backend realization
+            projection_basis: participant-local projection
+            observable_refs: [nodes.web.services.http]
+            hidden_refs: []
+            evidence_refs: [evidence.scan-output]
+            redaction_policy: no hidden refs in this SEM-213 fixture
+            latency_profile: terminal observation emitted after backend realization
         """
     )
 
@@ -224,7 +224,7 @@ def test_temporal_action_contract_declares_sem_213_and_compiles_it() -> None:
 
 def test_temporal_claims_require_time_domain_and_clock_authority() -> None:
     missing_clock_authority = _scenario_yaml().replace(
-        "        clock-authority: scenario.author.clock\n",
+        "        clock_authority: scenario.author.clock\n",
         "",
         1,
     )
@@ -235,8 +235,8 @@ def test_temporal_claims_require_time_domain_and_clock_authority() -> None:
 
 def test_temporal_backend_disclosure_refs_fail_closed() -> None:
     unknown_backend_disclosure = _scenario_yaml().replace(
-        "backend-disclosure-refs: [timing.remote-pacing]",
-        "backend-disclosure-refs: [timing.unknown]",
+        "backend_disclosure_refs: [timing.remote-pacing]",
+        "backend_disclosure_refs: [timing.unknown]",
         1,
     )
 
@@ -246,30 +246,30 @@ def test_temporal_backend_disclosure_refs_fail_closed() -> None:
 
 def test_temporal_contract_shapes_fail_closed() -> None:
     deadline_without_deadline_point = _scenario_yaml().replace(
-        "event-points: [submit, deadline, end]",
-        "event-points: [submit, end]",
+        "event_points: [submit, deadline, end]",
+        "event_points: [submit, end]",
         1,
     )
     dwell_without_sustained_window = _scenario_yaml().replace(
-        "event-points: [start, end]",
-        "event-points: [start]",
+        "event_points: [start, end]",
+        "event_points: [start]",
         1,
     )
     window_without_seed_basis = _scenario_yaml().replace(
-        "        randomization-basis: study coordinator seed and cohort assignment\n",
+        "        randomization_basis: study coordinator seed and cohort assignment\n",
         "",
         1,
     )
     temporal_claim_without_disclosure = _scenario_yaml().replace(
-        "backend-disclosure-refs: [timing.remote-pacing]",
-        "backend-disclosure-refs: []",
+        "backend_disclosure_refs: [timing.remote-pacing]",
+        "backend_disclosure_refs: []",
         1,
     )
     bounded_disclosure_without_bound = (
         _scenario_yaml()
         .replace(
-            "support-mode: disclosed_limitation",
-            "support-mode: bounded",
+            "support_mode: disclosed_limitation",
+            "support_mode: bounded",
             1,
         )
         .replace(

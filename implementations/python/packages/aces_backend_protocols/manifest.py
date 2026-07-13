@@ -18,6 +18,29 @@ from aces_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
 from .capabilities import BackendManifest
 
 
+def _evaluator_capability_payload(manifest: BackendManifest) -> dict[str, Any] | None:
+    evaluator = manifest.evaluator
+    if evaluator is None:
+        return None
+    payload: dict[str, Any] = {
+        "name": evaluator.name,
+        "supported_sections": sorted(evaluator.supported_sections),
+        "supports_scoring": evaluator.supports_scoring,
+        "supports_objectives": evaluator.supports_objectives,
+        "constraints": dict(evaluator.constraints),
+    }
+    if {"propositions", "assertions"}.issubset(evaluator.supported_sections):
+        payload.update(
+            supported_predicate_families=sorted(evaluator.supported_predicate_families),
+            supported_quantifiers=sorted(evaluator.supported_quantifiers),
+            supported_truth_outcomes=sorted(evaluator.supported_truth_outcomes),
+            supported_evidence_channels=sorted(evaluator.supported_evidence_channels),
+            supported_time_domains=sorted(evaluator.supported_time_domains),
+            preserves_binding_provenance=evaluator.preserves_binding_provenance,
+        )
+    return payload
+
+
 def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Model:
     """Render a backend manifest as the authoritative v2 contract model."""
 
@@ -45,6 +68,11 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
             )
             for declaration in manifest.realization_support
         ],
+        realization_envelope=(
+            manifest.realization_envelope.identity.model_dump(mode="json")
+            if manifest.realization_envelope is not None
+            else None
+        ),
         concept_bindings=[
             ConceptBindingEntryModel(scope=binding.scope, family=binding.family)
             for binding in manifest.concept_bindings
@@ -67,7 +95,7 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                     "name": manifest.orchestrator.name,
                     "supported_sections": sorted(manifest.orchestrator.supported_sections),
                     "supports_workflows": manifest.orchestrator.supports_workflows,
-                    "supports_condition_refs": manifest.orchestrator.supports_condition_refs,
+                    "supports_assertion_refs": manifest.orchestrator.supports_assertion_refs,
                     "supports_inject_bindings": manifest.orchestrator.supports_inject_bindings,
                     "supported_workflow_features": sorted(
                         feature for feature in manifest.orchestrator.supported_workflow_features
@@ -80,17 +108,7 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
                 if manifest.orchestrator is not None
                 else None
             ),
-            "evaluator": (
-                {
-                    "name": manifest.evaluator.name,
-                    "supported_sections": sorted(manifest.evaluator.supported_sections),
-                    "supports_scoring": manifest.evaluator.supports_scoring,
-                    "supports_objectives": manifest.evaluator.supports_objectives,
-                    "constraints": dict(manifest.evaluator.constraints),
-                }
-                if manifest.evaluator is not None
-                else None
-            ),
+            "evaluator": _evaluator_capability_payload(manifest),
             "participant_runtime": (
                 {
                     "name": manifest.participant_runtime.name,
@@ -136,4 +154,7 @@ def backend_manifest_v2_model(manifest: BackendManifest) -> BackendManifestV2Mod
 def backend_manifest_payload(manifest: BackendManifest) -> dict[str, Any]:
     """Render a backend manifest as JSON-ready data."""
 
-    return backend_manifest_v2_model(manifest).model_dump(mode="json")
+    payload = backend_manifest_v2_model(manifest).model_dump(mode="json")
+    if payload.get("realization_envelope") is None:
+        payload.pop("realization_envelope", None)
+    return payload

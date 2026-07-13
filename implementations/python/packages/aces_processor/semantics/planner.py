@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Protocol, TypeVar
 
+from aces_contracts.addressing import require_compiled_address
+
 
 class DependencyKind(str, Enum):
     """Typed runtime dependency semantics."""
@@ -42,9 +44,9 @@ class SupportsDependencySemantics(Protocol):
 
 
 def canonical_resource_identity(address: str) -> tuple[str, ...]:
-    """Return the canonical identity tuple for a compiled resource address."""
+    """Return an opaque, validated ordering key for a compiled address."""
 
-    return tuple(part for part in address.split(".") if part)
+    return (require_compiled_address(address),)
 
 
 def dependency_graph(

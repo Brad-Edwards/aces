@@ -1,4 +1,11 @@
 {
   "name": "concrete-scenario",
-  "description": "a fully concrete instantiated scenario with no unresolved references"
+  "description": "a fully concrete instantiated scenario with no unresolved references",
+  "instantiation_provenance": {
+  "authored_digest": {
+    "profile": "aces-sdl-semantic/v1",
+    "algorithm": "sha256",
+    "value": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}
 }

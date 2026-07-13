@@ -36,6 +36,8 @@ hook).
   `prose` family of the `specs/` root.
 - `concept-authority/` — concept-family and controlled-vocabulary
   authority artifacts (governed by ADR-012)
+- `evolution/` — ecosystem versioning, deprecation, removal, and migration
+  governance for GOV-901, GOV-902, and GOV-903 (governed by ADR-075)
 - `sdl/` — the language-neutral normative SDL authoring specification
   (the catalog set the published `contracts/schemas/sdl/` schemas must
   agree with; governed by ADR-001 and ADR-009)
@@ -44,3 +46,6 @@ hook).
 - `supply-chain/` — normative prose for the Packaging & Supply Chain
   wave, including the reusable-asset trust/authenticity/integrity policy
   (GOV-913, governed by ADR-071)
+Revision-pinned lineage and derivation records live under the normative
+`contracts/provenance/` authority registered by ADR-019; explanatory lineage
+pages consume that record rather than defining a parallel source registry.

@@ -1,0 +1,169 @@
+{
+  "$defs": {
+    "CompletenessConcernModel": {
+      "additionalProperties": false,
+      "properties": {
+        "concern_id": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Concern Id",
+          "type": "string"
+        },
+        "definition": {
+          "minLength": 1,
+          "title": "Definition",
+          "type": "string"
+        },
+        "semantic_owner": {
+          "minLength": 1,
+          "title": "Semantic Owner",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "concern_id",
+        "title",
+        "definition",
+        "semantic_owner"
+      ],
+      "title": "CompletenessConcernModel",
+      "type": "object"
+    },
+    "CompletenessProfileModel": {
+      "additionalProperties": false,
+      "properties": {
+        "dispositions": {
+          "patternProperties": {
+            "^[a-z][a-z0-9-]*$": {
+              "$ref": "#/$defs/ProfileDisposition"
+            }
+          },
+          "title": "Dispositions",
+          "type": "object"
+        },
+        "example_refs": {
+          "items": {
+            "pattern": "^[^/\\s][^\\s]*$",
+            "type": "string"
+          },
+          "title": "Example Refs",
+          "type": "array"
+        },
+        "explicit_non_claims": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Explicit Non Claims",
+          "type": "array"
+        },
+        "intended_claim": {
+          "minLength": 1,
+          "title": "Intended Claim",
+          "type": "string"
+        },
+        "profile_id": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile_id",
+        "title",
+        "intended_claim",
+        "explicit_non_claims",
+        "dispositions"
+      ],
+      "title": "CompletenessProfileModel",
+      "type": "object"
+    },
+    "ProfileDisposition": {
+      "enum": [
+        "required",
+        "allowed-underspecified",
+        "excluded"
+      ],
+      "title": "ProfileDisposition",
+      "type": "string"
+    }
+  },
+  "$id": "https://aces.dev/schemas/scientific-completeness-taxonomy-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "concerns": {
+      "items": {
+        "$ref": "#/$defs/CompletenessConcernModel"
+      },
+      "minItems": 1,
+      "title": "Concerns",
+      "type": "array"
+    },
+    "profile_family": {
+      "const": "scientific-scenario-completeness",
+      "default": "scientific-scenario-completeness",
+      "title": "Profile Family",
+      "type": "string"
+    },
+    "profiles": {
+      "items": {
+        "$ref": "#/$defs/CompletenessProfileModel"
+      },
+      "minItems": 1,
+      "title": "Profiles",
+      "type": "array"
+    },
+    "revision": {
+      "pattern": "^[a-z0-9][a-z0-9.-]*$",
+      "title": "Revision",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "scientific-completeness-taxonomy/v1",
+      "default": "scientific-completeness-taxonomy/v1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "revision",
+    "concerns",
+    "profiles"
+  ],
+  "title": "ScientificCompletenessTaxonomyModel",
+  "type": "object",
+  "x-aces-invariants": [
+    {
+      "description": "Concern and profile ids must be unique, and every profile disposition map must exactly cover the taxonomy concern set.",
+      "id": "scientific-completeness-taxonomy-rectangular",
+      "inputs": [
+        {
+          "contract_id": "scientific-completeness-taxonomy-v1",
+          "instance_path": "#"
+        }
+      ],
+      "level": "error",
+      "validator": "aces_contracts.scientific_completeness.ScientificCompletenessTaxonomyModel"
+    }
+  ],
+  "x-aces-semantic-profile": {
+    "contract_id": "scientific-completeness-taxonomy-v1",
+    "entry_schema_contract_id": "aces-semantic-invariants-v1",
+    "entry_schema_pointer": "#/$defs/AcesSemanticInvariantEntryModel",
+    "id": "aces-semantic-invariants-v1",
+    "keyword": "x-aces-invariants",
+    "required": true,
+    "uri": "https://aces.dev/schemas/semantic-invariants/v1"
+  }
+}

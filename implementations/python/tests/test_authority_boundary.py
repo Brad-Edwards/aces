@@ -4,12 +4,17 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from tools.check_authority_boundary import (  # noqa: E402
+    _REQUIRED_ARTIFACT_FAMILY_FIELDS,
+    _REQUIRED_AUTHORITY_ROOT_FIELDS,
+    _REQUIRED_NON_NORMATIVE_ROOT_FIELDS,
+    _REQUIRED_SCHEMA_AUTHORITY_FIELDS,
     ADR_AUTHORITY_RELATIVE_PATH,
     ADR_REFS,
     ADR_SEAM_REF,
@@ -25,6 +30,26 @@ from tools.check_authority_boundary import (  # noqa: E402
     SPECS_README_RELATIVE_PATH,
     evaluate_authority_boundary,
 )
+
+
+def _policy_without_entry_field(section: str, index: int, field: str) -> str:
+    """Return `_GOOD_POLICY` with one field deleted from a list entry.
+
+    Parses the canonical YAML, drops `section[index][field]`, and re-dumps.
+    Used to exercise every field of a `_REQUIRED_*_FIELDS` tuple (rather than a
+    single hand-picked field) so dropping a field from the tuple in production
+    leaves a failing test.
+    """
+    data = yaml.safe_load(_GOOD_POLICY)
+    del data[section][index][field]
+    return yaml.safe_dump(data, sort_keys=False)
+
+
+def _policy_without_schema_authority_field(field: str) -> str:
+    data = yaml.safe_load(_GOOD_POLICY)
+    del data["schema_authority"][field]
+    return yaml.safe_dump(data, sort_keys=False)
+
 
 # --------------------------------------------------------------------------- #
 # Canonical, well-formed authority-boundary YAML used as the positive case    #
@@ -55,10 +80,18 @@ authority_roots:
     root: contracts/profiles/
     authority: capability profile declarations
     family: profiles
+  - id: normative_realization_envelopes
+    root: contracts/realization-envelopes/
+    authority: configuration-bound backend realization envelope declarations
+    family: realization-envelopes
   - id: normative_concept_authority
     root: contracts/concept-authority/
     authority: concept-family and controlled-vocabulary authority artifacts
     family: concept-authority
+  - id: normative_provenance
+    root: contracts/provenance/
+    authority: revision-pinned lineage and derivation records
+    family: provenance
 non_normative_roots:
   - id: reference_implementations
     root: implementations/
@@ -78,9 +111,6 @@ non_normative_roots:
   - id: tooling
     root: tools/
     note: tooling
-  - id: changelog_fragments
-    root: changelog.d/
-    note: towncrier fragments
 legacy_top_level_dirs:
   - schemas
   - conformance
@@ -99,11 +129,19 @@ normative_artifact_families:
     family: governance-guidance
     requirement_refs:
       - AUT-811
+  - id: deprecation_records
+    artifact: specs/evolution/deprecation-records.yaml
+    authority: ecosystem deprecation and lifecycle records
+    family: deprecation-records
+    requirement_refs:
+      - GOV-902
 """
 
 # ADR-009 is immutable; the drift guard requires every authority-root token
 # (specs/, contracts/schemas/, contracts/fixtures/, contracts/profiles/,
-# contracts/concept-authority/) to appear in its text. ADR-019 is the
+# contracts/realization-envelopes/, contracts/concept-authority/,
+# contracts/provenance/) to appear
+# across the immutable ADR pair. ADR-019 is the
 # canonical-seam decision — required by adr_refs and by the drift guard.
 _GOOD_ADR_AUTHORITY = """# ADR-009: Normative Artifact Authority and Repository Structure
 
@@ -144,7 +182,9 @@ _GOOD_AUTHORITY_ROOTS: tuple[str, ...] = (
     "contracts/schemas",
     "contracts/fixtures",
     "contracts/profiles",
+    "contracts/realization-envelopes",
     "contracts/concept-authority",
+    "contracts/provenance",
 )
 _GOOD_NON_NORMATIVE_ROOTS: tuple[str, ...] = (
     "implementations",
@@ -153,7 +193,6 @@ _GOOD_NON_NORMATIVE_ROOTS: tuple[str, ...] = (
     "research",
     "notes",
     "tools",
-    "changelog.d",
 )
 
 
@@ -175,7 +214,7 @@ def _seed_repo(
     *,
     policy_body: str | None = _GOOD_POLICY,
     adr_body: str | None = _GOOD_ADR_AUTHORITY,
-    seam_body: str | None = "ADR-019 stub mentioning concept-authority.\n",
+    seam_body: str | None = "ADR-019 stub mentioning concept-authority, realization-envelopes, and provenance.\n",
     contracts_readme: str | None = _GOOD_CONTRACTS_README,
     specs_readme: str | None = _GOOD_SPECS_README,
     authority_roots: tuple[str, ...] = _GOOD_AUTHORITY_ROOTS,
@@ -200,7 +239,8 @@ def _seed_repo(
     if seam_body is not None:
         # ADR-019 governs the manifest YAML; the drift guard unions it with
         # ADR-009. The seed writes a stub that mentions `concept-authority`
-        # so the canonical positive case clears the drift check.
+        # and `realization-envelopes` so the canonical positive case clears
+        # the drift check.
         seam_relative = "docs/decisions/adrs/adr-019-normative-authority-boundary-manifest.md"
         seam_path = tmp_path / seam_relative
         seam_path.parent.mkdir(parents=True, exist_ok=True)
@@ -224,6 +264,13 @@ def _seed_repo(
     guidance_path.parent.mkdir(parents=True, exist_ok=True)
     if not guidance_path.exists():
         guidance_path.write_text("profile: aces-agent-guidance\n", encoding="utf-8")
+
+    # The canonical deprecation-records ledger (GOV-902) is likewise classified
+    # in _GOOD_POLICY and must exist on disk for the positive case.
+    deprecation_path = tmp_path / "specs" / "evolution" / "deprecation-records.yaml"
+    deprecation_path.parent.mkdir(parents=True, exist_ok=True)
+    if not deprecation_path.exists():
+        deprecation_path.write_text("policy: ecosystem-deprecation-records\n", encoding="utf-8")
 
     for root in authority_roots:
         _materialise_root(tmp_path, root)
@@ -290,15 +337,17 @@ def test_policy_value_is_normative_artifact_authority() -> None:
     assert POLICY_VALUE == "normative-artifact-authority"
 
 
-def test_canonical_authority_root_ids_cover_all_five_families() -> None:
-    # The five families ADR-009 names: prose, schemas, fixtures, profiles,
-    # concept-authority. A YAML that drops any of these fails the gate.
+def test_canonical_authority_root_ids_cover_every_family() -> None:
+    # ADR-009 and ADR-019 name these authority families. A YAML that drops any
+    # of them fails the gate.
     assert set(CANONICAL_AUTHORITY_ROOT_IDS) == {
         "normative_prose",
         "normative_schemas",
         "normative_fixtures",
         "normative_profiles",
+        "normative_realization_envelopes",
         "normative_concept_authority",
+        "normative_provenance",
     }
 
 
@@ -371,6 +420,12 @@ _TOP_LEVEL_FIELD_CASES = [
             "    family: governance-guidance\n"
             "    requirement_refs:\n"
             "      - AUT-811\n"
+            "  - id: deprecation_records\n"
+            "    artifact: specs/evolution/deprecation-records.yaml\n"
+            "    authority: ecosystem deprecation and lifecycle records\n"
+            "    family: deprecation-records\n"
+            "    requirement_refs:\n"
+            "      - GOV-902\n"
         ),
     ),
 ]
@@ -476,15 +531,16 @@ def test_legacy_top_level_dirs_non_list_value_is_rejected(tmp_path: Path) -> Non
     assert _flagged(failures, "authority-boundary-field-type")
 
 
-def test_authority_root_required_id_is_rejected(tmp_path: Path) -> None:
-    # An authority_roots entry missing `id` is a malformation, not a default.
-    body = _GOOD_POLICY.replace(
-        "  - id: normative_prose\n    root: specs/\n    authority: normative prose specifications\n    family: prose\n",
-        "  - root: specs/\n    authority: normative prose specifications\n    family: prose\n",
-        1,
-    )
+@pytest.mark.parametrize("field", _REQUIRED_AUTHORITY_ROOT_FIELDS)
+def test_authority_root_required_fields_are_rejected(tmp_path: Path, field: str) -> None:
+    # An authority_roots entry missing ANY required field is a malformation, not
+    # a default. Parametrised over the full tuple so dropping a field from
+    # _REQUIRED_AUTHORITY_ROOT_FIELDS in production leaves a failing test.
+    body = _policy_without_entry_field("authority_roots", 0, field)
     failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
-    assert _flagged(failures, "authority-boundary-entry-field")
+    assert any(
+        f.rule_id == "authority-boundary-entry-field" and f"required field: {field}" in f.message for f in failures
+    ), f"expected an entry-field failure naming {field!r}; got: {[f.render() for f in failures]}"
 
 
 def test_authority_root_must_end_with_slash(tmp_path: Path) -> None:
@@ -518,7 +574,7 @@ def test_authority_root_must_not_traverse_parent(tmp_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Canonical family coverage -- ADR-009's five families MUST each have an      #
+# Canonical family coverage -- every governed family MUST have an entry.      #
 # entry. Reordering or renaming an id is a drift.                             #
 # --------------------------------------------------------------------------- #
 
@@ -624,18 +680,15 @@ def test_authority_root_with_only_keep_marker_is_flagged_as_empty(tmp_path: Path
     )
 
 
-def test_non_normative_root_required_id_is_rejected(tmp_path: Path) -> None:
-    # Symmetric coverage to test_authority_root_required_id_is_rejected:
-    # a non_normative_roots entry missing `id` must fail the entry-field
-    # check. Without this test the entry-field validation loop in
-    # _check_non_normative_roots is entirely untested.
-    body = _GOOD_POLICY.replace(
-        "  - id: reference_implementations\n    root: implementations/\n    note: reference code only\n",
-        "  - root: implementations/\n    note: reference code only\n",
-        1,
-    )
+@pytest.mark.parametrize("field", _REQUIRED_NON_NORMATIVE_ROOT_FIELDS)
+def test_non_normative_root_required_fields_are_rejected(tmp_path: Path, field: str) -> None:
+    # Symmetric full-tuple coverage for _check_non_normative_roots: every
+    # required field of a non_normative_roots entry must be enforced.
+    body = _policy_without_entry_field("non_normative_roots", 0, field)
     failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
-    assert _flagged(failures, "authority-boundary-entry-field")
+    assert any(
+        f.rule_id == "authority-boundary-entry-field" and f"required field: {field}" in f.message for f in failures
+    ), f"expected an entry-field failure naming {field!r}; got: {[f.render() for f in failures]}"
 
 
 def test_legacy_dir_present_at_root_is_flagged(tmp_path: Path) -> None:
@@ -818,6 +871,18 @@ def test_contracts_readme_missing_adr_019_reference_is_flagged(tmp_path: Path) -
 # --------------------------------------------------------------------------- #
 # schema_authority block invariants.                                          #
 # --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("field", _REQUIRED_SCHEMA_AUTHORITY_FIELDS)
+def test_schema_authority_required_subfields_are_rejected(tmp_path: Path, field: str) -> None:
+    # Dropping any required sub-field from an otherwise-present schema_authority
+    # block must fail — the whole-block-absence case (_TOP_LEVEL_FIELD_CASES)
+    # does not cover per-sub-field requiredness.
+    body = _policy_without_schema_authority_field(field)
+    failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
+    assert any(
+        f.rule_id == "authority-boundary-entry-field" and f"required field: {field}" in f.message for f in failures
+    ), f"expected a schema_authority entry-field failure naming {field!r}; got: {[f.render() for f in failures]}"
 
 
 def test_schema_authority_normative_root_must_match_authority_root(tmp_path: Path) -> None:
@@ -1182,15 +1247,22 @@ _NAF_BLOCK = (
     "    family: governance-guidance\n"
     "    requirement_refs:\n"
     "      - AUT-811\n"
+    "  - id: deprecation_records\n"
+    "    artifact: specs/evolution/deprecation-records.yaml\n"
+    "    authority: ecosystem deprecation and lifecycle records\n"
+    "    family: deprecation-records\n"
+    "    requirement_refs:\n"
+    "      - GOV-902\n"
 )
 
 
 def test_canonical_artifact_family_binding_pins_agent_guidance() -> None:
-    # The agent-guidance AUT-811 profile is the pinned governance-guidance
-    # artifact; a rename of the constant surfaces in the suite rather than
-    # silently relaxing the gate.
+    # The agent-guidance AUT-811 profile and the GOV-902 deprecation-records
+    # ledger are the pinned artifact families; a rename of either constant
+    # surfaces in the suite rather than silently relaxing the gate.
     assert CANONICAL_ARTIFACT_FAMILY_BINDING == {
         "specs/agent-guidance/agent-guidance.yaml": "governance-guidance",
+        "specs/evolution/deprecation-records.yaml": "deprecation-records",
     }
 
 
@@ -1215,11 +1287,16 @@ def test_artifact_family_relabel_is_flagged(tmp_path: Path) -> None:
     assert _flagged(failures, "authority-boundary-artifact-family-canonical-binding")
 
 
-def test_artifact_family_missing_required_field_is_flagged(tmp_path: Path) -> None:
-    # An entry missing `family` is a malformation, not a default.
-    body = _GOOD_POLICY.replace("    family: governance-guidance\n", "", 1)
+@pytest.mark.parametrize("field", _REQUIRED_ARTIFACT_FAMILY_FIELDS)
+def test_artifact_family_missing_required_field_is_flagged(tmp_path: Path, field: str) -> None:
+    # An artifact-family entry missing ANY required field is a malformation, not
+    # a default — full-tuple coverage over _REQUIRED_ARTIFACT_FAMILY_FIELDS.
+    body = _policy_without_entry_field("normative_artifact_families", 0, field)
     failures = evaluate_authority_boundary(_seed_repo(tmp_path, policy_body=body))
-    assert _flagged(failures, "authority-boundary-artifact-family-entry-field")
+    assert any(
+        f.rule_id == "authority-boundary-artifact-family-entry-field" and f"required field: {field}" in f.message
+        for f in failures
+    ), f"expected an artifact-family entry-field failure naming {field!r}; got: {[f.render() for f in failures]}"
 
 
 def test_artifact_family_entry_must_be_mapping(tmp_path: Path) -> None:

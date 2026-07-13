@@ -440,15 +440,21 @@ def _build_reference_map(scenario) -> dict[tuple[str, str], list[str]]:
         if feat.dependencies:
             refs[("features", name)] = list(feat.dependencies)
 
-    # Events -> conditions, injects
+    # Events -> precondition assertions, injects
     for name, event in scenario.events.items():
         targets = []
-        if event.conditions:
-            targets.extend(event.conditions)
+        if event.assertions:
+            targets.extend(event.assertions)
         if event.injects:
             targets.extend(event.injects)
         if targets:
             refs[("events", name)] = targets
+
+    for name, proposition in scenario.propositions.items():
+        refs[("propositions", name)] = [*proposition.subjects, *proposition.evidence_requirements]
+
+    for name, assertion in scenario.assertions.items():
+        refs[("assertions", name)] = [assertion.proposition]
 
     # Scripts -> events
     for name, script in scenario.scripts.items():
@@ -502,7 +508,7 @@ def _build_reference_map(scenario) -> dict[tuple[str, str], list[str]]:
         if obj.depends_on:
             targets.extend(obj.depends_on)
         if obj.success:
-            targets.extend(obj.success.conditions)
+            targets.extend(obj.success.assertions)
         if targets:
             refs[("objectives", name)] = targets
 

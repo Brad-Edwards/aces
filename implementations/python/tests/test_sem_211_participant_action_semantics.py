@@ -48,108 +48,108 @@ def _scenario_yaml() -> str:
         entities:
           red-team:
             role: red
-        action-contracts:
+        action_contracts:
           scan:
-            semantic-version: 1.0.0
-            lifecycle-state: active
-            behavioral-granularity: atomic
-            procedure-basis: nmap service discovery
-            realization-profile: backend-declared
-            fidelity-claim: records participant discovery intent and terminal observation
+            semantic_version: 1.0.0
+            lifecycle_state: active
+            behavioral_granularity: atomic
+            procedure_basis: nmap service discovery
+            realization_profile: backend-declared
+            fidelity_claim: records participant discovery intent and terminal observation
             preconditions:
-              - precondition-id: authority-in-scope
-                precondition-class: authority
+              - precondition_id: authority-in-scope
+                precondition_class: authority
                 description: red participant is authorized to scan the web service
-                support-refs: [agents.red-agent, nodes.web.services.http]
-              - precondition-id: target-service-present
-                precondition-class: target
+                support_refs: [agents.red-agent, nodes.web.services.http]
+              - precondition_id: target-service-present
+                precondition_class: target
                 description: target service exists in the participant action scope
-                support-refs: [nodes.web.services.http]
-              - precondition-id: backend-can-realize-scan
-                precondition-class: realization
+                support_refs: [nodes.web.services.http]
+              - precondition_id: backend-can-realize-scan
+                precondition_class: realization
                 description: backend can realize the scan action contract
-                support-refs: [backend.participant-runtime]
+                support_refs: [backend.participant-runtime]
             effects:
-              - effect-id: discover-http-service
-                effect-class: intended_effect
+              - effect_id: discover-http-service
+                effect_class: intended_effect
                 description: participant may discover the web HTTP service
-                target-refs: [nodes.web.services.http]
-              - effect-id: scan-shared-knowledge-update
-                effect-class: side_effect
+                target_refs: [nodes.web.services.http]
+              - effect_id: scan-shared-knowledge-update
+                effect_class: side_effect
                 description: participant-local service knowledge is updated
-                target-refs: [nodes.web.services.http]
-              - effect-id: terminal-scan-observation
-                effect-class: observation_effect
+                target_refs: [nodes.web.services.http]
+              - effect_id: terminal-scan-observation
+                effect_class: observation_effect
                 description: terminal scan observation is emitted for the participant
-                evidence-refs: [evidence.scan-output]
-              - effect-id: participant-view-discovers-service
-                effect-class: visibility_effect
+                evidence_refs: [evidence.scan-output]
+              - effect_id: participant-view-discovers-service
+                effect_class: visibility_effect
                 description: participant view marks the web node discovered
-                target-refs: [nodes.web]
-              - effect-id: scan-evidence
-                effect-class: evidence_effect
+                target_refs: [nodes.web]
+              - effect_id: scan-evidence
+                effect_class: evidence_effect
                 description: scan tool output is retained as run evidence
-                evidence-refs: [evidence.scan-output]
-              - effect-id: no-hidden-truth-change
-                effect-class: no_effect
+                evidence_refs: [evidence.scan-output]
+              - effect_id: no-hidden-truth-change
+                effect_class: no_effect
                 description: scan does not expose hidden adjudication material
-            state-transition-effects: [participant knowledge expands]
-            failure-classes:
+            state_transition_effects: [participant knowledge expands]
+            failure_classes:
               - precondition_unsatisfied
               - unsupported_action
               - target_unavailable
               - timeout
               - backend_error
               - unknown
-            backend-failure-mappings:
-              - backend-error-code: backend.timeout
-                failure-class: timeout
+            backend_failure_mappings:
+              - backend_error_code: backend.timeout
+                failure_class: timeout
                 diagnostic: backend reported action timeout
-              - backend-error-code: backend.not-supported
-                failure-class: unsupported_action
+              - backend_error_code: backend.not-supported
+                failure_class: unsupported_action
                 diagnostic: backend lacks the scan action implementation
             interactions:
-              - interaction-class: shared_state_change
+              - interaction_class: shared_state_change
                 target: nodes.web.services.http
                 rationale: scan reads and updates participant-visible service knowledge
-                shared-state-refs: [nodes.web.services.http]
-        observation-boundaries:
+                shared_state_refs: [nodes.web.services.http]
+        observation_boundaries:
           red-view:
-            projection-basis: participant-local projection over observed services
-            observable-refs: []
-            hidden-refs: [nodes.web]
-            evidence-refs: [evidence.scan-output]
-            redaction-policy: hidden refs never project without explicit disclosure
-            latency-profile: terminal observation emitted after state transition commit
-            view-rules:
-              - information-ref: nodes.web
-                boundary-class: observable_resource
+            projection_basis: participant-local projection over observed services
+            observable_refs: []
+            hidden_refs: [nodes.web]
+            evidence_refs: [evidence.scan-output]
+            redaction_policy: hidden refs never project without explicit disclosure
+            latency_profile: terminal observation emitted after state transition commit
+            view_rules:
+              - information_ref: nodes.web
+                boundary_class: observable_resource
                 disposition: hidden
-                visibility-basis: service is not known before terminal scan output
-              - information-ref: evidence.scan-output
-                boundary-class: archival_evidence
+                visibility_basis: service is not known before terminal scan output
+              - information_ref: evidence.scan-output
+                boundary_class: archival_evidence
                 disposition: evidence_only
-                visibility-basis: archival run evidence reference
-                evidence-refs: [evidence.scan-output]
-            view-transitions:
-              - transition-id: discover-web-service
-                transition-kind: discovery
-                information-ref: nodes.web
+                visibility_basis: archival run evidence reference
+                evidence_refs: [evidence.scan-output]
+            view_transitions:
+              - transition_id: discover-web-service
+                transition_kind: discovery
+                information_ref: nodes.web
                 trigger: scan terminal observation
-                effective-from: episode-step:scan-0001:terminal-observation
-                effective-order: 30
-                history-event-type: observation_emitted
-                action-instance-id: scan-0001
-                from-disposition: hidden
-                to-disposition: discovered
-                evidence-refs: [evidence.scan-output]
+                effective_from: episode-step:scan-0001:terminal-observation
+                effective_order: 30
+                history_event_type: observation_emitted
+                action_instance_id: scan-0001
+                from_disposition: hidden
+                to_disposition: discovered
+                evidence_refs: [evidence.scan-output]
                 certainty: high
-                latency-profile: terminal observation latency
+                latency_profile: terminal observation latency
         agents:
           red-agent:
             entity: red-team
             actions: [scan]
-            observation-boundaries: [red-view]
+            observation_boundaries: [red-view]
         """
     )
 
@@ -250,24 +250,24 @@ def _history_payloads_for_action_result(result: ParticipantActionResult) -> list
 
 def _scenario_with_hidden_action_result_ref() -> str:
     scenario = _scenario_yaml().replace(
-        "hidden-refs: [nodes.web]",
-        "hidden-refs: [nodes.web, content.private-answer-key]",
+        "hidden_refs: [nodes.web]",
+        "hidden_refs: [nodes.web, content.private-answer-key]",
     )
     return scenario.replace(
-        "              - information-ref: evidence.scan-output\n"
-        "                boundary-class: archival_evidence\n"
+        "              - information_ref: evidence.scan-output\n"
+        "                boundary_class: archival_evidence\n"
         "                disposition: evidence_only\n"
-        "                visibility-basis: archival run evidence reference\n"
-        "                evidence-refs: [evidence.scan-output]",
-        "              - information-ref: content.private-answer-key\n"
-        "                boundary-class: private_answer_key\n"
+        "                visibility_basis: archival run evidence reference\n"
+        "                evidence_refs: [evidence.scan-output]",
+        "              - information_ref: content.private-answer-key\n"
+        "                boundary_class: private_answer_key\n"
         "                disposition: hidden\n"
-        "                visibility-basis: adjudication-only hidden truth\n"
-        "              - information-ref: evidence.scan-output\n"
-        "                boundary-class: archival_evidence\n"
+        "                visibility_basis: adjudication-only hidden truth\n"
+        "              - information_ref: evidence.scan-output\n"
+        "                boundary_class: archival_evidence\n"
         "                disposition: evidence_only\n"
-        "                visibility-basis: archival run evidence reference\n"
-        "                evidence-refs: [evidence.scan-output]",
+        "                visibility_basis: archival run evidence reference\n"
+        "                evidence_refs: [evidence.scan-output]",
     )
 
 
@@ -331,7 +331,7 @@ def test_action_contract_declares_sem_211_classes_and_compiles_them():
 
 
 def test_legacy_string_preconditions_are_not_sem_211_contracts():
-    scenario = _scenario_yaml().replace("precondition-class: authority", "precondition-class: legacy_string")
+    scenario = _scenario_yaml().replace("precondition_class: authority", "precondition_class: legacy_string")
 
     with pytest.raises(SDLParseError) as excinfo:
         parse_sdl(scenario)
@@ -1021,8 +1021,8 @@ def test_action_result_summary_evidence_refs_must_be_grounded_in_reported_result
 
 def test_action_result_refs_must_be_authorized_by_observation_boundary():
     scenario = _scenario_with_hidden_action_result_ref().replace(
-        "support-refs: [agents.red-agent, nodes.web.services.http]",
-        "support-refs: [agents.red-agent, nodes.web.services.http, content.private-answer-key]",
+        "support_refs: [agents.red-agent, nodes.web.services.http]",
+        "support_refs: [agents.red-agent, nodes.web.services.http, content.private-answer-key]",
     )
     model = compile_runtime_model(parse_sdl(scenario))
     hidden_authority = ParticipantActionPreconditionResult(
@@ -1070,9 +1070,9 @@ def test_action_result_refs_must_be_authorized_by_observation_boundary():
 
 def test_action_result_effect_targets_must_be_authorized_by_observation_boundary():
     scenario = _scenario_with_hidden_action_result_ref().replace(
-        "        target-refs: [nodes.web.services.http]\n      - effect-id: terminal-scan-observation",
-        "        target-refs: [nodes.web.services.http, content.private-answer-key]\n"
-        "      - effect-id: terminal-scan-observation",
+        "        target_refs: [nodes.web.services.http]\n      - effect_id: terminal-scan-observation",
+        "        target_refs: [nodes.web.services.http, content.private-answer-key]\n"
+        "      - effect_id: terminal-scan-observation",
     )
     model = compile_runtime_model(parse_sdl(scenario))
     result = ParticipantActionResult(
@@ -1114,8 +1114,8 @@ def test_action_result_effect_targets_must_be_authorized_by_observation_boundary
 
 def test_action_result_evidence_refs_must_be_authorized_by_observation_boundary():
     scenario = _scenario_with_hidden_action_result_ref().replace(
-        "evidence-refs: [evidence.scan-output]",
-        "evidence-refs: [evidence.scan-output, content.private-answer-key]",
+        "evidence_refs: [evidence.scan-output]",
+        "evidence_refs: [evidence.scan-output, content.private-answer-key]",
         1,
     )
     model = compile_runtime_model(parse_sdl(scenario))

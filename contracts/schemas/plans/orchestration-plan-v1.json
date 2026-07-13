@@ -8,11 +8,28 @@
           "type": "string"
         },
         "address": {
+          "allOf": [
+            {
+              "pattern": "^orchestration\\."
+            }
+          ],
+          "maxLength": 2048,
+          "minLength": 3,
+          "not": {
+            "pattern": "[^a-z0-9_.-]"
+          },
+          "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
           "title": "Address",
           "type": "string"
         },
         "ordering_dependencies": {
           "items": {
+            "maxLength": 2048,
+            "minLength": 3,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
             "type": "string"
           },
           "title": "Ordering Dependencies",
@@ -25,12 +42,26 @@
         },
         "refresh_dependencies": {
           "items": {
+            "maxLength": 2048,
+            "minLength": 3,
+            "not": {
+              "pattern": "[^a-z0-9_.-]"
+            },
+            "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
             "type": "string"
           },
           "title": "Refresh Dependencies",
           "type": "array"
         },
         "resource_type": {
+          "enum": [
+            "event",
+            "inject",
+            "inject-binding",
+            "script",
+            "story",
+            "workflow"
+          ],
           "title": "Resource Type",
           "type": "string"
         }
@@ -65,6 +96,12 @@
     },
     "startup_order": {
       "items": {
+        "maxLength": 2048,
+        "minLength": 3,
+        "not": {
+          "pattern": "[^a-z0-9_.-]"
+        },
+        "pattern": "^(?:[a-z0-9][a-z0-9_-]{0,63}|__private)(?:\\.(?:[a-z0-9][a-z0-9_-]{0,63}|__private))+$",
         "type": "string"
       },
       "title": "Startup Order",

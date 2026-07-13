@@ -2,7 +2,7 @@
 
 :func:`analyze_objective_semantics` is the single name-level source of truth
 for the SDL declarative-objective construct — actor binding, target resolution,
-success interpretation (over ``conditions`` observable state, per ADR-073), the
+success interpretation over backend-neutral assertions, the
 optional window (delegated to :func:`aces_sdl.semantics.objectives.analyze_objective_window`),
 and the acyclic ``depends_on`` ordering relation. It returns normalized
 references with their dependency-role tags, the per-objective ordering/refresh
@@ -72,8 +72,7 @@ class ObjectiveReference:
     reference_kind: ObjectiveReferenceKind
     source_name: str
     dependency_roles: tuple[ObjectiveDependencyRole, ...] = ()
-    #: Set on ``SUCCESS`` references to disambiguate the assessment-pipeline
-    #: namespace (a condition and a metric may legally share an SDL name).
+    #: Set on ``SUCCESS`` references to preserve the assertion namespace.
     success_resource_kind: AssessmentResourceKind | None = None
     window_reference_kind: ObjectiveWindowReferenceKind | None = None
     workflow_name: str | None = None
@@ -140,13 +139,9 @@ class ObjectiveSemanticAnalysis:
 
 @dataclass(frozen=True)
 class AssessmentResourceCatalog:
-    """The observable-state section an objective's success may name (post ADR-073).
+    """The backend-neutral assertion section objective success may name."""
 
-    Objective success references ``conditions`` only; the OCR scoring sections
-    (metrics/evaluations/tlos/goals) were removed by ADR-073.
-    """
-
-    conditions: Mapping[str, object]
+    assertions: Mapping[str, object]
 
 
 @dataclass(frozen=True)
@@ -221,7 +216,7 @@ def _has_cycle(graph: Mapping[str, list[str]]) -> bool:
 
 
 _SUCCESS_REFERENCE_SECTIONS: tuple[tuple[str, AssessmentResourceKind, str], ...] = (
-    ("conditions", AssessmentResourceKind.CONDITION, "objective.success-condition-undeclared"),
+    ("assertions", AssessmentResourceKind.ASSERTION, "objective.success-assertion-undeclared"),
 )
 
 
@@ -349,7 +344,7 @@ def _analyze_success(
     assessment_resources: AssessmentResourceCatalog,
     unresolved: Callable[[object], bool],
 ) -> tuple[list[ObjectiveReference], list[ObjectiveIssue], list[str]]:
-    """Resolve ``success.conditions`` (observable state, per ADR-073).
+    """Resolve backend-neutral ``success.assertions``.
 
     Resolved names are kind-qualified before they enter the derived
     ordering/refresh tuples, preserving the kind-qualifier seam even though
@@ -360,7 +355,7 @@ def _analyze_success(
     issues: list[ObjectiveIssue] = []
     resolved: list[str] = []
     success = getattr(objective, "success", None)
-    sections = ((assessment_resources.conditions, _SUCCESS_REFERENCE_SECTIONS[0]),)
+    sections = ((assessment_resources.assertions, _SUCCESS_REFERENCE_SECTIONS[0]),)
     for section, (attr, kind, code) in sections:
         for ref_name in getattr(success, attr, []) or []:
             if unresolved(ref_name):

@@ -6,19 +6,24 @@ Part of the SemanticValidator mixin composition; see __init__.py.
 from collections import defaultdict
 
 from .._base import is_variable_ref
+from .._declarations import DeclarationIndex, build_declaration_index
 from .._errors import SDLValidationError
-from .._runtime_service_families import collect_qualified_runtime_family_refs
+from .._runtime_service_families import (
+    RuntimeFamilyReference,
+    iter_runtime_family_references,
+)
 from ..entities import flatten_entities
 from ..nodes import NodeType
-from ..scenario import Scenario
-from ._support import _NODES_PREFIX
+from ..scenario import ScenarioContent
 
 
 class _ValidatorCore:
-    def __init__(self, scenario: Scenario) -> None:
+    def __init__(self, scenario: ScenarioContent) -> None:
         self._s = scenario
         self._errors: list[str] = []
         self._warnings: list[str] = []
+        self._declaration_index: DeclarationIndex | None = None
+        self._runtime_references: dict[str, RuntimeFamilyReference] | None = None
 
     def _err(self, msg: str) -> None:
         self._errors.append(msg)
@@ -43,46 +48,16 @@ class _ValidatorCore:
     def _all_entity_names(self) -> set[str]:
         return set(flatten_entities(self._s.entities).keys())
 
-    def _qualified_service_refs(self) -> set[str]:
-        refs: set[str] = set()
+    def _split_node_service_ref(self, ref: object) -> tuple[str, str] | None:
+        """Resolve a qualified service ref without parsing rendered delimiters."""
+
+        if not isinstance(ref, str):
+            return None
         for node_name, node in self._s.nodes.items():
             for service in node.services:
-                if service.name:
-                    refs.add(f"nodes.{node_name}.services.{service.name}")
-        return refs
-
-    @staticmethod
-    def _split_node_service_ref(ref: object) -> tuple[str, str] | None:
-        """Split ``nodes.<node>.services.<service>`` into node/service parts.
-
-        Node names may contain dots (for example ``wazuh.manager``), so service
-        refs must be partitioned on the ``.services.`` marker instead of split
-        by position.
-        """
-        if not isinstance(ref, str) or not ref.startswith(_NODES_PREFIX):
-            return None
-        node_name, sep, service_name = ref[len(_NODES_PREFIX) :].partition(".services.")
-        if not sep or not node_name or not service_name:
-            return None
-        return node_name, service_name
-
-    def _qualified_runtime_refs(self) -> set[str]:
-        """Qualified refs for node-scoped runtime inventories.
-
-        These let a top-level relationship endpoint resolve to a runtime
-        service family or stable child record. This keeps runtime-observed
-        logical state targetable without promoting those records to top-level
-        SDL sections.
-        """
-        return collect_qualified_runtime_family_refs(self._s)
-
-    def _qualified_acl_refs(self) -> set[str]:
-        refs: set[str] = set()
-        for infra_name, infra in self._s.infrastructure.items():
-            for acl in infra.acls:
-                if acl.name:
-                    refs.add(f"infrastructure.{infra_name}.acls.{acl.name}")
-        return refs
+                if service.name and ref == f"nodes.{node_name}.services.{service.name}":
+                    return node_name, service.name
+        return None
 
     def _workflow_step_refs(self) -> set[str]:
         refs: set[str] = set()
@@ -99,89 +74,9 @@ class _ValidatorCore:
         and are required for infrastructure entries because those keys
         intentionally mirror node names.
         """
-        index: dict[str, set[str]] = defaultdict(set)
-        self._populate_named_ref_index(index)
-        if not targetable:
-            return {alias: set(candidates) for alias, candidates in index.items()}
-        return self._filter_targetable_aliases(index)
-
-    _NAMED_REF_TOP_LEVEL_SECTIONS = (
-        ("nodes", True),
-        ("features", True),
-        ("conditions", True),
-        ("vulnerabilities", True),
-        ("infrastructure", False),
-        ("content", True),
-        ("accounts", True),
-        ("agents", True),
-        ("action_contracts", True),
-        ("observation_boundaries", True),
-        ("behavior_specifications", True),
-        ("evidence_requirements", True),
-        ("objectives", True),
-        ("workflows", True),
-        ("relationships", True),
-        ("variables", True),
-        ("injects", True),
-        ("events", True),
-        ("scripts", True),
-        ("stories", True),
-    )
-
-    _TARGETABLE_DISALLOWED_PREFIXES = (
-        "variables.",
-        "evidence_requirements.",
-        "objectives.",
-        "workflows.",
-    )
-
-    def _populate_named_ref_index(self, index: dict[str, set[str]]) -> None:
-        self._add_top_level_section_aliases(index)
-        self._add_entity_aliases(index)
-        self._add_content_item_aliases(index)
-        self._add_qualified_aliases(index)
-
-    def _add_top_level_section_aliases(self, index: dict[str, set[str]]) -> None:
-        for section_name, allow_bare in self._NAMED_REF_TOP_LEVEL_SECTIONS:
-            for name in getattr(self._s, section_name):
-                canonical = f"{section_name}.{name}"
-                index[canonical].add(canonical)
-                if allow_bare:
-                    index[name].add(canonical)
-
-    def _add_entity_aliases(self, index: dict[str, set[str]]) -> None:
-        for entity_name in self._all_entity_names():
-            canonical = f"entities.{entity_name}"
-            index[canonical].add(canonical)
-            index[entity_name].add(canonical)
-
-    def _add_content_item_aliases(self, index: dict[str, set[str]]) -> None:
-        for content_name, content in self._s.content.items():
-            for item in content.items:
-                if not item.name:
-                    continue
-                canonical = f"content.{content_name}.items.{item.name}"
-                index[canonical].add(canonical)
-                index[item.name].add(canonical)
-
-    def _add_qualified_aliases(self, index: dict[str, set[str]]) -> None:
-        for qualified_refs in (
-            self._qualified_service_refs(),
-            self._qualified_acl_refs(),
-            self._qualified_runtime_refs(),
-        ):
-            for ref in qualified_refs:
-                index[ref].add(ref)
-
-    def _filter_targetable_aliases(self, index: dict[str, set[str]]) -> dict[str, set[str]]:
-        filtered: dict[str, set[str]] = {}
-        for alias, candidates in index.items():
-            keep = {
-                candidate for candidate in candidates if not candidate.startswith(self._TARGETABLE_DISALLOWED_PREFIXES)
-            }
-            if keep:
-                filtered[alias] = keep
-        return filtered
+        if self._declaration_index is None:
+            raise RuntimeError("declaration index must be built before reference validation")
+        return self._declaration_index.reference_aliases(targetable=targetable)
 
     def _operating_scope_ref_index(self) -> dict[str, set[str]]:
         """Build the alias map for ACT-601 ``Agent.operating_scope``.
@@ -235,11 +130,13 @@ class _ValidatorCore:
         # service names. The service-ref helper only emits names declared
         # on VM nodes (a service on a switch is meaningless), so no extra
         # filtering is needed here.
-        for ref in self._qualified_service_refs():
-            index[ref].add(ref)
-            tail = ref.rsplit(".", 1)[-1]
-            if tail:
-                index[tail].add(ref)
+        for node_name, node in self._s.nodes.items():
+            for service in node.services:
+                if not service.name:
+                    continue
+                ref = f"nodes.{node_name}.services.{service.name}"
+                index[ref].add(ref)
+                index[service.name].add(ref)
 
     def _add_operating_scope_content_aliases(self, index: dict[str, set[str]]) -> None:
         # Content: sections and items keep the unrestricted aliasing from
@@ -291,6 +188,8 @@ class _ValidatorCore:
         """Run all validation passes and raise on errors."""
         self._errors = []
         self._warnings = []
+        self._declaration_index = build_declaration_index(self._s, raise_on_collision=False)
+        self._errors.extend(self._declaration_index.collision_errors)
 
         # OCR passes
         self._verify_nodes()
@@ -335,7 +234,10 @@ class _ValidatorCore:
         self._verify_relationship_proxy_upstreams()
         self._verify_agents()
         self._verify_participant_behavior()
+        self._verify_propositions_and_assertions()
         self._verify_objectives()
+        self._verify_objective_success_assertions()
+        self._verify_precondition_assertion_uses()
         self._verify_workflows()
         self._verify_participant_outcomes()
         self._verify_evidence_requirements()
@@ -365,35 +267,17 @@ class _ValidatorCore:
                     "supplies defaults."
                 )
 
-    @staticmethod
-    def _split_runtime_ref(ref: object, *, surface: str) -> tuple[str, str] | None:
-        """Split ``nodes.<node>.runtime.<surface>.<rest>`` into (node, rest).
+    def _runtime_reference(self, ref: object) -> RuntimeFamilyReference | None:
+        """Resolve an exact registered runtime address without delimiter parsing."""
 
-        Module composition rewrites the node segment to a dotted namespaced
-        form (``shared.web``), so we cannot split on ``.`` and index by
-        position. Partition on the surface marker instead so the node name
-        survives an arbitrary number of namespace prefixes.
-        """
-        if not isinstance(ref, str) or not ref.startswith(_NODES_PREFIX):
+        if not isinstance(ref, str):
             return None
-        marker = f".runtime.{surface}."
-        head, sep, tail = ref[len(_NODES_PREFIX) :].partition(marker)
-        if not sep or not head or not tail:
-            return None
-        return head, tail
-
-    def _node_runtime(self, node_name: str) -> object | None:
-        """Return the ``runtime`` surface for ``node_name``, or None."""
-        node = self._s.nodes.get(node_name)
-        return getattr(node, "runtime", None) if node is not None else None
-
-    @staticmethod
-    def _database_service_id_from_tail(tail: str) -> str | None:
-        """Service id from a ``<svc_id>`` (1 part) or ``<svc_id>.databases.<db_id>`` (3) tail."""
-        tail_parts = tail.split(".")
-        if len(tail_parts) == 1 or (len(tail_parts) == 3 and tail_parts[1] == "databases"):
-            return tail_parts[0]
-        return None
+        if self._runtime_references is None:
+            references: dict[str, RuntimeFamilyReference] = {}
+            for reference in iter_runtime_family_references(self._s):
+                references.setdefault(reference.address, reference)
+            self._runtime_references = references
+        return self._runtime_references.get(ref)
 
     def _resolve_database_service_ref(self, ref: object) -> object | None:
         """Resolve a qualified ``nodes.<node>.runtime.database_services.<id>`` ref.
@@ -402,15 +286,12 @@ class _ValidatorCore:
         resolve to the owning :class:`RuntimeDatabaseService` so a relationship's
         ``database_access`` can be checked against it.
         """
-        split = self._split_runtime_ref(ref, surface="database_services")
-        if split is None:
+        reference = self._runtime_reference(ref)
+        if reference is None or reference.family.collection_name != "database_services":
             return None
-        node_name, tail = split
-        svc_id = self._database_service_id_from_tail(tail)
-        runtime = self._node_runtime(node_name)
-        if svc_id is None or runtime is None:
+        if reference.collection_path not in {(), ("databases",)}:
             return None
-        return next((s for s in runtime.database_services if s.database_service_id == svc_id), None)
+        return reference.owning_item
 
     def _resolve_application_ref(self, ref: object) -> object | None:
         """Resolve a qualified ``nodes.<node>.runtime.applications.<id>`` ref.
@@ -419,11 +300,11 @@ class _ValidatorCore:
         ``database_access`` source endpoint can be confirmed to be a runtime
         application (ADR-029 §4).
         """
-        split = self._split_runtime_ref(ref, surface="applications")
-        if split is None:
+        reference = self._runtime_reference(ref)
+        if (
+            reference is None
+            or reference.family.collection_name != "applications"
+            or reference.item is not reference.owning_item
+        ):
             return None
-        node_name, tail = split
-        runtime = self._node_runtime(node_name)
-        if "." in tail or runtime is None:
-            return None
-        return next((a for a in runtime.applications if a.application_id == tail), None)
+        return reference.item

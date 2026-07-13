@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from copy import deepcopy
 
+from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.planning import ProvisioningPlan
 from aces_contracts.runtime_state import ApplyResult, RealizationProvenanceEntry, RuntimeSnapshot
@@ -17,6 +18,7 @@ from .participant_result_contracts import (
     participant_runtime_history_transition_diagnostics,
     participant_runtime_state_contract_diagnostics,
 )
+from .proposition_truth_contracts import proposition_truth_contract_diagnostics
 from .workflow_result_contracts import workflow_result_contract_diagnostics
 
 _BACKEND_CONTRACT_INVALID = "runtime.backend-contract-invalid"
@@ -56,6 +58,11 @@ def _call_backend_apply(
     backend_args = tuple(backend_snapshot if arg is snapshot else arg for arg in args)
     try:
         result = method(*backend_args)
+    except (TypeError, ValueError):
+        return _failed_apply_result(
+            baseline_snapshot,
+            _backend_contract_invalid(address, "Backend could not construct a valid apply result."),
+        )
     except Exception as exc:
         return _failed_apply_result(baseline_snapshot, _backend_call_failed(address, exc))
     return _finalize_backend_apply(
@@ -87,7 +94,14 @@ def _finalize_backend_apply(
     if invalid_message is not None:
         return _failed_apply_result(baseline_snapshot, _backend_contract_invalid(address, invalid_message))
     assert isinstance(result, ApplyResult)
-    contract_diagnostics = _snapshot_contract_diagnostics(result.snapshot)
+    contract_diagnostics = _snapshot_address_contract_diagnostics(result.snapshot)
+    if not contract_diagnostics:
+        contract_diagnostics = _changed_address_transition_diagnostics(
+            result,
+            baseline_snapshot,
+        )
+    if not contract_diagnostics:
+        contract_diagnostics = _snapshot_contract_diagnostics(result.snapshot)
     if not contract_diagnostics:
         contract_diagnostics = _snapshot_transition_contract_diagnostics(baseline_snapshot, result.snapshot)
     realization_provenance: tuple[RealizationProvenanceEntry, ...] = ()
@@ -125,7 +139,7 @@ def _backend_call_failed(address: str, exc: Exception) -> Diagnostic:
     return _failure_diagnostic(
         "runtime.backend-call-failed",
         address,
-        f"Backend method '{address}' raised {type(exc).__name__}: {exc}.",
+        f"Backend method '{address}' did not complete ({type(exc).__name__}).",
     )
 
 
@@ -205,13 +219,74 @@ def _apply_result_details_violation(result: ApplyResult, address: str) -> str | 
 
 
 def _snapshot_contract_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic]:
-    diagnostics = workflow_result_contract_diagnostics(snapshot)
-    if diagnostics:
-        return diagnostics
-    diagnostics = evaluation_result_contract_diagnostics(snapshot)
-    if diagnostics:
-        return diagnostics
-    return participant_runtime_state_contract_diagnostics(snapshot)
+    checks = (
+        workflow_result_contract_diagnostics,
+        evaluation_result_contract_diagnostics,
+        proposition_truth_contract_diagnostics,
+        participant_runtime_state_contract_diagnostics,
+    )
+    diagnostics: list[Diagnostic] = []
+    for check in checks:
+        diagnostics = check(snapshot)
+        if diagnostics:
+            break
+    return diagnostics
+
+
+def _snapshot_address_contract_diagnostics(snapshot: RuntimeSnapshot) -> list[Diagnostic]:
+    for map_key, entry in snapshot.entries.items():
+        try:
+            require_compiled_address(map_key, field_name="snapshot map key")
+            require_compiled_address(entry.address)
+        except ValueError:
+            return [
+                _backend_contract_invalid(
+                    "runtime.snapshot",
+                    "Backend snapshot contains a non-canonical resource address.",
+                )
+            ]
+        if map_key != entry.address:
+            return [
+                _backend_contract_invalid(
+                    "runtime.snapshot",
+                    "Backend snapshot map key does not equal its embedded address.",
+                )
+            ]
+    return []
+
+
+def _changed_address_transition_diagnostics(
+    result: ApplyResult,
+    baseline_snapshot: RuntimeSnapshot,
+) -> list[Diagnostic]:
+    admitted = _snapshot_carrier_addresses(baseline_snapshot) | _snapshot_carrier_addresses(result.snapshot)
+    if set(result.changed_addresses) - admitted:
+        return [
+            _backend_contract_invalid(
+                "runtime.changed-addresses",
+                "Backend reported a changed address outside the snapshot transition.",
+            )
+        ]
+    return []
+
+
+def _snapshot_carrier_addresses(snapshot: RuntimeSnapshot) -> set[str]:
+    carriers = (
+        snapshot.entries,
+        snapshot.orchestration_results,
+        snapshot.orchestration_history,
+        snapshot.evaluation_results,
+        snapshot.evaluation_history,
+        snapshot.proposition_truth_results,
+        snapshot.participant_episode_results,
+        snapshot.participant_episode_history,
+        snapshot.participant_behavior_history,
+        snapshot.shared_state_records,
+        snapshot.shared_state_history,
+        snapshot.joint_action_records,
+        snapshot.time_management_contexts,
+    )
+    return {str(address) for carrier in carriers for address in carrier}
 
 
 def _snapshot_transition_contract_diagnostics(

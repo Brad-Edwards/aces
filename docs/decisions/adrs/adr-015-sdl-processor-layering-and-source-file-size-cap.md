@@ -83,26 +83,34 @@ checker walks the AST of every changed `.py` file under each rule's
 `scope_root` and emits `layering-rule-violation` for any `import` or
 `from … import` of the forbidden top-level package or its submodules.
 
-### 2. 600-line cap on non-test source files
+### 2. 500-line cap on non-test source files
 
 No non-test, non-generated `.py` file under `implementations/python/packages/`
-shall exceed 600 lines, except for paths listed in
+shall exceed 500 lines, except for paths listed in
 `tools/policy/oversized_allowlist.yaml`.
 
-The allowlist is the inverse of the goal: each entry is technical debt to
-be drained. Each child PR of #3 splits its file and removes the entry.
-The tracker closes when the allowlist is empty.
+The 500-line value matches SonarCloud's S104 threshold, so a file either
+passes both the repo policy and the Sonar quality gate or fails both; there
+is no longer a 500–599 band that is repo-compliant but blocks the
+`dev → main` integration PR. (The cap was originally 600; see Amendments.)
 
-The fixed reference set — the 14 paths over the cap when this ADR landed —
-is a *code constant*, `_ADR015_INITIAL_OVERSIZED_FILES` in
+The allowlist is the inverse of the goal: each entry is technical debt to
+be drained. A split PR splits its file and removes the entry. The
+modularity tracker closes when the allowlist is empty.
+
+The fixed reference set — the paths over the cap when the current cap was
+adopted — is a *code constant*, `_ADR015_INITIAL_OVERSIZED_FILES` in
 `tools/policy/repo_policy.py`, **not** config in `adr_policy.yaml`. Keeping
 the locked set in PR-editable config would let one PR satisfy "the allowlist
 only shrinks" by editing the allowlist and the locked set together; pinning
-it in the policy module means adding a 15th entry requires a diff to the
+it in the policy module means adding an entry requires a diff to the
 checker code, which PR review scrutinises as policy rather than as data
 noise. The allowlist must be a subset of that constant — no new entry may be
-added; a file over the cap that wasn't one of the initial set must be split,
-not allow-listed. Enforcement:
+added; a file over the cap that wasn't one of the reference set must be
+split, not allow-listed. Lowering the cap re-baselines both the constant and
+the allowlist to the files over the new cap at that time (a code-constant
+diff, PR-scrutinised the same way); the shrink-only rule then continues from
+the new baseline. Enforcement:
 
 - `_check_oversized` — emits `oversized-source-file` for an over-cap,
   non-allowlisted changed file.
@@ -170,14 +178,14 @@ defensively. That would be a separate ADR.
 - The dependency between `aces_sdl` and `aces_processor` is a DAG,
   enforced by CI.
 - Each subsequent file split inherits the layering invariant for free.
-- The cap creates a forcing function: a file that wants to grow past 600
+- The cap creates a forcing function: a file that wants to grow past 500
   lines must justify the split or the allowlist entry.
 - The allowlist is self-documenting debt; its size measures remaining
   modularity work.
 
 ### Negative
 
-- Fourteen subsequent PRs are needed to drain the allowlist.
+- A subsequent PR is needed to drain each allowlist entry.
 - `docs/api/processor-semantics.rst` is rescoped to planner only; a new
   `docs/api/sdl-semantics.rst` documents the moved modules. Bookmarks to
   the processor-semantics page still resolve, to a smaller page.
@@ -188,6 +196,12 @@ defensively. That would be a separate ADR.
   re-introduce a layering bug the current rule doesn't capture. Mitigation:
   each new package introduction should consider whether it needs its own
   `layering_rules` entry.
-- The 600-line cap is conservative; some cohesive modules may hit it. The
+- The 500-line cap is conservative; some cohesive modules may hit it. The
   allowlist gives an explicit, visible escape hatch. The cap can be tuned
   later if it proves too aggressive.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-12 | #561 | Lowered the non-test source-file cap from 600 to 500 lines to align with SonarCloud's S104 threshold, closing the 500–599 band where a file was repo-compliant but failed the Sonar quality gate at the `dev → main` integration PR (#545). Re-baselined `_ADR015_INITIAL_OVERSIZED_FILES` and `tools/policy/oversized_allowlist.yaml` to the files over the 500-line cap as of this amendment; the shrink-only rule continues from that new baseline. |

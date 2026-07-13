@@ -11,6 +11,7 @@ from ._base import (
     parse_bool_or_var,
     parse_enum_or_var,
 )
+from ._identifiers import require_portable_identifier
 
 _BYTE_UNITS = {
     "b": 1,
@@ -181,11 +182,7 @@ def require_symbol(value: str, *, field_name: str) -> str:
     Symbol-defining ids are reference targets, so they must be concrete: empty
     values and ``${var}`` placeholders are rejected.
     """
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{field_name} must be a non-empty string")
-    if is_variable_ref(value):
-        raise ValueError(f"{field_name} must be a stable identifier, not a variable placeholder")
-    return value
+    return require_portable_identifier(value, field_name=field_name)
 
 
 def absolute_path_or_var(value: str, *, field_name: str) -> str:

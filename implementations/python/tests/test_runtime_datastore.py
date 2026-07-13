@@ -43,7 +43,11 @@ from pydantic import ValidationError
 
 from aces.core.sdl.scenario import Scenario
 
-_PUBLISHED_SDL_SCHEMA_NAMES = ("instantiated-scenario-v1", "sdl-authoring-input-v1")
+_PUBLISHED_SDL_SCHEMA_NAMES = (
+    "instantiated-scenario-snapshot-v1",
+    "instantiated-scenario-v1",
+    "sdl-authoring-input-v1",
+)
 _DATASTORE_MAPPING_SCHEMA_FIELDS = {
     "date_detection",
     "description",
@@ -354,30 +358,30 @@ def test_datastore_cardinality_fields_accept_variable_refs() -> None:
         **_search_index_service(
             cluster={
                 "cluster_id": "wazuh-cluster",
-                "node_count": "${NODE_COUNT}",
-                "shard_total": "${SHARDS}",
-                "shard_primaries": "${PRIMARIES}",
-                "doc_count": "${DOCS}",
-                "store_size_bytes": "${BYTES}",
+                "node_count": "${node_count}",
+                "shard_total": "${shards}",
+                "shard_primaries": "${primaries}",
+                "doc_count": "${docs}",
+                "store_size_bytes": "${bytes}",
             },
             partitions=[
                 {
                     "partition_id": "wazuh-alerts",
                     "kind": "index",
-                    "shard_count": "${SHARDS}",
-                    "replica_count": "${REPLICAS}",
-                    "doc_count": "${DOCS}",
-                    "doc_count_deleted": "${DELETED}",
-                    "store_size_bytes": "${BYTES}",
+                    "shard_count": "${shards}",
+                    "replica_count": "${replicas}",
+                    "doc_count": "${docs}",
+                    "doc_count_deleted": "${deleted}",
+                    "store_size_bytes": "${bytes}",
                 }
             ],
         )
     )
 
     assert svc.cluster is not None
-    assert svc.cluster.doc_count == "${DOCS}"
-    assert svc.cluster.store_size_bytes == "${BYTES}"
-    assert svc.partitions[0].doc_count_deleted == "${DELETED}"
+    assert svc.cluster.doc_count == "${docs}"
+    assert svc.cluster.store_size_bytes == "${bytes}"
+    assert svc.partitions[0].doc_count_deleted == "${deleted}"
 
 
 def test_datastore_cluster_rejects_negative_cardinality() -> None:
@@ -491,8 +495,8 @@ def test_relational_and_open_tail_impose_no_profile() -> None:
 
 
 def test_variable_ref_data_model_is_exempt_from_guard() -> None:
-    svc = RuntimeDatastoreService(datastore_service_id="ds-var", data_model="${DATA_MODEL}")
-    assert svc.data_model == "${DATA_MODEL}"
+    svc = RuntimeDatastoreService(datastore_service_id="ds-var", data_model="${data_model}")
+    assert svc.data_model == "${data_model}"
 
 
 def test_variable_refs_for_mapping_and_template_links_are_exempt_from_resolution_guard() -> None:
@@ -501,7 +505,7 @@ def test_variable_refs_for_mapping_and_template_links_are_exempt_from_resolution
             mappings=[
                 {
                     "mapping_id": "deferred-mapping",
-                    "partition_ref": "${PARTITION_ID}",
+                    "partition_ref": "${partition_id}",
                     "top_level_field_count": 1,
                     "leaf_field_count": 1,
                 }
@@ -509,15 +513,15 @@ def test_variable_refs_for_mapping_and_template_links_are_exempt_from_resolution
             templates=[
                 {
                     "template_id": "deferred-template",
-                    "mapping_ref": "${MAPPING_ID}",
+                    "mapping_ref": "${mapping_id}",
                     "index_patterns": ["wazuh-*"],
                 }
             ],
         )
     )
 
-    assert svc.mappings[0].partition_ref == "${PARTITION_ID}"
-    assert svc.templates[0].mapping_ref == "${MAPPING_ID}"
+    assert svc.mappings[0].partition_ref == "${partition_id}"
+    assert svc.templates[0].mapping_ref == "${mapping_id}"
 
 
 # --------------------------------------------------------------------------- #
@@ -573,11 +577,11 @@ def test_mapping_and_template_reject_duplicate_local_lists() -> None:
 
 
 def test_mapping_and_template_ids_reject_variable_placeholders() -> None:
-    with pytest.raises(ValidationError, match="mapping_id must be a stable identifier"):
-        RuntimeDatastoreMapping(mapping_id="${MAPPING_ID}")
+    with pytest.raises(ValidationError, match="mapping_id must be a portable SDL identifier"):
+        RuntimeDatastoreMapping(mapping_id="${mapping_id}")
 
-    with pytest.raises(ValidationError, match="template_id must be a stable identifier"):
-        RuntimeDatastoreTemplate(template_id="${TEMPLATE_ID}")
+    with pytest.raises(ValidationError, match="template_id must be a portable SDL identifier"):
+        RuntimeDatastoreTemplate(template_id="${template_id}")
 
 
 def test_secret_named_setting_may_carry_scenario_value() -> None:
@@ -671,7 +675,7 @@ def _string_branch(schema_name: str) -> dict:
     string values (issue #500); the authoring contract still accepts them, so
     the two schemas now differ on every string branch.
     """
-    if schema_name == "instantiated-scenario-v1":
+    if schema_name in {"instantiated-scenario-v1", "instantiated-scenario-snapshot-v1"}:
         return {"type": "string", "not": {"pattern": VARIABLE_TOKEN_PATTERN}}
     return {"type": "string"}
 
@@ -787,8 +791,8 @@ def test_node_heap_bytes_accept_human_int_and_var() -> None:
     assert node.heap_init_bytes == 536_870_912
     assert node.heap_max_bytes == 1_073_741_824
 
-    var_node = RuntimeDatastoreNode(node_id="n2", heap_max_bytes="${HEAP}")
-    assert var_node.heap_max_bytes == "${HEAP}"
+    var_node = RuntimeDatastoreNode(node_id="n2", heap_max_bytes="${heap}")
+    assert var_node.heap_max_bytes == "${heap}"
 
 
 def test_node_rejects_heap_init_above_max() -> None:
@@ -797,13 +801,13 @@ def test_node_rejects_heap_init_above_max() -> None:
 
 
 def test_node_heap_ordering_exempt_for_variable_bounds() -> None:
-    node = RuntimeDatastoreNode(node_id="n1", heap_init_bytes="${INIT}", heap_max_bytes=1024)
-    assert node.heap_init_bytes == "${INIT}"
+    node = RuntimeDatastoreNode(node_id="n1", heap_init_bytes="${init}", heap_max_bytes=1024)
+    assert node.heap_init_bytes == "${init}"
 
 
 def test_node_memory_locked_parses_bool_and_var() -> None:
     assert RuntimeDatastoreNode(node_id="n1", memory_locked="true").memory_locked is True
-    assert RuntimeDatastoreNode(node_id="n2", memory_locked="${MLOCK}").memory_locked == "${MLOCK}"
+    assert RuntimeDatastoreNode(node_id="n2", memory_locked="${mlock}").memory_locked == "${mlock}"
 
 
 def test_engine_plugin_retains_per_plugin_version() -> None:
@@ -816,7 +820,7 @@ def test_engine_plugin_retains_per_plugin_version() -> None:
 
 def test_engine_plugin_id_must_be_stable_symbol() -> None:
     with pytest.raises(ValidationError, match="plugin_id"):
-        RuntimeDatastoreEnginePlugin(plugin_id="${PLUGIN}", name="x")
+        RuntimeDatastoreEnginePlugin(plugin_id="${plugin}", name="x")
     with pytest.raises(ValidationError, match="plugin_id"):
         RuntimeDatastoreEnginePlugin(plugin_id="", name="x")
 
@@ -846,7 +850,7 @@ def test_endpoint_role_rejects_unrecognized_value() -> None:
 
 def test_endpoint_id_must_be_stable_symbol() -> None:
     with pytest.raises(ValidationError, match="endpoint_id"):
-        RuntimeDatastoreNodeEndpoint(endpoint_id="${E}")
+        RuntimeDatastoreNodeEndpoint(endpoint_id="${e}")
 
 
 def test_endpoint_port_range_enforced() -> None:

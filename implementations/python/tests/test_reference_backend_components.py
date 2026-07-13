@@ -25,12 +25,27 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate:
+      kind: presence
+      property: runtime
+      semantic_ref: urn:aces:declared-property:runtime
+      operator: exists
+assertions:
+  health:
+    proposition: health
+    role: postcondition
+    polarity: positive
 entities:
   blue: {role: blue}
 objectives:
   validate:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   response:
     start: run
@@ -38,7 +53,7 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """
 
@@ -54,6 +69,7 @@ def _control_plane():
 def test_orchestrator_start_records_workflow_result_and_history():
     target, control_plane, execution_plan = _control_plane()
     control_plane.submit_provisioning(execution_plan.provisioning)
+    control_plane.submit_evaluation(execution_plan.evaluation)
 
     receipt = control_plane.submit_orchestration(execution_plan.orchestration)
     status = control_plane.get_operation(receipt.operation_id)

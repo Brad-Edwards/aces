@@ -27,3 +27,4 @@ def _find_repo_root() -> Path:
 
 REPO_ROOT = _find_repo_root()
 EXAMPLES_DIR = REPO_ROOT / "examples" / "scenarios"
+EXPERIMENTS_DIR = REPO_ROOT / "examples" / "experiments"

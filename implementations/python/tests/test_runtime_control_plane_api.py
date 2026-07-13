@@ -34,6 +34,13 @@ def _scenario(yaml_str: str):
     return parse_sdl(textwrap.dedent(yaml_str))
 
 
+def _admit_workflow_prerequisites(control_plane: RuntimeControlPlane, execution_plan: object) -> None:
+    provisioning = control_plane.submit_provisioning(execution_plan.provisioning)
+    evaluation = control_plane.submit_evaluation(execution_plan.evaluation)
+    assert provisioning.accepted, provisioning.diagnostics
+    assert evaluation.accepted, evaluation.diagnostics
+
+
 def _participant_operation_record(operation_id: str, participant_address: str) -> ControlPlaneOperationRecord:
     submitted_at = "2026-06-05T10:00:00Z"
     return ControlPlaneOperationRecord(
@@ -154,12 +161,20 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   validate:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   response:
     start: run
@@ -167,12 +182,13 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
     target = create_stub_target()
     execution_plan = plan(compile_runtime_model(scenario), target.manifest)
     control_plane = RuntimeControlPlane(target)
+    _admit_workflow_prerequisites(control_plane, execution_plan)
     app = create_control_plane_app(
         control_plane,
         security=_test_security(target.name),
@@ -228,12 +244,20 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   validate:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   response:
     start: run
@@ -241,12 +265,13 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
     target = create_stub_target()
     execution_plan = plan(compile_runtime_model(scenario), target.manifest)
     control_plane = RuntimeControlPlane(target)
+    _admit_workflow_prerequisites(control_plane, execution_plan)
     app = create_control_plane_app(
         control_plane,
         security=_test_security(target.name),
@@ -284,11 +309,13 @@ workflows:
     assert summary["target"] == target.name
     assert summary["resources"]["total"] >= 1
     assert summary["resources"]["by_domain"]["orchestration"] >= 1
-    assert summary["operations"]["by_state"]["succeeded"] == 1
-    assert summary["operations"]["recent"][0]["operation_id"] == receipt["operation_id"]
-    assert summary["operations"]["recent"][0]["diagnostic_count"] == 0
-    assert summary["operations"]["recent"][0]["diagnostic_codes"] == []
-    assert summary["operations"]["recent"][0]["changed_addresses"]
+    assert summary["operations"]["by_state"]["succeeded"] == 3
+    orchestration_record = next(
+        record for record in summary["operations"]["recent"] if record["operation_id"] == receipt["operation_id"]
+    )
+    assert orchestration_record["diagnostic_count"] == 0
+    assert orchestration_record["diagnostic_codes"] == []
+    assert orchestration_record["changed_addresses"]
     assert summary["runtime_surfaces"]["orchestration_results"] >= 1
     assert summary["runtime_surfaces"]["orchestration_history"] >= 1
     assert summary["audit"]["allowed"] >= 2
@@ -522,12 +549,20 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   validate:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   response:
     start: run
@@ -535,12 +570,13 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
     target = create_stub_target()
     execution_plan = plan(compile_runtime_model(scenario), target.manifest)
     control_plane = RuntimeControlPlane(target)
+    _admit_workflow_prerequisites(control_plane, execution_plan)
     app = create_control_plane_app(
         control_plane,
         security=_test_security(target.name),
@@ -595,12 +631,20 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   validate:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   response:
     start: run
@@ -609,12 +653,13 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
     target = create_stub_target()
     execution_plan = plan(compile_runtime_model(scenario), target.manifest)
     control_plane = RuntimeControlPlane(target)
+    _admit_workflow_prerequisites(control_plane, execution_plan)
     app = create_control_plane_app(
         control_plane,
         security=_test_security(target.name),
@@ -679,12 +724,20 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   validate:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   rollback:
     start: finish
@@ -699,14 +752,15 @@ workflows:
       run:
         type: objective
         objective: validate
-        compensate-with: rollback
-        on-success: finish
-        on-failure: finish
+        compensate_with: rollback
+        on_success: finish
+        on_failure: finish
       finish: {type: end}
 """)
     target = create_stub_target()
     execution_plan = plan(compile_runtime_model(scenario), target.manifest)
     control_plane = RuntimeControlPlane(target)
+    _admit_workflow_prerequisites(control_plane, execution_plan)
     app = create_control_plane_app(
         control_plane,
         security=_test_security(target.name),
@@ -796,12 +850,20 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   validate:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   rollback:
     start: finish
@@ -817,14 +879,15 @@ workflows:
       run:
         type: objective
         objective: validate
-        compensate-with: rollback
-        on-success: finish
-        on-failure: finish
+        compensate_with: rollback
+        on_success: finish
+        on_failure: finish
       finish: {type: end}
 """)
     target = create_stub_target()
     execution_plan = plan(compile_runtime_model(scenario), target.manifest)
     control_plane = RuntimeControlPlane(target)
+    _admit_workflow_prerequisites(control_plane, execution_plan)
     app = create_control_plane_app(
         control_plane,
         security=_test_security(target.name),

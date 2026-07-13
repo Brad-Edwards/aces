@@ -1,0 +1,40 @@
+{
+  "schema_version": "realization-envelope/v1",
+  "contract_id": "realization-envelope-v1",
+  "id": "libvirt-qemu.techvault-appliance.v1",
+  "expression": {
+    "schema_version": "realization-envelope/v1",
+    "id": "libvirt-qemu.techvault-appliance.expression.v1",
+    "scope": "scenario",
+    "domains": {},
+    "bindings": [],
+    "closure": []
+  },
+  "configuration": {
+    "mode": "techvault-appliance",
+    "configuration_digest": "sha256:227dc29681c61c341291ef4ef30b8c777e166103a5e76a74d87cc2164a7bf5ca",
+    "architecture": "x86_64",
+    "image_policy": "generated-initramfs-appliance",
+    "network_policy": "generated-appliance-network",
+    "supported_node_types": ["switch", "vm"],
+    "supported_os_families": ["linux"],
+    "supported_content_types": [],
+    "supported_account_features": [],
+    "supports_acls": false,
+    "memory_mib": {"minimum": 64, "maximum": 128},
+    "vcpus": {"minimum": 1, "maximum": 2}
+  },
+  "concerns": [
+    {"concern": "topology", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "libvirt-domain-network-readback", "transformations": []},
+    {"concern": "architecture", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "libvirt-domain-xml-readback", "transformations": []},
+    {"concern": "image", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "generated-initramfs-attachment-readback", "transformations": []},
+    {"concern": "resource-allocation", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "libvirt-domain-xml-readback", "transformations": []},
+    {"concern": "network", "disposition": "realized", "observation_strength": "daemon-observed", "mechanism": "libvirt-network-domain-xml-readback", "transformations": []},
+    {"concern": "content-placement", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
+    {"concern": "account-placement", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
+    {"concern": "feature-binding", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
+    {"concern": "service", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
+    {"concern": "acl", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []}
+  ],
+  "digest": "sha256:b0cdf9c60cf42a50782f0d417cd931462c4d630e35e7546734710219477622ed"
+}

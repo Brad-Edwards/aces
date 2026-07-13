@@ -19,6 +19,7 @@ from ._base import (
     parse_enum_or_var,
     parse_int_or_var,
 )
+from ._identifiers import OptionalPortableIdentifier
 
 MINIMUM_NODE_COUNT = 1
 DEFAULT_NODE_COUNT = 1
@@ -38,7 +39,7 @@ class ACLRule(SDLModel):
     traffic rules between network segments.
     """
 
-    name: str = ""
+    name: OptionalPortableIdentifier = ""
     direction: str = ""
     from_net: str = ""
     to_net: str = ""

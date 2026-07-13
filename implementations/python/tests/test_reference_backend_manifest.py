@@ -53,3 +53,5 @@ def test_manifest_declares_only_evidence_backed_contract_ids():
     stub = create_stub_manifest()
 
     assert reference.supported_contract_versions == stub.supported_contract_versions
+    assert "realization-envelope-v1" not in reference.supported_contract_versions
+    assert reference.realization_envelope is None

@@ -21,10 +21,12 @@ source_refs:
   - docs/explain/reference/documentation-style-guide.md
   - docs/explain/reference/normative-artifact-authority.md
   - docs/explain/sdl/language-service.md
+  - specs/sdl/scientific-scenario-completeness.md
 
 recommended_workflow:
   - aces_tool_surface
   - aces_agent_guidance
+  - aces_intended_use_profiles
   - sdl_overview
   - sdl_section_reference
   - sdl_completions
@@ -72,6 +74,20 @@ guidance:
       source_refs:
         - implementations/python/packages/aces_mcp/tools/operations.py
         - docs/decisions/adrs/adr-021-falsification-first-claim-evidence-gate.md
+
+    - id: valid-sdl-not-scientific-completeness
+      audience: [contributor, operator]
+      surfaces: [mcp, sdl, assessment, docs]
+      statement: >-
+        Structural and semantic SDL validity establishes only the valid-fragment
+        profile. Do not describe a scenario as deployable, participant-ready,
+        controlled, reproducible, conformant, or behaviorally equivalent unless
+        the separately versioned scientific-completeness assessment supports
+        that exact claim and its required external bindings.
+      source_refs:
+        - specs/sdl/scientific-scenario-completeness.md
+        - contracts/profiles/scientific-completeness/scientific-scenario-completeness-rev1.json
+        - contracts/profiles/scientific-completeness/delivery-assessment-2026-07-12.json
 
   invariants:
     - id: validate-before-return
@@ -154,6 +170,7 @@ guidance:
       source_refs:
         - docs/decisions/adrs/adr-021-falsification-first-claim-evidence-gate.md
         - docs/explain/sdl/limitations.md
+        - specs/sdl/scientific-scenario-completeness.md
 
     - id: canonical-verification-graph
       audience: [contributor]

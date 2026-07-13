@@ -33,10 +33,14 @@ REPO_CONTRACTS = REPO_ROOT / "contracts"
 _CORPUS_PREFIX = "aces_contracts/_corpus/"
 _FAMILY_PROBES = {
     "profiles": "aces_contracts/_corpus/profiles/backend/provisioning-only.json",
+    "scientific-completeness": "aces_contracts/_corpus/profiles/scientific-completeness/scientific-scenario-completeness-rev1.json",
     "fixtures": "aces_contracts/_corpus/fixtures/",
     "concept-authority": "aces_contracts/_corpus/concept-authority/controlled-vocabularies-v1.json",
     "schemas": "aces_contracts/_corpus/schemas/",
+    "provenance": "aces_contracts/_corpus/provenance/sdl-lineage-ledger-v1.json",
 }
+
+_NOTICE_PATH = "aces_contracts/_corpus/provenance/THIRD_PARTY_NOTICES.md"
 
 _UV = shutil.which("uv")
 requires_uv = pytest.mark.skipif(_UV is None, reason="uv toolchain not available")
@@ -99,6 +103,14 @@ def test_built_wheel_bundles_each_corpus_family(built_wheel: Path, family: str):
 
 
 @requires_uv
+def test_built_wheel_includes_third_party_notice(built_wheel: Path):
+    with zipfile.ZipFile(built_wheel) as zf:
+        notice = zf.read(_NOTICE_PATH).decode("utf-8")
+    assert "Copyright (c) 2022 CR14" in notice
+    assert "fe83e8281fc4b954967fbaa5a0d099007ddcb06c" in notice
+
+
+@requires_uv
 def test_corpus_discoverable_via_importlib_resources_from_installed_wheel(installed_python: Path, tmp_path: Path):
     """Acceptance: the corpus is discoverable via ``importlib.resources`` from
     the installed distribution, resolved out of site-packages — NOT the repo
@@ -111,6 +123,7 @@ def test_corpus_discoverable_via_importlib_resources_from_installed_wheel(instal
         "print(json.dumps({\n"
         "  'root': str(root),\n"
         "  'backend_profile': (corpus_family_root('profiles')/'backend'/'provisioning-only.json').exists(),\n"
+        "  'scientific_completeness': (corpus_family_root('profiles')/'scientific-completeness'/'scientific-scenario-completeness-rev1.json').exists(),\n"
         "  'controlled_vocab': (corpus_family_root('concept-authority')/'controlled-vocabularies-v1.json').exists(),\n"
         "  'fixtures_dir': corpus_family_root('fixtures').is_dir(),\n"
         "  'schemas_dir': corpus_family_root('schemas').is_dir(),\n"
@@ -127,6 +140,7 @@ def test_corpus_discoverable_via_importlib_resources_from_installed_wheel(instal
     assert "site-packages" in resolved.parts, f"corpus resolved outside site-packages: {resolved}"
     assert resolved != REPO_CONTRACTS.resolve(), "installed dist fell back to the repo contracts/ tree"
     assert payload["backend_profile"] is True
+    assert payload["scientific_completeness"] is True
     assert payload["controlled_vocab"] is True
     assert payload["fixtures_dir"] is True
     assert payload["schemas_dir"] is True

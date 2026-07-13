@@ -6,6 +6,7 @@ from .participant_result_contracts import (
     participant_runtime_history_transition_diagnostics,
     participant_runtime_state_contract_diagnostics,
 )
+from .proposition_truth_contracts import proposition_truth_contract_diagnostics
 from .workflow_result_contracts import workflow_result_contract_diagnostics
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     "participant_episode_contract_diagnostics",
     "participant_runtime_history_transition_diagnostics",
     "participant_runtime_state_contract_diagnostics",
+    "proposition_truth_contract_diagnostics",
     "workflow_result_contract_diagnostics",
 ]

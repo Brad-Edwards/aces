@@ -14,11 +14,14 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
     if name in {
         "sdl-authoring-input-v1",
         "instantiated-scenario-v1",
+        "instantiated-scenario-snapshot-v1",
         "scenario-instantiation-request-v1",
     }:
         return schemas_dir / "sdl" / f"{name}.json"
     if name.startswith("backend-manifest-v"):
         return schemas_dir / "backend-manifest" / f"{name}.json"
+    if name.startswith("realization-envelope-v"):
+        return schemas_dir / "realization-envelope" / f"{name}.json"
     if name.startswith("processor-manifest-v"):
         return schemas_dir / "processor-manifest" / f"{name}.json"
     if name.startswith("participant-implementation-manifest-v"):
@@ -37,9 +40,15 @@ def _schema_output_path(schemas_dir: Path, name: str) -> Path:
         return schemas_dir / "concept-authority" / f"{name}.json"
     if name == "reusable-asset-trust-policy-v1":
         return schemas_dir / "asset-trust" / f"{name}.json"
+    if name == "sdl-lineage-ledger-v1":
+        return schemas_dir / "provenance" / f"{name}.json"
+    if name == "associated-artifact-manifest-v1":
+        return schemas_dir / "associated-artifacts" / f"{name}.json"
     if name.startswith("semantic-profile-v"):
         return schemas_dir / "profiles" / f"{name}.json"
     if name.startswith("backend-profile-v"):
+        return schemas_dir / "profiles" / f"{name}.json"
+    if name.startswith("scientific-completeness-"):
         return schemas_dir / "profiles" / f"{name}.json"
     if name in {
         "participant-lifecycle-event-v1",

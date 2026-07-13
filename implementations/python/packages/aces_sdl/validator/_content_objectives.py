@@ -41,8 +41,8 @@ _OBJECTIVE_ISSUE_RENDERERS = {
     "objective.target-ambiguous": (
         lambda i: f"Objective '{i.objective_name}' target '{i.ref}' is ambiguous; use one of: {', '.join(i.candidates)}"
     ),
-    "objective.success-condition-undeclared": (
-        lambda i: f"Objective '{i.objective_name}' references undefined condition '{i.ref}' in success criteria"
+    "objective.success-assertion-undeclared": (
+        lambda i: f"Objective '{i.objective_name}' references undefined assertion '{i.ref}' in success criteria"
     ),
     "objective.window.story-unbound": (
         lambda i: f"Objective '{i.objective_name}' references undefined story '{i.ref}' in window"
@@ -227,12 +227,14 @@ class _ContentObjectivesMixin:
                     rel.source,
                     owner_label=f"Relationship '{name}'",
                     ref_label="source",
+                    targetable=True,
                 )
             if not self._is_unresolved_var(rel.target):
                 self._validate_named_ref(
                     rel.target,
                     owner_label=f"Relationship '{name}'",
                     ref_label="target",
+                    targetable=True,
                 )
 
     def _verify_agents(self) -> None:
@@ -257,7 +259,6 @@ class _ContentObjectivesMixin:
         )
         if agent.initial_knowledge:
             self._verify_agent_initial_knowledge(name, agent.initial_knowledge, service_names)
-        self._verify_agent_starting_conditions(label, agent)
         for anchor in agent.authority_anchors:
             if not self._is_unresolved_var(anchor):
                 self._validate_named_ref(anchor, owner_label=label, ref_label="authority_anchor", targetable=False)
@@ -280,18 +281,6 @@ class _ContentObjectivesMixin:
                 self._err(undefined(subnet))
             elif not self._is_switch_node(subnet):
                 self._err(not_switch(subnet))
-
-    def _verify_agent_starting_conditions(self, label: str, agent: object) -> None:
-        for cond_name in agent.starting_conditions:
-            if self._is_unresolved_var(cond_name):
-                continue
-            # ADR-020 §6 publishes starting_conditions as accepting bare
-            # (`health`) or section-qualified (`conditions.health`)
-            # references. Strip the `conditions.` prefix when present so
-            # both forms resolve against the same dict.
-            bare_name = cond_name.removeprefix("conditions.")
-            if bare_name not in self._s.conditions:
-                self._err(f"{label} starting_condition '{cond_name}' not in conditions section")
 
     def _verify_agent_initial_knowledge(self, name: str, initial_knowledge: object, service_names: set[str]) -> None:
         label = f"Agent '{name}'"
@@ -401,7 +390,7 @@ class _ContentObjectivesMixin:
             agents_by_name=self._s.agents,
             entity_names=self._all_entity_names(),
             assessment_resources=AssessmentResourceCatalog(
-                conditions=self._s.conditions,
+                assertions=self._s.assertions,
             ),
             window_resources=WindowResourceCatalog(
                 stories=self._s.stories,

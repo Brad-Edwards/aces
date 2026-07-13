@@ -23,6 +23,7 @@ from aces_contracts.contracts import (
 from pydantic import BaseModel
 
 from aces_operations._evidence_run_artifact import EVIDENCE_RUN_SCHEMA
+from aces_operations._evidence_run_realization import _validate_realization_sources
 
 # Redaction gate: substrings/patterns that must never appear in the artifact.
 _FORBIDDEN_REDACTION_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
@@ -47,6 +48,7 @@ _REQUIRED_SECTIONS = (
     "scenario",
     "compiled_artifact",
     "backend",
+    "realization_facts",
     "realized_topology",
     "participant_action_proof",
     "terminal_observation",
@@ -77,6 +79,7 @@ def validate_libvirt_evidence_run_artifact(payload: Mapping[str, Any]) -> list[s
     problems.extend(_validate_embedded_contracts(payload))
     problems.extend(_validate_redaction(payload))
     problems.extend(_validate_boundary(payload))
+    problems.extend(_validate_realization_sources(payload))
     return problems
 
 

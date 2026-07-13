@@ -38,7 +38,7 @@ fixtures or schema authority.
 | Read a complete scenario | `examples/README.md`, `examples/scenarios/*.sdl.yaml` | `pytest tests/test_scenarios.py` | The checked examples load through the current parser boundary. |
 | Start from a reusable template or pattern | `examples/library/catalog.yaml`, `examples/library/templates/`, `examples/library/patterns/` | `python tools/check_example_library.py` | The catalog covers scenario, workflow, participant behavior, task, run, and study surfaces with parser-validated template bodies. |
 | Author a small SDL file | [`docs/explain/sdl/index.md`](sdl/index.md), [`docs/explain/sdl/sections.md`](sdl/sections.md), [`docs/explain/sdl/validation.md`](sdl/validation.md) | `parse_sdl_file()` or `load_scenario()` | The file is accepted by the current SDL model and semantic validator. |
-| Use an agent-facing authoring surface | `aces-mcp`, then `aces_tool_surface`, `aces_agent_guidance`, and [`docs/explain/sdl/language-service.md`](sdl/language-service.md) | `aces_agent_guidance`, `sdl_completions`, `sdl_apply_edit`, `sdl_diagnostics`, `sdl_format`, `sdl_references`, `sdl_validate`, `sdl_design_assessment`, `sdl_plan`, `sdl_claims_assessment` | The agent can help author, inspect, edit, dry-run, and qualify claims without repository-local code access. |
+| Use an agent-facing authoring surface | `aces-mcp`, then `aces_tool_surface`, `aces_agent_guidance`, `aces_intended_use_profiles`, and [`docs/explain/sdl/language-service.md`](sdl/language-service.md) | `aces_agent_guidance`, `aces_intended_use_profiles`, `sdl_completions`, `sdl_apply_edit`, `sdl_diagnostics`, `sdl_format`, `sdl_references`, `sdl_validate`, `sdl_design_assessment`, `sdl_plan`, `sdl_claims_assessment` | The agent can choose an intended-use scope, inspect current ACES blockers, and help author, edit, dry-run, and qualify claims without repository-local code access. |
 | Use variables or imports | [`docs/explain/sdl/parser.md`](sdl/parser.md), [`docs/explain/sdl/sections.md`](sdl/sections.md) | `aces sdl resolve`, `aces sdl verify-imports` | Imports and variable placeholders follow the current parser rules. |
 | Inspect current limits | [`docs/explain/sdl/limitations.md`](sdl/limitations.md), [`docs/explain/sdl/testing.md`](sdl/testing.md) | Compare the use case to the listed materialized surfaces | Unsupported or partial surfaces are identified before authoring. |
 | Work on backend conformance | [`docs/explain/sdl/runtime-architecture.md`](sdl/runtime-architecture.md), `contracts/README.md`, [`docs/explain/reference/backend-conformance.md`](reference/backend-conformance.md) | `aces conformance --help` and the conformance tests | The backend work is aligned with published contracts and fixtures. |
@@ -106,7 +106,9 @@ uv run aces-mcp
 
 Start with `aces_tool_surface`, then call `aces_agent_guidance` for
 machine-readable scope boundaries, invariants, review priorities, and
-safe-operating expectations. Use `sdl_claims_assessment` before making research
+safe-operating expectations. Call `aces_intended_use_profiles` to select an
+intended-use scope and inspect current ACES delivery blockers. Use
+`sdl_claims_assessment` before making research
 or range-readiness claims. These tools do not execute participant actions or
 start a live range.
 

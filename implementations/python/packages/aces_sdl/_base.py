@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from ._identifiers import PORTABLE_IDENTIFIER_PATTERN
+
 
 class SDLModel(BaseModel):
     """Base for all SDL Pydantic models."""
@@ -16,7 +18,7 @@ class SDLModel(BaseModel):
     )
 
 
-_VARIABLE_NAME_PATTERN = r"[A-Za-z_][A-Za-z0-9_-]*"
+_VARIABLE_NAME_PATTERN = PORTABLE_IDENTIFIER_PATTERN
 VARIABLE_NAME_PATTERN = _VARIABLE_NAME_PATTERN
 VARIABLE_NAME_RE = re.compile(r"^" + VARIABLE_NAME_PATTERN + r"$")
 # Single source of truth for the ``${name}`` substitution token, shared by the

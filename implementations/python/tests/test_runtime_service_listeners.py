@@ -99,7 +99,7 @@ def test_vm_runtime_service_listener_surface() -> None:
     assert listener.readiness.criteria == "HTTP 200"
 
 
-def test_parser_accepts_kebab_case_runtime_service_listeners() -> None:
+def test_parser_accepts_canonical_runtime_service_listeners() -> None:
     scenario = parse_sdl(
         """
         name: listener-parser
@@ -112,15 +112,15 @@ def test_parser_accepts_kebab_case_runtime_service_listeners() -> None:
             runtime:
               processes:
                 - {name: nginx, pid: 42}
-              service-listeners:
-                - service-listener-id: nginx-http-ipv4
+              service_listeners:
+                - service_listener_id: nginx-http-ipv4
                   service: http
                   address: 0.0.0.0
                   port: 80
                   protocol: TCP
-                  address-family: ipv4
+                  address_family: ipv4
                   scope: wildcard
-                  process-ref: nginx
+                  process_ref: nginx
                   readiness:
                     probe: GET /
                     criteria: HTTP 200
@@ -248,10 +248,10 @@ def test_runtime_service_listener_published_port_match_defers_unresolved_listene
     scenario = Scenario(
         name="listeners",
         variables={
-            "HTTP_PORT": {"type": "integer", "default": 80},
-            "TRANSPORT": {"type": "string", "default": "tcp"},
+            "http_port": {"type": "integer", "default": 80},
+            "transport": {"type": "string", "default": "tcp"},
         },
-        nodes={"misp": _node(_listener(port="${HTTP_PORT}", protocol="${TRANSPORT}"))},
+        nodes={"misp": _node(_listener(port="${http_port}", protocol="${transport}"))},
     )
 
     assert _validate(scenario) == []
@@ -273,66 +273,66 @@ def test_runtime_service_listeners_encode_misp_listener_facts() -> None:
                 - {name: nginx, pid: 11}
                 - {name: supervisord, pid: 1}
               network:
-                published-ports:
-                  - {container-port: 80, protocol: tcp, host-ip: 0.0.0.0, host-port: 80}
-                  - {container-port: 443, protocol: tcp, host-ip: 0.0.0.0, host-port: 443}
-              service-listeners:
-                - service-listener-id: nginx-http-ipv4
+                published_ports:
+                  - {container_port: 80, protocol: tcp, host_ip: 0.0.0.0, host_port: 80}
+                  - {container_port: 443, protocol: tcp, host_ip: 0.0.0.0, host_port: 443}
+              service_listeners:
+                - service_listener_id: nginx-http-ipv4
                   service: http
                   address: 0.0.0.0
                   port: 80
                   protocol: tcp
-                  address-family: ipv4
+                  address_family: ipv4
                   scope: wildcard
-                  process-ref: nginx
-                  process-name: nginx
-                  published-port-refs:
-                    - {container-port: 80, protocol: tcp, host-ip: 0.0.0.0, host-port: 80}
-                - service-listener-id: nginx-http-ipv6
+                  process_ref: nginx
+                  process_name: nginx
+                  published_port_refs:
+                    - {container_port: 80, protocol: tcp, host_ip: 0.0.0.0, host_port: 80}
+                - service_listener_id: nginx-http-ipv6
                   service: http
                   address: "::"
                   port: 80
                   protocol: tcp
-                  address-family: ipv6
+                  address_family: ipv6
                   scope: wildcard
-                  process-ref: nginx
-                - service-listener-id: nginx-https-ipv4
+                  process_ref: nginx
+                - service_listener_id: nginx-https-ipv4
                   service: https
                   address: 0.0.0.0
                   port: 443
                   protocol: tcp
-                  address-family: ipv4
+                  address_family: ipv4
                   scope: wildcard
-                  process-ref: nginx
-                - service-listener-id: nginx-https-ipv6
+                  process_ref: nginx
+                - service_listener_id: nginx-https-ipv6
                   service: https
                   address: "::"
                   port: 443
                   protocol: tcp
-                  address-family: ipv6
+                  address_family: ipv6
                   scope: wildcard
-                  process-ref: nginx
-                - service-listener-id: supervisord-loopback
+                  process_ref: nginx
+                - service_listener_id: supervisord-loopback
                   address: 127.0.0.1
                   port: 9001
                   protocol: tcp
-                  address-family: ipv4
+                  address_family: ipv4
                   scope: loopback-only
-                  process-ref: supervisord
-                - service-listener-id: local-runtime-loopback
+                  process_ref: supervisord
+                - service_listener_id: local-runtime-loopback
                   address: 127.0.0.1
                   port: 50000
                   protocol: tcp
-                  address-family: ipv4
+                  address_family: ipv4
                   scope: loopback-only
-                  process-name: runtime-local
-                - service-listener-id: docker-dns
+                  process_name: runtime-local
+                - service_listener_id: docker-dns
                   address: 127.0.0.11
                   port: 53
                   protocol: udp
-                  address-family: ipv4
+                  address_family: ipv4
                   scope: loopback-only
-                  process-name: docker-embedded-dns
+                  process_name: docker-embedded-dns
         """
     )
 

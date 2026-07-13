@@ -18,11 +18,10 @@ This note governs:
 - envelope subsumption;
 - deterministic witness generation;
 - negative conformance for closed envelopes;
-- backend-manifest carriage constraints for future schema evolution.
+- backend-manifest carriage constraints for schema evolution.
 
 Out of scope:
 
-- publishing a concrete JSON schema for envelope expressions;
 - replacing `run_target_conformance(reference_scenario=...)`;
 - adding implementation helpers, CLI commands, APIs, persistence, or runtime
   behavior;
@@ -31,15 +30,29 @@ Out of scope:
 
 ## Realization Status
 
-This spec is design authority. It is not yet executable. The relation helper,
-schema carrier, fixtures, property tests, target-conformance integration, and
-manifest evolution are downstream implementation work.
+This spec is design authority. The relation helper, the envelope expression
+contract model, fixtures, and property tests are implemented by issue #668:
 
-Until that work lands:
+- `aces_contracts.realization_envelope` carries the closed, versioned envelope
+  expression (`realization-envelope/v1`) — the admitted-fragment domain kinds,
+  scoped bindings, posture, closure, and witness policy of this note;
+- `aces_sdl.realization_envelope` implements `member`, `subsumes`, `witness`, and
+  `generate_negative_probes` as one deterministic engine over that contract.
+
+Issue #100 publishes the schema carrier at
+`contracts/schemas/realization-envelope/realization-envelope-v1.json`, packages governed
+backend instances under `contracts/realization-envelopes/`, and carries an
+immutable envelope/configuration identity through backend-manifest-v2,
+provisioning-plan-v1, and runtime-snapshot-v1. Backend carriers embed this same
+expression and add closed realization/observation disclosures; they do not
+introduce a second set language.
+
+The remaining downstream boundary is target-conformance integration:
 
 - SEM-218 remains the active exact/constrained/open realization authority;
-- `backend-manifest-v2.realization_support` remains the coarse capability and
-  disclosure surface;
+- `backend-manifest-v2.realization_support` remains the coarse capability floor,
+  while the selected envelope is the configuration-bound value and disclosure
+  authority;
 - `run_target_conformance(reference_scenario=...)` remains the temporary #663
   bridge for fixed-topology and simulation backends.
 
@@ -118,6 +131,16 @@ An envelope expression consists of:
 
 The shape above is semantic, not yet a published JSON schema.
 
+The relation operates on the **realization projection** of an admitted scenario,
+not on every member of its exchange artifact. The projection excludes fields
+annotated `x-aces-realization-dimension: false`. In
+`instantiated-scenario-v1`, `instantiation_provenance` is such artifact metadata:
+it remains mandatory for admission and participates in canonical snapshot
+identity, but a backend neither chooses nor realizes it. Closed-world envelope
+checks therefore MUST NOT treat that field as an unspecified realizable
+dimension. This projection does not weaken provenance validation or remove the
+field from the artifact.
+
 ## Required Semantics
 
 ### R1 - Envelopes denote sets
@@ -127,9 +150,9 @@ scenario instance `s` is a member of envelope `E` exactly when:
 
 1. `s` is structurally and semantically valid under the ordinary SDL rules;
 2. every effective binding in `E` is satisfied by the corresponding value or
-   child scope in `s`;
+   child scope in the realization projection of `s`;
 3. every closed-world scope in `E` has no unspecified realizable dimension in
-   `s`;
+   the realization projection of `s`;
 4. every governed reference in `E` resolves under the applicable concept or SDL
    authority.
 

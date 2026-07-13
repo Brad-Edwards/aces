@@ -350,20 +350,20 @@ class _RuntimeServicesMixin:
         server_id = server.ssh_server_id
         service_name = ref
         if ref.startswith("nodes."):
-            parts = ref.split(".")
-            if len(parts) != 4 or parts[2] != "services":
+            split = self._split_node_service_ref(ref)
+            if split is None:
                 self._err(
                     f"Node '{node_name}' runtime ssh_server '{server_id}' service ref '{ref}' "
                     f"must be a bare service name or 'nodes.<node>.services.<name>'"
                 )
                 return
-            if parts[1] != node_name:
+            service_node_name, service_name = split
+            if service_node_name != node_name:
                 self._err(
                     f"Node '{node_name}' runtime ssh_server '{server_id}' service ref '{ref}' "
                     f"must reference a service on the same node"
                 )
                 return
-            service_name = parts[3]
         if service_name not in service_names:
             self._err(
                 f"Node '{node_name}' runtime ssh_server '{server_id}' references undefined service '{service_name}'"

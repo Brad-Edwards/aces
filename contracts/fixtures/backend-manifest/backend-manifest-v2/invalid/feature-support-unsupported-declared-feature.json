@@ -136,7 +136,7 @@
         "workflows"
       ],
       "supports_workflows": true,
-      "supports_condition_refs": true,
+      "supports_assertion_refs": true,
       "supports_inject_bindings": true,
       "supported_workflow_features": [
         "call",

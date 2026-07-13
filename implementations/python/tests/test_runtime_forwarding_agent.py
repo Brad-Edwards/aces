@@ -60,7 +60,7 @@ def _log_forwarder(**overrides) -> dict:
         "ship_targets": [
             {
                 "target_id": "manager",
-                "target_node_ref": "wazuh.manager",
+                "target_node_ref": "wazuh-manager",
                 "ingestion_port": 1514,
                 "enrollment_port": 1515,
                 "protocol": "syslog",
@@ -185,8 +185,8 @@ def test_open_tail_kinds_impose_no_profile() -> None:
 
 
 def test_variable_ref_agent_kind_is_exempt_from_guard() -> None:
-    agent = RuntimeForwardingAgent(forwarding_agent_id="agent-var", agent_kind="${AGENT_KIND}")
-    assert agent.agent_kind == "${AGENT_KIND}"
+    agent = RuntimeForwardingAgent(forwarding_agent_id="agent-var", agent_kind="${agent_kind}")
+    assert agent.agent_kind == "${agent_kind}"
 
 
 def test_invalid_enum_value_rejected() -> None:
@@ -195,8 +195,8 @@ def test_invalid_enum_value_rejected() -> None:
 
 
 def test_id_fields_reject_variable_placeholders() -> None:
-    with pytest.raises(ValidationError, match="forwarding_agent_id must be a stable identifier"):
-        RuntimeForwardingAgent(forwarding_agent_id="${ID}")
+    with pytest.raises(ValidationError, match="forwarding_agent_id must be a qualified SDL identifier"):
+        RuntimeForwardingAgent(forwarding_agent_id="${id}")
 
 
 # --------------------------------------------------------------------------- #
@@ -403,10 +403,10 @@ def test_scenario_level_surface_reuses_runtime_forwarding_agent() -> None:
 
 
 def test_log_forwarder_target_node_ref_resolves_to_defined_node() -> None:
-    # The _log_forwarder fixture ships to target_node_ref "wazuh.manager".
+    # The _log_forwarder fixture ships to target_node_ref "wazuh-manager".
     scenario = Scenario(
         name="forwarding",
-        nodes={"wazuh.manager": _manager_node(), "sensor": _sensor_node(_log_forwarder())},
+        nodes={"wazuh-manager": _manager_node(), "sensor": _sensor_node(_log_forwarder())},
     )
     assert _validate(scenario) == []
 
@@ -459,7 +459,7 @@ def test_scenario_level_ship_target_service_ref_requires_target_node_ref() -> No
     )
     scenario = Scenario(
         name="forwarding",
-        nodes={"wazuh.manager": _manager_node()},
+        nodes={"wazuh-manager": _manager_node()},
         forwarding_agents=[agent],
     )
 
@@ -486,7 +486,7 @@ def test_forwarding_edge_resolves_scenario_level_forwarder() -> None:
         ship_targets=[
             {
                 "target_id": "manager",
-                "target_node_ref": "wazuh.manager",
+                "target_node_ref": "wazuh-manager",
                 "target_service_ref": "wazuh-agent-events",
                 "ingestion_port": 1514,
                 "protocol": "syslog",
@@ -503,14 +503,14 @@ def test_forwarding_edge_resolves_scenario_level_forwarder() -> None:
                 "resources": {"ram": "1 gib", "cpu": 1},
                 "services": [{"port": 5432, "protocol": "tcp", "name": "postgres"}],
             },
-            "wazuh.manager": _manager_node(),
+            "wazuh-manager": _manager_node(),
         },
         forwarding_agents=[agent],
         relationships={
             "db-logs-forwarded-wazuh": {
                 "type": "connects_to",
                 "source": "db",
-                "target": "wazuh.manager",
+                "target": "wazuh-manager",
                 "forwarding_edge": {
                     "forwarder_ref": "db-wazuh-agent",
                     "target_listener_role": "agent_event_ingestion",
@@ -532,13 +532,13 @@ def test_forwarding_edge_missing_forwarder_reports_combined_resolution_scope() -
                 "resources": {"ram": "1 gib", "cpu": 1},
                 "services": [{"port": 5432, "protocol": "tcp", "name": "postgres"}],
             },
-            "wazuh.manager": _manager_node(),
+            "wazuh-manager": _manager_node(),
         },
         relationships={
             "db-logs-forwarded-wazuh": {
                 "type": "connects_to",
                 "source": "db",
-                "target": "wazuh.manager",
+                "target": "wazuh-manager",
                 "forwarding_edge": {"forwarder_ref": "missing-agent"},
             }
         },
@@ -606,8 +606,8 @@ def test_forwarding_edge_forwarder_ref_required() -> None:
 
 
 def test_forwarding_edge_forwarder_ref_allows_variable_placeholder() -> None:
-    edge = RelationshipForwardingEdge(forwarder_ref="${FORWARDER}")
-    assert edge.forwarder_ref == "${FORWARDER}"
+    edge = RelationshipForwardingEdge(forwarder_ref="${forwarder}")
+    assert edge.forwarder_ref == "${forwarder}"
 
 
 def test_forwarding_edge_present_enrollment_identity_must_be_redacted() -> None:
@@ -648,6 +648,6 @@ def test_forwarding_edge_variable_classification_defers_check() -> None:
     edge = RelationshipForwardingEdge(
         forwarder_ref="agent-1",
         enrollment_identity_ref="agent-key-001",
-        enrollment_identity_classification="${CLASS}",
+        enrollment_identity_classification="${class}",
     )
-    assert edge.enrollment_identity_classification == "${CLASS}"
+    assert edge.enrollment_identity_classification == "${class}"

@@ -12,7 +12,7 @@ decided in prose.
   `contracts/schemas/`, `contracts/fixtures/`, `contracts/profiles/`,
   `contracts/concept-authority/`), each non-normative root
   (`implementations/`, `docs/`, `examples/`, `research/`, `notes/`,
-  `tools/`, `changelog.d/`), the legacy top-level directories ADR-009
+  `tools/`), the legacy top-level directories ADR-009
   transitioned out (`schemas/`, `conformance/`, `src/`), the
   schema-authority direction (no published schema may live under
   `implementations/`), and the `normative_artifact_families` block described

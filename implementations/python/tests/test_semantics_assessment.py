@@ -5,8 +5,8 @@ Per ADR-073 the OCR-inherited SDL scoring chain
 scoring, reward, and evaluation outputs live in the experiment/evaluator plane
 (ADR-055/064/069), not in authored SDL. What remains in
 ``aces.core.semantics.assessment`` is the resource-kind qualifier that objective
-success references carry: objective success references observable state only, so
-``CONDITION`` is the sole member.
+success references carry: objective success composes backend-neutral assertions,
+so ``ASSERTION`` is the sole member.
 
 These tests pin that reduced surface so a future revival of the removed scoring
 sections is a visible, deliberate change rather than an accident.
@@ -21,11 +21,11 @@ from aces.core.semantics.assessment import AssessmentResourceKind
 
 
 class TestAssessmentResourceKind:
-    def test_condition_is_the_only_member(self) -> None:
-        assert [kind.name for kind in AssessmentResourceKind] == ["CONDITION"]
+    def test_assertion_is_the_only_member(self) -> None:
+        assert [kind.name for kind in AssessmentResourceKind] == ["ASSERTION"]
 
-    def test_condition_value(self) -> None:
-        assert AssessmentResourceKind.CONDITION.value == "condition"
+    def test_assertion_value(self) -> None:
+        assert AssessmentResourceKind.ASSERTION.value == "assertion"
 
     def test_is_str_enum(self) -> None:
         assert issubclass(AssessmentResourceKind, str)

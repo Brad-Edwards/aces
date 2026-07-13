@@ -24,8 +24,8 @@ A reference is a string that names a target element. Five forms exist:
    `…<collection>.<id>.<child-collection>.<child-id>` to any depth the family
    defines ([runtime-inventory.md](runtime-inventory.md)).
 4. **Workflow-step** — `<workflow>.<step>`, naming a step within a workflow.
-   Used by objective windows. Because `.` separates the workflow from the step,
-   workflow **step** identifiers MUST NOT contain `.`
+   Used by objective windows. The workflow portion may be a composition-generated
+   qualified name and the step is exactly one portable local-id segment
    ([document-model.md §6](document-model.md)).
 5. **Module-composed (namespaced)** — after a module import is expanded, imported
    elements are addressed under their import namespace, and node segments are
@@ -33,13 +33,11 @@ A reference is a string that names a target element. Five forms exist:
    the expanded document
    ([ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md)).
 
-### Dotted node identifiers
-
-A node identifier MAY itself contain `.` (e.g. `wazuh.manager`). A qualified
-reference that traverses a node segment therefore resolves the **longest**
-node-identifier match rather than splitting on the first `.`. Resolution MUST
-account for dotted node names so that `nodes.wazuh.manager.runtime.…` addresses
-the `wazuh.manager` node, not a `wazuh` node with a `manager` member.
+Dots are path syntax, never authored identifier content. A dotted node key in a
+raw or normalized authoring object is invalid. A dotted node segment seen after
+composition is a validated namespace path and is carried structurally until the
+canonical renderer produces the external string; it is not recovered with a
+longest-match rule.
 
 ## 2. Resolution algorithm
 
@@ -47,11 +45,15 @@ the `wazuh.manager` node, not a `wazuh` node with a `manager` member.
    referencing field accepts.
 2. A field defines its **candidate set** — the section or sections a value may
    name. Some fields accept a single section (e.g. an objective's `success` →
-   `conditions`); others accept a set of targetable sections (e.g. an
+   `assertions`); others accept a set of targetable sections (e.g. an
    objective's `target`, a relationship's `source`/`target`). The candidate set
    is part of each field's definition and is reflected in the edge catalog (§5).
 3. A **bare** reference resolves against the candidate set. A **qualified**
-   reference resolves against the named section/path and MUST match it exactly.
+   reference resolves by exact lookup of the typed canonical address and
+   **MUST** match it exactly. Implementations **MUST NOT** discover ownership by
+   `split`, `partition`, `rsplit`, longest-prefix guessing, declaration order,
+   or first match. Compact aliases such as `<qualified-workflow>.<step>` are
+   constructed and resolved from declared workflow/step pairs.
 4. Some targetable candidate sets are deliberately restricted. For example, an
    objective `target` excludes the `variables`, `objectives`, and `workflows`
    prefixes; an agent `operating_scope` is restricted to VM nodes,
@@ -59,6 +61,10 @@ the `wazuh.manager` node, not a `wazuh` node with a `manager` member.
    field's candidate set does not resolve and fails as dangling (§4).
 5. Resolution is **declaration-based**: only declared elements are resolution
    targets. There is no implicit creation of a target by referencing it.
+6. Alias lookup occurs only after the canonical declaration index has retained
+   kind and provenance for every declaration and rejected address collisions.
+   A set or map that has already erased a duplicate rendering is not evidence of
+   uniqueness.
 
 ## 3. Unresolved variable placeholders
 
@@ -72,6 +78,10 @@ the `wazuh.manager` node, not a `wazuh` node with a `manager` member.
 3. After instantiation substitutes a concrete value, the normal reference rules
    (§2) apply to that value. A reference that becomes dangling or ambiguous only
    after substitution fails at instantiation.
+4. A direct or deserialized instantiated artifact is not exempt. Its required
+   provenance can explain binding and resolution inputs, but it does not create
+   declarations or authorize references. Artifact admission reruns the same
+   declaration-index and reference checks before compilation or snapshotting.
 
 ## 4. Failure semantics (fail-closed)
 
@@ -102,15 +112,15 @@ The SDL carries no graded scoring pipeline: the OCR-inherited `metrics`,
 `evaluations`, `tlos`, and `goals` sections were removed with
 [ADR-073](../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md), so
 no reference edge targets them. Graded scoring, reward, and evaluation outputs
-live in the experiment/evaluator plane (ADR-055/064/069). `conditions` remain the
-observable-state target for objective success and workflow predicates.
+live in the experiment/evaluator plane (ADR-055/064/069). `conditions` remain
+probe implementations; propositions and assertions carry portable truth.
 
 ### Narrative chain
 
 | Source | Field | Target |
 |--------|-------|--------|
 | `injects` | from/to entity | `entities` |
-| `events` | condition refs | `conditions` |
+| `events` | precondition assertion refs | `assertions` |
 | `events` | inject refs | `injects` |
 | `scripts` | event refs | `events` |
 | `stories` | script refs | `scripts` |
@@ -136,14 +146,14 @@ observable-state target for objective success and workflow predicates.
 | `agents` | subnets / initial-knowledge subnets | switch-backed `infrastructure` |
 | `agents` | initial-knowledge hosts | `nodes` (VM) |
 | `agents` | initial-knowledge services | declared services on nodes |
-| `agents` | starting conditions | `conditions` |
+| `agents` | starting assertions | `assertions` (preconditions) |
 | `agents` | actions / observation boundaries | `action_contracts` / `observation_boundaries` |
 | `action_contracts` | interaction related-action | `action_contracts` |
 | `observation_boundaries` | view-rule information refs | own observable/hidden/evidence refs |
 | `objectives` | actor | `agents` or flattened `entities` |
 | `objectives` | action | the bound agent's `action_contracts` |
 | `objectives` | target | targetable elements (excl. `variables`/`objectives`/`workflows`) |
-| `objectives` | success criteria | `conditions` (observable state only, [ADR-073](../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md)) |
+| `objectives` | success criteria | `assertions` (invariants/postconditions, [ADR-079](../../docs/decisions/adrs/adr-079-backend-neutral-proposition-and-truth-semantics.md)) |
 | `objectives` | window | `stories`/`scripts`/`events`/`workflows` (with closure rules) |
 | `objectives` | depends_on | `objectives` (acyclic) |
 | `outcome_interpretation_rules` | source | `action_contracts`/`objectives`/`workflows` |
@@ -171,7 +181,7 @@ element is the source or channel.
 | `workflows` | start | own steps |
 | `workflows` | step successors (`on_success`/`on_failure`) | own steps |
 | `workflows` | compensation | other `workflows` |
-| `workflows` | predicate condition refs | `conditions` (observable state) |
+| `workflows` | predicate assertion refs | `assertions` (preconditions) |
 | `workflows` | predicate step refs | own steps (executable) |
 
 Parallel/join control flow MUST be closed: every branch reaches its join and no
@@ -197,6 +207,77 @@ any role-bearing refs
 | Source | Field | Target |
 |--------|-------|--------|
 | any field | `${name}` placeholder | a declared `variables` entry (name only, at authoring time) |
+
+## 6. Machine-checkable reference-edge index
+
+This index gives every editor-visible reference field a stable candidate-domain
+token and makes the participant behavior surface explicit. It complements the
+semantic detail above: subtype-specific relationship and nested-runtime rules
+remain narrower than the broad completion domain recorded here. `targetable`
+means the declaration index excluding `variables`, `evidence_requirements`,
+`objectives`, and `workflows`; it is not a synonym for every named object.
+`derived:*`, `vocabulary:*`, `registry:*`, `contract:*`, and `opaque:*` name
+deliberately distinct resolution mechanisms and MUST NOT be collapsed into a
+generic symbol lookup.
+
+| Source path | Candidate domain | Resolution phase | Failure | Semantic owner |
+| --- | --- | --- | --- | --- |
+| `nodes.*.features[]` | `features` | semantic validation | fatal dangling or ambiguous | [node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
+| `nodes.*.conditions[]` | `conditions` | semantic validation | fatal dangling or ambiguous | [node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
+| `conditions.*.proposition` | `propositions` | semantic validation | fatal dangling or ambiguous when present | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |
+| `propositions.*.subjects[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |
+| `propositions.*.evidence_requirements[]` | `evidence_requirements` | semantic validation | fatal dangling or ambiguous | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |
+| `assertions.*.proposition` | `propositions` | semantic validation | fatal dangling or ambiguous | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |
+| `nodes.*.injects[]` | `injects` | semantic validation | fatal dangling or ambiguous | [node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
+| `nodes.*.vulnerabilities[]` | `vulnerabilities` | semantic validation | fatal dangling or ambiguous | [node validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
+| `infrastructure.*.links[]` | `infrastructure` | semantic validation | fatal dangling or ambiguous | [infrastructure validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
+| `infrastructure.*.dependencies[]` | `infrastructure` | semantic validation | fatal dangling or ambiguous | [infrastructure validator](../../implementations/python/packages/aces_sdl/validator/_nodes_infra_network.py) |
+| `features.*.dependencies[]` | `features` | semantic validation | fatal dangling, ambiguous, or cyclic | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `entities.*.vulnerabilities[]` | `vulnerabilities` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `injects.*.from_entity` | `entities` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `injects.*.to_entities[]` | `entities` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `events.*.assertions[]` | `assertions` | semantic validation | fatal dangling, ambiguous, or non-precondition role | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |
+| `events.*.injects[]` | `injects` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `scripts.*.events[]` | `events` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `stories.*.scripts[]` | `scripts` | semantic validation | fatal dangling or ambiguous | [section validator](../../implementations/python/packages/aces_sdl/validator/_sections.py) |
+| `content.*.target` | `nodes` | semantic validation | fatal unless target is a VM node | [content validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `accounts.*.node` | `nodes` | semantic validation | fatal unless target is a VM node | [account validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `relationships.*.source` | `targetable` | semantic validation | fatal dangling or ambiguous; subtype may narrow domain | [relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships.py) |
+| `relationships.*.target` | `targetable` | semantic validation | fatal dangling or ambiguous; subtype may narrow domain | [relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships.py) |
+| `agents.*.entity` | `entities` | semantic validation | fatal dangling or ambiguous | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `agents.*.starting_accounts[]` | `accounts` | semantic validation | fatal dangling or ambiguous | [participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `agents.*.starting_assertions[]` | `assertions` | semantic validation | fatal dangling, ambiguous, or non-precondition role | [proposition validator](../../implementations/python/packages/aces_sdl/validator/_propositions.py) |
+| `action_contracts.*.interactions.*.related_action_ref` | `action_contracts` | semantic validation | fatal dangling or ambiguous | [participant semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `observation_boundaries.*.view_rules.*.information_refs[]` | `derived:boundary_information` | semantic validation | fatal outside declared boundary information | [participant semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `outcome_interpretation_rules.*.source_ref` | `action_contracts,objectives,workflows` | semantic validation | fatal dangling or ambiguous | [outcome semantics](../../implementations/python/packages/aces_sdl/semantics/participant_outcome.py) |
+| `behavior_specifications.*.participant_refs[]` | `agents` | semantic validation | fatal dangling or ambiguous | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `behavior_specifications.*.participant_role_refs[]` | `derived:agent_roles` | semantic validation | fatal unless bound by a referenced participant | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `behavior_specifications.*.action_contract_refs[]` | `action_contracts` | semantic validation | fatal dangling or ambiguous | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `behavior_specifications.*.observation_boundary_refs[]` | `observation_boundaries` | semantic validation | fatal dangling or ambiguous | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `behavior_specifications.*.outcome_interpretation_rule_refs[]` | `outcome_interpretation_rules` | semantic validation | fatal dangling or ambiguous | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `behavior_specifications.*.authority_scope_refs[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [behavior validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py) |
+| `behavior_specifications.*.behavior_mode` | `vocabulary:behavior_mode` | structural validation | fatal invalid vocabulary value | [behavior model](behavior-specifications.md) |
+| `behavior_specifications.*.ai_offensive_behavior_refs[]` | `vocabulary:ai_offensive_behavior` | semantic validation | fatal unknown vocabulary identifier | [behavior model](behavior-specifications.md) |
+| `behavior_specifications.*.offensive_behavior_refs[]` | `vocabulary:offensive_behavior` | semantic validation | fatal unknown vocabulary identifier | [behavior model](behavior-specifications.md) |
+| `behavior_specifications.*.realization_profile_ref` | `opaque:realization_profile` | structural validation | fatal invalid reference shape; resolution belongs to realization | [behavior model](behavior-specifications.md) |
+| `behavior_specifications.*.backend_feature_support_refs[]` | `registry:behavior_features` | semantic validation | fatal unsupported feature identifier | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `behavior_specifications.*.evidence_contract_refs[]` | `contract:participant_evidence` | semantic validation | fatal unknown contract identifier | [behavior semantics](../../implementations/python/packages/aces_sdl/semantics/participant_behavior.py) |
+| `evidence_requirements.*.source_refs[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py) |
+| `evidence_requirements.*.scope_refs[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py) |
+| `evidence_requirements.*.channel_refs[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py) |
+| `evidence_requirements.*.trigger_ref` | `targetable` | semantic validation | fatal dangling or ambiguous | [evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py) |
+| `evidence_requirements.*.boundary_ref` | `targetable` | semantic validation | fatal dangling or ambiguous | [evidence validator](../../implementations/python/packages/aces_sdl/validator/_evidence_requirements.py) |
+| `objectives.*.agent` | `agents` | semantic validation | fatal dangling or ambiguous | [objective semantics](objective-semantics.md) |
+| `objectives.*.entity` | `entities` | semantic validation | fatal dangling or ambiguous | [objective semantics](objective-semantics.md) |
+| `objectives.*.targets[]` | `targetable` | semantic validation | fatal dangling or ambiguous | [objective semantics](objective-semantics.md) |
+| `objectives.*.success.assertions[]` | `assertions` | semantic validation | fatal dangling, ambiguous, or precondition role | [objective semantics](objective-semantics.md) |
+| `objectives.*.depends_on[]` | `objectives` | semantic validation | fatal dangling, ambiguous, or cyclic | [objective semantics](objective-semantics.md) |
+| `workflows.*.start` | `workflow_steps` | semantic validation | fatal dangling step | [workflow semantics](workflow-semantics.md) |
+| `workflows.*.steps.*.when.assertions[]` | `assertions` | semantic validation | fatal dangling, ambiguous, or non-precondition role | [workflow semantics](workflow-semantics.md) |
+
+The index is checked against language-service completion metadata and against a
+required behavior-edge set. Adding a completion-aware field or behavior
+reference without a corresponding row fails the repository contract gate.
 
 ## Extending the reference catalog
 

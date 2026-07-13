@@ -168,6 +168,7 @@ module_boundaries:
         aces_backend_libvirt:
           - aces_backend_libvirt.target
           - aces_backend_libvirt.techvault_native
+          - aces_backend_libvirt.guest_certified_driver
         aces_backend_protocols:
           - aces_backend_protocols.manifest
           - aces_backend_protocols.capabilities
@@ -219,6 +220,7 @@ module_boundaries:
       allowed_top_level_imports:
         - aces_backend_protocols
         - aces_backend_stubs
+        - aces_contracts
         - aces_processor
         - aces_sdl
       forbidden_import_prefixes:
@@ -234,16 +236,17 @@ module_boundaries:
       allowed_top_level_imports:
         - aces_sdl
 
-# ADR-015: non-test source files under packages/ cap at 600 lines.
-# The allowlist (oversized_allowlist.yaml) lists the files that were over
-# the cap when ADR-015 landed; each split PR (child of issue #3) removes
-# its entry. The allowlist must stay a subset of the *code* constant
+# ADR-015: non-test source files under packages/ cap at 500 lines (aligned
+# with SonarCloud S104; lowered from 600 per the 2026-07-12 amendment / #561).
+# The allowlist (oversized_allowlist.yaml) lists the files that were over the
+# cap when the current cap was adopted; each split PR removes its entry. The
+# allowlist must stay a subset of the *code* constant
 # _ADR015_INITIAL_OVERSIZED_FILES in tools/policy/repo_policy.py (the fixed
 # reference set) — entries can be drained but not added. The locked set is
 # intentionally NOT mirrored here: keeping it as config the same PR can edit
 # would make the "shrink only" rule self-satisfiable.
 oversized_source_files:
-  line_cap: 600
+  line_cap: 500
   allowlist_path: tools/policy/oversized_allowlist.yaml
   scope_roots:
     - implementations/python/packages

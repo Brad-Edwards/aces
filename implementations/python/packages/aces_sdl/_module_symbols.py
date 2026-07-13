@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from contextlib import suppress
 from typing import Any
 
+from ._base import is_variable_ref
+from ._identifiers import QualifiedName
 from ._module_runtime_aliases import nested_node_runtime_aliases
 from .entities import flatten_entities
-from .scenario import ModuleDescriptor, Scenario
+from .scenario import ModuleDescriptor, ScenarioContent
 
 # Canonical list of scenario top-level sections that hold user-defined
 # hashmap keys. Re-exported as both the public ``HASHMAP_SECTIONS`` name
@@ -18,6 +21,8 @@ HASHMAP_SECTIONS = (
     "infrastructure",
     "features",
     "conditions",
+    "propositions",
+    "assertions",
     "vulnerabilities",
     "entities",
     "injects",
@@ -37,21 +42,39 @@ HASHMAP_SECTIONS = (
     "workflows",
 )
 _HASHMAP_SECTIONS = HASHMAP_SECTIONS
+FORWARDING_AGENTS_SECTION = "forwarding_agents"
 
 
 def _prefix(namespace: str, name: str) -> str:
-    return f"{namespace}.{name}" if namespace else name
+    return QualifiedName.parse(name).prefixed(namespace).render() if namespace else QualifiedName.parse(name).render()
 
 
 def _private_prefix(namespace: str, name: str) -> str:
-    return _prefix(namespace, f"__private.{name}")
+    return QualifiedName.parse(name).prefixed(namespace, private=True).render()
+
+
+def rewrite_objective_window_ref(ref: str, workflow_names: Mapping[str, str]) -> str:
+    """Rewrite a workflow-step window reference through a symbol map."""
+
+    rewritten = ref
+    parts: tuple[str, ...] = ()
+    if not is_variable_ref(ref):
+        with suppress(TypeError, ValueError):
+            parts = QualifiedName.parse(ref).parts
+    if len(parts) >= 2:
+        workflow_name = QualifiedName(parts[:-1]).render()
+        if workflow_name in workflow_names:
+            rewritten = f"{workflow_names[workflow_name]}.{parts[-1]}"
+    return rewritten
 
 
 def explicit_exports(
-    scenario: Scenario,
+    scenario: ScenarioContent,
     descriptor: ModuleDescriptor,
+    *,
+    restrict_to_descriptor: bool,
 ) -> dict[str, set[str]]:
-    if scenario.module is None:
+    if not restrict_to_descriptor:
         return {
             section: set(getattr(scenario, section).keys())
             for section in _HASHMAP_SECTIONS
@@ -80,7 +103,7 @@ def _qualified_section_aliases(section_name: str, rename_map: Mapping[str, str])
 
 
 def _nested_node_service_aliases(
-    scenario: Scenario,
+    scenario: ScenarioContent,
     node_rename_map: Mapping[str, str],
 ) -> dict[str, str]:
     """Qualified service refs ``nodes.<vm>.services.<svc>``.
@@ -103,7 +126,7 @@ def _nested_node_service_aliases(
 
 
 def _nested_content_item_aliases(
-    scenario: Scenario,
+    scenario: ScenarioContent,
     content_rename_map: Mapping[str, str],
 ) -> dict[str, str]:
     """Qualified content-item refs ``content.<section>.items.<item>``."""
@@ -122,13 +145,18 @@ def _nested_content_item_aliases(
 
 
 def symbol_index(
-    scenario: Scenario,
+    scenario: ScenarioContent,
     *,
     namespace: str,
     descriptor: ModuleDescriptor,
+    restrict_to_descriptor: bool = False,
 ) -> dict[str, dict[str, str] | set[str]]:
     entities = set(flatten_entities(scenario.entities))
-    exported = explicit_exports(scenario, descriptor)
+    exported = explicit_exports(
+        scenario,
+        descriptor,
+        restrict_to_descriptor=restrict_to_descriptor,
+    )
     named: dict[str, str] = {}
     section_maps: dict[str, dict[str, str]] = {}
     for section_name in _HASHMAP_SECTIONS:
@@ -156,11 +184,20 @@ def symbol_index(
     named.update(nested_node_runtime_aliases(scenario, section_maps.get("nodes", {})))
     named.update(_nested_content_item_aliases(scenario, section_maps.get("content", {})))
 
+    forwarding_agent_map = _section_rename_map(
+        {agent.forwarding_agent_id: agent for agent in scenario.forwarding_agents},
+        namespace=namespace,
+        exported_names=exported.get(FORWARDING_AGENTS_SECTION, set()),
+    )
+    named.update(_qualified_section_aliases(FORWARDING_AGENTS_SECTION, forwarding_agent_map))
+
     return {
         "nodes": section_maps.get("nodes", {}),
         "infrastructure": section_maps.get("infrastructure", {}),
         "features": section_maps.get("features", {}),
         "conditions": section_maps.get("conditions", {}),
+        "propositions": section_maps.get("propositions", {}),
+        "assertions": section_maps.get("assertions", {}),
         "vulnerabilities": section_maps.get("vulnerabilities", {}),
         "entities": entity_map,
         "injects": section_maps.get("injects", {}),
@@ -178,8 +215,9 @@ def symbol_index(
         "evidence_requirements": section_maps.get("evidence_requirements", {}),
         "objectives": section_maps.get("objectives", {}),
         "workflows": section_maps.get("workflows", {}),
+        FORWARDING_AGENTS_SECTION: forwarding_agent_map,
         "named": named,
     }
 
 
-__all__ = ["HASHMAP_SECTIONS", "explicit_exports", "symbol_index"]
+__all__ = ["FORWARDING_AGENTS_SECTION", "HASHMAP_SECTIONS", "explicit_exports", "symbol_index"]

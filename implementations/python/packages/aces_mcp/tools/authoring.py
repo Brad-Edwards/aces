@@ -29,17 +29,20 @@ def register(mcp: FastMCP) -> None:
             "Pass the full YAML scenario text as `sdl_content`.  Optionally "
             "set `structural_only=true` to skip semantic cross-reference "
             "checks (useful for work-in-progress fragments that aren't "
-            "complete yet)."
+            "complete yet). Set `accept_migration_syntax=true` only when "
+            "migrating legacy field spellings; canonical validation is strict."
         ),
     )
     def sdl_validate(
         sdl_content: str,
         structural_only: bool = False,
+        accept_migration_syntax: bool = False,
     ) -> str:
         if len(sdl_content.encode("utf-8", errors="replace")) > _MAX_INPUT_BYTES:
             return f"INPUT TOO LARGE — limit is {_MAX_INPUT_BYTES} bytes."
 
         from aces_sdl import (
+            SDLMigrationPolicy,
             SDLParseError,
             SDLValidationError,
             parse_sdl,
@@ -49,6 +52,7 @@ def register(mcp: FastMCP) -> None:
             scenario = parse_sdl(
                 sdl_content,
                 skip_semantic_validation=structural_only,
+                migration_policy=(SDLMigrationPolicy.ACCEPT if accept_migration_syntax else SDLMigrationPolicy.REJECT),
             )
         except SDLParseError as exc:
             return (
@@ -77,6 +81,12 @@ def register(mcp: FastMCP) -> None:
             parts.append(f"\nAdvisories ({len(scenario.advisories)}):")
             for adv in scenario.advisories:
                 parts.append(f"  - {adv}")
+
+        if scenario.source_diagnostics:
+            parts.append(f"\nSource migration advisories ({len(scenario.source_diagnostics)}):")
+            for diagnostic in scenario.source_diagnostics:
+                start = diagnostic.primary_range.start
+                parts.append(f"  - [{diagnostic.code}] line {start.line}, column {start.column}: {diagnostic.message}")
 
         if structural_only:
             parts.append(
@@ -113,7 +123,7 @@ def register(mcp: FastMCP) -> None:
             return f"INPUT TOO LARGE — limit is {_MAX_INPUT_BYTES} bytes."
 
         import yaml as _yaml
-        from aces_sdl import SDLParseError, SDLValidationError, parse_sdl
+        from aces_sdl import SDLParseError, SDLValidationError, load_sdl_fragment, parse_sdl
 
         section = section.strip().lower().replace("-", "_")
         valid_sections = {
@@ -140,22 +150,28 @@ def register(mcp: FastMCP) -> None:
 
         # Build a minimal valid wrapper
         try:
-            section_data = _yaml.safe_load(section_yaml)
-        except _yaml.YAMLError as exc:
-            return f"YAML ERROR in section content:\n{exc}"
+            section_data = load_sdl_fragment(
+                section_yaml,
+                mapping_keys="literal",
+                base_pointer=f"/{section}",
+            )
+        except SDLParseError as exc:
+            label = "PARSE ERROR" if any(item.code != "sdl.parse" for item in exc.diagnostics) else "YAML ERROR"
+            return f"{label} in section content:\n{exc.details}"
 
         wrapper: dict = {}
         if context_yaml:
             try:
-                ctx = _yaml.safe_load(context_yaml)
+                ctx = load_sdl_fragment(context_yaml)
                 if isinstance(ctx, dict):
                     wrapper.update(ctx)
-            except _yaml.YAMLError as exc:
-                return f"YAML ERROR in context_yaml:\n{exc}"
+            except SDLParseError as exc:
+                label = "PARSE ERROR" if any(item.code != "sdl.parse" for item in exc.diagnostics) else "YAML ERROR"
+                return f"{label} in context_yaml:\n{exc.details}"
 
         # Force a safe synthetic name — always last so context_yaml cannot
         # override it and cause confusing error messages.
-        wrapper["name"] = "__mcp_validation_fragment"
+        wrapper["name"] = "mcp-validation-fragment"
         wrapper[section] = section_data
         combined = _yaml.dump(wrapper, default_flow_style=False, sort_keys=False)
 
@@ -252,9 +268,12 @@ def register(mcp: FastMCP) -> None:
             bullets = "\n".join(f"  - {e}" for e in exc.errors)
             return f"INSTANTIATION ERRORS ({len(exc.errors)}):\n{bullets}"
 
+        binding_count = len(concrete.instantiation_provenance.bindings) + sum(
+            len(item.bindings) for item in concrete.instantiation_provenance.imports
+        )
         parts = [
-            f"INSTANTIATED — scenario '{concrete.name}' fully resolved.",
-            f"Parameters used: {concrete.instantiation_parameters}",
+            f"INSTANTIATED - scenario '{concrete.name}' fully resolved.",
+            f"Bindings resolved: {binding_count}",
         ]
         section_counts = _section_summary(concrete)
         if section_counts:
@@ -379,8 +398,42 @@ features:
 
 conditions:
   web-healthy:
+    proposition: web-available
     command: "curl -sf https://localhost/ || exit 1"
     interval: 15
+
+propositions:
+  web-available:
+    description: The web service reports its availability as healthy.
+    subjects: [nodes.web-server.services.https]
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: service-healthy
+      semantic_ref: urn:aces:observable:service-healthy
+      operator: equals
+      expected: true
+    evidence_requirements: [web-health-evidence]
+
+assertions:
+  web-healthy:
+    proposition: web-available
+    role: postcondition
+
+evidence_requirements:
+  web-health-evidence:
+    description: Capture evidence used to decide web availability.
+    source_refs: [nodes.web-server.services.https]
+    scope_refs: [nodes.web-server]
+    boundary_kind: objective_completion
+    channel: api_response
+    artifact_role: proposition_truth_evidence
+    media_types: [application/json]
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: run_lifetime
+    loss_disclosure: required
 
 vulnerabilities:
   sqli:
@@ -397,7 +450,7 @@ entities:
     name: Red Team
     role: Red
 
-# Objective success references observable state (conditions) per ADR-073.
+# Objective success references assertions over typed propositions per ADR-079.
 # Graded scoring/reward, if a study needs it, lives in the experiment/evaluator
 # plane (ADR-055/064/069), not in the SDL.
 objectives:
@@ -405,7 +458,7 @@ objectives:
     description: Keep the web application available
     entity: blue-team
     success:
-      conditions: [web-healthy]
+      assertions: [web-healthy]
 
 accounts:
   web-admin-account:
@@ -491,8 +544,42 @@ features:
 
 conditions:
   web-healthy:
+    proposition: web-available
     command: "curl -sf https://localhost/ || exit 1"
     interval: 15
+
+propositions:
+  web-available:
+    description: The web service reports its availability as healthy.
+    subjects: [nodes.web-server.services.https]
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: service-healthy
+      semantic_ref: urn:aces:observable:service-healthy
+      operator: equals
+      expected: true
+    evidence_requirements: [web-health-evidence]
+
+assertions:
+  web-healthy:
+    proposition: web-available
+    role: postcondition
+
+evidence_requirements:
+  web-health-evidence:
+    description: Capture evidence used to decide web availability.
+    source_refs: [nodes.web-server.services.https]
+    scope_refs: [nodes.web-server]
+    boundary_kind: objective_completion
+    channel: api_response
+    artifact_role: proposition_truth_evidence
+    media_types: [application/json]
+    sensitivity: plain
+    redaction: redact_secrets
+    integrity: checksum
+    retention: run_lifetime
+    loss_disclosure: required
 
 vulnerabilities:
   sqli:
@@ -525,8 +612,8 @@ events:
 
 scripts:
   main-timeline:
-    start-time: 0
-    end-time: 4 hour
+    start_time: 0
+    end_time: 4 hour
     speed: ${exercise_speed}
     events:
       attack-start: 30 min
@@ -580,13 +667,13 @@ objectives:
     actions: [Scan, Exploit]
     targets: [web-server, sqli]
     success:
-      conditions: [web-healthy]
+      assertions: [web-healthy]
     window:
       stories: [exercise]
   blue-defend:
     entity: blue-team
     success:
-      conditions: [web-healthy]
+      assertions: [web-healthy]
     depends_on: [red-access]
 
 # --- Workflows ---
@@ -597,11 +684,11 @@ workflows:
       run-attack:
         type: objective
         objective: red-access
-        on-success: run-defense
+        on_success: run-defense
       run-defense:
         type: objective
         objective: blue-defend
-        on-success: done
+        on_success: done
       done:
         type: end
 """

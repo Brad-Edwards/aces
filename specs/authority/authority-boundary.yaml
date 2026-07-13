@@ -57,13 +57,23 @@ authority_roots:
 
   - id: normative_profiles
     root: contracts/profiles/
-    authority: capability profile declarations
+    authority: capability and intended-use profile declarations
     family: profiles
+
+  - id: normative_realization_envelopes
+    root: contracts/realization-envelopes/
+    authority: configuration-bound backend realization envelope declarations
+    family: realization-envelopes
 
   - id: normative_concept_authority
     root: contracts/concept-authority/
     authority: concept-family and controlled-vocabulary authority artifacts
     family: concept-authority
+
+  - id: normative_provenance
+    root: contracts/provenance/
+    authority: revision-pinned SDL lineage and third-party provenance records
+    family: provenance
 
 # Roots that are non-normative. These consume authority; they do not define it.
 # A reference implementation, an explanatory doc, a worked example, a research
@@ -93,10 +103,6 @@ non_normative_roots:
   - id: tooling
     root: tools/
     note: maintenance, codegen, and release helpers
-
-  - id: changelog_fragments
-    root: changelog.d/
-    note: towncrier changelog fragments; collated into CHANGELOG.md at release
 
 # Top-level directories explicitly transitioned out by ADR-009. The gate fails
 # if any of these reappears at the repo root.
@@ -142,3 +148,10 @@ normative_artifact_families:
     family: governance-guidance
     requirement_refs:
       - AUT-811
+
+  - id: deprecation_records
+    artifact: specs/evolution/deprecation-records.yaml
+    authority: ecosystem deprecation and lifecycle records (GOV-902)
+    family: deprecation-records
+    requirement_refs:
+      - GOV-902

@@ -9,6 +9,16 @@
       "content_hash": "e7b858c93b7ec763c361439b1d9c7cc3979a1d150ca64a7f41ebc12c050f5cff"
     },
     {
+      "contract_id": "associated-artifact-manifest-v1",
+      "schema_path": "contracts/schemas/associated-artifacts/associated-artifact-manifest-v1.json",
+      "stability": "draft",
+      "content_hash": "50cb495731d7274371dd01116acfe67dda3dd3261a1a911136cae02dab7f7927",
+      "last_change": {
+        "summary": "Initial publication of the ADR-077 scenario- and experiment-associated artifact manifest, canonical set identity, and required semantic byte-binding invariant.",
+        "content_hash": "50cb495731d7274371dd01116acfe67dda3dd3261a1a911136cae02dab7f7927"
+      }
+    },
+    {
       "contract_id": "atlas-tactics-source-v1",
       "schema_path": "contracts/schemas/concept-authority/atlas-tactics-source-v1.json",
       "stability": "draft",
@@ -32,20 +42,20 @@
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "4485bf2485e1f98be2c540552d42828a170dc6ff5beeb6b091a4e87a55b922ab",
+      "content_hash": "e2beb9d9f20f7564c8b485b653c706b8b3d83ebdc535bff62e80fbcd82d8200f",
       "last_change": {
-        "summary": "Added experiment-run-v1 to the governed backend manifest contract vocabulary for run-level observability and augmentation evidence disclosure.",
-        "content_hash": "4485bf2485e1f98be2c540552d42828a170dc6ff5beeb6b091a4e87a55b922ab"
+        "summary": "Published evaluator proposition, assertion, evidence, truth-outcome, temporal, and binding-provenance capability declarations and assertion-aware orchestration support.",
+        "content_hash": "e2beb9d9f20f7564c8b485b653c706b8b3d83ebdc535bff62e80fbcd82d8200f"
       }
     },
     {
       "contract_id": "backend-profile-v1",
       "schema_path": "contracts/schemas/profiles/backend-profile-v1.json",
       "stability": "draft",
-      "content_hash": "3f4152b2d7f1e4a01b30e2782a4d6001654e2785f4b9fe54121ed7e84a37c604",
+      "content_hash": "7796e171b81cc47e15446d77097c63d56564235b96a5f82e8e813753d4f7b709",
       "last_change": {
-        "summary": "Added experiment-run-v1 to the backend profile contract vocabulary so profile fixture conformance can exercise run-level observability semantics.",
-        "content_hash": "3f4152b2d7f1e4a01b30e2782a4d6001654e2785f4b9fe54121ed7e84a37c604"
+        "summary": "Added proposition-truth-result-v1 to the governed backend contract vocabulary.",
+        "content_hash": "7796e171b81cc47e15446d77097c63d56564235b96a5f82e8e813753d4f7b709"
       }
     },
     {
@@ -74,7 +84,11 @@
       "contract_id": "evaluation-plan-v1",
       "schema_path": "contracts/schemas/plans/evaluation-plan-v1.json",
       "stability": "draft",
-      "content_hash": "eeff605ae19059eb23648c717438189758f22ea8a35510c4561aa6f5f469a573"
+      "content_hash": "804f1970cbf9d80e80c3f984deb1d0f034470df7b25ee10ce7c7959b6ad69a4b",
+      "last_change": {
+        "summary": "Added proposition and assertion semantic-admission resources to the closed evaluation-plan vocabulary.",
+        "content_hash": "804f1970cbf9d80e80c3f984deb1d0f034470df7b25ee10ce7c7959b6ad69a4b"
+      }
     },
     {
       "contract_id": "evaluation-result-envelope-v1",
@@ -86,80 +100,100 @@
       "contract_id": "experiment-apparatus-context-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-apparatus-context-v1.json",
       "stability": "draft",
-      "content_hash": "565558814655c9fc3cd790fb441633622e4846d416ffaba43812143024e33ae3",
+      "content_hash": "a2c8fcfc2fec00a20ee9e46af3160c88b9e7aeb8b2315afbaa3781b3e25c0f93",
       "last_change": {
-        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
-        "content_hash": "565558814655c9fc3cd790fb441633622e4846d416ffaba43812143024e33ae3"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "a2c8fcfc2fec00a20ee9e46af3160c88b9e7aeb8b2315afbaa3781b3e25c0f93"
+      }
+    },
+    {
+      "contract_id": "experiment-authoring-input-v1",
+      "schema_path": "contracts/schemas/experiment-core/experiment-authoring-input-v1.json",
+      "stability": "draft",
+      "content_hash": "2f399830a126d155bbb3940ad1f0bbb2c41fe540ea261d12e37d74400393d976",
+      "last_change": {
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "2f399830a126d155bbb3940ad1f0bbb2c41fe540ea261d12e37d74400393d976"
       }
     },
     {
       "contract_id": "experiment-capture-spec-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-capture-spec-v1.json",
       "stability": "draft",
-      "content_hash": "1c479291aed4c60aa7a28d93839d3633f8dee585ca3098b83bd4fbb03bea86ad",
+      "content_hash": "b262408eda4309d265a292ffd2fbcb1e34ba58c28205e4d99996f1b854a70876",
       "last_change": {
-        "summary": "Published the SEM-224 observability/evidence plane (authored_evidence_requirement) as a portable x-aces-plane annotation sourced from the carrier-oriented plane classifier.",
-        "content_hash": "1c479291aed4c60aa7a28d93839d3633f8dee585ca3098b83bd4fbb03bea86ad"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "b262408eda4309d265a292ffd2fbcb1e34ba58c28205e4d99996f1b854a70876"
       }
     },
     {
       "contract_id": "experiment-derived-measure-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-derived-measure-v1.json",
       "stability": "draft",
-      "content_hash": "162aeeb41906008b03ef211b20646f451101c59cdcabc1614427ca3fa7945afe",
+      "content_hash": "3619f07b4e075a47a99e026aed5395a6a9c06b663a81e62f67bba7fd196ccf34",
       "last_change": {
-        "summary": "Published the SEM-224 observability/evidence plane (derived_analysis) as a portable x-aces-plane annotation sourced from the carrier-oriented plane classifier.",
-        "content_hash": "162aeeb41906008b03ef211b20646f451101c59cdcabc1614427ca3fa7945afe"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "3619f07b4e075a47a99e026aed5395a6a9c06b663a81e62f67bba7fd196ccf34"
       }
     },
     {
       "contract_id": "experiment-evidence-record-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-evidence-record-v1.json",
       "stability": "draft",
-      "content_hash": "3483ac4ff2cb61278d64253257f70dc73d14eaff3bc5501eee20a86a55d7d707",
+      "content_hash": "b6b14039002d04329d760a30b26cb191d795de3b49e377edd084be4d10f9c32b",
       "last_change": {
-        "summary": "Published the SEM-224 observability/evidence plane (captured_evidence) as a portable x-aces-plane annotation sourced from the carrier-oriented plane classifier.",
-        "content_hash": "3483ac4ff2cb61278d64253257f70dc73d14eaff3bc5501eee20a86a55d7d707"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "b6b14039002d04329d760a30b26cb191d795de3b49e377edd084be4d10f9c32b"
       }
     },
     {
       "contract_id": "experiment-run-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-run-v1.json",
       "stability": "draft",
-      "content_hash": "e1e7ca5e74439140cd27340a7754d8b871266e518ce93c98bf6ff0dbaa8bd134",
+      "content_hash": "1503644443be7e61d5710a6aed9437a66c53a7871eb0ff1541fb2449b684742b",
       "last_change": {
-        "summary": "Added SEM-225 run-level augmentation disclosures for processor/backend augmentation classification, visibility, observer-effect, comparability, and evidence provenance.",
-        "content_hash": "e1e7ca5e74439140cd27340a7754d8b871266e518ce93c98bf6ff0dbaa8bd134"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "1503644443be7e61d5710a6aed9437a66c53a7871eb0ff1541fb2449b684742b"
       }
     },
     {
       "contract_id": "experiment-study-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-study-v1.json",
       "stability": "draft",
-      "content_hash": "b769512ccf43a3cae303d363da84cf1d4bbd97099d7f9085f065bbe4d801b4d3",
+      "content_hash": "d180220068358f42d6ae850eccb9991dc9284db4b244ef70960837ea68d9b098",
       "last_change": {
-        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
-        "content_hash": "b769512ccf43a3cae303d363da84cf1d4bbd97099d7f9085f065bbe4d801b4d3"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "d180220068358f42d6ae850eccb9991dc9284db4b244ef70960837ea68d9b098"
       }
     },
     {
       "contract_id": "experiment-task-v1",
       "schema_path": "contracts/schemas/experiment-core/experiment-task-v1.json",
       "stability": "draft",
-      "content_hash": "45fb2eb011d89b9be057d236b9d4e58c2ce01f8c1365f7d521afc8192d68a73a",
+      "content_hash": "b82f084841720563089206f9a8dc94b93fde10035da9b3a64662b7660b30d823",
       "last_change": {
-        "summary": "Extended experiment-core references for the EXP-707/EXP-708/EXP-709 evidence and measure contract boundary.",
-        "content_hash": "45fb2eb011d89b9be057d236b9d4e58c2ce01f8c1365f7d521afc8192d68a73a"
+        "summary": "Extended shared experiment artifact roles and typed references for associated-artifact parents (ADR-077, issue #738).",
+        "content_hash": "b82f084841720563089206f9a8dc94b93fde10035da9b3a64662b7660b30d823"
+      }
+    },
+    {
+      "contract_id": "instantiated-scenario-snapshot-v1",
+      "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
+      "stability": "draft",
+      "content_hash": "8670e3cf3aafc452f25311e4eb98ed82bb89561faaaf368a9232448c8440a3c3",
+      "last_change": {
+        "summary": "Published backend-neutral propositions and assertions in canonical instantiated scenario snapshots.",
+        "content_hash": "8670e3cf3aafc452f25311e4eb98ed82bb89561faaaf368a9232448c8440a3c3"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "e0a28239e30855be948b4c3718ae34811de231b3f8d8e146d149d862af0b7cc5",
+      "content_hash": "58d4f2e69b91ad1639717d7892499bd1b2f007e23c0cb980314cbd701c2cd000",
       "last_change": {
-        "summary": "Removed the OCR scoring pipeline (metrics/evaluations/tlos/goals), agents.reward_calculator, entities.tlos, injects.tlos, and workflow-predicate/objective-success scoring references; narrowed objectives.success to conditions (observable state) per ADR-073.",
-        "content_hash": "e0a28239e30855be948b4c3718ae34811de231b3f8d8e146d149d862af0b7cc5"
+        "summary": "Published backend-neutral propositions, assertions, role-constrained truth references, and explicit condition-to-proposition bindings.",
+        "content_hash": "58d4f2e69b91ad1639717d7892499bd1b2f007e23c0cb980314cbd701c2cd000"
       }
     },
     {
@@ -172,13 +206,21 @@
       "contract_id": "operation-status-v1",
       "schema_path": "contracts/schemas/control-plane/operation-status-v1.json",
       "stability": "draft",
-      "content_hash": "a4db430e1bef55cc954e9620fdd91897175baeab8d132088647642c02792f0ec"
+      "content_hash": "fd9af93db03252516e91ffe2cc4eae6c006221b5a10ef6b9998762ec51a5ed53",
+      "last_change": {
+        "summary": "Constrained backend-reported changed addresses to unique canonical compiled addresses for DSL-101/DSL-102.",
+        "content_hash": "fd9af93db03252516e91ffe2cc4eae6c006221b5a10ef6b9998762ec51a5ed53"
+      }
     },
     {
       "contract_id": "orchestration-plan-v1",
       "schema_path": "contracts/schemas/plans/orchestration-plan-v1.json",
       "stability": "draft",
-      "content_hash": "9f132b651267f5cafa460879550a49eb18d735ab1e02b241e664ec6c73275bae"
+      "content_hash": "2ada1a85e8049b7ab52e8c867ab6360fb7fe2833c62ab9469d0b7a49aa0dd2e7",
+      "last_change": {
+        "summary": "Constrained orchestration operations to the orchestration address domain and closed resource-type vocabulary for DSL-101/DSL-102/SEM-205.",
+        "content_hash": "2ada1a85e8049b7ab52e8c867ab6360fb7fe2833c62ab9469d0b7a49aa0dd2e7"
+      }
     },
     {
       "contract_id": "participant-behavior-history-event-stream-v1",
@@ -308,13 +350,41 @@
       "contract_id": "processor-manifest-v2",
       "schema_path": "contracts/schemas/processor-manifest/processor-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "f47537f72e1f607b634b0d1f9d8854cc8abd11e0edec7272549d4d910f38993e"
+      "content_hash": "882ea02e0294d3ed7fb62b6bafec699236a5e3d42f4e22de27107ef3f2c25510",
+      "last_change": {
+        "summary": "Added proposition-truth-result-v1 to the processor contract surface.",
+        "content_hash": "882ea02e0294d3ed7fb62b6bafec699236a5e3d42f4e22de27107ef3f2c25510"
+      }
+    },
+    {
+      "contract_id": "proposition-truth-result-v1",
+      "schema_path": "contracts/schemas/control-plane/proposition-truth-result-v1.json",
+      "stability": "draft",
+      "content_hash": "4a37fa964b8a7e3e641f381a27ea6960e9bc1efb8edfe426b9c19e173f7a045f",
+      "last_change": {
+        "summary": "Initial publication of portable four-valued proposition truth results with typed evidence, provenance, temporal context, loss disclosure, and capability-bounded unsupported outcomes.",
+        "content_hash": "4a37fa964b8a7e3e641f381a27ea6960e9bc1efb8edfe426b9c19e173f7a045f"
+      }
     },
     {
       "contract_id": "provisioning-plan-v1",
       "schema_path": "contracts/schemas/plans/provisioning-plan-v1.json",
       "stability": "draft",
-      "content_hash": "e200fb7e8e68f05eb61c35cc2f724882e3b8977df7f4d5ae97e70401a1a76e01"
+      "content_hash": "e3d9a1357af4e49b78d591cca10547a4d0113aee794686e0f8d96e32bb940e49",
+      "last_change": {
+        "summary": "Added immutable realization-envelope identity carriage and constrained provisioning operations to canonical provision addresses and resource types.",
+        "content_hash": "e3d9a1357af4e49b78d591cca10547a4d0113aee794686e0f8d96e32bb940e49"
+      }
+    },
+    {
+      "contract_id": "realization-envelope-v1",
+      "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
+      "stability": "draft",
+      "content_hash": "a5992e81fbc935a7ee6eab3b173a89d6e664274f0f143475e303a54d01a27374",
+      "last_change": {
+        "summary": "Added explicit service-concern disclosure so backend envelopes cannot hide declared guest services inside another concern.",
+        "content_hash": "a5992e81fbc935a7ee6eab3b173a89d6e664274f0f143475e303a54d01a27374"
+      }
     },
     {
       "contract_id": "reference-models-v1",
@@ -326,36 +396,70 @@
       "contract_id": "reusable-asset-trust-policy-v1",
       "schema_path": "contracts/schemas/asset-trust/reusable-asset-trust-policy-v1.json",
       "stability": "draft",
-      "content_hash": "68f18e107bddb0b037a316bd334258da7329fc60460ee38ef415c89ce58ad7e0",
+      "content_hash": "de371c60018cc27664915404443df13dd881a57264a1539028409a14af1823b5",
       "last_change": {
-        "summary": "Initial publication of the GOV-913 reusable-asset trust/authenticity/integrity policy contract: per-family evidence-class requirements (integrity/authenticity/provenance/governance) referencing existing ACES mechanisms.",
-        "content_hash": "68f18e107bddb0b037a316bd334258da7329fc60460ee38ef415c89ce58ad7e0"
+        "summary": "Added the associated_artifact_set family with required set-integrity and concrete payload-checksum evidence (ADR-077, issue #738).",
+        "content_hash": "de371c60018cc27664915404443df13dd881a57264a1539028409a14af1823b5"
       }
     },
     {
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "cb6a599ef5137bcc5954ffd4f451167562186112c7595ec20b50eb94b97e1550",
+      "content_hash": "4e20e5c91ccd425c88be75a0e55be97f07d311e6499fc6bf73c3db4b37fa51bf",
       "last_change": {
-        "summary": "Added first-class joint_action_records and time_management_contexts fields to the runtime snapshot envelope for RUN-308 concurrent participant execution.",
-        "content_hash": "cb6a599ef5137bcc5954ffd4f451167562186112c7595ec20b50eb94b97e1550"
+        "summary": "Added portable proposition truth results as a distinct runtime snapshot carrier outside ordinary evaluation result envelopes.",
+        "content_hash": "4e20e5c91ccd425c88be75a0e55be97f07d311e6499fc6bf73c3db4b37fa51bf"
       }
     },
     {
       "contract_id": "scenario-instantiation-request-v1",
       "schema_path": "contracts/schemas/sdl/scenario-instantiation-request-v1.json",
       "stability": "draft",
-      "content_hash": "72a4a1969bc39d551efd0be364804dcdfca7694eceb2a58c402a026d981cd470"
+      "content_hash": "130a103664dd69819c1dbe13437e94436dfb2b5db871f135e9f1750c741b412f",
+      "last_change": {
+        "summary": "Constrained instantiation parameter names to portable local identifiers while leaving parameter values outside declaration identity for DSL-101.",
+        "content_hash": "130a103664dd69819c1dbe13437e94436dfb2b5db871f135e9f1750c741b412f"
+      }
+    },
+    {
+      "contract_id": "scientific-completeness-assessment-v1",
+      "schema_path": "contracts/schemas/profiles/scientific-completeness-assessment-v1.json",
+      "stability": "draft",
+      "content_hash": "f70a3b3769982ec179fd0d231829ebef4f2cd4c003d62ad26f813848330eee2d",
+      "last_change": {
+        "summary": "Initial publication of the separately revisioned REV1 concern-delivery assessment, evidence, limitation, satisfiability-witness, and external-binding contract for GOV-942.",
+        "content_hash": "f70a3b3769982ec179fd0d231829ebef4f2cd4c003d62ad26f813848330eee2d"
+      }
+    },
+    {
+      "contract_id": "scientific-completeness-taxonomy-v1",
+      "schema_path": "contracts/schemas/profiles/scientific-completeness-taxonomy-v1.json",
+      "stability": "draft",
+      "content_hash": "87eabab61eb27b6d66288ebce40b628e7405ba3c66ad116fd98b493c4b9bff21",
+      "last_change": {
+        "summary": "Initial publication of the REV1 scientific-scenario completeness taxonomy, atomic concern, intended-use disposition, and explicit non-claim contract for GOV-942.",
+        "content_hash": "87eabab61eb27b6d66288ebce40b628e7405ba3c66ad116fd98b493c4b9bff21"
+      }
     },
     {
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "820fbd6619a100e382d722890edcdde01da977158fd86f958f4928a9d32ad51a",
+      "content_hash": "17f941e916ffcbeb3e36b894029332326257bc7e4d1ab3419bc6e06c7f06f801",
       "last_change": {
-        "summary": "Removed the OCR scoring pipeline (metrics/evaluations/tlos/goals), agents.reward_calculator, entities.tlos, injects.tlos, and workflow-predicate/objective-success scoring references; narrowed objectives.success to conditions (observable state) per ADR-073.",
-        "content_hash": "820fbd6619a100e382d722890edcdde01da977158fd86f958f4928a9d32ad51a"
+        "summary": "Published backend-neutral proposition and assertion authoring, role-constrained objective/event/workflow/participant references, and explicit probe bindings.",
+        "content_hash": "17f941e916ffcbeb3e36b894029332326257bc7e4d1ab3419bc6e06c7f06f801"
+      }
+    },
+    {
+      "contract_id": "sdl-lineage-ledger-v1",
+      "schema_path": "contracts/schemas/provenance/sdl-lineage-ledger-v1.json",
+      "stability": "draft",
+      "content_hash": "ac8a7737debd83fe70cfe791a85f72455d6e474c806e3faf9692cdce38123e6d",
+      "last_change": {
+        "summary": "Initial publication of the revision-pinned SDL lineage, derivation, citation identity, compatibility, and third-party notice-disposition contract for issue #726.",
+        "content_hash": "ac8a7737debd83fe70cfe791a85f72455d6e474c806e3faf9692cdce38123e6d"
       }
     },
     {

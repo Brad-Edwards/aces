@@ -22,6 +22,7 @@ PROCESSOR_SUPPORTED_CONTRACT_IDS = (
     "workflow-result-envelope-v1",
     "workflow-history-event-stream-v1",
     "evaluation-result-envelope-v1",
+    "proposition-truth-result-v1",
     "evaluation-history-event-stream-v1",
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",
@@ -34,6 +35,7 @@ PROCESSOR_SUPPORTED_CONTRACT_IDS = (
 # separate authority surfaces and do not belong in this declaration field.
 BACKEND_SUPPORTED_CONTRACT_IDS = (
     "backend-manifest-v2",
+    "realization-envelope-v1",
     "provisioning-plan-v1",
     "orchestration-plan-v1",
     "evaluation-plan-v1",
@@ -43,6 +45,7 @@ BACKEND_SUPPORTED_CONTRACT_IDS = (
     "workflow-result-envelope-v1",
     "workflow-history-event-stream-v1",
     "evaluation-result-envelope-v1",
+    "proposition-truth-result-v1",
     "evaluation-history-event-stream-v1",
     "participant-episode-state-envelope-v1",
     "participant-episode-history-event-stream-v1",

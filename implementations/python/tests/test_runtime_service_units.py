@@ -476,7 +476,13 @@ class TestSemanticValidatorServiceManagerUnits:
     def test_qualified_service_ref_other_node_rejected(self):
         s = _scenario_with_units(
             [{**_BASE_UNIT, "service": "nodes.other.services.ssh"}],
-            nodes={"other": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
+            nodes={
+                "other": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "services": [{"port": 22, "name": "ssh"}],
+                }
+            },
         )
         errors = _validate(s)
         assert any("same node" in e for e in errors)
@@ -486,14 +492,14 @@ class TestSemanticValidatorServiceManagerUnits:
 
         s = Scenario(
             name="t",
-            variables={"SVC": {"type": "string", "required": True}},
+            variables={"svc": {"type": "string", "required": True}},
             nodes={
                 "box": {
                     "type": "vm",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "services": [{"port": 22, "name": "ssh"}],
                     "runtime": {
-                        "service_manager_units": [{**_BASE_UNIT, "service": "${SVC}"}],
+                        "service_manager_units": [{**_BASE_UNIT, "service": "${svc}"}],
                     },
                 },
             },
@@ -539,14 +545,14 @@ class TestSemanticValidatorServiceManagerUnits:
 
         s = Scenario(
             name="t",
-            variables={"UNIT_PATH": {"type": "string", "required": True}},
+            variables={"unit_path": {"type": "string", "required": True}},
             nodes={
                 "box": {
                     "type": "vm",
                     "resources": {"ram": "1 gib", "cpu": 1},
                     "services": [{"port": 22, "name": "ssh"}],
                     "runtime": {
-                        "service_manager_units": [{**_BASE_UNIT, "unit_file_path": "${UNIT_PATH}"}],
+                        "service_manager_units": [{**_BASE_UNIT, "unit_file_path": "${unit_path}"}],
                         "filesystem_inventory": [
                             {
                                 "path": "/etc/systemd/system/sshd.service",

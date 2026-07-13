@@ -107,7 +107,7 @@ def test_vm_runtime_network_sensor_inventory() -> None:
     assert sensor.monitored_network_refs == ["dmz-net", "internal-net", "security-net"]
 
 
-def test_parser_accepts_kebab_case_runtime_network_sensors() -> None:
+def test_parser_accepts_canonical_runtime_network_sensors() -> None:
     scenario = parse_sdl(
         """
         name: network-sensor-parser
@@ -119,15 +119,15 @@ def test_parser_accepts_kebab_case_runtime_network_sensors() -> None:
             runtime:
               network:
                 endpoints:
-                  - {network: dmz-net, ip-address: 172.20.1.50}
-              network-sensors:
-                - network-sensor-id: suricata
+                  - {network: dmz-net, ip_address: 172.20.1.50}
+              network_sensors:
+                - network_sensor_id: suricata
                   implementation: SURICATA
-                  sensor-kind: ids
-                  monitoring-posture: passive
-                  capture-mode: pcap
-                  capture-interfaces: any
-                  monitored-network-refs: [dmz-net]
+                  sensor_kind: ids
+                  monitoring_posture: passive
+                  capture_mode: pcap
+                  capture_interfaces: any
+                  monitored_network_refs: [dmz-net]
         infrastructure:
           dmz-net: 1
           suricata: {count: 1, links: [dmz-net]}

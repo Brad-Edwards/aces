@@ -63,6 +63,7 @@ def _runtime_surface_summary(snapshot: RuntimeSnapshot) -> dict[str, int]:
         "orchestration_results": len(snapshot.orchestration_results),
         "orchestration_history": _history_count(snapshot.orchestration_history),
         "evaluation_results": len(snapshot.evaluation_results),
+        "proposition_truth_results": len(snapshot.proposition_truth_results),
         "evaluation_history": _history_count(snapshot.evaluation_history),
         "participant_episode_results": len(snapshot.participant_episode_results),
         "participant_episode_history": _history_count(snapshot.participant_episode_history),

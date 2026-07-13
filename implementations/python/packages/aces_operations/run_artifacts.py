@@ -31,6 +31,15 @@ def is_valid_run_id_label(run_id: str) -> bool:
     return bool(RUN_ID_LABEL_PATTERN.match(run_id))
 
 
+def portable_artifact_ref(path: Path) -> str:
+    """Return a repository-portable reference without exposing a host path."""
+
+    for anchor in ("examples", "contracts", "specs", "docs"):
+        if anchor in path.parts:
+            return "/".join(path.parts[path.parts.index(anchor) :])
+    return path.name
+
+
 def run_artifact_path(output_dir: Path, run_id: str, subdir: str, filename: str) -> Path:
     """Return the archive path ``<output_dir>/runs/<run_id>/<subdir>/<filename>``.
 

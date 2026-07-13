@@ -28,11 +28,15 @@ _SECTION_FIELDS = [
     "outcome_interpretation_rules",
     "objectives",
     "workflows",
-    "variables",
 ]
 
 
-def compile_pipeline(sdl_content: str, parameters_json: str) -> dict[str, Any]:
+def compile_pipeline(
+    sdl_content: str,
+    parameters_json: str,
+    *,
+    accept_migration_syntax: bool = False,
+) -> dict[str, Any]:
     size_error = size_error_payload(sdl_content, parameters_json)
     if size_error is not None:
         return {"error": json.loads(size_error), "stages": [], "scenario": None, "model": None}
@@ -40,6 +44,7 @@ def compile_pipeline(sdl_content: str, parameters_json: str) -> dict[str, Any]:
     from aces_processor.compiler import compile_runtime_model
     from aces_sdl import (
         SDLInstantiationError,
+        SDLMigrationPolicy,
         SDLParseError,
         SDLValidationError,
         instantiate_scenario,
@@ -52,9 +57,12 @@ def compile_pipeline(sdl_content: str, parameters_json: str) -> dict[str, Any]:
 
     stages: list[dict[str, str]] = []
     try:
-        scenario = parse_sdl(sdl_content)
+        scenario = parse_sdl(
+            sdl_content,
+            migration_policy=(SDLMigrationPolicy.ACCEPT if accept_migration_syntax else SDLMigrationPolicy.REJECT),
+        )
     except SDLParseError as exc:
-        return {"error": stage_error("parse", exc.details), "stages": stages, "scenario": None, "model": None}
+        return {"error": stage_error("parse", exc), "stages": stages, "scenario": None, "model": None}
     except SDLValidationError as exc:
         return {
             "error": {
@@ -90,7 +98,13 @@ def compile_pipeline(sdl_content: str, parameters_json: str) -> dict[str, Any]:
         "stages": stages,
         "scenario": concrete,
         "model": model,
-        "instantiation_parameters": concrete.instantiation_parameters,
+        "source_diagnostics": [item.as_dict() for item in scenario.source_diagnostics],
+        "instantiation": {
+            "binding_count": len(concrete.instantiation_provenance.bindings)
+            + sum(len(item.bindings) for item in concrete.instantiation_provenance.imports),
+            "import_count": len(concrete.instantiation_provenance.imports),
+            "profile": concrete.instantiation_provenance.selected_profile,
+        },
     }
 
 
@@ -139,7 +153,15 @@ def stage_ok(stage: str, *, detail: str = "ok") -> dict[str, str]:
     return {"stage": stage, "status": "ok", "detail": detail}
 
 
-def stage_error(stage: str, message: str) -> dict[str, Any]:
+def stage_error(stage: str, error: object) -> dict[str, Any]:
+    structured = getattr(error, "diagnostics", ())
+    if structured:
+        return {
+            "status": "invalid",
+            "stage": stage,
+            "diagnostics": [item.as_dict() for item in structured],
+        }
+    message = getattr(error, "details", str(error))
     return {
         "status": "invalid",
         "stage": stage,
@@ -196,7 +218,7 @@ def runtime_model_summary(model: Any) -> dict[str, Any]:
             "entities": len(model.entity_specs),
             "agents": len(model.agent_specs),
             "relationships": len(model.relationship_specs),
-            "variables": len(model.variable_specs),
+            "capability_constraints": len(model.capability_constraints),
         },
         "domains": {
             "provisioning": {
@@ -278,13 +300,12 @@ def design_notes(scenario: Any, model: Any, execution_plan: Any) -> list[dict[st
                 "No objectives are authored; range intent and success criteria may be hard to assess.",
             )
         )
-    if scenario.objectives and not any(objective.success.conditions for objective in scenario.objectives.values()):
+    if scenario.objectives and not any(objective.success.assertions for objective in scenario.objectives.values()):
         notes.append(
             note(
                 "assessment",
                 "warning",
-                "Objectives exist without any observable-state (conditions) success criteria; "
-                "objective success may be under-specified.",
+                "Objectives exist without any backend-neutral success assertions; objective truth is under-specified.",
             )
         )
     if scenario.agents and not scenario.action_contracts:

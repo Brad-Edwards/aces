@@ -5,19 +5,26 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from aces_backend_protocols.capabilities import ProvisionerCapabilities
+from aces_contracts.contracts import RealizationEnvelopeIdentityModel
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp, RuntimeDomain
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
 
 from ._payload import NETWORK_RESOURCE_TYPE, NODE_RESOURCE_TYPE
-from .driver import DriverResult, LibvirtDriver
-from .manifest import LIBVIRT_PROVISIONER_CAPABILITIES
+from .driver import DomainSpec, DriverResult, LibvirtDriver, NetworkSpec
+from .envelopes import LibvirtDriverMode, load_libvirt_realization_envelope
+from .manifest import _provisioner_capabilities
 from .realization import Realization, interpret_provisioning_plan
+from .techvault_concerns import techvault_observation_diagnostics
+from .techvault_plan_admission import techvault_admission_diagnostics
 
 _DOMAIN = "runtime"
 INVALID_PLAN_CODE = "libvirt-backend.invalid-plan"
 UNCONFIRMED_DESTROY_CODE = "libvirt-backend.driver.unconfirmed-destroy"
 UNCONFIRMED_REALIZATION_CODE = "libvirt-backend.driver.unconfirmed-realization"
+MISSING_ENVELOPE_CODE = "libvirt-backend.realization-envelope.missing"
+MISMATCHED_ENVELOPE_CODE = "libvirt-backend.realization-envelope.mismatch"
+BASELINE_ENVELOPE_MISMATCH_CODE = "libvirt-backend.realization-envelope.baseline-mismatch"
 
 
 @dataclass
@@ -36,18 +43,39 @@ class LibvirtProvisioner:
         driver: LibvirtDriver | None = None,
         *,
         provisioner_capabilities: ProvisionerCapabilities | None = None,
+        realization_envelope: RealizationEnvelopeIdentityModel | None = None,
     ) -> None:
         self._driver = driver if driver is not None else _default_driver()
-        # The capability envelope every plan term is validated against; defaults to
-        # the libvirt manifest envelope but tracks the manifest the target was built
-        # with when create_libvirt_components passes it in (issue #605).
-        self._provisioner_capabilities = provisioner_capabilities or LIBVIRT_PROVISIONER_CAPABILITIES
+        mode = LibvirtDriverMode(getattr(self._driver, "driver_mode", LibvirtDriverMode.GENERIC.value))
+        expected_capabilities = _provisioner_capabilities(mode)
+        expected_envelope = load_libvirt_realization_envelope(mode).identity
+        if provisioner_capabilities is not None and provisioner_capabilities != expected_capabilities:
+            raise ValueError("libvirt provisioner capabilities do not match driver mode")
+        if realization_envelope is not None and realization_envelope != expected_envelope:
+            raise ValueError("libvirt provisioner realization envelope does not match driver mode")
+        self._provisioner_capabilities = expected_capabilities
+        self._mode = mode
+        self._name_prefix = str(getattr(self._driver, "name_prefix", "aces-techvault"))
+        self._backend_realization_envelope = load_libvirt_realization_envelope(mode)
+        self._realization_envelope = expected_envelope
 
     def validate(self, plan: ProvisioningPlan) -> list[Diagnostic]:
         if not isinstance(plan, ProvisioningPlan):
             return [_invalid_plan_diagnostic()]
+        identity_diagnostics = self._identity_diagnostics(plan, RuntimeSnapshot())
+        if identity_diagnostics:
+            return identity_diagnostics
         realization = interpret_provisioning_plan(plan, provisioner_capabilities=self._provisioner_capabilities)
-        return list(realization.diagnostics)
+        diagnostics = list(realization.diagnostics)
+        if self._mode is LibvirtDriverMode.TECHVAULT_APPLIANCE:
+            diagnostics.extend(
+                techvault_admission_diagnostics(
+                    plan,
+                    self._backend_realization_envelope,
+                    name_prefix=self._name_prefix,
+                )
+            )
+        return diagnostics
 
     def apply(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> ApplyResult:
         if not isinstance(plan, ProvisioningPlan):
@@ -57,8 +85,24 @@ class LibvirtProvisioner:
         return result
 
     def _apply_provisioning_plan(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> ApplyResult:
+        identity_diagnostics = self._identity_diagnostics(plan, snapshot)
+        if identity_diagnostics:
+            result = ApplyResult(success=False, snapshot=snapshot, diagnostics=identity_diagnostics)
+        else:
+            result = self._apply_realization(plan, snapshot)
+        return result
+
+    def _apply_realization(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> ApplyResult:
         realization = interpret_provisioning_plan(plan, provisioner_capabilities=self._provisioner_capabilities)
         diagnostics: list[Diagnostic] = list(realization.diagnostics)
+        if self._mode is LibvirtDriverMode.TECHVAULT_APPLIANCE:
+            diagnostics.extend(
+                techvault_admission_diagnostics(
+                    plan,
+                    self._backend_realization_envelope,
+                    name_prefix=self._name_prefix,
+                )
+            )
         if _has_error(diagnostics):
             return ApplyResult(success=False, snapshot=snapshot, diagnostics=diagnostics)
 
@@ -76,7 +120,10 @@ class LibvirtProvisioner:
 
         return ApplyResult(
             success=True,
-            snapshot=snapshot.with_entries(reconciliation.entries),
+            snapshot=snapshot.with_entries(
+                reconciliation.entries,
+                realization_envelope=self._realization_envelope,
+            ),
             diagnostics=diagnostics,
             changed_addresses=reconciliation.changed_addresses,
         )
@@ -88,33 +135,105 @@ class LibvirtProvisioner:
         delete_networks: list[str],
         delete_domains: list[str],
     ) -> list[Diagnostic]:
-        diagnostics: list[Diagnostic] = []
+        active = self._active_addresses(plan, realization)
+        networks = tuple(spec for spec in realization.networks if spec.address in active)
+        domains = tuple(spec for spec in realization.domains if spec.address in active)
+        diagnostics = self._realize_active(networks, domains)
+        diagnostics.extend(self._delete_targets(delete_networks, delete_domains))
+        return diagnostics
+
+    @staticmethod
+    def _active_addresses(plan: ProvisioningPlan, realization: Realization) -> set[str]:
         active = {op.address for op in plan.operations if op.action in {ChangeAction.CREATE, ChangeAction.UPDATE}}
         # A changed placement must realize its target domain even when the node
         # itself is UNCHANGED: the domain's seed now carries different cloud-init.
         for placement_address, node_address in realization.placement_targets.items():
             if placement_address in active:
                 active.add(node_address)
-        networks = tuple(spec for spec in realization.networks if spec.address in active)
-        domains = tuple(spec for spec in realization.domains if spec.address in active)
-        if networks or domains:
-            result = self._driver.realize(networks=networks, domains=domains)
-            diagnostics.extend(result.diagnostics)
-            diagnostics.extend(
-                _unconfirmed_realization_diagnostics(
-                    result,
-                    requested=tuple(spec.address for spec in (*networks, *domains)),
-                )
+        return active
+
+    def _realize_active(
+        self,
+        networks: tuple[NetworkSpec, ...],
+        domains: tuple[DomainSpec, ...],
+    ) -> list[Diagnostic]:
+        if not (networks or domains):
+            return []
+        result = self._driver.realize(networks=networks, domains=domains)
+        realization_diagnostics = [
+            *result.diagnostics,
+            *_unconfirmed_realization_diagnostics(
+                result, requested=tuple(spec.address for spec in (*networks, *domains))
+            ),
+        ]
+        diagnostics = list(realization_diagnostics)
+        observation_diagnostics: list[Diagnostic] = []
+        if self._mode is LibvirtDriverMode.TECHVAULT_APPLIANCE and not result.diagnostics:
+            observation_diagnostics = techvault_observation_diagnostics(
+                networks=networks,
+                domains=domains,
+                result=result,
             )
-        if delete_networks or delete_domains:
-            result = self._driver.destroy(networks=tuple(delete_networks), domains=tuple(delete_domains))
-            diagnostics.extend(result.diagnostics)
-            diagnostics.extend(
-                _unconfirmed_destroy_diagnostics(
-                    result,
-                    requested=(*delete_networks, *delete_domains),
+            diagnostics.extend(observation_diagnostics)
+        if self._mode is LibvirtDriverMode.TECHVAULT_APPLIANCE and _has_error(
+            [*realization_diagnostics, *observation_diagnostics]
+        ):
+            diagnostics.extend(self._rollback_realization(networks, domains))
+        return diagnostics
+
+    def _rollback_realization(
+        self,
+        networks: tuple[NetworkSpec, ...],
+        domains: tuple[DomainSpec, ...],
+    ) -> list[Diagnostic]:
+        cleanup = self._driver.destroy(
+            networks=tuple(spec.address for spec in networks),
+            domains=tuple(spec.address for spec in domains),
+        )
+        return [
+            *cleanup.diagnostics,
+            *_unconfirmed_destroy_diagnostics(
+                cleanup,
+                requested=tuple(spec.address for spec in (*domains, *networks)),
+            ),
+        ]
+
+    def _delete_targets(self, delete_networks: list[str], delete_domains: list[str]) -> list[Diagnostic]:
+        if not (delete_networks or delete_domains):
+            return []
+        result = self._driver.destroy(networks=tuple(delete_networks), domains=tuple(delete_domains))
+        return [
+            *result.diagnostics,
+            *_unconfirmed_destroy_diagnostics(
+                result,
+                requested=(*delete_networks, *delete_domains),
+            ),
+        ]
+
+    def _identity_diagnostics(self, plan: ProvisioningPlan, snapshot: RuntimeSnapshot) -> list[Diagnostic]:
+        diagnostics: list[Diagnostic] = []
+        if plan.realization_envelope is None:
+            diagnostics = [
+                _envelope_diagnostic(
+                    MISSING_ENVELOPE_CODE, "Provisioning plan is missing realization envelope identity."
                 )
-            )
+            ]
+        elif plan.realization_envelope != self._realization_envelope:
+            diagnostics = [
+                _envelope_diagnostic(
+                    MISMATCHED_ENVELOPE_CODE,
+                    "Provisioning plan realization envelope does not match the configured libvirt target.",
+                )
+            ]
+        elif (
+            snapshot.realization_envelope is not None and snapshot.realization_envelope != self._realization_envelope
+        ) or (_snapshot_has_state(snapshot) and snapshot.realization_envelope is None):
+            diagnostics = [
+                _envelope_diagnostic(
+                    BASELINE_ENVELOPE_MISMATCH_CODE,
+                    "Runtime snapshot is not bound to the configured libvirt realization envelope.",
+                )
+            ]
         return diagnostics
 
 
@@ -186,6 +305,26 @@ def _has_error(diagnostics: list[Diagnostic]) -> bool:
     return any(diag.is_error for diag in diagnostics)
 
 
+def _snapshot_has_state(snapshot: RuntimeSnapshot) -> bool:
+    return any(
+        (
+            snapshot.entries,
+            snapshot.orchestration_results,
+            snapshot.orchestration_history,
+            snapshot.evaluation_results,
+            snapshot.evaluation_history,
+            snapshot.participant_episode_results,
+            snapshot.participant_episode_history,
+            snapshot.participant_behavior_history,
+            snapshot.shared_state_records,
+            snapshot.shared_state_history,
+            snapshot.joint_action_records,
+            snapshot.time_management_contexts,
+            snapshot.realization_provenance,
+        )
+    )
+
+
 def _invalid_plan_diagnostic() -> Diagnostic:
     return Diagnostic(
         code=INVALID_PLAN_CODE,
@@ -223,5 +362,15 @@ def _driver_confirmation_diagnostic(address: str, *, code: str) -> Diagnostic:
         domain=_DOMAIN,
         address=address,
         message=f"Libvirt driver did not confirm {action} for '{address}'.",
+        severity=Severity.ERROR,
+    )
+
+
+def _envelope_diagnostic(code: str, message: str) -> Diagnostic:
+    return Diagnostic(
+        code=code,
+        domain=_DOMAIN,
+        address="runtime.libvirt.realization-envelope",
+        message=message,
         severity=Severity.ERROR,
     )

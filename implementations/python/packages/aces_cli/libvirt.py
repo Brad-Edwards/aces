@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import typer
 from aces_operations.libvirt_evidence_run import LibvirtEvidenceRunConfig, run_libvirt_evidence_run
 from aces_operations.techvault_live import TechVaultLiveConfig, validate_techvault_live
+
+_DEFAULT_CONNECTION_URI = "qemu:///system"
 
 app = typer.Typer(help="Libvirt backend operations.")
 techvault_app = typer.Typer(help="TechVault operational scenario checks.")
@@ -19,6 +22,20 @@ _LIVE_WARNING = """\
 This will create native libvirt/QEMU resources for the selected TechVault
 scenario and write a live-gate archive under the output directory.
 """
+
+_GUEST_WARNING = """\
+This will boot a guest-observing libvirt/QEMU appliance for the selected
+scenario through the production apply path, read realization facts back from
+inside the guest, and write a machine-readable scenario-evidence artifact under
+the output directory. Native resources are created and then torn down.
+"""
+
+
+def _noncredential_connection_uri(value: str) -> str:
+    parsed = urlsplit(value)
+    if parsed.username is not None or parsed.password is not None:
+        raise typer.BadParameter("connection URI must not contain credentials")
+    return value
 
 
 @techvault_app.command("validate-live")
@@ -46,21 +63,10 @@ def validate_live(
         help="Skip the native libvirt resource confirmation prompt.",
     ),
     connection_uri: str = typer.Option(
-        "qemu:///system",
+        _DEFAULT_CONNECTION_URI,
         "--connection-uri",
+        callback=_noncredential_connection_uri,
         help="libvirt connection URI.",
-    ),
-    appliance_memory_mib: int = typer.Option(
-        128,
-        "--appliance-memory-mib",
-        min=64,
-        help="Memory per generated TechVault appliance VM.",
-    ),
-    boot_timeout_seconds: int = typer.Option(
-        180,
-        "--boot-timeout-seconds",
-        min=1,
-        help="Maximum native appliance readiness wait.",
     ),
 ) -> None:
     """Boot TechVault through native ACES/libvirt and run the live validation gate."""
@@ -77,8 +83,50 @@ def validate_live(
         run_id=resolved_run_id,
         config=TechVaultLiveConfig(
             connection_uri=connection_uri,
-            appliance_memory_mib=appliance_memory_mib,
-            boot_timeout_seconds=boot_timeout_seconds,
+        ),
+    )
+    typer.echo(report.render())
+    if not report.passed:
+        raise typer.Exit(code=1)
+
+
+@techvault_app.command("guest-certify")
+def guest_certify(
+    scenario: Path = typer.Option(
+        Path("examples/scenarios/techvault-guest-certified.sdl.yaml"),
+        "--scenario",
+        help="ACES SDL scenario to boot and certify from inside the guest.",
+    ),
+    project_dir: Path = typer.Option(
+        Path("."),
+        "--project-dir",
+        "--output-dir",
+        help="Output directory for the guest-certified scenario-evidence artifact.",
+    ),
+    run_id: str | None = typer.Option(None, "--run-id", help="Run id for the evidence artifact."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip the native libvirt resource confirmation prompt."),
+    connection_uri: str = typer.Option(
+        _DEFAULT_CONNECTION_URI,
+        "--connection-uri",
+        callback=_noncredential_connection_uri,
+        help="libvirt connection URI.",
+    ),
+) -> None:
+    """Boot a guest-observing appliance and emit the guest-certified evidence artifact."""
+
+    if not yes:
+        typer.echo(_GUEST_WARNING)
+        if not typer.confirm("Continue?", default=False):
+            typer.echo("Aborted.")
+            raise typer.Exit(code=0)
+    resolved_run_id = run_id or datetime.now(UTC).strftime("aces_libvirt_guest_%Y%m%dT%H%M%SZ")
+    report = run_libvirt_evidence_run(
+        scenario_path=scenario.resolve(),
+        project_dir=project_dir.resolve(),
+        run_id=resolved_run_id,
+        config=LibvirtEvidenceRunConfig(
+            evidence_source_mode="guest-certified",
+            connection_uri=connection_uri,
         ),
     )
     typer.echo(report.render())
@@ -110,8 +158,9 @@ def validate_evidence(
         help="Realize the libvirt substrate natively (requires a libvirt daemon); default is deterministic.",
     ),
     connection_uri: str = typer.Option(
-        "qemu:///system",
+        _DEFAULT_CONNECTION_URI,
         "--connection-uri",
+        callback=_noncredential_connection_uri,
         help="libvirt connection URI (native-live only).",
     ),
 ) -> None:

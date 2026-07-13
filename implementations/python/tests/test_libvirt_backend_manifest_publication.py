@@ -87,8 +87,8 @@ def test_libvirt_target_passes_provisioning_only_conformance():
     assert not report.unsupported_contract_gaps
     assert not report.unsupported_capability_gaps
 
-    live_manifest = next((case for case in report.cases if case.name == "live-manifest"), None)
-    assert live_manifest is not None, "conformance must run the live-manifest validation case"
+    live_manifest = next((case for case in report.cases if case.name == "target-manifest"), None)
+    assert live_manifest is not None, "conformance must run the target-manifest validation case"
     assert live_manifest.passed, [diag.message for diag in live_manifest.diagnostics]
 
 
@@ -122,8 +122,8 @@ def test_realization_support_is_not_hollow():
             )
 
 
-def test_manifest_declares_full_realization_envelope():
-    """AC3: libvirt declares — and realizes via cloud-init — the full governed vocabulary."""
+def test_manifest_declares_only_the_configuration_bound_realization_envelope():
+    """ASR-519: descriptor-only and unobserved terms are absent from coarse claims."""
     manifest = create_libvirt_manifest()
     provisioner = manifest.provisioner
     declared_kinds = {
@@ -134,10 +134,8 @@ def test_manifest_declares_full_realization_envelope():
 
     assert "content-type" in declared_kinds
     assert "account-feature" in declared_kinds
-    assert provisioner.supported_content_types == frozenset({"file", "dataset", "directory"})
-    assert provisioner.supported_account_features == frozenset(
-        {"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}
-    )
+    assert provisioner.supported_content_types == frozenset({"file"})
+    assert provisioner.supported_account_features == frozenset({"groups", "shell", "home", "disabled", "auth_method"})
     assert provisioner.supports_accounts is True
     assert provisioner.supports_acls is True
-    assert "macos" in provisioner.supported_os_families
+    assert provisioner.supported_os_families == frozenset({"linux"})

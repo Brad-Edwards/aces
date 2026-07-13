@@ -129,7 +129,6 @@ uv run aces-mcp
 - `docs/` - explanatory documentation, API docs, and architecture decisions
 - `research/` - supporting literature and reference ecosystem material
 - `tools/` - repository maintenance, policy, and publication tooling
-- `changelog.d/` - towncrier release note fragments
 
 ## Lineage
 
@@ -191,10 +190,12 @@ conformance, and existing scenario examples.
 
 ## Versioning
 
-The Python package currently declares its version in
-[`implementations/python/pyproject.toml`](https://github.com/Brad-Edwards/aces/blob/main/implementations/python/pyproject.toml).
-Release notes are collated from towncrier fragments in
-[`changelog.d/`](https://github.com/Brad-Edwards/aces/tree/main/changelog.d). Do not hand-edit `CHANGELOG.md`.
+The Python package version lives in
+[`implementations/python/pyproject.toml`](https://github.com/Brad-Edwards/aces/blob/main/implementations/python/pyproject.toml)
+and is bumped by [release-please](https://github.com/googleapis/release-please)
+from the Conventional Commit history on `main`, which also generates
+`CHANGELOG.md`. Do not hand-edit the version or `CHANGELOG.md`. See
+[`docs/explain/releasing.md`](https://github.com/Brad-Edwards/aces/blob/main/docs/explain/releasing.md).
 
 Published JSON Schemas use versioned contract identifiers such as
 `sdl-authoring-input-v1`, but the suffix is not the same as a stability promise.
@@ -225,3 +226,5 @@ If you use ACES SDL in academic work, cite the repository:
 ## License
 
 Released under the MIT License. See [LICENSE](https://github.com/Brad-Edwards/aces/blob/main/LICENSE).
+Third-party attribution and license notices are recorded in
+[THIRD_PARTY_NOTICES.md](https://github.com/Brad-Edwards/aces/blob/main/THIRD_PARTY_NOTICES.md).

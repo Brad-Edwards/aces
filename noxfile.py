@@ -522,6 +522,10 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
             "skipped on staged check; runs on push and verify",
         )
         reporter.skip(
+            "policy / deprecation lifecycle records",
+            "skipped on staged check; runs on push and verify",
+        )
+        reporter.skip(
             "policy / concept authority governance",
             "skipped on staged check; runs on push and verify",
         )
@@ -549,6 +553,10 @@ def _run_policy(session: nox.Session, reporter: SessionReporter, *args: str) -> 
         reporter.run(
             "policy / authority boundary ADR",
             lambda: _run_project_python(session, "tools/check_authority_boundary.py"),
+        )
+        reporter.run(
+            "policy / deprecation lifecycle records",
+            lambda: _run_project_python(session, "tools/check_deprecation_lifecycle.py"),
         )
         reporter.run(
             "policy / concept authority governance",
@@ -602,6 +610,18 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
     reporter.run(
         "contracts / generated schema drift",
         lambda: _run_project_python(session, "tools/check_generated_schemas.py"),
+    )
+    reporter.run(
+        "contracts / SDL catalog parity",
+        lambda: _run_project_python(session, "tools/check_sdl_catalog_parity.py"),
+    )
+    reporter.run(
+        "contracts / SDL lineage provenance",
+        lambda: _run_project_python(session, "tools/check_sdl_lineage.py"),
+    )
+    reporter.run(
+        "contracts / scientific-scenario completeness",
+        lambda: _run_project_python(session, "tools/check_scientific_scenario_completeness.py"),
     )
     reporter.run(
         "contracts / json artifact validation",

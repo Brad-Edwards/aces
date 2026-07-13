@@ -13,7 +13,12 @@ becoming a validator-only interpretation of the SDL.
 
 ## Validation Passes
 
-### OCR SDL passes (ported from Rust `Scenario::formalize()`)
+### OCR-Ancestry SDL Passes
+
+These checks have translated algorithmic ancestry in OCR v0.21.2
+`Scenario::formalize()` at revision
+`fe83e8281fc4b954967fbaa5a0d099007ddcb06c`; current behavior is governed by
+ACES validators and is not claimed compatible with the OCR implementation.
 
 | Pass | What It Checks |
 |------|----------------|
@@ -83,8 +88,9 @@ algorithm and value. Runtime healthcheck entries marked as redacted must omit
 raw output. Runtime mount sources/options and local-control bind sources
 classified as `redacted` or `operator_secret` must omit the corresponding raw
 value; the Python models and generated JSON Schemas both reject non-empty raw
-values for redacted/operator-secret labels accepted by the parser's
-normalization rules, including case-insensitive hyphen/underscore spellings.
+values for redacted/operator-secret labels accepted by the value-normalization
+rules, including case-insensitive hyphen/underscore enum spellings. Structural
+field keys themselves use exact `snake_case` under `sdl-yaml/v1`.
 Runtime observed-value surfaces share the ADR-056/ADR-057 raw-value helper:
 redacted and operator-secret classifications omit raw values. ADR-057 supersedes
 the earlier name-driven omission rule: credential-shaped names do not by
@@ -505,7 +511,7 @@ the current validator surface.
 The normative boundary between a fatal **error** and a non-fatal **advisory** —
 including the classification criterion that decides which channel a condition
 belongs to — is stated in
-[`specs/sdl/diagnostics.md` §5](../../../specs/sdl/diagnostics.md). This page is
+{download}`specs/sdl/diagnostics.md <../../../specs/sdl/diagnostics.md>` §5. This page is
 non-normative explanation and cites that criterion rather than restating it: an
 **error** affects SDL meaning (structural/semantic invariants), while an
 **advisory** is a deployability or quality heuristic that leaves SDL meaning
@@ -521,7 +527,7 @@ Current advisory coverage:
 
 The fatal, fail-closed error semantics and the collect-all behaviour described
 here are the explanatory companion to the normative diagnostic boundary in
-[`specs/sdl/diagnostics.md`](../../../specs/sdl/diagnostics.md).
+{download}`specs/sdl/diagnostics.md <../../../specs/sdl/diagnostics.md>`.
 
 All passes run to completion. Errors are collected into a list and raised as a single `SDLValidationError`:
 

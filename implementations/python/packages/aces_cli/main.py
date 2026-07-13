@@ -24,7 +24,9 @@ def _version_callback(value: bool) -> None:
         try:
             current_version = version("aces-sdl")
         except PackageNotFoundError:
-            current_version = "0.1.0"
+            # Honest PEP 440 not-installed sentinel (GOV-901): do not report a
+            # plausible-looking release when the distribution is absent.
+            current_version = "0.0.0+unknown"
         typer.echo(f"aces {current_version}")
         raise typer.Exit()
 

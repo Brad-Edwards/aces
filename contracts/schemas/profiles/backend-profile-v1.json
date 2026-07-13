@@ -13,6 +13,7 @@
       "items": {
         "enum": [
           "backend-manifest-v2",
+          "realization-envelope-v1",
           "provisioning-plan-v1",
           "orchestration-plan-v1",
           "evaluation-plan-v1",
@@ -22,6 +23,7 @@
           "workflow-result-envelope-v1",
           "workflow-history-event-stream-v1",
           "evaluation-result-envelope-v1",
+          "proposition-truth-result-v1",
           "evaluation-history-event-stream-v1",
           "participant-episode-state-envelope-v1",
           "participant-episode-history-event-stream-v1",

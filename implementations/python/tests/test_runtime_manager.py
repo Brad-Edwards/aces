@@ -64,10 +64,18 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 events:
-  kickoff: {conditions: [health]}
+  kickoff: {assertions: [pre-health]}
 scripts:
-  timeline: {start-time: 0, end-time: 60, speed: 1, events: {kickoff: 10}}
+  timeline: {start_time: 0, end_time: 60, speed: 1, events: {kickoff: 10}}
 stories:
   main: {scripts: [timeline]}
 """)
@@ -96,12 +104,20 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   validate:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   response:
     start: run
@@ -109,7 +125,7 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
 
@@ -126,12 +142,20 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   validate:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   child:
     start: run
@@ -139,7 +163,7 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
   parent:
     start: delegate
@@ -147,7 +171,7 @@ workflows:
       delegate:
         type: call
         workflow: child
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
 
@@ -559,6 +583,8 @@ class RecordingEvaluator:
         self._history = {}
         for op in plan.operations:
             if op.action == ChangeAction.DELETE:
+                continue
+            if op.resource_type in {"proposition", "assertion"}:
                 continue
             result_contract = op.payload.get("result_contract", {})
             resource_type = str(result_contract.get("resource_type", op.resource_type))

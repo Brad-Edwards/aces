@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from ._errors import SDLParseError
+
 
 def invalid(
     stage: str,
@@ -33,3 +35,14 @@ def diagnostic(
     if location is not None:
         payload["range"] = {"start": location, "end": location}
     return payload
+
+
+def parse_error(error: SDLParseError) -> dict[str, Any]:
+    """Preserve structured parser diagnostics in language-service responses."""
+    if error.diagnostics:
+        return {
+            "status": "invalid",
+            "stage": "parse",
+            "diagnostics": [item.as_dict() for item in error.diagnostics],
+        }
+    return invalid("parse", "sdl.parse", error.details)

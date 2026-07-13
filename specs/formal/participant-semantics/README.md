@@ -23,7 +23,7 @@ What exists:
 
 - `agents.*` declares participant framing inputs: `entity`, `actions`,
   `starting_accounts`, `initial_knowledge`, `allowed_subnets`,
-  `starting_conditions`, `authority_anchors`, and `operating_scope`.
+  `starting_assertions`, `authority_anchors`, and `operating_scope`.
 - ADR-020 defines identity, role, starting conditions, authority anchors, and
   operating scope as authored participant framing.
 - ADR-013 and the participant-episode contracts define lifecycle state and

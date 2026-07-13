@@ -56,3 +56,44 @@ python real_daemon_smoke.py   # or: python libvirt_smoke.py
 For seeds/disks outside `/var/lib/libvirt/images`, the host needs
 `security_driver = "none"` and `user/group = "root"` in `/etc/libvirt/qemu.conf`
 (the AWS script sets these automatically).
+
+## Guest-certified realization proof (ASR-519, issue #715)
+
+`libvirt_smoke.py` proves substrate reconciliation/teardown at the *daemon* level.
+The **guest-certified** proof goes one layer deeper: it boots a guest-observing
+appliance through the production apply path and reads concern facts back **from
+inside the guest** (resource allocation, network addressing, file content, and
+service state), freshness-bound to a per-run challenge, then verifies teardown.
+Domain existence alone never satisfies it.
+
+The reproducible operator/self-hosted command is:
+
+```sh
+# Against a real libvirt/QEMU daemon (qemu:///system). Boots the appliance,
+# certifies from inside the guest, writes a machine-readable evidence artifact,
+# and returns non-zero on any failed stage.
+aces libvirt techvault guest-certify \
+  --scenario examples/scenarios/techvault-guest-certified.sdl.yaml \
+  --project-dir . --run-id guest-proof-1 --yes
+```
+
+It emits the `aces.libvirt.scenario-evidence-run/v1` artifact under
+`runs/<run-id>/scenario-evidence/libvirt-scenario-evidence-run.json`. The artifact
+is validated (source separation, binding, redaction) **before** it is written, so
+it contains no host paths, connection URIs, raw domain UUIDs, XML, or secrets; the
+guest report is bound to a redacted control-plane operation reference, the fresh
+challenge, the selected envelope/configuration + appliance digests, and a
+`sha256:` native correlation. The equivalent gate also runs as an opt-in pytest:
+
+```sh
+ACES_REAL_LIBVIRT_URI=qemu:///system \
+  uv run pytest -m integration \
+  implementations/python/tests/test_libvirt_backend_guest_certified_real_libvirt.py
+```
+
+Both are skipped by the default hermetic `nox verify` graph, which never requires
+libvirt, QEMU/KVM, privileges, a host image, network access, or credentials — the
+guest-certified proof is an explicit separate gate. The same host requirements
+apply (`security_driver = "none"` + `user/group = "root"` in
+`/etc/libvirt/qemu.conf` when boot artifacts and the run-local guest fact channel
+live outside `/var/lib/libvirt/images`; the AWS script sets these automatically).

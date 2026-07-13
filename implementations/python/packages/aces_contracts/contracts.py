@@ -6,12 +6,17 @@ import importlib
 import json
 import re
 from collections.abc import Mapping
+from copy import deepcopy
 from datetime import UTC, datetime, timedelta
+from enum import Enum
 from functools import lru_cache
 from typing import Annotated, Any, Literal
+from urllib.parse import parse_qsl, urlsplit
 
 from aces_sdl import VARIABLE_TOKEN_PATTERN
+from aces_sdl.canonical import InstantiatedScenarioSnapshot
 from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from aces_sdl.identifiers import PORTABLE_IDENTIFIER_JSON_SCHEMA, QUALIFIED_IDENTIFIER_MAX_LENGTH
 from aces_sdl.observability_plane_semantics import classify_contract_plane
 from aces_sdl.participant_attribution_semantics import (
     ParticipantAttributionCandidateKind,
@@ -33,10 +38,12 @@ from aces_sdl.participant_temporal_semantics import (
     ParticipantTimeDomain,
 )
 from aces_sdl.scenario import InstantiatedScenario, Scenario
+from aces_sdl.schema_catalogs import HASHMAP_SECTIONS, RUNTIME_SERVICE_FAMILIES, RuntimeReferenceChild
 from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler, StrictInt, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
+from .addressing import COMPILED_ADDRESS_JSON_SCHEMA, CompiledAddress
 from .corpus import CONCEPT_AUTHORITY, corpus_family_root
 from .manifest_authority import (
     BACKEND_SUPPORTED_CONTRACT_IDS,
@@ -58,7 +65,14 @@ from .participant_behavior import (
     ParticipantRuntimeLifecyclePhase,
     participant_lifecycle_field_violation_messages,
 )
+from .planning import (
+    PLAN_ADDRESS_ROOT_BY_DOMAIN,
+    PLAN_RESOURCE_TYPES_BY_DOMAIN,
+    RuntimeDomain,
+    require_plan_operation_identity,
+)
 from .versions import (
+    ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION,
     ATLAS_TACTICS_SOURCE_SCHEMA_VERSION,
     ATTACK_ENTERPRISE_TACTICS_SOURCE_SCHEMA_VERSION,
     BACKEND_MANIFEST_V2_SCHEMA_VERSION,
@@ -66,6 +80,7 @@ from .versions import (
     CONTROLLED_VOCABULARIES_SCHEMA_VERSION,
     EVALUATION_STATE_SCHEMA_VERSION,
     EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION,
+    EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION,
     EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION,
     EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION,
     EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION,
@@ -77,6 +92,7 @@ from .versions import (
     PARTICIPANT_IMPLEMENTATION_MANIFEST_V1_SCHEMA_VERSION,
     PARTICIPANT_IMPLEMENTATION_PROVENANCE_V1_SCHEMA_VERSION,
     PROCESSOR_MANIFEST_V2_SCHEMA_VERSION,
+    PROPOSITION_TRUTH_RESULT_SCHEMA_VERSION,
     REFERENCE_MODELS_SCHEMA_VERSION,
     REUSABLE_ASSET_TRUST_POLICY_SCHEMA_VERSION,
     RUNTIME_SNAPSHOT_SCHEMA_VERSION,
@@ -430,6 +446,15 @@ def _extend_reported_value_status_schema(json_schema: JsonSchemaValue) -> None:
 
 _DEFS_KEY = "$defs"
 _INSTANTIATION_INVARIANT_CONTRACT_ID = "instantiated-scenario-v1"
+_INSTANTIATED_SNAPSHOT_CONTRACT_ID = "instantiated-scenario-snapshot-v1"
+_SDL_AUTHORING_CONTRACT_ID = "sdl-authoring-input-v1"
+_SDL_IDENTIFIER_CONTRACT_IDS = frozenset(
+    {
+        _SDL_AUTHORING_CONTRACT_ID,
+        _INSTANTIATION_INVARIANT_CONTRACT_ID,
+        _INSTANTIATED_SNAPSHOT_CONTRACT_ID,
+    }
+)
 _SCHEMA_MAP_KEYS = ("properties", "patternProperties", _DEFS_KEY)
 _SCHEMA_SUBSCHEMA_KEYS = (
     "additionalProperties",
@@ -440,6 +465,147 @@ _SCHEMA_SUBSCHEMA_KEYS = (
     "oneOf",
     "prefixItems",
 )
+
+
+def _portable_property_names(*, maximum: int = 64) -> dict[str, Any]:
+    schema = deepcopy(PORTABLE_IDENTIFIER_JSON_SCHEMA)
+    schema["maxLength"] = maximum
+    return schema
+
+
+def _qualified_property_names(*, local_maximum: int = 64) -> dict[str, Any]:
+    local_tail = local_maximum - 1
+    segment = r"(?:[a-z0-9][a-z0-9_-]{0,63}|__private)"
+    return {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": QUALIFIED_IDENTIFIER_MAX_LENGTH,
+        "pattern": rf"^(?:{segment}\.)*[a-z0-9][a-z0-9_-]{{0,{local_tail}}}$",
+        "not": {"pattern": "[^a-z0-9_.-]"},
+    }
+
+
+def _resolve_local_ref(schema: dict[str, Any], node: object) -> dict[str, Any] | None:
+    if not isinstance(node, dict):
+        return None
+    ref = node.get("$ref")
+    if isinstance(ref, str) and ref.startswith("#/$defs/"):
+        resolved = schema.get(_DEFS_KEY, {}).get(ref.removeprefix("#/$defs/"))
+        return resolved if isinstance(resolved, dict) else None
+    return node
+
+
+def _collection_item_schema(
+    schema: dict[str, Any], owner: dict[str, Any], collection_name: str
+) -> dict[str, Any] | None:
+    collection = owner.get("properties", {}).get(collection_name)
+    collection = _resolve_local_ref(schema, collection)
+    if not isinstance(collection, dict):
+        return None
+    items = collection.get("items")
+    return _resolve_local_ref(schema, items)
+
+
+def _constrain_runtime_children(
+    schema: dict[str, Any],
+    owner: dict[str, Any],
+    children: tuple[RuntimeReferenceChild, ...],
+) -> None:
+    for child in children:
+        child_schema = _collection_item_schema(schema, owner, child.collection_name)
+        if child_schema is None:
+            continue
+        child_schema.setdefault("properties", {})[child.id_field] = _portable_property_names()
+        _constrain_runtime_children(schema, child_schema, child.children)
+
+
+def _attach_runtime_identifier_constraints(schema: dict[str, Any]) -> None:
+    runtime = schema.get(_DEFS_KEY, {}).get("RuntimeConfiguration")
+    if not isinstance(runtime, dict):
+        return
+    for family in RUNTIME_SERVICE_FAMILIES:
+        item_schema = _collection_item_schema(schema, runtime, family.collection_name)
+        if item_schema is None:
+            continue
+        if family.collection_name != "forwarding_agents":
+            item_schema.setdefault("properties", {})[family.id_field] = _portable_property_names()
+        _constrain_runtime_children(schema, item_schema, family.child_refs)
+
+
+def _constrain_collection_item_field(
+    owner: dict[str, Any],
+    collection_name: str,
+    field_name: str,
+    field_schema: dict[str, Any],
+) -> None:
+    collection = owner.get("properties", {}).get(collection_name)
+    if not isinstance(collection, dict):
+        return
+    items = collection.get("items")
+    if not isinstance(items, dict):
+        return
+    collection["items"] = {
+        "allOf": [
+            items,
+            {"properties": {field_name: field_schema}, "type": "object"},
+        ]
+    }
+
+
+def _attach_instantiation_request_identifier_constraints(schema: dict[str, Any]) -> None:
+    parameters = schema.get("properties", {}).get("parameters")
+    if isinstance(parameters, dict):
+        parameters["propertyNames"] = _portable_property_names()
+
+
+def _attach_sdl_identifier_constraints(contract_id: str, schema: dict[str, Any]) -> None:
+    if contract_id == "scenario-instantiation-request-v1":
+        _attach_instantiation_request_identifier_constraints(schema)
+    elif contract_id in _SDL_IDENTIFIER_CONTRACT_IDS:
+        _attach_scenario_identifier_constraints(contract_id, schema)
+
+
+def _scenario_schema_for_identifier_constraints(
+    contract_id: str,
+    schema: dict[str, Any],
+) -> dict[str, Any] | None:
+    if contract_id != _INSTANTIATED_SNAPSHOT_CONTRACT_ID:
+        return schema
+    nested = schema.get(_DEFS_KEY, {}).get("InstantiatedScenario")
+    return nested if isinstance(nested, dict) else None
+
+
+def _attach_scenario_identifier_constraints(contract_id: str, schema: dict[str, Any]) -> None:
+    scenario_schema = _scenario_schema_for_identifier_constraints(contract_id, schema)
+    if scenario_schema is None:
+        return
+    qualified = contract_id != _SDL_AUTHORING_CONTRACT_ID
+    for section_name in HASHMAP_SECTIONS:
+        section = scenario_schema.get("properties", {}).get(section_name)
+        if not isinstance(section, dict):
+            continue
+        local_maximum = 35 if section_name == "nodes" else 64
+        section["propertyNames"] = (
+            _qualified_property_names(local_maximum=local_maximum)
+            if qualified
+            else _portable_property_names(maximum=local_maximum)
+        )
+    _attach_runtime_identifier_constraints(schema)
+    forwarding_id_schema = _qualified_property_names() if qualified else _portable_property_names()
+    _constrain_collection_item_field(
+        scenario_schema,
+        "forwarding_agents",
+        "forwarding_agent_id",
+        forwarding_id_schema,
+    )
+    runtime = schema.get(_DEFS_KEY, {}).get("RuntimeConfiguration")
+    if isinstance(runtime, dict):
+        _constrain_collection_item_field(
+            runtime,
+            "forwarding_agents",
+            "forwarding_agent_id",
+            _portable_property_names(),
+        )
 
 
 def _apply_string_token_constraint(node: dict[str, Any]) -> None:
@@ -491,16 +657,16 @@ def _forbid_variable_tokens_in_strings(node: object) -> None:
 
 
 def _attach_instantiation_invariants(contract_id: str, json_schema: dict[str, Any]) -> None:
-    """Differentiate the instantiated-scenario contract from authoring-input.
+    """Apply the no-substitution-token invariant to concrete SDL artifacts.
 
-    The authoring (``Scenario``) and instantiated (``InstantiatedScenario``)
-    models share every field, so their generated schemas are identical apart
-    from metadata. An instantiated scenario is fully concrete, so the
-    instantiated schema additionally forbids unresolved ``${var}`` tokens in
-    string values — both whole-string placeholders and embedded tokens (issue
-    #500). The matching model-level invariant lives on ``InstantiatedScenario``.
+    An instantiated scenario is fully concrete, so its payload and canonical
+    snapshot forbid unresolved ``${var}`` tokens in string values. The matching
+    model-level invariant lives on ``InstantiatedScenario``.
     """
-    if contract_id != _INSTANTIATION_INVARIANT_CONTRACT_ID:
+    if contract_id not in {
+        _INSTANTIATION_INVARIANT_CONTRACT_ID,
+        _INSTANTIATED_SNAPSHOT_CONTRACT_ID,
+    }:
         return
     _forbid_variable_tokens_in_strings(json_schema)
 
@@ -514,6 +680,39 @@ def _schema_id_for_contract_id(contract_id: str) -> str:
 def _attach_json_schema_metadata(contract_id: str, json_schema: dict[str, Any]) -> None:
     json_schema.setdefault("$schema", _JSON_SCHEMA_DRAFT_2020_12)
     json_schema.setdefault("$id", _schema_id_for_contract_id(contract_id))
+
+
+def _attach_compiled_address_map_constraints(contract_id: str, json_schema: dict[str, Any]) -> None:
+    if contract_id != "runtime-snapshot-v1":
+        return
+    entries = json_schema.get("properties", {}).get("entries")
+    if not isinstance(entries, dict):
+        return
+    entries["propertyNames"] = deepcopy(COMPILED_ADDRESS_JSON_SCHEMA)
+    entries["additionalProperties"] = False
+
+
+_PLAN_CONTRACT_DOMAIN = {
+    "provisioning-plan-v1": RuntimeDomain.PROVISIONING,
+    "orchestration-plan-v1": RuntimeDomain.ORCHESTRATION,
+    "evaluation-plan-v1": RuntimeDomain.EVALUATION,
+}
+
+
+def _attach_plan_identity_constraints(contract_id: str, json_schema: dict[str, Any]) -> None:
+    domain = _PLAN_CONTRACT_DOMAIN.get(contract_id)
+    if domain is None:
+        return
+    operation = json_schema.get(_DEFS_KEY, {}).get("PlanOperationModel")
+    if not isinstance(operation, dict):
+        return
+    properties = operation.get("properties", {})
+    address = properties.get("address")
+    resource_type = properties.get("resource_type")
+    if isinstance(address, dict):
+        address.setdefault("allOf", []).append({"pattern": rf"^{PLAN_ADDRESS_ROOT_BY_DOMAIN[domain]}\."})
+    if isinstance(resource_type, dict):
+        resource_type["enum"] = sorted(PLAN_RESOURCE_TYPES_BY_DOMAIN[domain])
 
 
 _SEMANTIC_PROFILE_PHASE_ALLOWED_BINDING_SCOPES = {
@@ -727,6 +926,238 @@ class EvaluationHistoryEventModel(ContractModel):
     detail: str | None = None
     evidence_refs: list[str] = Field(default_factory=list)
     details: dict[str, Any] = Field(default_factory=dict)
+
+
+class PropositionTruthOutcome(str, Enum):
+    """Portable proposition-evaluation outcome domain.
+
+    ``unsupported`` is a realization disposition included in the portable
+    envelope, not a logical truth value.
+    """
+
+    TRUE = "true"
+    FALSE = "false"
+    UNKNOWN = "unknown"
+    UNSUPPORTED = "unsupported"
+
+
+class PropositionEvaluationBasis(str, Enum):
+    DECLARED_STATE = "declared_state"
+    OBSERVED_STATE = "observed_state"
+
+
+class PropositionAssertionPolarity(str, Enum):
+    POSITIVE = "positive"
+    NEGATIVE = "negative"
+
+
+class PropositionIndeterminacyReason(str, Enum):
+    MISSING_EVIDENCE = "missing_evidence"
+    STALE_EVIDENCE = "stale_evidence"
+    PARTIAL_EVIDENCE = "partial_evidence"
+    CONFLICTING_EVIDENCE = "conflicting_evidence"
+    REDACTED_EVIDENCE = "redacted_evidence"
+    LOSSY_EVIDENCE = "lossy_evidence"
+    PROBE_FAILURE = "probe_failure"
+
+
+class PropositionLossKind(str, Enum):
+    MISSING = "missing"
+    STALE = "stale"
+    PARTIAL = "partial"
+    CONFLICTING = "conflicting"
+    REDACTED = "redacted"
+    LOSSY = "lossy"
+    PROBE_FAILURE = "probe_failure"
+
+
+class PropositionProbeBindingModel(ContractModel):
+    """Provenance for one capability-bound proposition realization."""
+
+    binding_id: NonEmptyString
+    implementation_id: NonEmptyString
+    implementation_version: NonEmptyString
+    artifact_digest: Annotated[str, Field(pattern=r"^sha256:[0-9a-f]{64}$")]
+    backend_manifest_ref: NonEmptyString
+    proposition_address: NonEmptyString
+    capability_refs: list[NonEmptyString] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _validate_unique_capabilities(self) -> PropositionProbeBindingModel:
+        if len(set(self.capability_refs)) != len(self.capability_refs):
+            raise ValueError("probe binding capability_refs must be unique")
+        return self
+
+
+class PropositionTemporalContextModel(ContractModel):
+    """Governed boundary and clock context used for one evaluation."""
+
+    boundary_ref: NonEmptyString
+    time_domain: NonEmptyString
+    clock_authority: NonEmptyString
+
+
+class PropositionLossDisclosureModel(ContractModel):
+    kind: PropositionLossKind
+    within_admissible_bound: bool
+
+
+class PropositionTruthResultModel(ContractModel):
+    """Evidence-bearing truth result separate from evaluator lifecycle state."""
+
+    schema_version: Literal[PROPOSITION_TRUTH_RESULT_SCHEMA_VERSION] = PROPOSITION_TRUTH_RESULT_SCHEMA_VERSION
+    result_id: NonEmptyString
+    proposition_address: NonEmptyString
+    assertion_address: NonEmptyString
+    assertion_polarity: PropositionAssertionPolarity
+    proposition_outcome: PropositionTruthOutcome
+    assertion_outcome: PropositionTruthOutcome
+    evaluation_basis: PropositionEvaluationBasis
+    indeterminacy_reason: PropositionIndeterminacyReason | None = None
+    probe_binding: PropositionProbeBindingModel | None = None
+    evidence_refs: list[NonEmptyString] = Field(default_factory=list)
+    declared_artifact_digest: Annotated[str, Field(pattern=r"^sha256:[0-9a-f]{64}$")] | None = None
+    temporal_context: PropositionTemporalContextModel | None = None
+    loss_disclosures: list[PropositionLossDisclosureModel] = Field(default_factory=list)
+    unsupported_capability_refs: list[NonEmptyString] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_truth_result(self) -> PropositionTruthResultModel:
+        self._validate_unique_refs()
+        self._validate_polarity()
+        self._validate_outcome_explanation()
+        self._validate_basis_evidence()
+        self._validate_loss_bounds()
+        return self
+
+    def _validate_unique_refs(self) -> None:
+        for field_name in ("evidence_refs", "unsupported_capability_refs"):
+            refs = getattr(self, field_name)
+            if len(set(refs)) != len(refs):
+                raise ValueError(f"{field_name} must be unique")
+
+    def _validate_polarity(self) -> None:
+        expected = self.proposition_outcome
+        if self.assertion_polarity is PropositionAssertionPolarity.NEGATIVE:
+            if expected is PropositionTruthOutcome.TRUE:
+                expected = PropositionTruthOutcome.FALSE
+            elif expected is PropositionTruthOutcome.FALSE:
+                expected = PropositionTruthOutcome.TRUE
+        if self.assertion_outcome is not expected:
+            raise ValueError(
+                f"{self.assertion_polarity.value} assertion outcome must preserve or invert the proposition outcome"
+            )
+
+    def _validate_outcome_explanation(self) -> None:
+        if self.proposition_outcome is PropositionTruthOutcome.UNKNOWN:
+            if self.indeterminacy_reason is None:
+                raise ValueError("unknown proposition outcome requires indeterminacy_reason")
+        elif self.indeterminacy_reason is not None:
+            raise ValueError("indeterminacy_reason is valid only for unknown outcomes")
+        if self.proposition_outcome is PropositionTruthOutcome.UNSUPPORTED:
+            if not self.unsupported_capability_refs:
+                raise ValueError("unsupported outcome requires unsupported_capability_refs")
+        elif self.unsupported_capability_refs:
+            raise ValueError("unsupported_capability_refs are valid only for unsupported outcomes")
+
+    def _validate_basis_evidence(self) -> None:
+        decided = self.proposition_outcome in {PropositionTruthOutcome.TRUE, PropositionTruthOutcome.FALSE}
+        if decided and self.evaluation_basis is PropositionEvaluationBasis.OBSERVED_STATE:
+            self._validate_observed_evidence()
+        if self.probe_binding is not None and self.probe_binding.proposition_address != self.proposition_address:
+            raise ValueError("probe_binding proposition_address must match proposition_address")
+        if (
+            decided
+            and self.evaluation_basis is PropositionEvaluationBasis.DECLARED_STATE
+            and self.declared_artifact_digest is None
+        ):
+            raise ValueError("declared-state decided truth requires declared_artifact_digest")
+
+    def _validate_observed_evidence(self) -> None:
+        if self.probe_binding is None:
+            raise ValueError("observed-state decided truth requires probe_binding")
+        if not self.evidence_refs:
+            raise ValueError("observed-state decided truth requires evidence_refs")
+        if self.temporal_context is None:
+            raise ValueError("observed-state decided truth requires temporal_context")
+
+    def _validate_loss_bounds(self) -> None:
+        decided = self.proposition_outcome in {PropositionTruthOutcome.TRUE, PropositionTruthOutcome.FALSE}
+        if decided and any(not disclosure.within_admissible_bound for disclosure in self.loss_disclosures):
+            raise ValueError("lossy or partial evidence outside the admitted bound cannot decide truth")
+
+    def semantic_claim(self) -> tuple[object, ...]:
+        """Return the backend-independent portion used for equivalence checks."""
+
+        return (
+            self.proposition_address,
+            self.assertion_address,
+            self.assertion_polarity,
+            self.proposition_outcome,
+            self.assertion_outcome,
+            self.evaluation_basis,
+            self.indeterminacy_reason,
+            self.temporal_context,
+            tuple(self.loss_disclosures),
+            tuple(self.unsupported_capability_refs),
+        )
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        schema = handler(core_schema)
+        schema = handler.resolve_ref_schema(schema)
+        decided = {"enum": ["true", "false"]}
+        loss_items = deepcopy(schema["properties"]["loss_disclosures"]["items"])
+        loss_items["properties"] = {"within_admissible_bound": {"const": True}}
+        loss_items["required"] = ["within_admissible_bound"]
+        schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {
+                        "properties": {
+                            "evaluation_basis": {"const": "observed_state"},
+                            "proposition_outcome": decided,
+                        },
+                        "required": ["evaluation_basis", "proposition_outcome"],
+                    },
+                    "then": {
+                        "properties": {
+                            "probe_binding": {"not": {"type": "null"}},
+                            "evidence_refs": {"minItems": 1},
+                            "temporal_context": {"not": {"type": "null"}},
+                        }
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"proposition_outcome": {"const": "unknown"}},
+                        "required": ["proposition_outcome"],
+                    },
+                    "then": {"properties": {"indeterminacy_reason": {"not": {"type": "null"}}}},
+                    "else": {"properties": {"indeterminacy_reason": {"type": "null"}}},
+                },
+                {
+                    "if": {
+                        "properties": {"proposition_outcome": {"const": "unsupported"}},
+                        "required": ["proposition_outcome"],
+                    },
+                    "then": {"properties": {"unsupported_capability_refs": {"minItems": 1}}},
+                    "else": {"properties": {"unsupported_capability_refs": {"maxItems": 0}}},
+                },
+                {
+                    "if": {
+                        "properties": {"proposition_outcome": decided},
+                        "required": ["proposition_outcome"],
+                    },
+                    "then": {"properties": {"loss_disclosures": {"items": loss_items}}},
+                },
+            ]
+        )
+        return schema
 
 
 class ParticipantEpisodeStateModel(ContractModel):
@@ -1947,37 +2378,91 @@ class ParticipantContextViewModel(ContractModel):
 
 class PlanOperationModel(ContractModel):
     action: str
-    address: str
+    address: CompiledAddress
     resource_type: str
     payload: dict[str, Any] = Field(default_factory=dict)
-    ordering_dependencies: list[str] = Field(default_factory=list)
-    refresh_dependencies: list[str] = Field(default_factory=list)
+    ordering_dependencies: list[CompiledAddress] = Field(default_factory=list)
+    refresh_dependencies: list[CompiledAddress] = Field(default_factory=list)
+
+
+def _require_unique_operation_addresses(operations: list[PlanOperationModel]) -> None:
+    addresses = [operation.address for operation in operations]
+    if len(addresses) != len(set(addresses)):
+        raise ValueError("Plan operation addresses must be unique")
+
+
+def _require_operation_identities(operations: list[PlanOperationModel], domain: RuntimeDomain) -> None:
+    for operation in operations:
+        require_plan_operation_identity(domain, operation.address, operation.resource_type)
+
+
+def _require_startup_order_addresses(
+    operations: list[PlanOperationModel],
+    startup_order: list[str],
+) -> None:
+    if len(startup_order) != len(set(startup_order)):
+        raise ValueError("Plan startup_order addresses must be unique")
+    operation_addresses = {operation.address for operation in operations}
+    unknown = set(startup_order) - operation_addresses
+    if unknown:
+        raise ValueError("Plan startup_order must reference admitted operation addresses")
+
+
+class RealizationEnvelopeIdentityModel(ContractModel):
+    """Immutable realization-envelope identity carried across runtime contracts."""
+
+    contract_id: Literal["realization-envelope-v1"] = "realization-envelope-v1"
+    envelope_id: NonEmptyString
+    schema_version: Literal["realization-envelope/v1"] = "realization-envelope/v1"
+    digest: Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
+    configuration_digest: Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
 
 
 class ProvisioningPlanModel(ContractModel):
     operations: list[PlanOperationModel] = Field(default_factory=list)
     diagnostics: list[dict[str, Any]] = Field(default_factory=list)
+    realization_envelope: RealizationEnvelopeIdentityModel | None = None
+
+    @model_validator(mode="after")
+    def _validate_operation_addresses(self) -> ProvisioningPlanModel:
+        _require_unique_operation_addresses(self.operations)
+        _require_operation_identities(self.operations, RuntimeDomain.PROVISIONING)
+        return self
 
 
 class OrchestrationPlanModel(ContractModel):
     operations: list[PlanOperationModel] = Field(default_factory=list)
-    startup_order: list[str] = Field(default_factory=list)
+    startup_order: list[CompiledAddress] = Field(default_factory=list)
     diagnostics: list[dict[str, Any]] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_operation_addresses(self) -> OrchestrationPlanModel:
+        _require_unique_operation_addresses(self.operations)
+        _require_operation_identities(self.operations, RuntimeDomain.ORCHESTRATION)
+        _require_startup_order_addresses(self.operations, self.startup_order)
+        return self
 
 
 class EvaluationPlanModel(ContractModel):
     operations: list[PlanOperationModel] = Field(default_factory=list)
-    startup_order: list[str] = Field(default_factory=list)
+    startup_order: list[CompiledAddress] = Field(default_factory=list)
     diagnostics: list[dict[str, Any]] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_operation_addresses(self) -> EvaluationPlanModel:
+        _require_unique_operation_addresses(self.operations)
+        _require_operation_identities(self.operations, RuntimeDomain.EVALUATION)
+        _require_startup_order_addresses(self.operations, self.startup_order)
+        return self
 
 
 class SnapshotEntryModel(ContractModel):
-    address: str
+    address: CompiledAddress
     domain: str
     resource_type: str
     payload: dict[str, Any] = Field(default_factory=dict)
-    ordering_dependencies: list[str] = Field(default_factory=list)
-    refresh_dependencies: list[str] = Field(default_factory=list)
+    ordering_dependencies: list[CompiledAddress] = Field(default_factory=list)
+    refresh_dependencies: list[CompiledAddress] = Field(default_factory=list)
     status: str = "ready"
 
 
@@ -2014,11 +2499,12 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     """
 
     schema_version: Literal[RUNTIME_SNAPSHOT_SCHEMA_VERSION] = RUNTIME_SNAPSHOT_SCHEMA_VERSION
-    entries: dict[str, SnapshotEntryModel] = Field(default_factory=dict)
+    entries: dict[CompiledAddress, SnapshotEntryModel] = Field(default_factory=dict)
     orchestration_results: dict[str, WorkflowExecutionStateModel] = Field(default_factory=dict)
     orchestration_history: dict[str, list[WorkflowHistoryEventModel]] = Field(default_factory=dict)
     evaluation_results: dict[str, EvaluationResultStateModel] = Field(default_factory=dict)
     evaluation_history: dict[str, list[EvaluationHistoryEventModel]] = Field(default_factory=dict)
+    proposition_truth_results: dict[str, PropositionTruthResultModel] = Field(default_factory=dict)
     participant_episode_results: dict[str, ParticipantEpisodeStateModel] = Field(default_factory=dict)
     participant_episode_history: dict[str, list[ParticipantEpisodeHistoryEventModel]] = Field(default_factory=dict)
     participant_behavior_history: dict[str, list[ParticipantBehaviorHistoryEventModel]] = Field(default_factory=dict)
@@ -2027,7 +2513,15 @@ class RuntimeSnapshotEnvelopeModel(ContractModel):
     joint_action_records: dict[str, ParticipantJointActionRecordModel] = Field(default_factory=dict)
     time_management_contexts: dict[str, ParticipantTimeManagementContextModel] = Field(default_factory=dict)
     realization_provenance: list[RealizationProvenanceEntryModel] = Field(default_factory=list)
+    realization_envelope: RealizationEnvelopeIdentityModel | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _validate_entry_addresses(self) -> RuntimeSnapshotEnvelopeModel:
+        for map_key, entry in self.entries.items():
+            if map_key != entry.address:
+                raise ValueError("Runtime snapshot entries map key must equal embedded address")
+        return self
 
 
 class OperationReceiptModel(ContractModel):
@@ -2047,7 +2541,13 @@ class OperationStatusModel(ContractModel):
     submitted_at: str
     updated_at: str
     diagnostics: list[dict[str, Any]] = Field(default_factory=list)
-    changed_addresses: list[str] = Field(default_factory=list)
+    changed_addresses: list[CompiledAddress] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_changed_addresses(self) -> OperationStatusModel:
+        if len(self.changed_addresses) != len(set(self.changed_addresses)):
+            raise ValueError("changed addresses must be unique")
+        return self
 
 
 class ProvisionerCapabilitiesModel(ContractModel):
@@ -2123,7 +2623,7 @@ class OrchestratorCapabilitiesModel(ContractModel):
     name: NonEmptyString
     supported_sections: list[NonEmptyString] = Field(min_length=1)
     supports_workflows: bool = False
-    supports_condition_refs: bool = True
+    supports_assertion_refs: bool = True
     supports_inject_bindings: bool = True
     supported_workflow_features: list[WorkflowFeature] = Field(default_factory=list)
     supported_workflow_state_predicates: list[WorkflowStatePredicateFeature] = Field(default_factory=list)
@@ -2195,6 +2695,12 @@ class EvaluatorCapabilitiesModel(ContractModel):
     supported_sections: list[NonEmptyString] = Field(min_length=1)
     supports_scoring: bool = True
     supports_objectives: bool = True
+    supported_predicate_families: list[NonEmptyString] = Field(default_factory=list)
+    supported_quantifiers: list[NonEmptyString] = Field(default_factory=list)
+    supported_truth_outcomes: list[NonEmptyString] = Field(default_factory=list)
+    supported_evidence_channels: list[NonEmptyString] = Field(default_factory=list)
+    supported_time_domains: list[NonEmptyString] = Field(default_factory=list)
+    preserves_binding_provenance: bool = False
     constraints: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -2205,6 +2711,33 @@ class EvaluatorCapabilitiesModel(ContractModel):
         )
         if not self.supports_scoring and not self.supports_objectives:
             raise ValueError("evaluators must support scoring, objectives, or both")
+        for field_name in (
+            "supported_predicate_families",
+            "supported_quantifiers",
+            "supported_truth_outcomes",
+            "supported_evidence_channels",
+            "supported_time_domains",
+        ):
+            values = getattr(self, field_name)
+            if len(set(values)) != len(values):
+                raise ValueError(f"evaluator {field_name} must be unique")
+        proposition_sections = {"propositions", "assertions"}
+        if proposition_sections.intersection(self.supported_sections):
+            if not proposition_sections.issubset(self.supported_sections):
+                raise ValueError("evaluator proposition support requires propositions and assertions")
+            if set(self.supported_truth_outcomes) != {"true", "false", "unknown", "unsupported"}:
+                raise ValueError("evaluator proposition support requires all portable truth outcomes")
+            if not all(
+                (
+                    self.supported_predicate_families,
+                    self.supported_quantifiers,
+                    self.supported_evidence_channels,
+                    self.supported_time_domains,
+                )
+            ):
+                raise ValueError("evaluator proposition support requires typed capability dimensions")
+            if not self.preserves_binding_provenance:
+                raise ValueError("evaluator proposition support requires binding provenance")
         return self
 
     @classmethod
@@ -2556,6 +3089,7 @@ class BackendManifestV2Model(ContractModel):
     supported_contract_versions: list[NonEmptyString] = Field(min_length=1)
     compatibility: BackendCompatibilityModel
     realization_support: list[RealizationSupportDeclarationModel] = Field(min_length=1)
+    realization_envelope: RealizationEnvelopeIdentityModel | None = None
     concept_bindings: list[ConceptBindingEntryModel] = Field(min_length=1)
     constraints: dict[str, str] = Field(default_factory=dict)
     capabilities: BackendCapabilitiesV2Model
@@ -2563,6 +3097,11 @@ class BackendManifestV2Model(ContractModel):
     @model_validator(mode="after")
     def _validate_unique_binding_scopes(self) -> BackendManifestV2Model:
         validate_backend_supported_contract_versions(self.supported_contract_versions)
+        envelope_contract_declared = "realization-envelope-v1" in self.supported_contract_versions
+        if self.realization_envelope is not None and not envelope_contract_declared:
+            raise ValueError("realization_envelope requires realization-envelope-v1 support")
+        if envelope_contract_declared and self.realization_envelope is None:
+            raise ValueError("realization-envelope-v1 support requires realization_envelope identity")
         scopes = [binding.scope for binding in self.concept_bindings]
         if len(scopes) != len(set(scopes)):
             raise ValueError("concept_bindings must not contain duplicate scopes")
@@ -2578,6 +3117,33 @@ class BackendManifestV2Model(ContractModel):
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
         json_schema["properties"]["supported_contract_versions"]["items"]["enum"] = list(BACKEND_SUPPORTED_CONTRACT_IDS)
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {
+                        "properties": {"realization_envelope": {"not": {"type": "null"}}},
+                        "required": ["realization_envelope"],
+                    },
+                    "then": {
+                        "properties": {
+                            "supported_contract_versions": {"contains": {"const": "realization-envelope-v1"}}
+                        }
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "supported_contract_versions": {"contains": {"const": "realization-envelope-v1"}}
+                        },
+                        "required": ["supported_contract_versions"],
+                    },
+                    "then": {
+                        "properties": {"realization_envelope": {"not": {"type": "null"}}},
+                        "required": ["realization_envelope"],
+                    },
+                },
+            ]
+        )
         return json_schema
 
 
@@ -2772,6 +3338,7 @@ class ExperimentReferenceModel(ContractModel):
         "scenario",
         "scenario-snapshot",
         "task",
+        "authoring-input",
         "protocol",
         "apparatus-context",
         "run",
@@ -2866,6 +3433,32 @@ class ExperimentScenarioSnapshotReferenceModel(ExperimentReferenceModel):
     """Reference constrained to a sealed scenario snapshot."""
 
     ref_kind: Literal["scenario-snapshot"]
+
+
+class AssociatedArtifactParentReferenceModel(ExperimentReferenceModel):
+    """Reference constrained to a supported associated-artifact parent."""
+
+    ref_kind: Literal[
+        "scenario",
+        "scenario-snapshot",
+        "task",
+        "authoring-input",
+        "apparatus-context",
+        "run",
+        "study",
+    ]
+
+    @model_validator(mode="after")
+    def _validate_associated_artifact_parent(self) -> AssociatedArtifactParentReferenceModel:
+        if self.ref_kind == "scenario":
+            if self.ref_version is not None or self.ref_digest is not None or self.ref_path is not None:
+                raise ValueError("generic scenario parents are id-only; use scenario-snapshot for snapshot binding")
+        elif self.ref_kind != "scenario-snapshot" and (self.ref_digest is not None or self.ref_path is not None):
+            raise ValueError(
+                "experiment associated-artifact parents must not carry ref_digest or ref_path without a "
+                "normative parent canonicalization profile"
+            )
+        return self
 
 
 class ExperimentManifestReferenceModel(ExperimentReferenceModel):
@@ -3435,6 +4028,11 @@ class ExperimentArtifactRefModel(ContractModel):
         "scaffold",
         "baseline",
         "cost-resource-trace",
+        "documentation",
+        "operator-guide",
+        "configuration",
+        "profile",
+        "dataset",
         "other",
     ]
     media_type: NonEmptyString
@@ -3451,6 +4049,161 @@ class ExperimentArtifactRefModel(ContractModel):
     def _validate_artifact_created_at(self) -> ExperimentArtifactRefModel:
         _parse_rfc3339_datetime("created_at", self.created_at)
         return self
+
+
+AssociatedArtifactSetDigestString = Annotated[str, Field(pattern=r"^sha256:[a-f0-9]{64}$")]
+_ASSOCIATED_ARTIFACT_SECRET_QUERY_NAMES = frozenset(
+    {
+        "access_token",
+        "api_key",
+        "apikey",
+        "auth",
+        "credential",
+        "key",
+        "password",
+        "secret",
+        "sig",
+        "signature",
+        "token",
+    }
+)
+_ASSOCIATED_ARTIFACT_SECRET_QUERY_FRAGMENTS = (
+    "api-key",
+    "api_key",
+    "apikey",
+    "credential",
+    "password",
+    "secret",
+    "signature",
+    "token",
+)
+
+
+def _validate_associated_artifact_uri(artifact_id: str, uri: str) -> None:
+    parsed = urlsplit(uri)
+    if not parsed.scheme or (parsed.scheme in {"http", "https"} and not parsed.netloc):
+        raise ValueError(f"associated artifact {artifact_id!r} uri must be an absolute URI")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError(f"associated artifact {artifact_id!r} uri must not contain credential userinfo")
+    query_names = {name.casefold() for name, _value in parse_qsl(parsed.query, keep_blank_values=True)}
+    secret_names = {
+        name
+        for name in query_names
+        if name in _ASSOCIATED_ARTIFACT_SECRET_QUERY_NAMES
+        or any(fragment in name for fragment in _ASSOCIATED_ARTIFACT_SECRET_QUERY_FRAGMENTS)
+    }
+    if secret_names:
+        raise ValueError(f"associated artifact {artifact_id!r} uri must not contain secret-bearing query fields")
+
+
+class AssociatedArtifactManifestModel(ContractModel):
+    """One exact non-semantic artifact-reference set attached to one parent."""
+
+    schema_version: Literal[ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION]
+    manifest_id: NonEmptyString
+    manifest_version: NonEmptyString
+    canonicalization_profile: Literal["associated-artifact-set/v1"]
+    scope: Literal["scenario", "experiment"]
+    parent_ref: AssociatedArtifactParentReferenceModel
+    artifacts: dict[NonEmptyString, ExperimentArtifactRefModel] = Field(min_length=1)
+    set_digest: AssociatedArtifactSetDigestString
+
+    @model_validator(mode="after")
+    def _validate_associated_artifact_manifest(self) -> AssociatedArtifactManifestModel:
+        scenario_kinds = {"scenario", "scenario-snapshot"}
+        parent_is_scenario = self.parent_ref.ref_kind in scenario_kinds
+        if (self.scope == "scenario") != parent_is_scenario:
+            raise ValueError("associated-artifact scope and parent kind must agree")
+
+        descriptor_owners: dict[tuple[Any, ...], str] = {}
+        locator_claims: dict[str, tuple[Any, ...]] = {}
+        for artifact_key, artifact in self.artifacts.items():
+            if artifact_key != artifact.artifact_id:
+                raise ValueError(
+                    f"associated artifact map key {artifact_key!r} must equal embedded artifact_id "
+                    f"{artifact.artifact_id!r}"
+                )
+            _validate_associated_artifact_uri(artifact.artifact_id, artifact.uri)
+            descriptor_key = (
+                artifact.role,
+                artifact.media_type,
+                artifact.uri,
+                artifact.checksum.algorithm,
+                artifact.checksum.value.casefold(),
+                artifact.size_bytes,
+                artifact.created_at,
+                artifact.source,
+                tuple(ref.model_dump_json() for ref in artifact.satisfies_refs),
+                artifact.sensitivity,
+                artifact.description,
+            )
+            prior_descriptor_owner = descriptor_owners.get(descriptor_key)
+            if prior_descriptor_owner is not None:
+                raise ValueError(
+                    f"associated artifacts {prior_descriptor_owner!r} and {artifact.artifact_id!r} are exact "
+                    "descriptor aliases; duplicate descriptors require one stable artifact id"
+                )
+            descriptor_owners[descriptor_key] = artifact.artifact_id
+
+            locator_claim = (
+                artifact.media_type,
+                artifact.checksum.algorithm,
+                artifact.checksum.value.casefold(),
+                artifact.size_bytes,
+            )
+            prior_locator_claim = locator_claims.get(artifact.uri)
+            if prior_locator_claim is not None and prior_locator_claim != locator_claim:
+                raise ValueError("one associated-artifact locator must not carry conflicting payload claims")
+            locator_claims[artifact.uri] = locator_claim
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("allOf", []).extend(
+            [
+                {
+                    "if": {"properties": {"scope": {"const": "scenario"}}, "required": ["scope"]},
+                    "then": {
+                        "properties": {
+                            "parent_ref": {
+                                "properties": {
+                                    "ref_kind": {"enum": ["scenario", "scenario-snapshot"]},
+                                }
+                            }
+                        }
+                    },
+                },
+                {
+                    "if": {"properties": {"scope": {"const": "experiment"}}, "required": ["scope"]},
+                    "then": {
+                        "properties": {
+                            "parent_ref": {
+                                "properties": {
+                                    "ref_kind": {
+                                        "enum": ["task", "authoring-input", "apparatus-context", "run", "study"]
+                                    },
+                                }
+                            }
+                        }
+                    },
+                },
+            ]
+        )
+        _add_aces_invariant(
+            json_schema,
+            "associated-artifact-parent-set-and-byte-binding",
+            "Full conformance requires matching the concrete parent, recomputing the canonical set digest, "
+            "and binding every checksum and size to an explicitly supplied bounded byte stream.",
+            validator="aces_contracts.associated_artifacts.validate_associated_artifact_manifest",
+            inputs=[{"contract_id": "associated-artifact-manifest-v1", "instance_path": "#"}],
+        )
+        return json_schema
 
 
 class ExperimentValidityNoteModel(ContractModel):
@@ -5476,6 +6229,148 @@ class ExperimentStudyModel(ContractModel):
         return json_schema
 
 
+class ExperimentEpisodeControlModel(ContractModel):
+    """Declarative episode execution controls for a planned experiment.
+
+    Captures the pre-run execution-control facts — turn order, logical step
+    count, and episode termination — that ADR-069 requires for CAGE-2
+    execution-control equivalence but that the archival experiment-core
+    contracts only record after a run has executed.
+    """
+
+    turn_order: Literal["sequential", "simultaneous", "round-robin", "scenario-defined", "other"]
+    termination_rule: NonEmptyString
+    max_steps: PositiveInteger | None = None
+    termination_condition_refs: list[NonEmptyString] = Field(
+        default_factory=list, json_schema_extra={"uniqueItems": True}
+    )
+    description: NonEmptyString | None = None
+
+
+class ExperimentRedVariantSelectionModel(ContractModel):
+    """Selection of one red-agent variant bound into a planned experiment."""
+
+    variant_id: NonEmptyString
+    agent_ref: NonEmptyString
+    parameters: list[ExperimentParameterModel] = Field(default_factory=list)
+    description: NonEmptyString | None = None
+
+
+class ExperimentRunPlanModel(ContractModel):
+    """Pre-run replication, stochastic, episode, and red-variant plan.
+
+    Reuses the archival-family value models for stochastic controls, run
+    allocation, and clock intent, and adds the authoring-only episode and
+    red-variant selections. Exactly one of ``allocation`` (condition-based)
+    or ``target_run_count`` (simple, no-condition) declares the run count.
+    """
+
+    stochastic_controls: list[ExperimentStochasticControlModel] = Field(min_length=1)
+    episode_control: ExperimentEpisodeControlModel
+    allocation: ExperimentRunAllocationPlanModel | None = None
+    target_run_count: PositiveInteger | None = None
+    red_variant_selections: dict[NonEmptyString, ExperimentRedVariantSelectionModel] = Field(default_factory=dict)
+    clock_intent: ExperimentClockContextModel | None = None
+
+    @model_validator(mode="after")
+    def _validate_run_plan(self) -> ExperimentRunPlanModel:
+        if (self.allocation is None) == (self.target_run_count is None):
+            raise ValueError("run_plan must declare exactly one of allocation or target_run_count")
+        for key, selection in self.red_variant_selections.items():
+            if selection.variant_id != key:
+                raise ValueError(
+                    f"run_plan red_variant_selections key '{key}' must match embedded variant_id "
+                    f"'{selection.variant_id}'"
+                )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        json_schema.setdefault("oneOf", []).extend(
+            [
+                {
+                    "required": ["allocation"],
+                    "properties": {"allocation": {"not": {"type": "null"}}, "target_run_count": {"type": "null"}},
+                },
+                {
+                    "required": ["target_run_count"],
+                    "properties": {"target_run_count": {"not": {"type": "null"}}, "allocation": {"type": "null"}},
+                },
+            ]
+        )
+        _add_aces_invariant(
+            json_schema,
+            "run-plan-exactly-one-run-count-source",
+            "A run plan must declare exactly one of allocation or target_run_count, and every red-variant "
+            "selection map key must equal its embedded variant_id.",
+            validator="aces_contracts.contracts.ExperimentRunPlanModel._validate_run_plan",
+            inputs=[{"contract_id": "experiment-authoring-input-v1", "instance_path": "#/run_plan"}],
+        )
+        return json_schema
+
+
+class ExperimentSpecModel(ContractModel):
+    """Pre-run experiment authoring input: a design that binds a task to a run plan.
+
+    This is the authoring/input counterpart to the archival experiment-core
+    outputs (run/study/apparatus-context). It references the separately
+    authored task (and optionally a scenario snapshot) and declares the
+    pre-run experimental design — apparatus intent, run plan, factors,
+    intended capture, and validity notes — before any run executes. It is
+    never a run, study, or apparatus-context record (ADR-055 / ADR-074).
+    """
+
+    schema_version: Literal[EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION]
+    spec_id: NonEmptyString
+    spec_version: NonEmptyString
+    title: NonEmptyString
+    description: NonEmptyString
+    task_ref: ExperimentTaskReferenceModel
+    run_plan: ExperimentRunPlanModel
+    intended_scenario_ref: ExperimentScenarioReferenceModel | None = None
+    apparatus_intent: ExperimentApparatusConstraintModel | None = None
+    factors: dict[NonEmptyString, ExperimentStudyFactorModel] = Field(default_factory=dict)
+    capture_spec_refs: list[ExperimentCaptureSpecReferenceModel] = Field(default_factory=list)
+    validity_notes: list[ExperimentValidityNoteModel] = Field(default_factory=list)
+    artifact_refs: list[ExperimentArtifactRefModel] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_experiment_spec(self) -> ExperimentSpecModel:
+        allocation = self.run_plan.allocation
+        if allocation is not None:
+            factor_names = set(self.factors)
+            for blocking_factor in allocation.blocking_factors:
+                if blocking_factor not in factor_names:
+                    raise ValueError(
+                        f"run_plan allocation blocking factor '{blocking_factor}' must be a declared factor"
+                    )
+        return self
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls,
+        core_schema: CoreSchema,
+        handler: GetJsonSchemaHandler,
+    ) -> JsonSchemaValue:
+        json_schema = handler(core_schema)
+        json_schema = handler.resolve_ref_schema(json_schema)
+        _add_aces_invariant(
+            json_schema,
+            "experiment-spec-blocking-factors-declared",
+            "When a run plan declares an allocation with blocking factors, every blocking factor must be a "
+            "declared experiment-spec factor.",
+            validator="aces_contracts.contracts.ExperimentSpecModel._validate_experiment_spec",
+            inputs=[{"contract_id": "experiment-authoring-input-v1", "instance_path": "#"}],
+        )
+        return json_schema
+
+
 def validate_experiment_task_archival_datetimes(task: ExperimentTaskModel | Mapping[str, Any]) -> None:
     """Validate task-level archival timestamp semantics not carried by generic JSON Schema."""
 
@@ -6693,6 +7588,7 @@ def _event_stream_schema(title: str, item_schema: dict[str, Any]) -> dict[str, A
 
 REUSABLE_ASSET_FAMILIES: tuple[str, ...] = (
     "reusable_scenario",
+    "associated_artifact_set",
     "sdl_module",
     "experiment_task",
     "experiment_study",
@@ -6704,6 +7600,7 @@ _REUSABLE_ASSET_FAMILY_SET = frozenset(REUSABLE_ASSET_FAMILIES)
 
 ReusableAssetFamily = Literal[
     "reusable_scenario",
+    "associated_artifact_set",
     "sdl_module",
     "experiment_task",
     "experiment_study",
@@ -7005,12 +7902,22 @@ class ReusableAssetTrustPolicyModel(ContractModel):
 def schema_bundle() -> dict[str, dict[str, Any]]:
     """Return the repo-published JSON Schemas for external contracts."""
 
+    from aces_contracts.realization_envelope import BackendRealizationEnvelopeModel
+
+    from .provenance import SDLLineageLedgerModel
+    from .scientific_completeness import (
+        ScientificCompletenessAssessmentModel,
+        ScientificCompletenessTaxonomyModel,
+    )
+
     bundle = {
         "aces-semantic-invariants-v1": _aces_semantic_invariant_profile_schema_for_bundle(),
         "sdl-authoring-input-v1": Scenario.model_json_schema(),
         "instantiated-scenario-v1": InstantiatedScenario.model_json_schema(),
+        "instantiated-scenario-snapshot-v1": InstantiatedScenarioSnapshot.model_json_schema(),
         "scenario-instantiation-request-v1": InstantiationRequestModel.model_json_schema(),
         "backend-manifest-v2": BackendManifestV2Model.model_json_schema(),
+        "realization-envelope-v1": BackendRealizationEnvelopeModel.model_json_schema(),
         "processor-manifest-v2": ProcessorManifestV2Model.model_json_schema(),
         "participant-implementation-manifest-v1": ParticipantImplementationManifestModel.model_json_schema(),
         "participant-implementation-provenance-v1": ParticipantImplementationProvenanceModel.model_json_schema(),
@@ -7023,6 +7930,7 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "semantic-profile-v1": SemanticProfileModel.model_json_schema(),
         "backend-profile-v1": _backend_profile_schema_for_bundle(),
         "experiment-apparatus-context-v1": ExperimentApparatusContextModel.model_json_schema(),
+        "experiment-authoring-input-v1": ExperimentSpecModel.model_json_schema(),
         "experiment-capture-spec-v1": ExperimentCaptureSpecModel.model_json_schema(),
         "experiment-derived-measure-v1": ExperimentDerivedMeasureModel.model_json_schema(),
         "experiment-evidence-record-v1": ExperimentEvidenceRecordModel.model_json_schema(),
@@ -7040,6 +7948,10 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         ),
         "workflow-cancellation-request-v1": WorkflowCancellationRequestModel.model_json_schema(),
         "evaluation-result-envelope-v1": EvaluationResultStateModel.model_json_schema(),
+        "proposition-truth-result-v1": PropositionTruthResultModel.model_json_schema(),
+        "sdl-lineage-ledger-v1": SDLLineageLedgerModel.model_json_schema(),
+        "scientific-completeness-taxonomy-v1": ScientificCompletenessTaxonomyModel.model_json_schema(),
+        "scientific-completeness-assessment-v1": ScientificCompletenessAssessmentModel.model_json_schema(),
         "evaluation-history-event-stream-v1": _event_stream_schema(
             "EvaluationHistoryEventStream",
             EvaluationHistoryEventModel.model_json_schema(),
@@ -7064,12 +7976,44 @@ def schema_bundle() -> dict[str, dict[str, Any]]:
         "participant-context-view-v1": ParticipantContextViewModel.model_json_schema(),
         "operation-receipt-v1": OperationReceiptModel.model_json_schema(),
         "operation-status-v1": OperationStatusModel.model_json_schema(),
+        "associated-artifact-manifest-v1": AssociatedArtifactManifestModel.model_json_schema(),
         "reusable-asset-trust-policy-v1": ReusableAssetTrustPolicyModel.model_json_schema(),
     }
+    _add_aces_invariant(
+        bundle["scientific-completeness-taxonomy-v1"],
+        "scientific-completeness-taxonomy-rectangular",
+        "Concern and profile ids must be unique, and every profile disposition "
+        "map must exactly cover the taxonomy concern set.",
+        validator="aces_contracts.scientific_completeness.ScientificCompletenessTaxonomyModel",
+        inputs=[{"contract_id": "scientific-completeness-taxonomy-v1", "instance_path": "#"}],
+    )
+    _add_aces_invariant(
+        bundle["scientific-completeness-assessment-v1"],
+        "scientific-completeness-assessment-status-evidence",
+        "Concern ids must be unique and each delivery status must carry its "
+        "required executable evidence, external binding, issue refs, or "
+        "exclusion rationale.",
+        validator="aces_contracts.scientific_completeness.ScientificCompletenessAssessmentModel",
+        inputs=[{"contract_id": "scientific-completeness-assessment-v1", "instance_path": "#"}],
+    )
+    _add_aces_invariant(
+        bundle["scientific-completeness-assessment-v1"],
+        "scientific-completeness-taxonomy-assessment-join",
+        "Assessment family, taxonomy revision, and concern ids must exactly "
+        "match the joined taxonomy before completeness is computed.",
+        validator="aces_contracts.scientific_completeness.evaluate_profile_completeness",
+        inputs=[
+            {"contract_id": "scientific-completeness-taxonomy-v1", "instance_path": "#"},
+            {"contract_id": "scientific-completeness-assessment-v1", "instance_path": "#"},
+        ],
+    )
     for contract_id, json_schema in bundle.items():
+        _attach_sdl_identifier_constraints(contract_id, json_schema)
         _attach_instantiation_invariants(contract_id, json_schema)
         _attach_experiment_datetime_invariants(contract_id, json_schema)
         _attach_json_schema_metadata(contract_id, json_schema)
+        _attach_compiled_address_map_constraints(contract_id, json_schema)
+        _attach_plan_identity_constraints(contract_id, json_schema)
         _attach_aces_semantic_profile(contract_id, json_schema)
     known_contract_ids = frozenset(bundle)
     for contract_id, json_schema in bundle.items():
@@ -7092,6 +8036,10 @@ __all__ = [
     "AttackEnterpriseTacticsSourceModel",
     "AtlasTacticSourceTermModel",
     "AtlasTacticsSourceModel",
+    "ASSOCIATED_ARTIFACT_MANIFEST_SCHEMA_VERSION",
+    "AssociatedArtifactManifestModel",
+    "AssociatedArtifactParentReferenceModel",
+    "AssociatedArtifactSetDigestString",
     "BACKEND_MANIFEST_V2_SCHEMA_VERSION",
     "ApparatusIdentityModel",
     "BackendCompatibilityModel",
@@ -7129,6 +8077,7 @@ __all__ = [
     "ExperimentDerivedMeasureMethodModel",
     "ExperimentDerivedMeasureModel",
     "ExperimentDerivedMeasureReferenceModel",
+    "ExperimentEpisodeControlModel",
     "ExperimentEvidenceRecordModel",
     "ExperimentEvidenceRecordReferenceModel",
     "ExperimentEvidenceReferenceModel",
@@ -7142,13 +8091,16 @@ __all__ = [
     "ExperimentParameterModel",
     "ExperimentProcessorReferenceModel",
     "ExperimentRealizedFormDisclosureModel",
+    "ExperimentRedVariantSelectionModel",
     "ExperimentReferenceModel",
     "ExperimentResultSummaryModel",
     "ExperimentRunAllocationPlanModel",
     "ExperimentRunModel",
+    "ExperimentRunPlanModel",
     "ExperimentRunTraceabilityModel",
     "ExperimentScenarioReferenceModel",
     "ExperimentScenarioSnapshotReferenceModel",
+    "ExperimentSpecModel",
     "ExperimentSplitAndLeakageControlsModel",
     "ExperimentStatisticalMethodModel",
     "ExperimentStochasticControlModel",
@@ -7160,6 +8112,7 @@ __all__ = [
     "ExperimentUncertaintyMethodModel",
     "ExperimentValidityNoteModel",
     "EXPERIMENT_APPARATUS_CONTEXT_SCHEMA_VERSION",
+    "EXPERIMENT_AUTHORING_INPUT_SCHEMA_VERSION",
     "EXPERIMENT_CAPTURE_SPEC_SCHEMA_VERSION",
     "EXPERIMENT_DERIVED_MEASURE_SCHEMA_VERSION",
     "EXPERIMENT_EVIDENCE_RECORD_SCHEMA_VERSION",
@@ -7169,6 +8122,15 @@ __all__ = [
     "EvaluationHistoryEventModel",
     "EvaluationPlanModel",
     "EvaluationResultStateModel",
+    "PropositionAssertionPolarity",
+    "PropositionEvaluationBasis",
+    "PropositionIndeterminacyReason",
+    "PropositionLossDisclosureModel",
+    "PropositionLossKind",
+    "PropositionProbeBindingModel",
+    "PropositionTemporalContextModel",
+    "PropositionTruthOutcome",
+    "PropositionTruthResultModel",
     "EVALUATION_STATE_SCHEMA_VERSION",
     "EvaluatorCapabilitiesModel",
     "EventClassificationModel",
@@ -7233,6 +8195,7 @@ __all__ = [
     "ProcessorCapabilitiesV2Model",
     "ProvisionerCapabilitiesModel",
     "ProvisioningPlanModel",
+    "RealizationEnvelopeIdentityModel",
     "RawDataIntegrityModel",
     "RealizationProvenanceEntryModel",
     "RealizationSupportDeclarationModel",

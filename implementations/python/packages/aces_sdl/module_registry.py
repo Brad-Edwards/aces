@@ -27,7 +27,8 @@ from packaging.version import InvalidVersion, Version
 from pydantic import Field, ValidationError
 
 from ._base import SDLModel
-from ._errors import SDLParseError
+from ._errors import SDLParseDiagnostic, SDLParseError
+from ._source_profile import DEFAULT_SOURCE_PARSE_OPTIONS, SDLSourceParseOptions
 from .scenario import ImportDecl, ModuleDescriptor, Scenario
 
 LOCKFILE_NAME = "aces.lock.json"
@@ -113,36 +114,9 @@ class ResolvedModule:
 def _scenario_module_descriptor(scenario: Scenario, *, source_id: str) -> ModuleDescriptor:
     if scenario.module is not None:
         return scenario.module
-    normalized_source_id = source_id.replace("\\", "/")
-    if "/" not in normalized_source_id:
-        normalized_source_id = f"local/{normalized_source_id}"
-    return ModuleDescriptor(
-        id=normalized_source_id,
-        version=scenario.version,
-        parameters=sorted(scenario.variables.keys()),
-        exports={
-            section: sorted(getattr(scenario, section).keys())
-            for section in (
-                "nodes",
-                "infrastructure",
-                "features",
-                "conditions",
-                "vulnerabilities",
-                "entities",
-                "injects",
-                "events",
-                "scripts",
-                "stories",
-                "content",
-                "accounts",
-                "relationships",
-                "agents",
-                "objectives",
-                "workflows",
-            )
-            if getattr(scenario, section)
-        },
-        description=scenario.description,
+    raise SDLParseError(
+        "Imported SDL units require an explicit module descriptor",
+        path=Path(source_id),
     )
 
 
@@ -550,6 +524,8 @@ def resolve_import(
     base_dir: Path,
     lockfile: Lockfile | None = None,
     trust_policy: TrustPolicy | None = None,
+    source_options: SDLSourceParseOptions = DEFAULT_SOURCE_PARSE_OPTIONS,
+    source_diagnostics: list[SDLParseDiagnostic] | None = None,
 ) -> ResolvedModule:
     trust_policy = trust_policy or TrustPolicy()
     source = import_decl.normalized_source
@@ -579,6 +555,8 @@ def resolve_import(
             base_dir=base_dir,
             lockfile=lockfile,
             trust_policy=trust_policy,
+            source_options=source_options,
+            source_diagnostics=source_diagnostics,
         )
     if source.startswith("local:"):
         relative = source.removeprefix("local:")
@@ -592,6 +570,10 @@ def resolve_import(
         imported_raw = _load_normalized_data(
             import_path.read_text(encoding="utf-8"),
             path=import_path,
+            source_format=source_options.source_format,
+            migration_policy=source_options.migration_policy,
+            limits=source_options.limits,
+            source_diagnostics=source_diagnostics,
         )
         imported_scenario = Scenario.model_validate(imported_raw)
         descriptor = _scenario_module_descriptor(
@@ -750,7 +732,7 @@ def resolve_lock_records(
         records.append(
             LockRecord(
                 source=import_decl.normalized_source,
-                namespace=import_decl.namespace or resolved.module_descriptor.id.split("/")[-1],
+                namespace=import_decl.namespace,
                 requested_version=import_decl.version or "*",
                 resolved_source=resolved.resolved_source,
                 module_id=resolved.module_descriptor.id,

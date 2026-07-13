@@ -1,6 +1,7 @@
 """Tests for SDL semantic validation."""
 
 import pytest
+from pydantic import ValidationError
 
 from aces.core.sdl._errors import SDLValidationError
 from aces.core.sdl.scenario import Scenario
@@ -59,13 +60,8 @@ class TestVerifyNodes:
 
     def test_node_name_too_long(self):
         long_name = "a" * 36
-        s = _make_scenario(
-            nodes={
-                long_name: {"type": "switch"},
-            },
-        )
-        errors = _validate(s)
-        assert any("35 characters" in e for e in errors)
+        with pytest.raises(ValidationError, match="35 characters"):
+            _make_scenario(nodes={long_name: {"type": "switch"}})
 
     @pytest.mark.parametrize(
         ("field_name", "section_name", "section_value", "error_fragment"),
@@ -251,12 +247,12 @@ class TestVerifyRuntimeNetwork:
 
     def test_endpoint_network_variable_reference_is_skipped(self):
         s = _make_scenario(
-            variables={"TARGET_NET": {"type": "string", "required": True}},
+            variables={"target_net": {"type": "string", "required": True}},
             nodes={
                 "vm": {
                     "type": "vm",
                     "resources": {"ram": "1 gib", "cpu": 1},
-                    "runtime": {"network": {"endpoints": [{"network": "${TARGET_NET}"}]}},
+                    "runtime": {"network": {"endpoints": [{"network": "${target_net}"}]}},
                 },
             },
         )
@@ -319,7 +315,7 @@ class TestVerifyRuntimeCapabilityOverrides:
 
     def test_override_with_variable_subject_name_is_skipped(self):
         s = _make_scenario(
-            variables={"SHELL_NAME": {"type": "string", "required": True}},
+            variables={"shell_name": {"type": "string", "required": True}},
             nodes={
                 "vm": {
                     "type": "vm",
@@ -331,7 +327,7 @@ class TestVerifyRuntimeCapabilityOverrides:
                         "linux_capabilities": {
                             "process_overrides": [
                                 {
-                                    "subject": {"name": "${SHELL_NAME}"},
+                                    "subject": {"name": "${shell_name}"},
                                     "scope": "subtree",
                                     "drop": ["CAP_AUDIT_CONTROL"],
                                 }
@@ -410,12 +406,12 @@ class TestVerifyInjects:
 
 
 class TestVerifyEvents:
-    def test_event_references_undefined_condition(self):
+    def test_event_references_undefined_assertion(self):
         s = _make_scenario(
-            events={"e1": {"conditions": ["missing"]}},
+            events={"e1": {"assertions": ["missing"]}},
         )
         errors = _validate(s)
-        assert any("undefined condition" in e for e in errors)
+        assert any("assertion 'missing' not in assertions section" in e for e in errors)
 
 
 class TestVerifyScripts:
@@ -636,14 +632,14 @@ class TestVerifyRelationships:
         errors = _validate(s)
         assert not errors
 
-    def test_relationship_can_target_variable(self):
+    def test_relationship_rejects_non_targetable_variable(self):
         s = _make_scenario(
             nodes={"vm": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}}},
             variables={"env": {"type": "string", "default": "prod"}},
             relationships={"r1": {"type": "connects_to", "source": "vm", "target": "env"}},
         )
         errors = _validate(s)
-        assert not errors
+        assert any("does not reference any defined targetable element" in error for error in errors)
 
     def test_relationship_can_target_other_relationship(self):
         s = _make_scenario(
@@ -663,11 +659,11 @@ class TestVerifyRelationships:
                 "dataset": {
                     "type": "dataset",
                     "target": "vm",
-                    "items": [{"name": "budget.eml"}],
+                    "items": [{"name": "budget-email", "display_name": "budget.eml"}],
                 }
             },
             relationships={
-                "r1": {"type": "connects_to", "source": "vm", "target": "budget.eml"},
+                "r1": {"type": "connects_to", "source": "vm", "target": "budget-email"},
             },
         )
         errors = _validate(s)
@@ -890,7 +886,7 @@ class TestAgentParticipantFraming:
     """ACT-601 — declarative participant framing fields on Agent.
 
     Verifies semantic validation for the three framing fields that don't
-    already exist on Agent: ``starting_conditions``, ``authority_anchors``,
+    already exist on Agent: ``starting_assertions``, ``authority_anchors``,
     ``operating_scope``. Identity and role are already covered by the
     pre-existing ``Agent.entity`` and ``Entity.role`` bindings; the
     ``TestVerifyAgents`` cases above cover those.
@@ -913,6 +909,27 @@ class TestAgentParticipantFraming:
             "conditions": {
                 "beacon-online": {"command": "/usr/local/bin/check-beacon", "interval": 30},
             },
+            "propositions": {
+                "beacon-online": {
+                    "description": "The governed VM has declared beacon state.",
+                    "subjects": ["nodes.vm"],
+                    "basis": "declared_state",
+                    "predicate": {
+                        "kind": "boolean",
+                        "property": "beacon-online",
+                        "semantic_ref": "urn:aces:declared-property:beacon-online",
+                        "operator": "equals",
+                        "expected": True,
+                    },
+                },
+            },
+            "assertions": {
+                "beacon-online": {
+                    "proposition": "beacon-online",
+                    "role": "precondition",
+                    "polarity": "positive",
+                },
+            },
             "relationships": {
                 "red-controls-vm": {
                     "type": "manages",
@@ -922,33 +939,33 @@ class TestAgentParticipantFraming:
             },
         }
 
-    def test_undefined_starting_condition(self):
+    def test_undefined_starting_assertion(self):
         s = _make_scenario(
             **self._base_scenario_kwargs(),
             agents={
                 "a1": {
                     "entity": "red",
-                    "starting_conditions": ["ghost-condition"],
+                    "starting_assertions": ["ghost-condition"],
                 },
             },
         )
         errors = _validate(s)
-        assert any("starting_condition 'ghost-condition' not in conditions section" in e for e in errors), errors
+        assert any("assertion 'ghost-condition' not in assertions section" in e for e in errors), errors
 
-    def test_defined_starting_condition(self):
+    def test_defined_starting_assertion(self):
         s = _make_scenario(
             **self._base_scenario_kwargs(),
             agents={
                 "a1": {
                     "entity": "red",
-                    "starting_conditions": ["beacon-online"],
+                    "starting_assertions": ["beacon-online"],
                 },
             },
         )
         errors = _validate(s)
         assert not errors
 
-    def test_starting_condition_accepts_variable_placeholder(self):
+    def test_starting_assertion_accepts_variable_placeholder(self):
         kwargs = self._base_scenario_kwargs()
         kwargs["variables"] = {"beacon_ref": {"type": "string", "default": "beacon-online"}}
         s = _make_scenario(
@@ -956,40 +973,38 @@ class TestAgentParticipantFraming:
             agents={
                 "a1": {
                     "entity": "red",
-                    "starting_conditions": ["${beacon_ref}"],
+                    "starting_assertions": ["${beacon_ref}"],
                 },
             },
         )
         errors = _validate(s)
         assert not errors
 
-    def test_starting_condition_accepts_qualified_ref(self):
-        # ADR-020 §6 publishes starting_conditions as accepting bare or
-        # `conditions.<name>` qualified references.
+    def test_starting_assertion_rejects_section_qualified_ref(self):
         s = _make_scenario(
             **self._base_scenario_kwargs(),
             agents={
                 "a1": {
                     "entity": "red",
-                    "starting_conditions": ["conditions.beacon-online"],
+                    "starting_assertions": ["assertions.beacon-online"],
                 },
             },
         )
         errors = _validate(s)
-        assert not errors
+        assert any("assertion 'assertions.beacon-online' not in assertions section" in e for e in errors), errors
 
-    def test_qualified_starting_condition_undefined_is_rejected(self):
+    def test_qualified_starting_assertion_undefined_is_rejected(self):
         s = _make_scenario(
             **self._base_scenario_kwargs(),
             agents={
                 "a1": {
                     "entity": "red",
-                    "starting_conditions": ["conditions.ghost"],
+                    "starting_assertions": ["assertions.ghost"],
                 },
             },
         )
         errors = _validate(s)
-        assert any("starting_condition 'conditions.ghost' not in conditions section" in e for e in errors), errors
+        assert any("assertion 'assertions.ghost' not in assertions section" in e for e in errors), errors
 
     def test_undefined_authority_anchor(self):
         s = _make_scenario(
@@ -1115,7 +1130,7 @@ class TestAgentParticipantFraming:
                 "red-agent": {
                     "entity": "red",
                     "starting_accounts": ["phished"],
-                    "starting_conditions": ["beacon-online"],
+                    "starting_assertions": ["beacon-online"],
                     "authority_anchors": ["red", "red-controls-vm"],
                     "allowed_subnets": ["net"],
                     "operating_scope": ["net", "vm"],
@@ -1285,6 +1300,27 @@ class TestVerifyObjectives:
             "conditions": {
                 "exercise-passed": {"command": "/bin/check", "interval": 30},
             },
+            "propositions": {
+                "exercise-passed": {
+                    "description": "The governed exercise completion state is declared.",
+                    "subjects": ["nodes.web"],
+                    "basis": "declared_state",
+                    "predicate": {
+                        "kind": "boolean",
+                        "property": "exercise-passed",
+                        "semantic_ref": "urn:aces:declared-property:exercise-passed",
+                        "operator": "equals",
+                        "expected": True,
+                    },
+                },
+            },
+            "assertions": {
+                "exercise-passed": {
+                    "proposition": "exercise-passed",
+                    "role": "postcondition",
+                    "polarity": "positive",
+                },
+            },
             "events": {"attack-wave": {}},
             "scripts": {
                 "main-timeline": {
@@ -1303,7 +1339,7 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "ghost-agent",
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                 },
             },
         )
@@ -1316,7 +1352,7 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "entity": "ghost-team",
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                 },
             },
         )
@@ -1330,7 +1366,7 @@ class TestVerifyObjectives:
                 "obj-1": {
                     "agent": "red-agent",
                     "actions": ["Persist"],
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                 },
             },
         )
@@ -1344,7 +1380,7 @@ class TestVerifyObjectives:
                 "obj-1": {
                     "agent": "red-agent",
                     "targets": ["ghost-target"],
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                 },
             },
         )
@@ -1360,7 +1396,7 @@ class TestVerifyObjectives:
                 "obj-1": {
                     "agent": "red-agent",
                     "targets": ["web"],
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                 },
             },
         )
@@ -1376,7 +1412,7 @@ class TestVerifyObjectives:
                 "obj-1": {
                     "agent": "red-agent",
                     "targets": ["nodes.web", "infrastructure.net"],
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                 },
             },
         )
@@ -1405,7 +1441,7 @@ class TestVerifyObjectives:
                         "nodes.web.services.web-https",
                         "infrastructure.net.acls.allow-admin",
                     ],
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                 },
             },
             relationships={
@@ -1425,12 +1461,12 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "red-agent",
-                    "success": {"conditions": ["ghost-condition"]},
+                    "success": {"assertions": ["ghost-condition"]},
                 },
             },
         )
         errors = _validate(s)
-        assert any("undefined condition" in e for e in errors)
+        assert any("success assertion 'ghost-condition' not in assertions section" in e for e in errors)
 
     def test_window_event_must_belong_to_script(self):
         kwargs = self._base_kwargs()
@@ -1440,7 +1476,7 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "red-agent",
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                     "window": {
                         "scripts": ["main-timeline"],
                         "events": ["cleanup-wave"],
@@ -1457,12 +1493,12 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "red-agent",
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                     "depends_on": ["obj-2"],
                 },
                 "obj-2": {
                     "entity": "blue",
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                     "depends_on": ["obj-1"],
                 },
             },
@@ -1476,7 +1512,7 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "red-agent",
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                     "depends_on": ["ghost-objective"],
                 },
             },
@@ -1490,7 +1526,7 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "red-agent",
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                     "window": {"steps": ["response.validate"]},
                 },
             },
@@ -1504,7 +1540,7 @@ class TestVerifyObjectives:
             objectives={
                 "obj-1": {
                     "agent": "red-agent",
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                     "window": {
                         "workflows": ["response"],
                         "steps": ["other.validate"],
@@ -1518,7 +1554,7 @@ class TestVerifyObjectives:
                         "validate": {
                             "type": "objective",
                             "objective": "obj-1",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1529,7 +1565,7 @@ class TestVerifyObjectives:
                         "validate": {
                             "type": "objective",
                             "objective": "obj-1",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1547,7 +1583,7 @@ class TestVerifyObjectives:
                     "agent": "red-agent",
                     "actions": ["Scan"],
                     "targets": ["web"],
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                     "window": {
                         "stories": ["exercise"],
                         "scripts": ["main-timeline"],
@@ -1556,7 +1592,7 @@ class TestVerifyObjectives:
                 },
                 "report": {
                     "entity": "blue",
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                     "depends_on": ["recon"],
                 },
             },
@@ -1572,14 +1608,35 @@ class TestVerifyWorkflows:
             "conditions": {
                 "exercise-passed": {"command": "/bin/check", "interval": 30},
             },
+            "propositions": {
+                "exercise-passed": {
+                    "description": "The governed exercise completion state is declared.",
+                    "subjects": ["entities.blue"],
+                    "basis": "declared_state",
+                    "predicate": {
+                        "kind": "boolean",
+                        "property": "exercise-passed",
+                        "semantic_ref": "urn:aces:declared-property:exercise-passed",
+                        "operator": "equals",
+                        "expected": True,
+                    },
+                },
+            },
+            "assertions": {
+                "exercise-passed": {
+                    "proposition": "exercise-passed",
+                    "role": "postcondition",
+                    "polarity": "positive",
+                },
+            },
             "objectives": {
                 "validate-release": {
                     "entity": "blue",
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                 },
                 "rollback-edge": {
                     "entity": "blue",
-                    "success": {"conditions": ["exercise-passed"]},
+                    "success": {"assertions": ["exercise-passed"]},
                 },
             },
         }
@@ -1594,7 +1651,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "missing-objective",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1629,7 +1686,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "parallel",
@@ -1639,7 +1696,7 @@ class TestVerifyWorkflows:
                         "recover": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "join", "next": "validate"},
                     },
@@ -1659,7 +1716,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                         "orphan": {"type": "end"},
@@ -1685,7 +1742,7 @@ class TestVerifyWorkflows:
                         "rollback-edge": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "finish"},
                         "finish": {"type": "end"},
@@ -1706,7 +1763,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -1722,12 +1779,12 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "finish"},
                         "finish": {"type": "end"},
@@ -1748,14 +1805,14 @@ class TestVerifyWorkflows:
                         "loop": {
                             "type": "retry",
                             "objective": "validate-release",
-                            "on-success": "finish",
-                            "max-attempts": 5,
-                            "on-exhausted": "recover",
+                            "on_success": "finish",
+                            "max_attempts": 5,
+                            "on_exhausted": "recover",
                         },
                         "recover": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1775,7 +1832,7 @@ class TestVerifyWorkflows:
                         "run": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1796,7 +1853,7 @@ class TestVerifyWorkflows:
                         "delegate": {
                             "type": "call",
                             "workflow": "child",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1816,7 +1873,7 @@ class TestVerifyWorkflows:
                         "delegate": {
                             "type": "call",
                             "workflow": "b",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1827,7 +1884,7 @@ class TestVerifyWorkflows:
                         "delegate": {
                             "type": "call",
                             "workflow": "a",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1847,9 +1904,9 @@ class TestVerifyWorkflows:
                         "loop": {
                             "type": "retry",
                             "objective": "validate-release",
-                            "on-success": "finish",
-                            "max-attempts": 3,
-                            "on-exhausted": "nonexistent",
+                            "on_success": "finish",
+                            "max_attempts": 3,
+                            "on_exhausted": "nonexistent",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1869,7 +1926,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -1895,7 +1952,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -1921,7 +1978,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -1932,7 +1989,7 @@ class TestVerifyWorkflows:
                         "confirm": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -1973,7 +2030,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -1999,7 +2056,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -2009,7 +2066,7 @@ class TestVerifyWorkflows:
                         },
                         "gate": {
                             "type": "decision",
-                            "when": {"conditions": ["service-restored"]},
+                            "when": {"assertions": ["service-restored"]},
                             "then": "finish",
                             "else": "finish",
                         },
@@ -2031,7 +2088,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "branch",
+                            "on_success": "branch",
                         },
                         "branch": {
                             "type": "decision",
@@ -2056,7 +2113,7 @@ class TestVerifyWorkflows:
                     "steps": {
                         "gate": {
                             "type": "decision",
-                            "when": {"conditions": ["service-restored"]},
+                            "when": {"assertions": ["service-restored"]},
                             "then": "fanout",
                             "else": "joined",
                         },
@@ -2068,12 +2125,12 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "finish"},
                         "finish": {"type": "end"},
@@ -2099,12 +2156,12 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -2129,12 +2186,12 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "joined": {"type": "join", "next": "finish"},
                         "finish": {"type": "end"},
@@ -2155,7 +2212,7 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "finish",
+                            "on_success": "finish",
                         },
                         "orphan-join": {"type": "join", "next": "finish"},
                         "finish": {"type": "end"},
@@ -2181,12 +2238,12 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "branch"},
                         "branch": {
@@ -2218,13 +2275,13 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "retry",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
-                            "max-attempts": 3,
+                            "on_success": "joined",
+                            "max_attempts": 3,
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "branch"},
                         "branch": {
@@ -2234,7 +2291,7 @@ class TestVerifyWorkflows:
                                     {
                                         "step": "rollback",
                                         "outcomes": ["succeeded"],
-                                        "min-attempts": 2,
+                                        "min_attempts": 2,
                                     }
                                 ]
                             },
@@ -2264,7 +2321,7 @@ class TestVerifyWorkflows:
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "branch-in-branch",
+                            "on_success": "branch-in-branch",
                         },
                         "branch-in-branch": {
                             "type": "decision",
@@ -2275,7 +2332,7 @@ class TestVerifyWorkflows:
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "finish"},
                         "finish": {"type": "end"},
@@ -2300,19 +2357,19 @@ class TestVerifyWorkflows:
                         },
                         "rollback": {
                             "type": "decision",
-                            "when": {"conditions": ["service-restored"]},
+                            "when": {"assertions": ["service-restored"]},
                             "then": "rollback-success",
                             "else": "joined",
                         },
                         "rollback-success": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "branch"},
                         "branch": {
@@ -2347,17 +2404,17 @@ class TestVerifyWorkflows:
                             "type": "parallel",
                             "branches": ["rollback", "confirm"],
                             "join": "joined",
-                            "on-failure": "recover",
+                            "on_failure": "recover",
                         },
                         "rollback": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "confirm": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "joined",
+                            "on_success": "joined",
                         },
                         "joined": {"type": "join", "next": "finish"},
                         "recover": {
@@ -2387,8 +2444,8 @@ class TestVerifyWorkflows:
                         "validate": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "on-success": "finish",
-                            "on-failure": "${recovery_step}",
+                            "on_success": "finish",
+                            "on_failure": "${recovery_step}",
                         },
                         "finish": {"type": "end"},
                     },
@@ -2408,10 +2465,10 @@ class TestVerifyWorkflows:
                         "steps": {
                             "branch": {
                                 "type": "decision",
-                                "when": {"conditions": ["check"]},
+                                "when": {"assertions": ["check"]},
                                 "then": "finish",
                                 "else": "finish",
-                                "compensate-with": "rollback",
+                                "compensate_with": "rollback",
                             },
                             "finish": {"type": "end"},
                         },
@@ -2434,8 +2491,8 @@ class TestVerifyWorkflows:
                         "run": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "compensate-with": "rollback",
-                            "on-success": "finish",
+                            "compensate_with": "rollback",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -2446,8 +2503,8 @@ class TestVerifyWorkflows:
                         "undo": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "compensate-with": "response",
-                            "on-success": "finish",
+                            "compensate_with": "response",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -2468,8 +2525,8 @@ class TestVerifyWorkflows:
                         "run": {
                             "type": "objective",
                             "objective": "validate-release",
-                            "compensate-with": "rollback",
-                            "on-success": "finish",
+                            "compensate_with": "rollback",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -2480,8 +2537,8 @@ class TestVerifyWorkflows:
                         "undo": {
                             "type": "objective",
                             "objective": "rollback-edge",
-                            "compensate-with": "cleanup",
-                            "on-success": "finish",
+                            "compensate_with": "cleanup",
+                            "on_success": "finish",
                         },
                         "finish": {"type": "end"},
                     },
@@ -2551,6 +2608,26 @@ class TestVerifyVariables:
                     "interval": "${check_interval}",
                 }
             },
+            propositions={
+                "check": {
+                    "description": "The variable-selected objective target has declared runtime state.",
+                    "subjects": ["${objective_target}"],
+                    "basis": "declared_state",
+                    "predicate": {
+                        "kind": "presence",
+                        "property": "runtime",
+                        "semantic_ref": "urn:aces:declared-property:runtime",
+                        "operator": "exists",
+                    },
+                },
+            },
+            assertions={
+                "check": {
+                    "proposition": "check",
+                    "role": "postcondition",
+                    "polarity": "positive",
+                },
+            },
             entities={"blue": {"role": "blue"}},
             events={"evt": {}},
             scripts={
@@ -2601,7 +2678,7 @@ class TestVerifyVariables:
                 "obj": {
                     "agent": "a1",
                     "targets": ["${objective_target}"],
-                    "success": {"conditions": ["check"]},
+                    "success": {"assertions": ["check"]},
                 }
             },
         )
@@ -2712,7 +2789,11 @@ class TestVerifyRuntimeApplication:
     def test_application_qualified_service_ref_other_node_is_rejected(self):
         s = _make_scenario(
             nodes={
-                "other": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "other": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "services": [{"port": 8081, "name": "http"}],
+                },
                 "vm": self._node_with_application(
                     {"application_id": "app", "service": "nodes.other.services.http"},
                     services=[{"port": 8080, "name": "http"}],
@@ -2724,9 +2805,9 @@ class TestVerifyRuntimeApplication:
 
     def test_application_service_variable_reference_is_skipped(self):
         s = _make_scenario(
-            variables={"SVC": {"type": "string", "required": True}},
+            variables={"svc": {"type": "string", "required": True}},
             nodes={
-                "vm": self._node_with_application({"application_id": "app", "service": "${SVC}"}),
+                "vm": self._node_with_application({"application_id": "app", "service": "${svc}"}),
             },
         )
         assert _validate(s) == []
@@ -3391,7 +3472,7 @@ class TestVerifyRelationshipDatabaseAccess:
 
     def test_database_access_variable_source_is_skipped(self):
         # An unresolved ${var} source is left for instantiation, not flagged.
-        s = self._scenario_with_app_and_db(source="${APP_REF}")
+        s = self._scenario_with_app_and_db(source="${app_ref}")
         assert not any("does not resolve to a runtime application" in e for e in _validate(s))
 
 
@@ -3616,19 +3697,12 @@ class TestVerifyRelationshipProxyUpstream:
         )
         assert _validate(s) == []
 
-    def test_proxy_upstream_accepts_dotted_node_names_in_qualified_service_refs(self):
-        s = self._scenario_with_proxy(
-            route_upstream={
-                "target_node_ref": "app.backend",
-                "target_service": "nodes.app.backend.services.app",
-                "tls_terminated_here": True,
-            },
-            proxy_upstream={"client_tls_terminated": True},
-            proxy_node_name="front.proxy",
-            backend_node_name="app.backend",
-            relationship_target="nodes.app.backend.services.app",
-        )
-        assert _validate(s) == []
+    def test_proxy_upstream_rejects_dotted_authored_node_names(self):
+        with pytest.raises(ValidationError, match="nodes declaration key must be a portable SDL identifier"):
+            self._scenario_with_proxy(
+                proxy_node_name="front.proxy",
+                backend_node_name="app.backend",
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -3682,7 +3756,11 @@ class TestVerifyRuntimeSshServer:
     def test_qualified_service_ref_other_node_rejected(self):
         s = _make_scenario(
             nodes={
-                "other": {"type": "vm", "resources": {"ram": "1 gib", "cpu": 1}},
+                "other": {
+                    "type": "vm",
+                    "resources": {"ram": "1 gib", "cpu": 1},
+                    "services": [{"port": 2222, "name": "ssh"}],
+                },
                 "vm": self._node_with_ssh_server(
                     {"ssh_server_id": "sshd-default", "service": "nodes.other.services.ssh"},
                     services=[{"port": 22, "name": "ssh"}],
@@ -3705,10 +3783,10 @@ class TestVerifyRuntimeSshServer:
 
     def test_service_variable_reference_skipped(self):
         s = _make_scenario(
-            variables={"SVC": {"type": "string", "required": True}},
+            variables={"svc": {"type": "string", "required": True}},
             nodes={
                 "vm": self._node_with_ssh_server(
-                    {"ssh_server_id": "sshd-default", "service": "${SVC}"},
+                    {"ssh_server_id": "sshd-default", "service": "${svc}"},
                 ),
             },
         )

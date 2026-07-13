@@ -1,0 +1,4 @@
+{"id": "bad-cycle", "scope": "node",
+ "domains": {"a": {"kind": "record", "fields": {"x": "b"}},
+             "b": {"kind": "record", "fields": {"y": "a"}}},
+ "bindings": []}

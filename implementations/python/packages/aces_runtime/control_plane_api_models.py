@@ -76,6 +76,7 @@ def _provisioning_plan(model: ProvisioningPlanModel) -> ProvisioningPlan:
             for op in model.operations
         ],
         diagnostics=[_diagnostic_from_mapping(payload) for payload in model.diagnostics],
+        realization_envelope=model.realization_envelope,
     )
 
 
@@ -151,6 +152,7 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
             "orchestration_history": dict(snapshot.orchestration_history),
             "evaluation_results": dict(snapshot.evaluation_results),
             "evaluation_history": dict(snapshot.evaluation_history),
+            "proposition_truth_results": dict(snapshot.proposition_truth_results),
             "participant_episode_results": dict(snapshot.participant_episode_results),
             "participant_episode_history": dict(snapshot.participant_episode_history),
             "participant_behavior_history": dict(snapshot.participant_behavior_history),
@@ -158,6 +160,11 @@ def _snapshot_model(envelope: RuntimeSnapshotEnvelope) -> RuntimeSnapshotEnvelop
             "shared_state_history": dict(snapshot.shared_state_history),
             "joint_action_records": dict(snapshot.joint_action_records),
             "time_management_contexts": dict(snapshot.time_management_contexts),
+            "realization_envelope": (
+                snapshot.realization_envelope.model_dump(mode="json")
+                if snapshot.realization_envelope is not None
+                else None
+            ),
             "metadata": dict(snapshot.metadata),
         }
     )

@@ -14,7 +14,7 @@ from ._support import _topological_sort
 
 class _SectionsMixin:
     def _verify_variables(self) -> None:
-        defined = set(self._s.variables.keys())
+        defined = set(getattr(self._s, "variables", {}))
         self._check_variable_refs(self._s, "", defined)
 
     def _check_variable_refs(self, value: object, path: str, defined: set[str]) -> None:
@@ -136,9 +136,6 @@ class _SectionsMixin:
             self._verify_event_refs(name, event)
 
     def _verify_event_refs(self, name: str, event: object) -> None:
-        self._verify_membership_refs(
-            event.conditions, self._s.conditions, lambda ref: f"Event '{name}' references undefined condition '{ref}'"
-        )
         self._verify_membership_refs(
             event.injects, self._s.injects, lambda ref: f"Event '{name}' references undefined inject '{ref}'"
         )

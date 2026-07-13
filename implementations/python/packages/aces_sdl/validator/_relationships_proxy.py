@@ -3,8 +3,6 @@
 Part of the SemanticValidator mixin composition; see __init__.py.
 """
 
-from ._support import _NODES_PREFIX
-
 
 class _RelationshipsProxyMixin:
     def _verify_relationship_proxy_upstreams(self) -> None:
@@ -153,10 +151,9 @@ class _RelationshipsProxyMixin:
         if service_split is not None:
             node_name = service_split[0]
             return node_name if node_name in self._s.nodes else None
-        if target.startswith(_NODES_PREFIX):
-            node_name, sep, _tail = target[len(_NODES_PREFIX) :].partition(".runtime.")
-            if sep and node_name in self._s.nodes:
-                return node_name
+        runtime_reference = self._runtime_reference(target)
+        if runtime_reference is not None:
+            return runtime_reference.node_name
         return None
 
     def _check_proxy_upstream_route_ref(self, route_ref: str, source: str, label: str) -> object | None:

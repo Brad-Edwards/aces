@@ -5,15 +5,17 @@ from __future__ import annotations
 from collections.abc import Collection
 from typing import Any
 
-import yaml
-from yaml.error import MarkedYAMLError, YAMLError
 from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
-from ._language_diagnostics import invalid as _invalid
+from ._declarations import DeclarationIndex
+from ._errors import SDLParseError
+from ._identifiers import QualifiedName
+from ._language_diagnostics import parse_error as _parse_error
 from ._language_metadata import REFERENCE_COMPLETION_TARGETS
+from ._reference_targetability import is_targetable_section
+from ._yaml_loader import compose_sdl_yaml
 
-_CODE_PARSE = "sdl.parse"
-_SUCCESS_REFERENCE_TARGETS = frozenset({"conditions"})
+_SUCCESS_REFERENCE_TARGETS = frozenset({"assertions"})
 
 
 def find_references(
@@ -21,20 +23,46 @@ def find_references(
     symbol: str,
     *,
     section_fields: Collection[str],
+    declaration_index: DeclarationIndex | None = None,
 ) -> dict[str, Any]:
     """Return definition and occurrence locations for an SDL symbol."""
-    root, error = _compose_yaml(sdl_content)
-    if error is not None:
-        return error
+    if not sdl_content.strip():
+        result = {"status": "ok", "symbol": symbol, "definitions": [], "occurrences": []}
+    else:
+        root, error = _compose_yaml(sdl_content)
+        result = (
+            error
+            if error is not None
+            else _reference_result(root, symbol, section_fields, declaration_index=declaration_index)
+        )
+    return result
+
+
+def _reference_result(
+    root: Node | None,
+    symbol: str,
+    section_fields: Collection[str],
+    *,
+    declaration_index: DeclarationIndex | None,
+) -> dict[str, Any]:
     if root is None:
         return {"status": "ok", "symbol": symbol, "definitions": [], "occurrences": []}
-
     definitions = _collect_definitions(root, section_fields)
-    matching_definitions = [definition for definition in definitions if _definition_matches_symbol(definition, symbol)]
+    if declaration_index is not None:
+        definitions = [
+            definition
+            for definition in definitions
+            if declaration_index.declaration_for(definition["qualified_name"]) is not None
+        ]
     occurrences: list[dict[str, Any]] = []
+    spellings = (
+        declaration_index.spellings_for(symbol)
+        if declaration_index is not None
+        else frozenset({symbol, _bare_symbol(symbol)})
+    )
     _collect_occurrences(
         root,
-        symbol,
+        spellings,
         [],
         occurrences,
         qualified_section=_qualified_symbol_section(symbol),
@@ -42,23 +70,16 @@ def find_references(
     return {
         "status": "ok",
         "symbol": symbol,
-        "definitions": matching_definitions,
+        "definitions": [item for item in definitions if _definition_matches_symbol(item, symbol)],
         "occurrences": occurrences,
     }
 
 
 def _compose_yaml(sdl_content: str) -> tuple[Node | None, dict[str, Any] | None]:
     try:
-        return yaml.compose(sdl_content), None
-    except MarkedYAMLError as exc:
-        return None, _invalid(
-            "parse",
-            _CODE_PARSE,
-            str(exc.problem or exc),
-            location=_location_from_mark(exc.problem_mark),
-        )
-    except YAMLError as exc:
-        return None, _invalid("parse", _CODE_PARSE, str(exc))
+        return compose_sdl_yaml(sdl_content), None
+    except SDLParseError as exc:
+        return None, _parse_error(exc)
 
 
 def _collect_definitions(root: Node, section_fields: Collection[str]) -> list[dict[str, Any]]:
@@ -110,7 +131,7 @@ def _collect_section_definitions(
 
 def _collect_occurrences(
     node: Node,
-    symbol: str,
+    spellings: Collection[str],
     path: list[str],
     occurrences: list[dict[str, Any]],
     *,
@@ -119,7 +140,7 @@ def _collect_occurrences(
     if isinstance(node, MappingNode):
         _collect_mapping_occurrences(
             node,
-            symbol,
+            spellings,
             path,
             occurrences,
             qualified_section=qualified_section,
@@ -129,7 +150,7 @@ def _collect_occurrences(
     if isinstance(node, SequenceNode):
         _collect_sequence_occurrences(
             node,
-            symbol,
+            spellings,
             path,
             occurrences,
             qualified_section=qualified_section,
@@ -139,7 +160,7 @@ def _collect_occurrences(
     if isinstance(node, ScalarNode):
         _append_scalar_occurrence(
             node,
-            symbol,
+            spellings,
             path,
             occurrences,
             qualified_section=qualified_section,
@@ -148,7 +169,7 @@ def _collect_occurrences(
 
 def _collect_mapping_occurrences(
     node: MappingNode,
-    symbol: str,
+    spellings: Collection[str],
     path: list[str],
     occurrences: list[dict[str, Any]],
     *,
@@ -159,7 +180,7 @@ def _collect_mapping_occurrences(
         key_path = [*path, str(key)] if key is not None else [*path, "?"]
         if _is_matching_occurrence(
             key,
-            symbol,
+            spellings,
             key_path,
             qualified_section=qualified_section,
             mapping_key=True,
@@ -173,7 +194,7 @@ def _collect_mapping_occurrences(
             )
         _collect_occurrences(
             value_node,
-            symbol,
+            spellings,
             key_path,
             occurrences,
             qualified_section=qualified_section,
@@ -182,7 +203,7 @@ def _collect_mapping_occurrences(
 
 def _collect_sequence_occurrences(
     node: SequenceNode,
-    symbol: str,
+    spellings: Collection[str],
     path: list[str],
     occurrences: list[dict[str, Any]],
     *,
@@ -191,7 +212,7 @@ def _collect_sequence_occurrences(
     for index, item in enumerate(node.value):
         _collect_occurrences(
             item,
-            symbol,
+            spellings,
             [*path, str(index)],
             occurrences,
             qualified_section=qualified_section,
@@ -200,7 +221,7 @@ def _collect_sequence_occurrences(
 
 def _append_scalar_occurrence(
     node: ScalarNode,
-    symbol: str,
+    spellings: Collection[str],
     path: list[str],
     occurrences: list[dict[str, Any]],
     *,
@@ -209,7 +230,7 @@ def _append_scalar_occurrence(
     value = _scalar_value(node)
     if _is_matching_occurrence(
         value,
-        symbol,
+        spellings,
         path,
         qualified_section=qualified_section,
         mapping_key=False,
@@ -225,7 +246,7 @@ def _append_scalar_occurrence(
 
 def _is_matching_occurrence(
     value: str | None,
-    symbol: str,
+    spellings: Collection[str],
     path: list[str],
     *,
     qualified_section: str | None,
@@ -233,7 +254,7 @@ def _is_matching_occurrence(
 ) -> bool:
     return (
         value is not None
-        and _matches_symbol(value, symbol)
+        and value in spellings
         and _include_occurrence(
             path,
             qualified_section=qualified_section,
@@ -273,10 +294,6 @@ def _scalar_value(node: Node) -> str | None:
     return None
 
 
-def _matches_symbol(value: str, symbol: str) -> bool:
-    return value == symbol or value == _bare_symbol(symbol)
-
-
 def _definition_matches_symbol(definition: dict[str, Any], symbol: str) -> bool:
     qualified_section = _qualified_symbol_section(symbol)
     if qualified_section is not None:
@@ -285,9 +302,11 @@ def _definition_matches_symbol(definition: dict[str, Any], symbol: str) -> bool:
 
 
 def _qualified_symbol_section(symbol: str) -> str | None:
-    if "." not in symbol:
+    try:
+        parts = QualifiedName.parse(symbol).parts
+    except (TypeError, ValueError):
         return None
-    return symbol.split(".", 1)[0]
+    return parts[0] if len(parts) > 1 else None
 
 
 def _include_occurrence(
@@ -299,7 +318,9 @@ def _include_occurrence(
     if qualified_section is None:
         return True
     target = _reference_target_for_path(path, mapping_key=mapping_key)
-    return target in {qualified_section, "any"}
+    if target in {qualified_section, "any"}:
+        return True
+    return target == "targetable" and is_targetable_section(qualified_section)
 
 
 def _reference_target_for_path(path: list[str], *, mapping_key: bool) -> str | None:
@@ -315,7 +336,10 @@ def _reference_target_for_path(path: list[str], *, mapping_key: bool) -> str | N
 
 
 def _bare_symbol(symbol: str) -> str:
-    return symbol.rsplit(".", 1)[-1]
+    try:
+        return QualifiedName.parse(symbol).parts[-1]
+    except (TypeError, ValueError):
+        return symbol
 
 
 def _range_from_node(node: Node) -> dict[str, dict[str, int]]:

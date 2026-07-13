@@ -14,7 +14,8 @@ from aces_contracts.contracts import (
     ParticipantStatusViewModel,
 )
 from aces_contracts.participant_binding import ParticipantActionAdmissionRequest
-from aces_contracts.runtime_state import RuntimeSnapshot
+from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp
+from aces_contracts.runtime_state import RuntimeSnapshot, SnapshotEntry
 from aces_processor.models import (
     iter_participant_behavior_history_violations,
     iter_participant_episode_snapshot_violations,
@@ -51,35 +52,35 @@ nodes:
 entities:
   red-team:
     role: red
-action-contracts:
+action_contracts:
   scan:
-    semantic-version: 1.0.0
-    lifecycle-state: active
-    behavioral-granularity: atomic
-    procedure-basis: governed service discovery
-    realization-profile: backend-declared
-    fidelity-claim: records participant discovery intent and terminal observation
+    semantic_version: 1.0.0
+    lifecycle_state: active
+    behavioral_granularity: atomic
+    procedure_basis: governed service discovery
+    realization_profile: backend-declared
+    fidelity_claim: records participant discovery intent and terminal observation
     preconditions:
-      - precondition-id: authority-in-scope
-        precondition-class: authority
+      - precondition_id: authority-in-scope
+        precondition_class: authority
         description: red participant is authorized to scan the web service
     effects:
-      - effect-id: terminal-scan-observation
-        effect-class: observation_effect
+      - effect_id: terminal-scan-observation
+        effect_class: observation_effect
         description: terminal scan observation
-        evidence-refs: [evidence.scan-output]
-    failure-classes: [backend_error, unknown]
-observation-boundaries:
+        evidence_refs: [evidence.scan-output]
+    failure_classes: [backend_error, unknown]
+observation_boundaries:
   red-view:
-    projection-basis: participant-local projection over observed services
-    evidence-refs: [evidence.scan-output]
-    redaction-policy: hidden refs never project without explicit disclosure
-    latency-profile: terminal observation emitted after state transition commit
+    projection_basis: participant-local projection over observed services
+    evidence_refs: [evidence.scan-output]
+    redaction_policy: hidden refs never project without explicit disclosure
+    latency_profile: terminal observation emitted after state transition commit
 agents:
   red-agent:
     entity: red-team
     actions: [scan]
-    observation-boundaries: [red-view]
+    observation_boundaries: [red-view]
 """
 
 
@@ -281,6 +282,56 @@ nodes:
     assert snapshot.snapshot.entries
 
 
+def test_control_plane_rejects_dependency_outside_plan_and_snapshot() -> None:
+    plan = ProvisioningPlan(
+        operations=[
+            ProvisionOp(
+                action=ChangeAction.CREATE,
+                address="provision.node.vm",
+                resource_type="node",
+                payload={},
+                ordering_dependencies=("provision.network.missing",),
+            )
+        ]
+    )
+    control_plane = RuntimeControlPlane(create_stub_target())
+
+    receipt = control_plane.submit_provisioning(plan)
+
+    assert receipt.accepted is False
+    assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["runtime.plan-dependency-unresolved"]
+
+
+def test_control_plane_rejects_snapshot_resource_identity_disagreement() -> None:
+    address = "provision.node.vm"
+    snapshot = RuntimeSnapshot(
+        entries={
+            address: SnapshotEntry(
+                address=address,
+                domain=RuntimeDomain.EVALUATION,
+                resource_type="objective",
+                payload={},
+            )
+        }
+    )
+    plan = ProvisioningPlan(
+        operations=[
+            ProvisionOp(
+                action=ChangeAction.UPDATE,
+                address=address,
+                resource_type="node",
+                payload={},
+            )
+        ]
+    )
+    control_plane = RuntimeControlPlane(create_stub_target(), initial_snapshot=snapshot)
+
+    receipt = control_plane.submit_provisioning(plan)
+
+    assert receipt.accepted is False
+    assert [diagnostic.code for diagnostic in receipt.diagnostics] == ["runtime.plan-resource-incoherent"]
+
+
 def test_control_plane_submits_orchestration_with_portable_workflow_state():
     scenario = _scenario("""
 name: workflow
@@ -293,12 +344,20 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed VM has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   validate:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   response:
     start: run
@@ -306,13 +365,17 @@ workflows:
       run:
         type: objective
         objective: validate
-        on-success: finish
+        on_success: finish
       finish: {type: end}
 """)
     target = create_stub_target()
     execution_plan = plan(compile_runtime_model(scenario), target.manifest)
     control_plane = RuntimeControlPlane(target)
 
+    provisioning_receipt = control_plane.submit_provisioning(execution_plan.provisioning)
+    assert provisioning_receipt.accepted is True
+    evaluation_receipt = control_plane.submit_evaluation(execution_plan.evaluation)
+    assert evaluation_receipt.accepted is True
     receipt = control_plane.submit_orchestration(execution_plan.orchestration)
     status = control_plane.get_operation(receipt.operation_id)
     snapshot = control_plane.get_snapshot()

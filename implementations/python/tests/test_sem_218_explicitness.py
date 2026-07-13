@@ -35,7 +35,7 @@ def _scenario_with_explicitness_cases():
               network:
                 endpoints:
                   - network: net
-                    network-id-stability: unknown
+                    network_id_stability: unknown
         infrastructure:
           net:
             count: 1

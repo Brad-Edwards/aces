@@ -4,6 +4,7 @@ Part of the SemanticValidator mixin composition; see __init__.py.
 """
 
 from ..orchestration import Workflow, WorkflowPredicate, WorkflowStep, WorkflowStepType
+from ..propositions import AssertionRole
 from ..semantics.workflow import workflow_step_semantic_contract
 from ._support import _AvailableStateContext, _CompensationState, _WorkflowBuildState
 
@@ -24,7 +25,7 @@ class _WorkflowAnalysisMixin:
         self, workflow_name: str, step_name: str, predicate: WorkflowPredicate
     ) -> None:
         predicate_sections = (
-            ("condition", predicate.conditions, self._s.conditions),
+            ("assertion", predicate.assertions, self._s.assertions),
             ("objective", predicate.objectives, self._s.objectives),
         )
         for label, refs, section in predicate_sections:
@@ -36,6 +37,11 @@ class _WorkflowAnalysisMixin:
                         f"Workflow '{workflow_name}' step "
                         f"'{step_name}' references undefined "
                         f"{label} '{ref}' in predicate"
+                    )
+                elif label == "assertion" and section[ref].role is not AssertionRole.PRECONDITION:
+                    self._err(
+                        f"Workflow '{workflow_name}' step '{step_name}' assertion '{ref}' "
+                        "in predicate must be a precondition"
                     )
 
     def _validate_predicate_step_states(

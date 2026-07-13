@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from aces_contracts.diagnostics import Severity
+import pytest
 from aces_contracts.planning import (
     ChangeAction,
     PlannedResource,
@@ -100,6 +100,15 @@ def test_interpret_passes_through_unresolved_network_reference():
     assert realization.containers[0].networks == ("lan",)
 
 
+def test_interpret_does_not_guess_network_from_address_tail():
+    network = _network_resource("provision.network.shared.lan", "shared.lan")
+    plan = _plan(_node_resource("provision.node.web", "web"), network)
+
+    realization = interpret_provisioning_plan(plan)
+
+    assert realization.containers[0].networks == ("lan",)
+
+
 def test_interpret_records_placement_resources():
     placement = PlannedResource(
         address="provision.content.payload",
@@ -115,21 +124,15 @@ def test_interpret_records_placement_resources():
     assert realization.placements[0].resource_type == "content-placement"
 
 
-def test_interpret_diagnoses_unsupported_resource_type():
+def test_plan_rejects_unsupported_resource_type_before_interpretation():
     bad = PlannedResource(
         address="provision.mystery.x",
         domain=RuntimeDomain.PROVISIONING,
         resource_type="mystery-resource",
         payload={"name": "x"},
     )
-    plan = _plan(bad)
-
-    realization = interpret_provisioning_plan(plan)
-
-    assert realization.diagnostics
-    codes = {diag.code for diag in realization.diagnostics}
-    assert "reference-backend.realization.unsupported-resource" in codes
-    assert all(diag.severity == Severity.ERROR for diag in realization.diagnostics)
+    with pytest.raises(ValueError, match="resource_type must belong"):
+        _plan(bad)
 
 
 def test_interpret_diagnoses_invalid_node_payload():

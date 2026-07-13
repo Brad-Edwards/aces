@@ -31,25 +31,25 @@ under `runtime`, a primary `<noun>_id`, an addressable child-collection tree,
 and an owning ADR. The owning ADR is the normative authority for that family's
 fields, enums, and profiles; this index does not restate them.
 
-| Family key | `runtime.<collection>` | Primary id | Child collections (id) | Owning ADR |
+| Family key | `runtime.<collection>` | Primary id | Addressable child paths (`collection:id`) | Owning ADR |
 |------------|------------------------|------------|------------------------|-----------|
-| `service-listeners` | `service_listeners` | `service_listener_id` | — | [ADR-043](../../docs/decisions/adrs/adr-043-runtime-service-listener-surface.md) |
-| `applications` | `applications` | `application_id` | — | [ADR-026](../../docs/decisions/adrs/adr-026-application-http-surface-inventory.md) |
-| `database-services` | `database_services` | `database_service_id` | `databases` (`database_id`) | [ADR-029](../../docs/decisions/adrs/adr-029-database-logical-state-runtime-surface.md) |
-| `dns-services` | `dns_services` | `dns_service_id` | `zones` (`zone_id`) → `rrsets` (`rrset_id`) | [ADR-039](../../docs/decisions/adrs/adr-039-dns-service-runtime-inventory.md) |
-| `identity-authorities` | `identity_authorities` | `identity_authority_id` | `services`, `subjects`, `policies`, `relationships` | [ADR-032](../../docs/decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md) |
-| `file-services` | `file_services` | `file_service_id` | `shares`, `principals`, `access_rules`, `access_observations` | [ADR-037](../../docs/decisions/adrs/adr-037-runtime-file-service-and-filesystem-presence-semantics.md) |
-| `mail-services` | `mail_services` | `mail_service_id` | `components`, `listeners`, `domains`, `mailbox_stores`, `mailboxes`, `aliases`, `routing_rules`, `queues`, `settings` | [ADR-038](../../docs/decisions/adrs/adr-038-runtime-mail-service-logical-state.md) |
-| `network-sensors` | `network_sensors` | `network_sensor_id` | — | [ADR-042](../../docs/decisions/adrs/adr-042-network-sensor-runtime-monitoring.md) |
-| `network-detection-engines` | `network_detection_engines` | `network_detection_engine_id` | `rule_sources`, `network_sets`, `output_streams`, `control_channels` | [ADR-044](../../docs/decisions/adrs/adr-044-network-detection-engine-runtime-inventory.md) |
-| `security-monitoring-managers` | `security_monitoring_managers` | `security_monitoring_manager_id` | `listeners`, `components`, `agents`, `agent_groups`, `content_sets`, `detection_definitions`, `settings` | [ADR-040](../../docs/decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory.md), [ADR-045](../../docs/decisions/adrs/adr-045-security-monitoring-detection-definition-semantics.md) |
-| `ssh-servers` | `ssh_servers` | `ssh_server_id` | `match_rules` (`match_id`) | [ADR-031](../../docs/decisions/adrs/adr-031-ssh-server-configuration-surface.md) |
-| `app-authorizations` | `app_authorizations` | `app_authorization_id` | `principals`, `roles`, `permission_grants`, `role_mappings`, `tenants` | [ADR-046](../../docs/decisions/adrs/adr-046-app-authorization-runtime-inventory.md) |
-| `scheduled-jobs` | `scheduled_jobs` | `scheduled_job_id` | — | [ADR-047](../../docs/decisions/adrs/adr-047-scheduled-job-runtime-inventory.md) |
-| `datastore-services` | `datastore_services` | `datastore_service_id` | `nodes` (`node_id`) → `plugins`, `endpoints`; `partitions`, `templates`, `mappings`, `settings` | [ADR-048](../../docs/decisions/adrs/adr-048-datastore-service-runtime-inventory.md), [ADR-058](../../docs/decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints.md) |
-| `platform-applications` | `platform_applications` | `platform_application_id` | `organizations`, `tenants`, `content_objects`, `markings`, `upstream_bindings`, `connectors`, `settings` | [ADR-049](../../docs/decisions/adrs/adr-049-platform-application-runtime-inventory.md) |
-| `forwarding-agents` | `forwarding_agents` | `forwarding_agent_id` | `sources`, `transforms`, `ship_targets`, `reload_channels`, `settings` | [ADR-050](../../docs/decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md) |
-| `orchestration-authorities` | `orchestration_authorities` | `orchestration_authority_id` | `spawn_templates`, `realized_children` | [ADR-051](../../docs/decisions/adrs/adr-051-orchestration-authority-runtime-inventory.md) |
+| `service-listeners` | `service_listeners` | `service_listener_id` | none | [ADR-043](../../docs/decisions/adrs/adr-043-runtime-service-listener-surface.md) |
+| `applications` | `applications` | `application_id` | none | [ADR-026](../../docs/decisions/adrs/adr-026-application-http-surface-inventory.md) |
+| `database-services` | `database_services` | `database_service_id` | `databases:database_id` | [ADR-029](../../docs/decisions/adrs/adr-029-database-logical-state-runtime-surface.md) |
+| `dns-services` | `dns_services` | `dns_service_id` | `zones:zone_id, zones:zone_id/rrsets:rrset_id` | [ADR-039](../../docs/decisions/adrs/adr-039-dns-service-runtime-inventory.md) |
+| `identity-authorities` | `identity_authorities` | `identity_authority_id` | `services:service_id, subjects:subject_id, policies:policy_id, relationships:relationship_id` | [ADR-032](../../docs/decisions/adrs/adr-032-directory-domain-identity-runtime-surface.md) |
+| `file-services` | `file_services` | `file_service_id` | `shares:share_id, principals:principal_id, access_rules:rule_id, access_observations:observation_id` | [ADR-037](../../docs/decisions/adrs/adr-037-runtime-file-service-and-filesystem-presence-semantics.md) |
+| `mail-services` | `mail_services` | `mail_service_id` | `components:component_id, listeners:listener_id, domains:domain_id, mailbox_stores:store_id, mailboxes:mailbox_id, aliases:alias_id, routing_rules:rule_id, queues:queue_id, settings:setting_id` | [ADR-038](../../docs/decisions/adrs/adr-038-runtime-mail-service-logical-state.md) |
+| `network-sensors` | `network_sensors` | `network_sensor_id` | none | [ADR-042](../../docs/decisions/adrs/adr-042-network-sensor-runtime-monitoring.md) |
+| `network-detection-engines` | `network_detection_engines` | `network_detection_engine_id` | `rule_sources:source_id, network_sets:set_id, output_streams:stream_id, control_channels:channel_id` | [ADR-044](../../docs/decisions/adrs/adr-044-network-detection-engine-runtime-inventory.md) |
+| `security-monitoring-managers` | `security_monitoring_managers` | `security_monitoring_manager_id` | `listeners:listener_id, components:component_id, agents:agent_id, agent_groups:group_id, content_sets:content_id, detection_definitions:definition_id, settings:setting_id` | [ADR-040](../../docs/decisions/adrs/adr-040-security-monitoring-manager-runtime-inventory.md), [ADR-045](../../docs/decisions/adrs/adr-045-security-monitoring-detection-definition-semantics.md) |
+| `ssh-servers` | `ssh_servers` | `ssh_server_id` | `match_rules:match_id` | [ADR-031](../../docs/decisions/adrs/adr-031-ssh-server-configuration-surface.md) |
+| `app-authorizations` | `app_authorizations` | `app_authorization_id` | `principals:principal_id, roles:role_id, permission_grants:grant_id, role_mappings:mapping_id, tenants:tenant_id` | [ADR-046](../../docs/decisions/adrs/adr-046-app-authorization-runtime-inventory.md) |
+| `scheduled-jobs` | `scheduled_jobs` | `scheduled_job_id` | none | [ADR-047](../../docs/decisions/adrs/adr-047-scheduled-job-runtime-inventory.md) |
+| `datastore-services` | `datastore_services` | `datastore_service_id` | `nodes:node_id, nodes:node_id/plugins:plugin_id, nodes:node_id/endpoints:endpoint_id, partitions:partition_id, templates:template_id, mappings:mapping_id, settings:setting_id` | [ADR-048](../../docs/decisions/adrs/adr-048-datastore-service-runtime-inventory.md), [ADR-058](../../docs/decisions/adrs/adr-058-datastore-node-engine-provenance-and-endpoints.md) |
+| `platform-applications` | `platform_applications` | `platform_application_id` | `organizations:organization_id, tenants:tenant_id, content_objects:content_object_id, markings:marking_id, upstream_bindings:binding_id, connectors:connector_id, settings:setting_id` | [ADR-049](../../docs/decisions/adrs/adr-049-platform-application-runtime-inventory.md) |
+| `forwarding-agents` | `forwarding_agents` | `forwarding_agent_id` | `sources:source_id, transforms:transform_id, ship_targets:target_id, reload_channels:reload_channel_id, settings:setting_id` | [ADR-050](../../docs/decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md) |
+| `orchestration-authorities` | `orchestration_authorities` | `orchestration_authority_id` | `spawn_templates:template_id, realized_children:workload_id` | [ADR-051](../../docs/decisions/adrs/adr-051-orchestration-authority-runtime-inventory.md) |
 
 The node-scoped `forwarding_agents` family is distinct from the scenario-level
 `forwarding_agents` authoring section ([sections.md](sections.md)); they share
@@ -82,8 +82,9 @@ not contradict these.
 
 1. **Identity (`<noun>_id`).** Every family element and every addressable child
    element carries a stable `<noun>_id`. The id **MUST** be unique within its
-   collection and symbol-shaped (no whitespace or quoting that would make it
-   unaddressable in a qualified path; [document-model.md §6](document-model.md)).
+   collection and use the portable local-identifier grammar
+   ([document-model.md §6](document-model.md)). Runtime/native/provider ids that
+   are not ACES-local declaration identities retain their owning contracts.
    References address elements by these ids ([references.md](references.md)).
 2. **Enum sentinels.** An open enum carries a closed core of well-defined values
    plus the sentinels `unknown` and `other`, so an authored value can record

@@ -34,6 +34,9 @@ from aces_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
 from aces_contracts.vocabulary import RealizationSupportMode
 
 REFERENCE_BACKEND_NAME = "reference-emulation"
+REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(
+    contract_id for contract_id in BACKEND_SUPPORTED_CONTRACT_IDS if contract_id != "realization-envelope-v1"
+)
 
 _PARTICIPANT_ROLES = frozenset(PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE])
 _PARTICIPANT_BEHAVIOR_FEATURES = frozenset(
@@ -129,7 +132,7 @@ def _capabilities() -> BackendCapabilitySet:
             name="reference-emulation-orchestrator",
             supported_sections=frozenset({"injects", "events", "scripts", "stories", "workflows"}),
             supports_workflows=True,
-            supports_condition_refs=True,
+            supports_assertion_refs=True,
             supports_inject_bindings=True,
             supported_workflow_features=frozenset(
                 {
@@ -153,9 +156,15 @@ def _capabilities() -> BackendCapabilitySet:
         ),
         evaluator=EvaluatorCapabilities(
             name="reference-emulation-evaluator",
-            supported_sections=frozenset({"conditions", "objectives"}),
+            supported_sections=frozenset({"conditions", "propositions", "assertions", "objectives"}),
             supports_scoring=True,
             supports_objectives=True,
+            supported_predicate_families=frozenset({"presence", "boolean", "string", "number"}),
+            supported_quantifiers=frozenset({"all", "any", "at_least"}),
+            supported_truth_outcomes=frozenset({"true", "false", "unknown", "unsupported"}),
+            supported_evidence_channels=frozenset({"log", "api_response", "file_artifact"}),
+            supported_time_domains=frozenset({"scenario_time"}),
+            preserves_binding_provenance=True,
         ),
         participant_runtime=ParticipantRuntimeCapabilities(
             name="reference-emulation-participant-runtime",
@@ -205,7 +214,7 @@ def create_reference_backend_manifest(**config) -> BackendManifest:
     return BackendManifest(
         name=REFERENCE_BACKEND_NAME,
         version=_current_backend_version(),
-        supported_contract_versions=frozenset(BACKEND_SUPPORTED_CONTRACT_IDS),
+        supported_contract_versions=REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS,
         compatible_processors=frozenset({"aces-reference-processor"}),
         concept_bindings=_concept_bindings(),
         realization_support=_realization_support(),

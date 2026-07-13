@@ -11,21 +11,25 @@ from __future__ import annotations
 from typing import Any
 
 import yaml
+from pydantic import ValidationError
 
+from ._declarations import DeclarationIndex, build_declaration_index
 from ._errors import SDLParseError, SDLValidationError
 from ._language_diagnostics import diagnostic as _diagnostic
 from ._language_diagnostics import invalid as _invalid
+from ._language_diagnostics import parse_error as _parse_error
 from ._language_edit import apply_edit
 from ._language_metadata import REFERENCE_COMPLETION_TARGETS, SECTION_FIELD_COMPLETIONS
 from ._language_references import find_references
+from ._reference_targetability import is_targetable_section
+from .formatting import format_sdl_source
 from .parser import _load_normalized_data, parse_sdl
 from .scenario import Scenario
 
 _MAX_INPUT_BYTES = 64 * 1024
-_CODE_PARSE = "sdl.parse"
-
 _SCENARIO_METADATA_FIELDS = frozenset({"name", "version", "description", "module", "imports"})
 _SECTION_FIELDS = tuple(field for field in Scenario.model_fields if field not in _SCENARIO_METADATA_FIELDS)
+_TARGETABLE_SECTION_FIELDS = tuple(field for field in _SECTION_FIELDS if is_targetable_section(field))
 _TOP_LEVEL_KEYS = tuple(Scenario.model_fields)
 
 
@@ -43,11 +47,12 @@ def language_completions(
     data, error = _load_completion_data(sdl_content)
     if error is not None:
         return error
+    declaration_index = _declaration_index_from_data(data)
 
     pointer = _split_pointer_or_empty(cursor_path)
     target_section = _completion_target_section(pointer)
     if target_section is not None:
-        items = _reference_completion_items(data, target_section)
+        items = _reference_completion_items(data, target_section, declaration_index=declaration_index)
         context = f"reference:{target_section}"
     elif len(pointer) <= 1:
         existing = set(data) if isinstance(data, dict) else set()
@@ -86,27 +91,46 @@ def language_references(sdl_content: str, symbol: str) -> dict[str, Any]:
     if size_error is not None:
         return size_error
 
-    return find_references(sdl_content, symbol, section_fields=_SECTION_FIELDS)
+    return find_references(
+        sdl_content,
+        symbol,
+        section_fields=_SECTION_FIELDS,
+        declaration_index=_try_declaration_index(sdl_content),
+    )
+
+
+def _try_declaration_index(sdl_content: str) -> DeclarationIndex | None:
+    """Return the authoritative index for a complete structural document."""
+
+    try:
+        data = _load_normalized_data(sdl_content)
+    except SDLParseError:
+        return None
+    return _declaration_index_from_data(data)
+
+
+def _declaration_index_from_data(data: dict[str, Any]) -> DeclarationIndex | None:
+    try:
+        scenario = Scenario.model_validate(data)
+    except ValidationError:
+        return None
+    return build_declaration_index(scenario, raise_on_collision=False)
 
 
 def language_format(sdl_content: str) -> dict[str, Any]:
-    """Return normalized, consistently formatted SDL YAML."""
+    """Migrate recognized legacy spellings and return canonical SDL YAML."""
     size_error = _size_error(sdl_content)
     if size_error is not None:
         return size_error
 
     try:
-        data = _load_normalized_data(sdl_content)
+        result = format_sdl_source(sdl_content)
     except SDLParseError as exc:
-        return _invalid("parse", _CODE_PARSE, exc.details)
+        return _parse_error(exc)
 
-    formatted = yaml.safe_dump(
-        data,
-        allow_unicode=False,
-        default_flow_style=False,
-        sort_keys=False,
-    )
-    diagnostics = language_diagnostics(formatted)["diagnostics"]
+    formatted = result.content
+    diagnostics = [item.as_dict() for item in result.diagnostics]
+    diagnostics.extend(language_diagnostics(formatted)["diagnostics"])
     status = "formatted" if not diagnostics else "formatted_with_diagnostics"
     return {"status": status, "content": formatted, "diagnostics": diagnostics}
 
@@ -127,7 +151,7 @@ def language_diagnostics(
             skip_semantic_validation=not semantic_validation,
         )
     except SDLParseError as exc:
-        return _invalid("parse", _CODE_PARSE, exc.details)
+        return _parse_error(exc)
     except SDLValidationError as exc:
         return {
             "status": "invalid",
@@ -160,7 +184,7 @@ def apply_structured_edit(
     try:
         data = _load_normalized_data(sdl_content)
     except SDLParseError as exc:
-        return _invalid("parse", _CODE_PARSE, exc.details)
+        return _parse_error(exc)
 
     try:
         tokens = _split_pointer(pointer)
@@ -185,7 +209,7 @@ def _load_completion_data(sdl_content: str) -> tuple[dict[str, Any], dict[str, A
     try:
         return _load_normalized_data(sdl_content), None
     except SDLParseError as exc:
-        return {}, _invalid("parse", _CODE_PARSE, exc.details)
+        return {}, _parse_error(exc)
 
 
 def _completion_target_section(pointer: list[str]) -> str | None:
@@ -204,9 +228,31 @@ def _completion_target_section(pointer: list[str]) -> str | None:
     return None
 
 
-def _reference_completion_items(data: dict[str, Any], target_section: str) -> list[dict[str, str]]:
+def _reference_completion_items(
+    data: dict[str, Any],
+    target_section: str,
+    *,
+    declaration_index: DeclarationIndex | None,
+) -> list[dict[str, str]]:
+    if declaration_index is not None and target_section in {"any", "targetable"}:
+        return sorted(
+            (
+                {
+                    "label": spelling,
+                    "kind": "reference",
+                    "detail": declaration.address,
+                    "insert_text": spelling,
+                }
+                for spelling, declaration in declaration_index.reference_completions(
+                    targetable=target_section == "targetable"
+                )
+            ),
+            key=lambda item: (item["detail"], item["label"]),
+        )
     if target_section == "any":
         sections = _SECTION_FIELDS
+    elif target_section == "targetable":
+        sections = _TARGETABLE_SECTION_FIELDS
     elif target_section == "workflow_steps":
         return _workflow_step_completion_items(data)
     else:
@@ -218,11 +264,14 @@ def _reference_completion_items(data: dict[str, Any], target_section: str) -> li
         if not isinstance(section_data, dict):
             continue
         for name in section_data:
+            detail = f"{section}.{name}"
+            if declaration_index is not None and declaration_index.declaration_for(detail) is None:
+                continue
             items.append(
                 {
                     "label": str(name),
                     "kind": "reference",
-                    "detail": f"{section}.{name}",
+                    "detail": detail,
                     "insert_text": str(name),
                 }
             )

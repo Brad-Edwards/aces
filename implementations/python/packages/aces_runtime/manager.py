@@ -436,6 +436,7 @@ class RuntimeManager:
                 )
                 for address in _delete_order(provisioning_entries)
             ],
+            realization_envelope=working_snapshot.realization_envelope,
         )
         provision_result = _call_backend_apply(
             self._target.provisioner.apply,

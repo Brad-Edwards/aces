@@ -14,12 +14,15 @@ dependencies = [
     "rich>=13.0.0",
     "PyYAML>=6.0",
     "cryptography>=46.0.7",
+    "defusedxml>=0.7.1",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.34.0",
     "sse-starlette>=2.0.0",
     "asyncssh>=2.23.0",
     "mcp>=1.0.0",
     "packaging>=23.0",
+    "rfc8785>=0.1.4,<0.2",
+    "blake3>=1.0.8,<2",
 ]
 
 [project.optional-dependencies]
@@ -86,6 +89,7 @@ path = "hatch_build.py"
 [tool.hatch.build.targets.sdist.force-include]
 "../../contracts" = "_corpus"
 "../../README.md" = "README.md"
+"../../THIRD_PARTY_NOTICES.md" = "THIRD_PARTY_NOTICES.md"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -156,3 +160,4 @@ ignore = [
 "packages/aces_runtime/control_plane_api.py" = ["B008"]  # fastapi Depends() pattern
 "packages/aces_runtime/control_plane.py" = ["S112"]      # intentional exception suppression
 "packages/aces_sdl/module_registry.py" = ["S310", "S202"]  # explicit OCI URL fetch and tarball extract
+"packages/aces_contracts/realization_envelope.py" = ["E402"]  # late import breaks a carrier dependency cycle

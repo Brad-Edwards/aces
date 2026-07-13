@@ -25,11 +25,12 @@ from aces_contracts.diagnostics import Diagnostic
 from aces_contracts.manifest_authority import BACKEND_SUPPORTED_CONTRACT_IDS
 from aces_contracts.planning import ChangeAction, EvaluationPlan, OrchestrationPlan, ProvisioningPlan, RuntimeDomain
 from aces_contracts.runtime_state import ApplyResult, RuntimeSnapshot, SnapshotEntry
-from aces_contracts.versions import EVALUATION_STATE_SCHEMA_VERSION
 from aces_contracts.vocabulary import RealizationSupportMode
 from aces_runtime.registry import RuntimeTarget, RuntimeTargetComponents
 
-REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = BACKEND_SUPPORTED_CONTRACT_IDS
+from .evaluation_support import apply_evaluation_operation
+
+REFERENCE_BACKEND_SUPPORTED_CONTRACT_VERSIONS = frozenset(BACKEND_SUPPORTED_CONTRACT_IDS) - {"realization-envelope-v1"}
 REFERENCE_PARTICIPANT_ROLES = frozenset(
     PARTICIPANT_RUNTIME_CAPABILITY_REQUIRED_CONTRACTS[PARTICIPANT_RUNTIME_ROLE_SCOPE]
 )
@@ -165,7 +166,7 @@ def create_stub_manifest(
                 name="stub-orchestrator",
                 supported_sections=frozenset({"injects", "events", "scripts", "stories", "workflows"}),
                 supports_workflows=True,
-                supports_condition_refs=True,
+                supports_assertion_refs=True,
                 supports_inject_bindings=True,
                 supported_workflow_features=frozenset(
                     {
@@ -189,9 +190,15 @@ def create_stub_manifest(
             ),
             evaluator=EvaluatorCapabilities(
                 name="stub-evaluator",
-                supported_sections=frozenset({"conditions", "objectives"}),
+                supported_sections=frozenset({"conditions", "propositions", "assertions", "objectives"}),
                 supports_scoring=True,
                 supports_objectives=True,
+                supported_predicate_families=frozenset({"presence", "boolean", "string", "number"}),
+                supported_quantifiers=frozenset({"all", "any", "at_least"}),
+                supported_truth_outcomes=frozenset({"true", "false", "unknown", "unsupported"}),
+                supported_evidence_channels=frozenset({"log", "api_response", "file_artifact"}),
+                supported_time_domains=frozenset({"scenario_time"}),
+                preserves_binding_provenance=True,
             ),
             participant_runtime=(
                 ParticipantRuntimeCapabilities(
@@ -424,69 +431,7 @@ class StubEvaluator:
         history = {address: list(events) for address, events in snapshot.evaluation_history.items()}
         now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         for op in plan.operations:
-            if op.action == ChangeAction.DELETE:
-                entries.pop(op.address, None)
-                results.pop(op.address, None)
-                history.pop(op.address, None)
-                changed_addresses.append(op.address)
-                continue
-            entries[op.address] = SnapshotEntry(
-                address=op.address,
-                domain=RuntimeDomain.EVALUATION,
-                resource_type=op.resource_type,
-                payload=op.payload,
-                ordering_dependencies=op.ordering_dependencies,
-                refresh_dependencies=op.refresh_dependencies,
-                status="evaluating",
-            )
-            result_contract = op.payload.get("result_contract", {})
-            resource_type = str(result_contract.get("resource_type", op.resource_type))
-            result_payload: dict[str, object] = {
-                "state_schema_version": result_contract.get(
-                    "state_schema_version",
-                    EVALUATION_STATE_SCHEMA_VERSION,
-                ),
-                "resource_type": resource_type,
-                "run_id": "evaluation-run",
-                "status": "ready",
-                "observed_at": now,
-                "updated_at": now,
-                "detail": f"stub result for {op.address}",
-                "evidence_refs": [],
-            }
-            if result_contract.get("supports_score"):
-                fixed_max_score = result_contract.get("fixed_max_score")
-                result_payload["score"] = fixed_max_score if fixed_max_score is not None else 100
-                result_payload["max_score"] = fixed_max_score if fixed_max_score is not None else 100
-            if result_contract.get("supports_passed"):
-                result_payload["passed"] = True
-            results[op.address] = result_payload
-            history[op.address] = [
-                {
-                    "event_type": "evaluation_started",
-                    "timestamp": now,
-                    "status": "running",
-                    "passed": None,
-                    "score": None,
-                    "max_score": None,
-                    "detail": None,
-                    "evidence_refs": [],
-                    "details": {},
-                },
-                {
-                    "event_type": "evaluation_ready",
-                    "timestamp": now,
-                    "status": "ready",
-                    "passed": result_payload.get("passed"),
-                    "score": result_payload.get("score"),
-                    "max_score": result_payload.get("max_score"),
-                    "detail": result_payload.get("detail"),
-                    "evidence_refs": list(result_payload.get("evidence_refs", [])),
-                    "details": {},
-                },
-            ]
-            if op.action != ChangeAction.UNCHANGED:
-                changed_addresses.append(op.address)
+            apply_evaluation_operation(op, entries, results, history, changed_addresses, now)
         self._running = bool(plan.resources)
         self._startup_order = list(plan.startup_order)
         self._results = results

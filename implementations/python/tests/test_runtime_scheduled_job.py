@@ -42,12 +42,12 @@ def test_scheduled_job_full_inventory() -> None:
 
 
 def test_scheduled_job_id_rejects_empty() -> None:
-    with pytest.raises(ValidationError, match="scheduled_job_id must be a non-empty string"):
+    with pytest.raises(ValidationError, match="scheduled_job_id must be a portable SDL identifier"):
         RuntimeScheduledJob(**_job(scheduled_job_id=""))
 
 
 def test_scheduled_job_id_rejects_variable_placeholder() -> None:
-    with pytest.raises(ValidationError, match="scheduled_job_id must be a stable identifier"):
+    with pytest.raises(ValidationError, match="scheduled_job_id must be a portable SDL identifier"):
         RuntimeScheduledJob(**_job(scheduled_job_id="${job_id}"))
 
 

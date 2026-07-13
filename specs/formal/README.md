@@ -15,6 +15,7 @@ Examples:
 - `specs/formal/participant-runtime/`
 - `specs/formal/experiment-core/`
 - `specs/formal/validation-admission-profiles/`
+- `specs/formal/sdl-phases/`
 
 Cross-domain semantic notes that constrain future phases may also live at the
 top level when they apply across multiple domains, for example

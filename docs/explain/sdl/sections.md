@@ -1,8 +1,9 @@
 # SDL Sections Reference
 
 A scenario is a YAML document with a required top-level `name`, optional
-top-level composition fields (`version`, `module`, `imports`), and up to 22 named SDL
-sections. Aside from `name`, all sections are optional.
+top-level metadata and composition fields, and the authoring sections catalogued
+below. Aside from `name`, every top-level field is optional. The normative,
+machine-checked enumeration is `specs/sdl/sections.md`.
 
 Top-level composition fields are:
 
@@ -18,7 +19,7 @@ Canonical `imports.source` classes are:
 
 ## Section Overview
 
-### From Open Cyber Range SDL (10 sections)
+### OCR-derived core
 
 The OCR scoring pipeline sections (`metrics`, `evaluations`, `tlos`, `goals`)
 were removed from the SDL by
@@ -39,15 +40,20 @@ plane (ADR-055/064/069). `conditions` (observable state) remain.
 | `scripts` | `dict[str, Script]` | Timed event sequences with human-readable durations |
 | `stories` | `dict[str, Story]` | Top-level exercise orchestration grouping scripts |
 
-### Extended Sections (8 sections)
+### ACES extensions
 
 | Section | Type | Purpose | Adapted From |
 |---------|------|---------|--------------|
 | `content` | `dict[str, Content]` | Data placed into systems (files, datasets, emails) | CyRIS `copy_content` |
 | `accounts` | `dict[str, Account]` | Curated scenario/provisioning accounts on nodes, not full runtime identity inventory | CyRIS `add_account` |
 | `relationships` | `dict[str, Relationship]` | Typed edges between elements (auth, trust, federation) | STIX Relationship SRO |
-| `agents` | `dict[str, Agent]` | Autonomous participants (actions, knowledge, scope) | CybORG Agents |
-| `behavior-specifications` | `dict[str, ParticipantBehaviorSpecification]` | Versioned aggregates over participant action, observation, outcome, authority, and mode surfaces | ACES ACT-606 |
+| `forwarding_agents` | `list[RuntimeForwardingAgent]` | Scenario-level forwarding and shipping agents with element-carried identity | ACES ADR-050 |
+| `agents` | `dict[str, Agent]` | Autonomous participants (actions, knowledge, scope) | CybORG Agents, extended by ACES |
+| `action_contracts` | `dict[str, ParticipantActionContract]` | Preconditions, effects, failures, interactions, and fidelity claims for participant actions | ACES participant model |
+| `observation_boundaries` | `dict[str, ParticipantObservationBoundary]` | Participant-visible, hidden, discovered, and evidence-bearing information projections | ACES participant model |
+| `outcome_interpretation_rules` | `dict[str, OutcomeInterpretationRule]` | Rules connecting action observations and evidence to scenario-local outcomes | ACES participant model |
+| `behavior_specifications` | `dict[str, ParticipantBehaviorSpecification]` | Versioned aggregates over participant action, observation, outcome, authority, and mode surfaces | ACES ACT-606 |
+| `evidence_requirements` | `dict[str, EvidenceRequirement]` | Portable authored capture obligations, distinct from captured evidence | ACES DSL-124, ADR-066 |
 | `objectives` | `dict[str, Objective]` | Scenario-local objectives binding actors, targets, windows, and success (against observable `conditions`); not EXP task records | CACAO action/target/agent |
 | `workflows` | `dict[str, Workflow]` | Branching and parallel control graphs over declared objectives | CACAO workflow graph patterns; semantics tightened using Step Functions / Argo / SCXML style control-flow rules |
 | `variables` | `dict[str, Variable]` | Parameterization (types, defaults, substitution) | CACAO playbook_variables |
@@ -1351,13 +1357,16 @@ silently ignoring the missing prerequisite.
 
 ---
 
-## Conditions
+## Conditions, Propositions, and Assertions
 
-Health checks with optional timeout/retries/start_period.
+`conditions` describe executable probe implementations. They do not define
+portable truth by themselves. A condition may bind to a proposition that says
+what the probe observes.
 
 ```yaml
 conditions:
   web-alive:
+    proposition: web-alive
     command: "curl -sf http://localhost/ || exit 1"
     interval: 15
     timeout: 5
@@ -1368,6 +1377,41 @@ conditions:
 ```
 
 Must have either `command` + `interval` or `source`, not both.
+
+`propositions` are backend-neutral statements about finite subjects and typed,
+semantically grounded properties. Observed-state propositions name the authored
+evidence requirements needed to decide them. `assertions` apply a role and
+polarity to a proposition without redefining it.
+
+```yaml
+propositions:
+  web-alive:
+    description: The governed web service responds successfully.
+    subjects: [nodes.web.services.https]
+    basis: observed_state
+    predicate:
+      kind: boolean
+      property: service-alive
+      semantic_ref: urn:aces:observable:service-alive
+      operator: equals
+      expected: true
+    evidence_requirements: [web-health-evidence]
+
+assertions:
+  web-alive-at-completion:
+    proposition: web-alive
+    role: postcondition
+    polarity: positive
+  web-alive-before-action:
+    proposition: web-alive
+    role: precondition
+    polarity: positive
+```
+
+Portable truth outcomes are `true`, `false`, `unknown`, and `unsupported`.
+`unsupported` reports an admitted capability limit; it is not a logical truth
+value. Structural validity, evidence provenance, digest identity, and
+behavioral equivalence remain separate claims.
 
 ---
 
@@ -1395,9 +1439,9 @@ The OCR-inherited SDL scoring pipeline
 `metrics`, `evaluations`, `tlos` (Training Learning Objectives), and `goals`
 sections are no longer SDL surfaces.
 
-`conditions` remain first-class **observable state**: an objective's `success`
-is expressed against `conditions` (see [Objectives](#objectives)), and workflow
-predicates reference `conditions`. When a scenario genuinely needs a graded
+`conditions` remain first-class probe definitions, but backend-neutral truth is
+expressed through `propositions` and role-constrained `assertions` (see
+[Objectives](#objectives)). When a scenario genuinely needs a graded
 score, cumulative reward, pass/fail evaluation, or a leaderboard value, that
 concern lives in the experiment/evaluator plane — experiment-core contracts
 (`experiment-task-v1` metric definitions, `experiment-study-v1` analysis plans;
@@ -1448,7 +1492,7 @@ injects:
 
 events:
   attack-wave:
-    conditions: [scanner]
+    assertions: [scanner-ready]        # precondition assertion
     injects: [phishing-email]
 
 scripts:
@@ -1614,7 +1658,7 @@ agents:
     entity: red-team                    # identity + role (via entities.role)
     actions: [Scan, Exploit, Escalate]
     starting_accounts: [phished-user]   # references accounts section
-    starting_conditions: [beacon-online]  # references conditions section
+    starting_assertions: [beacon-online-before-start]  # precondition assertion
     initial_knowledge:
       hosts: [user0]                    # known at scenario start
       subnets: [user-net]
@@ -1643,9 +1687,9 @@ names declared in `nodes.*.services`, and `accounts` references entries in the
 `accounts` section. `allowed_subnets` follows the same switch-backed
 infrastructure rule.
 
-`starting_conditions` lists names from the `conditions` section, giving the
-authoring surface a declarative hook for participant-relevant precondition
-checks without embedding executable setup commands. `authority_anchors`
+`starting_assertions` lists precondition assertions, giving the authoring
+surface a declarative hook for participant-relevant starting state without
+equating a probe command with truth. `authority_anchors`
 references any declared scenario element (entities, relationships, content,
 nodes, …) that anchors what the participant is allowed or expected to do in
 scenario meaning — these are SDL-level anchors, not control-plane
@@ -1655,7 +1699,7 @@ define the boundary of where the participant may act or observe; it
 generalises `allowed_subnets`, which remains restricted to switch-backed
 infrastructure.
 
-Each of `starting_conditions`, `authority_anchors`, and `operating_scope`
+Each of `starting_assertions`, `authority_anchors`, and `operating_scope`
 accepts `${var}` placeholders that resolve through the declared `variables`
 section. Symbol-defining keys (agent names) remain stable identifiers and
 must not be variables.
@@ -1684,6 +1728,62 @@ remain separate apparatus surfaces.
 
 ---
 
+## Forwarding Agents
+
+The top-level `forwarding_agents` list declares scenario-scoped logical
+forwarders. Each element carries a stable `forwarding_agent_id`; relationship
+subtypes may reference it from a `forwarding_edge`. This list is distinct from
+`nodes.<node>.runtime.forwarding_agents`, which places the same logical family
+on one node.
+
+## Action Contracts
+
+`action_contracts` describe participant-visible actions as declared behavior:
+their applicability, intended and side effects, failure classes, interactions,
+and fidelity basis. They do not embed runner commands or claim that a backend
+can realize the action.
+
+```yaml
+action_contracts:
+  inspect-portal:
+    semantic_version: 1.0.0
+    lifecycle_state: active
+    behavioral_granularity: atomic
+    procedure_basis: bounded inspection of the declared portal
+    realization_profile: backend-declared
+```
+
+## Observation Boundaries
+
+`observation_boundaries` define an information projection for a participant:
+what begins observable or hidden, what may become discovered, and which evidence
+supports the transition. They describe scenario meaning, not UI filtering or
+control-plane authorization.
+
+```yaml
+observation_boundaries:
+  red-view:
+    projection_basis: participant-local view of the declared environment
+    observable_refs: [content.task-brief]
+    hidden_refs: [nodes.portal]
+    evidence_refs: [content.terminal-output]
+```
+
+## Outcome Interpretation Rules
+
+`outcome_interpretation_rules` state how participant action outcomes,
+observations, objective results, and evidence claims are interpreted. They keep
+the meaning of an observation separate from graded scoring or evaluator output.
+
+```yaml
+outcome_interpretation_rules:
+  inspect-portal-outcome:
+    semantic_version: 1.0.0
+    participant_scope: participant_local
+    observation_point_basis: inspect-portal terminal observation
+    interpretation_basis: retained terminal evidence supports the local outcome
+```
+
 ## Behavior Specifications
 
 First-class participant behavior specifications name, version, and validate an
@@ -1692,24 +1792,24 @@ aggregate over existing participant behavior surfaces. They do not replace
 rules, authority refs, backend feature claims, or runtime evidence.
 
 ```yaml
-behavior-specifications:
+behavior_specifications:
   red-scan-behavior:
-    semantic-version: 1.0.0
-    lifecycle-state: active
-    participant-refs: [red-agent]
-    participant-role-refs: [red]
-    action-contract-refs: [scan]
-    observation-boundary-refs: [red-view]
-    outcome-interpretation-rule-refs: [red-outcome]
-    authority-scope-refs:
+    semantic_version: 1.0.0
+    lifecycle_state: active
+    participant_refs: [red-agent]
+    participant_role_refs: [red]
+    action_contract_refs: [scan]
+    observation_boundary_refs: [red-view]
+    outcome_interpretation_rule_refs: [red-outcome]
+    authority_scope_refs:
       - nodes.web-server.services.https
-    behavior-mode: policy-directed
-    ai-offensive-behavior-refs: [ai-model-access, defense-evasion]
-    offensive-behavior-refs: [reconnaissance, exfiltration]
-    realization-profile-ref: participant-implementation-manifest:red-agent
-    backend-feature-support-refs: [behavior_history]
-    evidence-contract-refs: [participant-behavior-history-event-stream-v1]
-    extension-policy: governed-extension
+    behavior_mode: policy-directed
+    ai_offensive_behavior_refs: [ai-model-access, defense-evasion]
+    offensive_behavior_refs: [reconnaissance, exfiltration]
+    realization_profile_ref: participant-implementation-manifest:red-agent
+    backend_feature_support_refs: [behavior_history]
+    evidence_contract_refs: [participant-behavior-history-event-stream-v1]
+    extension_policy: governed-extension
     extensions:
       x-acme:review-note:
         owner: acme
@@ -1744,9 +1844,42 @@ outcome-rule runtime addresses.
 
 ---
 
+## Evidence Requirements
+
+`evidence_requirements` are portable capture obligations authored with the
+scenario. They state sources, scope, trigger or boundary, channel, artifact
+role, media types, handling, integrity, retention, and loss-disclosure intent.
+They are not evidence records and do not prove that capture occurred.
+
+```yaml
+evidence_requirements:
+  portal-trace:
+    description: Retain the declared portal observation for the study.
+    source_refs: [nodes.portal]
+    scope_refs: [nodes.portal]
+    trigger_ref: conditions.portal-online
+    channel: application_log
+    artifact_role: participant_observation
+    media_types: [application/json]
+    sensitivity: plain
+    redaction: none
+    integrity: checksum
+    retention: study_lifetime
+    loss_disclosure: required
+```
+
+Realized capture, checksums, provenance, loss reports, and derived analysis live
+in processor/backend and experiment evidence contracts. They remain separate
+from the authored requirement.
+
+---
+
 ## Objectives
 
-Declarative experiment semantics that bind actors, targets, timing, and success criteria in the same SDL. Inspired by CACAO's separation of agent, target, and workflow context; objective success is expressed against observable `conditions` ([ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md)).
+Declarative experiment semantics that bind actors, targets, timing, and success
+criteria in the same SDL. Objective success composes invariant or postcondition
+assertions over backend-neutral propositions
+([ADR-079](../../decisions/adrs/adr-079-backend-neutral-proposition-and-truth-semantics.md)).
 
 ```yaml
 objectives:
@@ -1760,7 +1893,7 @@ objectives:
       - infrastructure.dmz-switch.acls.allow-dmz-https
     success:
       mode: all_of                     # all_of, any_of
-      conditions: [beacon-online]      # observable state only
+      assertions: [beacon-online-achieved]
     window:
       stories: [exercise]
       scripts: [main-timeline]
@@ -1771,11 +1904,18 @@ objectives:
   blue-reporting:
     entity: blue-team
     success:
-      conditions: [web-alive]          # observable state only
+      assertions: [web-alive-at-completion]
     depends_on: [red-initial-access]
 ```
 
-Every objective must declare exactly one actor: either `agent` or `entity`. `success` is required and must reference at least one declared `condition` (observable state; the OCR scoring surfaces `metrics`/`evaluations`/`tlos`/`goals` were removed by [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md)). `targets` are optional, but when present they must resolve to named scenario elements. Bare target refs work when unambiguous; otherwise use a qualified ref such as `nodes.web-server`, `features.app-to-db`, or `content.mailbox.items.invoice.eml`. `window` is optional; when supplied, referenced stories/scripts/events/workflows must exist and remain internally consistent. Workflow steps use qualified refs of the form `<workflow>.<step>`.
+Every objective must declare exactly one actor: either `agent` or `entity`.
+`success` is required and must reference at least one declared invariant or
+postcondition assertion. `targets` are optional, but when present they must
+resolve to named scenario elements. Bare target refs work when unambiguous;
+otherwise use a qualified ref such as `nodes.web-server`, `features.app-to-db`,
+or `content.mailbox.items.invoice.eml`. `window` is optional; when supplied,
+referenced stories/scripts/events/workflows must exist and remain internally
+consistent. Workflow steps use qualified refs of the form `<workflow>.<step>`.
 
 `depends_on` is an ordering relation, not just commentary. It defines a partial order over objectives: downstream objectives are not considered ready until their predecessors have been satisfied. Objective dependency cycles are rejected.
 
@@ -1799,7 +1939,7 @@ workflows:
       branch-on-promotion:
         type: decision
         when:
-          conditions: [rogue-release-promoted]
+          assertions: [rogue-release-promoted-before-branch]
         then: rollback-fanout
         else: finish
       rollback-fanout:

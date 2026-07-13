@@ -18,6 +18,7 @@ from aces_contracts.contracts import (
     ExperimentEvidenceRecordModel,
     ExperimentRunModel,
     ExperimentRunTraceabilityModel,
+    ExperimentSpecModel,
     ExperimentStudyModel,
     ExperimentTaskModel,
     ParticipantImplementationManifestModel,
@@ -43,6 +44,7 @@ from aces.core.runtime import contracts as compat_runtime_contracts
 
 EXPERIMENT_CORE_FIXTURE_MODELS = {
     "experiment-apparatus-context-v1": ExperimentApparatusContextModel,
+    "experiment-authoring-input-v1": ExperimentSpecModel,
     "experiment-capture-spec-v1": ExperimentCaptureSpecModel,
     "experiment-derived-measure-v1": ExperimentDerivedMeasureModel,
     "experiment-evidence-record-v1": ExperimentEvidenceRecordModel,
@@ -624,6 +626,20 @@ def test_experiment_core_invalid_fixtures_fail_schema_and_model_validation():
             assert list(validator.iter_errors(payload)), path
             with pytest.raises(ValidationError):
                 model_cls.model_validate(payload)
+
+
+def test_experiment_authoring_input_rejects_undeclared_blocking_factor():
+    # A run-allocation blocking factor must resolve to a declared spec factor even
+    # when the factors map is empty/absent — the model enforces the x-aces-invariant
+    # that portable JSON Schema cannot express (issue #675 codex review).
+    payload = _experiment_fixture("experiment-authoring-input-v1")
+    payload["factors"] = {}
+    payload["run_plan"]["allocation"]["blocking_factors"] = ["undeclared-factor"]
+
+    # Schema-valid (blocking_factors is a list of strings) but model-invalid.
+    assert not list(Draft202012Validator(schema_bundle()["experiment-authoring-input-v1"]).iter_errors(payload))
+    with pytest.raises(ValidationError):
+        ExperimentSpecModel.model_validate(payload)
 
 
 def test_experiment_core_requires_schema_versions_on_wire_artifacts():

@@ -22,53 +22,55 @@ resolution rules and full reference-edge catalog with failure semantics are in
 [`references.md`](references.md). A blank "References" cell means the section is
 referenced by others but does not itself reference another section.
 
-## Metadata and composition fields
+## Complete top-level field catalog
 
-These describe the document and its composition. They are **not** authoring
-sections.
+This table is the complete, mechanically checked top-level language surface.
+"Lifecycle" names the document forms in which the field is carried. A
+composition field marked `expanded-empty` or `instantiated-empty` remains in the
+model with its empty default after module expansion; its authored composition
+instructions do not survive as executable scenario meaning. "References" is
+`catalogued` when the field owns at least one row in the exact edge index in
+[`references.md`](references.md).
 
-| Field | Shape | Required | Notes |
-|-------|-------|----------|-------|
-| `name` | scalar | **REQUIRED** | The scenario identity. The only required top-level field. |
-| `version` | scalar | optional (default `*`) | Scenario version; `*` means unpinned. |
-| `description` | scalar | optional (default empty) | Free-text description. |
-| `module` | mapping \| null | optional (default null) | Published module metadata when this document is a composable module: a canonical `publisher/name` id, a `version`, declared `parameters`, and `exports` ([ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md)). |
-| `imports` | list | optional (default empty) | Module imports. Each import names a module by `source` (or the deprecated `path`) and binds it under a `namespace` with `parameters`. Imports are expanded before full semantic validation ([document-model.md §7](document-model.md)). |
+| Field | Kind | Shape | Lifecycle | Presence/default | Identity | References | Semantic owner |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `name` | metadata | scalar | normalized, expanded, instantiated | required | `scenario_name` | none | [document model](document-model.md) |
+| `version` | metadata | scalar | normalized, expanded, instantiated | optional; default `*` | none | none | [document model](document-model.md) |
+| `description` | metadata | scalar | normalized, expanded, instantiated | optional; default empty string | none | none | [document model](document-model.md) |
+| `module` | composition | mapping | normalized, expanded-empty, instantiated-empty | optional; default null | `module.id` | none | [ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) |
+| `imports` | composition | list | normalized, expanded-empty, instantiated-empty | optional; default empty list | `namespace` | none | [ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) |
+| `nodes` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [nodes and runtime inventory](runtime-inventory.md) |
+| `infrastructure` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
+| `features` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
+| `conditions` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [proposition semantics](../../specs/formal/objectives/proposition-and-assertion-semantics.md) |
+| `propositions` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [proposition semantics](../../specs/formal/objectives/proposition-and-assertion-semantics.md) |
+| `assertions` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [proposition semantics](../../specs/formal/objectives/proposition-and-assertion-semantics.md) |
+| `vulnerabilities` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | none | [document model](document-model.md) |
+| `entities` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
+| `injects` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [reference catalog](references.md) |
+| `events` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [reference catalog](references.md) |
+| `scripts` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [reference catalog](references.md) |
+| `stories` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [reference catalog](references.md) |
+| `content` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
+| `accounts` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
+| `relationships` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [ADR-052](../../docs/decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md) |
+| `forwarding_agents` | section | list | normalized, expanded, instantiated | optional; default empty list | `forwarding_agent_id` | none | [ADR-050](../../docs/decisions/adrs/adr-050-forwarding-agent-runtime-inventory.md) |
+| `agents` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [participant model](participant-model.md) |
+| `action_contracts` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [participant model](participant-model.md) |
+| `observation_boundaries` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [participant model](participant-model.md) |
+| `outcome_interpretation_rules` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [participant model](participant-model.md) |
+| `behavior_specifications` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [behavior specifications](behavior-specifications.md) |
+| `evidence_requirements` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [observability and evidence](observability-and-evidence.md) |
+| `objectives` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [objective semantics](objective-semantics.md) |
+| `workflows` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [workflow semantics](workflow-semantics.md) |
+| `variables` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | none | [variables and instantiation](variables-and-instantiation.md) |
 
-## Authoring sections — map-keyed
+<!-- sdl-catalog-summary top-level=30 metadata-composition=5 sections=25 maps=24 lists=1 -->
 
-Each is a map keyed by a user-defined identifier ([document-model.md §6](document-model.md))
-and defaults to an empty map when omitted.
-
-| Section | Required | Key shape | References |
-|---------|----------|-----------|------------|
-| `nodes` | optional | identifier ≤ 35 chars; may contain `.` | `features`, `conditions`, `injects`, `vulnerabilities`; hosts the runtime inventory ([runtime-inventory.md](runtime-inventory.md)) |
-| `infrastructure` | optional | identifier matching a node | `nodes`; switch/network nodes; other `infrastructure` (dependencies) |
-| `features` | optional | identifier | `vulnerabilities`; other `features` (dependencies, acyclic) |
-| `conditions` | optional | identifier | — |
-| `vulnerabilities` | optional | identifier | — |
-| `entities` | optional | identifier | `vulnerabilities` |
-| `injects` | optional | identifier | `entities` |
-| `events` | optional | identifier | `conditions`, `injects` |
-| `scripts` | optional | identifier | `events` |
-| `stories` | optional | identifier | `scripts` |
-| `content` | optional | identifier | `nodes` (VM target) |
-| `accounts` | optional | identifier | `nodes` (VM) |
-| `relationships` | optional | identifier | typed by subtype: `entities`/`accounts`/targetable elements; runtime families (`applications`, `database_services`, `mail_services`, `platform_applications`, `app_authorizations`); scenario `forwarding_agents` ([ADR-052](../../docs/decisions/adrs/adr-052-typed-runtime-relationship-subtypes.md)) |
-| `agents` | optional | identifier | `entities`, `accounts`, `infrastructure`, `nodes`, `conditions`, `action_contracts`, `observation_boundaries`, targetable elements |
-| `action_contracts` | optional | identifier | other `action_contracts` (interactions) |
-| `observation_boundaries` | optional | identifier | own information refs (observable/hidden/evidence) |
-| `outcome_interpretation_rules` | optional | identifier | `action_contracts`, `objectives`, `workflows` |
-| `evidence_requirements` | optional | identifier | targetable elements for source, scope, channel, trigger, and boundary refs; distinct from `objectives` and scenario-native observability systems ([observability-and-evidence.md](observability-and-evidence.md)) |
-| `objectives` | optional | identifier | `agents`/`entities` (actor), `action_contracts` (action), targetable elements (target), `conditions` (success — observable state only, [ADR-073](../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md)), `stories`/`scripts`/`events`/`workflows` (window), other `objectives` (depends_on, acyclic) |
-| `workflows` | optional | identifier | own steps (`start`, successors), other `workflows` (compensation), `conditions` (predicates) |
-| `variables` | optional | identifier matching `[A-Za-z_][A-Za-z0-9_-]*` | referenced by `${…}` placeholders ([variables-and-instantiation.md](variables-and-instantiation.md)) |
-
-## Authoring section — list-valued
-
-| Section | Shape | Required | Element identity | Referenced by |
-|---------|-------|----------|------------------|---------------|
-| `forwarding_agents` | list | optional (default empty) | `forwarding_agent_id` on each element | `relationships` (`forwarding_edge.forwarder_ref`) |
+The section set therefore has two authoring shapes: maps keyed by stable
+user-defined identifiers and the scenario-level `forwarding_agents` list, whose
+elements carry their own stable identity. The checked summary above is derived
+from the rows; changing a row without reconciling it fails the contract gate.
 
 `forwarding_agents` is the **scenario-level** forwarding-agent inventory. It is
 distinct from the node-scoped `forwarding_agents` runtime-family collection that
@@ -83,11 +85,15 @@ ordering is normative (resolution and failure semantics in
 [`references.md`](references.md)):
 
 - **Narrative chain:** `injects` → `events` → `scripts` → `stories`, with
-  `injects` naming `entities` and `events` naming `conditions`. Objective
+  `injects` naming `entities` and `events` naming precondition assertions. Objective
   windows bind `stories`/`scripts`/`events`/`workflows`.
 
-`conditions` are observable state: an objective's success is expressed against
-`conditions`, and workflow predicates reference `conditions`. The SDL carries no
+`propositions` state typed claims; `assertions` use them as preconditions,
+invariants, or postconditions. Objective success composes invariant or
+postcondition assertions, while events and workflow predicates reference
+precondition assertions. `conditions` are executable probe declarations and
+must explicitly identify the proposition they realize; they are not observable
+facts. The SDL carries no
 graded scoring pipeline — the OCR-inherited `metrics`, `evaluations`, `tlos`
 (Training Learning Objectives), and `goals` sections were removed with
 [ADR-073](../../docs/decisions/adrs/adr-073-scoring-reward-language-scope.md).

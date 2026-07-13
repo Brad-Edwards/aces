@@ -23,6 +23,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from aces_backend_protocols.capabilities import ProvisionerCapabilities
+from aces_backend_protocols.naming import provider_resource_name
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import PlannedResource, ProvisioningPlan, RuntimeDomain
 
@@ -146,7 +147,7 @@ def interpret_provisioning_plan(
 def _network_address_lookup(networks: list[NetworkSpec]) -> dict[str, str]:
     lookup: dict[str, str] = {}
     for spec in networks:
-        for key in (spec.address, spec.name, spec.address.rsplit(".", 1)[-1]):
+        for key in (spec.address, spec.name):
             if key:
                 lookup[key] = spec.address
     return lookup
@@ -156,8 +157,8 @@ def _network_spec(resource: PlannedResource, payload: Mapping[str, object]) -> N
     infrastructure = _infrastructure_spec(payload)
     properties = infrastructure.get("properties")
     labels: dict[str, str] = {}
-    if isinstance(properties, Mapping) and properties.get("internal") is True:
-        labels["internal"] = "true"
+    if isinstance(properties, Mapping) and isinstance(properties.get("internal"), bool):
+        labels["internal"] = "true" if properties["internal"] else "false"
     cidr = properties.get("cidr") if isinstance(properties, Mapping) else None
     gateway = properties.get("gateway") if isinstance(properties, Mapping) else None
     return NetworkSpec(
@@ -177,7 +178,7 @@ def _node_address_lookup(
     lookup: dict[str, str] = {}
     for resource, payload in node_resources:
         name = _resource_name(resource, payload)
-        for key in (resource.address, name, resource.address.rsplit(".", 1)[-1]):
+        for key in (resource.address, name):
             if key:
                 lookup[key] = resource.address
     return lookup
@@ -380,7 +381,7 @@ def _network_cidr_lookup(networks: list[NetworkSpec]) -> dict[str, str]:
     for spec in networks:
         if not spec.cidr:
             continue
-        for key in (spec.address, spec.name, spec.address.rsplit(".", 1)[-1]):
+        for key in (spec.address, spec.name):
             if key:
                 lookup[key] = spec.cidr
     return lookup
@@ -390,7 +391,7 @@ def _resource_name(resource: PlannedResource, payload: Mapping[str, object]) -> 
     name = payload.get("name") or payload.get("node_name")
     if isinstance(name, str) and name:
         return name
-    return resource.address.rsplit(".", 1)[-1]
+    return provider_resource_name(resource.address, prefix="aces")
 
 
 def _infrastructure_spec(payload: Mapping[str, object]) -> Mapping[str, object]:

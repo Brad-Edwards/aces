@@ -29,7 +29,8 @@ Type conformance rules, enforced when the variable is defined:
 3. If both `default` and `allowed_values` are set, `default` **MUST** be a member
    of `allowed_values`.
 
-The variable **name** (the map key) **MUST** match `[A-Za-z_][A-Za-z0-9_-]*`
+The variable **name** (the map key) **MUST** use the portable local-identifier
+grammar `^[a-z0-9][a-z0-9_-]{0,63}$`
 ([document-model.md §6](document-model.md)).
 
 ## 2. Reference syntax
@@ -47,6 +48,12 @@ variable-name grammar above. Two placeholder positions are distinguished:
 A placeholder **MUST NOT** appear in an identifier-defining map key
 ([document-model.md §6](document-model.md)); variables parameterise values, not
 identities.
+
+Module parameter names, import-parameter keys, and
+`scenario-instantiation-request-v1.parameters` keys use the same grammar.
+Parameter values retain their owning field types. For any declaration `d` and
+two valid parameter environments `p1` and `p2`, canonical identity is invariant:
+`address(d, p1) = address(d, p2)`.
 
 Variables are **not** resolved at parse time. An authored document preserves
 `${…}` placeholders structurally; resolution happens only at instantiation.
@@ -96,16 +103,56 @@ becomes dangling or ambiguous after substitution fails here.
 An instantiated document is concrete. It **MUST NOT** contain:
 
 1. unresolved `${…}` placeholders (§3 step 8); and
-2. variable **definitions** surviving as ordinary authoring variables. The
-   `variables` section parameterises the authored document; once a document is
-   instantiated, the bound parameter values — not the variable definitions —
-   are what the document means. (The resolved parameter values and any captured
-   pre-substitution references are retained as instantiation context for
-   downstream consumers, but not as live authoring variables.)
+2. a `variables` member, even an empty one;
+3. an `imports` member, even an empty one; or
+4. a `module` member, even a null one.
 
 This is the authoring → instantiated distinction: a value that exists only to
 be substituted (a `${…}` reference) and the machinery that substitutes it (the
-`variables` definitions) do not survive into the instantiated form.
+`variables` definitions) do not survive into the instantiated form. `module`
+is packaging metadata and `imports` are composition instructions; verified
+resolution evidence survives under provenance instead.
+
+Every `instantiated-scenario-v1` payload **MUST** carry a closed
+`instantiation_provenance` object. Its members are:
+
+| Member | Meaning |
+|--------|---------|
+| `authored_digest` | Required `aces-sdl-semantic/v1` / SHA-256 identity of the validated expanded authoring object. Profile, algorithm, and digest value are explicit. |
+| `selected_profile` | Optional instantiation-profile selector. Absence means no named profile was selected; it does not imply a hidden default profile. |
+| `bindings` | Root bindings in variable declaration order. Each has a one-segment parameter identity, `provided` or `default` origin, and selected scalar value. |
+| `imports` | Verified resolved imports in declared preorder. Each carries namespace segments, requested and resolved identities, available digests, signer id, and module-local bindings. |
+| `capability_constraints` | Finite domains retained only for concrete `nodes.<id>.os` and `infrastructure.<id>.count` fields, addressed by RFC 6901 pointer and qualified parameter identity. |
+| `explicitness` | Portable SEM-218 model-path classifications whose parameter identities remain resolvable after variable definitions are removed. |
+
+A qualified imported binding identity is the import's `namespace` tuple
+concatenated with its one-segment local parameter identity. Root and qualified
+identities **MUST** be globally unique. Every capability or explicitness
+parameter identity **MUST** resolve to one binding. A capability binding's value
+**MUST** belong to its retained domain and equal the value at its concrete JSON
+Pointer. JSON equality distinguishes booleans from numbers; numerically equal
+JSON numbers compare equal. Duplicate domain values are forbidden under that
+equality.
+
+Import records preserve declared preorder and namespace segments, so nested
+structure does not have to be recovered by splitting dotted display strings.
+Requested/resolved source identities **MUST NOT** carry absolute host/cache
+paths or registry credentials. Trust-policy contents, request headers, cache
+locations, raw signatures, and source documents are excluded. A signer id and
+digest are resolution evidence, not a replacement for a signature or an
+independently chosen trust policy.
+
+The provenance supplies selected inputs and verification anchors for replay. It
+does not make replay self-contained or prove that the described transformation
+ran: repeated resolution still depends on source availability, source bytes,
+and current trust policy. Tools **MUST NOT** duplicate binding values into
+summaries, diagnostics, logs, or operation metadata merely because they are
+present in the artifact.
+
+The published JSON Schema enforces the closed phase shape, required provenance,
+scalar syntax, and absence of substitution tokens. Cross-field provenance
+relations and SDL references/graphs require model and semantic admission. Thus
+schema validity is necessary but not sufficient for compiler admission.
 
 ## 5. Authoring vs. instantiated reference checks
 

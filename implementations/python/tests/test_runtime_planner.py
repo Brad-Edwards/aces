@@ -201,11 +201,9 @@ infrastructure:
         assert ("provisioning.ordering-cycle", "provision.node.a") in diagnostics
         assert not execution_plan.is_valid
 
-    def test_cyclic_objective_dependencies_fail_closed(self):
-        execution_plan = plan(
-            compile_runtime_model(
-                parse_sdl(
-                    textwrap.dedent("""
+    def test_compiler_admission_rejects_cyclic_objective_dependencies(self):
+        scenario = parse_sdl(
+            textwrap.dedent("""
 name: objective-cycle
 nodes:
   vm:
@@ -216,28 +214,32 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   first:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
     depends_on: [second]
   second:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
     depends_on: [first]
 """),
-                    skip_semantic_validation=True,
-                )
-            ),
-            create_stub_manifest(),
+            skip_semantic_validation=True,
         )
 
-        diagnostics = {(diag.code, diag.address) for diag in execution_plan.diagnostics}
-
-        assert ("evaluation.ordering-cycle", "evaluation.objective.first") in diagnostics
-        assert not execution_plan.is_valid
+        with pytest.raises(SDLInstantiationError, match="Objective dependency graph contains a cycle"):
+            compile_runtime_model(scenario)
 
     def test_dependency_changes_propagate_through_evaluation_graph(self):
         old_model = compile_runtime_model(
@@ -252,12 +254,21 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   initial:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 """)
         )
         old_plan = plan(old_model, create_stub_manifest())
@@ -275,24 +286,32 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/false, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime-v2, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 entities:
   blue: {role: blue}
 objectives:
   initial:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 """,
             snapshot,
         )
 
         eval_actions = {op.address: op.action.value for op in new_plan.evaluation.operations}
         assert eval_actions["evaluation.condition.vm.health"] == "update"
-        # Objective success references the condition, so a condition change must
-        # propagate to the objective evaluation resource (metric->evaluation->tlo->goal
-        # chain removed by ADR-073).
+        # The condition and proposition changed independently. The objective
+        # refresh follows the proposition/assertion dependency chain.
         assert eval_actions["evaluation.objective.initial"] == "update"
 
-    def test_ambiguous_condition_refs_fail_closed(self):
+    def test_assertion_refs_remain_unambiguous_with_multiple_condition_bindings(self):
         execution_plan = plan(
             compile_runtime_model(
                 _scenario("""
@@ -312,16 +331,25 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.a]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 events:
-  kickoff: {conditions: [health]}
+  kickoff: {assertions: [pre-health]}
 """)
             ),
             create_stub_manifest(),
         )
 
-        codes = {diag.code for diag in execution_plan.diagnostics}
-        assert "orchestration.condition-ref-ambiguous" in codes
-        assert not execution_plan.is_valid
+        kickoff = execution_plan.model.events["orchestration.event.kickoff"]
+        assert kickoff.assertion_addresses == ("evaluation.assertion.pre-health",)
+        assert execution_plan.is_valid
 
     def test_top_level_inject_refs_resolve_directly(self):
         execution_plan = plan(
@@ -346,7 +374,7 @@ events:
         assert kickoff.inject_addresses == ("orchestration.inject.mail",)
         assert execution_plan.is_valid
 
-    def test_unbound_condition_and_inject_refs_invalidate_plan(self):
+    def test_compiler_admission_rejects_unbound_inject_refs(self):
         scenario = _scenario("""
 name: unbound
 nodes:
@@ -356,6 +384,15 @@ nodes:
     resources: {ram: 1 gib, cpu: 1}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 injects:
   mail: {source: inbox}
 entities:
@@ -363,22 +400,14 @@ entities:
 objectives:
   check:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 events:
-  kickoff: {conditions: [health], injects: [mail]}
+  kickoff: {assertions: [pre-health], injects: [mail]}
 """)
         scenario.injects = {}
 
-        execution_plan = plan(
-            compile_runtime_model(scenario),
-            create_stub_manifest(),
-        )
-
-        codes = {diag.code for diag in execution_plan.diagnostics}
-        assert "evaluation.condition-ref-unbound" in codes
-        assert "orchestration.condition-ref-unbound" in codes
-        assert "orchestration.inject-ref-unbound" in codes
-        assert not execution_plan.is_valid
+        with pytest.raises(SDLInstantiationError, match="references undefined inject 'mail'"):
+            compile_runtime_model(scenario)
 
     @pytest.mark.parametrize(
         ("orchestrator_kwargs", "scenario_yaml", "expected_code"),
@@ -387,7 +416,7 @@ events:
                 {
                     "supported_sections": frozenset({"workflows"}),
                     "supports_workflows": True,
-                    "supports_condition_refs": False,
+                    "supports_assertion_refs": False,
                     "supported_workflow_features": frozenset({WorkflowFeature.DECISION}),
                 },
                 """
@@ -401,19 +430,28 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 workflows:
   flow:
     start: branch
     steps:
       branch:
         type: decision
-        when: {conditions: [health]}
+        when: {assertions: [pre-health]}
         then: finish
         else: finish
       finish: {type: end}
 """,
-                "orchestrator.condition-refs-unsupported",
-                id="condition-refs-unsupported",
+                "orchestrator.assertion-refs-unsupported",
+                id="assertion-refs-unsupported",
             ),
             pytest.param(
                 {
@@ -434,10 +472,19 @@ entities:
   blue: {role: blue}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 objectives:
   defend:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   flow:
     start: attempt
@@ -445,8 +492,8 @@ workflows:
       attempt:
         type: retry
         objective: defend
-        on-success: finish
-        max-attempts: 3
+        on_success: finish
+        max_attempts: 3
       finish: {type: end}
 """,
                 "orchestrator.workflow-feature-unsupported",
@@ -465,10 +512,19 @@ entities:
   blue: {role: blue}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [entities.blue]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 objectives:
   defend:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   flow:
     start: validate
@@ -476,7 +532,7 @@ workflows:
       validate:
         type: objective
         objective: defend
-        on-success: branch
+        on_success: branch
       branch:
         type: decision
         when:
@@ -503,10 +559,19 @@ entities:
   blue: {role: blue}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [entities.blue]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 objectives:
   defend:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   flow:
     start: validate
@@ -514,15 +579,15 @@ workflows:
       validate:
         type: retry
         objective: defend
-        on-success: branch
-        max-attempts: 3
+        on_success: branch
+        max_attempts: 3
       branch:
         type: decision
         when:
           steps:
             - step: validate
               outcomes: [succeeded]
-              min-attempts: 2
+              min_attempts: 2
         then: finish
         else: finish
       finish: {type: end}
@@ -542,13 +607,22 @@ entities:
   blue: {role: blue}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [entities.blue]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 objectives:
   left:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
   right:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 workflows:
   flow:
     start: fanout
@@ -560,11 +634,11 @@ workflows:
       left-branch:
         type: objective
         objective: left
-        on-success: joined
+        on_success: joined
       right-branch:
         type: objective
         objective: right
-        on-success: joined
+        on_success: joined
       joined:
         type: join
         next: finish
@@ -592,7 +666,7 @@ workflows:
         assert expected_code in codes
         assert not execution_plan.is_valid
 
-    def test_workflow_condition_bindings_force_workflow_refresh(self):
+    def test_workflow_assertion_changes_force_workflow_refresh(self):
         old_model = compile_runtime_model(
             _scenario("""
 name: workflow
@@ -605,10 +679,19 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 objectives:
   initial:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 entities:
   blue: {role: blue}
 workflows:
@@ -617,7 +700,7 @@ workflows:
     steps:
       branch:
         type: decision
-        when: {conditions: [health]}
+        when: {assertions: [pre-health]}
         then: finish
         else: finish
       finish: {type: end}
@@ -638,10 +721,19 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/false, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime-v2, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 objectives:
   initial:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 entities:
   blue: {role: blue}
 workflows:
@@ -650,7 +742,7 @@ workflows:
     steps:
       branch:
         type: decision
-        when: {conditions: [health]}
+        when: {assertions: [pre-health]}
         then: finish
         else: finish
       finish: {type: end}
@@ -674,21 +766,33 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime-v2, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 injects:
   mail: {source: inbox}
 events:
-  kickoff: {conditions: [health], injects: [mail]}
+  kickoff: {assertions: [pre-health], injects: [mail]}
 """
         old_model = compile_runtime_model(_scenario(base))
         kickoff = old_model.events["orchestration.event.kickoff"]
-        assert "evaluation.condition.vm.health" not in kickoff.ordering_dependencies
-        assert "evaluation.condition.vm.health" in kickoff.refresh_dependencies
+        assert "evaluation.assertion.pre-health" not in kickoff.ordering_dependencies
+        assert "evaluation.assertion.pre-health" in kickoff.refresh_dependencies
         assert "orchestration.inject.mail" in kickoff.ordering_dependencies
 
         old_plan = plan(old_model, create_stub_manifest())
         snapshot = _snapshot_from_plan(old_plan)
         new_plan = _plan_with_snapshot(
-            base.replace("/bin/true", "/bin/false"),
+            base.replace(
+                "urn:aces:declared-property:runtime",
+                "urn:aces:declared-property:runtime-v2",
+            ),
             snapshot,
         )
 
@@ -708,10 +812,19 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 objectives:
   initial:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
     window:
       workflows: [flow]
       steps: [flow.branch]
@@ -723,7 +836,7 @@ workflows:
     steps:
       branch:
         type: decision
-        when: {conditions: [health]}
+        when: {assertions: [pre-health]}
         then: finish
         else: finish
       finish: {type: end}
@@ -737,6 +850,9 @@ workflows:
         assert "orchestration.workflow.flow" in objective.refresh_dependencies
         assert execution_plan.evaluation.startup_order == [
             "evaluation.condition.vm.health",
+            "evaluation.proposition.health",
+            "evaluation.assertion.health",
+            "evaluation.assertion.pre-health",
             "evaluation.objective.initial",
         ]
 
@@ -752,10 +868,19 @@ nodes:
     roles: {ops: operator}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.vm]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 objectives:
   initial:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
     window:
       scripts: [timeline]
       events: [kickoff]
@@ -764,9 +889,9 @@ objectives:
 entities:
   blue: {role: blue}
 events:
-  kickoff: {conditions: [health], description: kickoff}
+  kickoff: {assertions: [pre-health], description: kickoff}
 scripts:
-  timeline: {start-time: 0, end-time: 60, speed: 1, events: {kickoff: 10}}
+  timeline: {start_time: 0, end_time: 60, speed: 1, events: {kickoff: 10}}
 workflows:
   flow:
     description: primary
@@ -774,7 +899,7 @@ workflows:
     steps:
       branch:
         type: decision
-        when: {conditions: [health]}
+        when: {assertions: [pre-health]}
         then: finish
         else: finish
       finish: {type: end}
@@ -783,7 +908,7 @@ workflows:
         snapshot = _snapshot_from_plan(old_plan)
 
         changed_variants = [
-            base.replace("end-time: 60", "end-time: 120"),
+            base.replace("end_time: 60", "end_time: 120"),
             base.replace("description: kickoff", "description: changed"),
             base.replace("description: primary", "description: updated"),
             base.replace("then: finish", "then: finish\n        description: changed"),
@@ -905,29 +1030,38 @@ infrastructure:
     count: 1
     properties: {cidr: 10.0.0.0/24, gateway: 10.0.0.1}
     acls:
-      - {direction: in, from-net: corp, action: allow}
+      - {direction: in, from_net: corp, action: allow}
   dc: {count: 1, links: [corp]}
 accounts:
   admin: {username: administrator, node: dc, spn: LDAP/dc.example.local}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.dc]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 objectives:
   defend:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 entities:
   blue: {role: blue}
 events:
-  kickoff: {conditions: [health]}
+  kickoff: {assertions: [pre-health]}
 scripts:
-  timeline: {start-time: 0, end-time: 60, speed: 1, events: {kickoff: 10}}
+  timeline: {start_time: 0, end_time: 60, speed: 1, events: {kickoff: 10}}
 stories:
   main: {scripts: [timeline]}
 workflows:
   flow:
     start: start
     steps:
-      start: {type: objective, objective: defend, on-success: end}
+      start: {type: objective, objective: defend, on_success: end}
       end: {type: end}
 """)
         )
@@ -1020,7 +1154,7 @@ nodes:
   vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """)
             )
-        assert "nodes.vm.os" in str(exc.value)
+        assert "/nodes/vm/os" in str(exc.value)
 
     def test_variable_backed_os_without_allowed_values_uses_instantiated_default(self):
         manifest = _limited_backend_manifest(
@@ -1126,6 +1260,12 @@ infrastructure:
             """
 name: shared
 version: 1.0.0
+module:
+  id: aces/shared
+  version: 1.0.0
+  parameters: [os_name]
+  exports:
+    nodes: [vm]
 variables:
   os_name:
     type: string
@@ -1193,7 +1333,7 @@ infrastructure:
   vm: ${node_count}
 """)
             )
-        assert "infrastructure.vm.count" in str(exc.value)
+        assert "/infrastructure/vm/count" in str(exc.value)
 
     def test_variable_backed_os_allowed_values_fail_when_pre_instantiated(self):
         # Manager-path coverage: when the caller instantiates upstream and
@@ -1222,7 +1362,6 @@ variables:
 nodes:
   vm: {type: vm, os: '${os_name}', resources: {ram: 1 gib, cpu: 1}}
 """),
-            validate_semantics=False,
         )
         execution_plan = plan(compile_runtime_model(instantiated), manifest)
 
@@ -1354,25 +1493,34 @@ accounts:
   admin: {username: admin, node: web}
 conditions:
   health: {command: /bin/true, interval: 15}
+propositions:
+  health:
+    description: The governed node has declared runtime state.
+    subjects: [nodes.web]
+    basis: declared_state
+    predicate: {kind: presence, property: runtime, semantic_ref: urn:aces:declared-property:runtime, operator: exists}
+assertions:
+  health: {proposition: health, role: postcondition, polarity: positive}
+  pre-health: {proposition: health, role: precondition, polarity: positive}
 injects:
   mail: {source: inbox}
 objectives:
   initial:
     entity: blue
-    success: {conditions: [health]}
+    success: {assertions: [health]}
 entities:
   blue: {role: blue}
 events:
-  kickoff: {conditions: [health], injects: [mail]}
+  kickoff: {assertions: [pre-health], injects: [mail]}
 scripts:
-  timeline: {start-time: 0, end-time: 60, speed: 1, events: {kickoff: 10}}
+  timeline: {start_time: 0, end_time: 60, speed: 1, events: {kickoff: 10}}
 stories:
   main: {scripts: [timeline]}
 workflows:
   flow:
     start: start
     steps:
-      start: {type: objective, objective: initial, on-success: end}
+      start: {type: objective, objective: initial, on_success: end}
       end: {type: end}
 """)
             ),

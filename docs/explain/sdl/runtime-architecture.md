@@ -72,13 +72,19 @@ repo-owned concretization pass that runs before compilation.
 
 It:
 
+- validates the normalized/expanded authoring input
 - applies explicit parameter values
 - applies SDL variable defaults
 - rejects unresolved `${var}` placeholders
-- rebuilds a fully concrete `InstantiatedScenario`
+- rebuilds a closed `InstantiatedScenario` with portable binding/import,
+  capability, and explicitness evidence
+- removes `variables`, `imports`, and `module` from the concrete shape
+- reruns semantic validation after substitution
 
-`compile_runtime_model(scenario)` then normalizes the instantiated scenario
-into runtime objects.
+`compile_runtime_model(scenario)` then lowers the admitted instantiated scenario
+into runtime objects. A direct or JSON-deserialized `InstantiatedScenario`
+passes `admit_instantiated_scenario()` first; compiler callers cannot disable
+that semantic gate.
 
 It separates reusable definitions from bound runtime instances:
 
@@ -255,14 +261,14 @@ Validation is semantic, not section-only. Current checks include:
 - account features
 - orchestration/workflow usage
 - fine-grained workflow feature usage (`decision`, `retry`, `parallel` barriers, failure transitions)
-- workflow predicate condition refs
+- workflow predicate assertion refs
 - workflow predicate prior-step state refs and state-predicate subfeatures (`outcome-matching`, `attempt-counts`)
 - objective usage
 
 `OrchestratorCapabilities` expose both coarse workflow support and fine-grained workflow semantics:
 
 - `supports_workflows`
-- `supports_condition_refs`
+- `supports_assertion_refs`
 - `supported_workflow_features`
 - `supported_workflow_state_predicates`
 
@@ -289,10 +295,12 @@ Participant implementations use `participant-implementation-manifest-v1`
 alongside the backend and processor surfaces rather than nesting inside either
 one.
 
-Capability validation operates on concrete instantiated values rather than
-placeholder domains guessed by backends. This removes the old “defer until
-instantiation” gap for runtime-relevant fields such as `nodes.os` and
-`infrastructure.count`.
+Capability validation operates on admitted concrete values. Where
+`nodes.os` or `infrastructure.count` was selected from an authored finite
+domain, portable SDL provenance carries that domain and the compiler lowers it
+to one typed `CompiledCapabilityConstraint`; the planner validates the whole
+declared domain against backend limits. It does not reconstruct variable
+definitions or pair private variable-spec/ref maps.
 
 ## Runtime Target Lifecycle
 
@@ -397,8 +405,10 @@ Composition is registry-ready as well:
 - `aces sdl verify-imports` verifies lockfile, trust, digests, and signatures
 - `aces sdl publish` packages a publishable SDL module as an OCI image layout
 
-Resolution and trust happen before instantiation and semantic validation, but
-planner/runtime semantics still see only one fully expanded canonical scenario.
+Resolution and trust happen before instantiation and semantic validation.
+Planner/runtime semantics see one admitted concrete scenario; replay-relevant
+resolution and binding facts remain under its typed provenance rather than in
+live imports, variables, or Python-private side channels.
 
 `RuntimeManager.apply()` requires the plan provenance to match the manager:
 

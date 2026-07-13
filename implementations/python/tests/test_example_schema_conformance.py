@@ -24,19 +24,32 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import cache
 from pathlib import Path
+from typing import Any, Protocol
 
 import pytest
 from aces_contracts.corpus import corpus_family_root
-from aces_sdl.scenario import Scenario
+from aces_contracts.experiment_spec import load_experiment_spec
+from aces_sdl import load_sdl_fragment
 from aces_sdl.scenarios import load_scenario
 from jsonschema import Draft202012Validator
-from paths import EXAMPLES_DIR
+from paths import EXAMPLES_DIR, EXPERIMENTS_DIR
 
-# ``by_alias=True`` is load-bearing: the published schema is generated from the model with
-# ``model_json_schema()`` (aliases on), so a field-name dump fails on YAML-facing aliases
-# such as ``class``, ``on-success``, and ``max-attempts``. ``mode="json"`` yields JSON-native
-# scalars (enum values, not enum members). These are the same flags the runtime compiler
-# uses for its contract-shaped serialization.
+
+class SupportsModelDump(Protocol):
+    """Any loaded contract model that can be serialized for publication comparison.
+
+    The corpus spans more than one loaded model type (``Scenario`` for SDL,
+    ``ExperimentSpecModel`` for authored experiments), so the loader is typed by
+    the one capability the suite uses — ``model_dump`` — rather than a single
+    concrete model class.
+    """
+
+    def model_dump(self, **kwargs: Any) -> dict: ...
+
+
+# ``by_alias=True`` is load-bearing for intentional language keywords such as
+# ``class``, ``type``, ``then``, and ``else``. Ordinary structural wire fields
+# use canonical snake_case. ``mode="json"`` yields JSON-native enum values.
 _PUBLICATION_DUMP_KWARGS = {"mode": "json", "by_alias": True}
 
 
@@ -52,7 +65,7 @@ class CorpusEntry:
     contract_id: str
     root: Path
     glob: str
-    loader: Callable[[Path], Scenario]
+    loader: Callable[[Path], SupportsModelDump]
     schema_path: Path
     dump_kwargs: dict = field(default_factory=lambda: dict(_PUBLICATION_DUMP_KWARGS))
 
@@ -71,6 +84,13 @@ def _validator_for(schema_path: Path) -> Draft202012Validator:
 
 
 _SDL_SCHEMA_DIR = corpus_family_root("schemas") / "sdl"
+_EXP_SCHEMA_DIR = corpus_family_root("schemas") / "experiment-core"
+
+# The experiment authoring-input reference models (task / capture-spec) forbid
+# ``ref_digest``/``ref_path`` in their published sub-schemas, so an id-only
+# reference publishes without those keys. ``exclude_none`` yields exactly that
+# schema-conformant publication shape (unset optionals are omitted, not null).
+_EXPERIMENT_DUMP_KWARGS = {"mode": "json", "by_alias": True, "exclude_none": True}
 
 # Today the table has exactly one leg: the authoring example corpus against the published
 # authoring-input contract. No instantiated-scenario *example* artifacts exist under
@@ -84,6 +104,14 @@ VALIDATION_CORPUS = [
         glob="*.sdl.yaml",
         loader=load_scenario,
         schema_path=_SDL_SCHEMA_DIR / "sdl-authoring-input-v1.json",
+    ),
+    CorpusEntry(
+        contract_id="experiment-authoring-input-v1",
+        root=EXPERIMENTS_DIR,
+        glob="*.exp.yaml",
+        loader=load_experiment_spec,
+        schema_path=_EXP_SCHEMA_DIR / "experiment-authoring-input-v1.json",
+        dump_kwargs=dict(_EXPERIMENT_DUMP_KWARGS),
     ),
 ]
 
@@ -114,6 +142,17 @@ def test_example_conforms_to_published_schema(entry: CorpusEntry, path: Path) ->
     errors = sorted(entry.validator().iter_errors(payload), key=lambda error: error.json_path)
 
     assert not errors, f"{path.name} violates {entry.contract_id}:\n" + "\n".join(
+        f"  {error.json_path}: {error.message}" for error in errors
+    )
+
+
+@pytest.mark.parametrize("path", sorted(EXAMPLES_DIR.glob("*.sdl.yaml")), ids=lambda path: path.name)
+def test_sdl_example_is_canonical_source_and_direct_normalized_schema_input(path: Path) -> None:
+    """Canonical examples pass strict source decoding and the advertised schema directly."""
+    payload = load_sdl_fragment(path.read_text(encoding="utf-8"))
+    errors = sorted(_AUTHORING_ENTRY.validator().iter_errors(payload), key=lambda error: error.json_path)
+
+    assert not errors, f"{path.name} is not direct normalized authoring-schema input:\n" + "\n".join(
         f"  {error.json_path}: {error.message}" for error in errors
     )
 

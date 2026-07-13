@@ -88,8 +88,28 @@ def test_dsl_124_evidence_requirements_are_not_objective_targets() -> None:
         targets:
           - evidence_requirements.network-trace
         success:
-          conditions:
-            - capture-open
+          assertions:
+            - trace-captured
+    propositions:
+      trace-captured:
+        description: The governed network trace was captured.
+        subjects:
+          - nodes.siem
+        basis: observed_state
+        predicate:
+          kind: boolean
+          property: network-trace-captured
+          semantic_ref: urn:aces:observable:network-trace-captured
+          operator: equals
+          expected: true
+        evidence_requirements:
+          - network-trace
+    assertions:
+      trace-captured:
+        description: Trace capture must be observed at the objective boundary.
+        proposition: trace-captured
+        role: postcondition
+        polarity: positive
     """
     )
 

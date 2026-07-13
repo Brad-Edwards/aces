@@ -21,7 +21,7 @@ contributor-facing reading material.
   `docs/`, and examples remain non-normative worked examples.
 - `contracts/` is the home for normative machine-readable artifacts:
   published schemas, fixture corpora, capability profiles, semantic profiles,
-  and concept-authority catalogs.
+  realization envelopes, and concept-authority catalogs.
 - `implementations/` contains reference code only. Python models, CLI output,
   generated bindings, and conformance runners consume published authority; they
   do not define ecosystem meaning.
@@ -40,7 +40,8 @@ Reuse these existing surfaces before adding anything new:
 - normative prose surfaces: `specs/`, especially `specs/concept-authority/`
 - machine-readable authority: `contracts/README.md`,
   `contracts/schemas/README.md`, `contracts/schema-publication-manifest.json`,
-  `contracts/fixtures/`, and `contracts/profiles/`
+  `contracts/fixtures/`, `contracts/profiles/`, and
+  `contracts/realization-envelopes/`
 - contract model and schema bundle helpers:
   `aces_contracts.contracts.ContractModel`, `schema_bundle()`, and the
   published `*Model` validators
@@ -125,7 +126,7 @@ Avoid:
 - adding new authority-bearing artifacts anywhere other than `specs/` (for
   normative prose) or `contracts/` (for normative machine-readable
   artifacts). `docs/`, `implementations/`, `examples/`, `research/`,
-  `notes/`, `tools/`, and `changelog.d/` are non-normative roots per the
+  `notes/`, and `tools/` are non-normative roots per the
   authority manifest and may not host authority artifacts
 - adding implementation logic under the compatibility-only
   `implementations/python/src/aces/` tree
