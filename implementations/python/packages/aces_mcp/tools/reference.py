@@ -11,9 +11,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-# ---------------------------------------------------------------------------
 # Docs / examples on disk — allowlisted filenames only
-# ---------------------------------------------------------------------------
 
 
 def _find_repo_root(start: Path) -> Path:
@@ -60,9 +58,7 @@ def _read_example(name: str) -> str:
     return path.read_text()
 
 
-# ---------------------------------------------------------------------------
 # Section-level reference snippets
-# ---------------------------------------------------------------------------
 
 # Maps each section name to the heading anchor used in sections.md so we
 # can extract just the relevant portion.

@@ -16,7 +16,6 @@ files:
   - implementations/python/packages/aces_contracts/workflow.py
   - implementations/python/packages/aces_mcp/tools/authoring.py
   - implementations/python/packages/aces_mcp/tools/inspection.py
-  - implementations/python/packages/aces_mcp/tools/reference.py
   - implementations/python/packages/aces_operations/_evidence_run_artifact.py
   - implementations/python/packages/aces_processor/compiler.py
   - implementations/python/packages/aces_processor/models.py
