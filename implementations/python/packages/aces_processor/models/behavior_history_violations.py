@@ -288,7 +288,7 @@ def iter_participant_behavior_history_violations(
 
 
 def _iter_validated_participant_behavior_violations(
-    participant_behavior_history: list,
+    participant_behavior_history: list[Any],
     *,
     action_contracts: Mapping[str, ParticipantActionContractRuntime] | None,
     outcome_interpretation_rules: Mapping[str, ParticipantOutcomeInterpretationRuleRuntime] | None,

@@ -196,8 +196,8 @@ def _participant_episode_histories_from_source(
     if isinstance(participant_episode_history, Mapping):
         return participant_episode_history.values()
     if isinstance(participant_episode_history, list):
-        return (participant_episode_history,)
-    return ()
+        return [participant_episode_history]
+    return []
 
 
 def _participant_episode_normalized_history_event(
