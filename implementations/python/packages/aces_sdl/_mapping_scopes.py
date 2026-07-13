@@ -28,6 +28,7 @@ HASHMAP_SECTIONS = frozenset(
         "stories",
         "content",
         "accounts",
+        "identity_domains",
         "relationships",
         "agents",
         "action_contracts",

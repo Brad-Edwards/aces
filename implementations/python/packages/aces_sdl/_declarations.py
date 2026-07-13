@@ -275,6 +275,7 @@ _REFERENCEABLE_SECTIONS = frozenset(
         "scripts",
         "stories",
         "accounts",
+        "identity_domains",
         "relationships",
         "agents",
         "action_contracts",

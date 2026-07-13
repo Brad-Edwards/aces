@@ -149,6 +149,14 @@
           "default": false,
           "title": "Disabled"
         },
+        "domain_ref": {
+          "default": "",
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Domain Ref",
+          "type": "string"
+        },
         "groups": {
           "items": {
             "not": {
@@ -3435,6 +3443,56 @@
       "title": "FeatureType",
       "type": "string"
     },
+    "IdentityDomain": {
+      "additionalProperties": false,
+      "description": "Scenario-scoped authored identity domain.",
+      "properties": {
+        "authority_account_ref": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Authority Account Ref",
+          "type": "string"
+        },
+        "dns_name": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Dns Name",
+          "type": "string"
+        },
+        "netbios_name": {
+          "minLength": 1,
+          "not": {
+            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+          },
+          "title": "Netbios Name",
+          "type": "string"
+        },
+        "profile": {
+          "$ref": "#/$defs/IdentityDomainProfile",
+          "title": "Profile"
+        }
+      },
+      "required": [
+        "profile",
+        "dns_name",
+        "netbios_name",
+        "authority_account_ref"
+      ],
+      "title": "IdentityDomain",
+      "type": "object"
+    },
+    "IdentityDomainProfile": {
+      "description": "Closed profiles whose controller/join semantics are realizable.",
+      "enum": [
+        "active_directory"
+      ],
+      "title": "IdentityDomainProfile",
+      "type": "string"
+    },
     "ImageAttestation": {
       "additionalProperties": false,
       "description": "Observed build-attestation availability and verification result.\n\nAttestation *availability* (``status``) and *verification result*\n(``verification``) are deliberately separate facts: a mutable local image\ntag with no registry-visible OCI/in-toto/SLSA attestation is not the same\nstate as a failed verification (ADR-023 \u00a75).",
@@ -6366,6 +6424,28 @@
           "title": "Description",
           "type": "string"
         },
+        "domain_controller": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipDomainController"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "domain_join": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationshipDomainJoin"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "forwarding_edge": {
           "anyOf": [
             {
@@ -6483,6 +6563,35 @@
         }
       },
       "title": "RelationshipDatabaseAccess",
+      "type": "object"
+    },
+    "RelationshipDomainController": {
+      "additionalProperties": false,
+      "description": "Typed marker for a node-to-domain controller-role edge.",
+      "properties": {},
+      "title": "RelationshipDomainController",
+      "type": "object"
+    },
+    "RelationshipDomainJoin": {
+      "additionalProperties": false,
+      "description": "Typed member join with explicit ordered controller candidates.",
+      "properties": {
+        "controller_refs": {
+          "items": {
+            "not": {
+              "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
+            },
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Controller Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "controller_refs"
+      ],
+      "title": "RelationshipDomainJoin",
       "type": "object"
     },
     "RelationshipForwardingEdge": {
@@ -6872,7 +6981,9 @@
         "connects_to",
         "depends_on",
         "manages",
-        "replicates_to"
+        "replicates_to",
+        "domain_controller_for",
+        "joins_domain"
       ],
       "title": "RelationshipType",
       "type": "string"
@@ -22579,6 +22690,22 @@
       },
       "title": "Forwarding Agents",
       "type": "array"
+    },
+    "identity_domains": {
+      "additionalProperties": {
+        "$ref": "#/$defs/IdentityDomain"
+      },
+      "propertyNames": {
+        "maxLength": 2048,
+        "minLength": 1,
+        "not": {
+          "pattern": "[^a-z0-9_.-]"
+        },
+        "pattern": "^(?:(?:[a-z0-9][a-z0-9_-]{0,63}|__private)\\.)*[a-z0-9][a-z0-9_-]{0,63}$",
+        "type": "string"
+      },
+      "title": "Identity Domains",
+      "type": "object"
     },
     "infrastructure": {
       "additionalProperties": {

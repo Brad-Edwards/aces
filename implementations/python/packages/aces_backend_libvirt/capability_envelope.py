@@ -16,6 +16,7 @@ from dataclasses import dataclass
 
 from aces_backend_protocols.account_features import provisioner_account_features
 from aces_backend_protocols.capabilities import ProvisionerCapabilities
+from aces_backend_protocols.domain_topology import domain_topology_profile
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import ChangeAction, ProvisioningPlan, RuntimeDomain
 
@@ -40,6 +41,7 @@ _CODE_UNSUPPORTED_NODE_TYPE = "libvirt-backend.realization.unsupported-node-type
 _CODE_UNSUPPORTED_OS_FAMILY = "libvirt-backend.realization.unsupported-os-family"
 _CODE_UNSUPPORTED_CONTENT_TYPE = "libvirt-backend.realization.unsupported-content-type"
 _CODE_UNSUPPORTED_ACCOUNT_FEATURE = "libvirt-backend.realization.unsupported-account-feature"
+_CODE_UNSUPPORTED_DOMAIN_PROFILE = "libvirt-backend.realization.unsupported-domain-profile"
 
 
 @dataclass(frozen=True)
@@ -95,7 +97,19 @@ _ENVELOPE_DIMENSIONS: tuple[_EnvelopeDimension, ...] = (
         extract=lambda payload: tuple(sorted(provisioner_account_features(_spec(payload)))),
         supported=lambda caps: caps.supported_account_features,
     ),
+    _EnvelopeDimension(
+        resource_types=frozenset({NODE_RESOURCE_TYPE, ACCOUNT_PLACEMENT_RESOURCE_TYPE}),
+        code=_CODE_UNSUPPORTED_DOMAIN_PROFILE,
+        noun="identity-domain profile",
+        extract=lambda payload: _requested_domain_profiles(payload),
+        supported=lambda caps: caps.supported_domain_profiles,
+    ),
 )
+
+
+def _requested_domain_profiles(payload: Mapping[str, object]) -> tuple[str, ...]:
+    profile = domain_topology_profile(payload)
+    return (profile,) if profile else ()
 
 
 def capability_envelope_diagnostics(

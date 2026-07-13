@@ -39,6 +39,7 @@ class Account(SDLModel):
     description: str = ""
     mail: str = ""
     spn: str = ""
+    domain_ref: str = ""
     shell: str = ""
     home: str = ""
     disabled: bool | str = False

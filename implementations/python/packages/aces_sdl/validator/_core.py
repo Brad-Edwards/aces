@@ -227,6 +227,7 @@ class _ValidatorCore:
         self._verify_content()
         self._verify_accounts()
         self._verify_relationships()
+        self._verify_domain_topology()
         self._verify_relationship_database_access()
         self._verify_relationship_mail_access()
         self._verify_relationship_forwarding_edges()

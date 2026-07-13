@@ -46,6 +46,7 @@ plane (ADR-055/064/069). Declarative `conditions` remain.
 |---------|------|---------|--------------|
 | `content` | `dict[str, Content]` | Data placed into systems (files, datasets, emails) | CyRIS `copy_content` |
 | `accounts` | `dict[str, Account]` | Curated scenario/provisioning accounts on nodes, not full runtime identity inventory | CyRIS `add_account` |
+| `identity_domains` | `dict[str, IdentityDomain]` | Authored domain identity and authority for controller/join realization | ACES ADR-081 |
 | `relationships` | `dict[str, Relationship]` | Typed edges between elements (auth, trust, federation) | STIX Relationship SRO |
 | `forwarding_agents` | `list[RuntimeForwardingAgent]` | Scenario-level forwarding and shipping agents with element-carried identity | ACES ADR-050 |
 | `agents` | `dict[str, Agent]` | Autonomous participants (actions, knowledge, scope) | CybORG Agents, extended by ACES |
@@ -1569,6 +1570,51 @@ model itself.
 
 ---
 
+## Identity Domains
+
+Authored identity-domain realization intent. This is separate from observed
+`nodes.*.runtime.identity_authorities` inventory.
+
+```yaml
+identity_domains:
+  corp:
+    profile: active_directory
+    dns_name: corp.example
+    netbios_name: CORP
+    authority_account_ref: domain-admin
+
+accounts:
+  domain-admin:
+    username: Administrator
+    node: dc
+  web-service:
+    username: svc-web
+    node: workstation
+    spn: HTTP/workstation.corp.example
+    domain_ref: corp
+
+relationships:
+  dc-role:
+    type: domain_controller_for
+    source: dc
+    target: corp
+    domain_controller: {}
+  workstation-join:
+    type: joins_domain
+    source: workstation
+    target: corp
+    domain_join:
+      controller_refs: [dc]
+```
+
+Every domain has a VM controller, joins list explicit same-domain controller
+candidates, the authority account lives on a controller, and domain-bound
+accounts live on participating nodes. SPNs require `domain_ref`; the domain is
+never inferred from the SPN or node operating system. See the
+{download}`normative topology specification <../../../specs/sdl/authored-domain-topology.md>`.
+
+---
+
 ## Relationships
 
 Typed directed edges between any named scenario elements. Adapted from STIX Relationship SROs.
@@ -1598,7 +1644,9 @@ relationships:
     properties: {protocol: tcp, port: "5432"}
 ```
 
-Types: `authenticates_with`, `trusts`, `federates_with`, `connects_to`, `depends_on`, `manages`, `replicates_to`.
+Types: `authenticates_with`, `trusts`, `federates_with`, `connects_to`,
+`depends_on`, `manages`, `replicates_to`, `domain_controller_for`, and
+`joins_domain`.
 
 Relationship endpoints resolve against the scenario's named elements,
 including top-level section keys, nested entity dot-paths, variables, other

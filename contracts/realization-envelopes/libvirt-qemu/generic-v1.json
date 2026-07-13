@@ -12,7 +12,7 @@
   },
   "configuration": {
     "mode": "generic",
-    "configuration_digest": "sha256:2af0fbd4a95b95a3a51d1488f641985c93e4c470baeb188f3e981f8b36327450",
+    "configuration_digest": "sha256:227d7807516ed39ad04acd4eb9fac26d0f0d3d9c81eb42a3cbf25c9215888a8c",
     "architecture": "x86_64",
     "image_policy": "local-qcow2",
     "network_policy": "libvirt-managed",
@@ -20,6 +20,7 @@
     "supported_os_families": ["linux"],
     "supported_content_types": ["file"],
     "supported_account_features": ["auth_method", "disabled", "groups", "home", "shell"],
+    "supported_domain_profiles": [],
     "supports_acls": true,
     "memory_mib": {"minimum": 128, "maximum": null},
     "vcpus": {"minimum": 1, "maximum": null}
@@ -36,5 +37,5 @@
     {"concern": "service", "disposition": "unsupported", "observation_strength": "none", "mechanism": null, "transformations": []},
     {"concern": "acl", "disposition": "realized", "observation_strength": "driver-reported", "mechanism": "libvirt-nwfilter", "transformations": []}
   ],
-  "digest": "sha256:eb3b54b199249da599cdd59e050612314ed16fe6039630307894ee8d8e2a466f"
+  "digest": "sha256:85136f73d2752c5fdaf8c4219aefc42de756486555c17fe2f4b71a7c042221f0"
 }

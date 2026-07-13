@@ -230,14 +230,31 @@ def _namespace_payload(
         if isinstance(content, dict) and content.get("target"):
             content["target"] = _maybe_rename(str(content["target"]), symbols["nodes"])
     for account in namespaced.get("accounts", {}).values():
-        if isinstance(account, dict) and account.get("node"):
-            account["node"] = _maybe_rename(str(account["node"]), symbols["nodes"])
+        if isinstance(account, dict):
+            if account.get("node"):
+                account["node"] = _maybe_rename(str(account["node"]), symbols["nodes"])
+            if account.get("domain_ref"):
+                account["domain_ref"] = _maybe_rename(
+                    str(account["domain_ref"]),
+                    symbols["identity_domains"],
+                )
+    for identity_domain in namespaced.get("identity_domains", {}).values():
+        if isinstance(identity_domain, dict) and identity_domain.get("authority_account_ref"):
+            identity_domain["authority_account_ref"] = _maybe_rename(
+                str(identity_domain["authority_account_ref"]),
+                symbols["accounts"],
+            )
     for relationship in namespaced.get("relationships", {}).values():
         if isinstance(relationship, dict):
             if relationship.get("source"):
                 relationship["source"] = _maybe_rename(str(relationship["source"]), symbols["named"])
             if relationship.get("target"):
                 relationship["target"] = _maybe_rename(str(relationship["target"]), symbols["named"])
+            domain_join = relationship.get("domain_join")
+            if isinstance(domain_join, dict):
+                domain_join["controller_refs"] = [
+                    _maybe_rename(name, symbols["nodes"]) for name in domain_join.get("controller_refs", [])
+                ]
             forwarding_edge = relationship.get("forwarding_edge")
             if isinstance(forwarding_edge, dict) and forwarding_edge.get("forwarder_ref"):
                 forwarding_edge["forwarder_ref"] = _maybe_rename(

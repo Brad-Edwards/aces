@@ -358,3 +358,6 @@ adrs:
   - id: ADR-080
     path: docs/decisions/adrs/adr-080-revision-pinned-sdl-lineage-and-provenance-ledger.md
     pin: e5b44525b5c2bfcef5516e3661c6d3d3a6cb816c10d4c4bb05d720554cea6663
+  - id: ADR-081
+    path: docs/decisions/adrs/adr-081-authored-identity-domain-topology.md
+    pin: ac1e328e8c8f789a490853efa0f949ece0ebc93dc0ad08425adedb9ef9fe9273

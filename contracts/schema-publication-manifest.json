@@ -42,10 +42,10 @@
       "contract_id": "backend-manifest-v2",
       "schema_path": "contracts/schemas/backend-manifest/backend-manifest-v2.json",
       "stability": "draft",
-      "content_hash": "e2beb9d9f20f7564c8b485b653c706b8b3d83ebdc535bff62e80fbcd82d8200f",
+      "content_hash": "014178ea05ae875548c1121e11a59cb66215614a63bde35544dd972f0f53420c",
       "last_change": {
-        "summary": "Published evaluator proposition, assertion, evidence, truth-outcome, temporal, and binding-provenance capability declarations and assertion-aware orchestration support.",
-        "content_hash": "e2beb9d9f20f7564c8b485b653c706b8b3d83ebdc535bff62e80fbcd82d8200f"
+        "summary": "Added the governed provisioner domain-profile capability dimension for authored identity-domain realization (issue #763).",
+        "content_hash": "014178ea05ae875548c1121e11a59cb66215614a63bde35544dd972f0f53420c"
       }
     },
     {
@@ -180,20 +180,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "15998ab101e41f0b87a7a661b959f6ebfcd7cc4c94041e1a1b20ab2573b08b4b",
+      "content_hash": "d955247a08984f50f620fb602834caa8cf325aa3afc4427ae279b1b7a1d9b5d4",
       "last_change": {
-        "summary": "Clarified that Node.services entries identify node-local transport bindings without granting reachability or host publication (issue #748).",
-        "content_hash": "15998ab101e41f0b87a7a661b959f6ebfcd7cc4c94041e1a1b20ab2573b08b4b"
+        "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
+        "content_hash": "d955247a08984f50f620fb602834caa8cf325aa3afc4427ae279b1b7a1d9b5d4"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "c46feef54bde3cfe238cb1949386e5d726ef7319c2414bc307651e12a991b6e8",
+      "content_hash": "8fa21683b87d9754bb6ff8a99caf011fc7c92ea49eecdeacd38a47733b8ad83d",
       "last_change": {
-        "summary": "Clarified that Node.services entries identify node-local transport bindings without granting reachability or host publication (issue #748).",
-        "content_hash": "c46feef54bde3cfe238cb1949386e5d726ef7319c2414bc307651e12a991b6e8"
+        "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
+        "content_hash": "8fa21683b87d9754bb6ff8a99caf011fc7c92ea49eecdeacd38a47733b8ad83d"
       }
     },
     {
@@ -380,10 +380,10 @@
       "contract_id": "realization-envelope-v1",
       "schema_path": "contracts/schemas/realization-envelope/realization-envelope-v1.json",
       "stability": "draft",
-      "content_hash": "a5992e81fbc935a7ee6eab3b173a89d6e664274f0f143475e303a54d01a27374",
+      "content_hash": "0eb46ba5c89a8eee9e2ba74fb9079f690bca392eacf774da0900379b4fd79580",
       "last_change": {
-        "summary": "Added explicit service-concern disclosure so backend envelopes cannot hide declared guest services inside another concern.",
-        "content_hash": "a5992e81fbc935a7ee6eab3b173a89d6e664274f0f143475e303a54d01a27374"
+        "summary": "Added domain-profile capability disclosure to material backend realization configurations (issue #763).",
+        "content_hash": "0eb46ba5c89a8eee9e2ba74fb9079f690bca392eacf774da0900379b4fd79580"
       }
     },
     {
@@ -446,10 +446,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "9e9b402a1a1505054bc555f19b674d798e092667d3da54f1a8561369e26191e3",
+      "content_hash": "d1339b02f53d9c9885bd0f3a48e07c3e12b67406df561869c56140f445da22ac",
       "last_change": {
-        "summary": "Clarified that Node.services entries identify node-local transport bindings without granting reachability or host publication (issue #748).",
-        "content_hash": "9e9b402a1a1505054bc555f19b674d798e092667d3da54f1a8561369e26191e3"
+        "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
+        "content_hash": "d1339b02f53d9c9885bd0f3a48e07c3e12b67406df561869c56140f445da22ac"
       }
     },
     {

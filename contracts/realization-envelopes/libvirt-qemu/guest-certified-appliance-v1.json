@@ -31,6 +31,7 @@
       "home",
       "shell"
     ],
+    "supported_domain_profiles": [],
     "supports_acls": false,
     "memory_mib": {
       "minimum": 64,
@@ -40,7 +41,7 @@
       "minimum": 1,
       "maximum": 2
     },
-    "configuration_digest": "sha256:b33ad469eaf1a47963e49da8adc7376fc22880ac3e6126b427239daa00dc6d99"
+    "configuration_digest": "sha256:fbb560799256b26deb85fead1de2a681f5f93d16a03bb7c3e7d9792fcf88ea6c"
   },
   "concerns": [
     {
@@ -114,5 +115,5 @@
       "transformations": []
     }
   ],
-  "digest": "sha256:8416a600a6f1864e1b80e49fa60eef5f423f9249f2ea7dc56e14d8a669e33e2e"
+  "digest": "sha256:9f5e7b452821febb9e4f160b843dfc76f7d2ace1fb3dd2adb675fc9ce020aaa7"
 }

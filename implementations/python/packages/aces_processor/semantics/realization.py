@@ -75,6 +75,7 @@ CONCERN_PAYLOAD_PATH: dict[str, tuple[str, ...]] = {
     "os-family": ("os_family",),
     "node-type": ("node_type",),
     "content-type": ("spec", "type"),
+    "domain-topology": ("domain_topology",),
 }
 
 

@@ -521,12 +521,41 @@ vulnerabilities:
   unconstrained-deleg: {name: Unconstrained Delegation, description: "Machine trusts for any service", technical: true, class: CWE-250}
   ntlm-relay: {name: NTLM Relay, description: "NTLM auth relay to Exchange for privesc", technical: true, class: CWE-294}
 
+identity_domains:
+  corp:
+    profile: active_directory
+    dns_name: corp.offshore.local
+    netbios_name: CORP
+    authority_account_ref: da-corp
+  dev:
+    profile: active_directory
+    dns_name: dev.corp.offshore.local
+    netbios_name: DEV
+    authority_account_ref: da-dev
+
 accounts:
-  svc-sql: {username: svc_mssql, node: dc-corp, password_strength: weak, spn: "MSSQL/mssql.corp.offshore.local", groups: [Domain Users]}
-  da-corp: {username: Administrator, node: dc-corp, password_strength: strong, groups: [Domain Admins]}
-  nopreauth-user: {username: svc_legacy, node: dc-corp, password_strength: weak, description: "AS-REP roastable"}
+  svc-sql: {username: svc_mssql, node: dc-corp, password_strength: weak, spn: "MSSQL/mssql.corp.offshore.local", domain_ref: corp, groups: [Domain Users]}
+  da-corp: {username: Administrator, node: dc-corp, domain_ref: corp, password_strength: strong, groups: [Domain Admins]}
+  da-dev: {username: Administrator, node: dc-dev, domain_ref: dev, password_strength: strong, groups: [Domain Admins]}
+  nopreauth-user: {username: svc_legacy, node: dc-corp, domain_ref: corp, password_strength: weak, description: "AS-REP roastable"}
 
 relationships:
+  dc-corp-controls-corp-domain:
+    type: domain_controller_for
+    source: dc-corp
+    target: corp
+    domain_controller: {}
+  dc-dev-controls-dev-domain:
+    type: domain_controller_for
+    source: dc-dev
+    target: dev
+    domain_controller: {}
+  exchange-joins-corp-domain:
+    type: joins_domain
+    source: exchange
+    target: corp
+    domain_join:
+      controller_refs: [dc-corp]
   dev-trusts-corp:
     type: trusts
     source: ad-dev

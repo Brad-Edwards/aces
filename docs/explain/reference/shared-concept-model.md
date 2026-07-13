@@ -152,6 +152,7 @@ For example, a backend manifest binds its provisioner vocabulary:
   {"scope": "capabilities.provisioner.supported_os_families", "family": "assets"},
   {"scope": "capabilities.provisioner.supported_content_types", "family": "tools-and-artifacts"},
   {"scope": "capabilities.provisioner.supported_account_features", "family": "identities"},
+  {"scope": "capabilities.provisioner.supported_domain_profiles", "family": "identities"},
   {"scope": "capabilities.orchestrator.supported_sections", "family": "actions-and-events"},
   {"scope": "capabilities.evaluator.supported_sections", "family": "observables"}
 ]

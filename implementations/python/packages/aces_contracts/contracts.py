@@ -39,6 +39,7 @@ from aces_sdl.participant_temporal_semantics import (
 )
 from aces_sdl.scenario import InstantiatedScenario, Scenario
 from aces_sdl.schema_catalogs import HASHMAP_SECTIONS, RUNTIME_SERVICE_FAMILIES, RuntimeReferenceChild
+from aces_sdl.value_parsing import VARIABLE_REFERENCE_SCHEMA_MARKER
 from pydantic import BaseModel, ConfigDict, Field, GetJsonSchemaHandler, StrictInt, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
@@ -161,6 +162,7 @@ _BACKEND_CONCEPT_BINDING_SCOPES = frozenset(
         "capabilities.provisioner.supported_os_families",
         "capabilities.provisioner.supported_content_types",
         "capabilities.provisioner.supported_account_features",
+        "capabilities.provisioner.supported_domain_profiles",
         "capabilities.orchestrator.supported_sections",
         "capabilities.evaluator.supported_sections",
         "capabilities.observation.supported_capture_kinds",
@@ -644,16 +646,40 @@ def _child_subschemas(node: dict[str, Any]) -> list[Any]:
 
 
 def _forbid_variable_tokens_in_strings(node: object) -> None:
-    """Recursively forbid the ``${var}`` token on every free string subschema."""
+    """Remove variable-only alternatives and forbid tokens in remaining strings."""
     if isinstance(node, list):
         for item in node:
             _forbid_variable_tokens_in_strings(item)
         return
     if not isinstance(node, dict):
         return
+    _remove_variable_reference_union_branches(node)
     _apply_string_token_constraint(node)
     for child in _child_subschemas(node):
         _forbid_variable_tokens_in_strings(child)
+
+
+def _remove_variable_reference_union_branches(node: dict[str, Any]) -> None:
+    """Collapse authoring unions to their concrete branches for phase artifacts."""
+    for keyword in ("anyOf", "oneOf"):
+        branches = node.get(keyword)
+        if not isinstance(branches, list):
+            continue
+        retained = [
+            branch
+            for branch in branches
+            if not (isinstance(branch, dict) and branch.get(VARIABLE_REFERENCE_SCHEMA_MARKER) is True)
+        ]
+        if len(retained) == len(branches):
+            continue
+        node.pop(keyword)
+        if len(retained) == 1 and isinstance(retained[0], dict):
+            outer_keywords = dict(node)
+            node.clear()
+            node.update(retained[0])
+            node.update(outer_keywords)
+        else:
+            node[keyword] = retained or [{"not": {}}]
 
 
 def _attach_instantiation_invariants(contract_id: str, json_schema: dict[str, Any]) -> None:
@@ -2556,6 +2582,7 @@ class ProvisionerCapabilitiesModel(ContractModel):
     supported_os_families: list[NonEmptyString] = Field(min_length=1)
     supported_content_types: list[NonEmptyString] = Field(default_factory=list)
     supported_account_features: list[NonEmptyString] = Field(default_factory=list)
+    supported_domain_profiles: list[NonEmptyString] = Field(default_factory=list)
     max_total_nodes: int | None = Field(default=None, gt=0)
     supports_acls: bool = False
     supports_accounts: bool = False
@@ -2578,6 +2605,10 @@ class ProvisionerCapabilitiesModel(ContractModel):
         _validate_controlled_vocabulary_terms(
             "capabilities.provisioner.supported_account_features",
             self.supported_account_features,
+        )
+        _validate_controlled_vocabulary_terms(
+            "capabilities.provisioner.supported_domain_profiles",
+            self.supported_domain_profiles,
         )
         if self.supports_accounts and not self.supported_account_features:
             raise ValueError("provisioners that support accounts must declare supported_account_features")

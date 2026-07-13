@@ -76,6 +76,9 @@ _ACCOUNT_VALIDATOR = (
 _RELATIONSHIP_VALIDATOR = (
     "[relationship validator](../../implementations/python/packages/aces_sdl/validator/_relationships.py)"
 )
+_DOMAIN_TOPOLOGY_SEMANTICS = (
+    "[domain topology semantics](../../implementations/python/packages/aces_sdl/semantics/domain_topology.py)"
+)
 _PARTICIPANT_VALIDATOR = (
     "[participant validator](../../implementations/python/packages/aces_sdl/validator/_content_objectives.py)"
 )
@@ -182,6 +185,18 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         "fatal unless target is a vm node",
         _CONTENT_VALIDATOR,
     ),
+    "accounts.*.domain_ref": (
+        "identity_domains",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or inconsistent topology",
+        _DOMAIN_TOPOLOGY_SEMANTICS,
+    ),
+    "identity_domains.*.authority_account_ref": (
+        "accounts",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or authority outside domain controllers",
+        _DOMAIN_TOPOLOGY_SEMANTICS,
+    ),
     "accounts.*.node": (
         "nodes",
         _SEMANTIC,
@@ -199,6 +214,12 @@ _REFERENCE_EDGE_EXPECTATIONS: dict[str, tuple[str, str, str, str]] = {
         _SEMANTIC,
         "fatal dangling or ambiguous; subtype may narrow domain",
         _RELATIONSHIP_VALIDATOR,
+    ),
+    "relationships.*.domain_join.controller_refs[]": (
+        "nodes",
+        _SEMANTIC,
+        "fatal dangling, ambiguous, or controller outside target domain",
+        _DOMAIN_TOPOLOGY_SEMANTICS,
     ),
     "agents.*.entity": ("entities", _SEMANTIC, _DANGLING, _PARTICIPANT_VALIDATOR),
     "agents.*.starting_accounts[]": (

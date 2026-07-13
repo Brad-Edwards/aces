@@ -1092,6 +1092,13 @@ vulnerabilities:
     technical: true
     class: CWE-918
 
+identity_domains:
+  techvault:
+    profile: active_directory
+    dns_name: techvault.local
+    netbios_name: TECHVAULT
+    authority_account_ref: svc-backup
+
 accounts:
   ceo:
     username: ceo
@@ -1118,7 +1125,15 @@ accounts:
     groups: [Backup Operators]
     password_strength: weak
     spn: "MSSQL/db.techvault.local"
+    domain_ref: techvault
     description: "Kerberoastable service account"
+
+relationships:
+  dc-controls-techvault-domain:
+    type: domain_controller_for
+    source: dc
+    target: techvault
+    domain_controller: {}
 
 content:
   phishing-lures:
@@ -1431,6 +1446,18 @@ features:
     dependencies: [ad-forest-root]
     description: "AD Federation Services for SSO"
 
+identity_domains:
+  corp:
+    profile: active_directory
+    dns_name: ${domain_name}
+    netbios_name: CORP
+    authority_account_ref: domain-admin
+  dev:
+    profile: active_directory
+    dns_name: ${child_domain}
+    netbios_name: DEV
+    authority_account_ref: child-admin
+
 accounts:
   domain-admin:
     username: Administrator
@@ -1443,6 +1470,7 @@ accounts:
     groups: [Domain Users]
     password_strength: weak
     spn: "MSSQL/db.corp.local"
+    domain_ref: corp
     description: "Kerberoastable service account"
   child-admin:
     username: Administrator
@@ -1457,6 +1485,28 @@ accounts:
     mail: "jdoe@corp.local"
 
 relationships:
+  dc01-controls-corp-domain:
+    type: domain_controller_for
+    source: dc01
+    target: corp
+    domain_controller: {}
+  dc02-controls-dev-domain:
+    type: domain_controller_for
+    source: dc02
+    target: dev
+    domain_controller: {}
+  adfs-joins-corp-domain:
+    type: joins_domain
+    source: adfs
+    target: corp
+    domain_join:
+      controller_refs: [dc01]
+  ws01-joins-corp-domain:
+    type: joins_domain
+    source: ws01
+    target: corp
+    domain_join:
+      controller_refs: [dc01]
   child-trusts-parent:
     type: trusts
     source: ad-child-domain

@@ -60,6 +60,7 @@ def _concept_bindings() -> tuple[ConceptBinding, ...]:
         ConceptBinding(scope="capabilities.provisioner.supported_os_families", family="assets"),
         ConceptBinding(scope="capabilities.provisioner.supported_content_types", family="tools-and-artifacts"),
         ConceptBinding(scope="capabilities.provisioner.supported_account_features", family="identities"),
+        ConceptBinding(scope="capabilities.provisioner.supported_domain_profiles", family="identities"),
         ConceptBinding(scope="capabilities.orchestrator.supported_sections", family="actions-and-events"),
         ConceptBinding(scope="capabilities.evaluator.supported_sections", family="observables"),
         ConceptBinding(
@@ -124,6 +125,7 @@ def _capabilities() -> BackendCapabilitySet:
             supported_os_families=frozenset({"linux", "windows", "macos", "freebsd", "other"}),
             supported_content_types=frozenset({"file", "dataset", "directory"}),
             supported_account_features=frozenset({"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}),
+            supported_domain_profiles=frozenset({"active_directory"}),
             max_total_nodes=None,
             supports_acls=False,
             supports_accounts=True,
