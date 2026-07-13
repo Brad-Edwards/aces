@@ -41,10 +41,7 @@ nodes:
       - {name: wazuh-api, port: 55000, protocol: tcp}
       - {name: agent-events, port: 1514, protocol: tcp}
       - {name: syslog, port: 514, protocol: udp}
-    runtime:
-      health:
-        status: healthy
-        description: Runtime healthcheck must pass before public startup is ready.
+    conditions: {wazuh-manager-health: ""}
   wazuh-indexer:
     type: vm
     os: linux
@@ -102,3 +99,9 @@ infrastructure:
   aptl-grafana-otel:
     links: [security-net]
     dependencies: [aptl-tempo]
+
+conditions:
+  wazuh-manager-health:
+    command: /usr/local/bin/check-wazuh-manager
+    interval: 30
+    description: Declarative healthcheck required before public startup is ready.

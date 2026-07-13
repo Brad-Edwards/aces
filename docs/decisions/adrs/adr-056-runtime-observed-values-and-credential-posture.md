@@ -131,3 +131,9 @@ Rejected alternatives:
   would make raw secret omission advisory instead of executable.
 - Folding credential strength into credential posture was rejected because it
   would conflate presence/redaction with quality or assurance.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-13 | #417 | Narrowed the authored SDL boundary: health results, generated network identity, scanner-derived package findings, and scanner capture provenance use evidence/derived carriers rather than `Node.runtime`; the shared redaction invariant continues to govern the remaining declarative runtime fields. |

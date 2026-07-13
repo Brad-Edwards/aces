@@ -368,14 +368,6 @@ nodes:
         dns_options: ndots:0
         dns_search: [techvault.local]
         group_add: [adm, "101"]
-      health:
-        status: healthy
-        failing_streak: "0"
-        log:
-          - start: "2026-05-20T12:00:00Z"
-            end: "2026-05-20T12:00:01Z"
-            exit_code: "0"
-            output: ok
       packages:
         - manager: apk
           name: musl
@@ -385,7 +377,7 @@ nodes:
           name: shuffle-backend
           version: 1.2.3
           component_type: application
-          provenance: scanner
+          provenance: package-manager
           ecosystem: go
           purl: "pkg:golang/github.com/frikky/shuffle@1.2.3"
           cpe: "cpe:2.3:a:shuffle:shuffle:1.2.3:*:*:*:*:*:*:*"
@@ -401,15 +393,6 @@ nodes:
         - ecosystem: go
           path: /app/go.mod
           format: go-module
-      package_vulnerabilities:
-        - id: CVE-2026-12345
-          package_name: musl
-          installed_version: 1.2.4-r2
-          fixed_version: 1.2.5-r0
-          severity: high
-          scanner: trivy
-          image_digest: sha256:abc123
-          scan_time: "2026-05-20T12:00:00Z"
 """
         scenario = parse_sdl(sdl)
         node = scenario.nodes["shuffle-backend"]
@@ -476,10 +459,6 @@ nodes:
         assert node.runtime.container.init_process.executable_path == "/sbin/docker-init"
         assert node.runtime.container.init_process.reaps_children is True
         assert node.runtime.container.init_process.argv == ["/sbin/docker-init", "--", "/entrypoint.sh"]
-        assert node.runtime.health is not None
-        assert node.runtime.health.status == "healthy"
-        assert node.runtime.health.failing_streak == 0
-        assert node.runtime.health.log[0].exit_code == 0
         assert node.runtime.packages[0].manager == "apk"
         assert node.runtime.packages[0].name == "musl"
         assert node.runtime.packages[0].version == "1.2.4-r2"
@@ -487,7 +466,7 @@ nodes:
         assert node.runtime.software_components[0].name == "shuffle-backend"
         assert node.runtime.software_components[0].version == "1.2.3"
         assert node.runtime.software_components[0].component_type == "application"
-        assert node.runtime.software_components[0].provenance == "scanner"
+        assert node.runtime.software_components[0].provenance == "package_manager"
         assert node.runtime.software_components[0].ecosystem == "go"
         assert node.runtime.software_components[0].purl == "pkg:golang/github.com/frikky/shuffle@1.2.3"
         assert node.runtime.software_components[0].package_manager == "apk"
@@ -499,14 +478,6 @@ nodes:
         assert node.runtime.dependency_manifests[0].ecosystem == "go"
         assert node.runtime.dependency_manifests[0].path == "/app/go.mod"
         assert node.runtime.dependency_manifests[0].format == "go-module"
-        assert node.runtime.package_vulnerabilities[0].id == "CVE-2026-12345"
-        assert node.runtime.package_vulnerabilities[0].package_name == "musl"
-        assert node.runtime.package_vulnerabilities[0].installed_version == "1.2.4-r2"
-        assert node.runtime.package_vulnerabilities[0].fixed_version == "1.2.5-r0"
-        assert node.runtime.package_vulnerabilities[0].severity == "high"
-        assert node.runtime.package_vulnerabilities[0].scanner == "trivy"
-        assert node.runtime.package_vulnerabilities[0].image_digest == "sha256:abc123"
-        assert node.runtime.package_vulnerabilities[0].scan_time == "2026-05-20T12:00:00Z"
 
     def test_runtime_local_identity_inventory_parses_with_canonical_keys(self):
         sdl = """
@@ -612,18 +583,12 @@ nodes:
         domainname: techvault.local
         endpoints:
           - network: aptl-dmz
-            network_id: net-a1b2c3d4e5f6
-            network_id_stability: stable
-            endpoint_id: ep-1a2b3c4d5e6f
-            endpoint_id_stability: ephemeral
-            backend_generated: true
             ip_address: 172.20.0.20
             ip_prefix_length: "24"
             gateway: 172.20.0.1
             mac_address: 02:42:ac:14:00:14
             aliases: [aptl-webapp, webapp]
             dns_names: [aptl-webapp, webapp]
-            generated_dns_names: [a1b2c3d4e5f6]
             backend:
               driver: bridge
               ipam_driver: default
@@ -649,17 +614,12 @@ infrastructure:
         assert network.domainname == "techvault.local"
         endpoint = network.endpoints[0]
         assert endpoint.network == "aptl-dmz"
-        assert endpoint.network_id == "net-a1b2c3d4e5f6"
-        assert endpoint.network_id_stability == "stable"
-        assert endpoint.endpoint_id_stability == "ephemeral"
-        assert endpoint.backend_generated is True
         assert endpoint.ip_address == "172.20.0.20"
         assert endpoint.ip_prefix_length == 24
         assert endpoint.gateway == "172.20.0.1"
         assert endpoint.mac_address == "02:42:ac:14:00:14"
         assert endpoint.aliases == ["aptl-webapp", "webapp"]
         assert endpoint.dns_names == ["aptl-webapp", "webapp"]
-        assert endpoint.generated_dns_names == ["a1b2c3d4e5f6"]
         # Backend-native option keys are preserved verbatim as literal-map data.
         assert endpoint.backend.driver == "bridge"
         assert endpoint.backend.driver_options == {"com.docker.network.bridge.name": "br-dmz"}

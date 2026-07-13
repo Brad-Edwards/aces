@@ -91,3 +91,9 @@ remains evidence/provenance input rather than the normative schema.
 - Future references from components to packages, manifests, files, or processes
   must add semantic validation and module-reference support together, rather
   than publishing dangling string conventions.
+
+## Amendments
+
+| Date | Commit/PR | Summary |
+|------|-----------|---------|
+| 2026-07-13 | #417 | Clarified that authored software components describe required final state; scanner, SBOM, filesystem, and process-inspection capture methods remain evidence provenance and are no longer accepted as component provenance values in SDL. |

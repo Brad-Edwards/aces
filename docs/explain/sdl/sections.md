@@ -25,14 +25,14 @@ The OCR scoring pipeline sections (`metrics`, `evaluations`, `tlos`, `goals`)
 were removed from the SDL by
 [ADR-073](../../decisions/adrs/adr-073-scoring-reward-language-scope.md); graded
 scoring, reward, and evaluation outputs now live in the experiment/evaluator
-plane (ADR-055/064/069). `conditions` (observable state) remain.
+plane (ADR-055/064/069). Declarative `conditions` remain.
 
 | Section | Type | Purpose |
 |---------|------|---------|
 | `nodes` | `dict[str, Node]` | VMs and network switches — the compute/network topology |
 | `infrastructure` | `dict[str, InfraNode]` | Deployment topology: counts, links, dependencies, IP/CIDR, ACLs |
 | `features` | `dict[str, Feature]` | Software (Service/Configuration/Artifact) deployed to VMs |
-| `conditions` | `dict[str, Condition]` | Health checks (command+interval or library source) — observable state |
+| `conditions` | `dict[str, Condition]` | Declarative health/readiness checks (command+interval or library source) |
 | `vulnerabilities` | `dict[str, Vulnerability]` | CWE-classified vulnerabilities assigned to nodes/features |
 | `entities` | `dict[str, Entity]` | Teams, organizations, people (recursive, with exercise roles) |
 | `injects` | `dict[str, Inject]` | Actions between entities during exercises |
@@ -201,14 +201,6 @@ nodes:
         dns_options: [ndots:0]
         dns_search: [techvault.local]
         group_add: [adm, "101"]
-      health:
-        status: healthy
-        failing_streak: 0
-        log:
-          - start: "2026-05-20T12:00:00Z"
-            end: "2026-05-20T12:00:01Z"
-            exit_code: 0
-            output: ok
       packages:
         - manager: apk
           name: musl
@@ -218,7 +210,7 @@ nodes:
           name: shuffle-backend
           version: 1.2.3
           component_type: application
-          provenance: scanner
+          provenance: package-manager
           ecosystem: go
           purl: "pkg:golang/github.com/frikky/shuffle@1.2.3"
           cpe: "cpe:2.3:a:shuffle:shuffle:1.2.3:*:*:*:*:*:*:*"
@@ -234,15 +226,6 @@ nodes:
         - ecosystem: go
           path: /app/go.mod
           format: go-module
-      package_vulnerabilities:
-        - id: CVE-2026-12345
-          package_name: musl
-          installed_version: 1.2.4-r2
-          fixed_version: 1.2.5-r0
-          severity: high
-          scanner: trivy
-          image_digest: sha256:abc123
-          scan_time: "2026-05-20T12:00:00Z"
       local_identity:                   # observed /etc/passwd, /etc/group, sudo facts
         users:
           - username: www-data
@@ -265,23 +248,17 @@ nodes:
             run_as_users: [root]
             commands: ["/usr/bin/systemctl restart wazuh-agent"]
             nopasswd: true
-      network:                          # observed container network realization
+      network:                          # deliberately required runtime network state
         hostname: techvault-webapp
         domainname: techvault.local
         endpoints:
           - network: aptl-dmz           # references a switch-backed infrastructure entry
-            network_id: 7f2c1ad4e9b3...
-            network_id_stability: stable
-            endpoint_id: 3a9c7e0d3f5b...
-            endpoint_id_stability: ephemeral
-            backend_generated: true
             ip_address: 172.20.0.20
             ip_prefix_length: 24
             gateway: 172.20.0.1
             mac_address: 02:42:ac:14:00:14
             aliases: [aptl-webapp, webapp]
             dns_names: [aptl-webapp, webapp]
-            generated_dns_names: [3a9c7e0d3f5b]
             backend:
               driver: bridge
               ipam_driver: default
@@ -747,17 +724,24 @@ When `features`, `conditions`, or `injects` use the `{name: role}` form, the rol
 
 Concrete service bindings on a VM must be unique by `protocol` + `port`. Reusing `53/tcp` and `53/udp` is valid; declaring `443/tcp` twice on the same node is rejected. If a service binding also has a `name`, that `name` must be unique within the node and can be targeted directly as `nodes.<node>.services.<service_name>`.
 
-`runtime` captures observed facts about realized VM/container nodes. It covers
-participant-observable and analysis-relevant runtime state that is distinct
-from authored deployment intent and top-level authored declarations such as
-feature placement or service bindings; it does not exclude host-published
-bindings, application routes, daemon policy, databases, identity authorities,
-DNS service logical state, security-monitoring manager inventory, or other
-participant-interactable state merely because the evidence came from Docker,
-Compose, a scanner, or a backend inspector. Mounts describe realized
-filesystem attachments, including filesystem type, propagation, stability,
-whether a backend generated the source, and sensitivity classifications for
-the source and option strings. Mount sources or options classified as
+`runtime` is authored declarative contract state for VM/container nodes. Every
+field present there requires exact state, constrains acceptable state, or marks
+an explicitly open realization point. A value does not become an SDL
+requirement merely because Docker, a scanner, or a participant-visible probe
+reported it. Captured facts stay in a source evidence bundle and
+`ExperimentEvidenceRecordModel`; an author must deliberately promote a fact to
+the smallest semantically correct SDL field before it can affect compilation.
+Model defaults are likewise not proof of author declaration: explicitness is
+tracked through `model_fields_set` and SEM-218, not inferred from
+`model_dump()` output.
+
+Some historical runtime type and field names describe the observation that
+motivated the surface. Their carrier semantics are nevertheless declarative:
+presence in authored `Node.runtime` makes the value contract state. Mounts
+describe required filesystem attachments, including filesystem type,
+propagation, stability, whether a backend may generate the source, and
+sensitivity classifications for the source and option strings. Mount sources
+or options classified as
 `redacted` or `operator_secret` must omit the raw value. This sensitivity
 vocabulary is an ACES runtime contract, not an adopted taxonomy from Docker,
 Compose, or the cited scenario-language precedents. `filesystem_inventory` records
@@ -780,20 +764,26 @@ posture — `default`, `unconfined`, a named profile, or a profile path) and
 such as `seccomp:unconfined` or `no-new-privileges`); a seccomp posture is a
 distinct security control from `privileged`, so it is recorded separately (see
 [ADR-028](../../decisions/adrs/adr-028-container-seccomp-security-options-surface.md));
-`health` records observed health status and bounded healthcheck log facts;
 `packages` records package-manager rows; `software_components` records
 node-local software identity at component granularity with stable ACES ids,
 component type, version, purl/CPE/hash identifiers, package or manifest
-lineage, and runtime paths when known; `dependency_manifests` records observed
-manifest files; and `package_vulnerabilities` records scanner-derived
-CVE/advisory findings tied to an image digest and scan time. Software
-components are WHAT-IS state, not invocation surfaces, process snapshots, HTTP
-route inventory, build provenance, or authored deployment intent (see
+lineage, and runtime paths when required; and `dependency_manifests` records
+required manifest files. Software components are required final state, not
+invocation surfaces, process snapshots, HTTP route inventory, or scanner
+capture method (see
 [ADR-056](../../decisions/adrs/adr-056-runtime-observed-values-and-credential-posture.md)
 for the cross-surface observed-value and credential-posture inventory, and
 [ADR-034](../../decisions/adrs/adr-034-runtime-software-component-inventory.md)).
-Package findings are separate from the top-level `vulnerabilities` section,
-which remains the CWE-classified scenario vulnerability surface.
+
+Container health results are evidence, not `runtime` fields. Put the authored
+healthcheck definition in `conditions`, bind it through `Node.conditions`, and
+record status, failing streak, timestamps, exit codes, and output separately;
+the valid portable fixture
+[`runtime-health-observation.json`](../../../contracts/fixtures/experiment-core/experiment-evidence-record-v1/valid/runtime-health-observation.json)
+shows that carrier. Scanner identity/version/database, scan time, raw findings,
+and advisory snapshot state likewise belong in evidence. Derived severity
+counts belong in `ExperimentDerivedMeasureModel`; they do not automatically
+become top-level authored `vulnerabilities`.
 
 `runtime.service_manager_units` records observed service-manager unit
 lifecycle state — what `systemctl` exposes from inside a realized range node.
@@ -844,22 +834,16 @@ distinct from the top-level `accounts` provisioning surface, and service
 accounts recorded here are not implicitly compiled into account placements
 (see [ADR-024](../../decisions/adrs/adr-024-local-identity-inventory-surface.md)).
 
-`runtime.network` records the observed container network realization — the
-facts visible from inside the realized range or by a harness, distinct from the
-`infrastructure` topology declaration. `hostname` and `domainname` are the
-container's network identity. Each `endpoints` entry is a per-network
-attachment: `network` references a declared switch-backed infrastructure entry,
-and the entry carries the realized `ip_address`, `ip_prefix_length`, `gateway`,
-and `mac_address`; backend `network_id`/`endpoint_id` each with an explicit
-`stable`/`ephemeral` stability classification; a `backend_generated` flag; and
-three distinct name lists — stable per-network `aliases`, observed `dns_names`,
-and backend-`generated_dns_names` (such as a container-ID-prefixed DNS name,
-which is not stable scenario identity). The optional `backend` block records
-observable network `driver` and `ipam_driver` plus bounded backend-native
-`driver_options`/`ipam_options` maps — not raw engine inspect payloads.
-`published_ports` records host-published bindings, keeping container port, host
-IP, host port, and protocol distinct; this is host exposure observed at
-runtime, separate from the authored `services` declaration and image-default
+`runtime.network` records deliberately required container network state,
+distinct from the `infrastructure` topology declaration. `hostname`,
+`domainname`, aliases/DNS names, addresses, prefix, gateway, MAC, backend
+configuration, and published bindings are contract facts when authored.
+Docker network IDs, endpoint IDs, generated DNS names, and incidental inspect
+output are not accepted by the SDL schema; preserve them in evidence and the
+inventory mapping ledger instead. The valid portable fixture
+[`docker-network-endpoint-observation.json`](../../../contracts/fixtures/experiment-core/experiment-evidence-record-v1/valid/docker-network-endpoint-observation.json)
+demonstrates the evidence side. `published_ports` keeps container port, host IP,
+host port, and protocol distinct from the authored `services` declaration and image-default
 `source.build.config.exposed_ports`
 (see [ADR-025](../../decisions/adrs/adr-025-container-network-realization-surface.md)).
 

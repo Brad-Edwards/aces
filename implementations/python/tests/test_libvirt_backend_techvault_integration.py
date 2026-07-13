@@ -109,7 +109,18 @@ def test_techvault_operational_scenario_drives_full_libvirt_surface():
     manager = RuntimeManager(target)
     scenario = parse_sdl((EXAMPLES_DIR / "techvault-operational.sdl.yaml").read_text(encoding="utf-8"))
 
-    execution_plan = manager.plan(scenario)
+    admission_plan = manager.plan(scenario)
+
+    assert not admission_plan.is_valid
+    assert any(diagnostic.code == "evaluator.missing" for diagnostic in admission_plan.diagnostics)
+
+    provisioning_projection = scenario.model_copy(
+        update={
+            "conditions": {},
+            "nodes": {name: node.model_copy(update={"conditions": {}}) for name, node in scenario.nodes.items()},
+        }
+    )
+    execution_plan = manager.plan(provisioning_projection)
 
     assert execution_plan.is_valid
     assert execution_plan.model.scenario_name == "techvault"

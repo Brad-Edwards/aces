@@ -84,8 +84,7 @@ Runtime software components must have stable, concrete `component_id` values
 that are unique within the node runtime block.
 Runtime filesystem inventory UID/GID and size fields are non-negative, mode is
 stored as octal permission bits, and content digests must carry both the digest
-algorithm and value. Runtime healthcheck entries marked as redacted must omit
-raw output. Runtime mount sources/options and local-control bind sources
+algorithm and value. Runtime mount sources/options and local-control bind sources
 classified as `redacted` or `operator_secret` must omit the corresponding raw
 value; the Python models and generated JSON Schemas both reject non-empty raw
 values for redacted/operator-secret labels accepted by the value-normalization
@@ -389,11 +388,13 @@ evidence refs in event evidence, and participant-episode status sources in
 terminal participant-episode history for the same participant and episode.
 
 This also means the validator only enforces what the current SDL syntax can
-actually express. Node `runtime` metadata covers observed VM configuration
-facts such as mounts, path-local control interfaces, process identity, runtime
-filesystem inventory, container host/security configuration, health observations,
-package inventory, software component identity, dependency manifests, and
-scanner-derived package findings.
+actually express. Node `runtime` is declarative contract state. The closed
+model rejects observation-only health results, generated network/endpoint
+identifiers and generated DNS identity, scanner capture provenance, and
+scanner-derived package findings. Those facts use experiment evidence records,
+inventory ledgers, and derived measures instead. Packages, software components,
+dependency manifests, addresses, aliases, MACs, and backend details remain SDL
+only when an author deliberately requires them.
 The `source.build` block covers observed container image build provenance:
 base image and digest, layer chain, structured build-recipe instructions, build
 arguments, copied sources, image-default configuration, source-input mapping,

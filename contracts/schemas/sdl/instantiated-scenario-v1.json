@@ -8313,7 +8313,7 @@
     },
     "RuntimeConfiguration": {
       "additionalProperties": false,
-      "description": "Observed runtime configuration facts attached to a VM node.",
+      "description": "Declarative runtime state required by a VM node.\n\nCaptured observations remain in evidence records unless an author\ndeliberately promotes the fact to one of these contract fields.",
       "properties": {
         "app_authorizations": {
           "items": {
@@ -8421,17 +8421,6 @@
           "title": "Forwarding Agents",
           "type": "array"
         },
-        "health": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RuntimeHealthObservation"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
         "identity_authorities": {
           "items": {
             "$ref": "#/$defs/RuntimeIdentityAuthority"
@@ -8525,13 +8514,6 @@
           "title": "Orchestration Authorities",
           "type": "array"
         },
-        "package_vulnerabilities": {
-          "items": {
-            "$ref": "#/$defs/RuntimePackageVulnerabilityFinding"
-          },
-          "title": "Package Vulnerabilities",
-          "type": "array"
-        },
         "packages": {
           "items": {
             "$ref": "#/$defs/RuntimePackage"
@@ -8601,7 +8583,7 @@
     },
     "RuntimeContainerConfiguration": {
       "additionalProperties": false,
-      "description": "Observed container runtime host and security configuration facts.",
+      "description": "Required container runtime host and security configuration facts.",
       "properties": {
         "autoremove": {
           "anyOf": [
@@ -10777,7 +10759,7 @@
     },
     "RuntimeDependencyManifest": {
       "additionalProperties": false,
-      "description": "A dependency manifest visible in the realized runtime artifact.",
+      "description": "A dependency manifest required in the runtime artifact.",
       "properties": {
         "ecosystem": {
           "not": {
@@ -10827,7 +10809,7 @@
     },
     "RuntimeDeviceMapping": {
       "additionalProperties": false,
-      "description": "A host device mapping observed in runtime configuration.",
+      "description": "A host device mapping required in runtime configuration.",
       "properties": {
         "container_path": {
           "not": {
@@ -11015,7 +10997,7 @@
       "type": "object"
     },
     "RuntimeEnvironmentValueClassification": {
-      "description": "Sensitivity classification for an observed runtime environment value.",
+      "description": "Sensitivity classification for a required runtime environment value.",
       "enum": [
         "plain",
         "redacted",
@@ -11029,7 +11011,7 @@
     },
     "RuntimeEnvironmentVariable": {
       "additionalProperties": false,
-      "description": "Observed runtime environment variable with provenance and sensitivity.",
+      "description": "Required runtime environment variable with provenance and sensitivity.",
       "properties": {
         "description": {
           "default": "",
@@ -11100,7 +11082,7 @@
       "type": "object"
     },
     "RuntimeEnvironmentVariableProvenance": {
-      "description": "Origin class for an observed runtime environment variable.",
+      "description": "Required origin class for a runtime environment variable.",
       "enum": [
         "compose",
         "image",
@@ -11115,7 +11097,7 @@
     },
     "RuntimeExtraHost": {
       "additionalProperties": false,
-      "description": "An observed extra host mapping in runtime configuration.",
+      "description": "A required extra host mapping in runtime configuration.",
       "properties": {
         "address": {
           "not": {
@@ -12881,140 +12863,6 @@
       "title": "RuntimeForwardingTransformKind",
       "type": "string"
     },
-    "RuntimeHealthObservation": {
-      "additionalProperties": false,
-      "description": "Observed runtime health status and healthcheck log facts.",
-      "properties": {
-        "description": {
-          "default": "",
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Description",
-          "type": "string"
-        },
-        "failing_streak": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "not": {
-                "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-              },
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Failing Streak"
-        },
-        "log": {
-          "items": {
-            "$ref": "#/$defs/RuntimeHealthcheckLog"
-          },
-          "title": "Log",
-          "type": "array"
-        },
-        "status": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RuntimeHealthStatus"
-            },
-            {
-              "not": {
-                "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-              },
-              "type": "string"
-            }
-          ],
-          "default": "unknown",
-          "title": "Status"
-        }
-      },
-      "title": "RuntimeHealthObservation",
-      "type": "object"
-    },
-    "RuntimeHealthStatus": {
-      "description": "Observed health status for a runtime node or container.",
-      "enum": [
-        "none",
-        "starting",
-        "healthy",
-        "unhealthy",
-        "unknown",
-        "other"
-      ],
-      "title": "RuntimeHealthStatus",
-      "type": "string"
-    },
-    "RuntimeHealthcheckLog": {
-      "additionalProperties": false,
-      "description": "An observed runtime healthcheck log entry.",
-      "properties": {
-        "end": {
-          "default": "",
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "End",
-          "type": "string"
-        },
-        "exit_code": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "not": {
-                "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-              },
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Exit Code"
-        },
-        "output": {
-          "default": "",
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Output",
-          "type": "string"
-        },
-        "output_redacted": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "not": {
-                "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-              },
-              "type": "string"
-            }
-          ],
-          "default": false,
-          "title": "Output Redacted"
-        },
-        "start": {
-          "default": "",
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Start",
-          "type": "string"
-        }
-      },
-      "title": "RuntimeHealthcheckLog",
-      "type": "object"
-    },
     "RuntimeIdentityAttribute": {
       "additionalProperties": false,
       "description": "Observed identity attribute or bounded setting.\n\nSecret-bearing names must not carry raw values. This keeps directory\npasswords, Kerberos keys, keytabs, tokens, and client secrets out of\nfixtures, diagnostics, schemas, and generated runtime artifacts.",
@@ -13720,7 +13568,7 @@
     },
     "RuntimeInitProcess": {
       "additionalProperties": false,
-      "description": "Observed backend-injected container init / PID-1 reaper configuration.\n\nModels authored container runtime intent \u2014 for example Docker Compose\n``init: true`` causing PID 1 to be ``/sbin/docker-init`` (tini). This is\ndistinct from the observed PID-1 process recorded in\n``runtime.processes``; see ADR-027.",
+      "description": "Required backend-injected container init / PID-1 reaper configuration.\n\nModels authored container runtime intent \u2014 for example Docker Compose\n``init: true`` causing PID 1 to be ``/sbin/docker-init`` (tini). This is\ndistinct from the observed PID-1 process recorded in\n``runtime.processes``; see ADR-027.",
       "properties": {
         "argv": {
           "items": {
@@ -15619,7 +15467,7 @@
     },
     "RuntimeNamespaceConfiguration": {
       "additionalProperties": false,
-      "description": "Observed namespace modes for a runtime node or container.",
+      "description": "Required namespace modes for a runtime node or container.",
       "properties": {
         "cgroup": {
           "default": "",
@@ -15667,7 +15515,7 @@
     },
     "RuntimeNetworkBackendDetail": {
       "additionalProperties": false,
-      "description": "Observed backend network driver and IPAM detail for an endpoint's network.\n\n``driver_options`` and ``ipam_options`` are the bounded extension seam for\nbackend-native key/value facts; raw backend inspect payloads are not stored.",
+      "description": "Required backend network driver and IPAM detail for an endpoint's network.\n\n``driver_options`` and ``ipam_options`` are the bounded extension seam for\nbackend-native key/value facts; raw backend inspect payloads are not stored.",
       "properties": {
         "description": {
           "default": "",
@@ -16474,7 +16322,7 @@
       "type": "string"
     },
     "RuntimeNetworkDriver": {
-      "description": "Observed backend network driver class for a realized network.",
+      "description": "Backend network driver class required by the scenario.",
       "enum": [
         "bridge",
         "overlay",
@@ -16490,7 +16338,7 @@
     },
     "RuntimeNetworkEndpoint": {
       "additionalProperties": false,
-      "description": "An observed container network endpoint (per-network attachment).\n\n``network`` references a declared switch-backed infrastructure network by\nname. Per-network ``aliases``, observed ``dns_names``, and backend-generated\n``generated_dns_names`` are kept as three distinct lists; generated names\nare not stable scenario identity.",
+      "description": "A required container network attachment.\n\n``network`` references a declared switch-backed infrastructure network by\nname. Runtime-generated identifiers and names are capture evidence, not\ndeclaration identity.",
       "properties": {
         "aliases": {
           "items": {
@@ -16513,24 +16361,6 @@
           ],
           "default": null
         },
-        "backend_generated": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "not": {
-                "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-              },
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Backend Generated"
-        },
         "description": {
           "default": "",
           "not": {
@@ -16549,29 +16379,6 @@
           "title": "Dns Names",
           "type": "array"
         },
-        "endpoint_id": {
-          "default": "",
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Endpoint Id",
-          "type": "string"
-        },
-        "endpoint_id_stability": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RuntimeNetworkIdStability"
-            },
-            {
-              "not": {
-                "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-              },
-              "type": "string"
-            }
-          ],
-          "default": "unknown",
-          "title": "Endpoint Id Stability"
-        },
         "gateway": {
           "default": "",
           "not": {
@@ -16579,16 +16386,6 @@
           },
           "title": "Gateway",
           "type": "string"
-        },
-        "generated_dns_names": {
-          "items": {
-            "not": {
-              "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-            },
-            "type": "string"
-          },
-          "title": "Generated Dns Names",
-          "type": "array"
         },
         "ip_address": {
           "default": "",
@@ -16630,29 +16427,6 @@
           },
           "title": "Network",
           "type": "string"
-        },
-        "network_id": {
-          "default": "",
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Network Id",
-          "type": "string"
-        },
-        "network_id_stability": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RuntimeNetworkIdStability"
-            },
-            {
-              "not": {
-                "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-              },
-              "type": "string"
-            }
-          ],
-          "default": "unknown",
-          "title": "Network Id Stability"
         }
       },
       "required": [
@@ -16661,20 +16435,9 @@
       "title": "RuntimeNetworkEndpoint",
       "type": "object"
     },
-    "RuntimeNetworkIdStability": {
-      "description": "Stability class for a backend-generated network or endpoint identifier.\n\nDistinct from :class:`RuntimeFilesystemStability`: filesystem stability and\nbackend-identifier stability are different concepts (ADR-025).",
-      "enum": [
-        "stable",
-        "ephemeral",
-        "unknown",
-        "other"
-      ],
-      "title": "RuntimeNetworkIdStability",
-      "type": "string"
-    },
     "RuntimeNetworkRealization": {
       "additionalProperties": false,
-      "description": "Observed container network realization facts for a node.\n\n``hostname`` and ``domainname`` are the container's network identity facts,\nkept distinct from per-network aliases and DNS names.",
+      "description": "Declarative container network state for a node.\n\n``hostname`` and ``domainname`` are required container network identities,\nkept distinct from per-network aliases and DNS names.",
       "properties": {
         "description": {
           "default": "",
@@ -16953,7 +16716,7 @@
     },
     "RuntimeOperationalPolicy": {
       "additionalProperties": false,
-      "description": "Observed restart and resource-limit policy for a runtime node.",
+      "description": "Required restart and resource-limit policy for a runtime node.",
       "properties": {
         "description": {
           "default": "",
@@ -17337,7 +17100,7 @@
     },
     "RuntimePackage": {
       "additionalProperties": false,
-      "description": "A package observed in a runtime image or node.",
+      "description": "A package required in a runtime image or node.",
       "properties": {
         "architecture": {
           "default": "",
@@ -17392,124 +17155,6 @@
       ],
       "title": "RuntimePackage",
       "type": "object"
-    },
-    "RuntimePackageVulnerabilityFinding": {
-      "additionalProperties": false,
-      "description": "A scanner-derived CVE/advisory finding for an observed package.",
-      "properties": {
-        "advisory_url": {
-          "default": "",
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Advisory Url",
-          "type": "string"
-        },
-        "fixed_version": {
-          "default": "",
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Fixed Version",
-          "type": "string"
-        },
-        "id": {
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Id",
-          "type": "string"
-        },
-        "image_digest": {
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Image Digest",
-          "type": "string"
-        },
-        "installed_version": {
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Installed Version",
-          "type": "string"
-        },
-        "package_name": {
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Package Name",
-          "type": "string"
-        },
-        "scan_time": {
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Scan Time",
-          "type": "string"
-        },
-        "scanner": {
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Scanner",
-          "type": "string"
-        },
-        "scanner_database": {
-          "default": "",
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Scanner Database",
-          "type": "string"
-        },
-        "scanner_version": {
-          "default": "",
-          "not": {
-            "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-          },
-          "title": "Scanner Version",
-          "type": "string"
-        },
-        "severity": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RuntimePackageVulnerabilitySeverity"
-            },
-            {
-              "not": {
-                "pattern": "\\$\\{([a-z0-9][a-z0-9_-]{0,63})\\}"
-              },
-              "type": "string"
-            }
-          ],
-          "default": "unknown",
-          "title": "Severity"
-        }
-      },
-      "required": [
-        "id",
-        "package_name",
-        "installed_version",
-        "scanner",
-        "image_digest",
-        "scan_time"
-      ],
-      "title": "RuntimePackageVulnerabilityFinding",
-      "type": "object"
-    },
-    "RuntimePackageVulnerabilitySeverity": {
-      "description": "Scanner-derived package finding severity.",
-      "enum": [
-        "unknown",
-        "low",
-        "medium",
-        "high",
-        "critical",
-        "other"
-      ],
-      "title": "RuntimePackageVulnerabilitySeverity",
-      "type": "string"
     },
     "RuntimePlatformApplication": {
       "additionalProperties": false,
@@ -18526,7 +18171,7 @@
     },
     "RuntimePublishedPort": {
       "additionalProperties": false,
-      "description": "An observed host-published port binding for a container endpoint.\n\nHost IP, host port, container port, and protocol are kept distinct; this is\na runtime/host exposure fact, not a node service declaration (ADR-025).",
+      "description": "A required host-published port binding for a container endpoint.\n\nHost IP, host port, container port, and protocol are kept distinct; this is\na runtime/host exposure fact, not a node service declaration (ADR-025).",
       "properties": {
         "container_port": {
           "anyOf": [
@@ -18652,7 +18297,7 @@
     },
     "RuntimeResourceLimits": {
       "additionalProperties": false,
-      "description": "Observed runtime/cgroup resource limits for a node.",
+      "description": "Required runtime/cgroup resource limits for a node.",
       "properties": {
         "cpu": {
           "anyOf": [
@@ -18757,7 +18402,7 @@
       "type": "object"
     },
     "RuntimeRestartPolicy": {
-      "description": "Portable restart policy classification observed at runtime.",
+      "description": "Portable restart policy required by the scenario.",
       "enum": [
         "no",
         "always",
@@ -20634,7 +20279,7 @@
     },
     "RuntimeSoftwareComponent": {
       "additionalProperties": false,
-      "description": "A software component observed as part of a runtime node's state.",
+      "description": "A software component required as part of a runtime node's state.",
       "properties": {
         "component_id": {
           "not": {
@@ -20779,7 +20424,7 @@
     },
     "RuntimeSoftwareComponentHash": {
       "additionalProperties": false,
-      "description": "Digest attached to an observed runtime software component.",
+      "description": "Digest required for a runtime software component.",
       "properties": {
         "algorithm": {
           "not": {
@@ -20804,15 +20449,11 @@
       "type": "object"
     },
     "RuntimeSoftwareComponentProvenance": {
-      "description": "Origin class for an observed runtime software component fact.",
+      "description": "Required source origin for a runtime software component.",
       "enum": [
         "package_manager",
         "dependency_manifest",
-        "sbom",
-        "scanner",
         "image_metadata",
-        "filesystem",
-        "process_inspection",
         "operator",
         "self_reported",
         "unknown",
@@ -20822,7 +20463,7 @@
       "type": "string"
     },
     "RuntimeSoftwareComponentType": {
-      "description": "Portable type for a software component observed on a runtime node.",
+      "description": "Portable type for a software component required on a runtime node.",
       "enum": [
         "application",
         "framework",

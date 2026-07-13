@@ -129,6 +129,9 @@ adrs:
       - date: 2026-05-25
         ref: 4b959c3
         summary: "Corrected the control-plane API cross-reference from `aces_processor.control_plane_api` to `aces_runtime.control_plane_api`."
+      - date: 2026-07-13
+        ref: "#417"
+        summary: "Moved generated network identity and incidental inspect output from authored Node.runtime to evidence while retaining deliberately required network state."
   - id: ADR-026
     path: docs/decisions/adrs/adr-026-application-http-surface-inventory.md
     pin: 8818f870d79498f3322fd5edb9d2269948d04079ef5fbc7238811911ab7f5373
@@ -161,9 +164,17 @@ adrs:
   - id: ADR-033
     path: docs/decisions/adrs/adr-033-scenario-delivery-boundary-for-runtime-node-state.md
     pin: da01715747264384779a9bb203f4081ca401edaf7a947ecc48d791a18c97b69b
+    amendments:
+      - date: 2026-07-13
+        ref: "#417"
+        summary: "Refined participant-discoverable capture versus deliberate authored runtime contract promotion across the six carrier categories."
   - id: ADR-034
     path: docs/decisions/adrs/adr-034-runtime-software-component-inventory.md
     pin: eb62ece791c5c0b442d5c77d89867832c01f0f5bc108b577f8636089be7c647e
+    amendments:
+      - date: 2026-07-13
+        ref: "#417"
+        summary: "Clarified authored software components as required final state and moved scanner/SBOM/filesystem/process capture methods to evidence provenance."
   - id: ADR-035
     path: docs/decisions/adrs/adr-035-service-manager-unit-state-runtime-surface.md
     pin: a8eb4df39f8b88781fee62ce83a2d2abee3951ebbeed5dc0c544a2a929ffad06
@@ -267,6 +278,10 @@ adrs:
   - id: ADR-056
     path: docs/decisions/adrs/adr-056-runtime-observed-values-and-credential-posture.md
     pin: 3aa602de53f7607cf531b4a9da3f58192eb87ad21ddd92846fd2ae2a7526a4c3
+    amendments:
+      - date: 2026-07-13
+        ref: "#417"
+        summary: "Narrowed observation-only health, generated network identity, and scanner facts out of authored Node.runtime while retaining shared redaction semantics."
   - id: ADR-057
     path: docs/decisions/adrs/adr-057-runtime-secret-name-classifier-boundaries.md
     pin: 44c638bf47df8545b8af8a3850476fabc46a4ea42b3a8003b4f9ea1e89f72f49
