@@ -190,13 +190,9 @@ def _service_spec(raw_service: object) -> ServiceSpec | None:
     if not isinstance(raw_service, Mapping):
         return None
     port = raw_service.get("port")
-    if not _valid_service_port(port):
-        return None
     protocol = raw_service.get("protocol", "tcp")
-    if not isinstance(protocol, str):
-        return None
     name = raw_service.get("name", "")
-    if not isinstance(name, str):
+    if not _valid_service_port(port) or not isinstance(protocol, str) or not isinstance(name, str):
         return None
     return ServiceSpec(port=port, protocol=protocol, name=name)
 
