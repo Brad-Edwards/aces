@@ -23,6 +23,13 @@ sequence.
    nested runtime-family reference form
    ([references.md §1](references.md)):
    `nodes.<node>.runtime.<collection>.<id>[.<child-collection>.<child-id>…]`.
+4. `Node.services[]` is adjacent authored identity, not runtime inventory. Each
+   entry identifies a node-local transport binding by port, protocol, and
+   optional name; it does not authorize traffic, prove a live listener, publish
+   a host port, or classify an audience. Authorization remains in
+   `infrastructure.*.acls`, observed bind state in
+   `runtime.service_listeners`, and host publication in
+   `runtime.network.published_ports`.
 
 ## 2. Family index
 

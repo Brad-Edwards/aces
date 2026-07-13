@@ -344,6 +344,17 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
     diagnostics: list[Diagnostic] = []
     provisioner = manifest.provisioner
 
+    for resource in [*model.networks.values(), *model.node_deployments.values()]:
+        if resource.spec.get("infrastructure", {}).get("acls") and not provisioner.supports_acls:
+            diagnostics.append(
+                Diagnostic(
+                    code="provisioner.acls-unsupported",
+                    domain="provisioning",
+                    address=resource.address,
+                    message="Provisioner does not support ACL declarations.",
+                )
+            )
+
     for network in model.networks.values():
         if "switch" not in provisioner.supported_node_types:
             diagnostics.append(
@@ -354,16 +365,6 @@ def _validate_manifest(model: RuntimeModel, manifest: BackendManifest) -> list[D
                     message="Provisioner does not support switch/network nodes.",
                 )
             )
-        if network.spec.get("infrastructure", {}).get("acls") and not provisioner.supports_acls:
-            diagnostics.append(
-                Diagnostic(
-                    code="provisioner.acls-unsupported",
-                    domain="provisioning",
-                    address=network.address,
-                    message="Provisioner does not support ACL declarations.",
-                )
-            )
-
     for node in model.node_deployments.values():
         if node.node_type and node.node_type not in provisioner.supported_node_types:
             diagnostics.append(

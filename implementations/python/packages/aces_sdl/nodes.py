@@ -239,7 +239,13 @@ class AssetValue(SDLModel):
 
 
 class ServicePort(SDLModel):
-    """A network service exposed by a node. From OCSF NetworkEndpoint."""
+    """Authored identity of a node-local transport binding.
+
+    A service declaration does not authorize traffic, prove a live listener,
+    publish a host port, or classify an internal/external audience. Traffic
+    authorization belongs to infrastructure ACLs; observed bind state and host
+    publication belong to their dedicated runtime surfaces.
+    """
 
     port: int | str
     protocol: str = "tcp"
