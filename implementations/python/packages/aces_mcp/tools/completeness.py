@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from mcp.server.fastmcp import FastMCP
 
 from aces_mcp.tools.operation_support import json_response
+
+if TYPE_CHECKING:
+    from aces_contracts.scientific_completeness import CompletenessProfileModel, ProfileCompletenessResult
 
 
 def _authoring_tools(profile_id: str) -> list[str]:
@@ -26,7 +29,10 @@ def _authoring_tools(profile_id: str) -> list[str]:
     return tools
 
 
-def _profile_summary(profile: Any, outcome: Any) -> dict[str, Any]:
+def _profile_summary(
+    profile: CompletenessProfileModel,
+    outcome: ProfileCompletenessResult,
+) -> dict[str, Any]:
     disposition_counts = Counter(disposition.value for disposition in profile.dispositions.values())
     return {
         "profile_id": profile.profile_id,
