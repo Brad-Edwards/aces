@@ -1,42 +1,41 @@
-"""SEM-218 realization-support semantics: typed compiled requirements and the
-manifest-bound planner gate.
+"""SEM-218 compiled realization demand, apparatus matching, and disclosure.
 
-The normative boundary lives in
-``specs/formal/realization/explicitness-and-realization.md``. The compiler
-lowers each authored realization concern into a
-``CompiledRealizationRequirement`` carrying its SEM-218 explicitness class
-(part 1's ``aces_sdl.explicitness`` classifier output). The planner consumes
-that compiled metadata directly and matches it against the selected backend's
-``realization_support`` declarations. An unsupported exact or constrained
-requirement kind becomes a stable error ``Diagnostic`` before deployment,
-enforcing invariants I1/I2/I4 without silent approximation.
-
-The match is a single manifest-bound helper over
-``BackendManifest.realization_support`` / ``RealizationSupportDeclaration``.
-``domain`` and the kind strings are opaque non-empty strings today (the
-extensibility seam; a governed vocabulary is future work), so matching is
-exact string membership plus support-mode compatibility.
+The normative boundary is ``explicitness-and-realization.md``. Domain and kind
+strings remain opaque; matching is exact membership plus support compatibility.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass, replace
 
 from aces_backend_protocols.capabilities import BackendManifest
 from aces_contracts.addressing import require_compiled_address
 from aces_contracts.diagnostics import Diagnostic, Severity
 from aces_contracts.planning import ChangeAction, ProvisioningPlan, ProvisionOp
+from aces_contracts.realization_envelope import (
+    ClosureOverlay,
+    EnvelopeBinding,
+    EnvelopeScope,
+    Posture,
+    RealizationEnvelopeModel,
+)
 from aces_contracts.runtime_state import RealizationProvenanceEntry, RuntimeSnapshot
+from aces_contracts.vocabulary import Closure, RealizationSupportMode
 from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from aces_sdl.realization_envelope import effective_constraints, subsumes, tokenize_path
 
 __all__ = [
     "CONCERN_PAYLOAD_PATH",
     "EXACT_REQUIREMENT_KIND",
     "REALIZATION_DOMAIN",
+    "ApparatusRealizationDefaultResolver",
     "CompiledRealizationRequirement",
+    "materialize_realization_requirements",
     "realization_disclosure",
+    "realization_envelope_diagnostics",
     "realization_support_diagnostics",
+    "registered_realization_concerns",
     "resolve_realization_concern",
 ]
 
@@ -60,8 +59,8 @@ EXACT_REQUIREMENT_KIND = "declared-capability-match"
 # capabilities — not a general per-field designation authority (that is staged
 # under the SEM-218 coverage row).
 _CONCERN_KIND_BY_PATH: dict[tuple[str, str], str] = {
-    ("nodes", "os"): "os-family",
     ("nodes", "type"): "node-type",
+    ("nodes", "os"): "os-family",
     ("content", "type"): "content-type",
 }
 
@@ -91,11 +90,76 @@ class CompiledRealizationRequirement:
     address: str
     domain: str
     requirement_kind: str
-    explicitness: ExplicitnessClass
+    explicitness: ExplicitnessClass | None
     provenance: ExplicitnessProvenance
+    governing_scope: str | None = None
+    delegated: bool = False
 
     def __post_init__(self) -> None:
         require_compiled_address(self.address)
+        if self.delegated != (self.explicitness is None):
+            raise ValueError("delegated realization requirements must carry unresolved explicitness")
+
+
+ApparatusRealizationDefaultResolver = Callable[
+    [CompiledRealizationRequirement, BackendManifest],
+    Closure,
+]
+
+
+def _closed_apparatus_default(
+    _requirement: CompiledRealizationRequirement,
+    _manifest: BackendManifest,
+) -> Closure:
+    return Closure.CLOSED_WORLD
+
+
+def _effective_explicitness(
+    requirement: CompiledRealizationRequirement,
+    manifest: BackendManifest,
+    apparatus_default: ApparatusRealizationDefaultResolver | None,
+) -> ExplicitnessClass | None:
+    if not requirement.delegated:
+        return requirement.explicitness
+    resolver = apparatus_default or _closed_apparatus_default
+    closure = resolver(requirement, manifest)
+    return ExplicitnessClass.OPEN if closure is Closure.OPEN_WORLD else None
+
+
+def materialize_realization_requirements(
+    requirements: tuple[CompiledRealizationRequirement, ...],
+    manifest: BackendManifest,
+    *,
+    apparatus_default: ApparatusRealizationDefaultResolver | None = None,
+) -> tuple[CompiledRealizationRequirement, ...]:
+    """Resolve selected-apparatus delegation into the execution carrier."""
+
+    materialized: list[CompiledRealizationRequirement] = []
+    for requirement in requirements:
+        if requirement.delegated:
+            if _effective_explicitness(requirement, manifest, apparatus_default) is not ExplicitnessClass.OPEN:
+                # A closed default carries no realizable demand into execution.
+                continue
+            requirement = replace(
+                requirement,
+                explicitness=ExplicitnessClass.OPEN,
+                delegated=False,
+            )
+        materialized.append(requirement)
+    return tuple(materialized)
+
+
+def registered_realization_concerns(
+    *,
+    declaration_names: Mapping[str, Iterable[str]],
+) -> tuple[tuple[str, str, str, str], ...]:
+    """Enumerate ``(section, declaration, leaf, kind)`` registrations."""
+
+    return tuple(
+        (section, declaration_name, leaf_field, concern_kind)
+        for (section, leaf_field), concern_kind in _CONCERN_KIND_BY_PATH.items()
+        for declaration_name in declaration_names.get(section, ())
+    )
 
 
 def resolve_realization_concern(
@@ -110,8 +174,10 @@ def resolve_realization_concern(
     a published kind and yields ``None``.
     """
 
-    for (head, leaf), concern_kind in _CONCERN_KIND_BY_PATH.items():
-        if any(field_path == f"{head}.{name}.{leaf}" for name in declaration_names.get(head, ())):
+    for section, declaration_name, leaf_field, concern_kind in registered_realization_concerns(
+        declaration_names=declaration_names
+    ):
+        if field_path == f"{section}.{declaration_name}.{leaf_field}":
             return concern_kind
     return None
 
@@ -119,6 +185,8 @@ def resolve_realization_concern(
 def realization_support_diagnostics(
     requirements: tuple[CompiledRealizationRequirement, ...],
     manifest: BackendManifest,
+    *,
+    apparatus_default: ApparatusRealizationDefaultResolver | None = None,
 ) -> list[Diagnostic]:
     """Match compiled requirements against the manifest's ``realization_support``.
 
@@ -127,7 +195,8 @@ def realization_support_diagnostics(
     requirements need their concern kind in ``supported_constraint_kinds``.
     Unsupported kinds become stable error diagnostics naming the resource
     address, SDL field path, requirement kind, and missing capability. Open
-    requirements are not emitted by the compiler and so are not gated here.
+    requirements require an explicit ``open-realization`` apparatus claim;
+    unresolved delegation uses the agreed closed fallback.
 
     Diagnostics deliberately name only the field path and kind strings, never
     the exact author value, which may carry sensitive material (SEM-218
@@ -136,10 +205,30 @@ def realization_support_diagnostics(
 
     diagnostics: list[Diagnostic] = []
     for requirement in requirements:
+        explicitness = _effective_explicitness(requirement, manifest, apparatus_default)
         declarations = [
             declaration for declaration in manifest.realization_support if declaration.domain == requirement.domain
         ]
-        if requirement.explicitness is ExplicitnessClass.EXACT:
+        if explicitness is ExplicitnessClass.OPEN:
+            supported = any(
+                declaration.support_mode is RealizationSupportMode.OPEN_REALIZATION for declaration in declarations
+            )
+            if not supported:
+                diagnostics.append(
+                    Diagnostic(
+                        code="realization.unsupported-open-requirement",
+                        domain=requirement.domain,
+                        address=requirement.address,
+                        message=(
+                            "Backend declares no open realization support for "
+                            f"'{requirement.requirement_kind}' requirement at "
+                            f"'{requirement.field_path}' in domain '{requirement.domain}'."
+                        ),
+                        severity=Severity.ERROR,
+                    )
+                )
+            continue
+        if explicitness is ExplicitnessClass.EXACT:
             supported = any(
                 EXACT_REQUIREMENT_KIND in declaration.supported_exact_requirement_kinds for declaration in declarations
             )
@@ -159,7 +248,7 @@ def realization_support_diagnostics(
                         severity=Severity.ERROR,
                     )
                 )
-        elif requirement.explicitness is ExplicitnessClass.CONSTRAINED:
+        elif explicitness is ExplicitnessClass.CONSTRAINED:
             supported = any(
                 requirement.requirement_kind in declaration.supported_constraint_kinds for declaration in declarations
             )
@@ -179,6 +268,94 @@ def realization_support_diagnostics(
                     )
                 )
     return diagnostics
+
+
+def realization_envelope_diagnostics(
+    requirements: tuple[CompiledRealizationRequirement, ...],
+    manifest: BackendManifest,
+    *,
+    apparatus_default: ApparatusRealizationDefaultResolver | None = None,
+) -> list[Diagnostic]:
+    """Check open compiled demand against the offered envelope via subsumption."""
+
+    carrier = manifest.realization_envelope
+    if carrier is None:
+        return []
+    open_paths = tuple(
+        requirement.field_path
+        for requirement in requirements
+        if _effective_explicitness(requirement, manifest, apparatus_default) is ExplicitnessClass.OPEN
+    )
+    if not open_paths:
+        return []
+    requested = _open_request_envelope(open_paths)
+    offered = _offered_open_projection(carrier.expression, open_paths)
+    return list(subsumes(offered, requested).diagnostics)
+
+
+def _open_request_envelope(paths: tuple[str, ...]) -> RealizationEnvelopeModel:
+    return RealizationEnvelopeModel(
+        id="compiled-open-realization-request",
+        scope=EnvelopeScope.SCENARIO,
+        bindings=[
+            EnvelopeBinding(path=path, scope=EnvelopeScope.FIELD, posture=Posture.OPEN) for path in sorted(set(paths))
+        ],
+    )
+
+
+def _offered_open_projection(
+    offered: RealizationEnvelopeModel,
+    paths: tuple[str, ...],
+) -> RealizationEnvelopeModel:
+    constraints, closed = effective_constraints(offered)
+    domains = {}
+    bindings = []
+    for index, path in enumerate(sorted(set(paths))):
+        constraint = constraints.get(path)
+        if constraint is None:
+            continue
+        domain_name = f"offered-domain-{index}"
+        domains[domain_name] = constraint.domain
+        bindings.append(
+            EnvelopeBinding(
+                path=path,
+                scope=EnvelopeScope.FIELD,
+                posture=constraint.posture,
+                domain=domain_name,
+                overrideable=constraint.overrideable,
+            )
+        )
+    excludes_open_path = any(_closed_scope_excludes(path, closed) for path in paths)
+    closure = (
+        [
+            ClosureOverlay(
+                path="",
+                scope=EnvelopeScope.SCENARIO,
+                closure=Closure.CLOSED_WORLD,
+            )
+        ]
+        if excludes_open_path
+        else []
+    )
+    return RealizationEnvelopeModel(
+        id=f"{offered.id}.open-demand-projection",
+        scope=offered.scope,
+        domains=domains,
+        bindings=bindings,
+        closure=closure,
+    )
+
+
+def _closed_scope_excludes(path: str, closed: dict[str, set[str]]) -> bool:
+    target = tuple(tokenize_path(path))
+    for scope_path, admitted_children in closed.items():
+        scope = tuple(tokenize_path(scope_path)) if scope_path else ()
+        if len(scope) >= len(target) or target[: len(scope)] != scope:
+            continue
+        child = target[len(scope)]
+        if not isinstance(child, str) or child not in admitted_children:
+            return True
+    return False
 
 
 def realization_disclosure(
@@ -242,33 +419,31 @@ def _evaluate_realization(
     when a non-exact concern was left unrealized.
     """
 
+    diagnostic: Diagnostic | None = None
+    entry: RealizationProvenanceEntry | None = None
     path = CONCERN_PAYLOAD_PATH.get(requirement.requirement_kind)
     op = declared_ops.get(requirement.address)
-    # No realization is owed when the concern is unmapped, the plan declares no op
-    # for this resource, or it removes it (a DELETE op — expected absence); none is
-    # a backend fault, so there is no baseline to gate or disclose.
-    if path is None or op is None or op.action is ChangeAction.DELETE:
-        return None, None
-    declared_value = _concern_value(op.payload, path)
-    if declared_value is _MISSING_CONCERN_VALUE:
-        # The plan op carries no value for this concern: no author baseline to
-        # enforce (an upstream processor invariant, not a backend contract).
-        return None, None
+    if requirement.explicitness is None or path is None or op is None or op.action is ChangeAction.DELETE:
+        return diagnostic, entry
     snapshot_entry = returned_snapshot.entries.get(requirement.address)
     realized_value = (
         _concern_value(snapshot_entry.payload, path) if snapshot_entry is not None else _MISSING_CONCERN_VALUE
     )
-    honoured = realized_value == declared_value
-    diagnostic: Diagnostic | None = None
-    entry: RealizationProvenanceEntry | None = None
-    if requirement.explicitness is ExplicitnessClass.EXACT and not honoured:
-        # The backend realized the exact concern with a different value or omitted
-        # it entirely; both are forbidden silent approximation (I2).
-        diagnostic = _silent_approximation_diagnostic(requirement)
-    elif realized_value is not _MISSING_CONCERN_VALUE:
-        # A located realized concern: disclose its provenance. (A non-exact concern
-        # the backend left unrealized falls through with nothing to disclose.)
-        entry = _realization_provenance_entry(requirement, honoured)
+    if requirement.explicitness is ExplicitnessClass.OPEN:
+        if realized_value is not _MISSING_CONCERN_VALUE:
+            entry = _realization_provenance_entry(requirement, False)
+        return diagnostic, entry
+    declared_value = _concern_value(op.payload, path)
+    if declared_value is not _MISSING_CONCERN_VALUE:
+        honoured = realized_value == declared_value
+        if requirement.explicitness is ExplicitnessClass.EXACT and not honoured:
+            # The backend realized the exact concern with a different value or omitted
+            # it entirely; both are forbidden silent approximation (I2).
+            diagnostic = _silent_approximation_diagnostic(requirement)
+        elif realized_value is not _MISSING_CONCERN_VALUE:
+            # A located realized concern: disclose its provenance. (A non-exact concern
+            # the backend left unrealized falls through with nothing to disclose.)
+            entry = _realization_provenance_entry(requirement, honoured)
     return diagnostic, entry
 
 
@@ -283,6 +458,7 @@ def _realization_provenance_entry(
         requirement_kind=requirement.requirement_kind,
         explicitness=requirement.explicitness,
         provenance=(requirement.provenance if honoured else ExplicitnessProvenance.BACKEND_REALIZED),
+        governing_scope=requirement.governing_scope,
     )
 
 

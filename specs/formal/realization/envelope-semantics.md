@@ -161,12 +161,22 @@ Invalid SDL is never a member, even if it satisfies the envelope domains.
 ### R2 - Effective bindings use most-specific-wins
 
 For a concrete SDL path, the effective binding is the most specific binding
-whose scope contains that path.
+whose scope contains that path. Implementations MUST parse the complete
+canonical path; accepting only the tokenizable fragments of a malformed path is
+not conforming. When bindings address the same path depth, semantic scope order
+breaks the tie: field, node, topology/app, then scenario. Topology and app remain
+sibling scopes.
 
 If two bindings have equal specificity and incompatible domains or posture, the
 envelope is invalid. If a more-specific binding widens a value that an enclosing
 closed-world scope made exact or excluded, the envelope is invalid unless the
 enclosing binding explicitly marks that child as overrideable.
+
+That `overrideable` condition governs explicit envelope domain bindings. It
+does not prohibit the separate SEM-218 lexical author-default cascade from
+overriding inherited open/closed posture in either direction. In closure
+resolution, an effective `open-world` overlay removes inherited
+`closed-world` state at the same or a descendant path.
 
 Most-specific-wins is therefore deterministic; it is not merge-order dependent.
 

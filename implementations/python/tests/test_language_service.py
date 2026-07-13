@@ -40,6 +40,13 @@ def test_language_completions_include_top_level_sections_and_reference_targets()
     top_level_labels = {item["label"] for item in top_level["items"]}
     assert "nodes" in top_level_labels
     assert "workflows" in top_level_labels
+    assert "realization" in top_level_labels
+
+    realization_fields = language_completions(
+        "name: x\nrealization: {}\n",
+        cursor_path="/realization",
+    )
+    assert {item["label"] for item in realization_fields["items"]} == {"default", "scopes"}
 
     feature_refs = language_completions(
         SAMPLE_SDL,

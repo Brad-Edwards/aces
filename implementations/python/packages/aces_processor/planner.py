@@ -1,5 +1,7 @@
 """Planner for compiled SDL runtime models."""
 
+from dataclasses import replace
+
 from aces_backend_protocols.account_features import provisioner_account_features
 from aces_backend_protocols.capabilities import BackendManifest
 from aces_sdl.infrastructure import MINIMUM_NODE_COUNT
@@ -33,7 +35,13 @@ from .semantics.planner import (
     resource_dependency_cycles,
     resource_topological_order,
 )
-from .semantics.realization import realization_disclosure, realization_support_diagnostics
+from .semantics.realization import (
+    ApparatusRealizationDefaultResolver,
+    materialize_realization_requirements,
+    realization_disclosure,
+    realization_envelope_diagnostics,
+    realization_support_diagnostics,
+)
 
 __all__ = ["plan", "realization_disclosure", "snapshot_delete_order"]
 
@@ -749,20 +757,34 @@ def plan(
     snapshot: RuntimeSnapshot | None = None,
     *,
     target_name: str | None = None,
+    apparatus_realization_default: ApparatusRealizationDefaultResolver | None = None,
 ) -> ExecutionPlan:
     """Reconcile a compiled runtime model against the current snapshot."""
 
     snapshot = snapshot or RuntimeSnapshot()
-    resources = _collect_resources(model)
+    effective_requirements = materialize_realization_requirements(
+        model.realization_requirements,
+        manifest,
+        apparatus_default=apparatus_realization_default,
+    )
+    effective_model = replace(model, realization_requirements=effective_requirements)
+    resources = _collect_resources(effective_model)
     envelope_diagnostics = (
-        list(member(model.realization_instance, manifest.realization_envelope.expression).diagnostics)
-        if manifest.realization_envelope is not None and model.realization_instance is not None
+        list(member(effective_model.realization_instance, manifest.realization_envelope.expression).diagnostics)
+        if manifest.realization_envelope is not None and effective_model.realization_instance is not None
         else []
     )
     diagnostics = [
-        *model.diagnostics,
-        *_validate_manifest(model, manifest),
-        *realization_support_diagnostics(model.realization_requirements, manifest),
+        *effective_model.diagnostics,
+        *_validate_manifest(effective_model, manifest),
+        *realization_support_diagnostics(
+            effective_requirements,
+            manifest,
+        ),
+        *realization_envelope_diagnostics(
+            effective_requirements,
+            manifest,
+        ),
         *envelope_diagnostics,
         *_ordering_cycle_diagnostics(resources),
     ]
@@ -777,7 +799,7 @@ def plan(
         manifest=manifest,
         base_snapshot=snapshot,
         scenario_name=model.scenario_name,
-        model=model,
+        model=effective_model,
         provisioning=provisioning,
         orchestration=orchestration,
         evaluation=evaluation,

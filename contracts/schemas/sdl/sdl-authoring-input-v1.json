@@ -348,6 +348,16 @@
       "title": "AssetValueLevel",
       "type": "string"
     },
+    "AuthorRealizationPosture": {
+      "description": "Authored default posture, distinct from capability support modes.",
+      "enum": [
+        "closed",
+        "open",
+        "unspecified"
+      ],
+      "title": "AuthorRealizationPosture",
+      "type": "string"
+    },
     "BehaviorSpecificationExtensionValue": {
       "anyOf": [
         {
@@ -5014,6 +5024,63 @@
       ],
       "title": "PropositionBasis",
       "type": "string"
+    },
+    "RealizationDesignation": {
+      "additionalProperties": false,
+      "description": "Scenario-root SEM-218 designation table.",
+      "properties": {
+        "default": {
+          "$ref": "#/$defs/AuthorRealizationPosture",
+          "default": "unspecified"
+        },
+        "scopes": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RealizationScopeDesignation"
+          },
+          "title": "Scopes",
+          "type": "array"
+        }
+      },
+      "title": "RealizationDesignation",
+      "type": "object"
+    },
+    "RealizationScopeDesignation": {
+      "additionalProperties": false,
+      "description": "One typed lexical override at a canonical composed-model scope.",
+      "properties": {
+        "field_pointer": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "pattern": "^(?:/(?:[^~/]|~[01])*)*$",
+          "title": "Field Pointer",
+          "type": "string"
+        },
+        "namespace": {
+          "default": [],
+          "items": {
+            "maxLength": 64,
+            "minLength": 1,
+            "not": {
+              "pattern": "[^a-z0-9_-]"
+            },
+            "pattern": "^[a-z0-9]",
+            "type": "string"
+          },
+          "maxItems": 31,
+          "title": "Namespace",
+          "type": "array"
+        },
+        "posture": {
+          "$ref": "#/$defs/AuthorRealizationPosture"
+        }
+      },
+      "required": [
+        "field_pointer",
+        "posture"
+      ],
+      "title": "RealizationScopeDesignation",
+      "type": "object"
     },
     "Relationship": {
       "additionalProperties": false,
@@ -18053,6 +18120,18 @@
       },
       "title": "Propositions",
       "type": "object"
+    },
+    "realization": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RealizationDesignation"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-aces-realization-dimension": false
     },
     "relationships": {
       "additionalProperties": {

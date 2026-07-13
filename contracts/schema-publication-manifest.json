@@ -180,20 +180,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "15998ab101e41f0b87a7a661b959f6ebfcd7cc4c94041e1a1b20ab2573b08b4b",
+      "content_hash": "8e8048de4b5161c1a02d0900811f388b0d57a92b6d8434b0242f0a5254e9b377",
       "last_change": {
-        "summary": "Clarified that Node.services entries identify node-local transport bindings without granting reachability or host publication (issue #748).",
-        "content_hash": "15998ab101e41f0b87a7a661b959f6ebfcd7cc4c94041e1a1b20ab2573b08b4b"
+        "summary": "Added SEM-218 realization designation provenance and clarified Node.services reachability semantics (issue #748).",
+        "content_hash": "8e8048de4b5161c1a02d0900811f388b0d57a92b6d8434b0242f0a5254e9b377"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "c46feef54bde3cfe238cb1949386e5d726ef7319c2414bc307651e12a991b6e8",
+      "content_hash": "515cacc41d24c643e7655de70a40dc1b6305a14b9d840083d5d9ff694d58df29",
       "last_change": {
-        "summary": "Clarified that Node.services entries identify node-local transport bindings without granting reachability or host publication (issue #748).",
-        "content_hash": "c46feef54bde3cfe238cb1949386e5d726ef7319c2414bc307651e12a991b6e8"
+        "summary": "Added SEM-218 scoped realization records and clarified Node.services reachability semantics (issue #748).",
+        "content_hash": "515cacc41d24c643e7655de70a40dc1b6305a14b9d840083d5d9ff694d58df29"
       }
     },
     {
@@ -406,10 +406,10 @@
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "4e20e5c91ccd425c88be75a0e55be97f07d311e6499fc6bf73c3db4b37fa51bf",
+      "content_hash": "b1453a4764c14bf9ec1497030563ac0c774b17b1883d15fcbb2027d66f5dcbf9",
       "last_change": {
-        "summary": "Added portable proposition truth results as a distinct runtime snapshot carrier outside ordinary evaluation result envelopes.",
-        "content_hash": "4e20e5c91ccd425c88be75a0e55be97f07d311e6499fc6bf73c3db4b37fa51bf"
+        "summary": "Added redacted governing-scope references to SEM-218 runtime realization provenance.",
+        "content_hash": "b1453a4764c14bf9ec1497030563ac0c774b17b1883d15fcbb2027d66f5dcbf9"
       }
     },
     {
@@ -446,10 +446,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "9e9b402a1a1505054bc555f19b674d798e092667d3da54f1a8561369e26191e3",
+      "content_hash": "57e984be7783a5eb54ee210da434d2883aa468617b0ee8c2a42de1a769ff30b5",
       "last_change": {
-        "summary": "Clarified that Node.services entries identify node-local transport bindings without granting reachability or host publication (issue #748).",
-        "content_hash": "9e9b402a1a1505054bc555f19b674d798e092667d3da54f1a8561369e26191e3"
+        "summary": "Published SEM-218 scoped realization defaults and clarified Node.services reachability semantics (issue #748).",
+        "content_hash": "57e984be7783a5eb54ee210da434d2883aa468617b0ee8c2a42de1a769ff30b5"
       }
     },
     {
