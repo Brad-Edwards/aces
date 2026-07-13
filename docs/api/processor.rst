@@ -25,7 +25,38 @@ Compiler
 Processor Models
 ----------------
 
-.. automodule:: aces_processor.models
+The runtime data models live in the ``aces_processor.models`` package; its
+``__init__`` re-exports the full public surface, and the classes and functions
+are documented here from the subdomain modules that define them.
+
+.. automodule:: aces_processor.models.resources
+   :members:
+
+.. automodule:: aces_processor.models.behavior_resources
+   :members:
+
+.. automodule:: aces_processor.models.action_results
+   :members:
+
+.. automodule:: aces_processor.models.attribution
+   :members:
+
+.. automodule:: aces_processor.models.outcome
+   :members:
+
+.. automodule:: aces_processor.models.outcome_interpretation_validation
+   :members:
+
+.. automodule:: aces_processor.models.temporal
+   :members:
+
+.. automodule:: aces_processor.models.history_event
+   :members:
+
+.. automodule:: aces_processor.models.behavior_history_violations
+   :members:
+
+.. automodule:: aces_processor.models.runtime_model
    :members:
 
 Manifest Authority
