@@ -16,6 +16,8 @@ from pydantic import ConfigDict, ValidationError
 
 from ._base import VARIABLE_TOKEN_RE, extract_variable_name
 from ._errors import SDLInstantiationError, SDLValidationError
+from ._identifiers import QualifiedName
+from ._mapping_scopes import HASHMAP_SECTIONS
 from .canonical import canonical_sdl_digest
 from .explicitness import ExplicitnessRecord, derive_instantiated_explicitness
 from .phase_contracts import (
@@ -26,6 +28,7 @@ from .phase_contracts import (
     ParameterBinding,
     SemanticDigest,
 )
+from .realization_designation import RealizationDesignationRecord, designation_records
 from .scenario import ExpandedScenario, InstantiatedScenario, Scenario, ScenarioContent
 from .validator import SemanticValidator
 from .variables import Variable, VariableType
@@ -47,6 +50,7 @@ class _BoundScenarioResult:
     bindings: tuple[ParameterBinding, ...]
     capability_constraints: tuple[CapabilityConstraint, ...]
     explicitness: tuple[ExplicitnessProvenanceRecord, ...]
+    realization_designations: tuple[RealizationDesignationRecord, ...]
 
 
 def _matches_value_type(value: object, variable: Variable) -> bool:
@@ -235,7 +239,7 @@ def _bind_scenario_content(
             [f"Scenario contains unresolved variable references after instantiation: {unresolved_list}."]
         )
 
-    for authoring_field in ("variables", "imports", "module", "expansion_provenance"):
+    for authoring_field in ("variables", "imports", "module", "realization", "expansion_provenance"):
         substituted_payload.pop(authoring_field, None)
     try:
         content = _BoundScenarioContent.model_validate(substituted_payload)
@@ -247,11 +251,36 @@ def _bind_scenario_content(
         raise SDLInstantiationError(list(derived.errors))
     explicitness_by_path = {record.path: _portable_explicitness_record(record) for record in derived.records.values()}
     constraints: tuple[CapabilityConstraint, ...] = local_constraints
+    realization_designations = (
+        designation_records(raw_scenario.realization)
+        if isinstance(raw_scenario, Scenario) and raw_scenario.realization is not None
+        else ()
+    )
     if isinstance(raw_scenario, ExpandedScenario):
         constraints = (*raw_scenario.expansion_provenance.capability_constraints, *local_constraints)
+        imported_namespaces = tuple(record.namespace for record in raw_scenario.expansion_provenance.imports)
+        imported_prefixes = {
+            f"{section_name}.{declaration_name}"
+            for section_name in HASHMAP_SECTIONS
+            for declaration_name in getattr(raw_scenario, section_name)
+            if any(
+                QualifiedName.parse(declaration_name).parts[: len(namespace)] == namespace
+                for namespace in imported_namespaces
+            )
+        }
+        portable_imported_paths = {record.model_path for record in raw_scenario.expansion_provenance.explicitness}
+        for model_path in tuple(explicitness_by_path):
+            if model_path in portable_imported_paths:
+                continue
+            if any(
+                model_path == prefix or model_path.startswith(prefix + ".") or model_path.startswith(prefix + "[")
+                for prefix in imported_prefixes
+            ):
+                del explicitness_by_path[model_path]
         explicitness_by_path.update(
             {record.model_path: record for record in raw_scenario.expansion_provenance.explicitness}
         )
+        realization_designations = raw_scenario.expansion_provenance.realization_designations
 
     return _BoundScenarioResult(
         content=content,
@@ -265,6 +294,7 @@ def _bind_scenario_content(
         ),
         capability_constraints=constraints,
         explicitness=tuple(explicitness_by_path.values()),
+        realization_designations=realization_designations,
     )
 
 
@@ -322,6 +352,7 @@ def instantiate_scenario(
         imports=expansion.imports if expansion is not None else (),
         capability_constraints=bound.capability_constraints,
         explicitness=bound.explicitness,
+        realization_designations=bound.realization_designations,
     )
     payload = bound.content.model_dump(mode="python", by_alias=True)
     payload["instantiation_provenance"] = provenance.model_dump(mode="python")

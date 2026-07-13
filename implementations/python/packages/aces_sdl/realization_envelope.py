@@ -62,8 +62,10 @@ __all__ = [
     "RelationResult",
     "WitnessResult",
     "generate_negative_probes",
+    "effective_constraints",
     "member",
     "subsumes",
+    "tokenize_path",
     "witness",
 ]
 

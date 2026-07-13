@@ -39,6 +39,7 @@ instructions do not survive as executable scenario meaning. "References" is
 | `description` | metadata | scalar | normalized, expanded, instantiated | optional; default empty string | none | none | [document model](document-model.md) |
 | `module` | composition | mapping | normalized, expanded-empty, instantiated-empty | optional; default null | `module.id` | none | [ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) |
 | `imports` | composition | list | normalized, expanded-empty, instantiated-empty | optional; default empty list | `namespace` | none | [ADR-053](../../docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md) |
+| `realization` | composition | mapping | normalized | optional; default null | none | none | [explicitness and realization](../formal/realization/explicitness-and-realization.md) |
 | `nodes` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [nodes and runtime inventory](runtime-inventory.md) |
 | `infrastructure` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
 | `features` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [document model](document-model.md) |
@@ -65,12 +66,19 @@ instructions do not survive as executable scenario meaning. "References" is
 | `workflows` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | catalogued | [workflow semantics](workflow-semantics.md) |
 | `variables` | section | map | normalized, expanded, instantiated | optional; default empty map | `map_key` | none | [variables and instantiation](variables-and-instantiation.md) |
 
-<!-- sdl-catalog-summary top-level=30 metadata-composition=5 sections=25 maps=24 lists=1 -->
+<!-- sdl-catalog-summary top-level=31 metadata-composition=6 sections=25 maps=24 lists=1 -->
 
 The section set therefore has two authoring shapes: maps keyed by stable
 user-defined identifiers and the scenario-level `forwarding_agents` list, whose
 elements carry their own stable identity. The checked summary above is derived
 from the rows; changing a row without reconciling it fails the contract gate.
+
+`realization` is the scenario-root, authoring-only designation table. Its
+`default` is `closed`, `open`, or `unspecified`; optional `scopes` override that
+posture at canonical namespace/pointer identities. Expansion and instantiation
+remove the block from executable `ScenarioContent` and carry typed designation
+records in phase provenance so compilation can resolve the cascade without
+turning authoring machinery into runtime scenario content.
 
 `forwarding_agents` is the **scenario-level** forwarding-agent inventory. It is
 distinct from the node-scoped `forwarding_agents` runtime-family collection that

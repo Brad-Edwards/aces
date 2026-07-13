@@ -51,6 +51,7 @@ from .phase_contracts import (
     _json_value_equal,
 )
 from .propositions import Assertion, Proposition
+from .realization_designation import RealizationDesignation
 from .relationships import Relationship
 from .runtime_forwarding_agent import RuntimeForwardingAgent
 from .variables import Variable
@@ -354,6 +355,10 @@ class Scenario(ScenarioContent):
 
     module: ModuleDescriptor | None = None
     imports: list[ImportDecl] = Field(default_factory=list)
+    realization: RealizationDesignation | None = Field(
+        default=None,
+        json_schema_extra={"x-aces-realization-dimension": False},
+    )
     variables: VariableDefinitions = Field(
         default_factory=dict,
         json_schema_extra={"additionalProperties": False},

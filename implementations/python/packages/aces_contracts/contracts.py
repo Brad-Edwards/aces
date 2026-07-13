@@ -2482,6 +2482,7 @@ class RealizationProvenanceEntryModel(ContractModel):
     requirement_kind: NonEmptyString
     explicitness: ExplicitnessClass
     provenance: ExplicitnessProvenance
+    governing_scope: NonEmptyString | None = None
 
 
 class RuntimeSnapshotEnvelopeModel(ContractModel):

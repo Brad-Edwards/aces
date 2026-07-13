@@ -180,20 +180,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "2b17c6c70899c17c46649c5de8724c2f8529641155b03777e7437265b2559e0a",
+      "content_hash": "32df1d69451cc6117b6099a832398c813896d7ed6a03c98b08666f0c97ddaa0b",
       "last_change": {
-        "summary": "Removed observation-only health results, generated network identity, scanner findings, and scanner capture provenance from instantiated runtime contract snapshots.",
-        "content_hash": "2b17c6c70899c17c46649c5de8724c2f8529641155b03777e7437265b2559e0a"
+        "summary": "Added typed SEM-218 realization designation provenance to instantiated scenario snapshots.",
+        "content_hash": "32df1d69451cc6117b6099a832398c813896d7ed6a03c98b08666f0c97ddaa0b"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "11f87bec135c48910ce7c48c6f64a807e2fa305ae0855d96238c744e80d5fc2a",
+      "content_hash": "244fc4fb2d7ee2cb1b7e3197b6919e65ad5b47b0162a63f85227a59cccd38b1f",
       "last_change": {
-        "summary": "Removed observation-only health results, generated network identity, scanner findings, and scanner capture provenance from instantiated runtime contracts.",
-        "content_hash": "11f87bec135c48910ce7c48c6f64a807e2fa305ae0855d96238c744e80d5fc2a"
+        "summary": "Added typed SEM-218 scoped realization designation records to instantiation provenance.",
+        "content_hash": "244fc4fb2d7ee2cb1b7e3197b6919e65ad5b47b0162a63f85227a59cccd38b1f"
       }
     },
     {
@@ -406,10 +406,10 @@
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "4e20e5c91ccd425c88be75a0e55be97f07d311e6499fc6bf73c3db4b37fa51bf",
+      "content_hash": "b1453a4764c14bf9ec1497030563ac0c774b17b1883d15fcbb2027d66f5dcbf9",
       "last_change": {
-        "summary": "Added portable proposition truth results as a distinct runtime snapshot carrier outside ordinary evaluation result envelopes.",
-        "content_hash": "4e20e5c91ccd425c88be75a0e55be97f07d311e6499fc6bf73c3db4b37fa51bf"
+        "summary": "Added redacted governing-scope references to SEM-218 runtime realization provenance.",
+        "content_hash": "b1453a4764c14bf9ec1497030563ac0c774b17b1883d15fcbb2027d66f5dcbf9"
       }
     },
     {
@@ -446,10 +446,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "271972c3a991cfb98b19950d2c33bf53f3aca4c9f0cae275f3b191ebcf8152e9",
+      "content_hash": "668f51898e64d6382510fc928188dfcf1d96b131cb359074662a7e6eb38efb63",
       "last_change": {
-        "summary": "Removed observation-only health results, generated network identity, scanner findings, and scanner capture provenance from authored runtime contracts.",
-        "content_hash": "271972c3a991cfb98b19950d2c33bf53f3aca4c9f0cae275f3b191ebcf8152e9"
+        "summary": "Published the typed SEM-218 scenario realization default and RFC 6901 scoped override surface.",
+        "content_hash": "668f51898e64d6382510fc928188dfcf1d96b131cb359074662a7e6eb38efb63"
       }
     },
     {

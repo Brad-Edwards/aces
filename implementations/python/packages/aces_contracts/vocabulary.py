@@ -48,6 +48,13 @@ class RealizationSupportMode(str, Enum):
     OPEN_REALIZATION = "open-realization"
 
 
+class Closure(str, Enum):
+    """Whether unspecified realizable dimensions under a scope are admitted."""
+
+    OPEN_WORLD = "open-world"
+    CLOSED_WORLD = "closed-world"
+
+
 class ParticipantFeatureSupportLevel(str, Enum):
     """ADR-054 guarantee-strength scale for per-feature participant runtime support."""
 

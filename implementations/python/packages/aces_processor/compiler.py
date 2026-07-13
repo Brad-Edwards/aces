@@ -12,7 +12,8 @@ from aces_contracts.addressing import render_compiled_address
 from aces_contracts.versions import WORKFLOW_STATE_SCHEMA_VERSION
 from aces_sdl import build_declaration_index
 from aces_sdl.entities import flatten_entities
-from aces_sdl.explicitness import ExplicitnessClass
+from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
+from aces_sdl.identifiers import QualifiedName
 from aces_sdl.instantiate import admit_instantiated_scenario, instantiate_scenario
 from aces_sdl.nodes import NodeType
 from aces_sdl.orchestration import WorkflowStepType
@@ -20,6 +21,7 @@ from aces_sdl.participant_outcome_semantics import (
     OutcomeInterpretationSourceLayer,
     OutcomeInterpretationTargetLayer,
 )
+from aces_sdl.realization_designation import resolve_realization_designation
 from aces_sdl.scenario import ExpandedScenario, InstantiatedScenario, Scenario
 from aces_sdl.semantics.objective_semantics import (
     OBJECTIVE_WINDOW_DEPENDENCY_ROLES,
@@ -69,7 +71,7 @@ from .models import (
 from .semantics.realization import (
     REALIZATION_DOMAIN,
     CompiledRealizationRequirement,
-    resolve_realization_concern,
+    registered_realization_concerns,
 )
 
 
@@ -2402,15 +2404,19 @@ def _compile_workflows(
     }
 
 
-def _realization_requirement_address(scenario: InstantiatedScenario, field_path: str) -> str:
+def _realization_requirement_address(
+    scenario: InstantiatedScenario,
+    *,
+    section_name: str,
+    declaration_name: str,
+) -> str:
     """Resolve the compiled resource address for a realization-concern path."""
 
-    for name, node in scenario.nodes.items():
-        if field_path in {f"nodes.{name}.os", f"nodes.{name}.type"}:
-            return _network_address(name) if node.type == NodeType.SWITCH else _node_address(name)
-    for name in scenario.content:
-        if field_path == f"content.{name}.type":
-            return _content_address(name)
+    if section_name == "nodes" and declaration_name in scenario.nodes:
+        node = scenario.nodes[declaration_name]
+        return _network_address(declaration_name) if node.type == NodeType.SWITCH else _node_address(declaration_name)
+    if section_name == "content" and declaration_name in scenario.content:
+        return _content_address(declaration_name)
     raise ValueError("realization concern must resolve to one compiled resource address")
 
 
@@ -2420,28 +2426,60 @@ def _compile_realization_requirements(
     """SEM-218 typed compiler emission: lower each authored realization concern
     into a compiled requirement carrying its classifier explicitness class.
 
-    Open concerns are not gated and are not emitted; constrained and exact
-    concerns carry their concern kind for the planner realization gate.
+    Explicit leaves always win. Missing admitted concerns are lowered through
+    the typed lexical designation cascade; omitted designation preserves the
+    legacy closed fallback while explicit root delegation remains typed.
     """
 
     requirements: list[CompiledRealizationRequirement] = []
-    for field_path, record in scenario.explicitness.items():
-        if record.classification is ExplicitnessClass.OPEN:
-            continue
-        concern_kind = resolve_realization_concern(
-            field_path,
-            declaration_names={"nodes": scenario.nodes, "content": scenario.content},
-        )
-        if concern_kind is None:
-            continue
+    explicitness = scenario.explicitness
+    for section_name, declaration_name, field_name, concern_kind in registered_realization_concerns(
+        declaration_names={"nodes": scenario.nodes, "content": scenario.content}
+    ):
+        field_path = f"{section_name}.{declaration_name}.{field_name}"
+        encoded_name = declaration_name.replace("~", "~0").replace("/", "~1")
+        field_pointer = f"/{section_name}/{encoded_name}/{field_name}"
+        owner_namespace = QualifiedName.parse(declaration_name).parts[:-1]
+        record = explicitness.get(field_path)
+        if record is None:
+            resolution = resolve_realization_designation(
+                scenario.instantiation_provenance.realization_designations,
+                field_pointer=field_pointer,
+                owner_namespace=owner_namespace,
+            )
+            if resolution.source == "legacy-default" or (
+                resolution.closure is not None
+                and resolution.closure.value == "closed-world"
+                and not resolution.delegated
+            ):
+                continue
+            requirement_explicitness = (
+                ExplicitnessClass.OPEN
+                if resolution.closure is not None and resolution.closure.value == "open-world"
+                else None
+            )
+            provenance = ExplicitnessProvenance.AUTHOR_DECLARED
+            governing_scope = resolution.governing_scope
+            delegated = resolution.delegated
+        else:
+            requirement_explicitness = record.classification
+            provenance = record.provenance
+            governing_scope = f"#{field_pointer}"
+            delegated = False
         requirements.append(
             CompiledRealizationRequirement(
                 field_path=field_path,
-                address=_realization_requirement_address(scenario, field_path),
+                address=_realization_requirement_address(
+                    scenario,
+                    section_name=section_name,
+                    declaration_name=declaration_name,
+                ),
                 domain=REALIZATION_DOMAIN,
                 requirement_kind=concern_kind,
-                explicitness=record.classification,
-                provenance=record.provenance,
+                explicitness=requirement_explicitness,
+                provenance=provenance,
+                governing_scope=governing_scope,
+                delegated=delegated,
             )
         )
     return tuple(requirements)

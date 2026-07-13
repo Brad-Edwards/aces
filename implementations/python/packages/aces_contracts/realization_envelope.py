@@ -21,6 +21,7 @@ disclosures while the relation continues to operate on the same expression.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from enum import Enum
 from typing import Annotated, Literal
@@ -29,6 +30,7 @@ from pydantic import Field, model_validator
 
 from aces_contracts.contracts import ContractModel, NonEmptyString, RealizationEnvelopeIdentityModel
 from aces_contracts.versions import REALIZATION_ENVELOPE_SCHEMA_VERSION
+from aces_contracts.vocabulary import Closure
 
 __all__ = [
     "BackendRealizationEnvelopeModel",
@@ -60,6 +62,7 @@ __all__ = [
     "scalar_matches_numeric_type",
     "realization_envelope_digest",
     "realizer_configuration_digest",
+    "scope_specificity",
     "validate_backend_realization_envelope",
 ]
 
@@ -67,6 +70,14 @@ __all__ = [
 # from ``int`` here (see ``scalar_matches_numeric_type``); Pydantic preserves the
 # authored Python type on a closed model, so ``True`` never collapses to ``1``.
 DomainScalar = bool | int | float | str
+_ENVELOPE_PATH_RE = re.compile(r"^[^.\[\]]+(?:(?:\.[^.\[\]]+)|(?:\[\d+\]))*$")
+
+
+def _require_envelope_path(path: str, *, allow_root: bool) -> None:
+    if allow_root and path == "":
+        return
+    if _ENVELOPE_PATH_RE.fullmatch(path) is None:
+        raise ValueError("path must use the complete canonical SDL path grammar")
 
 
 class EnvelopeScope(str, Enum):
@@ -79,19 +90,27 @@ class EnvelopeScope(str, Enum):
     SCENARIO = "scenario"
 
 
+_SCOPE_SPECIFICITY = {
+    EnvelopeScope.SCENARIO: 0,
+    EnvelopeScope.TOPOLOGY: 1,
+    EnvelopeScope.APP: 1,
+    EnvelopeScope.NODE: 2,
+    EnvelopeScope.FIELD: 3,
+}
+
+
+def scope_specificity(scope: EnvelopeScope) -> int:
+    """Return semantic specificity; topology and app are sibling scopes."""
+
+    return _SCOPE_SPECIFICITY[scope]
+
+
 class Posture(str, Enum):
     """Author/backend intent for a bound value or child scope."""
 
     OPEN = "open"
     CONSTRAINED = "constrained"
     EXACT = "exact"
-
-
-class Closure(str, Enum):
-    """Whether unspecified realizable dimensions under a scope are admitted."""
-
-    OPEN_WORLD = "open-world"
-    CLOSED_WORLD = "closed-world"
 
 
 class NumericType(str, Enum):
@@ -214,6 +233,7 @@ class EnvelopeBinding(ContractModel):
 
     @model_validator(mode="after")
     def _validate_posture_domain(self) -> EnvelopeBinding:
+        _require_envelope_path(self.path, allow_root=False)
         if self.posture is Posture.OPEN and self.domain is not None:
             raise ValueError("open posture binding must not name a domain")
         if self.posture in (Posture.CONSTRAINED, Posture.EXACT) and not self.domain:
@@ -227,6 +247,11 @@ class ClosureOverlay(ContractModel):
     path: str = ""
     scope: EnvelopeScope
     closure: Closure
+
+    @model_validator(mode="after")
+    def _validate_path(self) -> ClosureOverlay:
+        _require_envelope_path(self.path, allow_root=True)
+        return self
 
 
 class WitnessPolicy(ContractModel):
@@ -296,22 +321,41 @@ class RealizationEnvelopeModel(ContractModel):
             visit(name)
 
     def _validate_bindings(self) -> None:
-        seen: dict[tuple[str, str], EnvelopeBinding] = {}
+        seen: dict[tuple[str, int], EnvelopeBinding] = {}
         for binding in self.bindings:
             if binding.domain is not None and binding.domain not in self.domains:
                 raise ValueError(f"binding path '{binding.path}' references unknown domain '{binding.domain}'")
             if binding.posture is Posture.EXACT and binding.domain is not None:
                 if not _is_singleton_domain(self.domains[binding.domain]):
                     raise ValueError(f"exact posture binding path '{binding.path}' requires a singleton domain")
-            key = (binding.path, binding.scope.value)
+            key = (binding.path, scope_specificity(binding.scope))
             existing = seen.get(key)
-            if existing is not None and (existing.domain, existing.posture) != (binding.domain, binding.posture):
+            if existing is not None and (
+                existing.domain,
+                existing.posture,
+                existing.overrideable,
+            ) != (
+                binding.domain,
+                binding.posture,
+                binding.overrideable,
+            ):
                 # Equal-specificity, incompatible binding is invalid, not
                 # merge-order dependent (envelope-semantics.md R2).
                 raise ValueError(
-                    f"conflicting equal-specificity bindings for path '{binding.path}' at scope '{binding.scope.value}'"
+                    f"conflicting equal-specificity bindings for path '{binding.path}' "
+                    f"at equivalent scopes '{existing.scope.value}' and '{binding.scope.value}'"
                 )
             seen[key] = binding
+        seen_closure: dict[tuple[str, int], tuple[EnvelopeScope, Closure]] = {}
+        for overlay in self.closure:
+            key = (overlay.path, scope_specificity(overlay.scope))
+            existing_closure = seen_closure.get(key)
+            if existing_closure is not None and existing_closure[1] is not overlay.closure:
+                raise ValueError(
+                    f"conflicting equal-specificity closure overlays for path '{overlay.path}' "
+                    f"at equivalent scopes '{existing_closure[0].value}' and '{overlay.scope.value}'"
+                )
+            seen_closure[key] = (overlay.scope, overlay.closure)
 
     def _validate_witness_policy(self) -> None:
         if self.witness_policy is None:
