@@ -1,0 +1,345 @@
+{
+  "protocol_id": "aces-related-work-comparison",
+  "revision": "protocol-v1",
+  "registered_at": "2026-07-13",
+  "title": "ACES reproducible related-work comparison protocol",
+  "purpose": "Compare the observed, revision-pinned capabilities of ACES and selected precedent systems without converting unlike scopes into a universal quality ranking.",
+  "inclusion_criteria": [
+    "Include ACES as the assessed system and independently identify each precedent named by issue 728.",
+    "Include a precedent only when an originating publication, maintaining-body standard, official documentation, or source repository supports cell-level extraction.",
+    "Use a fixed system version or full Git revision and retain the exact locator for every observation.",
+    "Retain systems with different purposes in separate scope strata; cross-stratum observations are descriptive only."
+  ],
+  "exclusion_criteria": [
+    "Exclude systems represented only by secondary summaries or unpinned mutable material.",
+    "Exclude composite identities such as Cyber DEM/FOM or CRACK/VSDL; related systems receive independent rows.",
+    "Exclude feature counts that cannot be mapped to an axis rubric and primary-source rationale.",
+    "Exclude repository popularity, marketing language, and roadmap intent as implementation or adoption evidence."
+  ],
+  "scope_strata": [
+    {
+      "stratum_id": "scenario-authoring",
+      "label": "Scenario authoring and realization",
+      "description": "Languages whose primary unit is an authored cyber-range scenario or infrastructure intent."
+    },
+    {
+      "stratum_id": "agent-simulation",
+      "label": "Agent simulation environment",
+      "description": "An executable environment centered on agent actions, observations, rewards, and episodes."
+    },
+    {
+      "stratum_id": "playbook-orchestration",
+      "label": "Security playbook orchestration",
+      "description": "A standardized workflow-exchange language rather than a cyber-range scenario language."
+    },
+    {
+      "stratum_id": "federation-exchange",
+      "label": "Federation data exchange",
+      "description": "Runtime cyber object/event exchange and its HLA-specific federation realization."
+    }
+  ],
+  "systems": [
+    {
+      "system_id": "aces",
+      "name": "ACES",
+      "version_label": "dev at 1b63b2a0b10dcd80e29b8bad14558ad9c6b706d0",
+      "scope_stratum": "scenario-authoring",
+      "inclusion_rationale": "The subject system, pinned to the pre-implementation dev revision and assessed against repository authority plus executable delivery evidence.",
+      "exclusion_rationale": null
+    },
+    {
+      "system_id": "ocr-sdl",
+      "name": "OCR SDL",
+      "version_label": "SDL-parser fe83e8281fc4b954967fbaa5a0d099007ddcb06c",
+      "scope_stratum": "scenario-authoring",
+      "inclusion_rationale": "A deployed YAML cyber-range authoring language with official documentation and a revision-pinned parser implementation.",
+      "exclusion_rationale": null
+    },
+    {
+      "system_id": "cyborg",
+      "name": "CybORG",
+      "version_label": "paper 2108.09118v1 and source 2742b5e0ce4330c9b14006b38acd3b5ebe00d6fd",
+      "scope_stratum": "agent-simulation",
+      "inclusion_rationale": "An executable autonomous-cyber-operations gym explicitly named by the issue and grounded in an originating paper plus source.",
+      "exclusion_rationale": null
+    },
+    {
+      "system_id": "cacao-v2",
+      "name": "CACAO 2.0",
+      "version_label": "OASIS Committee Specification 01, 27 November 2023",
+      "scope_stratum": "playbook-orchestration",
+      "inclusion_rationale": "A standardized security-playbook language that supplies a workflow and governance comparison boundary.",
+      "exclusion_rationale": null
+    },
+    {
+      "system_id": "cyber-dem",
+      "name": "Cyber DEM",
+      "version_label": "SISO-STD-025-2023",
+      "scope_stratum": "federation-exchange",
+      "inclusion_rationale": "The solution-independent cyber object/event model named by the issue, assessed separately from its HLA realization.",
+      "exclusion_rationale": null
+    },
+    {
+      "system_id": "cyber-fom",
+      "name": "Cyber FOM",
+      "version_label": "SISO-STD-025.3-2024",
+      "scope_stratum": "federation-exchange",
+      "inclusion_rationale": "The HLA-specific implementation of the Cyber DEM, independently attributable and standardized after the base model.",
+      "exclusion_rationale": null
+    },
+    {
+      "system_id": "crack",
+      "name": "CRACK",
+      "version_label": "Computers & Security 95:101837 and source 1f22c729a379d09001f446d19e01a5561eed6ca9",
+      "scope_stratum": "scenario-authoring",
+      "inclusion_rationale": "A TOSCA/Datalog cyber-range scenario framework with formal verification and deployment testing evidence.",
+      "exclusion_rationale": null
+    },
+    {
+      "system_id": "vsdl",
+      "name": "VSDL",
+      "version_label": "arXiv:2001.06681v1",
+      "scope_stratum": "scenario-authoring",
+      "inclusion_rationale": "A constraint-based virtual scenario language with SMT semantics, temporal guards, composition, and generated deployment scripts.",
+      "exclusion_rationale": null
+    }
+  ],
+  "axes": [
+    {
+      "axis_id": "expressive-breadth",
+      "label": "Expressive breadth",
+      "construct": "Distinct authored concerns representable within the system's declared scope, demonstrated by constructs and representative tasks rather than field counts.",
+      "direction": "higher-is-stronger-evidence",
+      "rubric": {
+        "0": "No authored representation for the representative concerns.",
+        "1": "One narrow concern family or indirect representation.",
+        "2": "Several concern families with material documented omissions.",
+        "3": "Broad, typed coverage across the representative concerns with explicit limits."
+      }
+    },
+    {
+      "axis_id": "semantic-precision",
+      "label": "Semantic precision",
+      "construct": "Defined meaning, reference rules, ambiguity control, and semantic invariants, independent of parser strictness.",
+      "direction": "higher-is-stronger-evidence",
+      "rubric": {
+        "0": "Meaning is informal or unavailable for the assessed constructs.",
+        "1": "Basic structural meaning with substantial ambiguity or implicit references.",
+        "2": "Documented semantic rules and validations for major constructs.",
+        "3": "Explicit formal or normative semantics with cross-reference and invariant treatment."
+      }
+    },
+    {
+      "axis_id": "formal-analyzability",
+      "label": "Formal analyzability",
+      "construct": "Explicit formal models and executable analyses over authored artifacts, not ordinary schema validation.",
+      "direction": "higher-is-stronger-evidence",
+      "rubric": {
+        "0": "No formal model or executable formal analysis was observed.",
+        "1": "Formal fragments or lightweight invariants without whole-scenario analysis.",
+        "2": "Substantial formalization or analysis over a bounded subset.",
+        "3": "Executable solver/model analysis is central to validation or generation."
+      }
+    },
+    {
+      "axis_id": "concrete-syntax-soundness",
+      "label": "Concrete-syntax soundness",
+      "construct": "Defined source profile, safe parsing, closed shape, reference checks, diagnostics, and negative-case rejection.",
+      "direction": "higher-is-stronger-evidence",
+      "rubric": {
+        "0": "No concrete authoring syntax or validation boundary applies.",
+        "1": "Syntax is described but negative behavior or closure is weakly evidenced.",
+        "2": "Implemented parser/schema checks cover common positive and negative cases.",
+        "3": "Bounded parser, closed structural and semantic validation, diagnostics, and negative controls are evidenced."
+      }
+    },
+    {
+      "axis_id": "composition-versioning",
+      "label": "Composition and versioning",
+      "construct": "Reuse, imports, identity, evolution, compatibility, migration, and version-bound composition.",
+      "direction": "higher-is-stronger-evidence",
+      "rubric": {
+        "0": "No reusable or versioned composition surface was observed.",
+        "1": "Ad hoc reuse or release versioning without composition semantics.",
+        "2": "Reusable units or version identity with bounded compatibility rules.",
+        "3": "Explicit composition plus version, compatibility, and evolution semantics."
+      }
+    },
+    {
+      "axis_id": "experiment-design",
+      "label": "Experiment design",
+      "construct": "Tasks, factors, allocation, randomization, measures, studies, and validity limits as declared research constructs.",
+      "direction": "higher-is-stronger-evidence",
+      "rubric": {
+        "0": "No experiment-design construct was observed within the declared scope.",
+        "1": "Objectives or evaluation hooks without a controlled design model.",
+        "2": "Several explicit design constructs with documented external or missing obligations.",
+        "3": "Versioned task/study/run design with allocation, measures, provenance, and validity boundaries."
+      }
+    },
+    {
+      "axis_id": "participant-modeling",
+      "label": "Participant modeling",
+      "construct": "Actions, observations, visibility, episodes, outcomes, and multi-participant interaction beyond generic roles.",
+      "direction": "higher-is-stronger-evidence",
+      "rubric": {
+        "0": "No participant behavior model applies.",
+        "1": "Roles, actors, or static knowledge without action/observation lifecycle.",
+        "2": "Explicit action, observation, visibility, or episode constructs with material gaps.",
+        "3": "Executed action/observation/reward/episode behavior with partial-observability evidence."
+      }
+    },
+    {
+      "axis_id": "provenance-evidence",
+      "label": "Provenance and evidence",
+      "construct": "Evidence identity, lineage, integrity, redaction, disclosure, and derivation rather than the mere existence of logs.",
+      "direction": "higher-is-stronger-evidence",
+      "rubric": {
+        "0": "No structured provenance or evidence surface was observed.",
+        "1": "Logs, timestamps, or metadata without full evidence lineage.",
+        "2": "Structured provenance/evidence for major outputs with bounded gaps.",
+        "3": "Versioned evidence identity, lineage, integrity/disclosure, and derivation surfaces."
+      }
+    },
+    {
+      "axis_id": "interoperability",
+      "label": "Interoperability",
+      "construct": "Defined exchange or conformance boundaries between independent implementations, not format export or backend count alone.",
+      "direction": "higher-is-stronger-evidence",
+      "rubric": {
+        "0": "No independent exchange or conformance boundary was observed.",
+        "1": "A single implementation or informal adapter boundary.",
+        "2": "Published interface/profile or multiple implementations without full independent conformance evidence.",
+        "3": "Standardized exchange/conformance boundary with independent implementation or federation evidence."
+      }
+    },
+    {
+      "axis_id": "usability",
+      "label": "Usability",
+      "construct": "Predeclared authoring-task completion, effort, errors, diagnostics, documentation support, and author-population limits.",
+      "direction": "higher-is-stronger-evidence",
+      "rubric": {
+        "0": "No authoring surface or task evidence applies.",
+        "1": "Examples or maintainer walkthroughs only; no independent author evidence.",
+        "2": "Documented workflows and task support with limited user evidence.",
+        "3": "Independent, disclosed author-task study with completion, effort, and error measures."
+      }
+    },
+    {
+      "axis_id": "implementation-maturity",
+      "label": "Implementation maturity",
+      "construct": "Shipped executable behavior, releases, conformance evidence, maintenance, and independent use rather than accepted designs.",
+      "direction": "higher-is-stronger-evidence",
+      "rubric": {
+        "0": "Concept or prose only for the assessed surface.",
+        "1": "Prototype or materially incomplete implementation.",
+        "2": "Maintained implementation with releases or operational use but limited independent conformance/adoption evidence.",
+        "3": "Mature maintained implementation with release, operational, and independent-use or conformance evidence."
+      }
+    },
+    {
+      "axis_id": "governance-community",
+      "label": "Governance and community",
+      "construct": "Standards/governance process, independent participation, adoption, and maintenance continuity rather than repository popularity.",
+      "direction": "higher-is-stronger-evidence",
+      "rubric": {
+        "0": "No durable governance or independent community evidence was observed.",
+        "1": "Single-project governance or maintainer-led continuity.",
+        "2": "Documented multi-party process or independent participation with limited standardization/adoption evidence.",
+        "3": "Recognized standards governance or sustained independent multi-party adoption and maintenance."
+      }
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "author-multihost-objective",
+      "kind": "authoring-task",
+      "title": "Author a multi-host scenario with an objective",
+      "authored_requirement": "Represent three networked hosts, service/software intent, two participant roles, and a success objective without implementation-specific credentials.",
+      "unit_of_observation": "One system-native authored artifact and its documented validation path.",
+      "applicability_rule": "Applicable when the system claims scenario, playbook, environment, or federation authoring for at least one named construct; otherwise record out of scope.",
+      "permitted_assistance": "Pinned official examples and reference documentation; no unstated extensions.",
+      "inputs": "A bounded prose brief naming topology, roles, service intent, and success condition.",
+      "expected_artifact": "A native artifact or source-grounded walkthrough identifying represented and unrepresented parts.",
+      "criteria": {
+        "success": "All applicable parts have native constructs and a documented validation path.",
+        "partial": "At least one applicable part requires prose, code, or an external plane.",
+        "failure": "The central authored unit cannot be represented within the system's declared scope."
+      }
+    },
+    {
+      "case_id": "author-versioned-composition",
+      "kind": "authoring-task",
+      "title": "Compose and version reusable authored material",
+      "authored_requirement": "Reuse a separately identified authored unit, bind its revision, and state compatibility or replacement behavior.",
+      "unit_of_observation": "One composition/versioning walkthrough using the pinned source boundary.",
+      "applicability_rule": "Applicable to systems that accept reusable authored units; out of scope for pure runtime exchange with no authoring composition.",
+      "permitted_assistance": "Pinned standards, source, and official examples.",
+      "inputs": "A base unit, a dependent unit, and a requested revision change.",
+      "expected_artifact": "A native reference/import/sub-playbook/composition mechanism or an explicit unsupported result.",
+      "criteria": {
+        "success": "Identity, revision, composition, and compatibility behavior are explicit.",
+        "partial": "Reuse exists but revision or compatibility behavior remains implicit.",
+        "failure": "No native reuse/composition mechanism was found."
+      }
+    },
+    {
+      "case_id": "author-controlled-experiment",
+      "kind": "authoring-task",
+      "title": "Declare a controlled participant experiment",
+      "authored_requirement": "Declare participants, a task, factor levels, allocation or randomization, measures, evidence, and a study/run boundary.",
+      "unit_of_observation": "One source-grounded mapping from the brief to native constructs and named external obligations.",
+      "applicability_rule": "Applicable when experiment, evaluation, training, or agent-study claims are in scope; otherwise out of scope.",
+      "permitted_assistance": "Pinned standards, source, official examples, and ACES experiment contracts.",
+      "inputs": "A two-condition participant study with a preserved seed, outcome measure, and evidence requirement.",
+      "expected_artifact": "Native study/task/run constructs or a bounded declaration of external/missing concerns.",
+      "criteria": {
+        "success": "All design elements are first-class and version/provenance bound.",
+        "partial": "Objectives or measures exist but allocation, study, evidence, or participant semantics are external or missing.",
+        "failure": "No applicable experiment-design surface was observed."
+      }
+    },
+    {
+      "case_id": "negative-dangling-reference",
+      "kind": "negative-case",
+      "title": "Reject a dangling authored reference",
+      "authored_requirement": "Introduce exactly one reference to an undeclared node, step, object, participant, or federation class.",
+      "unit_of_observation": "The documented or executable validation result for the single injected defect.",
+      "applicability_rule": "Applicable when the system has cross-object authored references; otherwise out of scope.",
+      "permitted_assistance": "Pinned parser tests, validation rules, standards text, or formal-analysis descriptions.",
+      "inputs": "A valid representative artifact plus one dangling identifier.",
+      "expected_artifact": "A bounded rejection/diagnostic or an explicit finding that the check is absent/not evidenced.",
+      "criteria": {
+        "success": "The production or normative validation boundary requires rejection with a useful location.",
+        "partial": "The constraint is stated but executable rejection or diagnostics are not evidenced.",
+        "failure": "The dangling reference is accepted or no validation rule was found."
+      }
+    },
+    {
+      "case_id": "negative-contradictory-constraints",
+      "kind": "negative-case",
+      "title": "Reject contradictory authored constraints",
+      "authored_requirement": "Inject one contradiction between two otherwise valid constraints, branches, resource bounds, or required semantic outcomes.",
+      "unit_of_observation": "The formal, semantic, or normative result for the single contradiction.",
+      "applicability_rule": "Applicable when the system claims semantic, formal, workflow, or conformance validation; otherwise out of scope.",
+      "permitted_assistance": "Pinned formal semantics, validator tests, standards conformance rules, and source documentation.",
+      "inputs": "A valid representative artifact plus one mutually unsatisfiable condition.",
+      "expected_artifact": "Unsatisfiable/rejected result or a bounded not-evaluated finding.",
+      "criteria": {
+        "success": "The owning analysis detects the contradiction before successful execution/exchange.",
+        "partial": "Only a bounded structural contradiction is detected or the rule lacks executable evidence.",
+        "failure": "No applicable contradiction check was observed."
+      }
+    }
+  ],
+  "analysis_rules": {
+    "primary_result": "Publish the evidence surface and scope-qualified Pareto frontiers; do not publish a universal total score.",
+    "pareto_scope": "Compute dominance only within a declared scope stratum and only over axes applicable to every member of that group.",
+    "missing_handling": "Keep out-of-scope, not observed, not implemented, and not evaluated distinct; never coerce them to zero.",
+    "weighting_policy": "Predeclare bounded integer weight profiles before reading their rankings and retain every result.",
+    "reversal_policy": "If reasonable profiles change the first-ranked system, disclose the reversal and prohibit a weight-independent winner headline.",
+    "quality_claim_policy": "A highest-quality claim requires a separate validated quality construct and is not supported by this protocol.",
+    "claim_evidence_policy": "Every public claim records ADR-021 evidence status, threats to validity, a falsification protocol, objective pass/fail criteria, allowed and disallowed evidence, named evidence artifacts, and a derivation recomputed from the frozen observations."
+  },
+  "amendment_log": []
+}

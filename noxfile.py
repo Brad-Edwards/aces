@@ -624,6 +624,10 @@ def _run_contracts(session: nox.Session, reporter: SessionReporter, *args: str) 
         lambda: _run_project_python(session, "tools/check_scientific_scenario_completeness.py"),
     )
     reporter.run(
+        "contracts / reproducible related-work comparison",
+        lambda: _run_project_python(session, "tools/check_related_work_comparison.py"),
+    )
+    reporter.run(
         "contracts / json artifact validation",
         lambda: _run_project_python(session, "tools/check_json_artifacts.py", *json_artifact_args),
     )
