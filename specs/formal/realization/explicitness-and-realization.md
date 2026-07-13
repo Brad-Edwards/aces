@@ -229,12 +229,13 @@ history, or evidence envelopes MUST be recorded with provenance
 distinguishing three origins:
 
 - **author-declared** — the value is exactly as the author wrote it in
-  the SDL (or as the author's parameter input resolved at
-  instantiation);
+  the SDL and survives instantiation without parameter or default
+  substitution;
 - **processor-derived** — the value was produced by deterministic
   processor activity that does NOT constitute realization: parameter
-  substitution, defaulting permitted by the SDL schema, canonical
-  identity normalization, and compilation transformations. The
+  substitution (whether the selected value is caller-bound or comes from an
+  SDL default), defaulting permitted by the SDL schema, canonical identity
+  normalization, and compilation transformations. The
   processor does not realize underspecified concerns; "processor-derived"
   is the provenance label for deterministic processing of declared
   input.

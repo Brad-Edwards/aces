@@ -15,7 +15,7 @@ import textwrap
 
 from aces_contracts.apparatus import ConceptBinding, RealizationSupportDeclaration
 from aces_contracts.vocabulary import RealizationSupportMode
-from aces_sdl.explicitness import ExplicitnessClass
+from aces_sdl.explicitness import ExplicitnessClass, ExplicitnessProvenance
 
 from aces.backends.stubs import create_stub_manifest
 from aces.core.runtime.capabilities import BackendManifest, ProvisionerCapabilities
@@ -100,6 +100,18 @@ def test_compiled_class_matches_scenario_classifier_output():
     for req in model.realization_requirements:
         assert req.field_path in classified
         assert req.explicitness is classified[req.field_path].classification
+
+
+def test_compiled_provenance_matches_scenario_classifier_output():
+    """Differential: compilation preserves the classifier's origin authority."""
+
+    classified = instantiate_scenario(_scenario(_CONSTRAINED_SCENARIO)).explicitness
+    model = compile_runtime_model(_scenario(_CONSTRAINED_SCENARIO))
+
+    by_field = {req.field_path: req for req in model.realization_requirements}
+    assert by_field["nodes.web.os"].provenance is ExplicitnessProvenance.PROCESSOR_DERIVED
+    assert by_field["nodes.web.os"].provenance is classified["nodes.web.os"].provenance
+    assert by_field["nodes.web.type"].provenance is ExplicitnessProvenance.AUTHOR_DECLARED
 
 
 def test_planner_rejects_unrealizable_exact_declaration():

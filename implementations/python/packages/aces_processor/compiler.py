@@ -2441,6 +2441,7 @@ def _compile_realization_requirements(
                 domain=REALIZATION_DOMAIN,
                 requirement_kind=concern_kind,
                 explicitness=record.classification,
+                provenance=record.provenance,
             )
         )
     return tuple(requirements)
