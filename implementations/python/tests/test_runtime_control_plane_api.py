@@ -12,7 +12,12 @@ from aces_contracts.contracts import (
     ParticipantHistoryViewModel,
     ParticipantStatusViewModel,
 )
-from aces_contracts.runtime_state import RuntimeSnapshot
+from aces_contracts.runtime_state import (
+    ExplicitnessClass,
+    ExplicitnessProvenance,
+    RealizationProvenanceEntry,
+    RuntimeSnapshot,
+)
 from starlette.testclient import TestClient
 
 from aces.backends.stubs import create_stub_target
@@ -432,6 +437,50 @@ nodes:
     restarted = RuntimeControlPlane(target, store=store)
     assert restarted.get_operation(receipt["operation_id"]) is not None
     assert restarted.get_snapshot().snapshot.entries
+
+
+def test_authenticated_snapshot_preserves_realization_governing_scope_from_store(tmp_path: Path):
+    target = create_stub_target()
+    store = LocalControlPlaneStore(tmp_path / "cp-store")
+    store.save_snapshot(
+        RuntimeSnapshot(
+            realization_provenance=(
+                RealizationProvenanceEntry(
+                    address="node.web",
+                    field_path="nodes.web.os",
+                    domain="runtime-realization",
+                    requirement_kind="os-family",
+                    explicitness=ExplicitnessClass.OPEN,
+                    provenance=ExplicitnessProvenance.BACKEND_REALIZED,
+                    governing_scope="#/",
+                ),
+            )
+        )
+    )
+    restarted = RuntimeControlPlane(target, store=store)
+    app = create_control_plane_app(
+        restarted,
+        security=_test_security(target.name),
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/snapshot",
+            headers={"authorization": "Bearer test-auditor-token"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["realization_provenance"] == [
+        {
+            "address": "node.web",
+            "field_path": "nodes.web.os",
+            "domain": "runtime-realization",
+            "requirement_kind": "os-family",
+            "explicitness": "open",
+            "provenance": "backend-realized",
+            "governing_scope": "#/",
+        }
+    ]
 
 
 def test_control_plane_api_records_audit_events_for_denials():

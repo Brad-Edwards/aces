@@ -13,6 +13,7 @@ from .phase_contracts import (
     ExplicitnessProvenanceRecord,
     ResolvedImportProvenance,
 )
+from .realization_designation import RealizationDesignationRecord
 from .scenario import ImportDecl, ScenarioContent
 
 
@@ -91,6 +92,27 @@ def prefixed_explicitness(
         }
     )
     return ExplicitnessProvenanceRecord.model_validate(payload)
+
+
+def prefixed_realization_designation(
+    record: RealizationDesignationRecord,
+    *,
+    namespace: str,
+    symbols: dict[str, dict[str, str] | set[str]],
+) -> RealizationDesignationRecord:
+    """Qualify one imported lexical scope through the composition symbol map."""
+
+    parts = record.field_pointer.split("/")
+    if len(parts) >= 3:
+        section_symbols = symbols.get(_decode_pointer_segment(parts[1]))
+        declaration_name = _decode_pointer_segment(parts[2])
+        if isinstance(section_symbols, Mapping) and declaration_name in section_symbols:
+            parts[2] = _encode_pointer_segment(section_symbols[declaration_name])
+    return RealizationDesignationRecord(
+        namespace=(namespace, *record.namespace),
+        field_pointer="/".join(parts),
+        posture=record.posture,
+    )
 
 
 def _decode_pointer_segment(segment: str) -> str:

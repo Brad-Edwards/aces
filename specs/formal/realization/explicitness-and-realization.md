@@ -25,9 +25,10 @@ that names a concern a backend will later realize, three questions:
    value or structure, and under what bounds?
 3. if the realizer cannot honor a binding declaration, what must happen?
 
-The note does not introduce new SDL syntax, define new exact-requirement
-kinds, or describe wave-3 participant semantics that build on this
-boundary. Those are governed elsewhere.
+The note owns one typed scenario-root SDL `realization` designation surface.
+It does not add realization fields to nested models, define new
+exact-requirement kinds, or describe wave-3 participant semantics that build
+on this boundary. Those are governed elsewhere.
 
 ## Realization Status
 
@@ -52,6 +53,9 @@ is `active`. What is *enforced today* spans authoring through observation:
 - the SEM-218 classifier in `aces_sdl.explicitness`, invoked by
   `SemanticValidator`, which tags authored SDL declarations as
   *exact*, *constrained*, or *open* for downstream consumers;
+- the typed `aces_sdl.realization_designation` authoring surface, which carries
+  a scenario default and RFC 6901 scoped overrides using `closed`, `open`, or
+  `unspecified`, resolved by semantic specificity rather than list order;
 - the instantiation downgrade rule in `instantiate_scenario`, which
   preserves authored explicitness metadata across parameter/default
   substitution without promoting substituted concrete values to false
@@ -60,9 +64,9 @@ is `active`. What is *enforced today* spans authoring through observation:
   each authored realization concern into a `CompiledRealizationRequirement`
   on the `RuntimeModel` preserving its exact / constrained / open class;
 - the planner realization-support gate in `aces_processor.planner.plan`,
-  which matches each compiled exact / constrained requirement kind against
-  the selected backend's `realization_support` and rejects an unsupported
-  kind with a structured `Diagnostic` before deployment;
+  which matches each compiled exact / constrained / open requirement against
+  the selected backend's `realization_support` and rejects open demand unless
+  the selected domain explicitly declares `OPEN_REALIZATION`;
 - the runtime non-approximation gate on backend adapters in
   `aces_processor.semantics.realization.realization_disclosure` (invoked from
   `aces_runtime.backend_calls._call_backend_apply`, the runtime adapter
@@ -72,7 +76,9 @@ is `active`. What is *enforced today* spans authoring through observation:
   accepted into runtime state;
 - the SEM-218 provenance ledger (`realization_provenance`) on the runtime
   snapshot envelope, which records each realized concern with its explicitness
-  class and author-declared / processor-derived / backend-realized origin.
+  class, author-declared / processor-derived / backend-realized origin, and a
+  redacted governing-scope reference preserved through store and authenticated
+  snapshot API conversion.
 
 With those last two enforcement points realized, every `SEM-200` lifecycle
 phase boundary is now enforced by named, tested code; no rule in this spec
@@ -102,6 +108,8 @@ extend these rather than introduce parallel registries:
 - shared SDL static semantics:
   `implementations/python/packages/aces_sdl/validator/`
   (`SemanticValidator`, `SDLValidationError`)
+- scoped author designation and canonical scope resolution:
+  `implementations/python/packages/aces_sdl/realization_designation.py`
 - instantiation and revalidation:
   `implementations/python/packages/aces_sdl/instantiate.py`
   (`instantiate_scenario`, `SDLInstantiationError`)
@@ -136,21 +144,12 @@ classes:
   realizable later. The realizer MAY pick any realization consistent with
   its declared capability domain.
 
-The taxonomy is binding immediately. The **concrete classification
-authority** — the per-field designation that says, for each SDL field
-and apparatus-manifest slot, which class it carries (and, for open
-fields, the set of realizable points the schema admits) — is staged
-work and is not delivered by this spec. Until that authority lands, the
-existing closed-Pydantic SDL models, controlled vocabularies, semantic
-profiles, and apparatus-contract type system serve as the structural
-floor: closed models reject undeclared fields (so silence is not
-freedom), and `RealizationSupportDeclaration` requires explicit
-exact-requirement-kinds / constraint-kinds (so apparatus capability is
-typed). Per-field SDL classification (e.g., "field X on construct Y is
-exact and bound to vocabulary Z; field Q on construct R is open and
-realizable at point P") will land with the SEM-218 classifier
-implementation as a designation table or annotation surface, and is
-tracked under the SEM-218 coverage row.
+The taxonomy and its **concrete classification authority** are binding. The
+incumbent classifier owns explicit leaf declarations. The scenario-root typed
+designation table owns inherited defaults only at realization points registered
+by the same SEM-218 concern authority. A scope default never turns an arbitrary
+missing model field into a realization point and never relaxes closed Pydantic
+unknown-key rejection.
 
 Silence at any other point is **not** open realization. The SDL parser,
 `SemanticValidator`, instantiation, the compiler, and the runtime
@@ -158,6 +157,24 @@ adapter layer MUST treat unstated values at non-realizable points as a
 validation failure, not as permission to fill them in. This is the
 closed-world default for the ecosystem; the existing closed-Pydantic
 SDL model boundary (`extra="forbid"`) enforces it structurally today.
+
+### Scoped default cascade
+
+`Scenario.realization` is optional. When present, it contains a root `default`
+and zero or more `scopes`. The only author posture spellings are `closed`,
+`open`, and `unspecified`. Scope identities combine a structured module
+`namespace` tuple with an RFC 6901 `field_pointer`; JSONPath, wildcards, and
+permissive dotted author paths are not accepted.
+
+Resolution is deterministic: an explicit leaf exact/constrained/open
+declaration wins first, then the most-specific concrete scoped default, then an
+inherited concrete outer default. `unspecified` delegates to the selected
+apparatus default; until a typed apparatus-default contract exists, that seam
+resolves closed. Omitting `realization` is distinct and preserves the legacy
+closed fallback. Equal-scope duplicates are invalid, and list/import order has
+no semantic effect. Imported declarations and designation scopes are qualified
+through the composition symbol map, so a module default cannot govern host or
+sibling declarations.
 
 ### Five invariants
 
@@ -188,7 +205,10 @@ does not pick values for underspecified concerns.
 concern only at a point where the owning SDL schema or semantic rule
 explicitly designates that concern as realizable, *and* where the
 backend's manifest declares a per-domain `RealizationSupportMode` of
-`CONSTRAINED` or `OPEN_REALIZATION` covering that concern. Silence
+`OPEN_REALIZATION` covering that open concern. When the backend also publishes
+a finer realization envelope, its offered projection MUST subsume the compiled
+open request under the canonical envelope relation. Constrained declarations
+use the separately declared constrained support surface. Silence
 outside such designated points is fail-closed: the authoring artifact
 MUST be rejected with a structured error rather than filled in.
 
@@ -244,9 +264,9 @@ distinguishing three origins:
 
 Provenance lives on the existing runtime plan / result / snapshot /
 participant-episode contracts; no new private channel may carry
-realization decisions out of band. The provenance contract above is
-normative; the per-field provenance encoding on those existing runtime
-contracts is staged work tracked under the SEM-218 coverage row.
+realization decisions out of band. The provenance contract above is realized
+on the existing runtime snapshot contract. Backend-filled open slots carry a
+stable `governing_scope` reference, never the realized value itself.
 
 ### Phase responsibilities
 
@@ -258,11 +278,11 @@ now enforced by named, tested code.
 
 | Phase | Responsibility | Status |
 | --- | --- | --- |
-| Authoring | Source of declarations. The authoring layer is the only authority that may classify a construct as exact, constrained, or open; downstream stages MUST treat that classification as immutable input. | partial — closed Pydantic SDL models (`extra="forbid"`), the apparatus-contract type system, and the `aces_sdl.explicitness` classifier carry the exact / constrained / open classification for authored SDL declarations. |
-| Validation | At the apparatus-contract layer: the shape gates on backend `RealizationSupportDeclaration` (I4 structural floor), the JSON-schema conditional gate, and `ProcessorManifestV2Model`'s asymmetric rejection of `realization_support` are enforced. At the SDL scenario layer: `SemanticValidator` enforces fail-closed validation on the *existing* closed SDL models and attaches SEM-218 classifier output to the validated scenario. | partial — apparatus-contract validation (manifest shape) and SDL-scenario classifier output are enforced; the compiler, planner, and runtime consumers of that output are realized (see those rows), and only the per-field SDL classification authority for the remaining concerns stays staged. |
-| Instantiation | Parameter and default substitution may resolve open concerns and constrained surfaces. Substitution MUST NOT downgrade an exact declaration into a constrained or open one, and MUST NOT introduce an exact declaration that the author did not write. The concrete scenario MUST be revalidated after substitution. | partial — `instantiate_scenario` revalidates after substitution and derives instantiated explicitness from the authored classification so substituted values do not become false exact declarations. |
-| Compilation | Lowers each declaration into a typed runtime requirement preserving class. Exact requirements carry their declared kind into the compiled representation; constrained requirements carry the typed constraint surface; open requirements are emitted as realizable slots tagged with the realization-and-disclosure family. | partial — `compile_runtime_model` emits `CompiledRealizationRequirement` metadata on the `RuntimeModel` preserving the exact / constrained / open class for the authored realization concerns the planner validates; per-field designation for the remaining concerns stays staged. |
-| Planning | Matches every compiled requirement against the candidate backend manifest. An unsupported exact-requirement-kind MUST cause plan rejection through a structured `Diagnostic` before deployment; an unsupported constraint-kind MUST cause the same outcome. An open realizable slot MAY be left for the backend only when its manifest declares matching support. | partial — `aces_processor.planner.plan` matches each compiled exact / constrained requirement kind against the backend's `realization_support` and emits a rejecting `Diagnostic` for an unsupported kind; the Execution-phase runtime non-approximation gate it hands off to is realized in `aces_processor.semantics.realization` (invoked from the `aces_runtime` adapter boundary). |
+| Authoring | Source of declarations. The authoring layer is the only authority that may classify a construct as exact, constrained, or open; downstream stages MUST treat that classification as immutable input. | active — closed Pydantic models, the leaf classifier, and the typed scenario/scoped `realization` designation surface carry author intent without conflating it with apparatus capability. |
+| Validation | Apparatus declarations and SDL designation scopes are structurally and semantically validated, including canonical pointers, namespace ownership, and equal-specificity conflicts. | active — contract shape gates and `SemanticValidator` enforce both authorities fail closed. |
+| Instantiation | Parameter and default substitution may resolve open concerns and constrained surfaces. Substitution MUST NOT downgrade an exact declaration into a constrained or open one, and MUST NOT introduce an exact declaration that the author did not write. The concrete scenario MUST be revalidated after substitution. | active — `instantiate_scenario` preserves explicitness plus typed designation provenance and revalidates concrete content. |
+| Compilation | Lowers each declaration into a typed runtime requirement preserving class. Exact requirements carry their declared kind into the compiled representation; constrained requirements carry the typed constraint surface; open requirements are emitted as realizable slots tagged with the realization-and-disclosure family. | active — `compile_runtime_model` applies leaf precedence and the scoped cascade, carrying open and delegated demand plus its governing scope. |
+| Planning | Matches every compiled requirement against the candidate backend manifest. An unsupported exact-requirement-kind MUST cause plan rejection through a structured `Diagnostic` before deployment; an unsupported constraint-kind MUST cause the same outcome. An open realizable slot MAY be left for the backend only when its manifest declares matching support. | active — the planner rejects open demand without explicit `OPEN_REALIZATION` support and never approximates it. |
 | Execution | Backend realizers honor the compiled class. A runtime adapter MUST NOT silently broaden an exact requirement, MUST NOT silently narrow an open realization beyond its declared constraints, and MUST surface incompatibilities through the existing runtime error envelope rather than approximate. | active — the runtime non-approximation gate `aces_processor.semantics.realization.realization_disclosure` (invoked from `aces_runtime.backend_calls._call_backend_apply`) compares each realized exact concern against the author declaration and rejects a silent approximation with a `runtime.backend-contract-invalid` diagnostic before the backend snapshot is accepted. |
 | Observation | Realized values land in plan, result, snapshot, history, and evidence surfaces with provenance per I5. Realization choices are observation data, not private backend state. | active — realized concerns are recorded on the runtime snapshot envelope's `realization_provenance` ledger with their explicitness class and author-declared / processor-derived / backend-realized origin; the snapshot is the aggregate observation surface that carries result and history data. |
 
@@ -298,27 +318,31 @@ realization status, are:
   substitution (I1). *Enforced today* by `instantiate_scenario`,
   `SDLInstantiationError`, and `aces_sdl.explicitness` deriving the
   instantiated explicitness map from the pre-substitution authored map.
-- **Compiler / planner gate** — compiled exact-requirement-kinds MUST
-  be matched against the selected backend's `realization_support`;
-  unsupported kinds MUST cause `Diagnostic`-bearing rejection before
+- **Compiler / planner gate** — compiled exact, constrained, and open
+  requirements MUST be matched against the selected backend's
+  `realization_support`; unsupported kinds and unsupported open demand MUST
+  cause `Diagnostic`-bearing rejection before
   deployment (I1, I2, I4). *Enforced today* by the typed compiler
   emission on `RuntimeModel.realization_requirements` and the
-  realization-support gate in `aces_processor.planner.plan`.
+  realization-support plus open-request envelope-subsumption gates in
+  `aces_processor.planner.plan`.
 - **Error-envelope gate** — unsupported exact requirements and
   forbidden approximations MUST be surfaced through stable validation
   errors or structured diagnostics (I1, I2). *Enforced today*; the
   shape-gate errors and the planner's
   `realization.unsupported-exact-requirement` /
-  `realization.unsupported-constraint-requirement` diagnostics surface
-  unsupported kinds before deployment.
+  `realization.unsupported-constraint-requirement` /
+  `realization.unsupported-open-requirement` diagnostics surface unsupported
+  demand before deployment.
 - **Persistence and observation gate** — values entering snapshots,
   results, history, and evidence MUST carry provenance distinguishing
   author-declared, processor-derived, and backend-realized origins (I5).
   *Enforced today* by the `realization_provenance` ledger on the runtime
   snapshot envelope (`RealizationProvenanceEntry` /
   `RealizationProvenanceEntryModel`), which records each realized concern's
-  explicitness class and origin and round-trips through the control-plane
-  snapshot serializers.
+  explicitness class, origin, and governing designation scope and round-trips
+  through the control-plane snapshot serializers and authenticated snapshot
+  response model.
 - **Host / OS exposure gate** — exact values, credentials, and backend
   tokens MUST NOT be passed through process argv, logs, audit details,
   diagnostics, JSON fixtures, or semantic-profile artifacts when they
@@ -437,7 +461,9 @@ invariant I1–I5 is enforced by named code.
   `aces_processor.semantics.realization.realization_support_diagnostics`
   (called from `aces_processor.planner.plan`) matches them against the
   backend's `realization_support`, rejecting unsupported kinds with a
-  `Diagnostic`.
+  `Diagnostic`. `realization_envelope_diagnostics` projects the offered
+  envelope onto compiled open concern paths and calls the canonical
+  `subsumes()` relation.
 - I2 runtime non-approximation gate —
   `aces_processor.semantics.realization.realization_disclosure` (re-exported
   through `aces_processor.planner`), invoked from
@@ -479,15 +505,20 @@ invariant I1–I5 is enforced by named code.
   realization (I2), the `realization_provenance` ledger recorded for honoured
   concerns (I5), the rejection diagnostic naming the field path and kind but
   not the value, and the ledger's round-trip through snapshot persistence.
+- `implementations/python/tests/test_sem_218_realization_designation.py` —
+  typed scenario/scoped designation parsing, both cascade override directions,
+  explicit-leaf precedence, delegation-versus-omission preservation,
+  namespace isolation, canonical-pointer rejection, open-support planning,
+  fine-envelope subsumption, governing-scope disclosure, authenticated
+  persistence delivery, and schema/model differential coverage.
 
 ## Non-Goals
 
 This spec does not:
 
-- introduce new SDL syntax for marking a field as exact, constrained, or
-  open — the classes are derived from existing closed Pydantic SDL
-  models, controlled vocabularies, semantic profiles, and the apparatus
-  manifest, not from a new keyword;
+- add realization fields to individual SDL declarations — explicit leaves are
+  still classified from their typed fields, while inherited defaults use the
+  single scenario-root `realization` designation surface;
 - enumerate the full set of governed exact-requirement-kinds — that
   expansion belongs to the controlled-vocabulary and reference-model
   authorities;

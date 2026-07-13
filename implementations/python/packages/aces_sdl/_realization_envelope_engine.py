@@ -18,12 +18,14 @@ from enum import Enum
 
 from aces_contracts.realization_envelope import (
     Closure,
+    ClosureOverlay,
     DomainDescriptor,
     EnvelopeBinding,
     Posture,
     RealizationEnvelopeModel,
     RecordDomain,
     WitnessPolicy,
+    scope_specificity,
 )
 from pydantic import BaseModel
 
@@ -47,15 +49,41 @@ class LeafConstraint:
 # --------------------------------------------------------------------------- #
 
 _PATH_TOKEN_RE = re.compile(r"[^.\[\]]+|\[\d+\]")
+_FULL_PATH_RE = re.compile(r"^[^.\[\]]+(?:\.[^.\[\]]+|\[\d+\])*$")
 
 
 def tokenize_path(path: str) -> list[PathToken]:
     """Split an SDL path into attribute/key segments and ``[i]`` list indices."""
 
+    if _FULL_PATH_RE.fullmatch(path) is None:
+        raise ValueError("path must use the complete canonical SDL path grammar")
     tokens: list[PathToken] = []
     for raw in _PATH_TOKEN_RE.findall(path):
         tokens.append(int(raw[1:-1]) if raw.startswith("[") else raw)
     return tokens
+
+
+def _path_tokens(path: str) -> tuple[PathToken, ...]:
+    return tuple(tokenize_path(path)) if path else ()
+
+
+def _is_same_or_descendant(path: str, ancestor: str) -> bool:
+    path_tokens = _path_tokens(path)
+    ancestor_tokens = _path_tokens(ancestor)
+    return len(ancestor_tokens) <= len(path_tokens) and path_tokens[: len(ancestor_tokens)] == ancestor_tokens
+
+
+def _render_path(tokens: Sequence[PathToken]) -> str:
+    rendered = ""
+    for token in tokens:
+        if isinstance(token, int):
+            segment = f"[{token}]"
+        elif rendered:
+            segment = f".{token}"
+        else:
+            segment = token
+        rendered += segment
+    return rendered
 
 
 def _navigate_step(current: object, token: PathToken) -> tuple[bool, object]:
@@ -186,7 +214,7 @@ def _record_closed_scopes(envelope: RealizationEnvelopeModel) -> dict[str, set[s
 
 
 def _prefixed_paths(constraints: dict[str, LeafConstraint], prefix: str) -> list[str]:
-    return [path for path in constraints if path == prefix or path.startswith(prefix + ".")]
+    return [path for path in constraints if _is_same_or_descendant(path, prefix)]
 
 
 def _apply_binding(
@@ -212,14 +240,34 @@ def _apply_binding(
 
 
 def _add_admitted_children(envelope: RealizationEnvelopeModel, scope_path: str, admitted: set[str]) -> None:
-    prefix = scope_path + "." if scope_path else ""
+    scope_tokens = _path_tokens(scope_path)
     for binding in envelope.bindings:
-        if not binding.path.startswith(prefix):
+        binding_tokens = _path_tokens(binding.path)
+        if len(binding_tokens) < len(scope_tokens) or binding_tokens[: len(scope_tokens)] != scope_tokens:
             continue
-        remainder = binding.path[len(prefix) :]
-        tokens = tokenize_path(remainder) if remainder else []
-        if tokens and isinstance(tokens[0], str):
-            admitted.add(tokens[0])
+        remainder = binding_tokens[len(scope_tokens) :]
+        if remainder and isinstance(remainder[0], str):
+            admitted.add(remainder[0])
+
+
+def _open_closed_subtree(closed: dict[str, set[str]], open_path: str) -> None:
+    """Shadow inherited closure only along ``open_path``, leaving siblings closed."""
+
+    for path in tuple(closed):
+        if _is_same_or_descendant(path, open_path):
+            del closed[path]
+    open_tokens = _path_tokens(open_path)
+    ancestors = tuple(path for path in closed if _is_same_or_descendant(open_path, path))
+    for ancestor in ancestors:
+        current = _path_tokens(ancestor)
+        remaining = open_tokens[len(current) :]
+        for index, token in enumerate(remaining):
+            current_path = _render_path(current)
+            if isinstance(token, str):
+                closed.setdefault(current_path, set()).add(token)
+            current = (*current, token)
+            if index < len(remaining) - 1:
+                closed.setdefault(_render_path(current), set())
 
 
 def effective_constraints(
@@ -233,14 +281,24 @@ def effective_constraints(
     """
 
     constraints: dict[str, LeafConstraint] = {}
-    for binding in sorted(envelope.bindings, key=lambda b: len(tokenize_path(b.path))):
+    for binding in sorted(envelope.bindings, key=_binding_specificity):
         _apply_binding(binding, envelope, constraints)
 
     closed = _record_closed_scopes(envelope)
-    for overlay in envelope.closure:
+    for overlay in sorted(envelope.closure, key=_overlay_specificity):
         if overlay.closure is Closure.CLOSED_WORLD:
             _add_admitted_children(envelope, overlay.path, closed.setdefault(overlay.path, set()))
+        else:
+            _open_closed_subtree(closed, overlay.path)
     return constraints, closed
+
+
+def _binding_specificity(binding: EnvelopeBinding) -> tuple[int, int]:
+    return len(tokenize_path(binding.path)), scope_specificity(binding.scope)
+
+
+def _overlay_specificity(overlay: ClosureOverlay) -> tuple[int, int]:
+    return len(tokenize_path(overlay.path)) if overlay.path else 0, scope_specificity(overlay.scope)
 
 
 # --------------------------------------------------------------------------- #
@@ -296,7 +354,7 @@ def overridability_violations(envelope: RealizationEnvelopeModel) -> list[str]:
 
     violations: list[str] = []
     constraints: dict[str, LeafConstraint] = {}
-    for binding in sorted(envelope.bindings, key=lambda b: len(tokenize_path(b.path))):
+    for binding in sorted(envelope.bindings, key=_binding_specificity):
         if binding.posture is Posture.OPEN:
             _record_open_widenings(constraints, binding.path, violations)
         elif binding.domain is not None:

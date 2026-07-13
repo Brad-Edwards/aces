@@ -180,20 +180,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "d955247a08984f50f620fb602834caa8cf325aa3afc4427ae279b1b7a1d9b5d4",
+      "content_hash": "10544c816e9407607d4bbc8002eb23645f2fc5bc6c7e86ca7fbd4ae3f0c6d25e",
       "last_change": {
         "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
-        "content_hash": "d955247a08984f50f620fb602834caa8cf325aa3afc4427ae279b1b7a1d9b5d4"
+        "content_hash": "10544c816e9407607d4bbc8002eb23645f2fc5bc6c7e86ca7fbd4ae3f0c6d25e"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "8fa21683b87d9754bb6ff8a99caf011fc7c92ea49eecdeacd38a47733b8ad83d",
+      "content_hash": "03aee5d25be44733ef09697b403235189bc91fc65da7bd6ff7ecd8ff6685d72a",
       "last_change": {
         "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
-        "content_hash": "8fa21683b87d9754bb6ff8a99caf011fc7c92ea49eecdeacd38a47733b8ad83d"
+        "content_hash": "03aee5d25be44733ef09697b403235189bc91fc65da7bd6ff7ecd8ff6685d72a"
       }
     },
     {
@@ -406,10 +406,10 @@
       "contract_id": "runtime-snapshot-v1",
       "schema_path": "contracts/schemas/snapshots/runtime-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "4e20e5c91ccd425c88be75a0e55be97f07d311e6499fc6bf73c3db4b37fa51bf",
+      "content_hash": "b1453a4764c14bf9ec1497030563ac0c774b17b1883d15fcbb2027d66f5dcbf9",
       "last_change": {
-        "summary": "Added portable proposition truth results as a distinct runtime snapshot carrier outside ordinary evaluation result envelopes.",
-        "content_hash": "4e20e5c91ccd425c88be75a0e55be97f07d311e6499fc6bf73c3db4b37fa51bf"
+        "summary": "Added redacted governing-scope references to SEM-218 runtime realization provenance.",
+        "content_hash": "b1453a4764c14bf9ec1497030563ac0c774b17b1883d15fcbb2027d66f5dcbf9"
       }
     },
     {
@@ -446,10 +446,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "d1339b02f53d9c9885bd0f3a48e07c3e12b67406df561869c56140f445da22ac",
+      "content_hash": "27f9ad3203fa48afec0247b7eb8afd376c1acc8dbdac7d88d9e0c96c9b9bf8c3",
       "last_change": {
         "summary": "Added authored identity-domain declarations, typed controller and join relationships, and explicit account domain bindings (issue #763).",
-        "content_hash": "d1339b02f53d9c9885bd0f3a48e07c3e12b67406df561869c56140f445da22ac"
+        "content_hash": "27f9ad3203fa48afec0247b7eb8afd376c1acc8dbdac7d88d9e0c96c9b9bf8c3"
       }
     },
     {

@@ -1217,6 +1217,37 @@
       ]
     },
     {
+      "subject_id": "sdl-field:realization",
+      "subject_kind": "top_level_field",
+      "disposition": "current",
+      "authority": {
+        "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+        "pointer": "#/properties/realization",
+        "contract_id": "sdl-authoring-input-v1"
+      },
+      "claims": [
+        {
+          "plane": "semantics",
+          "classification": "aces_native",
+          "source_refs": [],
+          "aces_boundaries": [
+            {
+              "artifact": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
+              "symbol_or_pointer": "#/properties/realization"
+            }
+          ],
+          "source_boundaries": [],
+          "divergence": "Defined by the current ACES normative contract; external systems may be intellectual precedents but do not define this subject.",
+          "compatibility": "not_applicable",
+          "citation_refs": [],
+          "internal_authority_refs": [
+            "specs/formal/realization/explicitness-and-realization.md"
+          ],
+          "compatibility_direction": "not_applicable"
+        }
+      ]
+    },
+    {
       "subject_id": "sdl-field:relationships",
       "subject_kind": "top_level_field",
       "disposition": "current",

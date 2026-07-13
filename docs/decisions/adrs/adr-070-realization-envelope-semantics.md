@@ -124,14 +124,22 @@ plus structural closure checks, and keeps witness generation deterministic.
 
 Posture applies at one of five scopes: field, node, topology, app, or scenario.
 Most-specific-wins selects the effective posture for a concrete field or child
-scope, but a more-specific posture may not silently widen a closed enclosing
-scope. Equal-specificity conflicts are diagnostics, not merge order.
+scope. The `overrideable` rule applies when a more-specific explicit envelope
+domain binding widens an enclosing binding; it does not prohibit the SEM-218
+lexical author-default cascade from overriding inherited open/closed posture in
+either direction. Equal path-specificity is broken by semantic scope
+specificity (field, node, topology/app, scenario), and equal-specificity
+conflicts are diagnostics rather than merge order.
 
 Open means the expression leaves the value to a downstream realizer at a point
 the SDL semantics declares realizable. Constrained means the value must fall
 inside a typed domain. Exact means the domain is a singleton. Closed-world
 scope means no unspecified realizable dimensions under that scope are portable
 members of the set.
+
+An effective `open-world` closure overlay replaces inherited `closed-world`
+state at the same or a descendant scope. This replacement is closure-cascade
+resolution, not widening of an explicit domain binding.
 
 ### 5. Backend manifest carriage uses configuration-bound identity
 

@@ -1,0 +1,536 @@
+{
+  "analysis_id": "analysis-v1",
+  "protocol_revision": "protocol-v1",
+  "snapshot_id": "snapshot-2026-07-13",
+  "generated_at": "2026-07-13T05:40:00Z",
+  "score_method": "Axis-specific 0..3 ordinal evidence levels; out-of-scope values are excluded. Pareto analysis is within scope strata. Weight profiles use recorded integer weights and retain all reversals.",
+  "pareto_groups": [
+    {
+      "group_id": "scenario-authoring-pareto",
+      "scope_stratum": "scenario-authoring",
+      "system_ids": [
+        "aces",
+        "ocr-sdl",
+        "crack",
+        "vsdl"
+      ],
+      "axis_ids": [
+        "expressive-breadth",
+        "semantic-precision",
+        "formal-analyzability",
+        "concrete-syntax-soundness",
+        "composition-versioning",
+        "experiment-design",
+        "participant-modeling",
+        "provenance-evidence",
+        "interoperability",
+        "usability",
+        "implementation-maturity",
+        "governance-community"
+      ],
+      "frontier_system_ids": [
+        "aces",
+        "ocr-sdl",
+        "vsdl"
+      ]
+    },
+    {
+      "group_id": "agent-simulation-pareto",
+      "scope_stratum": "agent-simulation",
+      "system_ids": [
+        "cyborg"
+      ],
+      "axis_ids": [
+        "expressive-breadth",
+        "semantic-precision",
+        "formal-analyzability",
+        "concrete-syntax-soundness",
+        "composition-versioning",
+        "experiment-design",
+        "participant-modeling",
+        "provenance-evidence",
+        "interoperability",
+        "usability",
+        "implementation-maturity",
+        "governance-community"
+      ],
+      "frontier_system_ids": [
+        "cyborg"
+      ]
+    },
+    {
+      "group_id": "playbook-orchestration-pareto",
+      "scope_stratum": "playbook-orchestration",
+      "system_ids": [
+        "cacao-v2"
+      ],
+      "axis_ids": [
+        "expressive-breadth",
+        "semantic-precision",
+        "formal-analyzability",
+        "concrete-syntax-soundness",
+        "composition-versioning",
+        "provenance-evidence",
+        "interoperability",
+        "usability",
+        "implementation-maturity",
+        "governance-community"
+      ],
+      "frontier_system_ids": [
+        "cacao-v2"
+      ]
+    },
+    {
+      "group_id": "federation-exchange-pareto",
+      "scope_stratum": "federation-exchange",
+      "system_ids": [
+        "cyber-dem",
+        "cyber-fom"
+      ],
+      "axis_ids": [
+        "expressive-breadth",
+        "semantic-precision",
+        "formal-analyzability",
+        "concrete-syntax-soundness",
+        "composition-versioning",
+        "provenance-evidence",
+        "interoperability",
+        "usability",
+        "implementation-maturity",
+        "governance-community"
+      ],
+      "frontier_system_ids": [
+        "cyber-fom"
+      ]
+    }
+  ],
+  "weight_profiles": [
+    {
+      "profile_id": "equal-evidence",
+      "scope_stratum": "scenario-authoring",
+      "weights": {
+        "expressive-breadth": 1,
+        "semantic-precision": 1,
+        "formal-analyzability": 1,
+        "concrete-syntax-soundness": 1,
+        "composition-versioning": 1,
+        "experiment-design": 1,
+        "participant-modeling": 1,
+        "provenance-evidence": 1,
+        "interoperability": 1,
+        "usability": 1,
+        "implementation-maturity": 1,
+        "governance-community": 1
+      },
+      "totals": {
+        "aces": 25,
+        "crack": 15,
+        "ocr-sdl": 15,
+        "vsdl": 16
+      },
+      "ranking": [
+        "aces",
+        "vsdl",
+        "crack",
+        "ocr-sdl"
+      ]
+    },
+    {
+      "profile_id": "breadth-and-composition",
+      "scope_stratum": "scenario-authoring",
+      "weights": {
+        "expressive-breadth": 5,
+        "semantic-precision": 0,
+        "formal-analyzability": 0,
+        "concrete-syntax-soundness": 0,
+        "composition-versioning": 3,
+        "experiment-design": 3,
+        "participant-modeling": 2,
+        "provenance-evidence": 2,
+        "interoperability": 1,
+        "usability": 0,
+        "implementation-maturity": 0,
+        "governance-community": 0
+      },
+      "totals": {
+        "aces": 42,
+        "crack": 18,
+        "ocr-sdl": 21,
+        "vsdl": 21
+      },
+      "ranking": [
+        "aces",
+        "ocr-sdl",
+        "vsdl",
+        "crack"
+      ]
+    },
+    {
+      "profile_id": "formal-rigor",
+      "scope_stratum": "scenario-authoring",
+      "weights": {
+        "expressive-breadth": 0,
+        "semantic-precision": 4,
+        "formal-analyzability": 5,
+        "concrete-syntax-soundness": 3,
+        "composition-versioning": 2,
+        "experiment-design": 0,
+        "participant-modeling": 0,
+        "provenance-evidence": 0,
+        "interoperability": 0,
+        "usability": 0,
+        "implementation-maturity": 0,
+        "governance-community": 0
+      },
+      "totals": {
+        "aces": 32,
+        "crack": 37,
+        "ocr-sdl": 12,
+        "vsdl": 39
+      },
+      "ranking": [
+        "vsdl",
+        "crack",
+        "aces",
+        "ocr-sdl"
+      ]
+    },
+    {
+      "profile_id": "maturity-and-governance",
+      "scope_stratum": "scenario-authoring",
+      "weights": {
+        "expressive-breadth": 0,
+        "semantic-precision": 0,
+        "formal-analyzability": 0,
+        "concrete-syntax-soundness": 1,
+        "composition-versioning": 0,
+        "experiment-design": 0,
+        "participant-modeling": 0,
+        "provenance-evidence": 0,
+        "interoperability": 3,
+        "usability": 3,
+        "implementation-maturity": 5,
+        "governance-community": 5
+      },
+      "totals": {
+        "aces": 22,
+        "crack": 10,
+        "ocr-sdl": 26,
+        "vsdl": 10
+      },
+      "ranking": [
+        "ocr-sdl",
+        "aces",
+        "crack",
+        "vsdl"
+      ]
+    }
+  ],
+  "sensitivity": {
+    "profile_ids": [
+      "equal-evidence",
+      "breadth-and-composition",
+      "formal-rigor",
+      "maturity-and-governance"
+    ],
+    "ranking_reversal_observed": true,
+    "winning_systems": [
+      "aces",
+      "ocr-sdl",
+      "vsdl"
+    ],
+    "disclosure": "The first-ranked scenario-authoring system changes across reasonable predeclared profiles, so no weight-independent total-order headline is permitted."
+  },
+  "claims": [
+    {
+      "claim_id": "no-overall-winner",
+      "kind": "no-overall-winner",
+      "statement": "No overall winner is supported: the four declared scope strata are analyzed separately, and the scenario-authoring first-ranked system changes across the four declared weight profiles.",
+      "system_ids": [
+        "aces",
+        "ocr-sdl",
+        "crack",
+        "vsdl",
+        "cyborg",
+        "cacao-v2",
+        "cyber-dem",
+        "cyber-fom"
+      ],
+      "axis_ids": [
+        "expressive-breadth",
+        "semantic-precision",
+        "formal-analyzability",
+        "concrete-syntax-soundness",
+        "composition-versioning",
+        "experiment-design",
+        "participant-modeling",
+        "provenance-evidence",
+        "interoperability",
+        "usability",
+        "implementation-maturity",
+        "governance-community"
+      ],
+      "evidence_status": "partial",
+      "threats_to_validity": [
+        "The four declared scope strata and selected systems do not exhaust every cyber-range or orchestration comparison frame.",
+        "The ordinal evidence levels remain dependent on the frozen rubric and on primary sources available at the pinned revisions."
+      ],
+      "falsification": {
+        "protocol": "Recompute scope membership and every declared scenario-authoring weight profile from the frozen protocol and observation matrix.",
+        "objective_pass_criteria": [
+          "All systems remain in one declared scope stratum and no Pareto calculation mixes strata.",
+          "The recomputed first-ranked scenario-authoring system changes across the declared profiles."
+        ],
+        "objective_fail_criteria": [
+          "A published overall winner is derived by combining unlike scope strata.",
+          "Recomputed declared profiles produce one invariant first-ranked system while the claim reports a reversal."
+        ],
+        "allowed_evidence_classes": [
+          "documentation",
+          "executable",
+          "normative",
+          "publication",
+          "source-code"
+        ],
+        "disallowed_evidence_classes": [
+          "marketing-claim",
+          "secondary-summary",
+          "unpinned-live-content"
+        ],
+        "evidence_artifact_refs": [
+          "protocol-v1",
+          "snapshot-2026-07-13",
+          "analysis-v1"
+        ]
+      },
+      "derivation": {
+        "kind": "scope-and-sensitivity",
+        "scope_strata": [
+          "agent-simulation",
+          "federation-exchange",
+          "playbook-orchestration",
+          "scenario-authoring"
+        ],
+        "profile_winners": {
+          "breadth-and-composition": "aces",
+          "equal-evidence": "aces",
+          "formal-rigor": "vsdl",
+          "maturity-and-governance": "ocr-sdl"
+        },
+        "ranking_reversal_observed": true
+      }
+    },
+    {
+      "claim_id": "scope-qualified-breadth",
+      "kind": "scope-qualified-breadth",
+      "statement": "Within the four-system scenario-authoring stratum and this frozen rubric, ACES is the sole expressive-breadth leader at level 3. This is the broadest combined surface observed in this corpus; `highest quality` is not supported, and standardization or maturity do not follow from breadth.",
+      "system_ids": [
+        "aces",
+        "ocr-sdl",
+        "crack",
+        "vsdl"
+      ],
+      "axis_ids": [
+        "expressive-breadth"
+      ],
+      "evidence_status": "partial",
+      "threats_to_validity": [
+        "The four-system scenario-authoring corpus is not an exhaustive census of scenario languages.",
+        "Expressive breadth is not a validated proxy for quality, maturity, standardization, or usability."
+      ],
+      "falsification": {
+        "protocol": "Recompute every scenario-authoring expressive-breadth score from the frozen observation cells and identify all systems at the maximum level.",
+        "objective_pass_criteria": [
+          "ACES has level 3 and is the only system at the recomputed maximum within the declared scenario-authoring stratum."
+        ],
+        "objective_fail_criteria": [
+          "A frozen scenario-authoring observation exceeds or ties ACES on expressive breadth.",
+          "The public wording generalizes the corpus-bounded maximum into highest quality, maturity, or standardization."
+        ],
+        "allowed_evidence_classes": [
+          "documentation",
+          "executable",
+          "normative",
+          "publication",
+          "source-code"
+        ],
+        "disallowed_evidence_classes": [
+          "marketing-claim",
+          "secondary-summary",
+          "unpinned-live-content"
+        ],
+        "evidence_artifact_refs": [
+          "protocol-v1",
+          "snapshot-2026-07-13",
+          "analysis-v1"
+        ]
+      },
+      "derivation": {
+        "kind": "axis-maximum",
+        "scope_stratum": "scenario-authoring",
+        "axis_id": "expressive-breadth",
+        "system_scores": {
+          "aces": 3,
+          "crack": 2,
+          "ocr-sdl": 2,
+          "vsdl": 2
+        },
+        "max_score": 3,
+        "leading_system_ids": [
+          "aces"
+        ]
+      }
+    },
+    {
+      "claim_id": "maturity-governance",
+      "kind": "maturity-governance",
+      "statement": "Against ACES's recorded level 1, CACAO 2.0 and Cyber FOM each record level 3 for governance and community, while CybORG records level 3 and OCR SDL level 2 for implementation maturity. These are axis-specific evidence comparisons, not cross-scope overall rankings or adoption claims.",
+      "system_ids": [
+        "aces",
+        "cacao-v2",
+        "cyber-fom",
+        "cyborg",
+        "ocr-sdl"
+      ],
+      "axis_ids": [
+        "implementation-maturity",
+        "governance-community"
+      ],
+      "evidence_status": "partial",
+      "threats_to_validity": [
+        "Implementation and governance evidence can change after the pinned revisions and retrieval dates.",
+        "Primary-source implementation or standards evidence is not equivalent to independent adoption, usability, or operational-quality evidence."
+      ],
+      "falsification": {
+        "protocol": "Recompute the four declared maturity and governance cell comparisons directly from the frozen observation matrix.",
+        "objective_pass_criteria": [
+          "Each named comparison has a strictly higher recorded axis level than the corresponding ACES level."
+        ],
+        "objective_fail_criteria": [
+          "Any named system does not exceed ACES on the declared axis after recomputation.",
+          "The public wording promotes axis-specific evidence into an overall ranking or independent-adoption claim."
+        ],
+        "allowed_evidence_classes": [
+          "documentation",
+          "executable",
+          "normative",
+          "publication",
+          "source-code"
+        ],
+        "disallowed_evidence_classes": [
+          "marketing-claim",
+          "secondary-summary",
+          "unpinned-live-content"
+        ],
+        "evidence_artifact_refs": [
+          "protocol-v1",
+          "snapshot-2026-07-13",
+          "analysis-v1"
+        ]
+      },
+      "derivation": {
+        "kind": "cell-comparisons",
+        "comparisons": [
+          {
+            "axis_id": "governance-community",
+            "left_system_id": "cacao-v2",
+            "left_score": 3,
+            "operator": "greater-than",
+            "right_system_id": "aces",
+            "right_score": 1
+          },
+          {
+            "axis_id": "governance-community",
+            "left_system_id": "cyber-fom",
+            "left_score": 3,
+            "operator": "greater-than",
+            "right_system_id": "aces",
+            "right_score": 1
+          },
+          {
+            "axis_id": "implementation-maturity",
+            "left_system_id": "cyborg",
+            "left_score": 3,
+            "operator": "greater-than",
+            "right_system_id": "aces",
+            "right_score": 1
+          },
+          {
+            "axis_id": "implementation-maturity",
+            "left_system_id": "ocr-sdl",
+            "left_score": 2,
+            "operator": "greater-than",
+            "right_system_id": "aces",
+            "right_score": 1
+          }
+        ]
+      }
+    },
+    {
+      "claim_id": "weight-sensitivity",
+      "kind": "sensitivity",
+      "statement": "Across the declared scenario-authoring profiles, breadth and composition ranks ACES first, formal rigor ranks VSDL first, and maturity and governance ranks OCR SDL first; this observed reversal prohibits a weight-independent winner claim.",
+      "system_ids": [
+        "aces",
+        "ocr-sdl",
+        "vsdl"
+      ],
+      "axis_ids": [
+        "expressive-breadth",
+        "semantic-precision",
+        "formal-analyzability",
+        "concrete-syntax-soundness",
+        "composition-versioning",
+        "experiment-design",
+        "participant-modeling",
+        "provenance-evidence",
+        "interoperability",
+        "usability",
+        "implementation-maturity",
+        "governance-community"
+      ],
+      "evidence_status": "partial",
+      "threats_to_validity": [
+        "Only the preregistered weight profiles are evaluated; other disclosed weights can produce other rankings.",
+        "Every weighted total remains dependent on axis-specific ordinal evidence levels and their frozen rubric."
+      ],
+      "falsification": {
+        "protocol": "Recompute each declared scenario-authoring weight profile from frozen observation scores and compare the first-ranked systems.",
+        "objective_pass_criteria": [
+          "Breadth and composition ranks ACES first, formal rigor ranks VSDL first, and maturity and governance ranks OCR SDL first.",
+          "The recomputed set of first-ranked systems contains more than one system."
+        ],
+        "objective_fail_criteria": [
+          "Any recorded profile winner differs from the recomputed winner.",
+          "The public wording suppresses the observed reversal or claims weight-independent robustness."
+        ],
+        "allowed_evidence_classes": [
+          "documentation",
+          "executable",
+          "normative",
+          "publication",
+          "source-code"
+        ],
+        "disallowed_evidence_classes": [
+          "marketing-claim",
+          "secondary-summary",
+          "unpinned-live-content"
+        ],
+        "evidence_artifact_refs": [
+          "protocol-v1",
+          "snapshot-2026-07-13",
+          "analysis-v1"
+        ]
+      },
+      "derivation": {
+        "kind": "profile-winners",
+        "profile_winners": {
+          "breadth-and-composition": "aces",
+          "formal-rigor": "vsdl",
+          "maturity-and-governance": "ocr-sdl"
+        },
+        "ranking_reversal_observed": true
+      }
+    }
+  ]
+}

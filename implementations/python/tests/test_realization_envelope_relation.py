@@ -37,6 +37,7 @@ from aces_sdl import (
     parse_sdl,
 )
 from aces_sdl._realization_envelope_domains import _MISSING, default_witness_value, out_of_domain_value
+from aces_sdl._realization_envelope_engine import effective_constraints
 from aces_sdl.realization_envelope import generate_negative_probes, member, subsumes, witness
 from aces_sdl.scenario import InstantiatedScenario, Scenario
 from hypothesis import given, settings
@@ -125,6 +126,16 @@ def test_invalid_fixtures_rejected(path: Path) -> None:
 def test_contract_rejects_unknown_field() -> None:
     with pytest.raises(ValidationError):
         RealizationEnvelopeModel.model_validate({"id": "x", "scope": "scenario", "unexpected": True})
+
+
+@pytest.mark.parametrize("path", ["nodes.web]junk.os", "nodes..web.os", "nodes[nope].os"])
+def test_contract_rejects_partially_tokenizable_binding_paths(path: str) -> None:
+    with pytest.raises(ValidationError):
+        EnvelopeBinding(
+            path=path,
+            scope=EnvelopeScope.FIELD,
+            posture=Posture.OPEN,
+        )
 
 
 def test_contract_rejects_arbitrary_predicate_domain() -> None:
@@ -481,6 +492,181 @@ def test_open_posture_widens_overrideable_record_leaf() -> None:
     windows = _instantiate("name: rec\nnodes:\n  web:\n    type: vm\n    os: windows\n")
     assert member(linux, env).holds
     assert member(windows, env).holds
+
+
+def test_binding_scope_breaks_equal_path_ties_independent_of_list_order() -> None:
+    def envelope(bindings: list[EnvelopeBinding]) -> RealizationEnvelopeModel:
+        return RealizationEnvelopeModel(
+            id="scope-order",
+            scope=EnvelopeScope.SCENARIO,
+            domains={
+                "wide": EnumDomain(values=["linux", "windows"]),
+                "linux": ExactDomain(value="linux"),
+            },
+            bindings=bindings,
+        )
+
+    outer = EnvelopeBinding(
+        path="nodes.web.os",
+        scope=EnvelopeScope.SCENARIO,
+        posture=Posture.CONSTRAINED,
+        domain="wide",
+        overrideable=True,
+    )
+    leaf = EnvelopeBinding(
+        path="nodes.web.os",
+        scope=EnvelopeScope.FIELD,
+        posture=Posture.EXACT,
+        domain="linux",
+    )
+    windows = _instantiate("name: scope-order\nnodes:\n  web: {type: vm, os: windows}\n")
+    linux = _instantiate("name: scope-order\nnodes:\n  web: {type: vm, os: linux}\n")
+
+    for bindings in ([outer, leaf], [leaf, outer]):
+        env = envelope(bindings)
+        assert member(linux, env).holds
+        result = member(windows, env)
+        assert not result.holds
+        assert not any("non-overrideable-widen" in diagnostic.code for diagnostic in result.diagnostics)
+
+
+def test_topology_and_app_bindings_conflict_as_sibling_scopes() -> None:
+    domains = {
+        "linux": ExactDomain(value="linux"),
+        "windows": ExactDomain(value="windows"),
+    }
+    bindings = [
+        EnvelopeBinding(
+            path="nodes.web.os",
+            scope=EnvelopeScope.TOPOLOGY,
+            posture=Posture.EXACT,
+            domain="linux",
+        ),
+        EnvelopeBinding(
+            path="nodes.web.os",
+            scope=EnvelopeScope.APP,
+            posture=Posture.EXACT,
+            domain="windows",
+        ),
+    ]
+    with pytest.raises(ValidationError, match="conflicting equal-specificity bindings"):
+        RealizationEnvelopeModel(
+            id="sibling-binding-conflict",
+            scope=EnvelopeScope.SCENARIO,
+            domains=domains,
+            bindings=bindings,
+        )
+
+
+def test_topology_and_app_closure_conflicts_as_sibling_scopes() -> None:
+    closure = [
+        ClosureOverlay(
+            path="nodes.web",
+            scope=EnvelopeScope.TOPOLOGY,
+            closure=Closure.CLOSED_WORLD,
+        ),
+        ClosureOverlay(
+            path="nodes.web",
+            scope=EnvelopeScope.APP,
+            closure=Closure.OPEN_WORLD,
+        ),
+    ]
+    with pytest.raises(ValidationError, match="conflicting equal-specificity closure overlays"):
+        RealizationEnvelopeModel(
+            id="sibling-closure-conflict",
+            scope=EnvelopeScope.SCENARIO,
+            closure=closure,
+        )
+
+
+def test_open_world_overlay_removes_inherited_closed_state() -> None:
+    env = RealizationEnvelopeModel(
+        id="open-overlay",
+        scope=EnvelopeScope.SCENARIO,
+        domains={
+            "node": RecordDomain(fields={"type": "vm"}, extra=False),
+            "vm": ExactDomain(value="vm"),
+        },
+        bindings=[
+            EnvelopeBinding(
+                path="nodes.web",
+                scope=EnvelopeScope.NODE,
+                posture=Posture.CONSTRAINED,
+                domain="node",
+            )
+        ],
+        closure=[
+            ClosureOverlay(
+                path="nodes.web",
+                scope=EnvelopeScope.NODE,
+                closure=Closure.OPEN_WORLD,
+            )
+        ],
+    )
+    instance = _instantiate('name: open-overlay\nnodes:\n  web: {type: vm, os: linux, os_version: "9"}\n')
+
+    assert member(instance, env).holds
+
+
+def test_open_descendant_shadows_closed_root_without_opening_siblings() -> None:
+    env = RealizationEnvelopeModel(
+        id="closed-root-open-node",
+        scope=EnvelopeScope.SCENARIO,
+        domains={"name": ExactDomain(value="scoped")},
+        bindings=[
+            EnvelopeBinding(
+                path="name",
+                scope=EnvelopeScope.SCENARIO,
+                posture=Posture.EXACT,
+                domain="name",
+            )
+        ],
+        closure=[
+            ClosureOverlay(path="", scope=EnvelopeScope.SCENARIO, closure=Closure.CLOSED_WORLD),
+            ClosureOverlay(path="nodes.web", scope=EnvelopeScope.NODE, closure=Closure.OPEN_WORLD),
+        ],
+    )
+    web_only = _instantiate("name: scoped\nnodes:\n  web: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}\n")
+    with_sibling = _instantiate(
+        "name: scoped\nnodes:\n"
+        "  web: {type: vm, os: linux, resources: {ram: 1 gib, cpu: 1}}\n"
+        "  worker: {type: vm, resources: {ram: 1 gib, cpu: 1}}\n"
+    )
+
+    assert member(web_only, env).holds
+    sibling_result = member(with_sibling, env)
+    assert not sibling_result.holds
+    assert any(diagnostic.address == "nodes.worker" for diagnostic in sibling_result.diagnostics)
+
+
+def test_open_world_overlay_uses_token_ancestry_for_indexed_descendants() -> None:
+    env = RealizationEnvelopeModel(
+        id="indexed-open-overlay",
+        scope=EnvelopeScope.SCENARIO,
+        domains={
+            "value": ExactDomain(value="allowed"),
+            "item": RecordDomain(fields={"value": "value"}, extra=False),
+        },
+        bindings=[
+            EnvelopeBinding(
+                path="items[0]",
+                scope=EnvelopeScope.NODE,
+                posture=Posture.CONSTRAINED,
+                domain="item",
+            )
+        ],
+        closure=[
+            ClosureOverlay(
+                path="items",
+                scope=EnvelopeScope.TOPOLOGY,
+                closure=Closure.OPEN_WORLD,
+            )
+        ],
+    )
+
+    _constraints, closed = effective_constraints(env)
+
+    assert "items[0]" not in closed
 
 
 def test_widening_non_overrideable_inherited_value_is_invalid() -> None:

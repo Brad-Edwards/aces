@@ -114,6 +114,7 @@ def _snapshot_payload(snapshot: RuntimeSnapshot) -> dict[str, Any]:
                 "requirement_kind": entry.requirement_kind,
                 "explicitness": entry.explicitness.value,
                 "provenance": entry.provenance.value,
+                "governing_scope": entry.governing_scope,
             }
             for entry in snapshot.realization_provenance
         ],
@@ -173,6 +174,7 @@ def _snapshot_from_payload(payload: dict[str, Any]) -> RuntimeSnapshot:
                 provenance=ExplicitnessProvenance(
                     str(item.get("provenance", ExplicitnessProvenance.AUTHOR_DECLARED.value))
                 ),
+                governing_scope=(str(item["governing_scope"]) if item.get("governing_scope") is not None else None),
             )
             for item in payload.get("realization_provenance", [])
             if isinstance(item, dict)

@@ -20,6 +20,9 @@ from ._composition_provenance import (
     prefixed_import_record as _prefixed_import_record,
 )
 from ._composition_provenance import (
+    prefixed_realization_designation as _prefixed_realization_designation,
+)
+from ._composition_provenance import (
     resolved_import_record as _resolved_import_record,
 )
 from ._errors import SDLInstantiationError, SDLParseDiagnostic, SDLParseError
@@ -53,6 +56,7 @@ from .phase_contracts import (
     ExplicitnessProvenanceRecord,
     ResolvedImportProvenance,
 )
+from .realization_designation import RealizationDesignation, RealizationDesignationRecord, designation_records
 from .scenario import ExpandedScenario, ImportDecl, ModuleDescriptor, ScenarioContent
 
 
@@ -438,6 +442,13 @@ def expand_sdl_modules(
     import_records: list[ResolvedImportProvenance] = []
     capability_constraints: list[CapabilityConstraint] = []
     explicitness_records: list[ExplicitnessProvenanceRecord] = []
+    realization_records: list[RealizationDesignationRecord] = []
+    raw_designation = merged.get("realization")
+    if raw_designation is not None:
+        try:
+            realization_records.extend(designation_records(RealizationDesignation.model_validate(raw_designation)))
+        except ValidationError as exc:
+            raise SDLParseError("Realization designation is structurally invalid", path=path) from exc
     lockfile = load_lockfile(resolved_path.parent)
     trust_policy = load_trust_policy(resolved_path.parent)
 
@@ -522,14 +533,25 @@ def expand_sdl_modules(
                 symbols=symbols,
             )
             for record in bound.explicitness
+            if any(record.model_path.startswith(f"{section_name}.") for section_name in _HASHMAP_SECTIONS)
+        )
+        realization_records.extend(
+            _prefixed_realization_designation(
+                record,
+                namespace=namespace,
+                symbols=symbols,
+            )
+            for record in inner_provenance.realization_designations
         )
 
     provenance = ExpansionProvenance(
         imports=tuple(import_records),
         capability_constraints=tuple(capability_constraints),
         explicitness=tuple(explicitness_records),
+        realization_designations=tuple(realization_records),
     )
     merged.pop("imports", None)
     merged.pop("module", None)
+    merged.pop("realization", None)
     merged["expansion_provenance"] = provenance.model_dump(mode="python")
     return merged, provenance

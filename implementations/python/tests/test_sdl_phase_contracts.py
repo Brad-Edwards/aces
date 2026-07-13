@@ -57,7 +57,7 @@ def _provenance(
 def test_phase_models_have_disjoint_authoring_and_instantiated_fields() -> None:
     shared = set(ScenarioContent.model_fields)
     assert not issubclass(InstantiatedScenario, Scenario)
-    assert set(Scenario.model_fields) == shared | {"module", "imports", "variables"}
+    assert set(Scenario.model_fields) == shared | {"module", "imports", "realization", "variables"}
     assert set(ExpandedScenario.model_fields) == shared | {"variables", "expansion_provenance"}
     assert set(InstantiatedScenario.model_fields) == shared | {"instantiation_provenance"}
     assert "ExpandedScenario" not in aces_sdl.__all__
