@@ -6,7 +6,7 @@ import subprocess
 
 import pytest
 from aces_backend_protocols.naming import provider_resource_name
-from aces_reference_backend.driver import ContainerSpec, NetworkSpec
+from aces_reference_backend.driver import ContainerSpec, NetworkSpec, ServiceSpec
 from aces_reference_backend.drivers.oci import ImageTrustPolicy, OciDeploymentDriver
 
 
@@ -38,6 +38,15 @@ def _driver(recorder: _Recorder) -> OciDeploymentDriver:
         runner=recorder,
         image_policy=ImageTrustPolicy(allowed_images=("img", "aces-reference/linux", "pinned-img")),
     )
+
+
+def test_container_spec_preserves_legacy_positional_labels_argument():
+    labels = {"environment": "test"}
+
+    spec = ContainerSpec("provision.node.web", "web", "img", (), labels)
+
+    assert spec.labels is labels
+    assert spec.services == ()
 
 
 def test_oci_realize_uses_fixed_argv_list_never_shell():
@@ -199,6 +208,28 @@ def test_oci_attaches_container_to_requested_networks():
     run_argv = next(call["argv"] for call in recorder.calls if "run" in call["argv"])
     assert "--network" in run_argv
     assert run_argv[run_argv.index("--network") + 1] == provider_resource_name("provision.network.lan", prefix="aces")
+
+
+def test_oci_service_descriptors_do_not_publish_host_ports():
+    recorder = _Recorder(stdout="id\n")
+    driver = _driver(recorder)
+
+    driver.realize(
+        networks=(),
+        containers=(
+            ContainerSpec(
+                address="provision.node.web",
+                name="web",
+                image_ref="img",
+                services=(ServiceSpec(port=8443, protocol="tcp", name="https"),),
+            ),
+        ),
+    )
+
+    run_argv = next(call["argv"] for call in recorder.calls if "run" in call["argv"])
+    assert "--publish" not in run_argv
+    assert "-p" not in run_argv
+    assert "8443" not in run_argv
 
 
 def test_oci_rejects_plan_pinned_image_without_allowlist():

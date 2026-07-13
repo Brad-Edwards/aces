@@ -125,7 +125,7 @@ def _capabilities() -> BackendCapabilitySet:
             supported_content_types=frozenset({"file", "dataset", "directory"}),
             supported_account_features=frozenset({"groups", "mail", "spn", "shell", "home", "disabled", "auth_method"}),
             max_total_nodes=None,
-            supports_acls=True,
+            supports_acls=False,
             supports_accounts=True,
         ),
         orchestrator=OrchestratorCapabilities(

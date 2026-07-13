@@ -11,10 +11,17 @@ from aces_contracts.planning import (
     RuntimeDomain,
 )
 from aces_reference_backend import interpret_provisioning_plan
+from aces_reference_backend.driver import ServiceSpec
 from aces_reference_backend.realization import Realization
 
 
-def _node_resource(address: str, name: str, os_family: str = "linux") -> PlannedResource:
+def _node_resource(
+    address: str,
+    name: str,
+    os_family: str = "linux",
+    *,
+    services: list[dict[str, object]] | None = None,
+) -> PlannedResource:
     return PlannedResource(
         address=address,
         domain=RuntimeDomain.PROVISIONING,
@@ -24,7 +31,10 @@ def _node_resource(address: str, name: str, os_family: str = "linux") -> Planned
             "node_name": name,
             "node_type": "vm",
             "os_family": os_family,
-            "spec": {"node": {}, "infrastructure": {"networks": ["lan"]}},
+            "spec": {
+                "node": {"services": services or []},
+                "infrastructure": {"networks": ["lan"]},
+            },
         },
     )
 
@@ -62,6 +72,44 @@ def test_interpret_maps_nodes_to_container_specs():
     assert [spec.address for spec in realization.containers] == ["provision.node.web"]
     assert realization.containers[0].name == "web"
     assert not realization.diagnostics
+
+
+def test_interpret_preserves_named_and_unnamed_service_descriptors():
+    plan = _plan(
+        _node_resource(
+            "provision.node.web",
+            "web",
+            services=[
+                {"port": 80, "protocol": "tcp", "name": "http"},
+                {"port": 5000, "protocol": "sctp", "name": ""},
+            ],
+        )
+    )
+
+    realization = interpret_provisioning_plan(plan)
+
+    assert realization.containers[0].services == (
+        ServiceSpec(port=80, protocol="tcp", name="http"),
+        ServiceSpec(port=5000, protocol="sctp", name=""),
+    )
+    assert not realization.diagnostics
+
+
+def test_interpret_rejects_malformed_service_without_leaking_payload():
+    sentinel = "TOKEN-LEAK-SENTINEL-XYZ"
+    plan = _plan(
+        _node_resource(
+            "provision.node.web",
+            "web",
+            services=[{"port": sentinel, "protocol": "tcp", "name": "http"}],
+        )
+    )
+
+    realization = interpret_provisioning_plan(plan)
+
+    codes = {diagnostic.code for diagnostic in realization.diagnostics}
+    assert "reference-backend.realization.service-invalid" in codes
+    assert all(sentinel not in diagnostic.message for diagnostic in realization.diagnostics)
 
 
 def test_interpret_maps_networks_to_network_specs():

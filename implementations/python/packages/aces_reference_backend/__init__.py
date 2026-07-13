@@ -21,6 +21,7 @@ from .driver import (
     DeploymentDriver,
     NetworkHandle,
     NetworkSpec,
+    ServiceSpec,
 )
 from .manifest import REFERENCE_BACKEND_NAME, create_reference_backend_manifest
 from .realization import Realization, interpret_provisioning_plan
@@ -37,6 +38,7 @@ __all__ = [
     "DeploymentDriver",
     "NetworkHandle",
     "NetworkSpec",
+    "ServiceSpec",
     "Realization",
     "create_reference_backend_components",
     "create_reference_backend_manifest",

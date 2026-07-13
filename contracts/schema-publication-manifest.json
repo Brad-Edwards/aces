@@ -180,20 +180,20 @@
       "contract_id": "instantiated-scenario-snapshot-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-snapshot-v1.json",
       "stability": "draft",
-      "content_hash": "32df1d69451cc6117b6099a832398c813896d7ed6a03c98b08666f0c97ddaa0b",
+      "content_hash": "8e8048de4b5161c1a02d0900811f388b0d57a92b6d8434b0242f0a5254e9b377",
       "last_change": {
-        "summary": "Added typed SEM-218 realization designation provenance to instantiated scenario snapshots.",
-        "content_hash": "32df1d69451cc6117b6099a832398c813896d7ed6a03c98b08666f0c97ddaa0b"
+        "summary": "Added SEM-218 realization designation provenance and clarified Node.services reachability semantics (issue #748).",
+        "content_hash": "8e8048de4b5161c1a02d0900811f388b0d57a92b6d8434b0242f0a5254e9b377"
       }
     },
     {
       "contract_id": "instantiated-scenario-v1",
       "schema_path": "contracts/schemas/sdl/instantiated-scenario-v1.json",
       "stability": "draft",
-      "content_hash": "244fc4fb2d7ee2cb1b7e3197b6919e65ad5b47b0162a63f85227a59cccd38b1f",
+      "content_hash": "515cacc41d24c643e7655de70a40dc1b6305a14b9d840083d5d9ff694d58df29",
       "last_change": {
-        "summary": "Added typed SEM-218 scoped realization designation records to instantiation provenance.",
-        "content_hash": "244fc4fb2d7ee2cb1b7e3197b6919e65ad5b47b0162a63f85227a59cccd38b1f"
+        "summary": "Added SEM-218 scoped realization records and clarified Node.services reachability semantics (issue #748).",
+        "content_hash": "515cacc41d24c643e7655de70a40dc1b6305a14b9d840083d5d9ff694d58df29"
       }
     },
     {
@@ -446,10 +446,10 @@
       "contract_id": "sdl-authoring-input-v1",
       "schema_path": "contracts/schemas/sdl/sdl-authoring-input-v1.json",
       "stability": "draft",
-      "content_hash": "668f51898e64d6382510fc928188dfcf1d96b131cb359074662a7e6eb38efb63",
+      "content_hash": "57e984be7783a5eb54ee210da434d2883aa468617b0ee8c2a42de1a769ff30b5",
       "last_change": {
-        "summary": "Published the typed SEM-218 scenario realization default and RFC 6901 scoped override surface.",
-        "content_hash": "668f51898e64d6382510fc928188dfcf1d96b131cb359074662a7e6eb38efb63"
+        "summary": "Published SEM-218 scoped realization defaults and clarified Node.services reachability semantics (issue #748).",
+        "content_hash": "57e984be7783a5eb54ee210da434d2883aa468617b0ee8c2a42de1a769ff30b5"
       }
     },
     {

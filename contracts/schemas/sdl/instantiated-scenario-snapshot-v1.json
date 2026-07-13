@@ -21652,7 +21652,7 @@
     },
     "ServicePort": {
       "additionalProperties": false,
-      "description": "A network service exposed by a node. From OCSF NetworkEndpoint.",
+      "description": "Authored identity of a node-local transport binding.\n\nA service declaration does not authorize traffic, prove a live listener,\npublish a host port, or classify an internal/external audience. Traffic\nauthorization belongs to infrastructure ACLs; observed bind state and host\npublication belong to their dedicated runtime surfaces.",
       "properties": {
         "description": {
           "default": "",
