@@ -215,6 +215,43 @@ def _safe_model_validation_errors(
     return diagnostics or [f"{subject} failed structural validation."]
 
 
+def _imported_declaration_prefixes(scenario: ExpandedScenario) -> set[str]:
+    imported_namespaces = tuple(record.namespace for record in scenario.expansion_provenance.imports)
+    prefixes: set[str] = set()
+    for section_name in HASHMAP_SECTIONS:
+        for declaration_name in getattr(scenario, section_name):
+            parts = QualifiedName.parse(declaration_name).parts
+            if any(parts[: len(namespace)] == namespace for namespace in imported_namespaces):
+                prefixes.add(f"{section_name}.{declaration_name}")
+    return prefixes
+
+
+def _path_has_prefix(model_path: str, prefixes: set[str]) -> bool:
+    return any(
+        model_path == prefix or model_path.startswith(prefix + ".") or model_path.startswith(prefix + "[")
+        for prefix in prefixes
+    )
+
+
+def _merge_expanded_provenance(
+    scenario: ExpandedScenario,
+    local_constraints: tuple[CapabilityConstraint, ...],
+    explicitness_by_path: dict[str, ExplicitnessProvenanceRecord],
+) -> tuple[tuple[CapabilityConstraint, ...], tuple[RealizationDesignationRecord, ...]]:
+    constraints = (*scenario.expansion_provenance.capability_constraints, *local_constraints)
+    imported_prefixes = _imported_declaration_prefixes(scenario)
+    portable_paths = {record.model_path for record in scenario.expansion_provenance.explicitness}
+    stale_paths = {
+        model_path
+        for model_path in explicitness_by_path
+        if model_path not in portable_paths and _path_has_prefix(model_path, imported_prefixes)
+    }
+    for model_path in stale_paths:
+        del explicitness_by_path[model_path]
+    explicitness_by_path.update({record.model_path: record for record in scenario.expansion_provenance.explicitness})
+    return constraints, scenario.expansion_provenance.realization_designations
+
+
 def _bind_scenario_content(
     raw_scenario: Scenario | ExpandedScenario,
     parameters: Mapping[str, JSONLike] | None = None,
@@ -257,30 +294,11 @@ def _bind_scenario_content(
         else ()
     )
     if isinstance(raw_scenario, ExpandedScenario):
-        constraints = (*raw_scenario.expansion_provenance.capability_constraints, *local_constraints)
-        imported_namespaces = tuple(record.namespace for record in raw_scenario.expansion_provenance.imports)
-        imported_prefixes = {
-            f"{section_name}.{declaration_name}"
-            for section_name in HASHMAP_SECTIONS
-            for declaration_name in getattr(raw_scenario, section_name)
-            if any(
-                QualifiedName.parse(declaration_name).parts[: len(namespace)] == namespace
-                for namespace in imported_namespaces
-            )
-        }
-        portable_imported_paths = {record.model_path for record in raw_scenario.expansion_provenance.explicitness}
-        for model_path in tuple(explicitness_by_path):
-            if model_path in portable_imported_paths:
-                continue
-            if any(
-                model_path == prefix or model_path.startswith(prefix + ".") or model_path.startswith(prefix + "[")
-                for prefix in imported_prefixes
-            ):
-                del explicitness_by_path[model_path]
-        explicitness_by_path.update(
-            {record.model_path: record for record in raw_scenario.expansion_provenance.explicitness}
+        constraints, realization_designations = _merge_expanded_provenance(
+            raw_scenario,
+            local_constraints,
+            explicitness_by_path,
         )
-        realization_designations = raw_scenario.expansion_provenance.realization_designations
 
     return _BoundScenarioResult(
         content=content,

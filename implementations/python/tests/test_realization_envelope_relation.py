@@ -531,6 +531,20 @@ def test_binding_scope_breaks_equal_path_ties_independent_of_list_order() -> Non
 
 
 def test_topology_and_app_bindings_conflict_as_sibling_scopes() -> None:
+    bindings = [
+        EnvelopeBinding(
+            path="nodes.web.os",
+            scope=EnvelopeScope.TOPOLOGY,
+            posture=Posture.EXACT,
+            domain="linux",
+        ),
+        EnvelopeBinding(
+            path="nodes.web.os",
+            scope=EnvelopeScope.APP,
+            posture=Posture.EXACT,
+            domain="windows",
+        ),
+    ]
     with pytest.raises(ValidationError, match="conflicting equal-specificity bindings"):
         RealizationEnvelopeModel(
             id="sibling-binding-conflict",
@@ -539,40 +553,28 @@ def test_topology_and_app_bindings_conflict_as_sibling_scopes() -> None:
                 "linux": ExactDomain(value="linux"),
                 "windows": ExactDomain(value="windows"),
             },
-            bindings=[
-                EnvelopeBinding(
-                    path="nodes.web.os",
-                    scope=EnvelopeScope.TOPOLOGY,
-                    posture=Posture.EXACT,
-                    domain="linux",
-                ),
-                EnvelopeBinding(
-                    path="nodes.web.os",
-                    scope=EnvelopeScope.APP,
-                    posture=Posture.EXACT,
-                    domain="windows",
-                ),
-            ],
+            bindings=bindings,
         )
 
 
 def test_topology_and_app_closure_conflicts_as_sibling_scopes() -> None:
+    closure = [
+        ClosureOverlay(
+            path="nodes.web",
+            scope=EnvelopeScope.TOPOLOGY,
+            closure=Closure.CLOSED_WORLD,
+        ),
+        ClosureOverlay(
+            path="nodes.web",
+            scope=EnvelopeScope.APP,
+            closure=Closure.OPEN_WORLD,
+        ),
+    ]
     with pytest.raises(ValidationError, match="conflicting equal-specificity closure overlays"):
         RealizationEnvelopeModel(
             id="sibling-closure-conflict",
             scope=EnvelopeScope.SCENARIO,
-            closure=[
-                ClosureOverlay(
-                    path="nodes.web",
-                    scope=EnvelopeScope.TOPOLOGY,
-                    closure=Closure.CLOSED_WORLD,
-                ),
-                ClosureOverlay(
-                    path="nodes.web",
-                    scope=EnvelopeScope.APP,
-                    closure=Closure.OPEN_WORLD,
-                ),
-            ],
+            closure=closure,
         )
 
 

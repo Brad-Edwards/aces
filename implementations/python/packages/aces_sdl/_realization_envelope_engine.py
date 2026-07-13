@@ -49,7 +49,7 @@ class LeafConstraint:
 # --------------------------------------------------------------------------- #
 
 _PATH_TOKEN_RE = re.compile(r"[^.\[\]]+|\[\d+\]")
-_FULL_PATH_RE = re.compile(r"^[^.\[\]]+(?:(?:\.[^.\[\]]+)|(?:\[\d+\]))*$")
+_FULL_PATH_RE = re.compile(r"^[^.\[\]]+(?:\.[^.\[\]]+|\[\d+\])*$")
 
 
 def tokenize_path(path: str) -> list[PathToken]:
@@ -76,7 +76,13 @@ def _is_same_or_descendant(path: str, ancestor: str) -> bool:
 def _render_path(tokens: Sequence[PathToken]) -> str:
     rendered = ""
     for token in tokens:
-        rendered += f"[{token}]" if isinstance(token, int) else (f".{token}" if rendered else token)
+        if isinstance(token, int):
+            segment = f"[{token}]"
+        elif rendered:
+            segment = f".{token}"
+        else:
+            segment = token
+        rendered += segment
     return rendered
 
 

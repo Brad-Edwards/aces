@@ -419,38 +419,31 @@ def _evaluate_realization(
     when a non-exact concern was left unrealized.
     """
 
+    diagnostic: Diagnostic | None = None
+    entry: RealizationProvenanceEntry | None = None
     path = CONCERN_PAYLOAD_PATH.get(requirement.requirement_kind)
     op = declared_ops.get(requirement.address)
     if requirement.explicitness is None or path is None or op is None or op.action is ChangeAction.DELETE:
-        return None, None
-    if requirement.explicitness is ExplicitnessClass.OPEN:
-        snapshot_entry = returned_snapshot.entries.get(requirement.address)
-        realized_value = (
-            _concern_value(snapshot_entry.payload, path) if snapshot_entry is not None else _MISSING_CONCERN_VALUE
-        )
-        if realized_value is _MISSING_CONCERN_VALUE:
-            return None, None
-        return None, _realization_provenance_entry(requirement, False)
-    declared_value = _concern_value(op.payload, path)
-    if declared_value is _MISSING_CONCERN_VALUE:
-        # The plan op carries no value for this concern: no author baseline to
-        # enforce (an upstream processor invariant, not a backend contract).
-        return None, None
+        return diagnostic, entry
     snapshot_entry = returned_snapshot.entries.get(requirement.address)
     realized_value = (
         _concern_value(snapshot_entry.payload, path) if snapshot_entry is not None else _MISSING_CONCERN_VALUE
     )
-    honoured = realized_value == declared_value
-    diagnostic: Diagnostic | None = None
-    entry: RealizationProvenanceEntry | None = None
-    if requirement.explicitness is ExplicitnessClass.EXACT and not honoured:
-        # The backend realized the exact concern with a different value or omitted
-        # it entirely; both are forbidden silent approximation (I2).
-        diagnostic = _silent_approximation_diagnostic(requirement)
-    elif realized_value is not _MISSING_CONCERN_VALUE:
-        # A located realized concern: disclose its provenance. (A non-exact concern
-        # the backend left unrealized falls through with nothing to disclose.)
-        entry = _realization_provenance_entry(requirement, honoured)
+    if requirement.explicitness is ExplicitnessClass.OPEN:
+        if realized_value is not _MISSING_CONCERN_VALUE:
+            entry = _realization_provenance_entry(requirement, False)
+        return diagnostic, entry
+    declared_value = _concern_value(op.payload, path)
+    if declared_value is not _MISSING_CONCERN_VALUE:
+        honoured = realized_value == declared_value
+        if requirement.explicitness is ExplicitnessClass.EXACT and not honoured:
+            # The backend realized the exact concern with a different value or omitted
+            # it entirely; both are forbidden silent approximation (I2).
+            diagnostic = _silent_approximation_diagnostic(requirement)
+        elif realized_value is not _MISSING_CONCERN_VALUE:
+            # A located realized concern: disclose its provenance. (A non-exact concern
+            # the backend left unrealized falls through with nothing to disclose.)
+            entry = _realization_provenance_entry(requirement, honoured)
     return diagnostic, entry
 
 

@@ -70,7 +70,7 @@ __all__ = [
 # from ``int`` here (see ``scalar_matches_numeric_type``); Pydantic preserves the
 # authored Python type on a closed model, so ``True`` never collapses to ``1``.
 DomainScalar = bool | int | float | str
-_ENVELOPE_PATH_RE = re.compile(r"^[^.\[\]]+(?:(?:\.[^.\[\]]+)|(?:\[\d+\]))*$")
+_ENVELOPE_PATH_RE = re.compile(r"^[^.\[\]]+(?:\.[^.\[\]]+|\[\d+\])*$")
 
 
 def _require_envelope_path(path: str, *, allow_root: bool) -> None:
@@ -321,6 +321,10 @@ class RealizationEnvelopeModel(ContractModel):
             visit(name)
 
     def _validate_bindings(self) -> None:
+        self._validate_binding_entries()
+        self._validate_closure_entries()
+
+    def _validate_binding_entries(self) -> None:
         seen: dict[tuple[str, int], EnvelopeBinding] = {}
         for binding in self.bindings:
             if binding.domain is not None and binding.domain not in self.domains:
@@ -346,6 +350,8 @@ class RealizationEnvelopeModel(ContractModel):
                     f"at equivalent scopes '{existing.scope.value}' and '{binding.scope.value}'"
                 )
             seen[key] = binding
+
+    def _validate_closure_entries(self) -> None:
         seen_closure: dict[tuple[str, int], tuple[EnvelopeScope, Closure]] = {}
         for overlay in self.closure:
             key = (overlay.path, scope_specificity(overlay.scope))
