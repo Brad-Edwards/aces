@@ -44,6 +44,17 @@ nodes:
     resources: {ram: 1 gib, cpu: 1}
 """
 
+_PARAMETERIZED_SCENARIO = """
+name: sem-218-runtime-parameterized
+variables:
+  os_choice: {type: string, default: linux, allowed_values: [linux, windows]}
+nodes:
+  web:
+    type: vm
+    os: ${os_choice}
+    resources: {ram: 1 gib, cpu: 1}
+"""
+
 
 def _plan_exact(manager: RuntimeManager):
     return manager.plan(parse_sdl(textwrap.dedent(_EXACT_SCENARIO)))
@@ -166,6 +177,20 @@ def test_honest_apply_records_realization_provenance():
     assert by_field["nodes.web.os"].requirement_kind == "os-family"
     assert by_field["nodes.web.type"].provenance is ExplicitnessProvenance.AUTHOR_DECLARED
     assert by_field["nodes.web.type"].explicitness is ExplicitnessClass.EXACT
+
+
+def test_honoured_parameter_substitution_records_processor_derived_provenance():
+    """I5: an honoured substituted value retains its processor-derived origin."""
+
+    manager = RuntimeManager(create_stub_target())
+    plan = manager.plan(parse_sdl(textwrap.dedent(_PARAMETERIZED_SCENARIO)))
+
+    result = manager.apply(plan)
+
+    assert result.success
+    by_field = {entry.field_path: entry for entry in result.snapshot.realization_provenance}
+    assert by_field["nodes.web.os"].provenance is ExplicitnessProvenance.PROCESSOR_DERIVED
+    assert by_field["nodes.web.os"].provenance is not ExplicitnessProvenance.AUTHOR_DECLARED
 
 
 def test_realization_provenance_round_trips_through_control_plane_store():

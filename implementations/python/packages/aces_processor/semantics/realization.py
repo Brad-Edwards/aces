@@ -92,6 +92,7 @@ class CompiledRealizationRequirement:
     domain: str
     requirement_kind: str
     explicitness: ExplicitnessClass
+    provenance: ExplicitnessProvenance
 
     def __post_init__(self) -> None:
         require_compiled_address(self.address)
@@ -281,7 +282,7 @@ def _realization_provenance_entry(
         domain=requirement.domain,
         requirement_kind=requirement.requirement_kind,
         explicitness=requirement.explicitness,
-        provenance=(ExplicitnessProvenance.AUTHOR_DECLARED if honoured else ExplicitnessProvenance.BACKEND_REALIZED),
+        provenance=(requirement.provenance if honoured else ExplicitnessProvenance.BACKEND_REALIZED),
     )
 
 
