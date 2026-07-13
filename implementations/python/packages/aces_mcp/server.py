@@ -11,6 +11,7 @@ from __future__ import annotations
 from mcp.server.fastmcp import FastMCP
 
 from aces_mcp.tools.authoring import register as register_authoring_tools
+from aces_mcp.tools.completeness import register as register_completeness_tools
 from aces_mcp.tools.experiment_authoring import register as register_experiment_authoring_tools
 from aces_mcp.tools.inspection import register as register_inspection_tools
 from aces_mcp.tools.language_service import register as register_language_service_tools
@@ -28,7 +29,9 @@ variables).
 
 Start with `aces_tool_surface` to understand the available tool families, \
 then use `aces_agent_guidance` for scope boundaries, invariants, review \
-priorities, and safe-operating expectations. Use `sdl_overview` to orient \
+priorities, and safe-operating expectations. Use `aces_intended_use_profiles` \
+to select the claim scope and inspect current ACES delivery blockers. Use \
+`sdl_overview` to orient \
 yourself. Use `sdl_section_reference` for any section you need to understand. \
 Use `sdl_get_example` to see real-world annotated scenarios. Use \
 `sdl_completions`, `sdl_references`, \
@@ -52,6 +55,7 @@ def create_server() -> FastMCP:
         instructions=_INSTRUCTIONS,
     )
     register_reference_tools(mcp)
+    register_completeness_tools(mcp)
     register_authoring_tools(mcp)
     register_experiment_authoring_tools(mcp)
     register_language_service_tools(mcp)

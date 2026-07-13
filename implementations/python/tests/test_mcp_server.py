@@ -675,9 +675,11 @@ class TestOperationTools:
         payload = _json_call(server, "aces_tool_surface")
         assert payload["surface"] == "aces-sdl"
         assert "aces_agent_guidance" in payload["recommended_workflow"]
+        assert "aces_intended_use_profiles" in payload["recommended_workflow"]
         assert "sdl_claims_assessment" in payload["recommended_workflow"]
         assert "sdl_completions" in payload["tool_families"]["language_service"]
         assert "aces_agent_guidance" in payload["tool_families"]["guidance"]
+        assert "aces_intended_use_profiles" in payload["tool_families"]["guidance"]
         assert any("does not expose participant cyber actions" in item for item in payload["boundaries"])
 
     def test_agent_guidance_returns_machine_usable_profile(self, server):
@@ -700,6 +702,50 @@ class TestOperationTools:
         for entries in payload["guidance"].values():
             assert entries
             assert all("operator" in entry["audience"] for entry in entries)
+
+    def test_intended_use_profiles_exposes_canonical_catalog(self, server):
+        payload = _json_call(server, "aces_intended_use_profiles")
+
+        assert payload["status"] == "ok"
+        assert payload["scope"] == "aces-delivery-capability"
+        assert payload["taxonomy_revision"] == "rev1"
+        assert len(payload["profiles"]) == 5
+        assert payload["scenario_assessment"]["status"] == "not-assessed"
+        assert {item["profile_id"] for item in payload["profiles"]} == {
+            "valid-sdl-fragment",
+            "deployable-scenario-intent",
+            "participant-evaluation-scenario",
+            "controlled-experiment-scenario",
+            "reproducible-benchmark-study-input",
+        }
+
+    def test_intended_use_profile_exposes_blockers_and_authoring_route(self, server):
+        payload = _json_call(
+            server,
+            "aces_intended_use_profiles",
+            {"profile_id": "controlled-experiment-scenario"},
+        )
+
+        profile = payload["profile"]
+        assert profile["aces_delivery"]["complete"] is False
+        assert "behavioral-relation-taxonomy" in profile["aces_delivery"]["blocking_concern_ids"]
+        assert "experiment_validate" in profile["next_tools"]
+        required = {item["concern_id"]: item for item in profile["required_concerns"]}
+        assert required["behavioral-relation-taxonomy"]["status"] == "missing"
+        assert required["behavioral-relation-taxonomy"]["issue_refs"] == ["#747"]
+        assert payload["scenario_assessment"]["performed"] is False
+
+    def test_intended_use_profile_rejects_unknown_id(self, server):
+        payload = _json_call(server, "aces_intended_use_profiles", {"profile_id": "attack-scenario"})
+
+        assert payload["status"] == "invalid"
+        assert payload["diagnostics"][0]["code"] == "aces.intended_use_profile.unknown"
+        assert "valid-sdl-fragment" in payload["diagnostics"][0]["available_profile_ids"]
+
+    def test_non_experiment_profile_does_not_recommend_experiment_tools(self, server):
+        payload = _json_call(server, "aces_intended_use_profiles", {"profile_id": "valid-sdl-fragment"})
+
+        assert "experiment_validate" not in payload["profile"]["next_tools"]
 
     def test_parse_returns_machine_readable_summary(self, server):
         payload = _json_call(server, "sdl_parse", {"sdl_content": MINIMAL_SDL})
