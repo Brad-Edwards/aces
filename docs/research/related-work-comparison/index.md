@@ -1,41 +1,33 @@
-# Related-Work Comparison Research
+# Reproducible Related-Work Comparison
 
-Issue: #508 (review LIT-1), also resolving review LIT-4.
+Issue: #728. Requirement: ASR-534.
 
-Purpose: gather the primary-source basis for a feature-by-feature comparison of
-ACES against precedent systems before writing
-[`docs/explain/sdl/related-work-comparison.md`](../../explain/sdl/related-work-comparison.md).
-The comparison answers the first question of any peer review of a new language:
-dimension by dimension, what can ACES express that the precedents cannot, and
-where do the precedents still lead ACES.
+This directory is the reproduction bundle for the reader-facing
+[Related-Work Comparison](../../explain/sdl/related-work-comparison.md). It
+replaces the earlier prose-only `yes`/`partial`/`no` table with a preregistered
+protocol, a frozen extraction snapshot, and recomputable analysis.
 
-These notes do not characterize competitor capabilities from memory. Every
-non-ACES claim in the comparison page is grounded in a precedent's own
-documentation, standard text, source, or originating-author literature, recorded
-in [`search-log.md`](search-log.md) with the exact source and a supporting
-finding.
+The result is deliberately bounded. It supports no universal winner or
+`highest quality` claim. Within the scenario-authoring stratum, different
+predeclared weighting profiles place ACES, VSDL, or OCR SDL first. Systems with
+different purposes remain in separate scope strata.
 
-## Relationship To Prior Research
+## Bundle Contents
 
-Element-level provenance and the source map already exist and are not repeated
-here:
-
-- [`docs/explain/sdl/precedents.md`](../../explain/sdl/precedents.md) — element-by-element
-  source mapping.
-- [`docs/explain/sdl/lineage.md`](../../explain/sdl/lineage.md) — narrative
-  source map by concern area.
-- `specs/formal/participant-semantics/README.md` — participant-semantics
-  primary-source review.
-
-This note covers the question specific to issue #508: how ACES and the
-precedents compare across named expressivity dimensions, with each cell
-traceable to a primary source.
-
-## Contents
-
-- [Search log](search-log.md) — the source rule, tooling, per-system primary
-  sources with URLs/DOIs, and the grounded findings behind every non-ACES cell
-  in the comparison matrix.
+- [`protocol-v1.json`](protocol-v1.json) freezes inclusion and exclusion rules,
+  system identities, scope strata, the twelve required axes and rubrics, three
+  representative authoring tasks, two negative cases, and analysis rules.
+- [`extraction-snapshot-2026-07-13.json`](extraction-snapshot-2026-07-13.json)
+  records pinned primary sources, all 96 system-axis observations, and all 40
+  system-case walkthroughs. Every observation includes an exact locator,
+  rationale, confidence, limitations, and review state.
+- [`analysis-v1.json`](analysis-v1.json) records scope-qualified Pareto
+  frontiers, four weight profiles, recomputed totals, the observed ranking
+  reversals, and the claims permitted on the public page. Every claim carries
+  ADR-021 evidence status, threats to validity, falsification criteria, named
+  evidence artifacts, and a structured derivation from recomputed cells.
+- [`search-log.md`](search-log.md) records source acquisition, revision and
+  digest choices, corpus boundaries, and the extraction method.
 
 :::{toctree}
 :hidden:
@@ -43,29 +35,44 @@ traceable to a primary source.
 search-log
 :::
 
-## Source Rule
+## Reproduce
 
-- Non-ACES cells cite the precedent's primary documentation: the maintaining
-  body's standard text, the originating authors' peer-reviewed papers or
-  technical reports, official project documentation, or the project's own
-  source. Secondary summaries are used only to locate primary sources or where
-  no primary source is available, and are identified as secondary.
-- ACES cells cite repository authority: specs under `specs/`, ADRs under
-  `docs/decisions/adrs/`, contracts under `contracts/`, or the reference notes
-  in `docs/explain/`. The comparison page is explanatory synthesis; it is not a
-  new authority for ACES semantics.
-- Where a capability could not be grounded in a primary source, it is recorded
-  as a confidence gap rather than asserted.
+Run the focused offline gate and its mutation tests from the repository root:
 
-## Scope Boundaries
+```bash
+implementations/python/.venv/bin/python tools/check_related_work_comparison.py
+implementations/python/.venv/bin/python -m pytest \
+  implementations/python/tests/test_related_work_comparison.py
+```
 
-- The comparison is an evidence surface, not a ranking. Cells are `yes`,
-  `partial`, `no`, or `out of scope`, each with a one-line justification and a
-  citation.
-- At least one dimension honestly favors a precedent. In practice several do:
-  HLA-grounded time management and federation interoperability (SISO Cyber
-  DEM/FOM, TENA/HLA), OASIS-standardized workflow taxonomy and signed
-  provenance (CACAO), executed RL episode discipline (CybORG), and formal
-  scenario verification (CRACK).
-- Maturity is stated honestly: several ACES surfaces are formally specified but
-  still materializing in the runtime, and ACES time semantics are not complete.
+The checker performs no network access and executes no compared project. It
+validates bounded closed JSON shapes, source pins, safe locators, primary-source
+coverage, rectangular matrices, ACES executable evidence, task and negative-case
+coverage, Pareto and sensitivity recomputation, and reader-page parity.
+It also rejects a public claim whose evidence status, falsification record,
+declared scope, derivation, or canonical statement drifts from the frozen
+observations and weight-profile results.
+
+## Extraction And Review Status
+
+The 2026-07-13 snapshot uses two evidence methods:
+
+- repository execution for existing ACES production and negative-test
+  boundaries where the cited repository paths already exercise the case;
+- source walkthroughs for external systems, using pinned standards,
+  publications, official documentation, and source revisions.
+
+The external cases are not executions of third-party code and are not a user
+study. The snapshot has one extraction pass and awaits independent replication
+or adjudication, so every public claim retains ADR-021 status `partial`.
+Usability therefore remains limited to documentation and walkthrough evidence;
+repository activity is not treated as independent adoption.
+
+## Authority Boundary
+
+These artifacts are non-normative research synthesis. They report observed
+evidence about ACES and precedents but do not define SDL meaning, validity,
+runtime behavior, or external-system capability. ACES semantics remain in
+`specs/`, published contracts, accepted ADRs, and implementation tests. A source
+refresh creates a new extraction snapshot; a rubric change creates a new
+protocol revision.
