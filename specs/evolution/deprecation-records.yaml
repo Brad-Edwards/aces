@@ -1,0 +1,63 @@
+# Ecosystem Deprecation Records (GOV-902)
+#
+# Canonical, reviewable record surface for repository-governed deprecation and
+# removal notices across ecosystem surfaces. Required reading:
+#
+#   specs/evolution/versioning-deprecation-and-migration.md
+#     -- the normative operational policy (Deprecation / Removal sections);
+#        each record below satisfies the complete-record contract it defines
+#   docs/decisions/adrs/adr-075-ecosystem-versioning-deprecation-and-migration-governance.md
+#     -- the architectural decision that mandates explicit deprecation records
+#
+# This file is a CI-time GOVERNANCE record surface, not a runtime lifecycle
+# registry, migration service, persistence layer, or endpoint (ADR-075 forbids
+# those). tools/check_deprecation_lifecycle.py validates every record against
+# the 7-field contract and fails closed on an incomplete record, so
+# supersession and removal stay predictable and reviewable (GOV-902). Each
+# record points back to its owning surface's existing authority; it does not
+# replace that authority. A deprecation is a lifecycle notice for a
+# still-supported surface (status: deprecated); removal (status: removed) is
+# allowed only after a record reaches its removal-eligibility rule, and for a
+# published-json-schema surface it references the ADR-061 removed_schemas
+# tombstone rather than duplicating it.
+#
+# Adding the next deprecation is one record here plus, when it is a new surface
+# family, a row in the surface-class matrix — never a central runtime service.
+
+policy: ecosystem-deprecation-records
+
+requirement_refs:
+  - GOV-902
+
+adr_refs:
+  - ADR-075
+
+spec: specs/evolution/versioning-deprecation-and-migration.md
+
+records:
+  # The legacy `aces.*` re-export namespace. ADR-010 treats it as
+  # compatibility-only and one-directional; the spec (migration section) blesses
+  # it staying in the compatibility tree. It carried no complete lifecycle
+  # record until GOV-902.
+  - id: aces-compat-namespace
+    surface_class: python-distribution
+    identifier: "implementations/python/src/aces/ (the legacy `aces.*` re-export namespace)"
+    status: deprecated
+    first_notice: "ADR-010 (repository realignment order and compatibility policy)"
+    replacement: "the owning packages under implementations/python/packages/ (aces_sdl, aces_contracts, aces_cli, aces_runtime, and siblings)"
+    migration_reference: "docs/decisions/adrs/adr-010-repository-realignment-order-and-compatibility-policy.md; docs/explain/sdl/runtime-architecture.md"
+    notice_window: "Supported through the pre-1.0 package series; removal eligible no earlier than the first major (post-1.0) package release and only via a complete removal record."
+    verification_evidence: "tools/check_repo_policy.py enforces the compatibility-wrapper-only rule for aces.* modules and the one-way import ban (owning packages must not import aces.*), proving the layer remains a supported wrapper during the notice window."
+
+  # The module-import `path:` field, superseded by `source:` in ADR-053. The
+  # parser still accepts it as a backward-compatible alias, normalizing it to
+  # the `local:{path}` source form.
+  - id: sdl-import-path-field
+    surface_class: sdl-scenario-module
+    identifier: "ImportDecl.path (the module-import `path:` field)"
+    status: deprecated
+    first_notice: "ADR-053 (SDL module composition for inventory-backed scenarios)"
+    replacement: "the `source:` field (path form `local:{path}`)"
+    migration_reference: "docs/decisions/adrs/adr-053-sdl-module-composition-for-inventory-backed-scenarios.md; docs/explain/sdl/parser.md"
+    notice_window: "Supported indefinitely as a backward-compatible alias; removal eligible only after a complete removal record and a deterministic source rewrite per the migration rules."
+    verification_evidence: "aces_sdl.scenario.ImportDecl.normalized_source maps a `path:` value to `local:{path}`, and validate_source_fields keeps deprecated-but-supported use non-fatal; parser tests exercise both the `source:` and `path:` forms."
