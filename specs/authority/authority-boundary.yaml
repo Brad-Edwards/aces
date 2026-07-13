@@ -148,3 +148,10 @@ normative_artifact_families:
     family: governance-guidance
     requirement_refs:
       - AUT-811
+
+  - id: deprecation_records
+    artifact: specs/evolution/deprecation-records.yaml
+    authority: ecosystem deprecation and lifecycle records (GOV-902)
+    family: deprecation-records
+    requirement_refs:
+      - GOV-902

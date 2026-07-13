@@ -119,6 +119,16 @@ Security exceptions may shorten ordinary notice only when the record names the
 affected versions, impact, mitigation, migration path, and review authority.
 The word "security" is not a blanket bypass for unreviewed breaking changes.
 
+Repository-governed deprecation records are recorded in
+`specs/evolution/deprecation-records.yaml` and validated by
+`tools/check_deprecation_lifecycle.py`, which fails closed on any record that
+omits a required field. That ledger is the single reviewable surface for these
+notices — a CI-time governance record, not a runtime lifecycle registry,
+migration service, or endpoint — and each record cites its owning surface's
+existing authority rather than replacing it. A record whose `status` is
+`removed` on a published JSON Schema surface references the ADR-061
+`removed_schemas` tombstone rather than duplicating it.
+
 ## Removal
 
 Removal is allowed only after a complete deprecation record reaches its removal
@@ -177,6 +187,10 @@ surface adds a more specific checker:
 - published schema evolution: schema publication checker, generated-schema
   parity, fixture validation, manifest hashes, change ledger, and tombstones;
 - ADR evolution: ADR index and accepted-content pin gate;
+- deprecation and lifecycle records: `specs/evolution/deprecation-records.yaml`
+  validated by `tools/check_deprecation_lifecycle.py` (complete-record contract,
+  removal-eligibility, and — for published schemas — a required ADR-061
+  `removed_schemas` tombstone reference);
 - SDL/module evolution: parser, validator, module registry, lockfile, trust,
   signature, digest, and semantic tests;
 - contract and manifest evolution: closed DTO validation, manifest authority,

@@ -119,6 +119,7 @@ CANONICAL_LEGACY_TOP_LEVEL_DIRS: tuple[str, ...] = ("schemas", "conformance", "s
 # pins roots, so the classification cannot be silently dropped or relabelled.
 CANONICAL_ARTIFACT_FAMILY_BINDING: dict[str, str] = {
     "specs/agent-guidance/agent-guidance.yaml": "governance-guidance",
+    "specs/evolution/deprecation-records.yaml": "deprecation-records",
 }
 
 # Required top-level fields and per-entry fields. Used by both the YAML shape

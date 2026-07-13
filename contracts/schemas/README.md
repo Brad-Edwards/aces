@@ -10,8 +10,8 @@ single implementation language or package layout.
 Current published schemas cover:
 - SDL normalized authoring objects (not raw YAML presentation)
 - instantiated scenarios and canonical instantiated snapshots
-- backend manifests (`v1` legacy plus shared-apparatus `v2`)
-- processor manifests (`v1` legacy plus shared-apparatus `v2`)
+- backend manifests (shared-apparatus `v2`)
+- processor manifests (shared-apparatus `v2`)
 - concept-authority catalogs
 - reference model catalogs
 - UCO alignment evidence
@@ -79,9 +79,9 @@ particular:
 - backend capability blocks must declare concrete provisioning and orchestration
   surfaces rather than empty shells
 
-`v1` backend and processor manifests remain checked in as deprecated legacy
-schema artifacts. The reference stack, contract tests, and conformance profiles
-use `v2`.
+Only the shared-apparatus `v2` backend and processor manifests are published;
+no `v1` backend or processor manifest schema is checked in. The reference
+stack, contract tests, and conformance profiles use `v2`.
 
 ## Concept Authority Catalog
 

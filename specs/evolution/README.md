@@ -11,3 +11,6 @@ The governing decision is
 - [`versioning-deprecation-and-migration.md`](versioning-deprecation-and-migration.md)
   defines the normative surface-class matrix and rules for GOV-901, GOV-902,
   and GOV-903.
+- [`deprecation-records.yaml`](deprecation-records.yaml) is the reviewable
+  record surface for GOV-902 deprecation and lifecycle notices, validated by
+  `tools/check_deprecation_lifecycle.py` against the complete-record contract.
